@@ -3,7 +3,10 @@ import { describe, expect, test, vi } from "vitest";
 import type { JsonObject } from "../json.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/slots.js";
-import { SEGMENT_KEY_PARAM } from "../cdn/decision.js";
+import {
+  responseAllowsSharedStorage,
+  SEGMENT_KEY_PARAM,
+} from "../cdn/decision.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback, forArchiveType } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -215,8 +218,23 @@ function memoryCdn() {
     },
   );
   const cdn: ConnectedCdn = {
-    match,
-    put,
+    // Conforming rather than an identity: these tests turn on what a segment
+    // render leaves carrying, so a decorate that widened would have to fail
+    // here rather than pass by doing nothing.
+    decorate: (response, tags) => {
+      if (response.headers.has("set-cookie")) return response;
+      if (!responseAllowsSharedStorage(response)) return response;
+      const headers = new Headers(response.headers);
+      if (!headers.has("cache-control")) {
+        headers.set("cache-control", "public, s-maxage=60");
+      }
+      if (tags.length > 0) headers.set("cache-tag", tags.join(","));
+      return new Response(response.body, {
+        status: response.status,
+        headers,
+      });
+    },
+    store: { match, put },
     purgeTags: vi.fn(() => Promise.resolve()),
   };
   return { cdn, store, match, put };
@@ -325,6 +343,28 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     // variant because they all share this tag set (#1740 AC3).
     expect(stored?.tags).toContain("t:article");
     expect(stored?.tags).toContain(`e:${String(entry.id)}`);
+  });
+
+  test("a shared-segment page leaves the origin unshared and untagged", async () => {
+    const { cdn } = memoryCdn();
+    const h = await createDispatcherHarness({
+      plugins: [membersPlugin],
+      cdn,
+    });
+    await seedEntry(h, "article", "gated");
+    const sub = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", sub.id),
+    );
+    await h.drainDeferred();
+
+    // The segment-keyed edge entry beside it is deliberately shared; this copy
+    // is one member's, and decoration may only ever narrow what the render
+    // declared. A downstream intermediary knows nothing of the segment axis.
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("cache-tag")).toBeNull();
   });
 
   test("a private-granting policy is never read from or written to the cdn", async () => {

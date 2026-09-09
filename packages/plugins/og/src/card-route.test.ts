@@ -1,4 +1,4 @@
-import type { ConnectedCdn } from "plumix";
+import type { CdnStore, ConnectedCdn } from "plumix";
 import { ACCESS_POLICY_META_KEY, entryPurgeTags, entryTag } from "plumix";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
@@ -341,17 +341,17 @@ describe("the card route", () => {
 
 describe("a card at the edge", () => {
   function cdnStub(seeded?: [string, Response]) {
-    const store = new Map<string, Response>(seeded ? [seeded] : []);
-    const put = vi.fn<ConnectedCdn["put"]>((request, response) => {
-      store.set(request.url, response);
+    const entries = new Map<string, Response>(seeded ? [seeded] : []);
+    const put = vi.fn<CdnStore["put"]>((request, response) => {
+      entries.set(request.url, response);
       return Promise.resolve();
     });
-    const match = vi.fn<ConnectedCdn["match"]>((request) =>
-      Promise.resolve(store.get(request.url)?.clone()),
+    const match = vi.fn<CdnStore["match"]>((request) =>
+      Promise.resolve(entries.get(request.url)?.clone()),
     );
     const cdn: ConnectedCdn = {
-      match,
-      put,
+      decorate: (response) => response,
+      store: { match, put },
       purgeTags: () => Promise.resolve(),
     };
     return { cdn, match, put };

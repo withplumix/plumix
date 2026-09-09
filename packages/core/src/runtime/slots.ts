@@ -1,3 +1,4 @@
+import type { Segment } from "../access/policy.js";
 import type { PlumixEnv } from "./bindings.js";
 
 /**
@@ -251,31 +252,85 @@ export interface KV {
 }
 
 /**
- * A CDN bound for the current isolate. Backs the public read-through
- * cache: `match` reads a stored response, `put` writes a fresh one tagged with
- * `tags`, and `purgeTags` invalidates every stored response carrying any of the
- * given tags. The canonical implementation (Cloudflare's `edge()`) is the
- * Workers Cache API plus the zone purge-by-tag REST API.
+ * An origin-side response store, present on a runtime that offers one.
+ * Cloudflare Workers does, via the Cache API, and there it is the only way a
+ * Worker-served page reaches the edge cache at all; every other CDN caches from
+ * the headers {@link ConnectedCdn.decorate} emits and has none.
  */
-export interface ConnectedCdn {
+export interface CdnStore {
   match(request: Request): Promise<Response | undefined>;
   /**
-   * Store `response` under `request`, tagged for {@link purgeTags}.
+   * Store `response` under `request`, tagged for
+   * {@link ConnectedCdn.purgeTags}. A non-GET request stores nothing, and the
+   * stored copy must not carry the response's `Set-Cookie` — both asserted by
+   * the cdn conformance suite, which is where the rules are stated in full.
    *
-   * Two rules an entry is shared under, both asserted by the cdn conformance
-   * suite. A non-GET request stores nothing — one entry keyed on a mutating
-   * request would answer every later visitor with the first one's result, and
-   * the Workers Cache API refuses it outright. And the stored copy must not
-   * carry the response's `Set-Cookie`: a cookie minted for whoever missed
-   * would otherwise be handed to everyone who hits. Stripping it and storing,
-   * or declining to store at all, both satisfy that.
+   * The copy persisted here is served straight to a visitor on a hit, so it
+   * must carry the freshness and tags a miss would leave with; core hands over
+   * the undecorated render and the provider re-headers it. That is also where
+   * this copy may widen sharing, which {@link ConnectedCdn.decorate} never
+   * does: a separately keyed entry is what makes widening safe.
    */
   put(
     request: Request,
     response: Response,
     tags: readonly string[],
   ): Promise<void>;
-  purgeTags(tags: readonly string[]): Promise<void>;
+}
+
+/**
+ * A CDN bound for the current isolate — a shared cache in front of the site.
+ *
+ * {@link decorate} is the only member every provider implements: it stamps the
+ * freshness and cache tags on the response going back to the visitor, which is
+ * how a page reaches a CDN the origin does not itself write to. The other three
+ * are where vendors differ, and each one being absent is a supported
+ * configuration rather than a broken provider.
+ */
+export interface ConnectedCdn {
+  /**
+   * Return the response the visitor receives, carrying whatever freshness and
+   * cache-tag headers this vendor reads. Called for every shared-cacheable
+   * public response, whether or not a {@link store} also holds a copy.
+   *
+   * Decoration may **narrow** sharing, never widen it, and the conformance
+   * suite asserts every arm: a response that declared a shared-cacheable
+   * freshness keeps it, a response that declared none is stamped with the
+   * site's page freshness, and a response marked `private`/`no-store`, or
+   * carrying a `Set-Cookie`, is returned untouched and untagged — that cookie
+   * is the visitor's own and cannot be stripped the way {@link CdnStore.put}
+   * strips it from a copy nobody else holds. Header names and the tag separator
+   * are the provider's own — vendors disagree on both.
+   */
+  decorate(response: Response, tags: readonly string[]): Response;
+  /**
+   * Absent alongside `purgeTags` is a supported pair; a store *without* one is
+   * the sharpest configuration this port allows, since an entry it holds is
+   * then reachable only by expiry. Such a provider belongs on a short TTL.
+   */
+  readonly store?: CdnStore;
+  /**
+   * Present when the CDN can key its cache on an audience segment — a store the
+   * provider keys itself, or a vendor that varies on a named cookie. Without
+   * either, a non-anonymous segment bypasses the CDN rather than risk one
+   * audience's page reaching another.
+   *
+   * Declared and not called: core stamps `private, no-store` on every
+   * non-anonymous render's client copy, so the first provider to implement this
+   * has to lift that stamping for itself before the member does anything.
+   */
+  readonly segmentVary?: (response: Response, segment: Segment) => Response;
+  /**
+   * Invalidate every cached response carrying any of `tags`. Absent when the
+   * vendor cannot invalidate by tag — freshness is then the only control, and
+   * such a site runs a short TTL rather than a long one.
+   *
+   * Optional in the type rather than a method that no-ops, so the compiler
+   * forces every call site to handle absence: a purge that exists and quietly
+   * does nothing would leave content cached and permanently unpurgeable with
+   * every call reporting success.
+   */
+  readonly purgeTags?: (tags: readonly string[]) => Promise<void>;
 }
 
 /**

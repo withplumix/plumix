@@ -10,13 +10,21 @@ import {
   registerCorePurgeInvalidator,
 } from "./purge.js";
 
-function fakeCtx(withCdn = true) {
+function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
   const purgeTags = vi.fn(() => Promise.resolve());
   const defer = vi.fn((p: Promise<unknown>) => {
     void p;
   });
+  const store = { match: vi.fn(), put: vi.fn() };
   const ctx = {
-    cdn: withCdn ? { match: vi.fn(), put: vi.fn(), purgeTags } : undefined,
+    cdn:
+      cdn === "absent"
+        ? undefined
+        : {
+            decorate: vi.fn(),
+            store,
+            ...(cdn === "purges" ? { purgeTags } : {}),
+          },
     defer,
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
     memo: createRequestMemo(),
@@ -61,9 +69,19 @@ describe("purge accumulator", () => {
   });
 
   it("is inert when no cdn is configured", () => {
-    const { ctx, defer } = fakeCtx(false);
+    const { ctx, defer } = fakeCtx("absent");
     enqueuePurgeTags(ctx, ["t:post", "e:1"]);
     flushPurgeTags(ctx);
+    expect(defer).not.toHaveBeenCalled();
+  });
+
+  // A vendor that cannot invalidate by tag has no `purgeTags` at all, which is
+  // the point of its being optional: nothing can call it and report success.
+  it("is inert when the provider cannot purge by tag", () => {
+    const { ctx, defer, purgeTags } = fakeCtx("cannot-purge");
+    enqueuePurgeTags(ctx, ["t:post", "e:1"]);
+    flushPurgeTags(ctx);
+    expect(purgeTags).not.toHaveBeenCalled();
     expect(defer).not.toHaveBeenCalled();
   });
 });

@@ -32,6 +32,12 @@ interface CacheableRequest {
    * {@link CACHEABLE_INTENTS}.
    */
   readonly customArchiveCacheable?: boolean;
+  /**
+   * Whether the bound provider can separate one audience segment's copy from
+   * another's. Named for the capability rather than for the store, because a
+   * vendor that varies on a named cookie satisfies it by a different route.
+   */
+  readonly canKeySegments: boolean;
 }
 
 // The markers of an ephemeral, per-request render grant: a `?preview=<token>`
@@ -75,7 +81,8 @@ export function requestCarriesEphemeralGrant(request: Request): boolean {
 }
 
 /** Why the CDN refused to participate in a request. */
-export type CdnBypassReason = "method" | "private" | "intent";
+export type CdnBypassReason =
+  "method" | "private" | "segment-unsupported" | "intent";
 
 /**
  * The variant marker folded into a cache-key URL for a non-anonymous segment.
@@ -134,6 +141,9 @@ export function methodIsCacheable(method: string): boolean {
 export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
   if (!methodIsCacheable(req.method)) return "method";
   if (req.segment === PRIVATE_SEGMENT) return "private";
+  if (req.segment !== "anonymous" && !req.canKeySegments) {
+    return "segment-unsupported";
+  }
   // A custom archive caches only on its explicit opt-in; the built-in intents
   // are fixed by CACHEABLE_INTENTS.
   const cacheable =
@@ -166,11 +176,10 @@ export function responseAllowsSharedStorage(response: Response): boolean {
 }
 
 /**
- * Whether a rendered response may be written to the CDN. Only a `200`
- * is a complete public document worth storing; redirects and errors are never
- * cached. Restricted to `GET` because the Workers Cache API persists GET
- * responses only — a HEAD render is served live.
+ * Whether a rendered response is a complete public document a shared cache may
+ * hold: only a `200`, never a redirect or an error. The gate on decoration, so
+ * a transient 500 never leaves carrying the site's page freshness.
  */
-export function responseIsStorable(method: string, status: number): boolean {
-  return method === "GET" && status === 200;
+export function responseIsShareable(status: number): boolean {
+  return status === 200;
 }

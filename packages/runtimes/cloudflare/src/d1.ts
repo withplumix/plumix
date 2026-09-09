@@ -4,7 +4,11 @@ import type {
   RequestScopedDbArgs,
 } from "plumix";
 import { drizzle } from "drizzle-orm/d1";
-import { isSecureRequest, readSessionCookie } from "plumix";
+import {
+  isSecureRequest,
+  readSessionCookie,
+  responseAllowsSharedStorage,
+} from "plumix";
 
 import {
   buildBookmarkCookie,
@@ -35,6 +39,17 @@ export interface D1Config {
 
 export interface D1DatabaseAdapter extends DatabaseAdapter {
   readonly config: D1Config;
+}
+
+// A response the `cdn:` provider stamped on the way out: it declares a
+// freshness a shared cache may act on. `responseAllowsSharedStorage` alone is
+// not the question — it is true of a response that declared nothing at all,
+// which is every admin and RPC response.
+function isSharedCacheable(response: Response): boolean {
+  return (
+    response.headers.has("cache-control") &&
+    responseAllowsSharedStorage(response)
+  );
 }
 
 export function d1(config: D1Config): D1DatabaseAdapter {
@@ -108,6 +123,14 @@ function connectRequestScoped(
       // Guards against Set-Cookie injection if D1 ever surfaces a bookmark
       // containing `;`, CR/LF, or other header-separator chars.
       if (!newBookmark || !isValidBookmark(newBookmark)) return response;
+      // `commit` runs after the dispatcher, so a public page has already been
+      // stamped shared-cacheable by the `cdn:` provider. Appending a
+      // per-visitor cookie there would invite the CDN to hold one reader's
+      // bookmark and hand it to everyone — and the bookmark is only ever an
+      // optimisation, so the shared page keeps its cacheability instead. A
+      // policy that grants `anonymous` to a signed-in visitor is exactly the
+      // shape that reaches here with both.
+      if (isSharedCacheable(response)) return response;
       const next = new Response(response.body, response);
       next.headers.append(
         "set-cookie",

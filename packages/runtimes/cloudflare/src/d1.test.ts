@@ -327,6 +327,50 @@ describe("d1() adapter — commit", () => {
     expect(cookie).toContain("Secure"); // https request
   });
 
+  test("a shared-cacheable page keeps its cacheability instead of the bookmark", () => {
+    const binding = fakeBinding("bookmark-new");
+    const scoped = callScoped(
+      adapter,
+      argsFor(binding, new Request("https://cms.example/"), {
+        isAuthenticated: true,
+        isWrite: false,
+      }),
+    );
+
+    // `commit` runs after the `cdn:` provider has stamped the page. A policy
+    // granting `anonymous` to a signed-in visitor reaches here with both, and
+    // pairing them would let the CDN hand one reader's bookmark to everyone.
+    const response = scoped.commit(
+      new Response("ok", {
+        headers: { "cache-control": "public, s-maxage=3600" },
+      }),
+    );
+
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("public, s-maxage=3600");
+  });
+
+  test("a response the page path marked private still gets the bookmark", () => {
+    const binding = fakeBinding("bookmark-new");
+    const scoped = callScoped(
+      adapter,
+      argsFor(binding, new Request("https://cms.example/"), {
+        isAuthenticated: true,
+        isWrite: false,
+      }),
+    );
+
+    const response = scoped.commit(
+      new Response("ok", {
+        headers: { "cache-control": "private, no-store" },
+      }),
+    );
+
+    expect(response.headers.get("set-cookie")).toContain(
+      "__plumix_d1_bookmark=bookmark-new",
+    );
+  });
+
   test("no Secure flag on an http request", () => {
     const binding = fakeBinding("bookmark-new");
     const scoped = callScoped(

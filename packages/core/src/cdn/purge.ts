@@ -2,7 +2,7 @@ import type { AppContext } from "../context/app.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { tryGetContext } from "../context/stores.js";
-import { entryPurgeTags, termPurgeTags } from "./tags.js";
+import { entryPurgeTags, normalizeTag, termPurgeTags } from "./tags.js";
 
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
@@ -22,13 +22,15 @@ export function enqueuePurgeTags(
   ctx: AppContext,
   tags: readonly string[],
 ): void {
-  if (ctx.cdn === undefined || tags.length === 0) return;
+  // A provider that cannot invalidate by tag has no `purgeTags` at all, so
+  // there is nothing to accumulate for — freshness is that site's only control.
+  if (ctx.cdn?.purgeTags === undefined || tags.length === 0) return;
   let set = pending.get(ctx.memo);
   if (set === undefined) {
     set = new Set();
     pending.set(ctx.memo, set);
   }
-  for (const tag of tags) set.add(tag);
+  for (const tag of tags) set.add(normalizeTag(tag));
 }
 
 /**
@@ -41,7 +43,7 @@ export function flushPurgeTags(ctx: AppContext): void {
   if (set === undefined) return;
   pending.delete(ctx.memo);
   const cdn = ctx.cdn;
-  if (cdn === undefined || set.size === 0) return;
+  if (cdn?.purgeTags === undefined || set.size === 0) return;
   ctx.defer(cdn.purgeTags([...set]));
 }
 

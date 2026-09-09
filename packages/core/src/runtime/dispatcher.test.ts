@@ -15,7 +15,7 @@ import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
-import type { ConnectedCdn } from "./slots.js";
+import type { CdnStore, ConnectedCdn } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
@@ -1648,12 +1648,68 @@ describe("dispatcher — imageDelivery slot wiring", () => {
 });
 
 describe("dispatcher — public read-through CDN", () => {
-  function cdnStub(hit?: Response) {
+  // Stands in for whatever headers a vendor writes: the freshness on a render
+  // that declared none, and the page's tags.
+  function decorate(response: Response, tags: readonly string[]): Response {
+    const headers = new Headers(response.headers);
+    if (!headers.has("cache-control")) {
+      headers.set("cache-control", "public, s-maxage=60");
+    }
+    if (tags.length > 0) headers.set("cache-tag", tags.join(","));
+    return new Response(response.body, { status: response.status, headers });
+  }
+
+  function cdnStub(hit?: Response, store = true) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
-    const purgeTags = vi.fn(() => Promise.resolve());
-    return { cdn: { match, put, purgeTags }, match, put };
+    const cdn: ConnectedCdn = {
+      decorate,
+      ...(store ? { store: { match, put } } : {}),
+      purgeTags: vi.fn(() => Promise.resolve()),
+    };
+    return { cdn, match, put };
   }
+
+  const blog = definePlugin("blog", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  });
+
+  test("a cacheable public page leaves the origin carrying its freshness and tags", async () => {
+    const { cdn } = cdnStub();
+    const h = await createDispatcherHarness({ plugins: [blog], cdn });
+    const author = await h.seedUser("admin");
+    const entry = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello"),
+    );
+
+    expect(response.status).toBe(200);
+    // Before this, the copy the visitor received carried nothing: freshness and
+    // tags only ever reached the store's own copy, so a CDN in front of the
+    // origin had nothing to act on.
+    expect(response.headers.get("cache-control")).toBe("public, s-maxage=60");
+    expect(response.headers.get("cache-tag")).toBe(
+      `t:post,e:${String(entry.id)}`,
+    );
+  });
+
+  test("a storeless provider still sends the visitor a decorated page", async () => {
+    const { cdn } = cdnStub(undefined, false);
+    const h = await createDispatcherHarness({ cdn });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("public, s-maxage=60");
+  });
 
   test("a cacheable public GET is served from the CDN on a hit", async () => {
     const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
@@ -1703,10 +1759,13 @@ describe("dispatcher — public read-through CDN", () => {
 
 describe("dispatcher — embedded reference CDN tags (#1508)", () => {
   function cdnStub() {
-    const match = vi.fn(() => Promise.resolve(undefined));
     const put = vi.fn(() => Promise.resolve());
-    const purgeTags = vi.fn(() => Promise.resolve());
-    return { cdn: { match, put, purgeTags }, put };
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match: () => Promise.resolve(undefined), put },
+      purgeTags: vi.fn(() => Promise.resolve()),
+    };
+    return { cdn, put };
   }
 
   // A blog whose posts carry a single `featured` entry-reference meta
@@ -1798,8 +1857,12 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   function cdnStub(hit?: Response) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
-    const purgeTags = vi.fn(() => Promise.resolve());
-    return { cdn: { match, put, purgeTags }, match, put };
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match, put },
+      purgeTags: vi.fn(() => Promise.resolve()),
+    };
+    return { cdn, match, put };
   }
 
   // A theme that renders any custom-archive node to a 200 so the store path
@@ -1893,10 +1956,13 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
 
 describe("dispatcher — plugin-route CDN (#1959)", () => {
   function cdnStub(hit?: Response) {
-    const match = vi.fn<ConnectedCdn["match"]>(() => Promise.resolve(hit));
-    const put = vi.fn<ConnectedCdn["put"]>(() => Promise.resolve());
-    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
-    const cdn: ConnectedCdn = { match, put, purgeTags };
+    const match = vi.fn<CdnStore["match"]>(() => Promise.resolve(hit));
+    const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match, put },
+      purgeTags: vi.fn(() => Promise.resolve()),
+    };
     return { cdn, match, put };
   }
 
@@ -2393,10 +2459,13 @@ describe("dispatcher — telemetry consumers", () => {
     const snapshots: TelemetrySnapshot[] = [];
     const store = new Map<string, Response>();
     const cdn: ConnectedCdn = {
-      match: (req) => Promise.resolve(store.get(req.url)?.clone()),
-      put: (req, res) => {
-        store.set(req.url, res);
-        return Promise.resolve();
+      decorate: (response) => response,
+      store: {
+        match: (req) => Promise.resolve(store.get(req.url)?.clone()),
+        put: (req, res) => {
+          store.set(req.url, res);
+          return Promise.resolve();
+        },
       },
       purgeTags: () => Promise.resolve(),
     };
@@ -2424,9 +2493,23 @@ describe("dispatcher — telemetry consumers", () => {
 
     const decisions = snapshots.map((s) => s.records.cdn?.map((r) => r.data));
     expect(decisions).toEqual([
-      [{ decision: "miss", stored: true, segment: "anonymous" }],
-      [{ decision: "hit", segment: "anonymous" }],
-      [{ decision: "bypass", reason: "private", segment: "private" }],
+      [
+        {
+          decision: "miss",
+          stored: true,
+          segment: "anonymous",
+          originStore: true,
+        },
+      ],
+      [{ decision: "hit", segment: "anonymous", originStore: true }],
+      [
+        {
+          decision: "bypass",
+          reason: "private",
+          segment: "private",
+          originStore: true,
+        },
+      ],
     ]);
 
     // The lookup/store latency itself is spanned (#1494): the miss carries

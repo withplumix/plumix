@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { ConnectedCdn } from "../runtime/slots.js";
+import type { CdnStore, ConnectedCdn } from "../runtime/slots.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { definePlugin } from "../plugin/define.js";
@@ -138,10 +138,14 @@ describe("public route dispatch", () => {
 
 describe("public route dispatch — CDN", () => {
   function cdnStub(hit?: Response) {
-    const match = vi.fn<ConnectedCdn["match"]>(() => Promise.resolve(hit));
-    const put = vi.fn<ConnectedCdn["put"]>(() => Promise.resolve());
-    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
-    return { cdn: { match, put, purgeTags }, match, put };
+    const match = vi.fn<CdnStore["match"]>(() => Promise.resolve(hit));
+    const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match, put },
+      purgeTags: vi.fn(() => Promise.resolve()),
+    };
+    return { cdn, match, put };
   }
 
   // What the sitemap will be: one document for every visitor, tagged with the

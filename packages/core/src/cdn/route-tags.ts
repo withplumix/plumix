@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { RequestMemo } from "../context/memo.js";
+import { normalizeTag } from "./tags.js";
 
 // Per-request tag accumulator for a `cacheable: true` plugin route. The
 // handler names what its response depends on while it runs; the read-through
@@ -30,7 +31,7 @@ export function tagCdnEntry(ctx: AppContext, tags: readonly string[]): void {
     set = new Set();
     pending.set(ctx.memo, set);
   }
-  for (const tag of tags) set.add(tag);
+  for (const tag of tags) set.add(normalizeTag(tag));
 }
 
 /** What the handler declared, for the store that is about to happen. */
