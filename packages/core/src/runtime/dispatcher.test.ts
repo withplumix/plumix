@@ -15,10 +15,10 @@ import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
-import type { ConnectedCache } from "./slots.js";
+import type { ConnectedCdn } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
-import { tagCacheEntry } from "../cache/route-tags.js";
-import { entryPurgeTags } from "../cache/tags.js";
+import { tagCdnEntry } from "../cdn/route-tags.js";
+import { entryPurgeTags } from "../cdn/tags.js";
 import { getContext } from "../context/stores.js";
 import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
@@ -1647,17 +1647,17 @@ describe("dispatcher — imageDelivery slot wiring", () => {
   });
 });
 
-describe("dispatcher — public read-through edge cache", () => {
-  function cacheStub(hit?: Response) {
+describe("dispatcher — public read-through CDN", () => {
+  function cdnStub(hit?: Response) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
     const purgeTags = vi.fn(() => Promise.resolve());
-    return { cache: { match, put, purgeTags }, match, put };
+    return { cdn: { match, put, purgeTags }, match, put };
   }
 
-  test("a cacheable public GET is served from the edge cache on a hit", async () => {
-    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
-    const h = await createDispatcherHarness({ cache });
+  test("a cacheable public GET is served from the CDN on a hit", async () => {
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cdn });
 
     const response = await h.dispatch(new Request("https://cms.example/"));
 
@@ -1666,17 +1666,17 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 
   test("a cacheable public GET stores the rendered response on a miss", async () => {
-    const { cache, put } = cacheStub();
-    const h = await createDispatcherHarness({ cache });
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({ cdn });
 
     await h.dispatch(new Request("https://cms.example/"));
 
     expect(put).toHaveBeenCalledOnce();
   });
 
-  test("a request carrying the session cookie bypasses the cache", async () => {
-    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
-    const h = await createDispatcherHarness({ cache });
+  test("a request carrying the session cookie bypasses the CDN", async () => {
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cdn });
 
     const response = await h.dispatch(
       new Request("https://cms.example/", {
@@ -1688,9 +1688,9 @@ describe("dispatcher — public read-through edge cache", () => {
     expect(match).not.toHaveBeenCalled();
   });
 
-  test("a request carrying a ?preview= draft grant bypasses the cache", async () => {
-    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
-    const h = await createDispatcherHarness({ cache });
+  test("a request carrying a ?preview= draft grant bypasses the CDN", async () => {
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ cdn });
 
     const response = await h.dispatch(
       new Request("https://cms.example/?preview=some-token"),
@@ -1701,12 +1701,12 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 });
 
-describe("dispatcher — embedded reference cache tags (#1508)", () => {
-  function cacheStub() {
+describe("dispatcher — embedded reference CDN tags (#1508)", () => {
+  function cdnStub() {
     const match = vi.fn(() => Promise.resolve(undefined));
     const put = vi.fn(() => Promise.resolve());
     const purgeTags = vi.fn(() => Promise.resolve());
-    return { cache: { match, put, purgeTags }, put };
+    return { cdn: { match, put, purgeTags }, put };
   }
 
   // A blog whose posts carry a single `featured` entry-reference meta
@@ -1729,10 +1729,10 @@ describe("dispatcher — embedded reference cache tags (#1508)", () => {
   });
 
   test("a permalink embedding a referenced entry carries that entity's tag", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [featuringBlog],
-      cache,
+      cdn,
     });
     const author = await h.seedUser("admin");
     const featured = await h.factory.entry.create({
@@ -1770,10 +1770,10 @@ describe("dispatcher — embedded reference cache tags (#1508)", () => {
   });
 
   test("a permalink embedding nothing is tagged exactly as before", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [featuringBlog],
-      cache,
+      cdn,
     });
     const author = await h.seedUser("admin");
     const plain = await h.factory.entry.create({
@@ -1794,12 +1794,12 @@ describe("dispatcher — embedded reference cache tags (#1508)", () => {
   });
 });
 
-describe("dispatcher — custom-archive edge cache (#1693)", () => {
-  function cacheStub(hit?: Response) {
+describe("dispatcher — custom-archive CDN (#1693)", () => {
+  function cdnStub(hit?: Response) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
     const purgeTags = vi.fn(() => Promise.resolve());
-    return { cache: { match, put, purgeTags }, match, put };
+    return { cdn: { match, put, purgeTags }, match, put };
   }
 
   // A theme that renders any custom-archive node to a 200 so the store path
@@ -1840,11 +1840,11 @@ describe("dispatcher — custom-archive edge cache (#1693)", () => {
   });
 
   test("stores an opted-in custom archive's rendered response on a miss", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [cacheableSchools],
       theme: customTheme,
-      cache,
+      cdn,
     });
 
     const response = await h.dispatch(
@@ -1857,11 +1857,11 @@ describe("dispatcher — custom-archive edge cache (#1693)", () => {
   });
 
   test("stores it under the type tags the resolver contributed", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [cacheableSchools],
       theme: customTheme,
-      cache,
+      cdn,
     });
 
     await h.dispatch(new Request("https://cms.example/schools/london"));
@@ -1873,11 +1873,11 @@ describe("dispatcher — custom-archive edge cache (#1693)", () => {
   });
 
   test("bypasses a custom archive that did not opt into caching", async () => {
-    const { cache, match, put } = cacheStub();
+    const { cdn, match, put } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [uncachedSchools],
       theme: customTheme,
-      cache,
+      cdn,
     });
 
     const response = await h.dispatch(
@@ -1891,18 +1891,16 @@ describe("dispatcher — custom-archive edge cache (#1693)", () => {
   });
 });
 
-describe("dispatcher — plugin-route edge cache (#1959)", () => {
-  function cacheStub(hit?: Response) {
-    const match = vi.fn<ConnectedCache["match"]>(() => Promise.resolve(hit));
-    const put = vi.fn<ConnectedCache["put"]>(() => Promise.resolve());
-    const purgeTags = vi.fn<ConnectedCache["purgeTags"]>(() =>
-      Promise.resolve(),
-    );
-    const cache: ConnectedCache = { match, put, purgeTags };
-    return { cache, match, put };
+describe("dispatcher — plugin-route CDN (#1959)", () => {
+  function cdnStub(hit?: Response) {
+    const match = vi.fn<ConnectedCdn["match"]>(() => Promise.resolve(hit));
+    const put = vi.fn<ConnectedCdn["put"]>(() => Promise.resolve());
+    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
+    const cdn: ConnectedCdn = { match, put, purgeTags };
+    return { cdn, match, put };
   }
 
-  // A content-addressed asset: it opts into the edge cache and declares its own
+  // A content-addressed asset: it opts into the CDN and declares its own
   // immutable freshness, which the provider keeps.
   const cards = definePlugin("og", (ctx) => {
     ctx.registerRoute({
@@ -1929,8 +1927,8 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
   });
 
   test("stores an opted-in plugin route's response on a miss", async () => {
-    const { cache, put } = cacheStub();
-    const h = await createDispatcherHarness({ plugins: [cards], cache });
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({ plugins: [cards], cdn });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -1947,8 +1945,8 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
   });
 
   test("serves the stored response on a subsequent request", async () => {
-    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
-    const h = await createDispatcherHarness({ plugins: [cards], cache });
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ plugins: [cards], cdn });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -1959,7 +1957,7 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
   });
 
   test("a write method through a cacheable route runs the handler live", async () => {
-    const { cache, match, put } = cacheStub(
+    const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
     );
     // `method: "*"` is the only registration that lets a non-GET reach an
@@ -1973,7 +1971,7 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
         handler: () => new Response("REBUILT", { status: 200 }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [anyMethod], cache });
+    const h = await createDispatcherHarness({ plugins: [anyMethod], cdn });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "POST" }),
@@ -1985,7 +1983,7 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  test("an opted-in route runs live when the deploy bound no cache", async () => {
+  test("an opted-in route runs live when the deploy bound no CDN", async () => {
     const h = await createDispatcherHarness({ plugins: [cards] });
 
     const response = await h.dispatch(
@@ -1997,7 +1995,7 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
   });
 
   test("stores under the tags the handler declared while it ran", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     // What a card route does: it resolves the entry it is answering for, then
     // names that entry in the vocabulary the publish purge already sweeps.
     const taggedCards = definePlugin("og", (ctx) => {
@@ -2007,12 +2005,12 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
         auth: "public",
         cacheable: true,
         handler: (_request, appCtx) => {
-          tagCacheEntry(appCtx, entryPurgeTags("post", 7));
+          tagCdnEntry(appCtx, entryPurgeTags("post", 7));
           return new Response("PNG", { status: 200 });
         },
       });
     });
-    const h = await createDispatcherHarness({ plugins: [taggedCards], cache });
+    const h = await createDispatcherHarness({ plugins: [taggedCards], cdn });
 
     await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -2022,13 +2020,13 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
     expect(put.mock.calls[0]?.[2]).toEqual(["t:post", "e:7"]);
   });
 
-  test("a route that did not opt in never touches the cache", async () => {
-    const { cache, match, put } = cacheStub(
+  test("a route that did not opt in never touches the CDN", async () => {
+    const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
     );
     const h = await createDispatcherHarness({
       plugins: [uncachedCards],
-      cache,
+      cdn,
     });
 
     const response = await h.dispatch(
@@ -2391,10 +2389,10 @@ describe("dispatcher — telemetry consumers", () => {
     });
   });
 
-  test("edge-cache decisions land in the snapshot as records: miss, hit, bypass with reason", async () => {
+  test("CDN decisions land in the snapshot as records: miss, hit, bypass with reason", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const store = new Map<string, Response>();
-    const cache: ConnectedCache = {
+    const cdn: ConnectedCdn = {
       match: (req) => Promise.resolve(store.get(req.url)?.clone()),
       put: (req, res) => {
         store.set(req.url, res);
@@ -2403,7 +2401,7 @@ describe("dispatcher — telemetry consumers", () => {
       purgeTags: () => Promise.resolve(),
     };
     const h = await createDispatcherHarness({
-      cache,
+      cdn,
       telemetry: {
         consumers: [
           { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
@@ -2416,7 +2414,7 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
     await h.dispatch(new Request("https://cms.example/"));
     await h.drainDeferred();
-    // A session cookie makes an un-policied request `private`: the shared cache
+    // A session cookie makes an un-policied request `private`: the shared CDN
     // is bypassed, and the resolved segment is stamped on every decision.
     const user = await h.seedUser("admin");
     await h.dispatch(
@@ -2424,7 +2422,7 @@ describe("dispatcher — telemetry consumers", () => {
     );
     await h.drainDeferred();
 
-    const decisions = snapshots.map((s) => s.records.cache?.map((r) => r.data));
+    const decisions = snapshots.map((s) => s.records.cdn?.map((r) => r.data));
     expect(decisions).toEqual([
       [{ decision: "miss", stored: true, segment: "anonymous" }],
       [{ decision: "hit", segment: "anonymous" }],
@@ -2432,15 +2430,15 @@ describe("dispatcher — telemetry consumers", () => {
     ]);
 
     // The lookup/store latency itself is spanned (#1494): the miss carries
-    // `cache: match` + `cache: put`, the hit just `cache: match` with the
+    // `cdn: match` + `cdn: put`, the hit just `cdn: match` with the
     // outcome stamped.
     const spanNames = snapshots.map((s) =>
       flattenSpans(s.spans)
         .map((span) => span.name)
-        .filter((name) => name.startsWith("cache: ")),
+        .filter((name) => name.startsWith("cdn: ")),
     );
-    expect(spanNames[0]).toEqual(["cache: match", "cache: put"]);
-    expect(spanNames[1]).toEqual(["cache: match"]);
+    expect(spanNames[0]).toEqual(["cdn: match", "cdn: put"]);
+    expect(spanNames[1]).toEqual(["cdn: match"]);
   });
 
   test("an admin RPC call produces an rpc procedure span in the snapshot", async () => {

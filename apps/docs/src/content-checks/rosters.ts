@@ -180,7 +180,7 @@ const CONFIG_OPTIONS = [
   "storage",
   "imageDelivery",
   "kv",
-  "cache",
+  "cdn",
   "mailer",
   "theme",
   "plugins",

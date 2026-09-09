@@ -1,6 +1,6 @@
 import type {
   AnyPluginDescriptor,
-  ConnectedCache,
+  ConnectedCdn,
   JsonValue,
   Logger,
 } from "plumix";
@@ -142,7 +142,7 @@ function settingsSaver(group: string): AnyPluginDescriptor {
 function createHarness(
   plugins: readonly AnyPluginDescriptor[] = [blogPlugin],
   options: {
-    readonly cache?: ConnectedCache;
+    readonly cdn?: ConnectedCdn;
     readonly basePath?: string;
     readonly logger?: Logger;
   } = {},
@@ -434,23 +434,21 @@ describe("seo:sitemap:urls", () => {
 });
 
 describe("a sitemap at the edge", () => {
-  function edgeStub() {
+  function cdnStub() {
     const store = new Map<string, Response>();
-    const put = vi.fn<ConnectedCache["put"]>((request, response) => {
+    const put = vi.fn<ConnectedCdn["put"]>((request, response) => {
       store.set(request.url, response);
       return Promise.resolve();
     });
-    const match = vi.fn<ConnectedCache["match"]>((request) =>
+    const match = vi.fn<ConnectedCdn["match"]>((request) =>
       Promise.resolve(store.get(request.url)?.clone()),
     );
-    const purgeTags = vi.fn<ConnectedCache["purgeTags"]>(() =>
-      Promise.resolve(),
-    );
-    return { cache: { match, put, purgeTags }, match, put, purgeTags };
+    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
+    return { cdn: { match, put, purgeTags }, match, put, purgeTags };
   }
 
   function tagsFor(
-    put: ReturnType<typeof edgeStub>["put"],
+    put: ReturnType<typeof cdnStub>["put"],
     path: string,
   ): readonly string[] {
     const call = put.mock.calls.find(
@@ -460,8 +458,8 @@ describe("a sitemap at the edge", () => {
   }
 
   test("stores each scope under its own type tag, so a publish retires only that scope", async () => {
-    const { cache, put } = edgeStub();
-    const h = await createHarness([taxonomyPlugin], { cache });
+    const { cdn, put } = cdnStub();
+    const h = await createHarness([taxonomyPlugin], { cdn });
     await seedPost(h);
 
     await bodyOf(h, "/sitemap-post-1.xml");
@@ -486,8 +484,8 @@ describe("a sitemap at the edge", () => {
   });
 
   test("declares a shared freshness window and serves the next request from the edge", async () => {
-    const { cache, match, put } = edgeStub();
-    const h = await createHarness([blogPlugin], { cache });
+    const { cdn, match, put } = cdnStub();
+    const h = await createHarness([blogPlugin], { cdn });
     await seedPost(h);
 
     const first = await h.dispatch(
@@ -509,7 +507,7 @@ describe("a sitemap at the edge", () => {
 
   // Every SEO group rewrites something a cached response already says, so a
   // save retires the sitemap set and the content pages of every registered
-  // type — the latter by type tag, since the cache has no site-wide one.
+  // type — the latter by type tag, since the cdn has no site-wide one.
   test.each([
     ["the plugin's own group", "seo", true],
     ["the verification group", "seo_verification", true],
@@ -519,9 +517,9 @@ describe("a sitemap at the edge", () => {
   ])(
     "a settings save on %s %s the cached set",
     async (_label, group, purged) => {
-      const { cache, purgeTags } = edgeStub();
+      const { cdn, purgeTags } = cdnStub();
       const h = await createHarness([blogPlugin, settingsSaver(group)], {
-        cache,
+        cdn,
       });
 
       await h.dispatch(new Request("https://cms.example/fire-settings-change"));
@@ -533,7 +531,7 @@ describe("a sitemap at the edge", () => {
     },
   );
 
-  test("with no cache configured the sitemap still serves, generated per request", async () => {
+  test("with no cdn configured the sitemap still serves, generated per request", async () => {
     const h = await createHarness();
     await seedPost(h);
 

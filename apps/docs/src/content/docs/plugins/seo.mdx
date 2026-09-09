@@ -375,11 +375,11 @@ ctx.registerArchiveType("event-series", {
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the edge cache when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all.
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all.
 
 A scope with no tags to contribute rides the one-hour window instead of a purge: a taxonomy registered with no `entryTypes` has none to name, and so does an archive whose `sitemap` omits `tags`. Declare `tags` on an archive whose content changes more often than that.
 
-With no edge cache configured, every sitemap is generated per request.
+With no CDN configured, every sitemap is generated per request.
 
 ## llms.txt
 

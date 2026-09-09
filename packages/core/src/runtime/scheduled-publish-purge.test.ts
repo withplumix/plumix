@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
-import { registerCorePurgeInvalidator } from "../cache/purge.js";
+import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import { createRequestMemo } from "../context/memo.js";
 import { requestStore } from "../context/stores.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
@@ -21,10 +21,10 @@ const silentLogger = {
 };
 
 // End-to-end proof of the composed path: the `publish-scheduled` cron task →
-// `entry:published` → the edge-cache purge subscriber → the flush at the end
+// `entry:published` → the CDN purge subscriber → the flush at the end
 // of `runScheduledTasks`. Each piece is unit-tested elsewhere; this guards
-// that they're actually wired together so a scheduled publish purges the edge.
-describe("scheduled publish purges the edge cache", () => {
+// that they're actually wired together so a scheduled publish purges the CDN.
+describe("scheduled publish purges the CDN", () => {
   it("fires one purge for the published entry's tags", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({ role: "admin" });
@@ -48,7 +48,7 @@ describe("scheduled publish purges the edge cache", () => {
       db,
       hooks,
       plugins: registry,
-      cache: { match: vi.fn(), put: vi.fn(), purgeTags },
+      cdn: { match: vi.fn(), put: vi.fn(), purgeTags },
       memo: createRequestMemo(),
       telemetry: NOOP_TELEMETRY,
       defer: (p: Promise<unknown>) => {
@@ -65,7 +65,7 @@ describe("scheduled publish purges the edge cache", () => {
     expect(purgeTags).toHaveBeenCalledWith(["t:post", `e:${String(due.id)}`]);
   });
 
-  it("does not purge when no cache is configured", async () => {
+  it("does not purge when no cdn is configured", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({ role: "admin" });
     await entryFactory.transient({ db }).create({
@@ -90,7 +90,7 @@ describe("scheduled publish purges the edge cache", () => {
       db,
       hooks,
       plugins: registry,
-      cache: undefined,
+      cdn: undefined,
       telemetry: NOOP_TELEMETRY,
       defer,
       logger: silentLogger,

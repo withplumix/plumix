@@ -15,7 +15,7 @@ function ctxWith(overrides: Partial<AppContext>): AppContext {
     basePath: "",
     siteName: "Demo",
     locale: { code: "en", direction: "ltr" },
-    cache: undefined,
+    cdn: undefined,
     storage: undefined,
     mailer: undefined,
     imageDelivery: undefined,

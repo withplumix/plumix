@@ -14,7 +14,7 @@ const BASE_CONTEXT: DebugContext = {
   tokenScopes: null,
   siteName: null,
   locale: { code: "en", direction: "ltr" },
-  slots: { cache: false, storage: false, mailer: false, images: false },
+  slots: { cdn: false, storage: false, mailer: false, images: false },
   plugins: { ids: [], entryTypes: [], termTaxonomies: [] },
 };
 

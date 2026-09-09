@@ -1,6 +1,6 @@
 import type {
   AnyPluginDescriptor,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedObjectStorage,
   I18nInput,
   ImageDelivery,
@@ -140,8 +140,8 @@ export interface HarnessOptions extends OgPluginOptions {
    * `null` for a deploy that declared no storage at all.
    */
   readonly storage?: ConnectedObjectStorage | null;
-  /** The edge cache the deploy bound; omitted, the route runs live. */
-  readonly cache?: ConnectedCache;
+  /** The CDN the deploy bound; omitted, the route runs live. */
+  readonly cdn?: ConnectedCdn;
   readonly withSiteTitle?: boolean;
   readonly assets?: { fetch: (request: Request) => Promise<Response> };
   /** Seeds the SEO plugin's default image, the last link of the chain. */
@@ -180,7 +180,7 @@ export async function createHarness(
 ): Promise<DispatcherHarness> {
   const {
     storage,
-    cache,
+    cdn,
     withSiteTitle = true,
     assets,
     siteDefaultImage,
@@ -203,7 +203,7 @@ export async function createHarness(
       og({ renderer: createFakeRenderer().renderer, ...rest }),
     ],
     storage: storage === null ? undefined : (storage ?? bucket()),
-    cache,
+    cdn,
     assets,
     basePath,
     i18n,

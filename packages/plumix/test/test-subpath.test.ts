@@ -28,7 +28,7 @@ import {
 } from "plumix/test";
 import {
   describeAssetsContract,
-  describeCacheContract,
+  describeCdnContract,
   describeKvContract,
   describeObjectStorageContract,
 } from "plumix/test/conformance";
@@ -82,7 +82,7 @@ describe("plumix/test/conformance subpath", () => {
     for (const suite of [
       describeKvContract,
       describeObjectStorageContract,
-      describeCacheContract,
+      describeCdnContract,
       describeAssetsContract,
     ]) {
       expect(suite).toBeTypeOf("function");

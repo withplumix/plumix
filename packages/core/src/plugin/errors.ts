@@ -136,7 +136,7 @@ export class PluginContextError extends Error {
   }): PluginContextError {
     return new PluginContextError(
       "cacheable_route_not_public",
-      `Plugin "${ctx.pluginId}" route ${ctx.method} ${ctx.path} is not public, so it cannot be cacheable — a gated response would be served from the shared cache to everyone.`,
+      `Plugin "${ctx.pluginId}" route ${ctx.method} ${ctx.path} is not public, so it cannot be cacheable — a gated response would be served from the shared CDN to everyone.`,
       { pluginId: ctx.pluginId, kind: ctx.method, path: ctx.path },
     );
   }

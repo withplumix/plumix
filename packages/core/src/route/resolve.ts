@@ -12,7 +12,7 @@ import type { EntryData, SearchData } from "./render/resolved-entry.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
-import { accumulateEmbeddedTags } from "../cache/embedded-tags.js";
+import { accumulateEmbeddedTags } from "../cdn/embedded-tags.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";

@@ -3,21 +3,21 @@ import { describe, expect, test } from "vitest";
 import type { Mailer } from "../auth/mailer/types.js";
 import type {
   AssetsBinding,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
 } from "../runtime/slots.js";
 import { createTelemetryCollector } from "./collector.js";
 import {
   traceAssets,
-  traceCache,
+  traceCdn,
   traceKv,
   traceMailer,
   traceStorage,
 } from "./traced-slots.js";
 
-describe("traceCache", () => {
-  function stub(hit?: Response): ConnectedCache {
+describe("traceCdn", () => {
+  function stub(hit?: Response): ConnectedCdn {
     return {
       match: () => Promise.resolve(hit),
       put: () => Promise.resolve(),
@@ -25,45 +25,45 @@ describe("traceCache", () => {
     };
   }
 
-  test("match produces a `cache: match` span carrying the hit/miss outcome", async () => {
+  test("match produces a `cdn: match` span carrying the hit/miss outcome", async () => {
     const telemetry = createTelemetryCollector();
-    const cache = traceCache(stub(new Response("hit")), () => telemetry);
+    const cdn = traceCdn(stub(new Response("hit")), () => telemetry);
 
-    const result = await cache.match(new Request("https://cms.example/"));
+    const result = await cdn.match(new Request("https://cms.example/"));
 
     expect(await result?.text()).toBe("hit");
     const [span] = telemetry.getSpans();
-    expect(span?.name).toBe("cache: match");
-    expect(span?.attributes["cache.hit"]).toBe(true);
+    expect(span?.name).toBe("cdn: match");
+    expect(span?.attributes["cdn.hit"]).toBe(true);
   });
 
-  test("a miss stamps cache.hit false", async () => {
+  test("a miss stamps cdn.hit false", async () => {
     const telemetry = createTelemetryCollector();
-    const cache = traceCache(stub(), () => telemetry);
+    const cdn = traceCdn(stub(), () => telemetry);
 
-    await cache.match(new Request("https://cms.example/"));
+    await cdn.match(new Request("https://cms.example/"));
 
-    expect(telemetry.getSpans()[0]?.attributes["cache.hit"]).toBe(false);
+    expect(telemetry.getSpans()[0]?.attributes["cdn.hit"]).toBe(false);
   });
 
-  test("put produces a `cache: put` span carrying the tags", async () => {
+  test("put produces a `cdn: put` span carrying the tags", async () => {
     const telemetry = createTelemetryCollector();
-    const cache = traceCache(stub(), () => telemetry);
+    const cdn = traceCdn(stub(), () => telemetry);
 
-    await cache.put(new Request("https://cms.example/"), new Response("x"), [
+    await cdn.put(new Request("https://cms.example/"), new Response("x"), [
       "t:post",
       "e:1",
     ]);
 
     const [span] = telemetry.getSpans();
-    expect(span?.name).toBe("cache: put");
-    expect(span?.attributes["cache.tags"]).toEqual(["t:post", "e:1"]);
+    expect(span?.name).toBe("cdn: put");
+    expect(span?.attributes["cdn.tags"]).toEqual(["t:post", "e:1"]);
   });
 
   test("purgeTags passes through unspanned — it runs post-response, outside the snapshot", async () => {
     const telemetry = createTelemetryCollector();
     const purged: (readonly string[])[] = [];
-    const cache = traceCache(
+    const cdn = traceCdn(
       {
         ...stub(),
         purgeTags: (tags) => (purged.push(tags), Promise.resolve()),
@@ -71,7 +71,7 @@ describe("traceCache", () => {
       () => telemetry,
     );
 
-    await cache.purgeTags(["t:post"]);
+    await cdn.purgeTags(["t:post"]);
 
     expect(purged).toEqual([["t:post"]]);
     expect(telemetry.getSpans()).toEqual([]);

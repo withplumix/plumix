@@ -140,7 +140,7 @@ function collectAppFacts(ctx: AppContext): DevErrorFact[] {
     { label: "Locale", value: `${ctx.locale.code} (${ctx.locale.direction})` },
     {
       label: "Slots",
-      value: `cache ${wired(ctx.cache)}, storage ${wired(ctx.storage)}, mailer ${wired(ctx.mailer)}, images ${wired(ctx.imageDelivery)}`,
+      value: `cdn ${wired(ctx.cdn)}, storage ${wired(ctx.storage)}, mailer ${wired(ctx.mailer)}, images ${wired(ctx.imageDelivery)}`,
     },
     { label: "Plugins", value: ctx.plugins.pluginIds.join(", ") || "—" },
     { label: "Entry types", value: listKeys(ctx.plugins.entryTypes) },

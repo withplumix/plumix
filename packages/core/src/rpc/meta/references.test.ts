@@ -5,7 +5,7 @@ import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../plugin/manifest.js";
-import { embeddedPageTags } from "../../cache/embedded-tags.js";
+import { embeddedPageTags } from "../../cdn/embedded-tags.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
 import {
   adminUser,

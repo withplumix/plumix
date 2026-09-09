@@ -29,7 +29,7 @@ import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type {
   AssetsBinding,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
   ImageDelivery,
@@ -56,7 +56,7 @@ import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
 import {
   traceAssets,
-  traceCache,
+  traceCdn,
   traceKv,
   traceMailer,
   traceStorage,
@@ -277,12 +277,12 @@ export interface AppContextBase<
    */
   readonly storage?: ConnectedObjectStorage;
   /**
-   * Bound edge cache for this request, when the config declared a `cache:`
+   * Bound CDN for this request, when the config declared a `cdn:`
    * slot and the runtime connected it (zone credentials present). The
    * dispatcher's public-route path reads/writes through this; `undefined`
    * means caching is off and every public page renders live.
    */
-  readonly cache?: ConnectedCache;
+  readonly cdn?: ConnectedCdn;
   /**
    * Bound key/value store for this request, when the config declared a `kv:`
    * slot and the runtime adapter connected it. Plugin handlers read/write via
@@ -419,7 +419,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly defer?: DeferFn;
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
-  readonly cache?: ConnectedCache;
+  readonly cdn?: ConnectedCdn;
   readonly kv?: ConnectedKv;
   readonly imageDelivery?: ImageDelivery;
   readonly imageRemotePatterns?: readonly RemotePattern[];
@@ -540,7 +540,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // read `base.telemetry` per call like `fetch` below.
     assets: args.assets && traceAssets(args.assets, () => base.telemetry),
     storage: args.storage && traceStorage(args.storage, () => base.telemetry),
-    cache: args.cache && traceCache(args.cache, () => base.telemetry),
+    cdn: args.cdn && traceCdn(args.cdn, () => base.telemetry),
     kv: args.kv && traceKv(args.kv, () => base.telemetry),
     imageDelivery: args.imageDelivery,
     imageRemotePatterns: args.imageRemotePatterns,

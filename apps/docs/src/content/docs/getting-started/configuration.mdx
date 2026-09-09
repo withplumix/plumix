@@ -49,7 +49,7 @@ export default plumix({
 
 One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt.
 
-Every slot below is optional unless it appears under "Required slots". Leaving one out is a decision with a consequence rather than an oversight. With no `cache` slot every public page renders live; with no `storage` slot there is nowhere for uploads to go; with no `mcp` or `api` block the dispatcher returns 404 for those paths before it imports either handler graph.
+Every slot below is optional unless it appears under "Required slots". Leaving one out is a decision with a consequence rather than an oversight. With no `cdn` slot every public page renders live; with no `storage` slot there is nowhere for uploads to go; with no `mcp` or `api` block the dispatcher returns 404 for those paths before it imports either handler graph.
 
 ## Secrets and EnvInput
 
@@ -185,17 +185,17 @@ import { kv } from "@plumix/runtime-cloudflare";
 export const kvStore = kv({ binding: "KV" });
 ```
 
-### cache
+### cdn
 
-The read-through edge cache for anonymous public renders. `ttl` is the freshness window in seconds and `staleWhileRevalidate` is how long a stale copy may still be served while a fresh one is fetched.
+The read-through CDN for anonymous public renders. `ttl` is the freshness window in seconds and `staleWhileRevalidate` is how long a stale copy may still be served while a fresh one is fetched.
 
 ```ts no-typecheck
 import { edge } from "@plumix/runtime-cloudflare";
 
-export const cache = edge({ ttl: 3600, staleWhileRevalidate: 86400 });
+export const cdn = edge({ ttl: 3600, staleWhileRevalidate: 86400 });
 ```
 
-`edge()` disables itself when the deploy lacks the zone id and purge token it needs, because a cache that cannot purge would serve a stale recipe forever. That is why the cache is inert on a `workers.dev` host and live on a zone.
+`edge()` disables itself when the deploy lacks the zone id and purge token it needs, because a CDN that cannot purge would serve a stale recipe forever. That is why the CDN is inert on a `workers.dev` host and live on a zone.
 
 ### mailer
 

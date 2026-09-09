@@ -160,10 +160,10 @@ Three adapters look for particular env keys, and not in the same way. For `r2()`
 | `CF_ACCOUNT_ID`             | `r2()`                                       | Presigned uploads stay off                                        |
 | `R2_ACCESS_KEY_ID`          | `r2()`                                       | Presigned uploads stay off                                        |
 | `R2_SECRET_ACCESS_KEY`      | `r2()`                                       | Presigned uploads stay off                                        |
-| `CF_ZONE_ID`                | `edge()`                                     | The edge cache stays off and pages render live                    |
-| `CF_CACHE_PURGE_TOKEN`      | `edge()`                                     | The edge cache stays off and pages render live                    |
+| `CF_ZONE_ID`                | `edge()`                                     | The edge CDN stays off and pages render live                      |
+| `CF_CACHE_PURGE_TOKEN`      | `edge()`                                     | The edge CDN stays off and pages render live                      |
 
-The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `edge()` behaves the same way with its pair, which is what makes the cache slot safe to leave in the config of a `workers.dev` deploy.
+The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `edge()` behaves the same way with its pair, which is what makes the cdn slot safe to leave in the config of a `workers.dev` deploy.
 
 Passing the value in config beats the env key, for the two adapters that offer the choice. `r2({ publicUrlBase })` and `images({ zone })` both win over what the env carries. `edge()` has no such option, so `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` have to be on the env.
 

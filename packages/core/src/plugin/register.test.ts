@@ -703,7 +703,7 @@ describe("registerRoute", () => {
     ]);
   });
 
-  test("carries the edge-cache opt-in onto the registered route", async () => {
+  test("carries the CDN opt-in onto the registered route", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("og", (ctx) => {
       ctx.registerRoute({
@@ -718,7 +718,7 @@ describe("registerRoute", () => {
     expect(registry.rawRoutes[0]?.cacheable).toBe(true);
   });
 
-  test("rejects the edge-cache opt-in on a route that is not public", async () => {
+  test("rejects the CDN opt-in on a route that is not public", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("og", (ctx) => {
       ctx.registerRoute({
@@ -737,7 +737,7 @@ describe("registerRoute", () => {
   // Load-bearing beyond consistency: the dispatcher's read-through happens
   // *outside* the per-route auth gate, so a cacheable dev route would serve a
   // stored answer to an off-loopback request without the gate ever running.
-  test("rejects the edge-cache opt-in on a development route", async () => {
+  test("rejects the CDN opt-in on a development route", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("og", (ctx) => {
       ctx.registerRoute({

@@ -2,15 +2,15 @@ import type { Segment } from "../access/policy.js";
 import type { DeferFn } from "../context/app.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { RouteIntent } from "../route/intent.js";
-import type { ConnectedCache } from "../runtime/slots.js";
+import type { ConnectedCdn } from "../runtime/slots.js";
 import {
-  cacheBypassReason,
+  cdnBypassReason,
   methodIsCacheable,
   requestIsPrivileged,
   responseAllowsSharedStorage,
   responseIsStorable,
-  routeCacheKey,
-  segmentCacheKey,
+  routeCdnKey,
+  segmentCdnKey,
 } from "./decision.js";
 
 interface ReadThroughArgs {
@@ -18,23 +18,23 @@ interface ReadThroughArgs {
   /**
    * The resolved audience segment. It keys the cache entry (so two requests in
    * the same non-`private` segment share one) and decides participation — a
-   * `private` segment bypasses the shared cache entirely.
+   * `private` segment bypasses the shared CDN entirely.
    */
   readonly segment: Segment;
   /**
    * Resolved public route intent, or `null` when the URL matches no public
-   * route (a 404) — in which case the cache is never consulted.
+   * route (a 404) — in which case the CDN is never consulted.
    */
   readonly intentKind: RouteIntent["kind"] | null;
   /**
    * When `intentKind` is `"custom"`, whether that plugin-registered archive
-   * opted into edge caching. The dispatcher resolves it from the archive-type
+   * opted into CDN caching. The dispatcher resolves it from the archive-type
    * registry so the pure decision layer stays free of the lookup.
    */
   readonly customArchiveCacheable?: boolean;
-  readonly cache: ConnectedCache;
+  readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
-  /** Records the cache decision + reason as a durationless `cache` fact. */
+  /** Records the cache decision + reason as a durationless `cdn` fact. */
   readonly telemetry: TelemetryCollector;
   /** Renders the page live. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
@@ -46,43 +46,35 @@ interface ReadThroughArgs {
 }
 
 /**
- * Serve a public page through the edge cache: return a stored response on a
+ * Serve a public page through the CDN: return a stored response on a
  * hit, otherwise render live and store the result when it's cacheable. The
  * store runs through `defer` so it never blocks the response. Requests that
  * aren't cacheable (privileged, non-GET/HEAD, search, no route) render live
- * and touch the cache not at all.
+ * and touch the CDN not at all.
  */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const {
-    request,
-    segment,
-    intentKind,
-    cache,
-    defer,
-    telemetry,
-    render,
-    tags,
-  } = args;
+  const { request, segment, intentKind, cdn, defer, telemetry, render, tags } =
+    args;
 
   const reason =
     intentKind === null
       ? "no-route"
-      : cacheBypassReason({
+      : cdnBypassReason({
           method: request.method,
           segment,
           intentKind,
           customArchiveCacheable: args.customArchiveCacheable,
         });
   if (reason !== null) {
-    telemetry.record("cache", { decision: "bypass", reason, segment });
+    telemetry.record("cdn", { decision: "bypass", reason, segment });
     return render();
   }
 
   // The segment is a cache-key axis: two requests in the same segment collide
   // on one entry, distinct segments never do (#1740).
   return lookupOrRender({
-    key: segmentCacheKey(request, segment),
-    cache,
+    key: segmentCdnKey(request, segment),
+    cdn,
     defer,
     telemetry,
     fact: { segment },
@@ -93,7 +85,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
 
 interface ReadThroughRouteArgs {
   readonly request: Request;
-  readonly cache: ConnectedCache;
+  readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
   /** Runs the plugin's handler. Called once on a miss, never on a hit. */
@@ -106,7 +98,7 @@ interface ReadThroughRouteArgs {
 }
 
 /**
- * Serve a plugin-registered raw route through the edge cache — the read-through
+ * Serve a plugin-registered raw route through the CDN — the read-through
  * a route opts into with `registerRoute({ cacheable: true })`.
  *
  * There is no segment axis here. The opt-in is the plugin's claim that the
@@ -115,22 +107,22 @@ interface ReadThroughRouteArgs {
  * bypassing it. Freshness stays the handler's to declare: the provider keeps a
  * `cache-control` it set and falls back to the site's page TTL only when it set
  * none. Tags are the handler's too — core can't name what a raw route's
- * response depends on, but the handler can, through `tagCacheEntry` — and a
+ * response depends on, but the handler can, through `tagCdnEntry` — and a
  * handler that names none stores an entry no purge reaches.
  */
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,
 ): Promise<Response> {
-  const { request, cache, defer, telemetry, render, tags } = args;
+  const { request, cdn, defer, telemetry, render, tags } = args;
 
   if (!methodIsCacheable(request.method)) {
-    telemetry.record("cache", { decision: "bypass", reason: "method" });
+    telemetry.record("cdn", { decision: "bypass", reason: "method" });
     return render();
   }
 
   return lookupOrRender({
-    key: routeCacheKey(request),
-    cache,
+    key: routeCdnKey(request),
+    cdn,
     defer,
     telemetry,
     fact: {},
@@ -157,11 +149,11 @@ function routeResponseIsShareable(request: Request, fresh: Response): boolean {
 interface LookupArgs {
   /** The cache-key request — the axes that separate entries are folded in. */
   readonly key: Request;
-  readonly cache: ConnectedCache;
+  readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
   /**
-   * Spread into every `cache` record this lookup emits. A bag rather than a
+   * Spread into every `cdn` record this lookup emits. A bag rather than a
    * field because the route path has no segment at all, and a `segment:
    * undefined` key is not a `JsonValue`.
    */
@@ -178,20 +170,20 @@ interface LookupArgs {
 // Shared by both read-throughs, once their own bypass rules have passed. The
 // store runs through `defer` so it never blocks the response.
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
-  const { key, cache, defer, telemetry, fact, render, tags, storable } = args;
+  const { key, cdn, defer, telemetry, fact, render, tags, storable } = args;
 
-  const hit = await cache.match(key);
+  const hit = await cdn.match(key);
   if (hit) {
-    telemetry.record("cache", { ...fact, decision: "hit" });
+    telemetry.record("cdn", { ...fact, decision: "hit" });
     return hit;
   }
 
   const fresh = await render();
   const stored =
     responseIsStorable(key.method, fresh.status) && (storable?.(fresh) ?? true);
-  telemetry.record("cache", { ...fact, decision: "miss", stored });
+  telemetry.record("cdn", { ...fact, decision: "miss", stored });
   if (stored) {
-    defer(cache.put(key, fresh.clone(), tags()));
+    defer(cdn.put(key, fresh.clone(), tags()));
   }
   return fresh;
 }

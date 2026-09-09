@@ -10,13 +10,13 @@ import {
   registerCorePurgeInvalidator,
 } from "./purge.js";
 
-function fakeCtx(withCache = true) {
+function fakeCtx(withCdn = true) {
   const purgeTags = vi.fn(() => Promise.resolve());
   const defer = vi.fn((p: Promise<unknown>) => {
     void p;
   });
   const ctx = {
-    cache: withCache ? { match: vi.fn(), put: vi.fn(), purgeTags } : undefined,
+    cdn: withCdn ? { match: vi.fn(), put: vi.fn(), purgeTags } : undefined,
     defer,
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
     memo: createRequestMemo(),
@@ -60,7 +60,7 @@ describe("purge accumulator", () => {
     expect(defer).not.toHaveBeenCalled();
   });
 
-  it("is inert when no cache is configured", () => {
+  it("is inert when no cdn is configured", () => {
     const { ctx, defer } = fakeCtx(false);
     enqueuePurgeTags(ctx, ["t:post", "e:1"]);
     flushPurgeTags(ctx);

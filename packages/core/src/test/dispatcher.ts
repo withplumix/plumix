@@ -32,7 +32,7 @@ import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type {
   AssetsBinding,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
@@ -110,10 +110,10 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly storage?: ConnectedObjectStorage;
   /**
-   * Bound edge cache. Stub it in tests that exercise the public read-through
-   * path (`ctx.cache`); the dispatcher consults it for cacheable public GETs.
+   * Bound CDN. Stub it in tests that exercise the public read-through
+   * path (`ctx.cdn`); the dispatcher consults it for cacheable public GETs.
    */
-  readonly cache?: ConnectedCache;
+  readonly cdn?: ConnectedCdn;
   /**
    * Configured OAuth providers for tests exercising the start/callback
    * routes. Pass `{ github: github({ clientId, clientSecret }), google:
@@ -242,7 +242,7 @@ export interface DispatcherHarness {
   ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
   /**
    * Await everything routed through `ctx.defer` so far (telemetry snapshot
-   * delivery, edge-cache purges). Mirrors the platform's `waitUntil`: call
+   * delivery, CDN purges). Mirrors the platform's `waitUntil`: call
    * after a dispatch, before asserting on deferred side effects.
    */
   readonly drainDeferred: () => Promise<void>;
@@ -283,7 +283,7 @@ function createContextFactory(args: {
         : undefined,
       assets: options.assets,
       storage: options.storage,
-      cache: options.cache,
+      cdn: options.cdn,
       imageDelivery: app.config.imageDelivery,
       imageRemotePatterns: app.config.images?.remotePatterns,
       mailer: app.config.mailer,

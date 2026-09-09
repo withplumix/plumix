@@ -107,7 +107,7 @@ export type { EntryChange } from "./entries/change-feed.js";
 export type { EntryChangeKind } from "./db/schema/entry_changes.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
-// Edge-cache tag vocabulary (PRD #1080). Exposed so a plugin that writes
+// CDN tag vocabulary (PRD #1080). Exposed so a plugin that writes
 // directly to `ctx.db` — bypassing the entry-mutation service, so no
 // `entry:*`/`term:*` action fires — can enqueue the same coarse purge core
 // would, instead of hand-restating the `t:<type>`/`e:<id>` scheme (#1700).
@@ -116,13 +116,13 @@ export {
   entryTag,
   termPurgeTags,
   typeTag,
-} from "./cache/tags.js";
-export { enqueuePurgeTags } from "./cache/purge.js";
+} from "./cdn/tags.js";
+export { enqueuePurgeTags } from "./cdn/purge.js";
 // Exposed for a `cacheable: true` plugin route, which is the only party that
 // knows what its own response read. Core tags a page from its resolved intent;
 // a raw route has none, so it names its own tags in the same vocabulary and the
 // publish purge that clears the page clears the route's entry with it.
-export { tagCacheEntry } from "./cache/route-tags.js";
+export { tagCdnEntry } from "./cdn/route-tags.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).
@@ -229,10 +229,10 @@ export type {
 // reading the live row alone shows a published entry's pre-edit state.
 export { getAutosave } from "./revisions/repository.js";
 export type { AutosavePairInput } from "./revisions/repository.js";
-// Exposed for a `cache:` provider: which responses a shared cache may hold is
+// Exposed for a `cdn:` provider: which responses a shared cache may hold is
 // framework policy, not the runtime's, and a provider's `put` reads the same
 // rule core does when it decides whether to store at all.
-export { responseAllowsSharedStorage } from "./cache/decision.js";
+export { responseAllowsSharedStorage } from "./cdn/decision.js";
 export {
   archive,
   author,

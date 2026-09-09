@@ -2,29 +2,29 @@ import { describe, expect, it } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import { createRequestMemo } from "../context/memo.js";
-import { cacheTagsFor, tagCacheEntry } from "./route-tags.js";
+import { cdnTagsFor, tagCdnEntry } from "./route-tags.js";
 
 // Only the two fields the accumulator reads: the memo it keys on, and the
-// cache slot whose absence means nothing will ever be stored.
+// cdn slot whose absence means nothing will ever be stored.
 function context(): AppContext {
-  return { memo: createRequestMemo(), cache: {} } as unknown as AppContext;
+  return { memo: createRequestMemo(), cdn: {} } as unknown as AppContext;
 }
 
-describe("tagCacheEntry", () => {
+describe("tagCdnEntry", () => {
   it("hands the tags a handler declared to the store that follows", () => {
     const ctx = context();
 
-    tagCacheEntry(ctx, ["e:7"]);
-    tagCacheEntry(ctx, ["t:post", "e:7"]);
+    tagCdnEntry(ctx, ["e:7"]);
+    tagCdnEntry(ctx, ["t:post", "e:7"]);
 
-    expect(cacheTagsFor(ctx)).toEqual(["e:7", "t:post"]);
+    expect(cdnTagsFor(ctx)).toEqual(["e:7", "t:post"]);
   });
 
   it("keeps one request's tags out of the next request's entry", () => {
     const first = context();
-    tagCacheEntry(first, ["e:7"]);
+    tagCdnEntry(first, ["e:7"]);
 
-    expect(cacheTagsFor(context())).toEqual([]);
+    expect(cdnTagsFor(context())).toEqual([]);
   });
 
   // Core derives contexts by spreading — the base-path strip and `withUser`
@@ -34,16 +34,16 @@ describe("tagCacheEntry", () => {
     const ctx = context();
     const derived: AppContext = { ...ctx, request: new Request("https://x/") };
 
-    tagCacheEntry(derived, ["e:7"]);
+    tagCdnEntry(derived, ["e:7"]);
 
-    expect(cacheTagsFor(ctx)).toEqual(["e:7"]);
+    expect(cdnTagsFor(ctx)).toEqual(["e:7"]);
   });
 
-  it("accumulates nothing on a deploy that bound no cache", () => {
-    const ctx = { ...context(), cache: undefined };
+  it("accumulates nothing on a deploy that bound no cdn", () => {
+    const ctx = { ...context(), cdn: undefined };
 
-    tagCacheEntry(ctx, ["e:7"]);
+    tagCdnEntry(ctx, ["e:7"]);
 
-    expect(cacheTagsFor(ctx)).toEqual([]);
+    expect(cdnTagsFor(ctx)).toEqual([]);
   });
 });

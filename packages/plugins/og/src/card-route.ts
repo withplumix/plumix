@@ -4,7 +4,7 @@ import {
   buildResolvedEntries,
   resolveListingPage,
   serveRenderedAsset,
-  tagCacheEntry,
+  tagCdnEntry,
   withBasePath,
 } from "plumix";
 import { eq } from "plumix/db";
@@ -102,7 +102,7 @@ export function createCardRoute(
     const url = new URL(request.url);
     const asked = parseCardPath(url.pathname, extension);
     if (asked === null) return notFound();
-    // The whole URL is the edge cache's key, query string included, so a
+    // The whole URL is the CDN's key, query string included, so a
     // parameter a caller invents is another entry holding the same immutable
     // bytes — an unauthenticated way to mint them without bound. A card reads
     // nothing from the query, so there is nothing to keep: send it back to the
@@ -136,7 +136,7 @@ export function createCardRoute(
     // What a purge of this card names, which for an entry card is the entry
     // tag the publish hook already sweeps. Belt and braces: the URL moved with
     // the edit, so nothing that reads the old one is stale.
-    tagCacheEntry(ctx, [identity.key.tag]);
+    tagCdnEntry(ctx, [identity.key.tag]);
 
     let response: Response;
     try {

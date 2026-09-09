@@ -28,12 +28,12 @@ import { stripBasePath, withBasePath } from "../base-path.js";
 import {
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
-} from "../cache/decision.js";
-import { embeddedPageTags } from "../cache/embedded-tags.js";
-import { flushPurgeTags } from "../cache/purge.js";
-import { readThrough, readThroughRoute } from "../cache/read-through.js";
-import { cacheTagsFor } from "../cache/route-tags.js";
-import { pageTags } from "../cache/tags.js";
+} from "../cdn/decision.js";
+import { embeddedPageTags } from "../cdn/embedded-tags.js";
+import { flushPurgeTags } from "../cdn/purge.js";
+import { readThrough, readThroughRoute } from "../cdn/read-through.js";
+import { cdnTagsFor } from "../cdn/route-tags.js";
+import { pageTags } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
@@ -121,7 +121,7 @@ const STATIC_ASSET_EXT =
 
 // Cacheable because the extension check makes the path permanently
 // unroutable — a short TTL only bounds "a deploy added this asset". The
-// edge cache stores GET+200 only, so this reaches browsers/CDNs, not the
+// CDN stores GET+200 only, so this reaches browsers/CDNs, not the
 // shared read-through layer.
 function cacheableAssetNotFound(hint: string): Response {
   const response = notFound(hint);
@@ -176,7 +176,7 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
         s.set("http.response.status_code", routed.status);
         return routed;
       });
-      // Request-end seam: fire one batched edge-cache purge for whatever
+      // Request-end seam: fire one batched CDN purge for whatever
       // entry mutations this request accumulated.
       flushPurgeTags(ctx);
     } catch (error) {
@@ -570,12 +570,12 @@ async function dispatchPublicRoute(
         : "anonymous";
     }
 
-    const cache = ctx.cache;
-    // No cache binding ⇒ every render is live and the read-through is never
-    // consulted. With a cache, a `private` segment still flows through it: the
+    const cdn = ctx.cdn;
+    // No CDN binding ⇒ every render is live and the read-through is never
+    // consulted. With a CDN, a `private` segment still flows through it: the
     // read-through bypasses internally (recording the decision) and renders
     // live, so the telemetry stays uniform across cached and bypassed requests.
-    if (cache === undefined) {
+    if (cdn === undefined) {
       return await renderPublicRoute(app, ctx, url, match, segment);
     }
     const intent = publicIntent(match, url);
@@ -590,7 +590,7 @@ async function dispatchPublicRoute(
         intent?.kind === "custom"
           ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
           : undefined,
-      cache,
+      cdn,
       defer: ctx.defer,
       telemetry: ctx.telemetry,
       render: () => renderPublicRoute(app, ctx, url, match, segment),
@@ -869,24 +869,24 @@ export function matchPluginRawRoute(
   return null;
 }
 
-// A registered public route, on the same edge-cache terms as a raw route: the
+// A registered public route, on the same CDN terms as a raw route: the
 // `cacheable: true` opt-in, the handler's own tags, and a live run wherever the
-// deploy bound no cache. There is no auth gate — a route at the site root is
+// deploy bound no CDN. There is no auth gate — a route at the site root is
 // public by construction.
 function servePublicRoute(
   match: PublicRouteMatch,
   ctx: AppContext,
 ): Promise<Response> {
   const run = async () => match.route.handler(ctx.request, ctx, match.params);
-  const cache = ctx.cache;
-  if (match.route.cacheable !== true || cache === undefined) return run();
+  const cdn = ctx.cdn;
+  if (match.route.cacheable !== true || cdn === undefined) return run();
   return readThroughRoute({
     request: ctx.request,
-    cache,
+    cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: run,
-    tags: () => cacheTagsFor(ctx),
+    tags: () => cdnTagsFor(ctx),
   });
 }
 
@@ -924,34 +924,34 @@ function dispatchPluginRawRoute(
   ctx: AppContext,
 ): Promise<Response> {
   const scoped = withoutAmbientSession(route, ctx);
-  if (scoped === ctx) return cacheRawRoute(route, ctx);
+  if (scoped === ctx) return serveRawRoute(route, ctx);
   // `getContext()` is the sanctioned way to read per-request state, and for a
   // hook listener the handler fires it is the only way — a `formPost` route
   // announcing a submission is exactly that shape. Leaving the ambient context
   // un-swapped would shut the door the handler holds and leave the one behind
   // it open, so the exempt context has to be the ambient one too.
-  return requestStore.run(scoped, () => cacheRawRoute(route, scoped));
+  return requestStore.run(scoped, () => serveRawRoute(route, scoped));
 }
 
-// A raw route reaches the edge cache on its own `cacheable: true` opt-in, and
-// only where the deploy bound a cache.
-function cacheRawRoute(
+// A raw route reaches the CDN on its own `cacheable: true` opt-in, and
+// only where the deploy bound a CDN.
+function serveRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
 ): Promise<Response> {
-  const cache = ctx.cache;
-  if (route.cacheable !== true || cache === undefined) {
+  const cdn = ctx.cdn;
+  if (route.cacheable !== true || cdn === undefined) {
     return runPluginRawRoute(route, ctx);
   }
   return readThroughRoute({
     request: ctx.request,
-    cache,
+    cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: () => runPluginRawRoute(route, ctx),
     // Read after the handler ran: a route resolves the entity it answers for
-    // mid-request, and `tagCacheEntry` is where it names what that was.
-    tags: () => cacheTagsFor(ctx),
+    // mid-request, and `tagCdnEntry` is where it names what that was.
+    tags: () => cdnTagsFor(ctx),
   });
 }
 

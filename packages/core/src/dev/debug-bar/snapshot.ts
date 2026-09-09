@@ -26,7 +26,7 @@ export interface DebugContext {
   readonly locale: { readonly code: string; readonly direction: string };
   /** Which optional runtime slots the config wired, by presence only. */
   readonly slots: {
-    readonly cache: boolean;
+    readonly cdn: boolean;
     readonly storage: boolean;
     readonly mailer: boolean;
     readonly images: boolean;
@@ -76,7 +76,7 @@ export function projectDebugSnapshot(
       siteName: ctx.siteName ?? null,
       locale: { code: ctx.locale.code, direction: ctx.locale.direction },
       slots: {
-        cache: Boolean(ctx.cache),
+        cdn: Boolean(ctx.cdn),
         storage: Boolean(ctx.storage),
         mailer: Boolean(ctx.mailer),
         images: Boolean(ctx.imageDelivery),

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ConnectedCache } from "../runtime/slots.js";
+import type { ConnectedCdn } from "../runtime/slots.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { SEGMENT_KEY_PARAM } from "./decision.js";
 import { readThrough, readThroughRoute } from "./read-through.js";
@@ -15,18 +15,18 @@ const GET = (url = "https://site.test/hello") => new Request(url);
 const noTags = () => [];
 
 function spies(
-  match: ConnectedCache["match"] = () => Promise.resolve(undefined),
+  match: ConnectedCdn["match"] = () => Promise.resolve(undefined),
 ) {
   const matchFn = vi.fn(match);
-  const put = vi.fn<ConnectedCache["put"]>(() => Promise.resolve());
+  const put = vi.fn<ConnectedCdn["put"]>(() => Promise.resolve());
   const purgeTags = vi.fn(() => Promise.resolve());
-  const cache: ConnectedCache = { match: matchFn, put, purgeTags };
-  return { cache, match: matchFn, put };
+  const cdn: ConnectedCdn = { match: matchFn, put, purgeTags };
+  return { cdn, match: matchFn, put };
 }
 
 describe("readThrough", () => {
-  it("renders and stores the tagged response on a cache miss", async () => {
-    const { cache, match, put } = spies();
+  it("renders and stores the tagged response on a cdn miss", async () => {
+    const { cdn, match, put } = spies();
     const fresh = new Response("body", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -34,7 +34,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "anonymous",
       intentKind: "single",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -50,14 +50,14 @@ describe("readThrough", () => {
 
   it("returns the cached response without rendering on a hit", async () => {
     const cached = new Response("cached", { status: 200 });
-    const { cache, put } = spies(() => Promise.resolve(cached));
+    const { cdn, put } = spies(() => Promise.resolve(cached));
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
       intentKind: "front-page",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -69,8 +69,8 @@ describe("readThrough", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("bypasses the cache entirely for a private segment", async () => {
-    const { cache, match, put } = spies();
+  it("bypasses the cdn entirely for a private segment", async () => {
+    const { cdn, match, put } = spies();
     const fresh = new Response("live", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -78,7 +78,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "private",
       intentKind: "single",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -91,7 +91,7 @@ describe("readThrough", () => {
   });
 
   it("keys a non-anonymous segment under a distinct entry and shares it across cookies", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const fresh = new Response("members", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -101,7 +101,7 @@ describe("readThrough", () => {
       }),
       segment: "authenticated",
       intentKind: "single",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -113,7 +113,7 @@ describe("readThrough", () => {
     // on the same entry.
     const matchKey = match.mock.calls[0]?.[0];
     const putKey = put.mock.calls[0]?.[0];
-    if (!matchKey || !putKey) throw new Error("expected a keyed cache request");
+    if (!matchKey || !putKey) throw new Error("expected a keyed cdn request");
     expect(new URL(matchKey.url).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
       "authenticated",
     );
@@ -121,8 +121,8 @@ describe("readThrough", () => {
     expect(putKey.url).toBe(matchKey.url);
   });
 
-  it("renders live without touching the cache for an unmatched route", async () => {
-    const { cache, match, put } = spies();
+  it("renders live without touching the cdn for an unmatched route", async () => {
+    const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("404", { status: 404 })),
     );
@@ -131,7 +131,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "anonymous",
       intentKind: null,
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -143,7 +143,7 @@ describe("readThrough", () => {
   });
 
   it("stores a custom archive that opted into caching", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const fresh = new Response("listing", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -152,7 +152,7 @@ describe("readThrough", () => {
       segment: "anonymous",
       intentKind: "custom",
       customArchiveCacheable: true,
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -165,7 +165,7 @@ describe("readThrough", () => {
   });
 
   it("bypasses a custom archive that did not opt into caching", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("listing", { status: 200 })),
     );
@@ -174,7 +174,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "anonymous",
       intentKind: "custom",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -187,7 +187,7 @@ describe("readThrough", () => {
   });
 
   it("does not store a non-200 render", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("nope", { status: 404 })),
     );
@@ -196,7 +196,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "anonymous",
       intentKind: "single",
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -210,13 +210,13 @@ describe("readThrough", () => {
 
 describe("readThroughRoute", () => {
   it("renders and stores an opted-in plugin route on a miss", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const fresh = new Response("card", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -232,7 +232,7 @@ describe("readThroughRoute", () => {
   });
 
   it("stores under the tags the handler declared while it ran", async () => {
-    const { cache, put } = spies();
+    const { cdn, put } = spies();
     const declared: string[] = [];
     const render = vi.fn(() => {
       declared.push("e:7", "t:post");
@@ -241,7 +241,7 @@ describe("readThroughRoute", () => {
 
     await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -255,12 +255,12 @@ describe("readThroughRoute", () => {
 
   it("returns the stored response without running the handler on a hit", async () => {
     const cached = new Response("stored card", { status: 200 });
-    const { cache, put } = spies(() => Promise.resolve(cached));
+    const { cdn, put } = spies(() => Promise.resolve(cached));
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -273,7 +273,7 @@ describe("readThroughRoute", () => {
   });
 
   it("looks up and stores under one key, the visitor's cookie dropped", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("card", { status: 200 })),
     );
@@ -284,7 +284,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         headers: { cookie: "plumix_locale=fr" },
       }),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -293,14 +293,14 @@ describe("readThroughRoute", () => {
 
     const matchKey = match.mock.calls[0]?.[0];
     const putKey = put.mock.calls[0]?.[0];
-    if (!matchKey || !putKey) throw new Error("expected a keyed cache request");
+    if (!matchKey || !putKey) throw new Error("expected a keyed cdn request");
     expect(matchKey.url).toBe("https://site.test/_plumix/og/card/abc.png");
     expect(matchKey.headers.has("cookie")).toBe(false);
     expect(putKey.url).toBe(matchKey.url);
   });
 
-  it("bypasses the cache for a write method", async () => {
-    const { cache, match, put } = spies();
+  it("bypasses the cdn for a write method", async () => {
+    const { cdn, match, put } = spies();
     const fresh = new Response("done", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
@@ -308,7 +308,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         method: "POST",
       }),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -321,7 +321,7 @@ describe("readThroughRoute", () => {
   });
 
   it("does not store a response the handler declared unshareable", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     // The route opted in, but this particular response is one visitor's: the
     // handler says so, and the provider would otherwise rewrite the directive
     // to the page TTL and share it.
@@ -333,7 +333,7 @@ describe("readThroughRoute", () => {
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -346,7 +346,7 @@ describe("readThroughRoute", () => {
   });
 
   it("looks a HEAD up but never stores one (the Cache API is GET-only)", async () => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("card", { status: 200 })),
     );
@@ -355,7 +355,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         method: "HEAD",
       }),
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
@@ -383,12 +383,12 @@ describe("readThroughRoute", () => {
       }),
     ],
   ])("serves but does not store when %s", async (_case, request, fresh) => {
-    const { cache, match, put } = spies();
+    const { cdn, match, put } = spies();
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThroughRoute({
       request,
-      cache,
+      cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,

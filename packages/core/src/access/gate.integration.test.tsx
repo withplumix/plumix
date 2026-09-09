@@ -2,8 +2,8 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { JsonObject } from "../json.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
-import type { ConnectedCache } from "../runtime/slots.js";
-import { SEGMENT_KEY_PARAM } from "../cache/decision.js";
+import type { ConnectedCdn } from "../runtime/slots.js";
+import { SEGMENT_KEY_PARAM } from "../cdn/decision.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback, forArchiveType } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -190,17 +190,17 @@ describe("access gate — entry-type-level policy", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Gated Article");
-    // With no cache binding, the copy sent to the client is always live and
+    // With no cdn binding, the copy sent to the client is always live and
     // per-visitor: an `authenticated` render carries `private, no-store` so a
     // downstream intermediary never shares it under the plain URL.
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
 
-// A real in-memory edge cache: `match`/`put` key on the request URL, exactly as
+// A real in-memory CDN: `match`/`put` key on the request URL, exactly as
 // the Workers Cache API does, so the segment folded into the key by #1740 is
 // what separates (or collapses) entries.
-function memoryCache() {
+function memoryCdn() {
   const store = new Map<
     string,
     { readonly response: Response; readonly tags: readonly string[] }
@@ -214,16 +214,16 @@ function memoryCache() {
       return Promise.resolve();
     },
   );
-  const cache: ConnectedCache = {
+  const cdn: ConnectedCdn = {
     match,
     put,
     purgeTags: vi.fn(() => Promise.resolve()),
   };
-  return { cache, store, match, put };
+  return { cdn, store, match, put };
 }
 
-// An entry type whose single/archive routes require login and cache under the
-// shared `authenticated` segment (the "explicit opt-in" of #1740) …
+// An entry type whose single/archive routes require login and are cached
+// under the shared `authenticated` segment (the "explicit opt-in" of #1740) …
 const membersPlugin = definePlugin("member-articles", (ctx) => {
   ctx.registerEntryType("article", {
     label: "Articles",
@@ -275,11 +275,11 @@ async function authed(
 }
 
 describe("access gate — segment-keyed caching (#1740)", () => {
-  test("two subscribers in one segment share a single cache entry keyed by segment", async () => {
-    const { cache, store } = memoryCache();
+  test("two subscribers in one segment share a single cdn entry keyed by segment", async () => {
+    const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       plugins: [membersPlugin],
-      cache,
+      cdn,
     });
     await seedEntry(h, "article", "gated");
     const alice = await h.seedUser("subscriber");
@@ -292,7 +292,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     // One entry, stored under the `authenticated` segment — not the plain URL.
     expect(store.size).toBe(1);
     const key = [...store.keys()][0];
-    if (key === undefined) throw new Error("expected a stored cache entry");
+    if (key === undefined) throw new Error("expected a stored cdn entry");
     expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
       "authenticated",
     );
@@ -309,10 +309,10 @@ describe("access gate — segment-keyed caching (#1740)", () => {
   });
 
   test("the segment variant carries the same t:/e: tags as the anonymous document", async () => {
-    const { cache, store } = memoryCache();
+    const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       plugins: [membersPlugin],
-      cache,
+      cdn,
     });
     const entry = await seedEntry(h, "article", "tagged");
     const sub = await h.seedUser("subscriber");
@@ -327,11 +327,11 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     expect(stored?.tags).toContain(`e:${String(entry.id)}`);
   });
 
-  test("a private-granting policy is never read from or written to the cache", async () => {
-    const { cache, store, match, put } = memoryCache();
+  test("a private-granting policy is never read from or written to the cdn", async () => {
+    const { cdn, store, match, put } = memoryCdn();
     const h = await createDispatcherHarness({
       plugins: [privatePlugin],
-      cache,
+      cdn,
     });
     await seedEntry(h, "memo", "secret");
     const sub = await h.seedUser("subscriber");
@@ -347,15 +347,15 @@ describe("access gate — segment-keyed caching (#1740)", () => {
   });
 
   test("an un-policied page keeps today's authenticated ⇒ private bypass", async () => {
-    const { cache, match, put } = memoryCache();
+    const { cdn, match, put } = memoryCdn();
     const h = await createDispatcherHarness({
       plugins: [membersPlugin],
-      cache,
+      cdn,
     });
     const sub = await h.seedUser("subscriber");
 
     // The front page carries no policy: a signed-in visitor bypasses the shared
-    // cache entirely, exactly as before this slice (no opt-in ⇒ private).
+    // cdn entirely, exactly as before this slice (no opt-in ⇒ private).
     const response = await h.dispatch(await authed(h, "/", sub.id));
     await h.drainDeferred();
 
@@ -369,12 +369,12 @@ describe("access gate — segment-keyed caching (#1740)", () => {
   // serve a draft/editor render to other members. The gate still allows
   // (`authenticated`), but the render is forced private.
   test.each(["preview=tok", "plumix.edit"])(
-    "an ephemeral ?%s grant on a policied route bypasses the shared cache",
+    "an ephemeral ?%s grant on a policied route bypasses the shared cdn",
     async (query) => {
-      const { cache, match, put } = memoryCache();
+      const { cdn, match, put } = memoryCdn();
       const h = await createDispatcherHarness({
         plugins: [membersPlugin],
-        cache,
+        cdn,
       });
       await seedEntry(h, "article", "gated");
       const editor = await h.seedUser("editor");
@@ -394,7 +394,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
 
 // The paywall: a soft gate. An active `entitlement:premium` gets the full
 // render under one shared segment; everyone else (anonymous or lapsed) gets a
-// teaser at their own segment — the same URL, a distinct cache variant. A
+// teaser at their own segment — the same URL, a distinct cdn variant. A
 // mutable `entitled` set stands in for the developer's per-request entitlement
 // check (a `meta` flag, their own table, an external billing API), letting a
 // test flip a subscription active/lapsed between requests.
@@ -417,7 +417,7 @@ function paywallSetup() {
       routes: ["/premium"],
       access: definePolicy({
         segments: [entitlementSegment("premium")],
-        // Runs on every request, before the cache lookup — its result is never
+        // Runs on every request, before the cdn lookup — its result is never
         // cached, so a lapsed entitlement is denied on the next request.
         resolve: (c) =>
           c.user && entitled.has(c.user.id)
@@ -477,13 +477,13 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     expect(response.headers.get("x-plumix-challenge")).toBe(null);
   });
 
-  test("two entitled principals share one full-variant cache entry", async () => {
-    const { cache, store } = memoryCache();
+  test("two entitled principals share one full-variant cdn entry", async () => {
+    const { cdn, store } = memoryCdn();
     const { entitled, plugin, theme } = paywallSetup();
     const h = await createDispatcherHarness({
       plugins: [plugin],
       theme,
-      cache,
+      cdn,
     });
     const alice = await h.seedUser("subscriber");
     const bob = await h.seedUser("subscriber");
@@ -497,7 +497,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     // One entry, keyed by the `entitlement:premium` segment — not per identity.
     expect(store.size).toBe(1);
     const key = [...store.keys()][0];
-    if (key === undefined) throw new Error("expected a stored cache entry");
+    if (key === undefined) throw new Error("expected a stored cdn entry");
     expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
       "entitlement:premium",
     );
@@ -511,13 +511,13 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     expect(store.size).toBe(1);
   });
 
-  test("serves teaser and full as two cache variants at one URL", async () => {
-    const { cache, store } = memoryCache();
+  test("serves teaser and full as two cdn variants at one URL", async () => {
+    const { cdn, store } = memoryCdn();
     const { entitled, plugin, theme } = paywallSetup();
     const h = await createDispatcherHarness({
       plugins: [plugin],
       theme,
-      cache,
+      cdn,
     });
     const member = await h.seedUser("subscriber");
     entitled.add(member.id);
@@ -556,13 +556,13 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     expect(paths).toEqual(new Set(["/premium"]));
   });
 
-  test("a lapsed entitlement is denied on the next request without cache busting", async () => {
-    const { cache, store } = memoryCache();
+  test("a lapsed entitlement is denied on the next request without cdn busting", async () => {
+    const { cdn, store } = memoryCdn();
     const { entitled, plugin, theme } = paywallSetup();
     const h = await createDispatcherHarness({
       plugins: [plugin],
       theme,
-      cache,
+      cdn,
     });
     const member = await h.seedUser("subscriber");
     entitled.add(member.id);
@@ -573,7 +573,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     expect(await active.text()).toContain('data-testid="full"');
     expect(store.size).toBe(1);
 
-    // The subscription lapses (the external check now returns false). No cache
+    // The subscription lapses (the external check now returns false). No cdn
     // busting — the full variant stays put.
     entitled.delete(member.id);
 
@@ -595,7 +595,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
 // An entry type whose single routes are PUBLIC by default but declare a
 // selectable `members` policy an editor can assign per-entry. Proves the
 // per-entry choice (stored under the reserved access meta key) overrides the
-// type default at the gate and in the cache key — the load-bearing data seam of
+// type default at the gate and in the cdn key — the load-bearing data seam of
 // #1742. Precedence: per-entry › entry-type › global.
 const perEntryPlugin = definePlugin("per-entry", (ctx) => {
   ctx.registerEntryType("column", {
@@ -682,11 +682,11 @@ describe("access gate — per-entry visibility (#1742)", () => {
     expect(await response.text()).toContain("stale title");
   });
 
-  test("the cache segment reflects the per-entry choice", async () => {
-    const { cache, store } = memoryCache();
+  test("the cdn segment reflects the per-entry choice", async () => {
+    const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       plugins: [perEntryPlugin],
-      cache,
+      cdn,
     });
     await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
     const sub = await h.seedUser("subscriber");
@@ -698,7 +698,7 @@ describe("access gate — per-entry visibility (#1742)", () => {
     // policy resolved to — not the plain anonymous URL.
     expect(store.size).toBe(1);
     const key = [...store.keys()][0];
-    if (key === undefined) throw new Error("expected a stored cache entry");
+    if (key === undefined) throw new Error("expected a stored cdn entry");
     expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
       "authenticated",
     );

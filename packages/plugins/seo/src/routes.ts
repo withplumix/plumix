@@ -1,5 +1,5 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
-import { enqueuePurgeTags, tagCacheEntry, typeTag, withBasePath } from "plumix";
+import { enqueuePurgeTags, tagCdnEntry, typeTag, withBasePath } from "plumix";
 import { tryGetContext } from "plumix/plugin";
 
 import type { SitemapScope } from "./sitemap.js";
@@ -72,8 +72,8 @@ async function handleSitemapIndex(
   ctx: AppContext,
   scopes: readonly SitemapScope[],
 ): Promise<Response> {
-  // `tagCacheEntry` unions, so scopes sharing a type tag need no dedupe here.
-  tagCacheEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
+  // `tagCdnEntry` unions, so scopes sharing a type tag need no dedupe here.
+  tagCdnEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
   // A site held out of the index is held out of search, and so is a scope its
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
@@ -91,7 +91,7 @@ async function handleSubSitemap(
   scope: SitemapScope,
   page: number,
 ): Promise<Response> {
-  tagCacheEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
+  tagCdnEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
   const settings = await loadSeoSettings(ctx);
   const urls = scopeIsOffered(scope, settings)
     ? await collectSitemapUrls(ctx, scope, page)

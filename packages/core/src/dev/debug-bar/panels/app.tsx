@@ -37,7 +37,7 @@ export const appPanel: DebugPanel = {
       <DebugSection title="Slots">
         <DebugKV
           rows={[
-            { label: "Cache", value: wired(context.slots.cache) },
+            { label: "CDN", value: wired(context.slots.cdn) },
             { label: "Storage", value: wired(context.slots.storage) },
             { label: "Mailer", value: wired(context.slots.mailer) },
             { label: "Images", value: wired(context.slots.images) },

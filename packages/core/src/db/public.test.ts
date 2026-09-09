@@ -6,7 +6,7 @@ import * as db from "./public.js";
 // plugin never needs its own `drizzle-orm` dependency. Assert the toolkit stays
 // whole so a refactor can't silently drop part of it (the drift #1700 is about).
 describe("@plumix/core/db surface", () => {
-  it("re-exports the drizzle write toolkit and edge-cache purge vocabulary", () => {
+  it("re-exports the drizzle write toolkit and CDN purge vocabulary", () => {
     for (const name of [
       "eq",
       "and",

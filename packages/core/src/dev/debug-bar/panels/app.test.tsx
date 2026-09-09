@@ -33,11 +33,11 @@ describe("appPanel", () => {
 
   test("marks wired slots and leaves unwired ones blank", () => {
     const html = render({
-      slots: { cache: true, storage: false, mailer: false, images: false },
+      slots: { cdn: true, storage: false, mailer: false, images: false },
     });
 
-    // cache is wired, storage is not
-    expect(html).toContain("Cache");
+    // cdn is wired, storage is not
+    expect(html).toContain("CDN");
     expect(html).toContain("Storage");
     expect(html).toContain("✓"); // something wired
     expect(html).toContain("—"); // something not

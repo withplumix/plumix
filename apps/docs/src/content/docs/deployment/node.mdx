@@ -21,7 +21,7 @@ The runtime is a slot like any other. `runtime: node()` tells Plumix it is runni
 | `diskStorage({ dir })` | `storage`       | A directory on disk for uploads                 |
 | `images({ widths })`   | `imageDelivery` | Resizing through `sharp`, served by the process |
 
-Nothing fills `kv` or `cache` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
+Nothing fills `kv` or `cdn` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
 
 ## Install
 
@@ -186,7 +186,7 @@ You still want `concurrencyPolicy: Forbid` on a CronJob or `flock` on a crontab:
 
 ## What Node does not do yet
 
-There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. Both are single-node concerns, as are the uploads and the image cache: this runtime is one process on one machine.
+There is no CDN and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. Both are single-node concerns, as are the uploads and the image cache: this runtime is one process on one machine.
 
 ## Commands the runtime adds
 

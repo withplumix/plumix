@@ -1,6 +1,6 @@
 # @plumix/runtime-cloudflare
 
-The **Cloudflare Workers runtime** for Plumix — the adapters that wire your site to D1, R2, KV, Images, and the edge cache. It's the first of Plumix's pluggable runtimes; the CMS itself is runtime-agnostic, so this package is swappable.
+The **Cloudflare Workers runtime** for Plumix — the adapters that wire your site to D1, R2, KV, Images, and the CDN. It's the first of Plumix's pluggable runtimes; the CMS itself is runtime-agnostic, so this package is swappable.
 
 ## Install
 
@@ -60,7 +60,7 @@ export default plumix({
 | `d1({ binding, session })`            | `database`      | D1 (SQLite). `session` is `"disabled"` \| `"auto"` \| `"primary-first"` for read replication.                                                   |
 | `r2({ binding, publicUrlBase, s3 })`  | `storage`       | R2 object storage. Add `s3` credentials to enable presigned-PUT uploads.                                                                        |
 | `images({ zone })`                    | `imageDelivery` | Cloudflare Image Transformations URLs. `zone` is a hostname, no protocol.                                                                       |
-| `edge({ ttl, staleWhileRevalidate })` | `cache`         | Edge cache (Cache API + purge-by-tag).                                                                                                          |
+| `edge({ ttl, staleWhileRevalidate })` | `cdn`           | CDN (Cache API + purge-by-tag).                                                                                                                 |
 | `kv({ binding })`                     | `kv`            | Cloudflare KV.                                                                                                                                  |
 | `cloudflareDeployOrigin({ … })`       | —               | Derives `rpId` + `origin` + `allowedOrigins` from the Workers Builds env; `productionOrigin` for a custom domain, `localOrigin` for `pnpm dev`. |
 

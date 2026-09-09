@@ -1,5 +1,5 @@
 // Slot conformance suites — one parameterised `describe` per slot port. An
-// adapter proves its kv, storage, cache or assets implementation satisfies the
+// adapter proves its kv, storage, cdn or assets implementation satisfies the
 // contract core relies on by calling these with a factory of its own.
 //
 // Its own subpath rather than part of `plumix/test`, because these modules
@@ -11,8 +11,8 @@ export type { KvContractOptions } from "./kv.js";
 export { describeObjectStorageContract } from "./object-storage.js";
 export type { ObjectStorageContractOptions } from "./object-storage.js";
 
-export { describeCacheContract } from "./cache.js";
-export type { CacheContractOptions } from "./cache.js";
+export { describeCdnContract } from "./cdn.js";
+export type { CdnContractOptions } from "./cdn.js";
 
 export { describeAssetsContract } from "./assets.js";
 export type { AssetsContractOptions, AssetsNotFound } from "./assets.js";

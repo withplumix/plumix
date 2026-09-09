@@ -490,7 +490,7 @@ export interface CustomArchiveResolution {
   readonly data: CustomArchiveData;
   readonly title: string;
   /**
-   * Edge-cache tags for the content this archive lists — typically `t:<type>`
+   * CDN tags for the content this archive lists — typically `t:<type>`
    * for each entry type it draws from (see {@link typeTag}). When the archive
    * is `cacheable`, a publish of any listed type purges the stored page, the
    * same coarse invalidation the built-in archives get. Ignored when the
@@ -511,7 +511,7 @@ export interface ArchiveTypeOptions {
   /** Route priority (lower wins); defaults to the rewrite-rule priority. */
   readonly priority?: number;
   /**
-   * Opt this archive's anonymous GET renders into the built-in edge cache.
+   * Opt this archive's anonymous GET renders into the built-in CDN.
    * Off by default: core can't know a custom archive's content dependencies,
    * so caching without a tag contribution would risk stale pages. Pair with a
    * `tags` contribution from {@link CustomArchiveResolution.tags} so a publish
@@ -525,7 +525,7 @@ export interface ArchiveTypeOptions {
   /**
    * Access-control policy gating this custom (route-level) archive. Absent ⇒
    * the global `anonymous` default. A policied archive renders live (it opts
-   * out of the edge cache in this slice, like any other policied route).
+   * out of the CDN in this slice, like any other policied route).
    */
   readonly access?: AccessPolicy;
 }
@@ -642,7 +642,7 @@ export interface RegisteredRawRoute {
   readonly path: string;
   readonly auth: PluginRouteAuth;
   /**
-   * Whether the route opted into the edge cache — see `registerRoute`, which
+   * Whether the route opted into the CDN — see `registerRoute`, which
    * documents what taking it claims and rejects it on a gated route.
    */
   readonly cacheable?: boolean;
@@ -666,7 +666,7 @@ export interface PublicRouteOptions {
   /** An exact pathname, or a URLPattern pathname (`/sitemap-post-:page.xml`). */
   readonly path: string;
   /**
-   * Whether the route opted into the edge cache — see `registerRoute`, which
+   * Whether the route opted into the CDN — see `registerRoute`, which
    * documents what taking it claims.
    */
   readonly cacheable?: boolean;
