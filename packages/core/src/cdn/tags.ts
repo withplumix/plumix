@@ -5,7 +5,19 @@ import type { RouteIntent } from "../route/intent.js";
 // tag `t:<type>`; entry permalinks carry the entry tag `e:<id>`. Publishing an
 // entry purges both — its permalink and every archive of that type.
 export function typeTag(entryType: string): string {
-  return `t:${entryType}`;
+  return normalizeTag(`t:${entryType}`);
+}
+
+/**
+ * The one spelling of a tag. At least one target CDN (Netlify) matches tags
+ * case-insensitively, so `t:Post` and `t:post` would be two tags on one vendor
+ * and one on another — a collision that only ever appears on the vendor the
+ * site did not develop against. Applied wherever a tag enters the system: the
+ * constructors here, a plugin's own `tagCdnEntry`, and the purge accumulator,
+ * so a plugin's stored tag and its purge cannot disagree.
+ */
+export function normalizeTag(tag: string): string {
+  return tag.toLowerCase();
 }
 
 export function entryTag(entryId: number): string {

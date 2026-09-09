@@ -8,7 +8,7 @@ import {
   methodIsCacheable,
   requestIsPrivileged,
   responseAllowsSharedStorage,
-  responseIsStorable,
+  responseIsShareable,
   routeCdnKey,
   segmentCdnKey,
 } from "./decision.js";
@@ -46,16 +46,18 @@ interface ReadThroughArgs {
 }
 
 /**
- * Serve a public page through the CDN: return a stored response on a
- * hit, otherwise render live and store the result when it's cacheable. The
- * store runs through `defer` so it never blocks the response. Requests that
- * aren't cacheable (privileged, non-GET/HEAD, search, no route) render live
- * and touch the CDN not at all.
+ * Serve a public page through the CDN: return a stored response on a hit,
+ * otherwise render live and hand the result to the provider on the way out —
+ * decorated with the site's freshness and the page's cache tags, and written to
+ * an origin store where the provider has one. The store runs through `defer` so
+ * it never blocks the response. Requests that aren't cacheable (privileged,
+ * non-GET/HEAD, search, no route) render live and touch the CDN not at all.
  */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
   const { request, segment, intentKind, cdn, defer, telemetry, render, tags } =
     args;
 
+  const originStore = cdn.store !== undefined;
   const reason =
     intentKind === null
       ? "no-route"
@@ -64,9 +66,15 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
           segment,
           intentKind,
           customArchiveCacheable: args.customArchiveCacheable,
+          canKeySegments: originStore || cdn.segmentVary !== undefined,
         });
   if (reason !== null) {
-    telemetry.record("cdn", { decision: "bypass", reason, segment });
+    telemetry.record("cdn", {
+      decision: "bypass",
+      reason,
+      segment,
+      originStore,
+    });
     return render();
   }
 
@@ -116,7 +124,11 @@ export async function readThroughRoute(
   const { request, cdn, defer, telemetry, render, tags } = args;
 
   if (!methodIsCacheable(request.method)) {
-    telemetry.record("cdn", { decision: "bypass", reason: "method" });
+    telemetry.record("cdn", {
+      decision: "bypass",
+      reason: "method",
+      originStore: cdn.store !== undefined,
+    });
     return render();
   }
 
@@ -127,19 +139,20 @@ export async function readThroughRoute(
     telemetry,
     fact: {},
     tags,
-    storable: (fresh) => routeResponseIsShareable(request, fresh),
+    shareable: (fresh) => routeResponseIsShareable(request, fresh),
     render,
   });
 }
 
 // The opt-in speaks for the route; each response still speaks for itself, and
 // the entry it would fill is reachable only by whatever tags the handler
-// declared — often none. So a response that came out for one visitor stays out
-// of the store: `auth: "public"` only means *core* doesn't gate the route, and
-// a handler checking a bearer token core knows nothing about is exactly the
-// shape at risk. A `Set-Cookie` says the same thing (the provider would strip
-// it, leaving later visitors a body whose cookie went missing), as does a
-// `private`/`no-store` the provider would otherwise overwrite with the page TTL.
+// declared — often none. So a response that came out for one visitor is neither
+// stored nor announced as shared: `auth: "public"` only means *core* doesn't
+// gate the route, and a handler checking a bearer token core knows nothing
+// about is exactly the shape at risk. A `Set-Cookie` says the same thing (the
+// store would strip it, leaving later visitors a body whose cookie went
+// missing), as does a `private`/`no-store` the store would otherwise overwrite
+// with the page TTL.
 function routeResponseIsShareable(request: Request, fresh: Response): boolean {
   if (requestIsPrivileged(request)) return false;
   if (fresh.headers.has("set-cookie")) return false;
@@ -161,29 +174,44 @@ interface LookupArgs {
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];
   /**
-   * A condition on the fresh response beyond its method and status. Only the
-   * route path sets one; a page render is storable on those two alone.
+   * A condition on the fresh response beyond its status. Only the route path
+   * sets one; a page render is shareable on its status alone.
    */
-  readonly storable?: (fresh: Response) => boolean;
+  readonly shareable?: (fresh: Response) => boolean;
 }
 
 // Shared by both read-throughs, once their own bypass rules have passed. The
 // store runs through `defer` so it never blocks the response.
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
-  const { key, cdn, defer, telemetry, fact, render, tags, storable } = args;
+  const { key, cdn, defer, telemetry, fact, render, tags, shareable } = args;
+  const store = cdn.store;
+  // A storeless deploy never hits at the origin — every arriving request got
+  // past the CDN and is a miss by definition — so the fact says which regime
+  // produced it rather than reading as a permanently failing cache.
+  const originStore = store !== undefined;
 
-  const hit = await cdn.match(key);
+  const hit = await store?.match(key);
   if (hit) {
-    telemetry.record("cdn", { ...fact, decision: "hit" });
+    telemetry.record("cdn", { ...fact, decision: "hit", originStore });
     return hit;
   }
 
   const fresh = await render();
-  const stored =
-    responseIsStorable(key.method, fresh.status) && (storable?.(fresh) ?? true);
-  telemetry.record("cdn", { ...fact, decision: "miss", stored });
-  if (stored) {
-    defer(cdn.put(key, fresh.clone(), tags()));
-  }
-  return fresh;
+  const shared =
+    responseIsShareable(fresh.status) && (shareable?.(fresh) ?? true);
+  // The Workers Cache API persists GET responses only, so a HEAD render is
+  // decorated and served without filling an entry.
+  const stored = store !== undefined && shared && key.method === "GET";
+  telemetry.record("cdn", { ...fact, decision: "miss", stored, originStore });
+  if (!shared) return fresh;
+
+  const entryTags = tags();
+  // Cloned before `decorate` reads the body.
+  if (stored) defer(store.put(key, fresh.clone(), entryTags));
+  // A per-visitor cookie can be stripped from the store's own copy but not
+  // from the one going back to the visitor, so that response leaves
+  // unannounced rather than inviting a shared cache to hold it. The port asks
+  // every provider for the same refusal; core makes it regardless.
+  if (fresh.headers.has("set-cookie")) return fresh;
+  return cdn.decorate(fresh, entryTags);
 }

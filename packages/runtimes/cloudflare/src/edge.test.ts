@@ -1,4 +1,4 @@
-import type { ConnectedCdn } from "plumix";
+import type { CdnStore, ConnectedCdn } from "plumix";
 import { describeCdnContract } from "plumix/test/conformance";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,15 +46,101 @@ function connect(
   return cdn;
 }
 
+function connectStore(config?: EdgeConfig): CdnStore {
+  const store = connect(config).store;
+  if (store === undefined) throw new Error("expected an origin store");
+  return store;
+}
+
+function purgeTags(tags: readonly string[]): Promise<void> {
+  const purge = connect().purgeTags;
+  if (purge === undefined) throw new Error("expected a tag purge");
+  return purge(tags);
+}
+
 function storedResponse(): Response {
   const call = store.put.mock.calls[0];
   if (call === undefined) throw new Error("store.put was not called");
   return call[1] as Response;
 }
 
+describe("connected cdn decorate", () => {
+  it("stamps the page freshness on a render that declared none", () => {
+    const decorated = connect().decorate(new Response("body"), []);
+
+    expect(decorated.headers.get("cache-control")).toBe(
+      "public, s-maxage=60, stale-while-revalidate=600",
+    );
+  });
+
+  it("emits a comma-joined Cache-Tag header from the page tags", () => {
+    const decorated = connect().decorate(new Response("body"), [
+      "t:post",
+      "e:7",
+    ]);
+
+    expect(decorated.headers.get("cache-tag")).toBe("t:post,e:7");
+  });
+
+  it("omits the Cache-Tag header when there are no tags", () => {
+    expect(
+      connect().decorate(new Response("body"), []).headers.get("cache-tag"),
+    ).toBeNull();
+  });
+
+  it("keeps a handler's own shared freshness instead of the page TTL", () => {
+    const decorated = connect().decorate(
+      new Response("body", {
+        headers: { "cache-control": "public, max-age=31536000, immutable" },
+      }),
+      ["t:post"],
+    );
+
+    expect(decorated.headers.get("cache-control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+    expect(decorated.headers.get("cache-tag")).toBe("t:post");
+  });
+
+  it("returns a private response untouched and untagged", () => {
+    // Decoration narrows what a handler shared; it never widens it. The
+    // segment variant that sends these directives is deliberately unshared on
+    // the copy the visitor receives, whatever its edge entry does.
+    const personalized = new Response("body", {
+      headers: { "cache-control": "private, no-store" },
+    });
+
+    const decorated = connect().decorate(personalized, ["t:post"]);
+
+    expect(decorated).toBe(personalized);
+    expect(decorated.headers.get("cache-tag")).toBeNull();
+  });
+
+  it("returns a response that sets a cookie untouched and untagged", () => {
+    // The stored copy has its cookie stripped; this one is the visitor's own,
+    // so announcing it as shared would hand their cookie to everyone.
+    const withCookie = new Response("body", {
+      headers: { "set-cookie": "plumix_session=secret" },
+    });
+
+    const decorated = connect().decorate(withCookie, ["t:post"]);
+
+    expect(decorated).toBe(withCookie);
+    expect(decorated.headers.get("cache-tag")).toBeNull();
+  });
+
+  it("omits stale-while-revalidate when the policy has none", () => {
+    expect(
+      connect({ ttl: 30 })
+        .decorate(new Response("body"), [])
+        .headers.get("cache-control"),
+    ).toBe("public, s-maxage=30");
+  });
+});
+
 describe("connected cdn put", () => {
   it("stores a GET with the edge cache-control derived from policy", async () => {
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/post"),
       new Response("body", { status: 200 }),
       [],
@@ -67,7 +153,7 @@ describe("connected cdn put", () => {
   });
 
   it("emits a comma-joined Cache-Tag header from the page tags", async () => {
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/post"),
       new Response("body", { status: 200 }),
       ["t:post", "e:7"],
@@ -77,7 +163,7 @@ describe("connected cdn put", () => {
   });
 
   it("omits the Cache-Tag header when there are no tags", async () => {
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/post"),
       new Response("body", { status: 200 }),
       [],
@@ -90,13 +176,17 @@ describe("connected cdn put", () => {
     const response = new Response("body", { status: 200 });
     response.headers.set("set-cookie", "plumix_session=secret");
 
-    await connect().put(new Request("https://site.test/post"), response, []);
+    await connectStore().put(
+      new Request("https://site.test/post"),
+      response,
+      [],
+    );
 
     expect(storedResponse().headers.get("set-cookie")).toBeNull();
   });
 
   it("does not store non-GET requests (the Cache API is GET-only)", async () => {
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/post", { method: "HEAD" }),
       new Response("body", { status: 200 }),
       [],
@@ -106,7 +196,7 @@ describe("connected cdn put", () => {
   });
 
   it("keeps a response's own shared freshness instead of the page TTL", async () => {
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/og/abc.png"),
       new Response("body", {
         status: 200,
@@ -123,7 +213,7 @@ describe("connected cdn put", () => {
   it("applies the page TTL to a response whose cache-control forbids sharing", async () => {
     // A segment variant tells the *client* copy not to be stored while its
     // edge copy is deliberately shared — that directive must not survive here.
-    await connect().put(
+    await connectStore().put(
       new Request("https://site.test/members"),
       new Response("body", {
         status: 200,
@@ -138,7 +228,7 @@ describe("connected cdn put", () => {
   });
 
   it("omits stale-while-revalidate when the policy has none", async () => {
-    await connect({ ttl: 30 }).put(
+    await connectStore({ ttl: 30 }).put(
       new Request("https://site.test/post"),
       new Response("body", { status: 200 }),
       [],
@@ -166,7 +256,7 @@ describe("connected cdn purgeTags", () => {
   });
 
   it("POSTs the tags to the zone purge_cache endpoint with the bearer token", async () => {
-    await connect().purgeTags(["t:post", "e:7"]);
+    await purgeTags(["t:post", "e:7"]);
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -182,13 +272,13 @@ describe("connected cdn purgeTags", () => {
   });
 
   it("does not call the API for an empty tag list", async () => {
-    await connect().purgeTags([]);
+    await purgeTags([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("throws when the purge API responds non-ok", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
-    await expect(connect().purgeTags(["t:post"])).rejects.toThrow(
+    await expect(purgeTags(["t:post"])).rejects.toThrow(
       /purge_cache responded 403/,
     );
   });
@@ -264,5 +354,5 @@ describe("edge as a cdn slot", () => {
     globalThis.fetch = originalFetch;
   });
 
-  describeCdnContract({ connect });
+  describeCdnContract({ connect, store: true, purgeTags: true });
 });

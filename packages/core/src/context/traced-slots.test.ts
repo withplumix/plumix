@@ -19,8 +19,11 @@ import {
 describe("traceCdn", () => {
   function stub(hit?: Response): ConnectedCdn {
     return {
-      match: () => Promise.resolve(hit),
-      put: () => Promise.resolve(),
+      decorate: (response) => response,
+      store: {
+        match: () => Promise.resolve(hit),
+        put: () => Promise.resolve(),
+      },
       purgeTags: () => Promise.resolve(),
     };
   }
@@ -29,7 +32,7 @@ describe("traceCdn", () => {
     const telemetry = createTelemetryCollector();
     const cdn = traceCdn(stub(new Response("hit")), () => telemetry);
 
-    const result = await cdn.match(new Request("https://cms.example/"));
+    const result = await cdn.store?.match(new Request("https://cms.example/"));
 
     expect(await result?.text()).toBe("hit");
     const [span] = telemetry.getSpans();
@@ -41,7 +44,7 @@ describe("traceCdn", () => {
     const telemetry = createTelemetryCollector();
     const cdn = traceCdn(stub(), () => telemetry);
 
-    await cdn.match(new Request("https://cms.example/"));
+    await cdn.store?.match(new Request("https://cms.example/"));
 
     expect(telemetry.getSpans()[0]?.attributes["cdn.hit"]).toBe(false);
   });
@@ -50,10 +53,11 @@ describe("traceCdn", () => {
     const telemetry = createTelemetryCollector();
     const cdn = traceCdn(stub(), () => telemetry);
 
-    await cdn.put(new Request("https://cms.example/"), new Response("x"), [
-      "t:post",
-      "e:1",
-    ]);
+    await cdn.store?.put(
+      new Request("https://cms.example/"),
+      new Response("x"),
+      ["t:post", "e:1"],
+    );
 
     const [span] = telemetry.getSpans();
     expect(span?.name).toBe("cdn: put");
@@ -71,10 +75,45 @@ describe("traceCdn", () => {
       () => telemetry,
     );
 
-    await cdn.purgeTags(["t:post"]);
+    await cdn.purgeTags?.(["t:post"]);
 
     expect(purged).toEqual([["t:post"]]);
     expect(telemetry.getSpans()).toEqual([]);
+  });
+
+  test("decorate passes through unspanned — it is header math, not I/O", () => {
+    const telemetry = createTelemetryCollector();
+    const cdn = traceCdn(
+      {
+        ...stub(),
+        decorate: (response, tags) =>
+          new Response(response.body, {
+            headers: { "cache-tag": tags.join(",") },
+          }),
+      },
+      () => telemetry,
+    );
+
+    const decorated = cdn.decorate(new Response("page"), ["t:post"]);
+
+    expect(decorated.headers.get("cache-tag")).toBe("t:post");
+    expect(telemetry.getSpans()).toEqual([]);
+  });
+
+  test("a storeless provider stays storeless through the wrapper", () => {
+    const telemetry = createTelemetryCollector();
+    const { store: _store, ...storeless } = stub();
+    const cdn = traceCdn(storeless, () => telemetry);
+
+    expect(cdn.store).toBeUndefined();
+  });
+
+  test("a provider that cannot purge stays unable to through the wrapper", () => {
+    const telemetry = createTelemetryCollector();
+    const { purgeTags: _purgeTags, ...unpurgeable } = stub();
+    const cdn = traceCdn(unpurgeable, () => telemetry);
+
+    expect(cdn.purgeTags).toBeUndefined();
   });
 });
 

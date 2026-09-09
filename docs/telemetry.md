@@ -56,8 +56,8 @@ Known gaps that are by design, not oversights (#1494):
   borderline case — its span _starts_ inside the request (so it appears in
   the tree) but its duration stamps when the store settles, which may be after
   a consumer serialized the snapshot; treat the duration as best-effort.
-- **`ctx.storage.url` / `ctx.storage.presignPut`** are unspanned — plain URL
-  math / local signing, not bucket round-trips.
+- **`ctx.storage.url` / `ctx.storage.presignPut` / `ctx.cdn.decorate`** are
+  unspanned — plain URL math, local signing and header writes, not round-trips.
 - **`Date.now()` millisecond granularity** can produce occasional negative
   self-times (child durations summing 1–6ms past the parent). An OTel exporter
   wanting monotonic timing should consider `performance.now()`.

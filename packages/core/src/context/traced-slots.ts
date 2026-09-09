@@ -1,6 +1,7 @@
 import type { Mailer } from "../auth/mailer/types.js";
 import type {
   AssetsBinding,
+  CdnStore,
   ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
@@ -16,25 +17,36 @@ import type { TelemetryCollector } from "./telemetry.js";
  */
 type GetTelemetry = () => TelemetryCollector;
 
-export function traceCdn(
-  cdn: ConnectedCdn,
-  getTelemetry: GetTelemetry,
-): ConnectedCdn {
+function traceCdnStore(store: CdnStore, getTelemetry: GetTelemetry): CdnStore {
   return {
     match: (request) =>
       getTelemetry().span("cdn: match", async (s) => {
-        const hit = await cdn.match(request);
+        const hit = await store.match(request);
         s.set("cdn.hit", hit !== undefined);
         return hit;
       }),
     put: (request, response, tags) =>
       getTelemetry().span("cdn: put", (s) => {
         s.set("cdn.tags", () => [...tags]);
-        return cdn.put(request, response, tags);
+        return store.put(request, response, tags);
       }),
+  };
+}
+
+export function traceCdn(
+  cdn: ConnectedCdn,
+  getTelemetry: GetTelemetry,
+): ConnectedCdn {
+  const store = cdn.store;
+  return {
+    // Header math rather than I/O, like `storage.url` below — spanning it would
+    // put a 0ms row next to real round-trips.
+    decorate: cdn.decorate.bind(cdn),
+    ...(store && { store: traceCdnStore(store, getTelemetry) }),
+    ...(cdn.segmentVary && { segmentVary: cdn.segmentVary.bind(cdn) }),
     // Untraced on purpose: purges fire post-response (after the snapshot is
     // delivered), so a span here would dangle as an unfinished root.
-    purgeTags: (tags) => cdn.purgeTags(tags),
+    ...(cdn.purgeTags && { purgeTags: cdn.purgeTags.bind(cdn) }),
   };
 }
 

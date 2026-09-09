@@ -124,8 +124,11 @@ describe("createAppContext platform I/O tracing", () => {
         url: () => Promise.resolve(null),
       },
       cdn: {
-        match: () => Promise.resolve(undefined),
-        put: () => Promise.resolve(),
+        decorate: (response) => response,
+        store: {
+          match: () => Promise.resolve(undefined),
+          put: () => Promise.resolve(),
+        },
         purgeTags: () => Promise.resolve(),
       },
       mailer: { send: () => Promise.resolve() },
@@ -136,7 +139,7 @@ describe("createAppContext platform I/O tracing", () => {
 
     await ctx.assets?.fetch(new Request("https://cms.example/x"));
     await ctx.storage?.get("k");
-    await ctx.cdn?.match(new Request("https://cms.example/"));
+    await ctx.cdn?.store?.match(new Request("https://cms.example/"));
     await ctx.mailer?.send({ to: "u@example.com", subject: "s", text: "t" });
 
     expect(ctx.telemetry.getSpans().map((s) => s.name)).toEqual([

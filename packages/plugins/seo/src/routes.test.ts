@@ -1,5 +1,6 @@
 import type {
   AnyPluginDescriptor,
+  CdnStore,
   ConnectedCdn,
   JsonValue,
   Logger,
@@ -435,16 +436,23 @@ describe("seo:sitemap:urls", () => {
 
 describe("a sitemap at the edge", () => {
   function cdnStub() {
-    const store = new Map<string, Response>();
-    const put = vi.fn<ConnectedCdn["put"]>((request, response) => {
-      store.set(request.url, response);
+    const entries = new Map<string, Response>();
+    const put = vi.fn<CdnStore["put"]>((request, response) => {
+      entries.set(request.url, response);
       return Promise.resolve();
     });
-    const match = vi.fn<ConnectedCdn["match"]>((request) =>
-      Promise.resolve(store.get(request.url)?.clone()),
+    const match = vi.fn<CdnStore["match"]>((request) =>
+      Promise.resolve(entries.get(request.url)?.clone()),
     );
-    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
-    return { cdn: { match, put, purgeTags }, match, put, purgeTags };
+    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
+      Promise.resolve(),
+    );
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: { match, put },
+      purgeTags,
+    };
+    return { cdn, match, put, purgeTags };
   }
 
   function tagsFor(

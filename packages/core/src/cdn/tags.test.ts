@@ -1,10 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { entryPurgeTags, pageTags, termPurgeTags } from "./tags.js";
+import { entryPurgeTags, pageTags, termPurgeTags, typeTag } from "./tags.js";
 
 describe("entryPurgeTags", () => {
   it("purges the type tag and the entry tag", () => {
     expect(entryPurgeTags("post", 42)).toEqual(["t:post", "e:42"]);
+  });
+
+  it("carries the lowercased type tag", () => {
+    expect(entryPurgeTags("EventSeries", 42)).toEqual([
+      "t:eventseries",
+      "e:42",
+    ]);
+  });
+});
+
+describe("typeTag", () => {
+  // At least one target CDN matches tags case-insensitively, so a mixed-case
+  // entry type would be two tags on one vendor and one on another.
+  it("lowercases the entry type at construction", () => {
+    expect(typeTag("EventSeries")).toBe("t:eventseries");
   });
 });
 
@@ -15,6 +30,10 @@ describe("termPurgeTags", () => {
 
   it("purges nothing for a taxonomy with no entry types", () => {
     expect(termPurgeTags([])).toEqual([]);
+  });
+
+  it("carries lowercased type tags", () => {
+    expect(termPurgeTags(["Post"])).toEqual(["t:post"]);
   });
 });
 
