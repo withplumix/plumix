@@ -126,8 +126,8 @@ export { tagCacheEntry } from "./cache/route-tags.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).
-export { serveRenderedAsset } from "./cache/rendered-asset.js";
-export type { RenderedAssetArgs } from "./cache/rendered-asset.js";
+export { serveRenderedAsset } from "./storage/rendered-asset.js";
+export type { RenderedAssetArgs } from "./storage/rendered-asset.js";
 // The page's canonical URL — the same value core's `<link rel=canonical>` and
 // its redirect normalizer resolve, so a plugin naming the page (`og:url`, a
 // sitemap `<loc>`) cannot disagree with where core sends traffic.
