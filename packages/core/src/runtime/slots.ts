@@ -251,18 +251,18 @@ export interface KV {
 }
 
 /**
- * An edge cache bound for the current isolate. Backs the public read-through
+ * A CDN bound for the current isolate. Backs the public read-through
  * cache: `match` reads a stored response, `put` writes a fresh one tagged with
  * `tags`, and `purgeTags` invalidates every stored response carrying any of the
  * given tags. The canonical implementation (Cloudflare's `edge()`) is the
  * Workers Cache API plus the zone purge-by-tag REST API.
  */
-export interface ConnectedCache {
+export interface ConnectedCdn {
   match(request: Request): Promise<Response | undefined>;
   /**
    * Store `response` under `request`, tagged for {@link purgeTags}.
    *
-   * Two rules an entry is shared under, both asserted by the cache conformance
+   * Two rules an entry is shared under, both asserted by the cdn conformance
    * suite. A non-GET request stores nothing — one entry keyed on a mutating
    * request would answer every later visitor with the first one's result, and
    * the Workers Cache API refuses it outright. And the stored copy must not
@@ -279,16 +279,16 @@ export interface ConnectedCache {
 }
 
 /**
- * Edge-cache slot. `connect` returns a {@link ConnectedCache} when the
+ * CDN slot. `connect` returns a {@link ConnectedCdn} when the
  * runtime has everything it needs to cache safely, or `null` to disable
  * caching for this deploy (e.g. a Cloudflare deploy with no zone credentials,
  * where pages must render live) — a verdict that holds for the handler's life.
  * Mirrors the `storage:` slot's connect shape.
  */
-export interface CacheProvider {
+export interface CdnProvider {
   readonly kind: string;
   /** Bound once per handler — see {@link KV.connect}. */
-  connect(env: PlumixEnv): ConnectedCache | null;
+  connect(env: PlumixEnv): ConnectedCdn | null;
 }
 
 export interface TransformOpts {

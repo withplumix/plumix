@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { ConnectedCache } from "../runtime/slots.js";
-import { tagCacheEntry } from "../cache/route-tags.js";
-import { entryPurgeTags } from "../cache/tags.js";
+import type { ConnectedCdn } from "../runtime/slots.js";
+import { tagCdnEntry } from "../cdn/route-tags.js";
+import { entryPurgeTags } from "../cdn/tags.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
@@ -136,14 +136,12 @@ describe("public route dispatch", () => {
   });
 });
 
-describe("public route dispatch — edge cache", () => {
-  function cacheStub(hit?: Response) {
-    const match = vi.fn<ConnectedCache["match"]>(() => Promise.resolve(hit));
-    const put = vi.fn<ConnectedCache["put"]>(() => Promise.resolve());
-    const purgeTags = vi.fn<ConnectedCache["purgeTags"]>(() =>
-      Promise.resolve(),
-    );
-    return { cache: { match, put, purgeTags }, match, put };
+describe("public route dispatch — CDN", () => {
+  function cdnStub(hit?: Response) {
+    const match = vi.fn<ConnectedCdn["match"]>(() => Promise.resolve(hit));
+    const put = vi.fn<ConnectedCdn["put"]>(() => Promise.resolve());
+    const purgeTags = vi.fn<ConnectedCdn["purgeTags"]>(() => Promise.resolve());
+    return { cdn: { match, put, purgeTags }, match, put };
   }
 
   // What the sitemap will be: one document for every visitor, tagged with the
@@ -153,17 +151,17 @@ describe("public route dispatch — edge cache", () => {
       path: "/sitemap.xml",
       cacheable: true,
       handler: (_request, appCtx) => {
-        tagCacheEntry(appCtx, entryPurgeTags("post", 7));
+        tagCdnEntry(appCtx, entryPurgeTags("post", 7));
         return new Response("<urlset/>", { status: 200 });
       },
     });
   });
 
   test("an opted-in route stores its response under the tags it declared", async () => {
-    const { cache, put } = cacheStub();
+    const { cdn, put } = cdnStub();
     const harness = await createDispatcherHarness({
       plugins: [sitemap],
-      cache,
+      cdn,
     });
 
     (await harness.fetch("/sitemap.xml")).assertStatus(200);
@@ -174,10 +172,10 @@ describe("public route dispatch — edge cache", () => {
   });
 
   test("a subsequent request is served from the stored entry", async () => {
-    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
     const harness = await createDispatcherHarness({
       plugins: [sitemap],
-      cache,
+      cdn,
     });
 
     const response = await harness.fetch("/sitemap.xml");
@@ -186,13 +184,13 @@ describe("public route dispatch — edge cache", () => {
     expect(await response.text()).toBe("CACHED");
   });
 
-  test("a route that did not opt in never touches the cache", async () => {
-    const { cache, match, put } = cacheStub(
+  test("a route that did not opt in never touches the CDN", async () => {
+    const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
     );
     const harness = await createDispatcherHarness({
       plugins: [owner("/feed")],
-      cache,
+      cdn,
     });
 
     const response = await harness.fetch("/feed");

@@ -10,7 +10,7 @@ import type { PluginDescriptor } from "./plugin/define.js";
 import type { RedirectRule } from "./route/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
-  CacheProvider,
+  CdnProvider,
   DatabaseAdapter,
   ImageDelivery,
   KV,
@@ -81,13 +81,13 @@ export interface PlumixConfigInput {
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   /**
-   * Public read-through edge cache. Optional and default-off: with no `cache`
+   * Public read-through CDN. Optional and default-off: with no `cdn`
    * slot, every public page renders live. The canonical provider is
    * `edge({ ttl, staleWhileRevalidate })` from `@plumix/runtime-cloudflare`;
    * it disables itself when the deploy lacks the zone credentials needed to
    * cache safely (e.g. on `workers.dev`).
    */
-  readonly cache?: CacheProvider;
+  readonly cdn?: CdnProvider;
   /**
    * Outbound email transport. Implementations conform to the `Mailer`
    * interface from `@plumix/core` — one method, swap in any provider
@@ -181,7 +181,7 @@ export interface PlumixConfig {
   readonly storage?: ObjectStorage;
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
-  readonly cache?: CacheProvider;
+  readonly cdn?: CdnProvider;
   readonly mailer?: MailerInput;
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
@@ -216,7 +216,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     storage: config.storage,
     imageDelivery: config.imageDelivery,
     kv: config.kv,
-    cache: config.cache,
+    cdn: config.cdn,
     mailer: config.mailer,
     theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],

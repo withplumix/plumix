@@ -22,7 +22,7 @@ export function enqueuePurgeTags(
   ctx: AppContext,
   tags: readonly string[],
 ): void {
-  if (ctx.cache === undefined || tags.length === 0) return;
+  if (ctx.cdn === undefined || tags.length === 0) return;
   let set = pending.get(ctx.memo);
   if (set === undefined) {
     set = new Set();
@@ -40,9 +40,9 @@ export function flushPurgeTags(ctx: AppContext): void {
   const set = pending.get(ctx.memo);
   if (set === undefined) return;
   pending.delete(ctx.memo);
-  const cache = ctx.cache;
-  if (cache === undefined || set.size === 0) return;
-  ctx.defer(cache.purgeTags([...set]));
+  const cdn = ctx.cdn;
+  if (cdn === undefined || set.size === 0) return;
+  ctx.defer(cdn.purgeTags([...set]));
 }
 
 // Entry lifecycle actions that change what the public sees — published,
@@ -68,8 +68,8 @@ const TERM_ACTIONS = [
 ] as const;
 
 /**
- * Register core's edge-cache purge subscribers. Called at app boot when a
- * cache slot is configured; each entry mutation enqueues `t:<type>` + `e:<id>`,
+ * Register core's CDN purge subscribers. Called at app boot when a
+ * cdn slot is configured; each entry mutation enqueues `t:<type>` + `e:<id>`,
  * each term mutation enqueues `t:<type>` for the taxonomy's entry types, for
  * the post-request flush.
  */

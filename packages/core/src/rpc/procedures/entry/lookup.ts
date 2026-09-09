@@ -7,7 +7,7 @@ import type {
   LookupAdapter,
   LookupResult,
 } from "../../../plugin/lookup.js";
-import { entryTag } from "../../../cache/tags.js";
+import { entryTag } from "../../../cdn/tags.js";
 import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";

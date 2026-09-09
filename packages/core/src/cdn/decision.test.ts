@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  cacheBypassReason,
+  cdnBypassReason,
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
   responseAllowsSharedStorage,
   responseIsStorable,
-  routeCacheKey,
+  routeCdnKey,
   SEGMENT_KEY_PARAM,
-  segmentCacheKey,
+  segmentCdnKey,
 } from "./decision.js";
 
-describe("cacheBypassReason", () => {
+describe("cdnBypassReason", () => {
   it("caches an anonymous GET to a public entry permalink", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "anonymous",
         intentKind: "single",
@@ -25,7 +25,7 @@ describe("cacheBypassReason", () => {
   it("caches anonymous GETs to archive, taxonomy, and front-page intents", () => {
     for (const intentKind of ["archive", "taxonomy", "front-page"] as const) {
       expect(
-        cacheBypassReason({ method: "GET", segment: "anonymous", intentKind }),
+        cdnBypassReason({ method: "GET", segment: "anonymous", intentKind }),
       ).toBe(null);
     }
   });
@@ -37,14 +37,14 @@ describe("cacheBypassReason", () => {
       "members",
     ] as const) {
       expect(
-        cacheBypassReason({ method: "GET", segment, intentKind: "single" }),
+        cdnBypassReason({ method: "GET", segment, intentKind: "single" }),
       ).toBe(null);
     }
   });
 
   it("bypasses a private segment", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "private",
         intentKind: "single",
@@ -54,7 +54,7 @@ describe("cacheBypassReason", () => {
 
   it("bypasses search pages", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "anonymous",
         intentKind: "search",
@@ -64,14 +64,14 @@ describe("cacheBypassReason", () => {
 
   it("bypasses a custom archive that has not opted into caching", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "anonymous",
         intentKind: "custom",
       }),
     ).toBe("intent");
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "anonymous",
         intentKind: "custom",
@@ -82,7 +82,7 @@ describe("cacheBypassReason", () => {
 
   it("caches a custom archive that opted in via cacheable: true", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "anonymous",
         intentKind: "custom",
@@ -93,7 +93,7 @@ describe("cacheBypassReason", () => {
 
   it("still bypasses an opted-in custom archive for a private segment", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "GET",
         segment: "private",
         intentKind: "custom",
@@ -104,7 +104,7 @@ describe("cacheBypassReason", () => {
 
   it("still bypasses an opted-in custom archive on a non-GET/HEAD method", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "POST",
         segment: "anonymous",
         intentKind: "custom",
@@ -115,7 +115,7 @@ describe("cacheBypassReason", () => {
 
   it("bypasses non-GET/HEAD methods", () => {
     expect(
-      cacheBypassReason({
+      cdnBypassReason({
         method: "POST",
         segment: "anonymous",
         intentKind: "single",
@@ -124,11 +124,11 @@ describe("cacheBypassReason", () => {
   });
 });
 
-describe("segmentCacheKey", () => {
+describe("segmentCdnKey", () => {
   const at = (req: Request) => new URL(req.url);
 
   it("keys the anonymous segment under the plain URL", () => {
-    const key = segmentCacheKey(
+    const key = segmentCdnKey(
       new Request("https://site.test/post"),
       "anonymous",
     );
@@ -137,7 +137,7 @@ describe("segmentCacheKey", () => {
   });
 
   it("folds a non-anonymous segment into the key URL", () => {
-    const key = segmentCacheKey(
+    const key = segmentCdnKey(
       new Request("https://site.test/post"),
       "authenticated",
     );
@@ -145,15 +145,12 @@ describe("segmentCacheKey", () => {
   });
 
   it("gives distinct segments distinct keys, and same-segment requests one key", () => {
-    const a = segmentCacheKey(
+    const a = segmentCdnKey(
       new Request("https://site.test/x"),
       "authenticated",
     );
-    const b = segmentCacheKey(
-      new Request("https://site.test/x"),
-      "role:editor",
-    );
-    const c = segmentCacheKey(
+    const b = segmentCdnKey(new Request("https://site.test/x"), "role:editor");
+    const c = segmentCdnKey(
       new Request("https://site.test/x"),
       "authenticated",
     );
@@ -162,7 +159,7 @@ describe("segmentCacheKey", () => {
   });
 
   it("strips the session cookie so same-segment cookies collapse to one key", () => {
-    const key = segmentCacheKey(
+    const key = segmentCdnKey(
       new Request("https://site.test/post", {
         headers: { cookie: "plumix_session=abc" },
       }),
@@ -174,13 +171,13 @@ describe("segmentCacheKey", () => {
   it("drops a client-supplied marker before applying the server segment", () => {
     // An anonymous request crafted to carry the authenticated marker must not
     // land on (or poison) the authenticated variant's entry.
-    const anon = segmentCacheKey(
+    const anon = segmentCdnKey(
       new Request(`https://site.test/post?${SEGMENT_KEY_PARAM}=authenticated`),
       "anonymous",
     );
     expect(at(anon).searchParams.has(SEGMENT_KEY_PARAM)).toBe(false);
 
-    const authed = segmentCacheKey(
+    const authed = segmentCdnKey(
       new Request(`https://site.test/post?${SEGMENT_KEY_PARAM}=spoofed`),
       "authenticated",
     );
@@ -270,9 +267,9 @@ describe("responseIsStorable", () => {
   });
 });
 
-describe("routeCacheKey", () => {
+describe("routeCdnKey", () => {
   it("keys off the whole URL with the visitor's cookie dropped", () => {
-    const key = routeCacheKey(
+    const key = routeCdnKey(
       new Request("https://site.test/_plumix/og/card/abc.png?w=1200", {
         headers: { cookie: "plumix_session=alice" },
       }),

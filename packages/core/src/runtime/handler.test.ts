@@ -262,7 +262,7 @@ describe("createPlumixHandler — scheduled", () => {
 });
 
 describe("createPlumixHandler — slot binding", () => {
-  test("storage, kv, cache and image delivery connect once across requests", async () => {
+  test("storage, kv, cdn and image delivery connect once across requests", async () => {
     const calls: string[] = [];
     const handler = await handlerFor({
       storage: {
@@ -279,10 +279,10 @@ describe("createPlumixHandler — slot binding", () => {
           return memoryKv().connect();
         },
       },
-      cache: {
+      cdn: {
         kind: "counting",
         connect: () => {
-          calls.push("cache");
+          calls.push("cdn");
           return null;
         },
       },
@@ -297,7 +297,7 @@ describe("createPlumixHandler — slot binding", () => {
     });
     await handler.fetch(request(), { env: {} });
     await handler.fetch(request(), { env: {} });
-    expect(calls.sort()).toEqual(["cache", "imageDelivery", "kv", "storage"]);
+    expect(calls.sort()).toEqual(["cdn", "imageDelivery", "kv", "storage"]);
   });
 
   test("a database without connectRequest connects once across requests", async () => {

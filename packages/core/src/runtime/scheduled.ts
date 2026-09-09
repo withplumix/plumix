@@ -1,7 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { ScheduledRunReport } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
-import { flushPurgeTags } from "../cache/purge.js";
+import { flushPurgeTags } from "../cdn/purge.js";
 import { scheduledTasksFor } from "./schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
@@ -50,14 +50,14 @@ export async function runScheduledTasks(
     }
   }
   try {
-    // A scheduled publish fires `entry:published`; flush the batched edge-cache
+    // A scheduled publish fires `entry:published`; flush the batched CDN
     // purge it accumulated, the same request-end seam the dispatcher uses.
     flushPurgeTags(ctx);
     // No response exists on this path — the envelope carries a synthetic 200;
     // task failures are error spans, caught above so siblings still run.
     deliverTelemetrySnapshot(ctx, 200, startedAt);
   } catch (error) {
-    // A cache adapter that throws synchronously must not discard the accounting
+    // A CDN adapter that throws synchronously must not discard the accounting
     // the loop just did: the tasks ran, and the caller is about to be told
     // whether they worked.
     ctx.logger.error(

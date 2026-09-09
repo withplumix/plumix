@@ -1,5 +1,5 @@
-import type { ConnectedCache } from "plumix";
-import { describeCacheContract } from "plumix/test/conformance";
+import type { ConnectedCdn } from "plumix";
+import { describeCdnContract } from "plumix/test/conformance";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EdgeConfig } from "./edge.js";
@@ -33,17 +33,17 @@ describe("edge().connect", () => {
     expect(edge({ ttl: 60 }).connect({ CF_ZONE_ID: "zone-1" })).toBeNull();
   });
 
-  it("returns a connected cache when credentials are present", () => {
+  it("returns a connected cdn when credentials are present", () => {
     expect(edge({ ttl: 60 }).connect(CREDS)).not.toBeNull();
   });
 });
 
 function connect(
   config: EdgeConfig = { ttl: 60, staleWhileRevalidate: 600 },
-): ConnectedCache {
-  const cache = edge(config).connect(CREDS);
-  if (cache === null) throw new Error("expected a connected cache");
-  return cache;
+): ConnectedCdn {
+  const cdn = edge(config).connect(CREDS);
+  if (cdn === null) throw new Error("expected a connected cdn");
+  return cdn;
 }
 
 function storedResponse(): Response {
@@ -52,7 +52,7 @@ function storedResponse(): Response {
   return call[1] as Response;
 }
 
-describe("connected cache put", () => {
+describe("connected cdn put", () => {
   it("stores a GET with the edge cache-control derived from policy", async () => {
     await connect().put(
       new Request("https://site.test/post"),
@@ -150,7 +150,7 @@ describe("connected cache put", () => {
   });
 });
 
-describe("connected cache purgeTags", () => {
+describe("connected cdn purgeTags", () => {
   const originalFetch = globalThis.fetch;
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -251,7 +251,7 @@ function purgeableEdge(): {
   };
 }
 
-describe("edge as a cache slot", () => {
+describe("edge as a cdn slot", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
@@ -264,5 +264,5 @@ describe("edge as a cache slot", () => {
     globalThis.fetch = originalFetch;
   });
 
-  describeCacheContract({ connect });
+  describeCdnContract({ connect });
 });

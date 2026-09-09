@@ -261,7 +261,7 @@ export interface PluginSetupContextBase {
    *  handler emits locale-bearing HTML, set `Vary: Cookie, Accept-Language`
    *  yourself — the dispatcher can't infer it from `ctx`.
    *
-   *  `cacheable: true` opts the route into the edge cache: a GET is answered
+   *  `cacheable: true` opts the route into the CDN: a GET is answered
    *  from the entry stored under its URL, so the handler runs once per URL
    *  rather than once per request; every other method runs the handler. Take
    *  it only where the route answers every visitor with the same document. The
@@ -272,7 +272,7 @@ export interface PluginSetupContextBase {
    *
    *  Freshness is the handler's: it keeps a `cache-control` it set, and a
    *  response that set none takes the site's page TTL. So are the tags: the
-   *  entry stores untagged unless the handler calls `tagCacheEntry` while it
+   *  entry stores untagged unless the handler calls `tagCdnEntry` while it
    *  runs, and `immutable` belongs only on a content-addressed URL, since a
    *  purge reaches Cloudflare but never a browser or a scraper. A response
    *  answering a request that carried a session, an `Authorization` header or

@@ -1,4 +1,4 @@
-import type { ConnectedCache } from "plumix";
+import type { ConnectedCdn } from "plumix";
 import { ACCESS_POLICY_META_KEY, entryPurgeTags, entryTag } from "plumix";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
@@ -146,7 +146,7 @@ describe("the card route", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  // A card carries the entry's title, is served from a shared cache, and sits
+  // A card carries the entry's title, is served from a shared cdn, and sits
   // at an enumerable id, so every entry with no page a scraper can reach has to
   // be refused — whether that is publication status, the type's visibility, or
   // the access layer turning an anonymous visitor away.
@@ -340,26 +340,26 @@ describe("the card route", () => {
 });
 
 describe("a card at the edge", () => {
-  function edgeStub(seeded?: [string, Response]) {
+  function cdnStub(seeded?: [string, Response]) {
     const store = new Map<string, Response>(seeded ? [seeded] : []);
-    const put = vi.fn<ConnectedCache["put"]>((request, response) => {
+    const put = vi.fn<ConnectedCdn["put"]>((request, response) => {
       store.set(request.url, response);
       return Promise.resolve();
     });
-    const match = vi.fn<ConnectedCache["match"]>((request) =>
+    const match = vi.fn<ConnectedCdn["match"]>((request) =>
       Promise.resolve(store.get(request.url)?.clone()),
     );
-    const cache: ConnectedCache = {
+    const cdn: ConnectedCdn = {
       match,
       put,
       purgeTags: () => Promise.resolve(),
     };
-    return { cache, match, put };
+    return { cdn, match, put };
   }
 
   test("stores the card under the tag the entry's own publish purges", async () => {
-    const { cache, put } = edgeStub();
-    const harness = await createHarness({ cache });
+    const { cdn, put } = cdnStub();
+    const harness = await createHarness({ cdn });
     const id = await seedEntry(harness);
 
     await fetchCard(harness, id);
@@ -376,9 +376,9 @@ describe("a card at the edge", () => {
   });
 
   test("renders once, then answers the next request from the edge", async () => {
-    const { cache, match, put } = edgeStub();
+    const { cdn, match, put } = cdnStub();
     const fake = createFakeRenderer();
-    const harness = await createHarness({ cache, renderer: fake.renderer });
+    const harness = await createHarness({ cdn, renderer: fake.renderer });
     const id = await seedEntry(harness);
     const path = await cardPath(harness, id);
 
@@ -399,8 +399,8 @@ describe("a card at the edge", () => {
   });
 
   test("keeps a crafted query string from minting an entry of its own", async () => {
-    const { cache, put } = edgeStub();
-    const harness = await createHarness({ cache });
+    const { cdn, put } = cdnStub();
+    const harness = await createHarness({ cdn });
     const id = await seedEntry(harness);
     const path = await cardPath(harness, id);
 
@@ -417,8 +417,8 @@ describe("a card at the edge", () => {
 
   test("answers from the stored copy without reaching the route", async () => {
     const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
-    const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
-    const harness = await createHarness({ cache });
+    const { cdn, match } = cdnStub([path, new Response("EDGE COPY")]);
+    const harness = await createHarness({ cdn });
 
     const response = await harness.fetch(new URL(path).pathname);
 
@@ -428,8 +428,8 @@ describe("a card at the edge", () => {
 
   test("hands a signed-in visitor the one entry everybody reads", async () => {
     const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
-    const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
-    const harness = await createHarness({ cache });
+    const { cdn, match } = cdnStub([path, new Response("EDGE COPY")]);
+    const harness = await createHarness({ cdn });
     const reader = await harness.seedUser("subscriber");
 
     const response = await harness.fetch(new URL(path).pathname, {

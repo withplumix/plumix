@@ -105,7 +105,7 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
    });
    ```
 
-4. **Prove the slots.** Run the conformance suites against whatever kv, storage, cache and assets implementations you ship beside the adapter. [Proving a slot](#proving-a-slot) below has the shape.
+4. **Prove the slots.** Run the conformance suites against whatever kv, storage, cdn and assets implementations you ship beside the adapter. [Proving a slot](#proving-a-slot) below has the shape.
 
 </Steps>
 
@@ -230,7 +230,7 @@ export async function runCron(cron: string): Promise<void> {
 
 ### `PlumixHandler.dispose`
 
-Drains the deferred work no `waitUntil` took, then resolves. Telemetry delivery and edge-cache purges go through `ctx.defer`, and on a runtime whose invocations carry no `waitUntil` the default handler tracks those promises in a pending set instead. `dispose()` is what empties it.
+Drains the deferred work no `waitUntil` took, then resolves. Telemetry delivery and CDN purges go through `ctx.defer`, and on a runtime whose invocations carry no `waitUntil` the default handler tracks those promises in a pending set instead. `dispose()` is what empties it.
 
 The drain follows work that defers more work, against an absolute deadline — `disposeTimeoutMs` on the handler options, five seconds by default — so a chain of quick tasks cannot hold a shutdown open indefinitely. Abandoning is final: a supervisor escalating `SIGTERM` to `SIGINT` does not buy a stuck task a second timeout.
 
@@ -258,7 +258,7 @@ The runtime's configuration bag: bindings, secrets and plain variables. Every sl
 
 On Workers it is the Worker `env`. On a process runtime it is `process.env` plus any clients you bound alongside. Its type is `PlumixEnv`, the interface a runtime augments through `declare module "plumix"`, so a site's slots read your keys type-checked.
 
-Core assumes `env` is stable for the handler's life: object storage, kv, cache and image delivery are connected once, on the first invocation, and reused. Two things are not bound once: the database, through `connectRequest`, and the `assets` resolver, which is called per request because a binding read is cheap.
+Core assumes `env` is stable for the handler's life: object storage, kv, cdn and image delivery are connected once, on the first invocation, and reused. Two things are not bound once: the database, through `connectRequest`, and the `assets` resolver, which is called per request because a binding read is cheap.
 
 ```ts
 declare module "plumix" {
@@ -331,7 +331,7 @@ The host matters in development too. The dev-only surfaces — the debug bar, th
 
 **Supply the client address from something you trust.** See [`Invocation.clientAddress`](#invocationclientaddress). The adapter is the only layer that knows which proxy is in front of it.
 
-**Supply `waitUntil`, or call `dispose()` on shutdown.** Without `waitUntil` the default handler still starts the work and tracks it, so in a long-lived process it finishes like any floating promise. What a runtime that does neither loses is whatever is still in flight when the process ends: a telemetry batch that never reaches its endpoint, an edge-cache purge that never fires and leaves a published entry serving a stale page. It is a silent loss — nothing rejects, the promise dies with the process.
+**Supply `waitUntil`, or call `dispose()` on shutdown.** Without `waitUntil` the default handler still starts the work and tracks it, so in a long-lived process it finishes like any floating promise. What a runtime that does neither loses is whatever is still in flight when the process ends: a telemetry batch that never reaches its endpoint, a CDN purge that never fires and leaves a published entry serving a stale page. It is a silent loss — nothing rejects, the promise dies with the process.
 
 **Supply `env` as the augmented `PlumixEnv`.** See [`Invocation.env`](#invocationenv). Core binds every slot against the first `env` it sees, so building a fresh one per request silently pins the site to one request's values.
 
@@ -377,7 +377,7 @@ Plumix's own repository pins Node to `^24.15.0`, above that floor.
 
 ## Proving a slot
 
-An adapter usually ships slot implementations beside it — a Redis kv, an S3 bucket, a cache in front of a CDN. Each of those has a contract core relies on and no compiler checks: that `list` honours `limit` as an upper bound, that a cursor resumes without repeating a key, that a TTL expires, that `delete` is idempotent.
+An adapter usually ships slot implementations beside it — a Redis kv, an S3 bucket, a `cdn:` provider fronting a third-party CDN. Each of those has a contract core relies on and no compiler checks: that `list` honours `limit` as an upper bound, that a cursor resumes without repeating a key, that a TTL expires, that `delete` is idempotent.
 
 `plumix/test/conformance` exports one parameterised suite per slot port. Each takes a factory that returns a connected slot and runs the contract against it. Core's own in-memory slots and the Cloudflare slots are the first callers, so the suites are the same assertions the shipped implementations are held to.
 
@@ -394,7 +394,7 @@ describeKvContract({
 });
 ```
 
-`describeObjectStorageContract`, `describeCacheContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
+`describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
 
 ## Related
 

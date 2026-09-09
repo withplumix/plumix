@@ -1,11 +1,11 @@
-import type { CacheProvider, ConnectedCache } from "plumix";
+import type { CdnProvider, ConnectedCdn } from "plumix";
 import { responseAllowsSharedStorage } from "plumix";
 
-import { EdgeCacheError } from "./errors.js";
+import { EdgeCdnError } from "./errors.js";
 import { readEnvString } from "./read-env.js";
 
 /**
- * Edge-cache policy for {@link edge}. `ttl` is the edge freshness window in
+ * CDN policy for {@link edge}. `ttl` is the edge freshness window in
  * seconds (`s-maxage`); `staleWhileRevalidate` lets a colo serve a stale copy
  * for that many seconds after expiry while it refreshes in the background.
  */
@@ -102,15 +102,15 @@ async function purgeByTag(
     },
   );
   if (!response.ok) {
-    throw EdgeCacheError.purgeFailed({ status: response.status });
+    throw EdgeCdnError.purgeFailed({ status: response.status });
   }
 }
 
-function connectedCache(
+function connectedCdn(
   store: EdgeStore,
   config: EdgeConfig,
   creds: Credentials,
-): ConnectedCache {
+): ConnectedCdn {
   return {
     match: (request) => store.match(request),
     put: async (request, response, tags) => {
@@ -123,12 +123,12 @@ function connectedCache(
 }
 
 /**
- * Cloudflare edge-cache provider backed by the Workers Cache API
+ * Cloudflare CDN provider backed by the Workers Cache API
  * (`caches.default`) plus the zone purge-by-tag REST API. Disables itself
  * (returns `null` from `connect`) when the deploy lacks the zone credentials
  * needed to purge — pages then render live.
  */
-export function edge(config: EdgeConfig): CacheProvider {
+export function edge(config: EdgeConfig): CdnProvider {
   return {
     kind: "cloudflare-edge",
     connect(env) {
@@ -137,7 +137,7 @@ export function edge(config: EdgeConfig): CacheProvider {
       if (zoneId === undefined || purgeToken === undefined) return null;
       const store = defaultStore();
       if (store === null) return null;
-      return connectedCache(store, config, { zoneId, purgeToken });
+      return connectedCdn(store, config, { zoneId, purgeToken });
     },
   };
 }

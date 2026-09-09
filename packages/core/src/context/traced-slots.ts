@@ -1,7 +1,7 @@
 import type { Mailer } from "../auth/mailer/types.js";
 import type {
   AssetsBinding,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
 } from "../runtime/slots.js";
@@ -16,25 +16,25 @@ import type { TelemetryCollector } from "./telemetry.js";
  */
 type GetTelemetry = () => TelemetryCollector;
 
-export function traceCache(
-  cache: ConnectedCache,
+export function traceCdn(
+  cdn: ConnectedCdn,
   getTelemetry: GetTelemetry,
-): ConnectedCache {
+): ConnectedCdn {
   return {
     match: (request) =>
-      getTelemetry().span("cache: match", async (s) => {
-        const hit = await cache.match(request);
-        s.set("cache.hit", hit !== undefined);
+      getTelemetry().span("cdn: match", async (s) => {
+        const hit = await cdn.match(request);
+        s.set("cdn.hit", hit !== undefined);
         return hit;
       }),
     put: (request, response, tags) =>
-      getTelemetry().span("cache: put", (s) => {
-        s.set("cache.tags", () => [...tags]);
-        return cache.put(request, response, tags);
+      getTelemetry().span("cdn: put", (s) => {
+        s.set("cdn.tags", () => [...tags]);
+        return cdn.put(request, response, tags);
       }),
     // Untraced on purpose: purges fire post-response (after the snapshot is
     // delivered), so a span here would dangle as an unfinished root.
-    purgeTags: (tags) => cache.purgeTags(tags),
+    purgeTags: (tags) => cdn.purgeTags(tags),
   };
 }
 

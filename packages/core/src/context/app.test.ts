@@ -106,7 +106,7 @@ describe("createAppContext origin resolution", () => {
 });
 
 describe("createAppContext platform I/O tracing", () => {
-  test("assets, storage, cache, and mailer slots are wrapped in telemetry spans", async () => {
+  test("assets, storage, cdn, and mailer slots are wrapped in telemetry spans", async () => {
     const harness = await createDispatcherHarness();
     const ctx = createAppContext({
       db: harness.db,
@@ -123,7 +123,7 @@ describe("createAppContext platform I/O tracing", () => {
         list: () => Promise.resolve({ items: [], truncated: false }),
         url: () => Promise.resolve(null),
       },
-      cache: {
+      cdn: {
         match: () => Promise.resolve(undefined),
         put: () => Promise.resolve(),
         purgeTags: () => Promise.resolve(),
@@ -136,13 +136,13 @@ describe("createAppContext platform I/O tracing", () => {
 
     await ctx.assets?.fetch(new Request("https://cms.example/x"));
     await ctx.storage?.get("k");
-    await ctx.cache?.match(new Request("https://cms.example/"));
+    await ctx.cdn?.match(new Request("https://cms.example/"));
     await ctx.mailer?.send({ to: "u@example.com", subject: "s", text: "t" });
 
     expect(ctx.telemetry.getSpans().map((s) => s.name)).toEqual([
       "assets: fetch",
       "storage: get",
-      "cache: match",
+      "cdn: match",
       "mailer: send",
     ]);
   });

@@ -19,7 +19,7 @@ export default plumix({
   // Presigned uploads and image transforms stay dormant until their env keys
   // are attached (see each primitive's docs); until then media routes through
   // the worker and public pages render live.
-  // Edge cache is intentionally not declared: per-session sandboxes are
+  // The CDN slot is intentionally not declared: per-session sandboxes are
   // unshareable at the edge. Each visitor has their own database keyed on a
   // session cookie, so a cached render would serve one visitor's sandbox to
   // all others.

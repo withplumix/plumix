@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import type { ConnectedCache } from "../../runtime/slots.js";
-import { cacheContractCases, describeCacheContract } from "./cache.js";
+import type { ConnectedCdn } from "../../runtime/slots.js";
 import { failingCases } from "./case.js";
+import { cdnContractCases, describeCdnContract } from "./cdn.js";
 
 interface CachedEntry {
   readonly body: string;
@@ -14,9 +14,9 @@ interface CachedEntry {
 // A tag-indexed map is the smallest store that can satisfy the contract, so it
 // is what the cases are proved green against here. Cloudflare's `edge()` runs
 // them against the Workers Cache API in its own package.
-function mapCache(
+function mapCdn(
   purge: (entries: Map<string, CachedEntry>, tags: readonly string[]) => void,
-): ConnectedCache {
+): ConnectedCdn {
   const entries = new Map<string, CachedEntry>();
   return {
     match: (request) => {
@@ -57,10 +57,10 @@ function byTag(
   }
 }
 
-describeCacheContract({ connect: () => mapCache(byTag) });
+describeCdnContract({ connect: () => mapCdn(byTag) });
 
-/** A cache that stores whatever it is handed, cookie and method included. */
-function leakyCache(): ConnectedCache {
+/** A cdn that stores whatever it is handed, cookie and method included. */
+function leakyCdn(): ConnectedCdn {
   const entries = new Map<string, CachedEntry>();
   return {
     match: (request) => {
@@ -86,33 +86,33 @@ function leakyCache(): ConnectedCache {
   };
 }
 
-describe("cache contract cases", () => {
-  test("fail a cache that stores a non-GET request", async () => {
-    const failed = await failingCases(cacheContractCases, {
-      connect: leakyCache,
+describe("cdn contract cases", () => {
+  test("fail a cdn that stores a non-GET request", async () => {
+    const failed = await failingCases(cdnContractCases, {
+      connect: leakyCdn,
     });
     expect(failed).toContain("a non-GET request is not stored");
   });
 
-  test("fail a cache that hands back the response's Set-Cookie", async () => {
-    const failed = await failingCases(cacheContractCases, {
-      connect: leakyCache,
+  test("fail a cdn that hands back the response's Set-Cookie", async () => {
+    const failed = await failingCases(cdnContractCases, {
+      connect: leakyCdn,
     });
     expect(failed).toContain(
       "a stored response does not carry the response's Set-Cookie",
     );
   });
 
-  test("fail a cache whose purge does nothing", async () => {
-    const failed = await failingCases(cacheContractCases, {
-      connect: () => mapCache(() => undefined),
+  test("fail a cdn whose purge does nothing", async () => {
+    const failed = await failingCases(cdnContractCases, {
+      connect: () => mapCdn(() => undefined),
     });
     expect(failed).toContain("purging a tag drops every response carrying it");
   });
 
-  test("fail a cache whose purge empties the store", async () => {
-    const failed = await failingCases(cacheContractCases, {
-      connect: () => mapCache((entries) => entries.clear()),
+  test("fail a cdn whose purge empties the store", async () => {
+    const failed = await failingCases(cdnContractCases, {
+      connect: () => mapCdn((entries) => entries.clear()),
     });
     expect(failed).toContain(
       "purging a tag leaves responses that do not carry it",

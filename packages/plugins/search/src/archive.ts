@@ -84,7 +84,7 @@ export function registerSearchArchive(
     ],
     priority: SHADOW_PRIORITY,
     // Not `cacheable`, for the reason core gives for leaving its own search
-    // page out of the edge cache: the query space is unbounded, so every
+    // page out of the CDN: the query space is unbounded, so every
     // distinct string a crawler tries would mint an entry keyed on that URL.
     resolve: async (appCtx, params) => {
       const query = decodeQuery(params.query);

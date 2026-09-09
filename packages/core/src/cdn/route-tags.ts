@@ -21,10 +21,10 @@ const pending = new WeakMap<RequestMemo, Set<string>>();
  * Only a route registered with `cacheable: true` is stored at all, and only a
  * handler knows what its own response read, so the claim is the route's to
  * make. Calling it twice in a request unions the tags; calling it on a route
- * that never reaches the edge cache does nothing.
+ * that never reaches the CDN does nothing.
  */
-export function tagCacheEntry(ctx: AppContext, tags: readonly string[]): void {
-  if (ctx.cache === undefined || tags.length === 0) return;
+export function tagCdnEntry(ctx: AppContext, tags: readonly string[]): void {
+  if (ctx.cdn === undefined || tags.length === 0) return;
   let set = pending.get(ctx.memo);
   if (set === undefined) {
     set = new Set();
@@ -34,6 +34,6 @@ export function tagCacheEntry(ctx: AppContext, tags: readonly string[]): void {
 }
 
 /** What the handler declared, for the store that is about to happen. */
-export function cacheTagsFor(ctx: AppContext): string[] {
+export function cdnTagsFor(ctx: AppContext): string[] {
   return [...(pending.get(ctx.memo) ?? [])];
 }

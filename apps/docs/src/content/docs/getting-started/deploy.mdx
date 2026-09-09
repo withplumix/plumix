@@ -85,7 +85,7 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
   the account immediately, or keep the deploy unreachable until you can.
 </Aside>
 
-Node ships no edge cache and no `kv` — every page renders on every request, and uploads and the image cache live on the one machine the process runs on. [Node.js](/deployment/node/) covers what that means and when `plumix/storage/s3` or `plumix/db/libsql` are worth swapping in instead of the disk-backed defaults.
+Node ships no CDN and no `kv` — every page renders on every request, and uploads and the image cache live on the one machine the process runs on. [Node.js](/deployment/node/) covers what that means and when `plumix/storage/s3` or `plumix/db/libsql` are worth swapping in instead of the disk-backed defaults.
 
 </TabItem>
 <TabItem label="Cloudflare">
@@ -191,7 +191,7 @@ wrangler kv namespace create KV
 "kv_namespaces": [{ "binding": "KV", "id": "<the id wrangler printed>" }]
 ```
 
-The edge cache needs no resource, but it does check for two values before it stores anything. `edge()` reads `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` from the environment and returns an inactive cache when either is missing, because a cache with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching stays off there and switches on when you attach a domain and set both secrets.
+The CDN needs no resource, but it does check for two values before it stores anything. `edge()` reads `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` from the environment and returns an inactive CDN when either is missing, because a CDN with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching stays off there and switches on when you attach a domain and set both secrets.
 
 ### Deploying from git
 

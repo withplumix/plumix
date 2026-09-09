@@ -36,7 +36,7 @@ describe("projectDebugSnapshot", () => {
         tokenScopes: ["read:posts"],
         resolvedEntity: { kind: "entry", id: 7 },
         siteName: "My Site",
-        cache: {} as never,
+        cdn: {} as never,
         plugins: {
           pluginIds: ["blog"],
           entryTypes: new Map([["post", {}]]),
@@ -53,7 +53,7 @@ describe("projectDebugSnapshot", () => {
     expect(snap.context.resolvedEntity).toEqual({ kind: "entry", id: 7 });
     expect(snap.context.siteName).toBe("My Site");
     expect(snap.context.slots).toEqual({
-      cache: true,
+      cdn: true,
       storage: false,
       mailer: false,
       images: false,

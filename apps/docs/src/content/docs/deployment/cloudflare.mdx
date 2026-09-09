@@ -1,6 +1,6 @@
 ---
 title: Cloudflare Workers
-description: The Cloudflare runtime adapter, and the factories that fill the database, storage, KV, image and cache slots with D1, R2, Workers KV, Image Transformations and the edge cache.
+description: The Cloudflare runtime adapter, and the factories that fill the database, storage, KV, image and CDN slots with D1, R2, Workers KV, Image Transformations and the edge CDN.
 tier: P0
 sidebar:
   order: 20
@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-Cloudflare Workers is a fully supported runtime, chosen with one flag (`--runtime cloudflare`), and the one the edge cache, KV and image transformations exist for. `@plumix/runtime-cloudflare` holds the adapter that bridges the Worker to Plumix, plus one small factory per platform service, and each factory goes in the config slot named after the job it does.
+Cloudflare Workers is a fully supported runtime, chosen with one flag (`--runtime cloudflare`), and the one the CDN, KV and image transformations exist for. `@plumix/runtime-cloudflare` holds the adapter that bridges the Worker to Plumix, plus one small factory per platform service, and each factory goes in the config slot named after the job it does.
 
 ## Overview
 
@@ -21,11 +21,11 @@ The runtime is a slot like any other. `runtime: cloudflare()` tells Plumix which
 | `r2({ binding })`  | `storage`       | An R2 bucket                             |
 | `kv({ binding })`  | `kv`            | A Workers KV namespace                   |
 | `images({ zone })` | `imageDelivery` | Cloudflare Image Transformations         |
-| `edge({ ttl })`    | `cache`         | The Workers Cache API and purge by tag   |
+| `edge({ ttl })`    | `cdn`           | The Workers Cache API and purge by tag   |
 
 Three more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host a Workers Builds build is served on, which [Passkey origins across deploys](#passkey-origins-across-deploys) below covers. `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check, and `cfAccessLogoutUrl` builds the Access sign-out URL that check needs on the way back out.
 
-Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cache` slot renders every public page live.
+Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cdn` slot renders every public page live.
 
 `cloudflare()` also tells the CLI where its commands live. That is how `plumix dev`, `plumix build`, `plumix deploy`, `plumix types` and `plumix migrate apply` exist at all. They come from the runtime rather than from core, and swapping the runtime swaps them.
 
@@ -173,17 +173,17 @@ Presigned uploads need S3 credentials, because an R2 binding cannot mint a presi
 
 Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat that as the floor.
 
-## The edge cache
+## The edge CDN
 
-`edge({ ttl, staleWhileRevalidate })` caches public pages in the Workers Cache API and purges them by cache tag through the zone API. You add it to the config as `cache: edge({ ttl: 3600, staleWhileRevalidate: 86400 })`. `ttl` becomes `s-maxage` in seconds, and `staleWhileRevalidate` is how long a colo may serve an expired copy while it refetches.
+`edge({ ttl, staleWhileRevalidate })` caches public pages in the Workers Cache API and purges them by cache tag through the zone API. You add it to the config as `cdn: edge({ ttl: 3600, staleWhileRevalidate: 86400 })`. `ttl` becomes `s-maxage` in seconds, and `staleWhileRevalidate` is how long a colo may serve an expired copy while it refetches.
 
 The slot disables itself unless the Worker env carries both `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN`. That is not a convenience check. Without a zone and a purge token the site could store a page it can never purge, so caching stays off and every page renders live. This is why a `workers.dev` deploy sees no caching even with the slot configured.
 
-Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the cache for no gain. A custom archive that a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
+Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the CDN for no gain. A custom archive that a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
 
-A request that carries a session cookie, an `Authorization` header or a `?preview=` token bypasses the cache entirely. `?plumix.edit` is checked separately, on a route that carries an access policy, where the resolved audience segment would otherwise be cacheable. On a route with no policy the editor request is already caught by its session cookie. Stored responses have their `Set-Cookie` headers stripped before they are written.
+A request that carries a session cookie, an `Authorization` header or a `?preview=` token bypasses the CDN entirely. `?plumix.edit` is checked separately, on a route that carries an access policy, where the resolved audience segment would otherwise be cacheable. On a route with no policy the editor request is already caught by its session cookie. Stored responses have their `Set-Cookie` headers stripped before they are written.
 
-A raw route a plugin mounted at `/_plumix/<pluginId>` is the sixth cacheable kind, and it takes the same opt-in: `registerRoute({ cacheable: true })`. Only an `auth: "public"` route may take it, since a stored response is served to everyone, and registering it on a gated route throws at boot. A GET is answered from the entry, and every other method runs the handler. The entry is keyed off the request URL with the cookie dropped, so a signed-in visitor reads the shared copy rather than bypassing it the way a page render does — take the opt-in only where the route answers every visitor with the same document, locale included, since a `Vary` the handler sets is not a key axis here either. The whole URL is the key, query string included, so any parameter a caller invents is another entry. And the tags are the handler's to name: core cannot know what a plugin's handler depends on, so a route stores untagged unless the handler calls `tagCacheEntry(ctx, entryPurgeTags(type, id))` while it runs, which puts its entry under the same tags the entry's own pages carry and clears it on the same publish.
+A raw route a plugin mounted at `/_plumix/<pluginId>` is the sixth cacheable kind, and it takes the same opt-in: `registerRoute({ cacheable: true })`. Only an `auth: "public"` route may take it, since a stored response is served to everyone, and registering it on a gated route throws at boot. A GET is answered from the entry, and every other method runs the handler. The entry is keyed off the request URL with the cookie dropped, so a signed-in visitor reads the shared copy rather than bypassing it the way a page render does — take the opt-in only where the route answers every visitor with the same document, locale included, since a `Vary` the handler sets is not a key axis here either. The whole URL is the key, query string included, so any parameter a caller invents is another entry. And the tags are the handler's to name: core cannot know what a plugin's handler depends on, so a route stores untagged unless the handler calls `tagCdnEntry(ctx, entryPurgeTags(type, id))` while it runs, which puts its entry under the same tags the entry's own pages carry and clears it on the same publish.
 
 Reading the shared copy is one thing; filling it is another. A route response is stored only when nothing about it says it belongs to one visitor: the request carried no session, `Authorization` header or `?preview=` token, and the response sets no cookie and declares itself neither `private` nor `no-store`. A handler that gates itself — on a bearer token Plumix never sees, say — is registered as `auth: "public"` like any other, and this is what keeps its answer out of the shared entry.
 

@@ -197,7 +197,7 @@ _Avoid_: PAT, personal access token, bearer token
 A developer-supplied rule pairing an arbitrary resolve step with a closed, declarable set of audience segments.
 
 **Segment**:
-The audience label a resolved access is tagged with — built-in (`anonymous`, `authenticated`, `private`, `role:<role>`), an `entitlement:<label>`, or a custom label. Doubles as the shared-cache variant key.
+The audience label a resolved access is tagged with — built-in (`anonymous`, `authenticated`, `private`, `role:<role>`), an `entitlement:<label>`, or a custom label. Doubles as the shared-CDN variant key.
 _Avoid_: audience, variant, cache key
 
 **Gate**:
@@ -245,7 +245,7 @@ _Avoid_: IP, client IP, remote address
 The render mode a request resolves to — `live`, `preview`, or `edit`.
 
 **Preview grant**:
-A valid preview token granting draft visibility for one entry, forcing a cache bypass.
+A valid preview token granting draft visibility for one entry, forcing a CDN bypass.
 
 **Admin bar**:
 The zero-JS, server-rendered admin chrome overlaid on public pages for logged-in users.
@@ -273,18 +273,18 @@ The declarative `<head>`/`<html>` descriptor (title, meta, link, script tags) a 
 
 ## Caching
 
-**Edge cache**:
+**CDN**:
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
 
 **Cache tag**:
-A coarse label a stored response carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`). A page is tagged from its resolved intent; a plugin route that opted into the edge cache names its own with `tagCacheEntry`, in the same vocabulary or in a namespace of its own that nothing purges.
+A coarse label a stored response carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`). A page is tagged from its resolved intent; a plugin route that opted into the CDN names its own with `tagCdnEntry`, in the same vocabulary or in a namespace of its own that nothing purges.
 
 **Purge**:
 Invalidation of stored responses by tag, or of a source's variants by its URL.
 _Avoid_: bust, invalidate
 
 **Rendered asset**:
-Bytes a route produces once and then serves from object storage — a generated social card, a derived image. Read-through like the edge cache, but keyed by a content-addressed storage key rather than by the request, so a changed input lands on a new key and there is nothing to purge.
+Bytes a route produces once and then serves from object storage — a generated social card, a derived image. Read-through like the CDN, but keyed by a content-addressed storage key rather than by the request, so a changed input lands on a new key and there is nothing to purge.
 
 **Variant**:
 One transform of an image source — a width, a crop, a format — that the Node runtime's image route renders once and keeps on disk under a hash of the request, bounded in size and purged by source when the media item behind it is trashed or deleted, since a variant carries its source's gating.
@@ -335,7 +335,7 @@ them distinct by **always qualifying** them; bare use is a smell.
 - **template** — the **theme render unit** (this glossary) vs the stored
   **page-template** choice an entry can pick vs the **project template** in the
   scaffolder. Qualify when more than one is in play.
-- **read-through** — the **edge cache** sense (a stored response, keyed by the
+- **read-through** — the **CDN** sense (a stored response, keyed by the
   request and purged by tag) vs the **rendered asset** sense (bytes behind a
   content-addressed storage key, which nothing purges). Qualify when more
   than one is in play.

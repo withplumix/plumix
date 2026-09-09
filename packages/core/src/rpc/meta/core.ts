@@ -16,7 +16,7 @@ import type {
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
-import { accumulateEmbeddedTags } from "../../cache/embedded-tags.js";
+import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
 import { eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";

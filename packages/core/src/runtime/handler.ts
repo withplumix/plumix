@@ -4,7 +4,7 @@ import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
 import type {
   AssetsBinding,
-  ConnectedCache,
+  ConnectedCdn,
   ConnectedDb,
   ConnectedKv,
   ConnectedObjectStorage,
@@ -232,7 +232,7 @@ function syntheticScheduledRequest(
 /** The env-derived slots, bound once for the handler's life. */
 interface BoundSlots {
   readonly storage: ConnectedObjectStorage | undefined;
-  readonly cache: ConnectedCache | undefined;
+  readonly cdn: ConnectedCdn | undefined;
   readonly kv: ConnectedKv | undefined;
   readonly imageDelivery: ImageDelivery | undefined;
 }
@@ -240,9 +240,9 @@ interface BoundSlots {
 function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
   return {
     storage: app.config.storage?.connect(env),
-    // `cache` connects to null when the deploy cannot purge; null → undefined
+    // `cdn` connects to null when the deploy cannot purge; null → undefined
     // turns caching off and pages render live.
-    cache: app.config.cache?.connect(env) ?? undefined,
+    cdn: app.config.cdn?.connect(env) ?? undefined,
     kv: app.config.kv?.connect(env),
     imageDelivery: connectImageDelivery(app, env),
   };
@@ -281,7 +281,7 @@ function buildAppContext({
     defer,
     assets: options.assets?.(env),
     storage: slots.storage,
-    cache: slots.cache,
+    cdn: slots.cdn,
     kv: slots.kv,
     imageDelivery: slots.imageDelivery,
     imageRemotePatterns: app.config.images?.remotePatterns,

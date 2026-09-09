@@ -38,7 +38,7 @@ Then open `http://localhost:5173/_plumix/admin` and create your first passkey.
 
 The runtime is pluggable — you choose where Plumix runs. Available now:
 
-- **[Cloudflare Workers](./packages/runtimes/cloudflare)** — D1, R2, KV, Images, and edge cache.
+- **[Cloudflare Workers](./packages/runtimes/cloudflare)** — D1, R2, KV, Images, and CDN.
 
 More runtimes are on the way.
 

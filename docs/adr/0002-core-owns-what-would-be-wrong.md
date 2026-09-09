@@ -15,7 +15,7 @@ permanently sends `/about/` to `/about` while the page never declares
 core keeps the canonical URL, its tag and the normalizer, and hands away head
 meta, `robots.txt`, the sitemap and the feeds.
 
-The rule cuts the same way outside SEO. Core keeps the edge cache, because a
+The rule cuts the same way outside SEO. Core keeps the CDN, because a
 response stored under the wrong key is wrong; it does not keep IndexNow, because
 a site that notifies nobody is merely quiet.
 

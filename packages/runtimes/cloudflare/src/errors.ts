@@ -148,9 +148,9 @@ export class PlumixRuntimeConfigError extends Error {
   }
 }
 
-export class EdgeCacheError extends Error {
+export class EdgeCdnError extends Error {
   static {
-    EdgeCacheError.prototype.name = "EdgeCacheError";
+    EdgeCdnError.prototype.name = "EdgeCdnError";
   }
 
   readonly code: "purge_failed";
@@ -162,8 +162,8 @@ export class EdgeCacheError extends Error {
     this.status = status;
   }
 
-  static purgeFailed(ctx: { status: number }): EdgeCacheError {
-    return new EdgeCacheError(
+  static purgeFailed(ctx: { status: number }): EdgeCdnError {
+    return new EdgeCdnError(
       "purge_failed",
       `edge(): cloudflare purge_cache responded ${String(ctx.status)}`,
       ctx.status,
