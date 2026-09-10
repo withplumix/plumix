@@ -150,7 +150,7 @@ That declares the name, never the value. [Secrets](/deployment/secrets/) covers 
 
 ## Keys the Cloudflare adapters read by convention
 
-Three adapters look for particular env keys, and not in the same way. For `r2()` and `images()` the env is a fallback the config can beat. For `edge()` it is the only route in, because `EdgeConfig` takes `ttl` and `staleWhileRevalidate` and nothing else. Set the keys as vars or as secrets, whichever the value warrants.
+Two adapters look for particular env keys, and for both the env is a fallback the config can beat. Set the keys as vars or as secrets, whichever the value warrants. The CDN provider is not among them: `cloudflare()` takes its zone id and purge token as required config, which is why the block above declares those two keys for a resolver to read.
 
 | Key                         | Read by                                      | Effect when absent                                                |
 | --------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
@@ -160,12 +160,8 @@ Three adapters look for particular env keys, and not in the same way. For `r2()`
 | `CF_ACCOUNT_ID`             | `r2()`                                       | Presigned uploads stay off                                        |
 | `R2_ACCESS_KEY_ID`          | `r2()`                                       | Presigned uploads stay off                                        |
 | `R2_SECRET_ACCESS_KEY`      | `r2()`                                       | Presigned uploads stay off                                        |
-| `CF_ZONE_ID`                | `edge()`                                     | The edge CDN stays off and pages render live                      |
-| `CF_CACHE_PURGE_TOKEN`      | `edge()`                                     | The edge CDN stays off and pages render live                      |
 
-The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `edge()` behaves the same way with its pair, which is what makes the cdn slot safe to leave in the config of a `workers.dev` deploy.
-
-Passing the value in config beats the env key, for the two adapters that offer the choice. `r2({ publicUrlBase })` and `images({ zone })` both win over what the env carries. `edge()` has no such option, so `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` have to be on the env.
+The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `cloudflare()` behaves the same way with its credential pair, which is what makes the cdn slot safe to leave in the config of a `workers.dev` deploy.
 
 ## Local development
 

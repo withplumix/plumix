@@ -54,22 +54,30 @@ export default plumix({
 
 ## Adapters
 
-| Factory                               | Field           | What it does                                                                                                                                    |
-| ------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cloudflare()`                        | `runtime`       | Bridges the Workers environment to Plumix.                                                                                                      |
-| `d1({ binding, session })`            | `database`      | D1 (SQLite). `session` is `"disabled"` \| `"auto"` \| `"primary-first"` for read replication.                                                   |
-| `r2({ binding, publicUrlBase, s3 })`  | `storage`       | R2 object storage. Add `s3` credentials to enable presigned-PUT uploads.                                                                        |
-| `images({ zone })`                    | `imageDelivery` | Cloudflare Image Transformations URLs. `zone` is a hostname, no protocol.                                                                       |
-| `edge({ ttl, staleWhileRevalidate })` | `cdn`           | CDN (Cache API + purge-by-tag).                                                                                                                 |
-| `kv({ binding })`                     | `kv`            | Cloudflare KV.                                                                                                                                  |
-| `cloudflareDeployOrigin({ … })`       | —               | Derives `rpId` + `origin` + `allowedOrigins` from the Workers Builds env; `productionOrigin` for a custom domain, `localOrigin` for `pnpm dev`. |
+| Factory                              | Field           | What it does                                                                                                                                    |
+| ------------------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cloudflare()`                       | `runtime`       | Bridges the Workers environment to Plumix.                                                                                                      |
+| `d1({ binding, session })`           | `database`      | D1 (SQLite). `session` is `"disabled"` \| `"auto"` \| `"primary-first"` for read replication.                                                   |
+| `r2({ binding, publicUrlBase, s3 })` | `storage`       | R2 object storage. Add `s3` credentials to enable presigned-PUT uploads.                                                                        |
+| `images({ zone })`                   | `imageDelivery` | Cloudflare Image Transformations URLs. `zone` is a hostname, no protocol.                                                                       |
+| `kv({ binding })`                    | `kv`            | Cloudflare KV.                                                                                                                                  |
+| `cloudflareDeployOrigin({ … })`      | —               | Derives `rpId` + `origin` + `allowedOrigins` from the Workers Builds env; `productionOrigin` for a custom domain, `localOrigin` for `pnpm dev`. |
 
 Each `binding` matches a resource declared in your `wrangler.jsonc` (`d1_databases`, `r2_buckets`, `kv_namespaces`).
 
 ## Notes
 
 - **`cloudflareDeployOrigin`** anchors the passkey `rpId` to the account registrable domain (`<account>.workers.dev`) and returns an `allowedOrigins` wildcard for it, so one passkey enrolled once works on production _and_ every per-branch preview URL. `origin` still reflects the specific deploy host (production `<worker>.<account>.workers.dev`, preview `<branch>-<worker>.<account>.workers.dev`, local your `localOrigin`). For a custom-domain production deploy, pass `productionOrigin: "https://example.com"` — Workers Builds can't expose the custom domain, so it must be declared. (A custom domain and `workers.dev` are different registrable domains, so no single passkey spans both — sign in to those previews with magic-link or Cloudflare Access.)
-- **`edge()` is dormant until you attach a zone.** It reads `CF_ZONE_ID` + `CF_CACHE_PURGE_TOKEN` from the worker env and renders live (no caching) when either is missing — so it's a safe no-op on `*.workers.dev`.
+- **The CDN slot is not in this package.** It is filled by a provider of the same vendor name from core, which works identically from a Worker and from a container, so a config on Workers imports both and aliases one:
+
+  ```ts
+  import { cloudflare as cdn } from "plumix/cdn/cloudflare"; // the cdn slot
+
+  import { cloudflare } from "@plumix/runtime-cloudflare"; // the runtime slot
+  ```
+
+  It takes its zone id and purge token as config rather than reading them off the env, and is dormant until you attach a zone: with either credential resolving to nothing it renders live, so it is a safe no-op on `*.workers.dev`.
+
 - **Presigned R2 uploads** need bucket CORS rules and S3 credentials; see [`@plumix/plugin-media`](../../plugins/media) for the details.
 
 ## Support
