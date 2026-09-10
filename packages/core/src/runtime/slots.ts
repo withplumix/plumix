@@ -23,6 +23,16 @@ export interface RequestScopedDbArgs {
   readonly isWrite: boolean;
 }
 
+/**
+ * Deliberately has no `close` seam, unlike {@link ConnectedDb}. `connectRequest`
+ * answers per request, so an adapter that used it to hand out a connection
+ * would need it released on every response path including the error one —
+ * a real seam with a real cost, for a shape none of today's adapters need.
+ *
+ * An adapter behind this hook must own its own pooling and hand out a
+ * borrowed handle — the way `connect` owns the one client `ConnectedDb.close`
+ * releases — rather than minting a connection per request here.
+ */
 export interface RequestScopedDb {
   readonly db: unknown;
   /**
@@ -67,6 +77,9 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
    *
    * Declared as a property (not a method) so that `this`-less bare
    * references — common in test fixtures and wrappers — are safe.
+   *
+   * Ownership: see {@link RequestScopedDb} — the returned `db` has no
+   * release seam, so an adapter using this hook must own its pooling.
    */
   readonly connectRequest?: (
     args: RequestScopedDbArgs,
