@@ -44,7 +44,7 @@ Every provider exports its bare vendor name, and importing it under the `cdn` al
 
 ## Quickstart
 
-This is the whole path for a site that is _not_ a Worker — a container, a droplet, a VM — sitting behind a Cloudflare zone. A Workers deploy skips steps 5 and 6 and is otherwise identical.
+This is the whole path for a site that is _not_ a Worker — a container, a droplet, a VM — sitting behind a Cloudflare zone. A Workers deploy takes steps 1 to 4 unchanged and skips the rest: it is already on the zone, its pages reach the cache through the Cache API rather than through a cache rule, and [Cloudflare Workers](/deployment/cloudflare/) covers what it sees instead.
 
 <Steps>
 
@@ -65,13 +65,13 @@ This is the whole path for a site that is _not_ a Worker — a container, a drop
 
 6. **Add a cache rule for HTML.** Cloudflare does not cache HTML documents by default, whatever the origin asks for. Without this rule the site emits correct headers and caches nothing. [The cache rule](#the-cache-rule) below has the settings.
 
-7. **Verify a page caches.** Two requests to the same public URL, the second answered from the edge:
+7. **Verify a page caches.** Two requests to the same public URL, the second answered from the zone:
 
    ```sh
    curl -sI https://recipes.example/ | grep -i 'cf-cache-status\|cache-control\|cache-tag'
    ```
 
-   The first is `cf-cache-status: MISS`, the second `HIT`. `cache-control` carries the `s-maxage` you configured and `cache-tag` names what a purge will reach.
+   The first is `cf-cache-status: MISS`, the second `HIT`. `cache-control` carries the `s-maxage` you configured and `cache-tag` names what a purge will reach. That header is the zone's own verdict, so it is the signal for this shape of deploy and not for a Worker, whose pages are held in the Cache API a layer below it; there the `cdn` telemetry fact is what records a hit.
 
 8. **Publish something and watch it clear.** Edit a published entry in the admin and publish it again. Its permalink and every archive listing it go back to `MISS` on the next request.
 
@@ -100,19 +100,19 @@ Edge TTL is the load-bearing half. Left on a fixed number it overrides the `s-ma
 
 The slot's configuration is identical across the three rows below. What differs is what the deploy has to cache _with_.
 
-| Deploy                                                    | What holds a copy                                    | Segments other than `private` |
-| --------------------------------------------------------- | ---------------------------------------------------- | ----------------------------- |
-| Worker behind its own zone                                | The Cloudflare edge, and the Cache API at the origin | Cached, keyed per segment     |
-| Container or VM behind a Cloudflare zone                  | The Cloudflare edge                                  | Rendered live                 |
-| Any host with no `cdn` slot, or with a credential missing | Nothing                                              | Rendered live                 |
+| Deploy                                                    | How a copy is held                            | Segments other than `private` |
+| --------------------------------------------------------- | --------------------------------------------- | ----------------------------- |
+| Worker behind its own zone                                | The colo cache, written through the Cache API | Cached, keyed per segment     |
+| Container or VM behind a Cloudflare zone                  | The zone's cache, filled from the headers     | Rendered live                 |
+| Any host with no `cdn` slot, or with a credential missing | Nothing                                       | Rendered live                 |
 
-A Worker gets the second store for free, and it is why a Workers deploy answers some requests without the origin doing anything at all. Behind a CDN the site does not run on, every request that reaches the origin is a miss by definition — the hits were absorbed a hop earlier and the origin never sees them — so a storeless deploy is not a failing cache, and the telemetry `cdn` fact records which regime produced a miss.
+The difference is where a hit is answered. A Worker still runs on every request; a hit means it found the page in the Cache API and returned it without rendering. Behind a CDN the site does not run on, a hit never reaches the site at all, so every request the origin does see is a miss by definition — which is why the telemetry `cdn` fact records whether a store was in play, rather than letting a storeless deploy read as a permanently failing cache.
 
 The third column is the trade-off worth weighing before you choose a host. An [access policy](/access/overview/) resolves each visitor into an audience segment, and two visitors in the same segment can share one cached page only if something can key the cache on that segment. The Cache API can, because the site owns it and writes the key itself. A CDN alone cannot, unless the vendor can vary on a named cookie — so behind one, a request in any segment other than `anonymous` bypasses the cache and renders live rather than risk one audience receiving another's page. Anonymous pages, which on most sites are nearly all of them, are unaffected and cache either way. One segment never caches on any host: `private` is the escape hatch a policy reaches for when a render is genuinely per-visitor, and it bypasses everywhere, which is also where an ephemeral grant lands.
 
 ## Which routes cache
 
-Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is deliberately excluded, because one entry per distinct query string would fill the cache for no gain. A custom archive a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
+Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is deliberately excluded, because one entry per distinct query string would fill the cache for no gain. A custom archive a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on. Pair that opt-in with the `tags` its resolver returns — usually the `t:<type>` of each type it draws from — or the archive caches under no tag and no publish can reach it. Author and date archives are the gap in the other direction: they are tagged like the front page, but they are not among the cacheable kinds, so they render live.
 
 On a route carrying no access policy, a request bearing a session cookie, an `Authorization` header or a `?preview=` token bypasses the cache entirely: any of the three can make the render differ from the shared anonymous document. On a policied route the segment decides instead, and an authenticated member of a cacheable audience reads that audience's entry rather than bypassing — so the two ephemeral grants, `?preview=` and `?plumix.edit`, are excluded by name there. Either way a draft never enters a shared cache, which is the guarantee [Statuses](/content-modelling/statuses/) rests on: a render authorized for one request must not outlive it.
 
@@ -132,7 +132,7 @@ A cached page is stored under tags, and a publish purges by tag rather than by U
 
 ### e:\*
 
-`e:<id>` — the single entry tag, carried only by that entry's permalink. It is what lets an edit to one recipe clear that recipe's page without touching the archives it appears in.
+`e:<id>` — the single entry tag. An entry's own permalink carries it, and so does any page that resolved a reference to that entry while rendering: resolution contributes the tag as it materializes the entity, and the page stores under it. So editing one recipe clears its permalink and every page that embedded it.
 
 ## Purging
 
@@ -144,7 +144,7 @@ The purge runs after the response through `ctx.defer`, so a zone that refuses on
 
 A deploy with working credentials fills the CDN. Redeploy without them — a rotated secret nobody carried over, an environment variable dropped in a config rewrite — and the provider goes inert on the next boot. New responses leave undecorated, publishing enqueues nothing, and no error appears anywhere, because the origin genuinely cannot see the entries the CDN already holds. Those pages then stay stale for the full freshness window, and a long `ttl` is a long time to be wrong.
 
-Nothing in the code can defend this, so treat a token rotation as a two-step change: set the new token, confirm the deploy still purges — publish something and watch `cf-cache-status` return to `MISS` — and revoke the old one after. When a published change refuses to appear, that verification is also the diagnosis: a page that stays `HIT` through a publish is a deploy whose credentials no longer resolve.
+Nothing in the code can defend this, so treat a token rotation as a two-step change: set the new token, confirm the deploy still purges, and revoke the old one after. Behind a zone that confirmation is step 7's header — publish something and watch `cf-cache-status` fall back to `MISS`; on a Worker it is the `cdn` telemetry fact doing the same job. When a published change refuses to appear, that same check is the diagnosis: a page that survives a publish is a deploy whose credentials no longer resolve.
 
 ## Providers without tag purge
 

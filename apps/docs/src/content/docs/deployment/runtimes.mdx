@@ -396,7 +396,7 @@ describeKvContract({
 
 `describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
 
-An absent port member is a supported provider, not a gap the suite reports: a vendor that cannot invalidate by tag omits `purgeTags`. Publish one and recommend a short `ttl` beside it — [CDN Caching](/deployment/cdn/#providers-without-tag-purge) says why freshness is then the site's only control.
+An absent port member is a supported provider, not a gap the suite reports — but declare it: a vendor that cannot invalidate by tag omits `purgeTags` and leaves the suite's option of the same name off. The suite asserts the two agree in both directions, so a member you drop while still declaring it fails rather than passing quietly. Publish such a provider and recommend a short `ttl` beside it — [CDN Caching](/deployment/cdn/#providers-without-tag-purge) says why freshness is then the site's only control.
 
 ## Related
 
