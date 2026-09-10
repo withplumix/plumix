@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { defineBlock } from "@plumix/blocks";
 import { useAuthMethods } from "@plumix/blocks/renderer";
 
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type {
@@ -11,6 +12,7 @@ import type {
   TelemetrySnapshot,
   TelemetrySpan,
 } from "../context/telemetry.js";
+import type { User } from "../db/schema/users.js";
 import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
@@ -393,6 +395,72 @@ describe("dispatcher — routing", () => {
 
     expect(response.status).toBe(200);
     expect(authenticated).toBe(false);
+  });
+
+  // A signal a custom authenticator reads instead of `plumix_session` — an SSO
+  // header, a Cloudflare Access JWT, a tenant cookie. Deliberately not the
+  // default cookie, so these tests fail if the shell goes back to sniffing it.
+  const TENANT_HEADER = "x-tenant-session";
+
+  function tenantHeaderAuthenticator(user: User): RequestAuthenticator {
+    return {
+      authenticate: (request) =>
+        Promise.resolve(request.headers.has(TENANT_HEADER) ? { user } : null),
+      hasSession: (request) => request.headers.has(TENANT_HEADER),
+    };
+  }
+
+  test("bounces a signed-in non-staff visitor authenticated by a custom authenticator's own signal", async () => {
+    const assets = htmlAssets("<!doctype html><title>admin</title>");
+    // The authenticator captures its user before the harness exists, so the
+    // db is built here rather than reached for through `h.seedUser()`.
+    const db = await createTestDb();
+    const subscriber = await userFactory
+      .transient({ db })
+      .create({ role: "subscriber" });
+    const h = await createDispatcherHarness({
+      db,
+      assets,
+      authenticator: tenantHeaderAuthenticator(subscriber),
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin", {
+        method: "GET",
+        headers: { [TENANT_HEADER]: "whoever" },
+      }),
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/");
+  });
+
+  test("a custom authenticator's signed-in visitor's locale preference reaches the admin shell", async () => {
+    const assets = htmlAssets(
+      '<!doctype html><html lang="en"><head></head><body></body></html>',
+    );
+    // Same reason as above: the user has to exist before the authenticator
+    // (and therefore the harness) can capture it.
+    const db = await createTestDb();
+    const admin = await userFactory
+      .transient({ db })
+      .create({ role: "admin", meta: { locale: "ar" } });
+    const h = await createDispatcherHarness({
+      db,
+      assets,
+      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      authenticator: tenantHeaderAuthenticator(admin),
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/", {
+        method: "GET",
+        headers: { [TENANT_HEADER]: "whoever" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<html lang="ar" dir="rtl">');
   });
 });
 

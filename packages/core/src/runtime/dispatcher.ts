@@ -19,7 +19,6 @@ import {
   authenticateTraced,
   requestHasSession,
 } from "../auth/authenticator.js";
-import { readSessionCookie } from "../auth/cookies.js";
 import {
   hasCsrfHeader,
   hasMatchingOrigin,
@@ -1062,11 +1061,12 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const contentType = upstream.headers.get("content-type")?.toLowerCase();
   if (!contentType?.includes("text/html")) return upstream;
 
-  // Only run the authenticator when there's actually a session cookie to
-  // validate — Bearer-only requests on the shell path would otherwise bump
-  // `api_tokens.lastUsedAt` on every cross-site GET navigation. Anonymous
-  // visitors hit the cookie + Accept-Language tiers of the resolver chain.
-  const auth = readSessionCookie(ctx.request)
+  // Only run the authenticator when the site's own authenticator reports a
+  // session signal — a Bearer-only request on the shell path would otherwise
+  // bump `api_tokens.lastUsedAt` on every cross-site GET navigation, since
+  // `apiTokenAuthenticator.hasSession` returns `false`. Anonymous visitors
+  // hit the cookie + Accept-Language tiers of the resolver chain.
+  const auth = ctxHasSession(ctx)
     ? await authenticateTraced(ctx, ctx.authenticator)
     : null;
   // A signed-in non-staff visitor (a `subscriber` from open signup) has no
