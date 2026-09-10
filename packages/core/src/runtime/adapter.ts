@@ -14,7 +14,8 @@ export interface Invocation {
    * Keep the runtime alive until the promise settles. Deferred work (telemetry
    * delivery, cache purges) routes through it when supplied; an adapter that
    * omits it owes its platform a {@link PlumixHandler.dispose} call at
-   * shutdown instead.
+   * shutdown instead, which also releases the database connection the
+   * handler bound.
    */
   readonly waitUntil?: (promise: Promise<unknown>) => void;
   /**
@@ -95,8 +96,13 @@ export interface PlumixHandler {
    * abandoned, so a process runtime can exit non-zero over them.
    *
    * Also releases the database connection the handler bound, after the drain.
-   * Not terminal: a request arriving afterwards reconnects, so calling this on
-   * a handler still in service costs a reconnect rather than breaking it.
+   *
+   * Deliberately not terminal: a `fetch` arriving after `dispose()` returns
+   * reconnects rather than failing. A disposed handler stays usable — at the
+   * cost of a fresh connection — so a long-lived host may call this to drain
+   * outstanding work without discarding the handler it drained. The only
+   * caller today (a process runtime's `SIGTERM` path) exits right after, so
+   * this only matters the moment a second caller wants a mid-life drain.
    */
   readonly dispose?: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
