@@ -169,7 +169,7 @@ describe("createPlumixHandler — fetch", () => {
       auth: auth({
         passkey: stubAuth.passkey,
         authenticator: {
-          authenticate: async () => null,
+          authenticate: () => Promise.resolve(null),
           hasSession: (r) => r.headers.get("x-sso") === "1",
         },
       }),
@@ -201,7 +201,7 @@ describe("createPlumixHandler — fetch", () => {
       auth: auth({
         passkey: stubAuth.passkey,
         authenticator: {
-          authenticate: async () => null,
+          authenticate: () => Promise.resolve(null),
           hasSession: () => false,
         },
       }),
