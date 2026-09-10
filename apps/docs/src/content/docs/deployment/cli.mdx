@@ -1,0 +1,168 @@
+---
+title: CLI Reference
+description: Every plumix command — the four built-ins, the ones a runtime contributes, and the global flags that precede any of them.
+tier: P1
+roster: true
+sidebar:
+  order: 15
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`plumix <command> [options]` is the whole surface. Four commands ship with the package itself; a runtime adapter contributes the rest — which is why `deploy` and `types` exist on Cloudflare and not on Node, and why `plumix --help` groups them separately.
+
+## Overview
+
+`plumix migrate`, `plumix cron`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy`, `types` and `migrate apply` come from `RuntimeAdapter.commandsModule` instead, so their behaviour — and in `migrate`'s case, which subcommands exist beyond `generate` — is the adapter's to define. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+
+`plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the four built-ins, because loading the runtime's commands means loading the config first.
+
+<Aside type="note" title="i18n runs without a config">
+  Every other command loads `plumix.config.ts` before it runs — `i18n` does not,
+  because it is tooling for a package (admin, a plugin, a theme), not a site.
+  Run it from anywhere with translatable source, with or without a Plumix app in
+  reach.
+</Aside>
+
+## Quickstart
+
+`plumix --help` from a project root is the fastest way to see what applies to it: the four built-ins always, and — once a config loads — the runtime's own commands beside them, grouped under its name.
+
+```bash
+plumix --help
+```
+
+<Aside type="tip">
+  `plumix <command> --help` is not wired up per command today. This page, and
+  the one-line descriptions `--help` prints, are the reference.
+</Aside>
+
+## Commands
+
+### `dev`
+
+Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither builds an app on the Node side first — `dev` opts out via `deferApp`, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
+
+```bash
+plumix dev
+plumix dev --port 3000
+```
+
+### `build`
+
+Builds the deployable artefact. On Cloudflare that is the Worker bundle; on Node it is `dist/client` for the browser and `dist/server` to run with `node`, built client-first because the server bundle bakes in the client's asset manifest.
+
+```bash
+plumix build
+```
+
+### `deploy`
+
+Cloudflare only. Forwards straight to `wrangler deploy`, with every argument after `deploy` appended unchanged.
+
+```bash
+plumix deploy
+plumix deploy --dry-run
+```
+
+### `types`
+
+Cloudflare only. Forwards to `wrangler types`, for the ambient binding types `wrangler.jsonc` describes.
+
+```bash
+plumix types
+```
+
+### `migrate`
+
+Generates or applies database migrations. `plumix migrate` and `plumix migrate generate` run `drizzle-kit generate` against the schema Plumix assembles from every plugin's tables, writing it to `.plumix/schema.ts` first. Every other subcommand comes from the runtime: `plumix migrate apply` runs `wrangler d1 migrations apply` on Cloudflare — naming the D1 database from `wrangler.jsonc` when the site has exactly one — and applies the generated files directly to the configured SQLite file on Node.
+
+```bash
+plumix migrate generate
+plumix migrate apply
+```
+
+### `cron`
+
+Lists the site's scheduled tasks, or fires one schedule now — the externally-driven half of cron, for a `cron: false` deploy that hands firing to a system cron or a Kubernetes `CronJob` instead of a runtime's own trigger. [Node.js](/deployment/node/#scheduled-tasks) covers the deploy shape this exists for.
+
+`plumix cron list` prints every schedule the site's plugins declare, and which tasks run on each. A task that declares no cron of its own runs on every firing, so it is printed under all of them. `plumix cron run "<expression>"` fires the tasks due on that schedule, refusing an expression nothing declares rather than exiting green having done nothing.
+
+```bash
+plumix cron list
+plumix cron run "*/5 * * * *"
+```
+
+A run takes the same claim-and-lease guard the in-process scheduler does, so it is never overlapped by another run of the same schedule — across replicas, when the database is shared — and it says which it did rather than failing silently: `Skipped "…": another run holds the lease`. It exits non-zero when a task failed, naming it; a skipped run exits zero, because the guard working is not a failure. Put `concurrencyPolicy: Forbid` on the CronJob or `flock` around the crontab entry anyway — those stop a second process before it opens a database at all, which the lease alone cannot do.
+
+### `doctor`
+
+Prints a diagnostic snapshot: the resolved config path, the runtime and database kind, every installed plugin, the schema table count, and the Node and platform versions the command itself is running on.
+
+```bash
+plumix doctor
+```
+
+### `i18n`
+
+Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds `lingui.config.ts` and a compile-check script, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).
+
+```bash
+plumix i18n extract
+plumix i18n compile
+plumix i18n init
+```
+
+Unlike every other command, `i18n` runs without loading `plumix.config.ts` — it is tooling for whatever package you run it from, not a step in a site's build.
+
+## Global flags
+
+Recognised ahead of the command name; anything after it passes through to the command unparsed, so a subcommand flag like `migrate apply`'s database name is never mistaken for one of these.
+
+### `--config`
+
+Path to `plumix.config.{ts,js,mjs}`, for a project whose config does not live at the project root under the default name.
+
+```bash
+plumix build --config config/plumix.config.ts
+```
+
+### `--cwd`
+
+The project root, read as the directory holding `plumix.config.ts` unless `--config` says otherwise. Defaults to the process's working directory. Every path a command resolves — the schema output, the migrations directory, a Node SQLite file — is relative to this, so it has to land before a command that opens a database does any of its own work.
+
+```bash
+plumix doctor --cwd ../my-site
+```
+
+### `--verbose`
+
+Prints diagnostic output — the detail behind a command's own decisions, such as why `--help` fell back to the built-in commands alone.
+
+```bash
+plumix build --verbose
+```
+
+### `--help`
+
+Prints command groups and their one-line descriptions: the built-ins always, and a runtime's own commands once its config loads. Also `-h`, and the default when `plumix` runs with no command at all.
+
+```bash
+plumix --help
+```
+
+### `--version`
+
+Prints the installed `plumix` package version. Also `-v`.
+
+```bash
+plumix --version
+```
+
+## Related
+
+[Runtime Adapters](/deployment/runtimes/#the-adapter) documents `commandsModule`, the seam a runtime uses to contribute `dev`, `build`, `deploy`, `types` and `migrate apply`. [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/) show what each runtime's commands look like from the operator's side, cron included.
+
+## Next steps
+
+Run `plumix doctor` in a project to see the reference above against a real config — it is the fastest way to confirm which runtime's commands you should expect from `--help`.
