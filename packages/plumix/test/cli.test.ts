@@ -77,24 +77,36 @@ describe("plumix CLI dispatch", () => {
     vi.restoreAllMocks();
   });
 
-  test("migrate generate writes .plumix/schema.ts and invokes drizzle-kit", async () => {
-    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
-      "/fake/drizzle-kit/bin.cjs",
-    );
-    const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
-      .mockResolvedValue("");
+  // Extended timeout: `migrate` is the only command here that builds an app,
+  // so this test alone pays `resolveCommandApp`'s deferred
+  // `import("@plumix/core")` — the root barrel, kept off the CLI's cold path
+  // on purpose (see `cold-start.test.ts`) and ~1.5s to transform and evaluate
+  // from source. The sibling files that import the barrel statically pay the
+  // same cost in vitest's import phase, which no timeout bills. drizzle-kit is
+  // mocked below; none of this is a subprocess.
+  test(
+    "migrate generate writes .plumix/schema.ts and invokes drizzle-kit",
+    { timeout: 15_000 },
+    async () => {
+      vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+        "/fake/drizzle-kit/bin.cjs",
+      );
+      const spawn = vi
+        .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+        .mockResolvedValue("");
 
-    await run(["--cwd", dir, "migrate", "generate"]);
+      await run(["--cwd", dir, "migrate", "generate"]);
 
-    const emitted = join(dir, ".plumix/schema.ts");
-    expect(existsSync(emitted)).toBe(true);
-    expect(readFileSync(emitted, "utf8")).toContain(
-      'export * from "plumix/schema";',
-    );
-    expect(spawn).toHaveBeenCalledOnce();
-    expect(exitCode).toBeUndefined();
-  });
+      const emitted = join(dir, ".plumix/schema.ts");
+      expect(existsSync(emitted)).toBe(true);
+      expect(readFileSync(emitted, "utf8")).toContain(
+        'export * from "plumix/schema";',
+      );
+      expect(spawn).toHaveBeenCalledOnce();
+      expect(spawn.mock.calls[0]?.[1]).toContain("/fake/drizzle-kit/bin.cjs");
+      expect(exitCode).toBeUndefined();
+    },
+  );
 
   test("unknown command throws CliError with unknown_command", async () => {
     await expect(run(["--cwd", dir, "nonsense-command"])).rejects.toMatchObject(
