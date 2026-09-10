@@ -253,9 +253,10 @@ export interface KV {
 
 /**
  * An origin-side response store, present on a runtime that offers one.
- * Cloudflare Workers does, via the Cache API, and there it is the only way a
- * Worker-served page reaches the edge cache at all; every other CDN caches from
- * the headers {@link ConnectedCdn.decorate} emits and has none.
+ * Cloudflare Workers is the case that has one: a Worker runs in front of its
+ * own zone's cache, so the headers {@link ConnectedCdn.decorate} emits do not
+ * reach it (#2265). Every other CDN caches from those headers and has no
+ * store.
  */
 export interface CdnStore {
   match(request: Request): Promise<Response | undefined>;

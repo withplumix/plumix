@@ -169,9 +169,9 @@ function credential(
  * Cloudflare CDN provider: freshness and cache tags on every public response,
  * and purge by cache tag through the zone API — both of which work from any
  * host behind the zone, a Worker, a container or a VM alike. On Workers it
- * additionally stores through the Cache API, the only way a Worker-served page
- * reaches the edge cache at all; the store is discovered rather than
- * configured.
+ * additionally stores through the Cache API, because a Worker runs in front of
+ * its own zone's cache and the zone never holds what the Worker returns. The
+ * store is discovered rather than configured.
  *
  * Inert (`connect` returns `null`, pages render live) when either credential
  * resolves to nothing on this deploy — a `workers.dev` host, a container with
@@ -181,6 +181,10 @@ function credential(
  *
  * Note that Cloudflare does not cache HTML without a Cache Rule on the zone. A
  * deploy that emits perfect headers still caches nothing until that rule exists.
+ *
+ * Workers Caching (`cache.enabled` in wrangler config) honours the same headers
+ * but is purged only through its own binding, so a deploy that enables it holds
+ * pages this provider cannot invalidate (#2265).
  */
 export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
   return {
