@@ -15,7 +15,7 @@ The `cdn` slot says one thing: there is a shared cache in front of this site, he
 
 A CDN provider does two jobs, and neither of them needs a particular runtime. On the way out it decorates a shared-cacheable public response with the freshness and cache tags the vendor reads. When content changes it purges those tags through the vendor's API, which is an HTTP call. A Worker, a container and a VM all make that call the same way.
 
-Where the runtime also offers an origin-side response store the provider uses that too — Cloudflare Workers does, through the Cache API, and there it is the only way a Worker-served page reaches the edge cache at all. Which mechanism a host adds is the provider's business and never appears in configuration.
+Where the runtime also offers an origin-side response store the provider uses that too — Cloudflare Workers does, through the Cache API. A Worker runs in front of its own zone's cache, so the zone never holds what the Worker hands back and the stored copy is what a later request is answered from. Which mechanism a host adds is the provider's business and never appears in configuration.
 
 Plumix ships one provider, `cloudflare()` from `plumix/cdn/cloudflare`. It lives in core rather than in a runtime package and carries no dependencies — a `fetch` call and some header writes — so a container deploy does not pull a Workers toolchain into its image to get caching.
 
@@ -94,6 +94,14 @@ Edge TTL is the load-bearing half. Left on a fixed number it overrides the `s-ma
   the rule itself. Creating cache rules is a far broader permission than
   purging, and a token that can rewrite a zone's caching is not one a CMS should
   hold. It is a setup step you do once, by hand.
+</Aside>
+
+<Aside type="caution" title="Leave Workers Caching off">
+  Cloudflare's Workers Caching — `"cache": { "enabled": true }` in
+  `wrangler.jsonc`, off by default — reads the same headers this provider
+  writes but is purged only through its own Worker-scoped binding, so a publish
+  leaves it serving the old page. [Cloudflare
+  Workers](/deployment/cloudflare/#workers-caching) has the detail.
 </Aside>
 
 ## What each host caches
