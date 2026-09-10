@@ -617,4 +617,30 @@ describe("createPlumixHandler — releasing the database", () => {
     await handler.fetch(request(), { env: {} });
     await expect(handler.dispose?.()).resolves.toEqual({ abandoned: 0 });
   });
+
+  test("is not terminal: a fetch after dispose reconnects rather than failing", async () => {
+    let connects = 0;
+    const close = vi.fn();
+    const handler = await handlerFor({
+      database: {
+        kind: "closable",
+        connect: () => {
+          connects += 1;
+          return { db: {}, close };
+        },
+      },
+    });
+
+    await handler.fetch(request(), { env: {} });
+    await handler.dispose?.();
+    expect(connects).toBe(1);
+    expect(close).toHaveBeenCalledTimes(1);
+
+    const response = await handler.fetch(request(), { env: {} });
+    expect(response.status).not.toBe(500);
+    expect(connects).toBe(2);
+
+    await handler.dispose?.();
+    expect(close).toHaveBeenCalledTimes(2);
+  });
 });

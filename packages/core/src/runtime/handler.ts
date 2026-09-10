@@ -91,6 +91,10 @@ export function createPlumixHandler(
   // throws on close (a handle already closed, a socket already gone) must not
   // become an unhandled rejection on the one path whose job is a clean
   // shutdown.
+  //
+  // Deliberately re-arms rather than latching a disposed flag: clearing
+  // `boundDb` is what makes `connectDatabase` reconnect on the next `fetch`,
+  // per the decision recorded on `PlumixHandler.dispose`.
   const releaseDatabase = (): void => {
     try {
       boundDb?.close?.();
