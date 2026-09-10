@@ -155,6 +155,67 @@ describe("createPlumixHandler — fetch", () => {
     expect(response.headers.get("x-commit-ran")).toBe("1");
   });
 
+  test("isAuthenticated reflects a custom authenticator's hasSession verdict, not the session cookie", async () => {
+    let seenIsAuthenticated: boolean | undefined;
+    const handler = await handlerFor({
+      database: {
+        kind: "scoped",
+        connect: () => ({ db: {} }),
+        connectRequest: (args) => {
+          seenIsAuthenticated = args.isAuthenticated;
+          return { db: {}, commit: (response) => response };
+        },
+      },
+      auth: auth({
+        passkey: stubAuth.passkey,
+        authenticator: {
+          authenticate: () => Promise.resolve(null),
+          hasSession: (r) => r.headers.get("x-sso") === "1",
+        },
+      }),
+    });
+
+    await handler.fetch(
+      new Request("https://cms.example/unknown", {
+        headers: { "x-sso": "1" },
+      }),
+      { env: {} },
+    );
+    expect(seenIsAuthenticated).toBe(true);
+
+    await handler.fetch(request(), { env: {} });
+    expect(seenIsAuthenticated).toBe(false);
+  });
+
+  test("a bearer-only request is still classified unauthenticated", async () => {
+    let seenIsAuthenticated: boolean | undefined;
+    const handler = await handlerFor({
+      database: {
+        kind: "scoped",
+        connect: () => ({ db: {} }),
+        connectRequest: (args) => {
+          seenIsAuthenticated = args.isAuthenticated;
+          return { db: {}, commit: (response) => response };
+        },
+      },
+      auth: auth({
+        passkey: stubAuth.passkey,
+        authenticator: {
+          authenticate: () => Promise.resolve(null),
+          hasSession: () => false,
+        },
+      }),
+    });
+
+    await handler.fetch(
+      new Request("https://cms.example/unknown", {
+        headers: { Authorization: "Bearer token" },
+      }),
+      { env: {} },
+    );
+    expect(seenIsAuthenticated).toBe(false);
+  });
+
   test("the invocation's client address reaches a handler as ctx.clientAddress", async () => {
     const seen = await whoami(new Request("https://cms.example/whoami"), {
       env: {},
