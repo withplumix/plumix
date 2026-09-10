@@ -15,7 +15,7 @@ The `cdn` slot says one thing: there is a shared cache in front of this site, he
 
 A CDN provider does two jobs, and neither of them needs a particular runtime. On the way out it decorates a shared-cacheable public response with the freshness and cache tags the vendor reads. When content changes it purges those tags through the vendor's API, which is an HTTP call. A Worker, a container and a VM all make that call the same way.
 
-Where the runtime also offers an origin-side response store, the provider uses it as well. Cloudflare Workers does, through the Cache API, and there it is the only way a Worker-served page reaches the edge cache at all. Behind a CDN the site does not run on, the headers are the whole mechanism. Which of the two is in play is the provider's business and never appears in configuration.
+Where the runtime also offers an origin-side response store the provider uses that too — Cloudflare Workers does, through the Cache API, and there it is the only way a Worker-served page reaches the edge cache at all. Which mechanism a host adds is the provider's business and never appears in configuration.
 
 Plumix ships one provider, `cloudflare()` from `plumix/cdn/cloudflare`. It lives in core rather than in a runtime package and carries no dependencies — a `fetch` call and some header writes — so a container deploy does not pull a Workers toolchain into its image to get caching.
 
@@ -100,17 +100,17 @@ Edge TTL is the load-bearing half. Left on a fixed number it overrides the `s-ma
 
 The slot's configuration is identical across the three rows below. What differs is what the deploy has to cache _with_.
 
-| Deploy                                                    | What holds a copy                                    | Segments but `private`    |
-| --------------------------------------------------------- | ---------------------------------------------------- | ------------------------- |
-| Worker behind its own zone                                | The Cloudflare edge, and the Cache API at the origin | Cached, keyed per segment |
-| Container or VM behind a Cloudflare zone                  | The Cloudflare edge                                  | Rendered live             |
-| Any host with no `cdn` slot, or with a credential missing | Nothing                                              | Rendered live             |
+| Deploy                                                    | What holds a copy                                    | Segments other than `private` |
+| --------------------------------------------------------- | ---------------------------------------------------- | ----------------------------- |
+| Worker behind its own zone                                | The Cloudflare edge, and the Cache API at the origin | Cached, keyed per segment     |
+| Container or VM behind a Cloudflare zone                  | The Cloudflare edge                                  | Rendered live                 |
+| Any host with no `cdn` slot, or with a credential missing | Nothing                                              | Rendered live                 |
 
 A Worker gets the second store for free, and it is why a Workers deploy answers some requests without the origin doing anything at all. Behind a CDN the site does not run on, every request that reaches the origin is a miss by definition — the hits were absorbed a hop earlier and the origin never sees them — so a storeless deploy is not a failing cache, and the telemetry `cdn` fact records which regime produced a miss.
 
 The third column is the trade-off worth weighing before you choose a host. An [access policy](/access/overview/) resolves each visitor into an audience segment, and two visitors in the same segment can share one cached page only if something can key the cache on that segment. The Cache API can, because the site owns it and writes the key itself. A CDN alone cannot, unless the vendor can vary on a named cookie — so behind one, a request in any segment other than `anonymous` bypasses the cache and renders live rather than risk one audience receiving another's page. Anonymous pages, which on most sites are nearly all of them, are unaffected and cache either way. One segment never caches on any host: `private` is the escape hatch a policy reaches for when a render is genuinely per-visitor, and it bypasses everywhere, which is also where an ephemeral grant lands.
 
-## What gets cached
+## Which routes cache
 
 Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is deliberately excluded, because one entry per distinct query string would fill the cache for no gain. A custom archive a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
 
@@ -141,8 +141,6 @@ Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues th
 The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
 
 ## Rotating the purge token
-
-This is the failure mode to plan for rather than meet.
 
 A deploy with working credentials fills the CDN. Redeploy without them — a rotated secret nobody carried over, an environment variable dropped in a config rewrite — and the provider goes inert on the next boot. New responses leave undecorated, publishing enqueues nothing, and no error appears anywhere, because the origin genuinely cannot see the entries the CDN already holds. Those pages then stay stale for the full freshness window, and a long `ttl` is a long time to be wrong.
 
