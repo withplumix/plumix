@@ -901,6 +901,24 @@ describe("REST API — bearer PAT auth", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toContain("no-store");
   });
+
+  test("an anonymous response is non-cacheable too", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("the OpenAPI document is non-cacheable too", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
 });
 
 describe("REST API — telemetry", () => {

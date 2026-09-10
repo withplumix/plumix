@@ -64,6 +64,7 @@ import {
   notFound,
   permanentRedirect,
   redirect,
+  withHeaders,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
@@ -330,6 +331,21 @@ async function tryColdInterfaces(
   return null;
 }
 
+// oRPC reads a GET's input from `?data=`, and a plugin procedure declaring
+// `route: { method: "GET" }` opts itself out of oRPC's strict-GET default —
+// which would let a URL a signed-in visitor can be navigated to answer private
+// JSON. The method this surface accepts is decided here, not per procedure.
+// Both clients POST.
+async function dispatchRpc(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
+  const rpcHandler = await app.loadRpcHandler();
+  const result = await rpcHandler.handle(ctx.request, {
+    prefix: RPC_PREFIX,
+    context: ctx,
+  });
+  return result.matched ? result.response : notFound("rpc-procedure-not-found");
+}
+
 // Everything mounted under `/_plumix/` behind the CSRF gate: RPC, the auth
 // flows (POST endpoints, OAuth, magic-link/email-change verify), the admin
 // shell, and plugin-registered raw routes. Returns null for any non-plumix path
@@ -361,14 +377,11 @@ async function tryPlumixRoutes(
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
-    const rpcHandler = await app.loadRpcHandler();
-    const result = await rpcHandler.handle(ctx.request, {
-      prefix: RPC_PREFIX,
-      context: ctx,
-    });
-    return result.matched
-      ? result.response
-      : notFound("rpc-procedure-not-found");
+    // Every answer here is per-visitor; an absent header would leave a shared
+    // cache in front of the site to infer that for itself.
+    return withHeaders(await dispatchRpc(app, ctx), (h) =>
+      h.set("cache-control", "private, no-store"),
+    );
   }
 
   const authRoute = POST_AUTH_ROUTES.get(pathname);

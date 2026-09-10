@@ -683,6 +683,30 @@ describe("dispatcher — RPC", () => {
     expect(response.status).toBe(401);
   });
 
+  test("a dispatched RPC response declares private, no-store", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  test("GET /_plumix/rpc/auth/session is rejected with 405", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/rpc/auth/session?data=%7B%7D", {
+        method: "GET",
+      }),
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("POST");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   test("POST /_plumix/rpc/unknown/procedure with CSRF header returns 404", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(

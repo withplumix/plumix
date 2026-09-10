@@ -44,7 +44,7 @@ export interface D1DatabaseAdapter extends DatabaseAdapter {
 // A response the `cdn:` provider stamped on the way out: it declares a
 // freshness a shared cache may act on. `responseAllowsSharedStorage` alone is
 // not the question — it is true of a response that declared nothing at all,
-// which is every admin and RPC response.
+// and a bookmark must not ride out on one of those.
 function isSharedCacheable(response: Response): boolean {
   return (
     response.headers.has("cache-control") &&
