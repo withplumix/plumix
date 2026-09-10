@@ -190,12 +190,17 @@ export const kvStore = kv({ binding: "KV" });
 The read-through CDN for anonymous public renders. `ttl` is the freshness window in seconds and `staleWhileRevalidate` is how long a stale copy may still be served while a fresh one is fetched.
 
 ```ts no-typecheck
-import { edge } from "@plumix/runtime-cloudflare";
+import { cloudflare as cdn } from "plumix/cdn/cloudflare";
 
-export const cdn = edge({ ttl: 3600, staleWhileRevalidate: 86400 });
+export const cdnSlot = cdn({
+  ttl: 3600,
+  staleWhileRevalidate: 86400,
+  zoneId: (env) => env.CF_ZONE_ID,
+  purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+});
 ```
 
-`edge()` disables itself when the deploy lacks the zone id and purge token it needs, because a CDN that cannot purge would serve a stale recipe forever. That is why the CDN is inert on a `workers.dev` host and live on a zone.
+`zoneId` and `purgeToken` are required, and the provider disables itself when either resolves to nothing, because a CDN that cannot purge would serve a stale recipe forever. That is why the CDN is inert on a `workers.dev` host and live on a zone. The provider lives in core rather than in a runtime package, so this line is the same whether the site runs on Workers or in a container.
 
 ### mailer
 

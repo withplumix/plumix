@@ -36,8 +36,8 @@ function byTag(
 }
 
 // A tag-indexed map is the smallest store that can satisfy the contract, so it
-// is what the cases are proved green against here. Cloudflare's `edge()` runs
-// them against the Workers Cache API in its own package.
+// is what the cases are proved green against here. The Cloudflare provider
+// runs them against the Workers Cache API beside its own tests.
 function storefulCdn(
   purge: (entries: Map<string, CachedEntry>, tags: readonly string[]) => void,
 ): ConnectedCdn {

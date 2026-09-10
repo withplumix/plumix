@@ -1,6 +1,6 @@
 ---
 title: Cloudflare Workers
-description: The Cloudflare runtime adapter, and the factories that fill the database, storage, KV, image and CDN slots with D1, R2, Workers KV, Image Transformations and the edge CDN.
+description: The Cloudflare runtime adapter, and the factories that fill the database, storage, KV and image slots with D1, R2, Workers KV and Image Transformations.
 tier: P0
 sidebar:
   order: 20
@@ -21,7 +21,6 @@ The runtime is a slot like any other. `runtime: cloudflare()` tells Plumix which
 | `r2({ binding })`  | `storage`       | An R2 bucket                             |
 | `kv({ binding })`  | `kv`            | A Workers KV namespace                   |
 | `images({ zone })` | `imageDelivery` | Cloudflare Image Transformations         |
-| `edge({ ttl })`    | `cdn`           | The Workers Cache API and purge by tag   |
 
 Three more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host a Workers Builds build is served on, which [Passkey origins across deploys](#passkey-origins-across-deploys) below covers. `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check, and `cfAccessLogoutUrl` builds the Access sign-out URL that check needs on the way back out.
 
@@ -173,13 +172,13 @@ Presigned uploads need S3 credentials, because an R2 binding cannot mint a presi
 
 Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat that as the floor.
 
-## The edge CDN
+## The CDN
 
-`edge({ ttl, staleWhileRevalidate })` stamps public pages with the freshness and cache tags a CDN reads, keeps a copy in the Workers Cache API, and purges by cache tag through the zone API. You add it to the config as `cdn: edge({ ttl: 3600, staleWhileRevalidate: 86400 })`. `ttl` becomes `s-maxage` in seconds, and `staleWhileRevalidate` is how long a colo may serve an expired copy while it refetches.
+The CDN slot comes from core rather than from this package, because nothing about it is Workers-specific: `cloudflare({ ttl, staleWhileRevalidate, zoneId, purgeToken })` from `plumix/cdn/cloudflare` stamps public pages with the freshness and cache tags a CDN reads, keeps a copy in the Workers Cache API, and purges by cache tag through the zone API. You add it to the config as `cdn: cdn({ ttl: 3600, staleWhileRevalidate: 86400, zoneId: (env) => env.CF_ZONE_ID, purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN })`, importing it as `import { cloudflare as cdn } from "plumix/cdn/cloudflare"` — every provider exports its bare vendor name, and the alias is what makes swapping one a single-word edit. `ttl` becomes `s-maxage` in seconds, and `staleWhileRevalidate` is how long a colo may serve an expired copy while it refetches.
 
 A cacheable public page leaves the origin carrying those headers, not just the copy the Workers Cache API holds. Two responses leave untouched and untagged: one that declared itself `private` or `no-store`, and one that sets a cookie — that cookie is the visitor's own and cannot be stripped the way the stored copy's is. A response that declared its own shared-cacheable freshness keeps it; the `ttl` above applies only to one that declared none. Note that Cloudflare does not cache HTML without a cache rule on the zone, so the headers alone will not fill the edge cache until you add one.
 
-The slot disables itself unless the Worker env carries both `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN`. That is not a convenience check. Without a zone and a purge token the site could store a page it can never purge, so caching stays off and every page renders live. This is why a `workers.dev` deploy sees no caching even with the slot configured.
+`zoneId` and `purgeToken` are required fields, and the resolver form above keeps the secret out of the committed file. The slot disables itself when either resolves to nothing on this deploy. That is not a convenience check. Without a zone and a purge token the site could store a page it can never purge, so caching stays off and every page renders live. This is why a `workers.dev` deploy sees no caching even with the slot configured.
 
 Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the CDN for no gain. A custom archive that a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
 

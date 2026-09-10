@@ -8,12 +8,15 @@ import type { PlumixEnv } from "./bindings.js";
  * the config module is evaluated before any request. `env` is the augmentable
  * {@link PlumixEnv} (the cloudflare runtime extends it with `Cloudflare.Env`),
  * so a resolver reads bindings/secrets type-checked. Used by the secret-bearing
- * config slots — `mailer`, OAuth `clientSecret`, R2 S3 creds — all mirroring the
- * `libsql()` connection-config union.
+ * config slots — `mailer`, OAuth `clientSecret`, R2 S3 creds, the Cloudflare
+ * CDN's zone credentials — all mirroring the `libsql()` connection-config
+ * union.
  *
  * `T` must be a non-callable value: the literal-vs-resolver discriminator is
  * `typeof input === "function"`, which every current slot satisfies (each `T`
- * is an object).
+ * is an object or a string). A `T` that includes `undefined` resolves and
+ * memoises like any other — the CDN's credentials use it to say the value may
+ * be missing on a given deploy.
  */
 export type EnvInput<T> = T | ((env: PlumixEnv) => T);
 

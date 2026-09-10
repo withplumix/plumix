@@ -82,10 +82,11 @@ export interface PlumixConfigInput {
   readonly kv?: KV;
   /**
    * Public read-through CDN. Optional and default-off: with no `cdn`
-   * slot, every public page renders live. The canonical provider is
-   * `edge({ ttl, staleWhileRevalidate })` from `@plumix/runtime-cloudflare`;
-   * it disables itself when the deploy lacks the zone credentials needed to
-   * cache safely (e.g. on `workers.dev`).
+   * slot, every public page renders live. The provider shipped today is
+   * `cloudflare({ ttl, zoneId, purgeToken })` from `plumix/cdn/cloudflare`,
+   * which works from any host behind the zone; it disables itself when the
+   * deploy lacks the credentials needed to cache safely (e.g. on
+   * `workers.dev`).
    */
   readonly cdn?: CdnProvider;
   /**

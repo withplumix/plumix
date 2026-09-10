@@ -182,10 +182,12 @@ describe("the cold-start path defers its heavy graphs", () => {
 });
 
 // Modules published only behind a subpath — the libSQL driver, the S3 slot and
-// its SigV4 signer — so a bundle that never imports the subpath never carries
-// them. The root barrel is the entry here, not the cold path: the property is
-// that no public export reaches them, whatever a bundler later shakes.
+// its SigV4 signer, the Cloudflare CDN provider — so a bundle that never
+// imports the subpath never carries them. The root barrel is the entry here,
+// not the cold path: the property is that no public export reaches them,
+// whatever a bundler later shakes.
 const SUBPATH_ONLY = [
+  "cdn/cloudflare/index.ts",
   "db/libsql.ts",
   "storage/s3/index.ts",
   "storage/s3/sigv4.ts",

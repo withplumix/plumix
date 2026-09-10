@@ -152,6 +152,10 @@
       "types": "./dist/db/libsql.d.ts",
       "default": "./dist/db/libsql.js"
     },
+    "./cdn/cloudflare": {
+      "types": "./dist/cdn/cloudflare.d.ts",
+      "default": "./dist/cdn/cloudflare.js"
+    },
     "./storage/s3": {
       "types": "./dist/storage/s3.d.ts",
       "default": "./dist/storage/s3.js"

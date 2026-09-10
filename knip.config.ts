@@ -168,8 +168,10 @@ const config: KnipConfig = {
         // barrel so the driver stays out of unrelated bundles).
         "src/db/libsql.ts",
         // `plumix/storage/s3` re-exports the core S3 slot + SigV4 signer on
-        // its own subpath for the same reason.
+        // its own subpath for the same reason, and `plumix/cdn/cloudflare`
+        // the Cloudflare CDN provider.
         "src/storage/s3.ts",
+        "src/cdn/cloudflare.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",
         "src/schema/index.ts",

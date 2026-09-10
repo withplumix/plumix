@@ -429,6 +429,30 @@ declare module "plumix" {
 }
 ```
 
+### plumix/cdn/cloudflare
+
+The Cloudflare CDN slot, on its own subpath so a site that configures no CDN never carries a vendor's provider. It works from a Worker, a container or a VM alike, which is what makes the `cdn:` line the one line that survives a move between hosts — [Cloudflare Workers](/deployment/cloudflare/#the-cdn) covers what it writes and what it stores. Alias the import, because every provider exports its bare vendor name and aliasing is what makes swapping one a single-word edit.
+
+`zoneId` and `purgeToken` are required, and a deploy where either resolves to nothing leaves the CDN inert: pages render live, and the debug bar's slot row is where that shows.
+
+```ts
+import { cloudflare as cdn } from "plumix/cdn/cloudflare";
+
+export const cdnSlot = cdn({
+  ttl: 3600,
+  staleWhileRevalidate: 86400,
+  zoneId: (env) => env.CF_ZONE_ID,
+  purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+});
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly CF_ZONE_ID: string;
+    readonly CF_CACHE_PURGE_TOKEN: string;
+  }
+}
+```
+
 ### plumix/storage/s3
 
 The S3 object-storage slot and the SigV4 signer behind it, on their own subpath for the reason `plumix/db/libsql` is: a deploy that binds a native bucket never carries the signer. `s3()` talks to any S3-compatible endpoint over `fetch`, so AWS S3, R2 through its S3 API, MinIO, DigitalOcean Spaces and GCS interop all go through one slot, and it always offers `presignPut`. The signer's two forms, `presignPutUrl` and `signRequest`, are exported for a runtime adapter that needs them on their own.
