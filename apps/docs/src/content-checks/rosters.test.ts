@@ -133,7 +133,7 @@ describe("the rosters bound to their source at runtime", () => {
   // type name, so the `*` goes straight through it; `entryTag` takes a number,
   // so it goes back afterwards.
   it("binds the cache-tag roster to the two minters the façade exports", () => {
-    expect(itemsOf("going-further/caching.mdx")).toEqual([
+    expect(itemsOf("deployment/cdn.mdx")).toEqual([
       typeTag("*"),
       entryTag(7).replace("7", "*"),
     ]);

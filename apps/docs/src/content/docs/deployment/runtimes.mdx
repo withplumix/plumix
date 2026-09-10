@@ -394,7 +394,7 @@ describeKvContract({
 });
 ```
 
-`describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
+`describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. A CDN port member left absent is a supported provider rather than a gap the suite reports: a vendor that cannot invalidate by tag omits `purgeTags`, and what a site then loses — freshness as its only control over correctness, and the short `ttl` that follows — is [CDN Caching](/deployment/cdn/#providers-without-tag-purge), which is where to state the TTL you recommend for a provider you publish. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
 
 ## Related
 

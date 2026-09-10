@@ -1,0 +1,165 @@
+---
+title: CDN Caching
+description: The cdn slot, the Cloudflare provider that fills it, and running a cached site from a Worker, a container or a VM — including the zone rule Cloudflare needs before it caches HTML at all.
+tier: P1
+roster: true
+sidebar:
+  order: 50
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+The `cdn` slot says one thing: there is a shared cache in front of this site, here is who runs it, how fresh a page may be, and how to tell it to drop something. It is the one line in a config that does not change when the site moves hosts — `runtime`, `database` and `storage` all do.
+
+## Overview
+
+A CDN provider does two jobs, and neither of them needs a particular runtime. On the way out it decorates a shared-cacheable public response with the freshness and cache tags the vendor reads. When content changes it purges those tags through the vendor's API, which is an HTTP call. A Worker, a container and a VM all make that call the same way.
+
+Where the runtime also offers an origin-side response store, the provider uses it as well. Cloudflare Workers does, through the Cache API, and there it is the only way a Worker-served page reaches the edge cache at all. Behind a CDN the site does not run on, the headers are the whole mechanism. Which of the two is in play is the provider's business and never appears in configuration.
+
+Plumix ships one provider, `cloudflare()` from `plumix/cdn/cloudflare`. It lives in core rather than in a runtime package and carries no dependencies — a `fetch` call and some header writes — so a container deploy does not pull a Workers toolchain into its image to get caching.
+
+```ts
+import type { CdnProvider } from "plumix";
+import { cloudflare as cdn } from "plumix/cdn/cloudflare";
+
+export const cdnSlot: CdnProvider = cdn({
+  ttl: 3600,
+  staleWhileRevalidate: 86400,
+  zoneId: (env) => env.CF_ZONE_ID,
+  purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+});
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly CF_ZONE_ID: string;
+    readonly CF_CACHE_PURGE_TOKEN: string;
+  }
+}
+```
+
+Every provider exports its bare vendor name, and importing it under the `cdn` alias is what makes swapping one a single-word edit. `ttl` becomes `s-maxage` in seconds. `staleWhileRevalidate` is how long a colo may keep serving an expired copy while it fetches a fresh one behind the visitor's back.
+
+`zoneId` and `purgeToken` are required, and the provider stays entirely inert when either resolves to nothing on this deploy: nothing is cached and every page renders live. A cache the site cannot purge would serve a stale recipe until its freshness ran out, so refusing to fill one is the safer failure. It is silent rather than logged, because "not deployed yet" is the ordinary local state; in development the debug bar's slot row is where an unconfigured CDN shows.
+
+## Quickstart
+
+This is the whole path for a site that is _not_ a Worker — a container, a droplet, a VM — sitting behind a Cloudflare zone. A Workers deploy skips steps 5 and 6 and is otherwise identical.
+
+<Steps>
+
+1. **Add the slot.** The provider above, as `cdn:` in `plumix.config.ts` beside `runtime` and `database`. Nothing in it names your host.
+
+2. **Find the zone id.** It is on the zone's overview page in the Cloudflare dashboard, under API.
+
+3. **Mint a purge token.** A user API token scoped to that one zone with the `Cache Purge` permission, and nothing else.
+
+4. **Put both in the environment.** They reach the config through the `(env) => …` resolvers above, which read `process.env` on Node — a `.env` file in development, the container's own environment in production. [Secrets](/deployment/secrets/) covers the resolver form.
+
+   ```sh
+   CF_ZONE_ID=<the zone id>
+   CF_CACHE_PURGE_TOKEN=<the token>
+   ```
+
+5. **Proxy the origin through the zone.** The site's DNS record has to be orange-clouded, or requests never reach a Cloudflare colo and no header the origin writes is read by anything.
+
+6. **Add a cache rule for HTML.** Cloudflare does not cache HTML documents by default, whatever the origin asks for. Without this rule the site emits correct headers and caches nothing. [The cache rule](#the-cache-rule) below has the settings.
+
+7. **Verify a page caches.** Two requests to the same public URL, the second answered from the edge:
+
+   ```sh
+   curl -sI https://recipes.example/ | grep -i 'cf-cache-status\|cache-control\|cache-tag'
+   ```
+
+   The first is `cf-cache-status: MISS`, the second `HIT`. `cache-control` carries the `s-maxage` you configured and `cache-tag` names what a purge will reach.
+
+8. **Publish something and watch it clear.** Edit a published entry in the admin and publish it again. Its permalink and every archive listing it go back to `MISS` on the next request.
+
+</Steps>
+
+## The cache rule
+
+Cloudflare honours origin freshness for static file extensions on its own. An HTML document is not one of them: it needs a rule marking it eligible for cache, and a rule telling the edge to take its TTL from the origin rather than from a fixed number.
+
+Under **Caching → Cache Rules**, create a rule matching the traffic you want cached — `Hostname equals recipes.example` is the usual shape — and set:
+
+- **Cache eligibility** to _Eligible for cache_.
+- **Edge TTL** to _Use cache-control header if present, bypass cache if not_.
+- **Browser TTL** to _Respect origin TTL_.
+
+Edge TTL is the load-bearing half. Left on a fixed number it overrides the `s-maxage` the provider writes, and your `ttl` becomes decoration; set to respect the origin, the config file stays the single place freshness is decided.
+
+<Aside type="caution" title="Plumix does not create this rule">
+  The site already holds a zone id and a token, so it could in principle write
+  the rule itself. Creating cache rules is a far broader permission than
+  purging, and a token that can rewrite a zone's caching is not one a CMS should
+  hold. It is a setup step you do once, by hand.
+</Aside>
+
+## What each host caches
+
+The slot's configuration is identical across the three rows below. What differs is what the deploy has to cache _with_.
+
+| Deploy                                                    | What holds a copy                                    | Segments but `private`    |
+| --------------------------------------------------------- | ---------------------------------------------------- | ------------------------- |
+| Worker behind its own zone                                | The Cloudflare edge, and the Cache API at the origin | Cached, keyed per segment |
+| Container or VM behind a Cloudflare zone                  | The Cloudflare edge                                  | Rendered live             |
+| Any host with no `cdn` slot, or with a credential missing | Nothing                                              | Rendered live             |
+
+A Worker gets the second store for free, and it is why a Workers deploy answers some requests without the origin doing anything at all. Behind a CDN the site does not run on, every request that reaches the origin is a miss by definition — the hits were absorbed a hop earlier and the origin never sees them — so a storeless deploy is not a failing cache, and the telemetry `cdn` fact records which regime produced a miss.
+
+The third column is the trade-off worth weighing before you choose a host. An [access policy](/access/overview/) resolves each visitor into an audience segment, and two visitors in the same segment can share one cached page only if something can key the cache on that segment. The Cache API can, because the site owns it and writes the key itself. A CDN alone cannot, unless the vendor can vary on a named cookie — so behind one, a request in any segment other than `anonymous` bypasses the cache and renders live rather than risk one audience receiving another's page. Anonymous pages, which on most sites are nearly all of them, are unaffected and cache either way. One segment never caches on any host: `private` is the escape hatch a policy reaches for when a render is genuinely per-visitor, and it bypasses everywhere, which is also where an ephemeral grant lands.
+
+## What gets cached
+
+Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is deliberately excluded, because one entry per distinct query string would fill the cache for no gain. A custom archive a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
+
+On a route carrying no access policy, a request bearing a session cookie, an `Authorization` header or a `?preview=` token bypasses the cache entirely: any of the three can make the render differ from the shared anonymous document. On a policied route the segment decides instead, and an authenticated member of a cacheable audience reads that audience's entry rather than bypassing — so the two ephemeral grants, `?preview=` and `?plumix.edit`, are excluded by name there. Either way a draft never enters a shared cache, which is the guarantee [Statuses](/content-modelling/statuses/) rests on: a render authorized for one request must not outlive it.
+
+A raw route a plugin mounted at `/_plumix/<pluginId>` is the sixth cacheable kind, and it takes the same opt-in: `registerRoute({ cacheable: true })`. Only an `auth: "public"` route may take it, since a stored response is served to everyone, and registering it on a gated route throws at boot. Take the opt-in only where the route answers every visitor with the same document, locale included: the entry is keyed off the request URL with the cookie dropped, so a signed-in visitor reads the shared copy rather than bypassing it the way a page render does, and a `Vary` the handler sets is not a key axis. The whole URL is the key, query string included, so any parameter a caller invents is another entry.
+
+Reading the shared copy is one thing and filling it is another. A route response is stored only when nothing about it says it belongs to one visitor: the request carried no session, `Authorization` header or `?preview=` token, and the response sets no cookie and declares itself neither `private` nor `no-store`. A handler that gates itself — on a bearer token Plumix never sees, say — is registered `auth: "public"` like any other, and this is what keeps its answer out of the shared entry.
+
+Freshness on such a route is the response's to declare. A handler that sets its own `Cache-Control` keeps it — a content-addressed asset asking for `max-age=31536000, immutable` is stored with exactly that, and a content-addressed URL is the one kind `immutable` belongs on, since a purge reaches the CDN but never the browser or the scraper holding the URL. The slot's `ttl` applies only to a response that declared none.
+
+## Cache tags
+
+A cached page is stored under tags, and a publish purges by tag rather than by URL. The vocabulary is these two and nothing else — coarse by design, since a page that lists content cannot enumerate what it will list next week. Both are lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
+
+### t:\*
+
+`t:<type>` — the entry type tag. It goes on every page that lists or embeds content of that type: its archives, the front page, term archives, and permalinks, which can render sibling content of their own. Any publish of that type reaches all of them.
+
+### e:\*
+
+`e:<id>` — the single entry tag, carried only by that entry's permalink. It is what lets an edit to one recipe clear that recipe's page without touching the archives it appears in.
+
+## Purging
+
+Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues the `t:<type>` of every entry type its taxonomy lists. A plugin's own cacheable route stores untagged unless its handler calls `tagCdnEntry` while it runs, which is how it puts its entry under the same tags the entry's pages carry and clears it on the same publish.
+
+The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
+
+## Rotating the purge token
+
+This is the failure mode to plan for rather than meet.
+
+A deploy with working credentials fills the CDN. Redeploy without them — a rotated secret nobody carried over, an environment variable dropped in a config rewrite — and the provider goes inert on the next boot. New responses leave undecorated, publishing enqueues nothing, and no error appears anywhere, because the origin genuinely cannot see the entries the CDN already holds. Those pages then stay stale for the full freshness window, and a long `ttl` is a long time to be wrong.
+
+Nothing in the code can defend this, so treat a token rotation as a two-step change: set the new token, confirm the deploy still purges — publish something and watch `cf-cache-status` return to `MISS` — and revoke the old one after. When a published change refuses to appear, that verification is also the diagnosis: a page that stays `HIT` through a publish is a deploy whose credentials no longer resolve.
+
+## Providers without tag purge
+
+A vendor that cannot invalidate by tag is a supported provider, not a broken one. The port makes `purgeTags` optional precisely so such a vendor is configurable, and optional rather than a no-op method so that no call site can believe a purge happened when none did.
+
+The consequence is that freshness becomes the only control you have. Correctness comes from the TTL expiring, not from anything the publish does, so the recommended `ttl` for such a provider is minutes rather than the hours a purging provider can afford: pick the longest window you are willing to serve a stale page for, and accept that every edit takes up to that long to appear. A provider with an origin store and no tag purge is sharper still — an entry it holds is reachable only by expiry — and belongs on a short TTL for the same reason.
+
+## Related
+
+[Cloudflare Workers](/deployment/cloudflare/) covers the Cache API store this page's first table row gets, and the rest of the Workers adapter. [Node.js](/deployment/node/) is the container-shaped deploy the quickstart above is written for. [Secrets](/deployment/secrets/) covers the `(env) => value` resolvers the two credentials arrive through, and [Configuration](/getting-started/configuration/) lists the `cdn` slot beside every other one a site config carries.
+
+[Runtime Adapters](/deployment/runtimes/) has the provider contract and `describeCdnContract`, the conformance suite a new provider is held to.
+
+## Next steps
+
+Run the verification in step 7 against a real deploy before you rely on any of this — the cache rule is the step most sites miss, and its symptom is a site that looks configured and caches nothing. Then read [Statuses](/content-modelling/statuses/) for how drafts and preview links stay out of a shared cache.

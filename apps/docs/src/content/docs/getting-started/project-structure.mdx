@@ -431,7 +431,7 @@ declare module "plumix" {
 
 ### plumix/cdn/cloudflare
 
-The Cloudflare CDN slot, on its own subpath so a site that configures no CDN never carries a vendor's provider. It works from a Worker, a container or a VM alike, which is what makes the `cdn:` line the one line that survives a move between hosts — [Cloudflare Workers](/deployment/cloudflare/#the-cdn) covers what it writes and what it stores. Alias the import, because every provider exports its bare vendor name and aliasing is what makes swapping one a single-word edit.
+The Cloudflare CDN slot, on its own subpath so a site that configures no CDN never carries a vendor's provider. It works from a Worker, a container or a VM alike, which is what makes the `cdn:` line the one line that survives a move between hosts — [CDN Caching](/deployment/cdn/) covers what it writes, what it stores and what each host gets. Alias the import, because every provider exports its bare vendor name and aliasing is what makes swapping one a single-word edit.
 
 `zoneId` and `purgeToken` are required, and a deploy where either resolves to nothing leaves the CDN inert: pages render live, and the debug bar's slot row is where that shows.
 
