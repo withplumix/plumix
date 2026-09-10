@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import { normalizeTag } from "./tags.js";
 
 // Per-request accumulator of cache tags for entities embedded into a page
 // via read-time reference resolution (#1508). When resolution materializes
@@ -24,7 +25,7 @@ export function accumulateEmbeddedTags(
     set = new Set();
     pending.set(ctx.request, set);
   }
-  for (const tag of tags) set.add(tag);
+  for (const tag of tags) set.add(normalizeTag(tag));
 }
 
 /** The de-duplicated tags accumulated for this request, in insertion order. */
