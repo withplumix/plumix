@@ -1,7 +1,6 @@
 import type { Segment } from "../access/policy.js";
 import type { RouteIntent } from "../route/intent.js";
 import { PRIVATE_SEGMENT } from "../access/segments.js";
-import { readSessionCookie } from "../auth/cookies.js";
 
 // Public route intents whose anonymous render is a shared, cacheable document.
 // `search` is deliberately excluded — its unbounded query space would pollute
@@ -51,11 +50,20 @@ const EDIT_PARAM = "plumix.edit";
  * make the render differ from the shared anonymous document — a logged-in
  * editor's view, or a draft visible only to a preview-link holder — so such
  * requests must bypass the CDN entirely. The preview case is the load-bearing
- * one: a draft render is anonymous (no cookie) yet must never be cached, or it
- * would outlive the token's authorization window in the CDN.
+ * one: a draft render carries no session yet must never be cached, or it would
+ * outlive the token's authorization window in the CDN.
+ *
+ * `hasSession` is the caller's authenticator verdict (`requestHasSession`) —
+ * only the authenticator knows what signal a session rides on (#2264). The
+ * bearer arm stands on its own: `apiTokenAuthenticator` reports no session, so
+ * that a GET never bumps `lastUsedAt`, yet its render is privileged all the
+ * same.
  */
-export function requestIsPrivileged(request: Request): boolean {
-  if (readSessionCookie(request) !== null) return true;
+export function requestIsPrivileged(
+  request: Request,
+  hasSession: boolean,
+): boolean {
+  if (hasSession) return true;
   if (request.headers.has("authorization")) return true;
   return new URL(request.url).searchParams.has(PREVIEW_PARAM);
 }
@@ -69,9 +77,9 @@ export function requestIsPrivileged(request: Request): boolean {
  * (or an editor's autosave render) would outlive that grant.
  *
  * The un-policied CDN path gets this for free through {@link
- * requestIsPrivileged} (whose session-cookie arm bypasses every authenticated
+ * requestIsPrivileged} (whose session arm bypasses every authenticated
  * request); the policied path keys on the segment — an authenticated audience
- * member always carries a cookie — so it must exclude these grants explicitly.
+ * member always carries a session — so it must exclude these grants explicitly.
  * Keyed on the marker's presence, not a validated token: an invalid grant then
  * renders live-but-uncached, which is safe.
  */

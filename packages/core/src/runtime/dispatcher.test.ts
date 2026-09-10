@@ -17,6 +17,7 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
 import type { CdnStore, ConnectedCdn } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
+import { readSessionCookie } from "../auth/cookies.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { getContext } from "../context/stores.js";
@@ -29,6 +30,8 @@ import {
   DEV_ORIGIN,
   plumixRequest,
 } from "../test/dispatcher.js";
+import { userFactory } from "../test/factories.js";
+import { createTestDb } from "../test/harness.js";
 import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
@@ -1670,6 +1673,29 @@ describe("dispatcher — public read-through CDN", () => {
     return { cdn, match, put };
   }
 
+  // The cookie a site carrying its own session signal signs visitors in under —
+  // an SSO deployment, a tenant cookie, the demo runtime's per-visitor sandbox
+  // token. Deliberately not `plumix_session`.
+  const TENANT_COOKIE = "tenant_session";
+
+  // The authenticator captures its user before the harness exists, so the db is
+  // built here rather than reached for through `h.seedUser()`.
+  async function tenantHarness(cdn: ConnectedCdn): Promise<DispatcherHarness> {
+    const db = await createTestDb();
+    const signedIn = await userFactory.transient({ db }).create();
+    const carriesCookie = (request: Request) =>
+      readSessionCookie(request, TENANT_COOKIE) !== null;
+    return createDispatcherHarness({
+      db,
+      cdn,
+      authenticator: {
+        authenticate: (request) =>
+          Promise.resolve(carriesCookie(request) ? { user: signedIn } : null),
+        hasSession: carriesCookie,
+      },
+    });
+  }
+
   const blog = definePlugin("blog", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
   });
@@ -1742,6 +1768,33 @@ describe("dispatcher — public read-through CDN", () => {
 
     expect(await response.text()).not.toBe("CACHED");
     expect(match).not.toHaveBeenCalled();
+  });
+
+  test("a custom authenticator's signed-in visitor bypasses the CDN", async () => {
+    const { cdn, match, put } = cdnStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    const h = await tenantHarness(cdn);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/", {
+        headers: { cookie: `${TENANT_COOKIE}=whoever` },
+      }),
+    );
+
+    expect(await response.text()).not.toBe("CACHED");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test("a custom authenticator's anonymous visitor still reaches the CDN", async () => {
+    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+    const h = await tenantHarness(cdn);
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(await response.text()).toBe("CACHED");
+    expect(match).toHaveBeenCalledOnce();
   });
 
   test("a request carrying a ?preview= draft grant bypasses the CDN", async () => {

@@ -120,6 +120,10 @@ A public page render skips authentication for traffic that carries no session. L
 
 That default is right for anything cookie-shaped and wrong for everything else. An authenticator carrying its credential in a header sees every public request as anonymous, so a signed-in principal gets the signed-out page and every capability-gated render decision takes the anonymous branch. Returning `false` opts out on purpose. The API-token authenticator does exactly that, because an API token belongs to an API client rather than to a browser session, and a cross-site navigation carrying an `Authorization` header should not touch the token's `lastUsedAt`.
 
+The [shared cache](/deployment/cdn/) asks the same predicate, so what you answer here decides more than whether a user loads. On a page carrying no access policy, a request you call signed in bypasses the cache entirely, because its render may differ from the anonymous document every other visitor receives. On a plugin route that opted into caching it reads the shared entry as everyone does, but its render is never stored into one. A policied route is keyed by audience segment instead, and an entitled member reads that audience's entry rather than bypassing.
+
+Declaring no session opens a narrow but real hole. Core then treats the request as anonymous throughout, so a route handler or theme that calls `authenticate` itself and personalizes what it renders has that render stored under the public URL and served on to the next visitor.
+
 ```ts
 import type { RequestAuthenticator } from "plumix";
 import { apiTokenAuthenticator, chainAuthenticators } from "plumix";
