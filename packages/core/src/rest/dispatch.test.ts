@@ -891,18 +891,31 @@ describe("REST API — bearer PAT auth", () => {
 
     expect(res.status).toBe(401);
   });
+});
 
-  test("a PAT-authed response is non-cacheable", async () => {
+describe("REST API — freshness", () => {
+  // Bare `no-store`, not `private, no-store` — the `private` would be
+  // redundant beside a directive that already binds every cache.
+  test("a PAT-authed read declares no-store", async () => {
     const h = await restHarness();
     const { secret } = await mintPat(h, { role: "editor" });
 
     const res = await h.dispatch(bearerGet("/_plumix/api/v1/posts", secret));
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("no-store");
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
-  test("an anonymous response is non-cacheable too", async () => {
+  test("an unmatched route declares no-store", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/nope"));
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("an anonymous read declares no-store", async () => {
     const h = await restHarness();
 
     const res = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
@@ -911,7 +924,7 @@ describe("REST API — bearer PAT auth", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
-  test("a rejected token is non-cacheable too", async () => {
+  test("a rejected token declares no-store", async () => {
     const h = await restHarness();
 
     const res = await h.dispatch(
@@ -922,7 +935,7 @@ describe("REST API — bearer PAT auth", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
-  test("a preflight is non-cacheable too", async () => {
+  test("a preflight declares no-store", async () => {
     const h = await restHarness({
       api: { enabled: true, cors: { origins: ["https://app.example"] } },
     });
@@ -938,7 +951,7 @@ describe("REST API — bearer PAT auth", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
-  test("the OpenAPI document is non-cacheable too", async () => {
+  test("the OpenAPI document declares no-store", async () => {
     const h = await restHarness();
 
     const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));

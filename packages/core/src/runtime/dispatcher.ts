@@ -63,7 +63,6 @@ import {
   notFound,
   permanentRedirect,
   redirect,
-  withHeaders,
   withNoStore,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
@@ -313,24 +312,31 @@ async function tryColdInterfaces(
   ctx: AppContext,
   pathname: string,
 ): Promise<Response | null> {
-  if (pathname === MCP_PATH) {
-    // Default-off in production; auto-enabled in dev so a connected coding
-    // agent reaches it with no config flag. `devCsrfLocalhost` is statically
-    // false in production builds, so the auto-enable never applies there.
-    if (!interfaceEnabled(app.config.mcp) && !app.devCsrfLocalhost) {
-      return notFound("mcp-disabled");
-    }
-    const handleMcpRequest = await app.loadMcpHandler();
-    return handleMcpRequest(ctx, app.devCsrfLocalhost);
-  }
+  if (pathname === MCP_PATH) return withNoStore(await dispatchMcp(app, ctx));
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
-    if (!interfaceEnabled(app.config.api)) {
-      return withNoStore(notFound("api-disabled"));
-    }
-    const dispatchRest = await app.loadRestHandler();
-    return dispatchRest(ctx);
+    return withNoStore(await dispatchRest(app, ctx));
   }
   return null;
+}
+
+async function dispatchMcp(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  // Default-off in production; auto-enabled in dev so a connected coding
+  // agent reaches it with no config flag. `devCsrfLocalhost` is statically
+  // false in production builds, so the auto-enable never applies there.
+  if (!interfaceEnabled(app.config.mcp) && !app.devCsrfLocalhost) {
+    return notFound("mcp-disabled");
+  }
+  const handleMcpRequest = await app.loadMcpHandler();
+  return handleMcpRequest(ctx, app.devCsrfLocalhost);
+}
+
+async function dispatchRest(
+  app: PlumixApp,
+  ctx: AppContext,
+): Promise<Response> {
+  if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
+  const handleRestRequest = await app.loadRestHandler();
+  return handleRestRequest(ctx);
 }
 
 // oRPC reads a GET's input from `?data=`, and a plugin procedure declaring
@@ -379,11 +385,7 @@ async function tryPlumixRoutes(
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
-    // Every answer here is per-visitor; an absent header would leave a shared
-    // cache in front of the site to infer that for itself.
-    return withHeaders(await dispatchRpc(app, ctx), (h) =>
-      h.set("cache-control", "private, no-store"),
-    );
+    return withNoStore(await dispatchRpc(app, ctx));
   }
 
   const authRoute = POST_AUTH_ROUTES.get(pathname);

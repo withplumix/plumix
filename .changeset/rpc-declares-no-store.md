@@ -7,7 +7,7 @@ carried no `cache-control` at all, so a shared cache in front of the site
 decided for them from an absent header — and since a `SameSite=Lax` session
 cookie rides a top-level navigation, a URL an attacker gets a signed-in victim
 to visit could have its private JSON stored under a key any visitor reaches.
-Every RPC response now says `private, no-store`.
+Every RPC response now says `no-store`.
 
 The RPC branch also accepts `POST` only, answering `405` with `Allow: POST`
 otherwise. oRPC reads a `GET`'s input from `?data=`, and while its handler
