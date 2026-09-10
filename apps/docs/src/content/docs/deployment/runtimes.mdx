@@ -260,6 +260,8 @@ On Workers it is the Worker `env`. On a process runtime it is `process.env` plus
 
 Core assumes `env` is stable for the handler's life: object storage, kv, cdn and image delivery are connected once, on the first invocation, and reused. Two things are not bound once: the database, through `connectRequest`, and the `assets` resolver, which is called per request because a binding read is cheap.
 
+`connectRequest` has no release seam — unlike `connect`, whose `ConnectedDb.close` the handler calls on every response path including the error one. An adapter that answers through `connectRequest` must own its own pooling and hand out a borrowed handle rather than mint a connection per request; today's two adapters (D1 Sessions, the demo Durable Object proxy) both do.
+
 ```ts
 declare module "plumix" {
   interface PlumixEnv {
