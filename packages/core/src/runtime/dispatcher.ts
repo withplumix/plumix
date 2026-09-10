@@ -15,7 +15,10 @@ import {
 } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
 import { PRIVATE_SEGMENT } from "../access/segments.js";
-import { authenticateTraced } from "../auth/authenticator.js";
+import {
+  authenticateTraced,
+  requestHasSession,
+} from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import {
   hasCsrfHeader,
@@ -495,6 +498,12 @@ function redirectResponse(resolution: RedirectResolution): Response {
     : redirect(resolution.location, resolution.status);
 }
 
+// Whether this request carries a session, as the site's own authenticator reads
+// it — the CDN's privileged check has to ask it rather than the cookie (#2264).
+function ctxHasSession(ctx: AppContext): boolean {
+  return requestHasSession(ctx.authenticator, ctx.request);
+}
+
 // The public route intent for a resolved match: an unmatched root is the front
 // page, any other unmatched URL is a 404 (never cached).
 function publicIntent(match: RouteMatch | null, url: URL): RouteIntent | null {
@@ -565,7 +574,7 @@ async function dispatchPublicRoute(
         ? PRIVATE_SEGMENT
         : access.segment;
     } else {
-      segment = requestIsPrivileged(ctx.request)
+      segment = requestIsPrivileged(ctx.request, ctxHasSession(ctx))
         ? PRIVATE_SEGMENT
         : "anonymous";
     }
@@ -882,6 +891,7 @@ function servePublicRoute(
   if (match.route.cacheable !== true || cdn === undefined) return run();
   return readThroughRoute({
     request: ctx.request,
+    hasSession: ctxHasSession(ctx),
     cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
@@ -945,6 +955,7 @@ function serveRawRoute(
   }
   return readThroughRoute({
     request: ctx.request,
+    hasSession: ctxHasSession(ctx),
     cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,

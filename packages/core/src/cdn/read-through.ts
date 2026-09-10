@@ -93,6 +93,8 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
 
 interface ReadThroughRouteArgs {
   readonly request: Request;
+  /** The dispatcher's `requestHasSession` verdict for this request. */
+  readonly hasSession: boolean;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
@@ -121,7 +123,7 @@ interface ReadThroughRouteArgs {
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,
 ): Promise<Response> {
-  const { request, cdn, defer, telemetry, render, tags } = args;
+  const { request, hasSession, cdn, defer, telemetry, render, tags } = args;
 
   if (!methodIsCacheable(request.method)) {
     telemetry.record("cdn", {
@@ -139,7 +141,7 @@ export async function readThroughRoute(
     telemetry,
     fact: {},
     tags,
-    shareable: (fresh) => routeResponseIsShareable(request, fresh),
+    shareable: (fresh) => routeResponseIsShareable(request, hasSession, fresh),
     render,
   });
 }
@@ -153,8 +155,12 @@ export async function readThroughRoute(
 // store would strip it, leaving later visitors a body whose cookie went
 // missing), as does a `private`/`no-store` the store would otherwise overwrite
 // with the page TTL.
-function routeResponseIsShareable(request: Request, fresh: Response): boolean {
-  if (requestIsPrivileged(request)) return false;
+function routeResponseIsShareable(
+  request: Request,
+  hasSession: boolean,
+  fresh: Response,
+): boolean {
+  if (requestIsPrivileged(request, hasSession)) return false;
   if (fresh.headers.has("set-cookie")) return false;
   return responseAllowsSharedStorage(fresh);
 }

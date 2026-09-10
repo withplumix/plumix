@@ -234,19 +234,26 @@ describe("segmentCdnKey", () => {
 
 describe("requestIsPrivileged", () => {
   it("treats a plain anonymous GET as not privileged", () => {
-    expect(requestIsPrivileged(new Request("https://site.test/post"))).toBe(
-      false,
-    );
+    expect(
+      requestIsPrivileged(new Request("https://site.test/post"), false),
+    ).toBe(false);
   });
 
-  it("treats a session-cookie request as privileged", () => {
+  it("treats a request the authenticator calls signed in as privileged", () => {
+    expect(
+      requestIsPrivileged(new Request("https://site.test/post"), true),
+    ).toBe(true);
+  });
+
+  it("treats a session cookie the authenticator disowns as not privileged", () => {
     expect(
       requestIsPrivileged(
         new Request("https://site.test/post", {
           headers: { cookie: "plumix_session=abc" },
         }),
+        false,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("treats a request with an Authorization header as privileged", () => {
@@ -255,13 +262,17 @@ describe("requestIsPrivileged", () => {
         new Request("https://site.test/post", {
           headers: { authorization: "Bearer pl_pat_x" },
         }),
+        false,
       ),
     ).toBe(true);
   });
 
   it("treats a ?preview= draft-grant request as privileged", () => {
     expect(
-      requestIsPrivileged(new Request("https://site.test/post?preview=tok")),
+      requestIsPrivileged(
+        new Request("https://site.test/post?preview=tok"),
+        false,
+      ),
     ).toBe(true);
   });
 });

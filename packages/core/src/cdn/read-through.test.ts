@@ -13,7 +13,10 @@ const immediateDefer = (p: Promise<unknown>): void => {
   void p;
 };
 
-const GET = (url = "https://site.test/hello") => new Request(url);
+const GET = (
+  url = "https://site.test/hello",
+  headers?: Record<string, string>,
+) => new Request(url, { headers });
 const noTags = () => [];
 
 // The marker a conforming `decorate` leaves on the visitor's copy, so a test
@@ -420,6 +423,7 @@ describe("readThroughRoute", () => {
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -446,6 +450,7 @@ describe("readThroughRoute", () => {
 
     await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -465,6 +470,7 @@ describe("readThroughRoute", () => {
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -489,6 +495,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         headers: { cookie: "plumix_locale=fr" },
       }),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -513,6 +520,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         method: "POST",
       }),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -538,6 +546,7 @@ describe("readThroughRoute", () => {
 
     const result = await readThroughRoute({
       request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -561,6 +570,7 @@ describe("readThroughRoute", () => {
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
         method: "HEAD",
       }),
+      hasSession: false,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -574,29 +584,38 @@ describe("readThroughRoute", () => {
   });
 
   it.each([
-    [
-      "the request was privileged",
-      new Request("https://site.test/_plumix/og/card/abc.png", {
-        headers: { authorization: "Bearer token" },
+    {
+      case: "the request carries a bearer credential",
+      request: GET("https://site.test/_plumix/og/card/abc.png", {
+        authorization: "Bearer token",
       }),
-      new Response("card", { status: 200 }),
-    ],
-    [
-      "the response sets a cookie",
-      GET("https://site.test/_plumix/og/card/abc.png"),
-      new Response("card", {
+      hasSession: false,
+      fresh: new Response("card", { status: 200 }),
+    },
+    {
+      case: "the authenticator reports a session",
+      request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: true,
+      fresh: new Response("card", { status: 200 }),
+    },
+    {
+      case: "the response sets a cookie",
+      request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
+      fresh: new Response("card", {
         status: 200,
         headers: { "set-cookie": "csrf=abc" },
       }),
-    ],
+    },
   ])(
-    "serves but neither stores nor decorates when %s",
-    async (_case, request, fresh) => {
+    "serves but neither stores nor decorates when $case",
+    async ({ request, hasSession, fresh }) => {
       const { cdn, match, put, decorate } = spies();
       const render = vi.fn(() => Promise.resolve(fresh));
 
       const result = await readThroughRoute({
         request,
+        hasSession,
         cdn,
         defer: immediateDefer,
         telemetry: NOOP_TELEMETRY,
