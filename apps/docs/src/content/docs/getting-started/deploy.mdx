@@ -85,7 +85,7 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
   the account immediately, or keep the deploy unreachable until you can.
 </Aside>
 
-Node ships no CDN and no `kv` — every page renders on every request, and uploads and the image cache live on the one machine the process runs on. [Node.js](/deployment/node/) covers what that means and when `plumix/storage/s3` or `plumix/db/libsql` are worth swapping in instead of the disk-backed defaults.
+Node ships no `kv`, and uploads and the image cache live on the one machine the process runs on. [Node.js](/deployment/node/) covers what that means and when `plumix/storage/s3` or `plumix/db/libsql` are worth swapping in instead of the disk-backed defaults. Public pages render on every request until you put a CDN in front of the process and declare the `cdn` slot, which is the same declaration a Worker carries — [CDN Caching](/deployment/cdn/) is that path end to end.
 
 </TabItem>
 <TabItem label="Cloudflare">
@@ -191,7 +191,7 @@ wrangler kv namespace create KV
 "kv_namespaces": [{ "binding": "KV", "id": "<the id wrangler printed>" }]
 ```
 
-The CDN needs no resource, but it does need two credentials before it stores anything. `cloudflare()` takes a `zoneId` and a `purgeToken` — read from the environment through a resolver in your config — and returns an inactive CDN when either resolves to nothing, because a CDN with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching stays off there and switches on when you attach a domain and set both secrets.
+The CDN needs no resource, but it does need two credentials before it stores anything. `cloudflare()` takes a `zoneId` and a `purgeToken` — read from the environment through a resolver in your config — and returns an inactive CDN when either resolves to nothing, because a CDN with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching starts when you attach a domain. One more step is then yours: Cloudflare does not cache HTML without a cache rule, so read [CDN Caching](/deployment/cdn/#the-cache-rule) before concluding the headers are not working.
 
 ### Deploying from git
 

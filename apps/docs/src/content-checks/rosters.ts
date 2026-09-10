@@ -887,7 +887,7 @@ type _EveryPerTypeActionUsesTheStar = Assert<
 
 const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 
-// --- Going Further ---------------------------------------------------------
+// --- Deployment ------------------------------------------------------------
 
 /**
  * The whole cache-tag vocabulary, coarse by design. Sources: `typeTag` and
@@ -898,8 +898,6 @@ const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
  * these two.
  */
 const CACHE_TAGS = ["t:*", "e:*"] as const;
-
-// --- Deployment ------------------------------------------------------------
 
 /**
  * Every command, then the global flags that precede any of them. Sources: the
@@ -1069,7 +1067,7 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   { page: "access/capabilities.mdx", items: CAPABILITIES, binding: "runtime" },
   { page: "apis/mcp.mdx", items: MCP_TOOLS, binding: "page-only" },
   { page: "hooks/reference.mdx", items: HOOKS, binding: "type-level" },
-  { page: "going-further/caching.mdx", items: CACHE_TAGS, binding: "runtime" },
+  { page: "deployment/cdn.mdx", items: CACHE_TAGS, binding: "runtime" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
   {
     page: "deployment/runtimes.mdx",

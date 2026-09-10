@@ -200,7 +200,7 @@ export const cdnSlot = cdn({
 });
 ```
 
-`zoneId` and `purgeToken` are required, and the provider disables itself when either resolves to nothing, because a CDN that cannot purge would serve a stale recipe forever. That is why the CDN is inert on a `workers.dev` host and live on a zone. The provider lives in core rather than in a runtime package, so this line is the same whether the site runs on Workers or in a container.
+`zoneId` and `purgeToken` are required, and the provider disables itself when either resolves to nothing, because a CDN that cannot purge would serve a stale recipe forever. That is why the CDN is inert on a `workers.dev` host and live on a zone. The provider lives in core rather than in a runtime package, so this line is the same whether the site runs on Workers or in a container. [CDN Caching](/deployment/cdn/) covers what each host caches, the zone rule Cloudflare needs before it caches HTML, and what rotating that token does to pages the CDN already holds.
 
 ### mailer
 

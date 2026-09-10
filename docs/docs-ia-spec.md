@@ -47,8 +47,8 @@ landing page, because a Starlight group label cannot itself be a link.
 | 9   | APIs                | 7       | 0      |
 | 10  | Hooks               | 5       | 0      |
 | 11  | Extending the Admin | 7       | 0      |
-| 12  | Going Further       | 9       | 0      |
-| 13  | Deployment          | 7       | 4      |
+| 12  | Going Further       | 8       | 0      |
+| 13  | Deployment          | 8       | 4      |
 | 14  | Plugins             | 14      | 3      |
 | 15  | Releases & Upgrades | 2       | 0      |
 |     | **Total**           | **107** | **30** |
@@ -201,7 +201,6 @@ entry — content-editor material is out of scope for this site.
 | Slug                            | Title                | T   | Purpose                                                                                                                       | Covers                  |
 | ------------------------------- | -------------------- | --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | `going-further/overview`        | Overview             | P1  | Section landing page; names what this section covers.                                                                         | —                       |
-| `going-further/caching`         | Caching              | P1  | **Roster page** for the tag vocabulary. Edge cache, tags, purge.                                                              | cache tags, purge       |
 | `going-further/testing`         | Testing              | P1  | `plumix/test`, the context factory, Playwright helpers. **Promotion candidate** — becomes a section if it outgrows two pages. | 3 test subpaths         |
 | `going-further/dev-tools`       | Dev Tools            | P1  | Dev error pages, the client overlay, the debug bar, errors to terminal.                                                       | dev surfaces            |
 | `going-further/i18n`            | Internationalization | P2  | Locales, `Label`, formatters, catalogs.                                                                                       | i18n surface, 5 locales |
@@ -210,15 +209,16 @@ entry — content-editor material is out of scope for this site.
 
 ### 13. Deployment
 
-| Slug                    | Title                    | T   | Purpose                                                                    | Covers                                          |
-| ----------------------- | ------------------------ | --- | -------------------------------------------------------------------------- | ----------------------------------------------- |
-| `deployment/overview`   | Overview                 | P0  | What deploying a Plumix site involves.                                     | —                                               |
-| `deployment/cloudflare` | Cloudflare Workers       | P0  | The default runtime: D1, R2, KV, Images, edge cache.                       | `@plumix/runtime-cloudflare`                    |
-| `deployment/node`       | Node.js                  | P1  | A plain process: `node:sqlite`, disk storage, `PORT`/`HOST`, `trustProxy`. | `@plumix/runtime-node`                          |
-| `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                                           | bindings, slots                                 |
-| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.                               | secret slots                                    |
-| `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.                                | 7 commands + 5 global flags                     |
-| `deployment/runtimes`   | Runtime Adapters         | P2  | **Roster page.** The adapter contract, its obligations, the runtime floor. | `RuntimeAdapter`, `PlumixHandler`, `Invocation` |
+| Slug                    | Title                    | T   | Purpose                                                                                            | Covers                                          |
+| ----------------------- | ------------------------ | --- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `deployment/overview`   | Overview                 | P0  | What deploying a Plumix site involves.                                                             | —                                               |
+| `deployment/cloudflare` | Cloudflare Workers       | P0  | The default runtime: D1, R2, KV, Images, edge cache.                                               | `@plumix/runtime-cloudflare`                    |
+| `deployment/node`       | Node.js                  | P1  | A plain process: `node:sqlite`, disk storage, `PORT`/`HOST`, `trustProxy`.                         | `@plumix/runtime-node`                          |
+| `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                                                                   | bindings, slots                                 |
+| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.                                                       | secret slots                                    |
+| `deployment/cdn`        | CDN Caching              | P1  | **Roster page** for the tag vocabulary. The slot from any host: hosts, the zone rule, credentials. | `plumix/cdn/cloudflare`                         |
+| `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.                                                        | 7 commands + 5 global flags                     |
+| `deployment/runtimes`   | Runtime Adapters         | P2  | **Roster page.** The adapter contract, its obligations, the runtime floor.                         | `RuntimeAdapter`, `PlumixHandler`, `Invocation` |
 
 ### 14. Plugins
 
@@ -350,7 +350,7 @@ states only what differs.
 
 `Field Types` · `Core Blocks` · `Marks` · `Shortcodes` · `Hook Reference` · `Capabilities` · `Roles` ·
 `Hydration Strategies` · `Configuration` · `Entry Type Reference` · `Statuses and Publishing` ·
-`Templates` · `Template Data` · `CLI Reference` · `MCP` · `Caching` (tag vocabulary) ·
+`Templates` · `Template Data` · `CLI Reference` · `MCP` · `CDN Caching` (tag vocabulary) ·
 `Project Structure` (façade subpaths) · `Plugins` (the shipped `@plumix/plugin-*` packages) ·
 `Custom Rule Kinds` (the target constructors a plugin-authored rule kind selects with) ·
 `Translation Catalogs` (the keys of a plugin descriptor's `i18n` slot) ·
@@ -469,8 +469,8 @@ Every area of the public surface has a home. Mapping from the inventory:
 | RPC · REST · 9 MCP tools · raw routes · db toolkit · request context                            | APIs                                                                  |
 | 105 hooks · type augmentation                                                                   | Hooks                                                                 |
 | admin pages · widgets · login links · plugin chunk · shims · CSS                                | Extending the Admin                                                   |
-| caching · i18n · cron · telemetry · testing · dev tools                                         | Going Further                                                         |
-| runtime adapter · bindings · secrets · CLI                                                      | Deployment                                                            |
+| i18n · cron · telemetry · testing · dev tools                                                   | Going Further                                                         |
+| runtime adapter · bindings · secrets · CDN · CLI                                                | Deployment                                                            |
 | 9 official plugins · descriptor · packaging                                                     | Plugins                                                               |
 
 **Deliberately undocumented:** the contribution guide and all core-contributor material; all

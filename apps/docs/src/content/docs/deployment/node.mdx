@@ -21,7 +21,7 @@ The runtime is a slot like any other. `runtime: node()` tells Plumix it is runni
 | `diskStorage({ dir })` | `storage`       | A directory on disk for uploads                 |
 | `images({ widths })`   | `imageDelivery` | Resizing through `sharp`, served by the process |
 
-Nothing fills `kv` or `cdn` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
+Nothing fills `kv` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site. The `cdn` slot is not a runtime's to fill — it names the shared cache in front of the site, and a process behind a CDN configures it exactly as a Worker does. [CDN Caching](/deployment/cdn/) is the path from a container to cached pages.
 
 ## Install
 
@@ -186,7 +186,9 @@ You still want `concurrencyPolicy: Forbid` on a CronJob or `flock` on a crontab:
 
 ## What Node does not do yet
 
-There is no CDN and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. Both are single-node concerns, as are the uploads and the image cache: this runtime is one process on one machine.
+There is no `kv`, so a plugin requiring that capability cannot be scaffolded on Node; the scaffolder says so by name. It is a single-node concern, as are the uploads and the image cache: this runtime is one process on one machine.
+
+Public pages are a different story. A process with no CDN in front of it renders every page on every request, but that is a deployment left undone rather than a limit of this runtime — put the site behind a CDN, declare the `cdn` slot, and public pages cache and purge exactly as they do on Workers. The one thing a container does not get is the origin-side response store a Worker has, which is what a Workers deploy uses to cache a page per audience segment; behind a CDN alone, a non-anonymous segment renders live. [CDN Caching](/deployment/cdn/) covers both.
 
 ## Commands the runtime adds
 
@@ -194,7 +196,7 @@ There is no CDN and no `kv`, so a page renders on every request, and a plugin re
 
 ## Related
 
-[Overview](/deployment/overview/) is the Cloudflare-shaped picture of a deploy; on Node there are no bindings, and `PORT`, `HOST` and the secrets arrive on `process.env`. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which reads the same environment here. [Runtime Adapters](/deployment/runtimes/) is the contract this package implements, and [Cloudflare Workers](/deployment/cloudflare/) is the other implementation of it.
+[Overview](/deployment/overview/) is the Cloudflare-shaped picture of a deploy; on Node there are no bindings, and `PORT`, `HOST` and the secrets arrive on `process.env`. [CDN Caching](/deployment/cdn/) is what to read next if this process will sit behind a CDN. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which reads the same environment here. [Runtime Adapters](/deployment/runtimes/) is the contract this package implements, and [Cloudflare Workers](/deployment/cloudflare/) is the other implementation of it.
 
 ## Next steps
 
