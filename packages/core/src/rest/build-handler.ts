@@ -33,6 +33,12 @@ export type RestDispatch = (ctx: AppContext) => Promise<Response>;
 const API_V1_PREFIX = "/_plumix/api/v1";
 const SPEC_PATH = `${API_V1_PREFIX}/openapi.json`;
 
+// Nothing this surface answers carries a cache tag, so a shared copy of it
+// could never be purged when what is behind it changes.
+function nonStorable(response: Response): Response {
+  return withHeaders(response, (h) => h.set("cache-control", "no-store"));
+}
+
 export function buildRestDispatcher(
   registry: PluginRegistry,
   cors?: ApiCorsConfig,
@@ -74,7 +80,7 @@ export function buildRestDispatcher(
       const doc = jsonResponse(
         await (spec ??= generateOpenApiDocument(router)),
       );
-      return withCors(doc, allowOrigin, varyByOrigin);
+      return withCors(nonStorable(doc), allowOrigin, varyByOrigin);
     }
 
     const principal: RestPrincipal = await resolveRestPrincipal(ctx);
@@ -92,13 +98,14 @@ export function buildRestDispatcher(
       ? result.response
       : notFound("rest-route-not-found");
 
-    // PAT-authed reads may include non-public content: never cache them, and
-    // never CORS-expose them — a token in browser JS can't be used cross-origin.
+    // A PAT-authed read may include non-public content, so it is `private` on
+    // top of non-storable, and never CORS-exposed — a token in browser JS can't
+    // be used cross-origin.
     if (principal.kind === "authed") {
       return withHeaders(response, (h) =>
         h.set("cache-control", "private, no-store"),
       );
     }
-    return withCors(response, allowOrigin, varyByOrigin);
+    return withCors(nonStorable(response), allowOrigin, varyByOrigin);
   };
 }
