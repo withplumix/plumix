@@ -184,6 +184,67 @@ You still want `concurrencyPolicy: Forbid` on a CronJob or `flock` on a crontab:
 
 `SIGTERM` stops the scheduler before the drain begins, so a firing already in flight finishes and no new one starts behind it.
 
+## Containers
+
+`plumix build` produces a directory and a file, not an image; nothing here scaffolds a Dockerfile, and none ships with `create-plumix-app`. This is the shape one takes, because the pieces above only add up to a working deploy when they are put together in the right order.
+
+An Astro Node build is stateless — the image is the artefact, and a redeploy loses nothing. A Plumix Node deploy is not: three things on this page write to disk, and every one of them is gone on the next redeploy unless a volume survives it.
+
+- `nodeSqlite({ path })` — the database, `data/site.sqlite` in the scaffold
+- `diskStorage({ dir })` — uploads, `data/media`
+- `images()` — the resized-variant cache, `.cache/plumix/images` by default
+
+Mount a volume over `data/` and the database and uploads survive a redeploy. The image cache is different: losing it costs a cold cache, not data, [as above](#images) — worth mounting too if the first view of every page after a deploy shouldn't pay for a fresh render, but not required the way `data/` is.
+
+### Migrate before the server starts
+
+`plumix migrate apply` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so the server process itself receives `SIGTERM` rather than a wrapping shell. As `docker-entrypoint.sh`:
+
+```sh
+#!/bin/sh
+set -e
+plumix migrate apply
+exec node dist/server/worker.js
+```
+
+### Environment and shutdown
+
+`PORT` and `HOST` come from the environment, as in [Quickstart](#quickstart); turn on [`trustProxy`](#behind-a-proxy) when an ingress or load balancer terminates TLS in front of the container. Pass secrets the same way — through the environment at container start, not a build-time `ARG` or `ENV`, which [persists in the image's layer history](/deployment/secrets/) for anyone who can pull it.
+
+Give the container more than the ten seconds the [drain](#the-process) needs before it gives up: a `terminationGracePeriodSeconds` of 10 races the drain's own deadline, so 30 leaves room for the `SIGTERM` to reach the process and the last response to leave before the platform sends `SIGKILL`.
+
+### One database, or many
+
+A single replica needs nothing beyond the volume above. Multiple replicas change what [the no-overlap guarantee](#scheduled-tasks) can promise: it holds only when every replica shares one database, which `nodeSqlite`'s file on a per-pod volume does not give you. Point `database` at `plumix/db/libsql` instead, or keep `nodeSqlite` and set `cron: false` with a single external trigger so only one replica ever runs a schedule.
+
+### A multi-stage Dockerfile
+
+Two stages: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's `node_modules` and source never reach the image that ships. As `Dockerfile`:
+
+```dockerfile
+FROM node:24-slim AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+FROM node:24-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
+COPY --from=build /app/dist ./dist
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
+VOLUME /app/data
+EXPOSE 3000
+ENTRYPOINT ["./docker-entrypoint.sh"]
+```
+
+`COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument.
+
 ## What Node does not do yet
 
 There is no `kv`, so a plugin requiring that capability cannot be scaffolded on Node; the scaffolder says so by name. It is a single-node concern, as are the uploads and the image cache: this runtime is one process on one machine.
