@@ -64,6 +64,7 @@ import {
   notFound,
   permanentRedirect,
   redirect,
+  withNoStore,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
@@ -323,11 +324,31 @@ async function tryColdInterfaces(
     return handleMcpRequest(ctx, app.devCsrfLocalhost);
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
-    if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
+    if (!interfaceEnabled(app.config.api)) {
+      return withNoStore(notFound("api-disabled"));
+    }
     const dispatchRest = await app.loadRestHandler();
-    return dispatchRest(ctx);
+    return withNoStore(await dispatchRest(ctx));
   }
   return null;
+}
+
+// The unmatched 404 is synthesized here rather than by the oRPC handler, so
+// this is the only place that sees both outcomes — which is why the caller
+// stamps freshness around the whole branch rather than inside the handler.
+async function handleRpc(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  // oRPC reads a GET's input from `?data=` and its router never narrows on
+  // method, and the session cookie is SameSite=Lax — so a lured top-level
+  // navigation would hand back a signed-in victim's JSON under a URL any
+  // visitor can reach. Every client POSTs, so refusing the rest costs nothing
+  // and closes the web-cache-deception shape at the source.
+  if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
+  const rpcHandler = await app.loadRpcHandler();
+  const result = await rpcHandler.handle(ctx.request, {
+    prefix: RPC_PREFIX,
+    context: ctx,
+  });
+  return result.matched ? result.response : notFound("rpc-procedure-not-found");
 }
 
 // Everything mounted under `/_plumix/` behind the CSRF gate: RPC, the auth
@@ -361,14 +382,7 @@ async function tryPlumixRoutes(
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
-    const rpcHandler = await app.loadRpcHandler();
-    const result = await rpcHandler.handle(ctx.request, {
-      prefix: RPC_PREFIX,
-      context: ctx,
-    });
-    return result.matched
-      ? result.response
-      : notFound("rpc-procedure-not-found");
+    return withNoStore(await handleRpc(app, ctx));
   }
 
   const authRoute = POST_AUTH_ROUTES.get(pathname);

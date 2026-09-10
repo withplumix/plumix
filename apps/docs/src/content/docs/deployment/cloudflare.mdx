@@ -190,7 +190,7 @@ Cloudflare's Workers Caching — `"cache": { "enabled": true }` in `wrangler.jso
 
 The provider cannot clear any of it. Workers Caching is purged through its own Worker-scoped binding, and the zone purge behind your `Cache Purge` token does not reach it. A publish would clear the Cache API entry and leave this one serving the old page until it expires on its own — and the `cdn` telemetry fact will not show you that it happened, because a hit never reaches the Worker to record one.
 
-Leave the flag off. It caches more of the entrypoint than the `cdn` slot governs: every response the Worker returns passes through it, and only the ones the provider decorates carry a directive saying what a shared cache may do with them. The scaffolded `wrangler.jsonc` does not set it.
+Leave the flag off, on the purge argument above. It also caches more of the entrypoint than the `cdn` slot governs: every response the Worker returns passes through it, not only the ones the provider decorates. The platform's own endpoints are covered — RPC and the REST API declare `private, no-store` themselves, and the admin shell `private, no-cache` — so what is left undeclared is whatever a plugin's own route returns without saying. The scaffolded `wrangler.jsonc` does not set it.
 
 ## Scheduled tasks and cron triggers
 

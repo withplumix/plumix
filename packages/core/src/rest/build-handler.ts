@@ -6,12 +6,7 @@ import type { AppContext } from "../context/app.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";
-import {
-  jsonResponse,
-  notFound,
-  unauthorized,
-  withHeaders,
-} from "../runtime/http.js";
+import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
 import {
   isOriginDependent,
   preflightResponse,
@@ -92,13 +87,11 @@ export function buildRestDispatcher(
       ? result.response
       : notFound("rest-route-not-found");
 
-    // PAT-authed reads may include non-public content: never cache them, and
-    // never CORS-expose them — a token in browser JS can't be used cross-origin.
-    if (principal.kind === "authed") {
-      return withHeaders(response, (h) =>
-        h.set("cache-control", "private, no-store"),
-      );
-    }
+    // A PAT can't be used from browser JS cross-origin, so CORS-exposing a
+    // token-authed read would only invite the footgun. Freshness is not
+    // decided here: the dispatcher declares `no-store` over the whole branch,
+    // anonymous reads included.
+    if (principal.kind === "authed") return response;
     return withCors(response, allowOrigin, varyByOrigin);
   };
 }

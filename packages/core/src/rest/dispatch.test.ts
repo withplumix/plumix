@@ -899,7 +899,43 @@ describe("REST API — bearer PAT auth", () => {
     const res = await h.dispatch(bearerGet("/_plumix/api/v1/posts", secret));
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("no-store");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+});
+
+// A response that declares nothing hands the freshness call to whatever cache
+// sits in front of the site, so the surface answers the same way throughout —
+// anonymous published content included, since nothing here can purge a copy a
+// shared cache has taken.
+describe("REST API — freshness", () => {
+  test("an anonymous read declares no-store", async () => {
+    const h = await restHarness();
+    await seedPublished(h, 1);
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  test("a rejected token declares no-store", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(
+      bearerGet("/_plumix/api/v1/posts", "pl_pat_not-a-real-token"),
+    );
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  test("the OpenAPI document declares no-store", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
   });
 });
 

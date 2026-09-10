@@ -696,6 +696,42 @@ describe("dispatcher — RPC", () => {
     expect(response.headers.get("x-plumix-hint")).toBe(
       "rpc-procedure-not-found",
     );
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  // A raw Request, not `plumixRequest`: the lure is a top-level navigation, so
+  // it carries no CSRF header — and the CSRF gate waves safe methods through.
+  // oRPC reads a GET's input from `?data=`, which is what makes the URL alone
+  // enough to extract the victim's JSON.
+  test("GET /_plumix/rpc/entry/list is rejected with 405", async () => {
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/rpc/entry/list?data=%7B%7D", {
+        method: "GET",
+      }),
+    );
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("POST");
+    // 405 is heuristically cacheable, so the refusal has to declare too.
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  test("POST /_plumix/rpc/entry/list answers a signed-in caller with no-store", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("admin");
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest("/_plumix/rpc/entry/list", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ json: {} }),
+        }),
+        user.id,
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
 

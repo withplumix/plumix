@@ -130,6 +130,8 @@ Reading the shared copy is one thing and filling it is another. A route response
 
 Freshness on such a route is the response's to declare. A handler that sets its own `Cache-Control` keeps it — a content-addressed asset asking for `max-age=31536000, immutable` is stored with exactly that, and a content-addressed URL is the one kind `immutable` belongs on, since a purge reaches the CDN but never the browser or the scraper holding the URL. The slot's `ttl` applies only to a response that declared none.
 
+The platform's own endpoints decide for themselves and leave nothing to guess at. Every `/_plumix/rpc/**` and `/_plumix/api/v1/**` answer — refusals included — declares `private, no-store`, so no shared cache may hold one, whether or not you configured it. The admin shell sends `private, no-cache`, which lets the visitor's own browser keep a copy it revalidates while `private` keeps it out of any cache in between. RPC also answers anything but POST with a 405: oRPC would otherwise read a GET's input from `?data=`, and the session cookie rides a top-level navigation, so a signed-in visitor could be lured into putting their own JSON behind a URL anyone can request. A plugin procedure that sets its own `Cache-Control` does not keep it here — this surface is uniformly unshareable.
+
 ## Cache tags
 
 A cached page is stored under tags, and a publish purges by tag rather than by URL. The vocabulary is these two and nothing else — coarse by design, since a page that lists content cannot enumerate what it will list next week. Both are lower-cased on the way in, because at least one target CDN matches tags case-insensitively.

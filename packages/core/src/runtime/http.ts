@@ -43,6 +43,19 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   });
 }
 
+// The platform's own endpoints — RPC, REST, and any refusal they answer with
+// — are per-principal answers behind a URL that says nothing about which one.
+// A response that declares no freshness is one a heuristic shared cache is
+// entitled to store, and several of the statuses these surfaces return (404,
+// 405) are heuristically cacheable by default. Declaring the refusal here
+// keeps that decision out of the hands of whatever cache an operator has put
+// in front of the site.
+export function withNoStore(response: Response): Response {
+  return withHeaders(response, (h) =>
+    h.set("cache-control", "private, no-store"),
+  );
+}
+
 export function unauthorized(): Response {
   return jsonResponse({ error: "unauthorized" }, { status: 401 });
 }
