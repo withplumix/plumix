@@ -12,7 +12,7 @@ import type {
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "./slots.js";
-import { readSessionCookie } from "../auth/cookies.js";
+import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
 import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
@@ -107,7 +107,7 @@ export function createPlumixHandler(
         const scoped = connectDatabase({
           env: invocation.env,
           request,
-          isAuthenticated: readSessionCookie(request) !== null,
+          isAuthenticated: requestHasSession(app.authenticator, request),
           isWrite: !isSafeMethod(request.method),
         });
         const ctx = buildAppContext({

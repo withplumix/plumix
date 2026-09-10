@@ -13,7 +13,7 @@ export interface RequestScopedDbArgs {
   readonly request: Request;
   readonly schema: SchemaModule;
   /**
-   * Heuristic: true when the request carries a Plumix session cookie.
+   * The configured authenticator's `hasSession` verdict for this request.
    * Adapters should treat this as "maybe signed in" — use it to gate whether
    * per-request state (e.g. a bookmark cookie) is worth persisting. Not a
    * substitute for validating the session inside handlers.
