@@ -27,6 +27,12 @@ describe("embedded-tags accumulator", () => {
     expect(embeddedPageTags(ctx)).toEqual([]);
   });
 
+  it("lower-cases a contributed tag", () => {
+    const ctx = fakeCtx();
+    accumulateEmbeddedTags(ctx, ["t:Post"]);
+    expect(embeddedPageTags(ctx)).toEqual(["t:post"]);
+  });
+
   it("scopes tags to the accumulating context", () => {
     const a = fakeCtx();
     const b = fakeCtx();
