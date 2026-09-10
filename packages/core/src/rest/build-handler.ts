@@ -11,6 +11,7 @@ import {
   notFound,
   unauthorized,
   withHeaders,
+  withNoStore,
 } from "../runtime/http.js";
 import {
   isOriginDependent,
@@ -32,12 +33,6 @@ export type RestDispatch = (ctx: AppContext) => Promise<Response>;
 
 const API_V1_PREFIX = "/_plumix/api/v1";
 const SPEC_PATH = `${API_V1_PREFIX}/openapi.json`;
-
-// Nothing this surface answers carries a cache tag, so a shared copy of it
-// could never be purged when what is behind it changes.
-function nonStorable(response: Response): Response {
-  return withHeaders(response, (h) => h.set("cache-control", "no-store"));
-}
 
 export function buildRestDispatcher(
   registry: PluginRegistry,
@@ -73,18 +68,18 @@ export function buildRestDispatcher(
       ctx.request.headers.get("origin"),
     );
     if (ctx.request.method === "OPTIONS") {
-      return preflightResponse(ctx.request, allowOrigin);
+      return withNoStore(preflightResponse(ctx.request, allowOrigin));
     }
 
     if (url.pathname === SPEC_PATH) {
       const doc = jsonResponse(
         await (spec ??= generateOpenApiDocument(router)),
       );
-      return withCors(nonStorable(doc), allowOrigin, varyByOrigin);
+      return withCors(withNoStore(doc), allowOrigin, varyByOrigin);
     }
 
     const principal: RestPrincipal = await resolveRestPrincipal(ctx);
-    if (principal.kind === "unauthorized") return unauthorized();
+    if (principal.kind === "unauthorized") return withNoStore(unauthorized());
 
     const context: RestContext = {
       ...principal.ctx,
@@ -106,6 +101,6 @@ export function buildRestDispatcher(
         h.set("cache-control", "private, no-store"),
       );
     }
-    return withCors(nonStorable(response), allowOrigin, varyByOrigin);
+    return withCors(withNoStore(response), allowOrigin, varyByOrigin);
   };
 }

@@ -65,6 +65,7 @@ import {
   permanentRedirect,
   redirect,
   withHeaders,
+  withNoStore,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
@@ -324,7 +325,9 @@ async function tryColdInterfaces(
     return handleMcpRequest(ctx, app.devCsrfLocalhost);
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
-    if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
+    if (!interfaceEnabled(app.config.api)) {
+      return withNoStore(notFound("api-disabled"));
+    }
     const dispatchRest = await app.loadRestHandler();
     return dispatchRest(ctx);
   }

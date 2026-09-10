@@ -92,6 +92,9 @@ describe("dispatcher — REST API enablement gate", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("api-disabled");
     expect(probe.loads.rest).toBe(0);
+    // A 404 is heuristically cacheable, so the refusal declares too — the
+    // enabled surface behind it says `no-store` on every answer.
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   test("api.enabled loads the REST handler once and delegates to it", async () => {
