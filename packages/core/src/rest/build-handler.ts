@@ -6,13 +6,7 @@ import type { AppContext } from "../context/app.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";
-import {
-  jsonResponse,
-  notFound,
-  unauthorized,
-  withHeaders,
-  withNoStore,
-} from "../runtime/http.js";
+import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
 import {
   isOriginDependent,
   preflightResponse,
@@ -68,18 +62,18 @@ export function buildRestDispatcher(
       ctx.request.headers.get("origin"),
     );
     if (ctx.request.method === "OPTIONS") {
-      return withNoStore(preflightResponse(ctx.request, allowOrigin));
+      return preflightResponse(ctx.request, allowOrigin);
     }
 
     if (url.pathname === SPEC_PATH) {
       const doc = jsonResponse(
         await (spec ??= generateOpenApiDocument(router)),
       );
-      return withCors(withNoStore(doc), allowOrigin, varyByOrigin);
+      return withCors(doc, allowOrigin, varyByOrigin);
     }
 
     const principal: RestPrincipal = await resolveRestPrincipal(ctx);
-    if (principal.kind === "unauthorized") return withNoStore(unauthorized());
+    if (principal.kind === "unauthorized") return unauthorized();
 
     const context: RestContext = {
       ...principal.ctx,
@@ -93,14 +87,9 @@ export function buildRestDispatcher(
       ? result.response
       : notFound("rest-route-not-found");
 
-    // A PAT-authed read may include non-public content, so it is `private` on
-    // top of non-storable, and never CORS-exposed — a token in browser JS can't
-    // be used cross-origin.
-    if (principal.kind === "authed") {
-      return withHeaders(response, (h) =>
-        h.set("cache-control", "private, no-store"),
-      );
-    }
-    return withCors(withNoStore(response), allowOrigin, varyByOrigin);
+    // A PAT can't be used from browser JS cross-origin, so CORS-exposing a
+    // token-authed read would only encourage putting one there.
+    if (principal.kind === "authed") return response;
+    return withCors(response, allowOrigin, varyByOrigin);
   };
 }

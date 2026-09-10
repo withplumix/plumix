@@ -94,8 +94,6 @@ describe("dispatcher — REST API enablement gate", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("api-disabled");
     expect(probe.loads.rest).toBe(0);
-    // A 404 is heuristically cacheable, so the refusal declares too — the
-    // enabled surface behind it says `no-store` on every answer.
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
@@ -128,6 +126,7 @@ describe("dispatcher — MCP enablement gate", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("mcp-disabled");
     expect(probe.loads.mcp).toBe(0);
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   test("mcp.enabled loads the MCP handler once and delegates to it", async () => {
@@ -142,6 +141,7 @@ describe("dispatcher — MCP enablement gate", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("mcp-ok");
     expect(probe.loads.mcp).toBe(1);
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 });
 
@@ -754,7 +754,7 @@ describe("dispatcher — RPC", () => {
     expect(response.status).toBe(401);
   });
 
-  test("a dispatched RPC response declares private, no-store", async () => {
+  test("a dispatched RPC response declares no-store", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/rpc/entry/list", {
@@ -763,7 +763,7 @@ describe("dispatcher — RPC", () => {
         body: JSON.stringify({ json: {} }),
       }),
     );
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   test("GET /_plumix/rpc/auth/session is rejected with 405", async () => {
@@ -775,7 +775,7 @@ describe("dispatcher — RPC", () => {
     );
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   test("POST /_plumix/rpc/unknown/procedure with CSRF header returns 404", async () => {

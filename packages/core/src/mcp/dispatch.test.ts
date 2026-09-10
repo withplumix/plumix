@@ -1158,3 +1158,38 @@ describe("MCP endpoint — telemetry tracing tools absent in production", () => 
     expect(names).toContain("schema_describe");
   });
 });
+
+describe("MCP endpoint — freshness", () => {
+  test("a tools/list answer declares no-store", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const res = await h.dispatch(
+      mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }, { secret }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("a wrong-method refusal declares no-store", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const res = await h.dispatch(mcpRequest({}, { secret, method: "GET" }));
+
+    expect(res.status).toBe(405);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("a missing token declares no-store", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+
+    const res = await h.dispatch(
+      mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    );
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
