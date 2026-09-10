@@ -43,6 +43,14 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   });
 }
 
+// Nothing the platform's own interfaces answer carries a cache tag, so a
+// shared copy could never be purged when what is behind it changes. Their
+// refusals declare it too: 404 and 405 are both heuristically cacheable by
+// default, so an undeclared refusal is one an intermediary may store.
+export function withNoStore(response: Response): Response {
+  return withHeaders(response, (h) => h.set("cache-control", "no-store"));
+}
+
 export function unauthorized(): Response {
   return jsonResponse({ error: "unauthorized" }, { status: 401 });
 }

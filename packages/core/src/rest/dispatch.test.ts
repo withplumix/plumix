@@ -911,6 +911,33 @@ describe("REST API — bearer PAT auth", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 
+  test("a rejected token is non-cacheable too", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(
+      bearerGet("/_plumix/api/v1/posts", "pl_pat_not-a-real-token"),
+    );
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("a preflight is non-cacheable too", async () => {
+    const h = await restHarness({
+      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+    });
+
+    const res = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/posts", {
+        method: "OPTIONS",
+        headers: { origin: "https://app.example" },
+      }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
   test("the OpenAPI document is non-cacheable too", async () => {
     const h = await restHarness();
 
