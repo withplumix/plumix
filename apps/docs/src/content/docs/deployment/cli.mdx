@@ -41,7 +41,7 @@ plumix --help
 
 ### `dev`
 
-Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither builds an app on the Node side first — `dev` opts out via `deferApp`, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
+Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither runtime has the CLI build the app up front — `dev` opts out via `deferApp` on both, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
 
 ```bash
 plumix dev
