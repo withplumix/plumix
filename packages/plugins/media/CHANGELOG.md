@@ -1,5 +1,15 @@
 # @plumix/plugin-media
 
+## 0.8.0
+
+### Minor Changes
+
+- [#2229](https://github.com/withplumix/plumix/pull/2229) [`4687c85`](https://github.com/withplumix/plumix/commit/4687c85a6456ced4de15a10f1b4ea052bcfb38b8) Thanks [@nasyrov](https://github.com/nasyrov)! - When a media item is trashed or deleted, through the plugin's own `media.delete` or the generic entry procedures, the plugin asks the image-delivery slot to purge the item's variants, so a transform rendered while it was published stops answering once it is hidden.
+
+### Patch Changes
+
+- [#2228](https://github.com/withplumix/plumix/pull/2228) [`f0cf852`](https://github.com/withplumix/plumix/commit/f0cf8528ae48a739af6faad780e1bc775f32804f) Thanks [@nasyrov](https://github.com/nasyrov)! - The library's thumbnail helper hands a relative media URL — what a disk-stored upload served through the plugin's own route has — to an `imageDelivery` slot that declares `acceptsRelativeSources`, so such uploads get thumbnails on the Node runtime. A slot without the flag still receives absolute URLs only.
+
 ## 0.7.0
 
 ### Minor Changes

@@ -1,5 +1,315 @@
 # plumix
 
+## 0.22.0
+
+### Minor Changes
+
+- [#2231](https://github.com/withplumix/plumix/pull/2231) [`c0c8464`](https://github.com/withplumix/plumix/commit/c0c8464064880af02ef66c589ae096ad2f58cf89) Thanks [@nasyrov](https://github.com/nasyrov)! - `plumix/test` exports `applyCoreTestSchema(db)`, which lays core's tables and the change-feed triggers onto a database a runtime or plugin suite opened itself. `createTestDb` goes through the same function, so a test database built by hand cannot drift from the one core hands out and an entry save fires the triggers production has.
+
+- [#2275](https://github.com/withplumix/plumix/pull/2275) [`7c87337`](https://github.com/withplumix/plumix/commit/7c87337d1a8493391fd507e14701b1140cd9372e) Thanks [@nasyrov](https://github.com/nasyrov)! - Public pages now leave the origin carrying their freshness and cache tags, so a
+  site behind a CDN it does not write to gets edge caching for the first time.
+  `ConnectedCdn` is reshaped around that: `decorate(response, tags)` is the only
+  member every provider implements, and `store`, `purgeTags` and `segmentVary`
+  are all optional — a vendor that cannot invalidate by tag has no `purgeTags` at
+  all rather than one that quietly does nothing. Decoration may narrow sharing and
+  never widen it: a handler's own shared-cacheable `cache-control` is preserved, a
+  response marked `private`/`no-store` or carrying a `Set-Cookie` is returned
+  untouched and untagged, and the site's page freshness is stamped only where the
+  response declared none.
+
+  Because a public page now leaves carrying `s-maxage`, `d1()` no longer appends
+  its read-your-writes bookmark cookie to a response that declares itself
+  shared-cacheable — a policy granting `anonymous` to a signed-in visitor would
+  otherwise let the CDN hand one reader's bookmark to everyone.
+
+  Cache tags are lowercased wherever one enters the system: the `typeTag` /
+  `entryTag` constructors, a plugin's own `tagCdnEntry`, and the purge
+  accumulator. The `cdn` telemetry fact records whether an origin store was in
+  play, and a non-anonymous audience segment bypasses a provider that cannot
+  separate segments, recorded as `segment-unsupported`.
+
+  `describeCdnContract` from `plumix/test/conformance` now
+  takes the optional members a provider ships (`store`, `purgeTags`) and runs the
+  cases that apply. `edge()` from `@plumix/runtime-cloudflare` implements the new
+  port with its Workers Cache API store intact.
+
+  ```diff
+   const cdn: ConnectedCdn = {
+  -  match: (request) => store.match(request),
+  -  put: (request, response, tags) => store.put(request, response, tags),
+  -  purgeTags: (tags) => purge(tags),
+  +  decorate: (response, tags) => stampFreshnessAndTags(response, tags),
+  +  store: { match, put },
+  +  purgeTags: (tags) => purge(tags),
+   };
+  ```
+
+- [#2213](https://github.com/withplumix/plumix/pull/2213) [`4dbbce2`](https://github.com/withplumix/plumix/commit/4dbbce2004222de9ec7e86c96bc3087629c1f5e7) Thanks [@nasyrov](https://github.com/nasyrov)! - `createDispatcherHarness` takes a `db` option so a caller can supply its own drizzle database — the seam a runtime package uses to run core's request-level tests over its driver. Without it the harness creates its in-memory libsql database as before. `applyTestSchema` accepts any drizzle SQLite db, sync or async.
+
+- [#2219](https://github.com/withplumix/plumix/pull/2219) [`7921de6`](https://github.com/withplumix/plumix/commit/7921de6cb20512e9674395adda14f3e2aab16854) Thanks [@nasyrov](https://github.com/nasyrov)! - Breaking (pre-1.0): `PlumixHandler.dispose()` resolves `{ abandoned }`, the number of deferred tasks still running when its deadline passed, and takes an optional `{ timeoutMs }` for the time a shutdown has left. An adapter implementing its own `dispose` must resolve that shape; callers that awaited `void` are unaffected. A process runtime uses it to exit non-zero over abandoned work instead of only logging.
+
+- [#2274](https://github.com/withplumix/plumix/pull/2274) [`b17c870`](https://github.com/withplumix/plumix/commit/b17c87033d70173ee87bfa7b3b22191246c9fa10) Thanks [@nasyrov](https://github.com/nasyrov)! - **Breaking:** the `cache:` config slot is renamed `cdn:`. `CacheProvider` and `ConnectedCache` are renamed `CdnProvider` and `ConnectedCdn`, `ctx.cache` is renamed `ctx.cdn`, `tagCacheEntry` is renamed `tagCdnEntry`, and `describeCacheContract`/`CacheContractOptions` from `plumix/test/conformance` are renamed `describeCdnContract`/`CdnContractOptions`. No behavior change — `edge()` from `@plumix/runtime-cloudflare` keeps doing exactly what it did before, under the new name.
+
+  ```diff
+   export default plumix({
+  -  cache: edge({ ttl: 3600 }),
+  +  cdn: edge({ ttl: 3600 }),
+   });
+  ```
+
+- [#2229](https://github.com/withplumix/plumix/pull/2229) [`4687c85`](https://github.com/withplumix/plumix/commit/4687c85a6456ced4de15a10f1b4ea052bcfb38b8) Thanks [@nasyrov](https://github.com/nasyrov)! - `ImageDelivery` gains an optional `purge(sourceUrl)` for a slot that keeps rendered variants itself, so a plugin can have a source's variants forgotten when the source stops being what it was. A slot that transforms at the edge leaves it out.
+
+- [#2228](https://github.com/withplumix/plumix/pull/2228) [`f0cf852`](https://github.com/withplumix/plumix/commit/f0cf8528ae48a739af6faad780e1bc775f32804f) Thanks [@nasyrov](https://github.com/nasyrov)! - `ImageDelivery` gains an optional `acceptsRelativeSources` flag for a slot that resolves a same-origin relative source itself, such as an in-process transformer, rather than fetching it over the network as a CDN does.
+
+- [#2253](https://github.com/withplumix/plumix/pull/2253) [`4560fad`](https://github.com/withplumix/plumix/commit/4560fad423d2372d4cf11fa3335173143b59bbba) Thanks [@nasyrov](https://github.com/nasyrov)! - Fire scheduled tasks on a Node deploy, and settle on one cron dialect
+
+  A Node deploy now runs its own scheduled tasks. The schedules come from
+  `app.scheduledTasks`, so they follow the plugins a site installs rather than a
+  list kept in the runtime, and the process wakes on each UTC minute to fire the
+  ones due. It is on by default; `node({ cron: false })` hands the schedules to an
+  external scheduler instead, and `plumix cron list` / `plumix cron run "<expr>"`
+  are there to drive them.
+
+  Two runs of a task never overlap. Firings are serialised inside the process, and
+  across processes a claim row and a lease row in the site's own database mean
+  replicas sharing one database contend there — so exactly one of them runs each
+  firing.
+
+  **Breaking:** a cron expression must now be one every runtime reads the same
+  way, and `buildApp` rejects one that is not, naming the task. `buildApp` runs at
+  boot on every runtime, so an expression that comes from an environment variable
+  passes the build and fails when the site starts — on Cloudflare that is a throw
+  on every request, not just a dead task. Check your schedules before upgrading.
+
+  What is now rejected:
+
+  - **A numeric day-of-week.** Cloudflare reads that field as `1-7` with `1` =
+    Sunday, Unix cron as `0-6` with `0` = Sunday, so `0 0 * * 1` meant Sunday on
+    one and Monday on the other. Write the day by name — `SUN`, `MON`, … — and
+    the error names both readings rather than guessing which you meant.
+  - **The Quartz extensions `L`, `W` and `#`**, which Cloudflare accepted and no
+    other runtime does.
+  - **The `@daily` / `@hourly` / `@weekly` / `@midnight` shorthands**, and
+    six-field expressions carrying a seconds column. Write the five-field form.
+  - **A range that wraps the week**, such as `SAT-SUN`. Write it as a list:
+    `SAT,SUN`.
+
+  Everything else is unchanged: `*`, lists, ranges and steps in every field, and
+  numeric months. A site using only those needs no edit.
+
+- [#2252](https://github.com/withplumix/plumix/pull/2252) [`c8a131b`](https://github.com/withplumix/plumix/commit/c8a131b199293766e5336bc94e1d945af3ec998e) Thanks [@nasyrov](https://github.com/nasyrov)! - The Node `images()` route now matches `basePath`: `ImageDelivery.connect()` receives the site's resolved base path so `url()` prefixes `/_plumix/image` the way every other outbound URL is prefixed, and the pre-handler layer matches requests against the same prefixed route. A site served under a subdirectory, behind a proxy that forwards only that subdirectory, now reaches the route.
+
+  Two smaller gaps close alongside it: rendering passes `{ animated: true }` to `sharp`, so an animated GIF or WebP source keeps its frames through a resize instead of losing them to the first one; and `Accept` negotiation now parses `q` values instead of doing a substring match, so `image/avif;q=0` no longer selects AVIF.
+
+- [#2232](https://github.com/withplumix/plumix/pull/2232) [`689a693`](https://github.com/withplumix/plumix/commit/689a693759c21c9e2c8d062db8d1c50771137fed) Thanks [@nasyrov](https://github.com/nasyrov)! - Queries through the `node:sqlite` shim now record `db: <kind>` spans, so a Node
+  site's debug bar lists its SQL and telemetry consumers see the same query
+  tree the libsql and D1 adapters produce. `traceDbQuerySync` is the new core
+  helper behind it — the synchronous twin of `traceDbQuery`, for a driver whose
+  statement API returns rows rather than a promise. `createTracedContext` gains a
+  `dbSpans()` reader alongside its `dbQueryCount()`.
+
+- [#2277](https://github.com/withplumix/plumix/pull/2277) [`a539382`](https://github.com/withplumix/plumix/commit/a5393825b275f93113a30c5560c9193bd07b68d1) Thanks [@nasyrov](https://github.com/nasyrov)! - **Breaking:** `edge()` and `EdgeConfig` are gone from `@plumix/runtime-cloudflare`.
+  The Cloudflare CDN provider now ships from core as `cloudflare()` behind
+  `plumix/cdn/cloudflare`, so a site hosted anywhere — a container, a droplet, a
+  VM — can put Cloudflare in front of it and have its public pages cached at the
+  edge, with publishing purging them. It has no dependencies (header writes and
+  one authenticated request), so a container deploy no longer pulls a Workers
+  toolchain into its image to get edge caching. On Workers it additionally uses
+  the Cache API when it finds one; which mechanism is in play never appears in
+  configuration. The `cdn:` line is now the one line in a site's configuration
+  that does not change when the site moves hosts.
+
+  The zone id and purge token are required provider config taking `(env) =>`
+  resolvers, rather than `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` read implicitly
+  from the environment: the requirement is visible and type-checked while the
+  secret stays out of the committed file. With either credential resolving to
+  nothing the provider is inert — nothing is decorated, nothing is stored — and
+  silent at startup, since nothing cached means nothing can go stale; the debug
+  bar's slot row is where that shows. A purge the zone _rejects_ is what logs at
+  error level, and it never fails the publish.
+
+  Providers export their bare vendor name, so alias the import — every provider
+  then aliases to the same word and swapping vendors later is a one-word edit.
+
+  ```diff
+  -import { edge } from "@plumix/runtime-cloudflare";
+  +import { cloudflare as cdn } from "plumix/cdn/cloudflare";
+
+   export default definePlumixConfig({
+  -  cdn: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
+  +  cdn: cdn({
+  +    ttl: 3600,
+  +    staleWhileRevalidate: 86400,
+  +    zoneId: (env) => env.CF_ZONE_ID,
+  +    purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+  +  }),
+   });
+  ```
+
+- [#2209](https://github.com/withplumix/plumix/pull/2209) [`c8bede7`](https://github.com/withplumix/plumix/commit/c8bede7407bf77c464e92f0b5f60a0a68bf74d59) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `buildAppClientFirst` to `plumix/vite`, the client-before-server build
+  ordering a runtime's build command installs as Vite's `builder.buildApp`; the
+  Cloudflare build command now imports it from there. Lets a runtime's
+  `plumix.scaffold` block name its local secrets file (`secretsFile`, default
+  `.dev.vars`) and the paths its tooling writes into `.gitignore` (`gitignore`),
+  so the scaffolder's base `.gitignore` and generated config comment stop naming
+  wrangler. A scaffolded Cloudflare project is unchanged apart from the order of
+  two `.gitignore` lines and the wording of the secrets comment. The scaffold
+  smoke job runs every registered runtime against the `blank` and `all-plugins`
+  shapes.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a runtime-neutral e2e harness to `plumix/test/playwright`. `definePlumixE2EConfig` takes `configDir` (pass `import.meta.dirname`) beside `playground`, reads the `plumix.e2e` block of the runtime package the playground depends on for the state to wipe and where the database lives, and applies migrations through `plumix migrate apply` instead of naming wrangler; `openPlaygroundDb` resolves the database through the same block and drops its unused `binding` option. Adds `runtimeSpec`, the one spec every runtime playground runs (bootstrap the first admin with a passkey, publish an entry, read it publicly, upload media, sign out), plus the `CONTENT_LIST_ROWS` and `PNG_1X1` fixtures the plugin suites share. The Cloudflare runtime declares its block and ships a playground that runs the spec.
+
+### Patch Changes
+
+- [#2279](https://github.com/withplumix/plumix/pull/2279) [`1711eba`](https://github.com/withplumix/plumix/commit/1711ebaf8bd62dc7c947b745ec19abe937d218d8) Thanks [@nasyrov](https://github.com/nasyrov)! - Cache tags contributed by read-time reference resolution are now lower-cased on
+  the way in, as tags from every other entry point already were. A page stored
+  under `t:Post` was not reached by a purge enqueuing `t:post`, so it stayed in
+  the CDN until its freshness ran out.
+
+- [#2280](https://github.com/withplumix/plumix/pull/2280) [`c48f2ee`](https://github.com/withplumix/plumix/commit/c48f2ee2202529be86bb69b647086bc12a4e1ea4) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the shared-cache gate reading the `plumix_session` cookie itself instead
+  of asking the configured authenticator. A site whose authenticator carries its
+  session on another signal — an SSO header, a tenant cookie — had every signed-in
+  render classified anonymous, so it was eligible to be stored under the public
+  URL and served on to the next visitor. `hasSession` already decided whether a
+  public render loads a user; it now decides cacheability too, on both the page
+  and the opted-in plugin-route paths.
+
+  The decision layer stays free of the auth surface: `requestIsPrivileged` takes
+  the verdict as a plain boolean the dispatcher resolves through
+  `requestHasSession`. Its bearer arm is unchanged and still stands on its own —
+  `apiTokenAuthenticator` reports no session on purpose, so that a GET never bumps
+  a token's `lastUsedAt`, yet its render is privileged all the same. An
+  authenticator that implements no `hasSession` still falls back to the standard
+  cookie, so the default install behaves exactly as before.
+
+  Expect a lower hit rate wherever the authenticator reports a session on ordinary
+  traffic. Those page renders now bypass the cache, and `cacheable: true` plugin
+  routes stop storing on them — correct, but a change an operator should see
+  coming rather than discover.
+
+- [#2286](https://github.com/withplumix/plumix/pull/2286) [`5032b4b`](https://github.com/withplumix/plumix/commit/5032b4b26d4285ca03f9ef25661175ec20efaff5) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the runtime handler reading the `plumix_session` cookie directly to
+  decide `RequestScopedDbArgs.isAuthenticated`, instead of asking the configured
+  authenticator. A site whose authenticator carries its session on another
+  signal — an SSO header, its own cookie — always saw `false` here, which
+  silently disabled D1 Sessions read-your-writes: no bookmark resume on read, no
+  bookmark cookie on commit. A signed-in visitor could publish an entry and then
+  be served a lagging replica.
+
+  `isAuthenticated` now comes from `requestHasSession(app.authenticator,
+request)` — the same helper the shared-cache gate already uses. A
+  bearer-only request still resolves to `false`, since `apiTokenAuthenticator`
+  reports no session and an API client has no browser to hold a bookmark
+  cookie. An authenticator that implements no `hasSession` falls back to the
+  standard cookie, so the default install is unchanged.
+
+- [#2223](https://github.com/withplumix/plumix/pull/2223) [`fe4f7a4`](https://github.com/withplumix/plumix/commit/fe4f7a4daf4cd483e101000a214cadb56e341adb) Thanks [@nasyrov](https://github.com/nasyrov)! - `emitPlumixSources` now also returns the config's `runtime` adapter, so a runtime's `dev` command that defers building the app can still read its own options.
+
+- [#2255](https://github.com/withplumix/plumix/pull/2255) [`2aa7087`](https://github.com/withplumix/plumix/commit/2aa7087973243ec3bfad5997799bff696b197ecc) Thanks [@nasyrov](https://github.com/nasyrov)! - Guard `plumix cron run` against overlapping runs
+
+  `plumix cron run` fired unconditionally, so the deploys most likely to overlap —
+  the ones on `cron: false`, driven by a system cron or a Kubernetes CronJob whose
+  invocation overran its own schedule — were the ones with no protection. It now
+  takes the same claim and lease the in-process scheduler does, with the same
+  per-schedule lease policy, and reports which it did rather than exiting green
+  having run nothing.
+
+  It also honours `--cwd` when opening the database, and turns an unmigrated or
+  unreachable one into an error naming the fix instead of a raw driver message.
+
+  Core exports `connectScheduledDb`, the one place that opens the database a
+  scheduled run writes through, so the runtime adapter and the CLI cannot drift on
+  how they connect it.
+
+- [#2293](https://github.com/withplumix/plumix/pull/2293) [`474c7a0`](https://github.com/withplumix/plumix/commit/474c7a00cd79a025a08625b64d3205b7eed78c24) Thanks [@nasyrov](https://github.com/nasyrov)! - `/_plumix/mcp` now declares `no-store` like the RPC and REST surfaces beside
+  it. It was the same gap one surface over, and a reachable one: MCP is
+  default-off, so the `mcp-disabled` 404 is what every production deployment
+  returns there, and a 404 is heuristically cacheable. The endpoint's 405, its
+  cross-origin 403, its 401 and every bearer-authed tool response were undeclared
+  too.
+
+  All three surfaces now stamp freshness once around their dispatcher branch
+  instead of at each handler exit, so a new exit inside one of them cannot escape
+  it. `buildRestDispatcher` no longer decides caching at all.
+
+  The directive is uniformly `no-store`, without the `private` that RPC and
+  PAT-authed REST reads carried: `no-store` already binds every cache, shared and
+  private alike. Page renders and access-gate refusals are unchanged and keep
+  `private, no-store`, where it sits alongside `Vary: cookie`.
+
+- [#2258](https://github.com/withplumix/plumix/pull/2258) [`1348817`](https://github.com/withplumix/plumix/commit/13488173a6e7c9bd40a5d62eb18b327d408d27c9) Thanks [@nasyrov](https://github.com/nasyrov)! - Release the database connections a scheduled run opens
+
+  `plumix cron run` opened database connections and never released them. A
+  one-shot process exits only when its event loop drains and a remote libsql
+  client holds a live socket until it is closed, so a Kubernetes CronJob pod could
+  keep running long after its work finished — and with `concurrencyPolicy: Forbid`
+  that blocks the next firing too.
+
+  `DatabaseAdapter.connect` may now return a `close()` alongside its `db`, so a
+  connection is released through the seam that created it. `nodeSqlite` and
+  `plumix/db/libsql` provide one; D1 does not, having a binding rather than a
+  connection. `createPlumixHandler` releases the connection it bound as part of
+  `dispose()`, after the drain — deferred work is querying through it until then —
+  and `plumix cron run` drains the handler and then releases the guard's own.
+
+  The long-lived Node scheduler keeps its connection: the next firing uses it.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the bootstrap, login and accept-invite screens staying put after a successful passkey ceremony: the session is now refetched before navigating, so the route guard, which reads it with `staleTime: "static"`, sees the signed-in user.
+
+- [#2256](https://github.com/withplumix/plumix/pull/2256) [`2e28cd6`](https://github.com/withplumix/plumix/commit/2e28cd6b212633bace43a21e38b5497bbee73a42) Thanks [@nasyrov](https://github.com/nasyrov)! - Report scheduled-task failures instead of swallowing them
+
+  A scheduled task that throws is caught so its siblings still run, which left
+  every caller unable to tell a healthy run from one where everything failed.
+  `plumix cron run` exited zero either way, so a Kubernetes CronJob's alerting
+  never fired, and the in-process scheduler logged each task's error without ever
+  saying the firing as a whole had not done its job.
+
+  A firing now answers with a `ScheduledRunReport` — `{ ran, failed, aborted? }`.
+  `runScheduledTasks` returns one and `PlumixHandler.scheduled` may resolve to
+  one; an adapter that answers nothing still conforms, and its caller then knows
+  only that the run was attempted. `plumix cron run` exits non-zero naming the
+  tasks that failed, and the Node scheduler logs the same summary.
+
+  `aborted` is separate from `failed` on purpose: a run that never reached its
+  tasks — a missing binding, a database that will not connect — reports why,
+  rather than naming a task that never started.
+
+- [#2289](https://github.com/withplumix/plumix/pull/2289) [`526bbc0`](https://github.com/withplumix/plumix/commit/526bbc03a5e2db08e755f114c834b537c1ac1b28) Thanks [@nasyrov](https://github.com/nasyrov)! - Closes the freshness gaps left on the platform's own interfaces. The
+  `api-disabled` 404, the REST `401` for a rejected token, and the CORS preflight
+  all returned before the `no-store` stamp — and a 404 is heuristically
+  cacheable, so the disabled-API refusal was the one most likely to be stored.
+  `/_plumix/api/v1/**` now declares `no-store` on every response it can return.
+
+  The directive itself moves to a shared `withNoStore` in `runtime/http.ts`
+  rather than being written out at each call site.
+
+- [#2287](https://github.com/withplumix/plumix/pull/2287) [`c38a060`](https://github.com/withplumix/plumix/commit/c38a0606b98aa1afee31e51ba658e8152ea3d5ac) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares freshness on the two `/_plumix/` surfaces that sent none. RPC responses
+  carried no `cache-control` at all, so a shared cache in front of the site
+  decided for them from an absent header — and since a `SameSite=Lax` session
+  cookie rides a top-level navigation, a URL an attacker gets a signed-in victim
+  to visit could have its private JSON stored under a key any visitor reaches.
+  Every RPC response now says `no-store`.
+
+  The RPC branch also accepts `POST` only, answering `405` with `Allow: POST`
+  otherwise. oRPC reads a `GET`'s input from `?data=`, and while its handler
+  rejects a `GET` by default, a procedure declaring `route: { method: "GET" }`
+  opts itself back out — a plugin router could reopen the shape. The method the
+  surface accepts is now the dispatcher's decision rather than each procedure's.
+  Nothing shipped issues a non-`POST` RPC call: both the admin client and the
+  theme's `useAuth` probe `POST`.
+
+  On the REST side, only PAT-authed reads declared anything. Anonymous
+  `/_plumix/api/v1/**` reads and the OpenAPI document now declare `no-store` too:
+  nothing on that surface carries a cache tag, so a shared copy of it could never
+  be purged when the content behind it changes. Operators fronting the public read
+  API with a CDN will see it stop being stored.
+
+- Updated dependencies [[`2aa7087`](https://github.com/withplumix/plumix/commit/2aa7087973243ec3bfad5997799bff696b197ecc), [`4560fad`](https://github.com/withplumix/plumix/commit/4560fad423d2372d4cf11fa3335173143b59bbba), [`1348817`](https://github.com/withplumix/plumix/commit/13488173a6e7c9bd40a5d62eb18b327d408d27c9), [`a539382`](https://github.com/withplumix/plumix/commit/a5393825b275f93113a30c5560c9193bd07b68d1), [`2e28cd6`](https://github.com/withplumix/plumix/commit/2e28cd6b212633bace43a21e38b5497bbee73a42), [`bd3e109`](https://github.com/withplumix/plumix/commit/bd3e109c57432bfac01a50fbeed432b5eb39234e)]:
+  - @plumix/core@0.22.0
+  - @plumix/admin@0.22.0
+  - @plumix/admin-editor@0.22.0
+  - @plumix/admin-ui@0.22.0
+  - @plumix/blocks@0.22.0
+
 ## 0.21.0
 
 ### Minor Changes

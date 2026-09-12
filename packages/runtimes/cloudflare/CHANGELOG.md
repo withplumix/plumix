@@ -1,5 +1,113 @@
 # @plumix/runtime-cloudflare
 
+## 0.11.0
+
+### Minor Changes
+
+- [#2275](https://github.com/withplumix/plumix/pull/2275) [`7c87337`](https://github.com/withplumix/plumix/commit/7c87337d1a8493391fd507e14701b1140cd9372e) Thanks [@nasyrov](https://github.com/nasyrov)! - Public pages now leave the origin carrying their freshness and cache tags, so a
+  site behind a CDN it does not write to gets edge caching for the first time.
+  `ConnectedCdn` is reshaped around that: `decorate(response, tags)` is the only
+  member every provider implements, and `store`, `purgeTags` and `segmentVary`
+  are all optional — a vendor that cannot invalidate by tag has no `purgeTags` at
+  all rather than one that quietly does nothing. Decoration may narrow sharing and
+  never widen it: a handler's own shared-cacheable `cache-control` is preserved, a
+  response marked `private`/`no-store` or carrying a `Set-Cookie` is returned
+  untouched and untagged, and the site's page freshness is stamped only where the
+  response declared none.
+
+  Because a public page now leaves carrying `s-maxage`, `d1()` no longer appends
+  its read-your-writes bookmark cookie to a response that declares itself
+  shared-cacheable — a policy granting `anonymous` to a signed-in visitor would
+  otherwise let the CDN hand one reader's bookmark to everyone.
+
+  Cache tags are lowercased wherever one enters the system: the `typeTag` /
+  `entryTag` constructors, a plugin's own `tagCdnEntry`, and the purge
+  accumulator. The `cdn` telemetry fact records whether an origin store was in
+  play, and a non-anonymous audience segment bypasses a provider that cannot
+  separate segments, recorded as `segment-unsupported`.
+
+  `describeCdnContract` from `plumix/test/conformance` now
+  takes the optional members a provider ships (`store`, `purgeTags`) and runs the
+  cases that apply. `edge()` from `@plumix/runtime-cloudflare` implements the new
+  port with its Workers Cache API store intact.
+
+  ```diff
+   const cdn: ConnectedCdn = {
+  -  match: (request) => store.match(request),
+  -  put: (request, response, tags) => store.put(request, response, tags),
+  -  purgeTags: (tags) => purge(tags),
+  +  decorate: (response, tags) => stampFreshnessAndTags(response, tags),
+  +  store: { match, put },
+  +  purgeTags: (tags) => purge(tags),
+   };
+  ```
+
+- [#2274](https://github.com/withplumix/plumix/pull/2274) [`b17c870`](https://github.com/withplumix/plumix/commit/b17c87033d70173ee87bfa7b3b22191246c9fa10) Thanks [@nasyrov](https://github.com/nasyrov)! - **Breaking:** the `cache:` config slot is renamed `cdn:`. `CacheProvider` and `ConnectedCache` are renamed `CdnProvider` and `ConnectedCdn`, `ctx.cache` is renamed `ctx.cdn`, `tagCacheEntry` is renamed `tagCdnEntry`, and `describeCacheContract`/`CacheContractOptions` from `plumix/test/conformance` are renamed `describeCdnContract`/`CdnContractOptions`. No behavior change — `edge()` from `@plumix/runtime-cloudflare` keeps doing exactly what it did before, under the new name.
+
+  ```diff
+   export default plumix({
+  -  cache: edge({ ttl: 3600 }),
+  +  cdn: edge({ ttl: 3600 }),
+   });
+  ```
+
+- [#2277](https://github.com/withplumix/plumix/pull/2277) [`a539382`](https://github.com/withplumix/plumix/commit/a5393825b275f93113a30c5560c9193bd07b68d1) Thanks [@nasyrov](https://github.com/nasyrov)! - **Breaking:** `edge()` and `EdgeConfig` are gone from `@plumix/runtime-cloudflare`.
+  The Cloudflare CDN provider now ships from core as `cloudflare()` behind
+  `plumix/cdn/cloudflare`, so a site hosted anywhere — a container, a droplet, a
+  VM — can put Cloudflare in front of it and have its public pages cached at the
+  edge, with publishing purging them. It has no dependencies (header writes and
+  one authenticated request), so a container deploy no longer pulls a Workers
+  toolchain into its image to get edge caching. On Workers it additionally uses
+  the Cache API when it finds one; which mechanism is in play never appears in
+  configuration. The `cdn:` line is now the one line in a site's configuration
+  that does not change when the site moves hosts.
+
+  The zone id and purge token are required provider config taking `(env) =>`
+  resolvers, rather than `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` read implicitly
+  from the environment: the requirement is visible and type-checked while the
+  secret stays out of the committed file. With either credential resolving to
+  nothing the provider is inert — nothing is decorated, nothing is stored — and
+  silent at startup, since nothing cached means nothing can go stale; the debug
+  bar's slot row is where that shows. A purge the zone _rejects_ is what logs at
+  error level, and it never fails the publish.
+
+  Providers export their bare vendor name, so alias the import — every provider
+  then aliases to the same word and swapping vendors later is a one-word edit.
+
+  ```diff
+  -import { edge } from "@plumix/runtime-cloudflare";
+  +import { cloudflare as cdn } from "plumix/cdn/cloudflare";
+
+   export default definePlumixConfig({
+  -  cdn: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
+  +  cdn: cdn({
+  +    ttl: 3600,
+  +    staleWhileRevalidate: 86400,
+  +    zoneId: (env) => env.CF_ZONE_ID,
+  +    purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+  +  }),
+   });
+  ```
+
+### Patch Changes
+
+- [#2222](https://github.com/withplumix/plumix/pull/2222) [`301429d`](https://github.com/withplumix/plumix/commit/301429dabe61f705785b9ba394a4ed1f075a9cd7) Thanks [@nasyrov](https://github.com/nasyrov)! - `create-plumix-app --runtime node` scaffolds a site that runs as a plain Node.js process: `node()` as the runtime, `nodeSqlite` on a file under `data/`, `diskStorage` when a plugin needs the storage capability, `.env` as the secrets file with an `.env.example`, `data` ignored, and a literal localhost passkey origin with a comment to change it for production. A plugin needing a capability Node does not provide, such as media's image delivery, is refused by name. The default runtime stays `cloudflare`.
+
+  The base skeleton now leaves three things to the runtime: the ambient type packages the tsconfig lists, the README's Deploy section, and what the `clean` script removes. The Cloudflare block declares all three, so its projects are unchanged.
+
+- [#2209](https://github.com/withplumix/plumix/pull/2209) [`c8bede7`](https://github.com/withplumix/plumix/commit/c8bede7407bf77c464e92f0b5f60a0a68bf74d59) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `buildAppClientFirst` to `plumix/vite`, the client-before-server build
+  ordering a runtime's build command installs as Vite's `builder.buildApp`; the
+  Cloudflare build command now imports it from there. Lets a runtime's
+  `plumix.scaffold` block name its local secrets file (`secretsFile`, default
+  `.dev.vars`) and the paths its tooling writes into `.gitignore` (`gitignore`),
+  so the scaffolder's base `.gitignore` and generated config comment stop naming
+  wrangler. A scaffolded Cloudflare project is unchanged apart from the order of
+  two `.gitignore` lines and the wording of the secrets comment. The scaffold
+  smoke job runs every registered runtime against the `blank` and `all-plugins`
+  shapes.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a runtime-neutral e2e harness to `plumix/test/playwright`. `definePlumixE2EConfig` takes `configDir` (pass `import.meta.dirname`) beside `playground`, reads the `plumix.e2e` block of the runtime package the playground depends on for the state to wipe and where the database lives, and applies migrations through `plumix migrate apply` instead of naming wrangler; `openPlaygroundDb` resolves the database through the same block and drops its unused `binding` option. Adds `runtimeSpec`, the one spec every runtime playground runs (bootstrap the first admin with a passkey, publish an entry, read it publicly, upload media, sign out), plus the `CONTENT_LIST_ROWS` and `PNG_1X1` fixtures the plugin suites share. The Cloudflare runtime declares its block and ships a playground that runs the spec.
+
 ## 0.10.0
 
 ### Minor Changes

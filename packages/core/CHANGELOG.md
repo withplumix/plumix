@@ -1,5 +1,140 @@
 # @plumix/core
 
+## 0.22.0
+
+### Minor Changes
+
+- [#2255](https://github.com/withplumix/plumix/pull/2255) [`2aa7087`](https://github.com/withplumix/plumix/commit/2aa7087973243ec3bfad5997799bff696b197ecc) Thanks [@nasyrov](https://github.com/nasyrov)! - Guard `plumix cron run` against overlapping runs
+
+  `plumix cron run` fired unconditionally, so the deploys most likely to overlap —
+  the ones on `cron: false`, driven by a system cron or a Kubernetes CronJob whose
+  invocation overran its own schedule — were the ones with no protection. It now
+  takes the same claim and lease the in-process scheduler does, with the same
+  per-schedule lease policy, and reports which it did rather than exiting green
+  having run nothing.
+
+  It also honours `--cwd` when opening the database, and turns an unmigrated or
+  unreachable one into an error naming the fix instead of a raw driver message.
+
+  Core exports `connectScheduledDb`, the one place that opens the database a
+  scheduled run writes through, so the runtime adapter and the CLI cannot drift on
+  how they connect it.
+
+- [#2253](https://github.com/withplumix/plumix/pull/2253) [`4560fad`](https://github.com/withplumix/plumix/commit/4560fad423d2372d4cf11fa3335173143b59bbba) Thanks [@nasyrov](https://github.com/nasyrov)! - Fire scheduled tasks on a Node deploy, and settle on one cron dialect
+
+  A Node deploy now runs its own scheduled tasks. The schedules come from
+  `app.scheduledTasks`, so they follow the plugins a site installs rather than a
+  list kept in the runtime, and the process wakes on each UTC minute to fire the
+  ones due. It is on by default; `node({ cron: false })` hands the schedules to an
+  external scheduler instead, and `plumix cron list` / `plumix cron run "<expr>"`
+  are there to drive them.
+
+  Two runs of a task never overlap. Firings are serialised inside the process, and
+  across processes a claim row and a lease row in the site's own database mean
+  replicas sharing one database contend there — so exactly one of them runs each
+  firing.
+
+  **Breaking:** a cron expression must now be one every runtime reads the same
+  way, and `buildApp` rejects one that is not, naming the task. `buildApp` runs at
+  boot on every runtime, so an expression that comes from an environment variable
+  passes the build and fails when the site starts — on Cloudflare that is a throw
+  on every request, not just a dead task. Check your schedules before upgrading.
+
+  What is now rejected:
+
+  - **A numeric day-of-week.** Cloudflare reads that field as `1-7` with `1` =
+    Sunday, Unix cron as `0-6` with `0` = Sunday, so `0 0 * * 1` meant Sunday on
+    one and Monday on the other. Write the day by name — `SUN`, `MON`, … — and
+    the error names both readings rather than guessing which you meant.
+  - **The Quartz extensions `L`, `W` and `#`**, which Cloudflare accepted and no
+    other runtime does.
+  - **The `@daily` / `@hourly` / `@weekly` / `@midnight` shorthands**, and
+    six-field expressions carrying a seconds column. Write the five-field form.
+  - **A range that wraps the week**, such as `SAT-SUN`. Write it as a list:
+    `SAT,SUN`.
+
+  Everything else is unchanged: `*`, lists, ranges and steps in every field, and
+  numeric months. A site using only those needs no edit.
+
+- [#2258](https://github.com/withplumix/plumix/pull/2258) [`1348817`](https://github.com/withplumix/plumix/commit/13488173a6e7c9bd40a5d62eb18b327d408d27c9) Thanks [@nasyrov](https://github.com/nasyrov)! - Release the database connections a scheduled run opens
+
+  `plumix cron run` opened database connections and never released them. A
+  one-shot process exits only when its event loop drains and a remote libsql
+  client holds a live socket until it is closed, so a Kubernetes CronJob pod could
+  keep running long after its work finished — and with `concurrencyPolicy: Forbid`
+  that blocks the next firing too.
+
+  `DatabaseAdapter.connect` may now return a `close()` alongside its `db`, so a
+  connection is released through the seam that created it. `nodeSqlite` and
+  `plumix/db/libsql` provide one; D1 does not, having a binding rather than a
+  connection. `createPlumixHandler` releases the connection it bound as part of
+  `dispose()`, after the drain — deferred work is querying through it until then —
+  and `plumix cron run` drains the handler and then releases the guard's own.
+
+  The long-lived Node scheduler keeps its connection: the next firing uses it.
+
+- [#2277](https://github.com/withplumix/plumix/pull/2277) [`a539382`](https://github.com/withplumix/plumix/commit/a5393825b275f93113a30c5560c9193bd07b68d1) Thanks [@nasyrov](https://github.com/nasyrov)! - **Breaking:** `edge()` and `EdgeConfig` are gone from `@plumix/runtime-cloudflare`.
+  The Cloudflare CDN provider now ships from core as `cloudflare()` behind
+  `plumix/cdn/cloudflare`, so a site hosted anywhere — a container, a droplet, a
+  VM — can put Cloudflare in front of it and have its public pages cached at the
+  edge, with publishing purging them. It has no dependencies (header writes and
+  one authenticated request), so a container deploy no longer pulls a Workers
+  toolchain into its image to get edge caching. On Workers it additionally uses
+  the Cache API when it finds one; which mechanism is in play never appears in
+  configuration. The `cdn:` line is now the one line in a site's configuration
+  that does not change when the site moves hosts.
+
+  The zone id and purge token are required provider config taking `(env) =>`
+  resolvers, rather than `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` read implicitly
+  from the environment: the requirement is visible and type-checked while the
+  secret stays out of the committed file. With either credential resolving to
+  nothing the provider is inert — nothing is decorated, nothing is stored — and
+  silent at startup, since nothing cached means nothing can go stale; the debug
+  bar's slot row is where that shows. A purge the zone _rejects_ is what logs at
+  error level, and it never fails the publish.
+
+  Providers export their bare vendor name, so alias the import — every provider
+  then aliases to the same word and swapping vendors later is a one-word edit.
+
+  ```diff
+  -import { edge } from "@plumix/runtime-cloudflare";
+  +import { cloudflare as cdn } from "plumix/cdn/cloudflare";
+
+   export default definePlumixConfig({
+  -  cdn: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
+  +  cdn: cdn({
+  +    ttl: 3600,
+  +    staleWhileRevalidate: 86400,
+  +    zoneId: (env) => env.CF_ZONE_ID,
+  +    purgeToken: (env) => env.CF_CACHE_PURGE_TOKEN,
+  +  }),
+   });
+  ```
+
+- [#2256](https://github.com/withplumix/plumix/pull/2256) [`2e28cd6`](https://github.com/withplumix/plumix/commit/2e28cd6b212633bace43a21e38b5497bbee73a42) Thanks [@nasyrov](https://github.com/nasyrov)! - Report scheduled-task failures instead of swallowing them
+
+  A scheduled task that throws is caught so its siblings still run, which left
+  every caller unable to tell a healthy run from one where everything failed.
+  `plumix cron run` exited zero either way, so a Kubernetes CronJob's alerting
+  never fired, and the in-process scheduler logged each task's error without ever
+  saying the firing as a whole had not done its job.
+
+  A firing now answers with a `ScheduledRunReport` — `{ ran, failed, aborted? }`.
+  `runScheduledTasks` returns one and `PlumixHandler.scheduled` may resolve to
+  one; an adapter that answers nothing still conforms, and its caller then knows
+  only that the run was attempted. `plumix cron run` exits non-zero naming the
+  tasks that failed, and the Node scheduler logs the same summary.
+
+  `aborted` is separate from `failed` on purpose: a run that never reached its
+  tasks — a missing binding, a database that will not connect — reports why,
+  rather than naming a task that never started.
+
+### Patch Changes
+
+- [#2323](https://github.com/withplumix/plumix/pull/2323) [`bd3e109`](https://github.com/withplumix/plumix/commit/bd3e109c57432bfac01a50fbeed432b5eb39234e) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `auth.sessions` applying only to the session cookie: the server-side session check now enforces the configured `maxAgeSeconds`, `absoluteMaxAgeSeconds` and `refreshThreshold` instead of the defaults. `sessionAuthenticator()` and `defaultAuthenticator()` accept the policy for operators who compose their own authenticator chain.
+- Updated dependencies []:
+  - @plumix/blocks@0.22.0
+
 ## 0.21.0
 
 ### Minor Changes
