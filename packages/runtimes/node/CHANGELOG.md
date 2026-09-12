@@ -1,5 +1,15 @@
 # @plumix/runtime-node
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2320](https://github.com/withplumix/plumix/pull/2320) [`41aee82`](https://github.com/withplumix/plumix/commit/41aee82275e5a3d0c462a04d38493727d35ee71e) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes scheduled-run failures going unreported on Node. The generated entry dropped `handler.scheduled`'s return, so the `ScheduledRunReport` the scheduler logs failures from never arrived: a task that threw under `cron: true` said nothing. The entry's orchestration — the portable `{ fetch, scheduled }` pair, the assets → images → site serve chain, the cron start and the shutdown protocol — now lives in `createNodeSite`, and the generated entry is imports and calls. `listener`, `startCron` and the default export keep their shapes. The entry also exports `dispose`, so a host embedding `listener` can drain the site on its own shutdown the way the standalone process does on `SIGTERM`. Also changed: the handler is now built on the first request or firing rather than when cron starts, so a process that starts cron and receives neither has nothing for `dispose()` to release.
+
+### Patch Changes
+
+- [#2320](https://github.com/withplumix/plumix/pull/2320) [`41aee82`](https://github.com/withplumix/plumix/commit/41aee82275e5a3d0c462a04d38493727d35ee71e) Thanks [@nasyrov](https://github.com/nasyrov)! - Bounds a Node shutdown by one deadline, as it was documented to be. `SIGTERM` gives the scheduler stop, the in-flight drain and the deferred-work drain a shared ten seconds — but the in-flight drain raced a fresh full ten rather than what was left, so a scheduler stop that took four seconds pushed the process to fourteen, past a grace period sized for ten. Every step now spends from the same clock. The consequence runs the other way too: a scheduler stop that uses the whole budget now leaves the in-flight and deferred drains nothing, so a shutdown that used to exit 0 at fourteen seconds exits 1 at ten. The cut line now names the budget — `the 10000ms shutdown budget ran out` — rather than implying in-flight responses had all of it.
+
 ## 0.1.0
 
 ### Minor Changes
