@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import type { PluginDescriptor } from "plumix";
 import {
   auth as authConfig,
@@ -151,9 +153,8 @@ describe("createNodeSite — serveWhenMain", () => {
 });
 
 describe("serveProcess", () => {
-  // The process seams the deleted string-matching tests used to assert on:
-  // the cron gate, and the order the drain spends its one budget in.
   const noop: ServeProcessOptions["listener"] = (_req, res) => res.end();
+  const servers: Server[] = [];
 
   function harness(overrides: Partial<ServeProcessOptions> = {}) {
     const exit = vi.fn();
@@ -167,7 +168,21 @@ describe("serveProcess", () => {
       exit,
       ...overrides,
     });
-    return { exit, dispose, startCron, drain: process_.drain };
+    servers.push(process_.server);
+    return {
+      exit,
+      dispose,
+      startCron,
+      drain: process_.drain,
+      server: process_.server,
+    };
+  }
+
+  async function bound(server: Server): Promise<AddressInfo> {
+    if (!server.listening) {
+      await new Promise((up) => server.once("listening", up));
+    }
+    return server.address() as AddressInfo;
   }
 
   function stubScheduler(): Scheduler {
@@ -178,11 +193,27 @@ describe("serveProcess", () => {
   }
 
   beforeEach(() => {
-    // An ephemeral port: the drain closes the server, so nothing is left bound.
+    // An ephemeral port, so nothing here can collide with a suite's fixed one.
     /* eslint-disable turbo/no-undeclared-env-vars -- what the built site reads when it runs, which is what this drives */
     process.env.PORT = "0";
     process.env.HOST = "127.0.0.1";
     /* eslint-enable turbo/no-undeclared-env-vars */
+  });
+
+  afterEach(async () => {
+    /* eslint-disable turbo/no-undeclared-env-vars -- restoring what beforeEach set */
+    delete process.env.PORT;
+    delete process.env.HOST;
+    /* eslint-enable turbo/no-undeclared-env-vars */
+    // A test that fails before its drain leaves both behind, and the drain is
+    // what would have removed them.
+    process.removeAllListeners("SIGTERM");
+    process.removeAllListeners("SIGINT");
+    await Promise.all(
+      servers
+        .splice(0)
+        .map((server) => new Promise((shut) => server.close(shut))),
+    );
   });
 
   test("cron: false hands the schedules to an external scheduler", async () => {
@@ -193,16 +224,18 @@ describe("serveProcess", () => {
     expect(startCron).not.toHaveBeenCalled();
   });
 
-  test("stops the scheduler before the drain, within what is left of the budget", async () => {
+  test("stops the scheduler before the drain, and bounds both", async () => {
     const order: string[] = [];
+    let stopBudget: number | undefined;
+    let disposeBudget: number | undefined;
     const scheduler: Scheduler = {
       start: () => Promise.resolve(),
-      stop: vi.fn((options?: { timeoutMs?: number }) => {
-        order.push(`stop:${String(options?.timeoutMs !== undefined)}`);
+      stop: (options) => {
+        order.push("stop");
+        stopBudget = options?.timeoutMs;
         return Promise.resolve();
-      }),
+      },
     };
-    let disposeBudget: number | undefined;
     const { drain } = harness({
       startCron: () => Promise.resolve(scheduler),
       dispose: (options) => {
@@ -216,28 +249,65 @@ describe("serveProcess", () => {
 
     await drain("SIGTERM");
 
-    // Unbounded, a multi-minute task in flight would hold SIGTERM open and
-    // leave `dispose()` a zero budget, so the orchestrator SIGKILLs first.
-    expect(order).toEqual(["stop:true", "dispose"]);
-    expect(disposeBudget).toBeTypeOf("number");
+    // `dispose()` waits for deferred work, and a firing that started behind it
+    // would hand it more. Unbounded, either could hold SIGTERM open until the
+    // orchestrator SIGKILLs.
+    expect(order).toEqual(["stop", "dispose"]);
+    expect(stopBudget).toBeGreaterThan(0);
+    expect(disposeBudget).toBeGreaterThan(0);
   });
 
   test("stops a scheduler that finishes starting after the signal landed", async () => {
     // `buildApp` may still be running when SIGTERM arrives; the scheduler must
     // not start behind the shutdown and fire into its drain.
     const scheduler = stubScheduler();
-    let started: (value: Scheduler) => void = () => undefined;
+    let start: (value: Scheduler) => void = () => undefined;
     const { drain } = harness({
-      startCron: () => new Promise<Scheduler>((resolve) => (started = resolve)),
+      startCron: () => new Promise<Scheduler>((resolve) => (start = resolve)),
     });
 
     const draining = drain("SIGTERM");
-    started(scheduler);
+    start(scheduler);
     await draining;
     await Promise.resolve();
 
     // eslint-disable-next-line @typescript-eslint/unbound-method -- call check, not invocation
     expect(scheduler.stop).toHaveBeenCalledWith({ timeoutMs: 0 });
+  });
+
+  test("spends one budget across the whole shutdown, not one per step", async () => {
+    // A stop close to the budget leaves the drain a real but small slice, so
+    // the two worlds are far apart: one budget spends 600ms, one per step
+    // spends 1100. The slack either side of the threshold is STOP / 2.
+    const BUDGET = 600;
+    const STOP = 500;
+    const scheduler: Scheduler = {
+      start: () => Promise.resolve(),
+      stop: () => new Promise((done) => setTimeout(done, STOP)),
+    };
+    let arrive = (): void => undefined;
+    const arrived = new Promise<void>((resolve) => (arrive = resolve));
+    const { drain, server } = harness({
+      drainDeadlineMs: BUDGET,
+      // Never answers, so `server.close()` cannot settle and the drain has to
+      // fall through to its own deadline. `closeIdleConnections()` would reap
+      // a socket that had not sent a request, so the request is load-bearing.
+      listener: () => arrive(),
+      startCron: () => Promise.resolve(scheduler),
+    });
+    await Promise.resolve();
+    const { port } = await bound(server);
+    const hung = fetch(`http://127.0.0.1:${String(port)}/`).catch(() => null);
+    await arrived;
+
+    const began = Date.now();
+    await drain("SIGTERM");
+    const elapsed = Date.now() - began;
+    await hung;
+
+    expect(elapsed).toBeLessThan(BUDGET + STOP / 2);
+    // The other side: the drain spends the budget rather than cutting short.
+    expect(elapsed).toBeGreaterThanOrEqual(BUDGET);
   });
 
   test("exits non-zero when deferred work is abandoned", async () => {

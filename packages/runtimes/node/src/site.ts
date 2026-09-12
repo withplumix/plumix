@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { dirname, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type {
   DisposeOptions,
@@ -206,11 +207,15 @@ export interface ServeProcessOptions {
   readonly cron: boolean;
   /** Test seam: what ends the process, so a drain can be driven without one. */
   readonly exit?: (code: number) => void;
+  /** Test seam: the shutdown budget, so a test need not spend the real one. */
+  readonly drainDeadlineMs?: number;
 }
 
 export interface ServingProcess {
   /** What the signal listeners call; returned so a test can drive it. */
   readonly drain: (signal: NodeJS.Signals) => Promise<void>;
+  /** The server, still binding when this returns; a test reads its port. */
+  readonly server: Server;
 }
 
 // Not on the barrel: `serveWhenMain` is the door, and this is what a test
@@ -221,6 +226,7 @@ export function serveProcess({
   dispose,
   cron,
   exit = (code) => process.exit(code),
+  drainDeadlineMs = DRAIN_DEADLINE_MS,
 }: ServeProcessOptions): ServingProcess {
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
   const port = Number(envOr(process.env.PORT, "3000"));
@@ -261,7 +267,7 @@ export function serveProcess({
     process.off("SIGTERM", shutdown);
     process.off("SIGINT", shutdown);
     console.log(`plumix: ${signal} received, draining`);
-    const deadline = Date.now() + DRAIN_DEADLINE_MS;
+    const deadline = Date.now() + drainDeadlineMs;
     const closed = new Promise<boolean>((settle) =>
       server.close(() => settle(true)),
     );
@@ -271,18 +277,18 @@ export function serveProcess({
     // same budget the drain then spends, so a long task cannot hold the whole
     // shutdown open and leave `dispose()` nothing.
     stopping = true;
-    await scheduler?.stop({ timeoutMs: Math.max(0, deadline - Date.now()) });
+    await scheduler?.stop({ timeoutMs: remainingMs(deadline) });
     const finished = await Promise.race([
       closed,
-      sleep(DRAIN_DEADLINE_MS, false),
+      // Unref'd: a drain that has already lost its race must not be what keeps
+      // the process alive, the way the scheduler's own tick is not.
+      sleep(remainingMs(deadline), false, { ref: false }),
     ]);
-    const { abandoned } = await dispose({
-      timeoutMs: Math.max(0, deadline - Date.now()),
-    });
+    const { abandoned } = await dispose({ timeoutMs: remainingMs(deadline) });
     server.closeAllConnections();
     if (!finished) {
       console.error(
-        `plumix: exiting with in-flight responses cut after ${String(DRAIN_DEADLINE_MS)}ms`,
+        `plumix: exiting with in-flight responses cut after ${String(drainDeadlineMs)}ms`,
       );
     }
     if (abandoned > 0) {
@@ -295,7 +301,12 @@ export function serveProcess({
   const shutdown = (signal: NodeJS.Signals): void => void drain(signal);
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
-  return { drain };
+  return { drain, server };
+}
+
+/** What is left of the shutdown's one deadline. */
+function remainingMs(deadline: number): number {
+  return Math.max(0, deadline - Date.now());
 }
 
 /**
