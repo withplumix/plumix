@@ -1,5 +1,5 @@
 import { hostname } from "node:os";
-import type { Db, PlumixApp, PlumixEnv } from "plumix";
+import type { Db, PlumixApp, PlumixEnv, ScheduledRunReport } from "plumix";
 import { connectScheduledDb, createScheduledRunGuard } from "plumix";
 
 import type {
@@ -12,7 +12,14 @@ import { createScheduler } from "./scheduler.js";
 export interface ScheduledRunnerOptions {
   readonly app: PlumixApp;
   readonly env: PlumixEnv;
-  readonly fire: (cron: string, scheduledTime: number) => Promise<void>;
+  /**
+   * Fires one schedule. Narrowing away the report would silence every failed
+   * run: it is what the scheduler's failure logging reads (#2303).
+   */
+  readonly fire: (
+    cron: string,
+    scheduledTime: number,
+  ) => Promise<void | ScheduledRunReport>;
   /** Whether to take the cross-process lease; see `createScheduledRunGuard`. */
   readonly lease?: boolean;
   readonly ttlMs?: number;

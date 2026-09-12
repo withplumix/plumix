@@ -1,9 +1,9 @@
-// What the adapter and the entry it generates agree on.
+// What the adapter and the site module behind the generated entry agree on.
 
 /**
  * Where the assets layer reads from, named on the invocation's env — the
- * Node twin of Cloudflare's `ASSETS` binding. The entry points it at
- * `dist/client` beside itself; without it the admin answers
+ * Node twin of Cloudflare's `ASSETS` binding. `createNodeSite` points it at
+ * `dist/client` beside the entry; without it the admin answers
  * `admin-not-available`.
  */
 export const ASSETS_DIR_ENV = "PLUMIX_ASSETS_DIR";

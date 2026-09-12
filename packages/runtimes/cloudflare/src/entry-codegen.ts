@@ -55,6 +55,14 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "  async scheduled(event, env, ctx) {",
     "    const app = await appPromise;",
     "    handler ??= config.runtime.createHandler(app);",
+    // Dropping the report is deliberate here, unlike Node (#2303), where the
+    // in-process loop is the only thing that can say a firing as a whole
+    // failed; Workers *is* the scheduler, so there is no such line to write.
+    // Every failure still reaches `wrangler tail` — core logs each task
+    // through `ctx.logger.error` and an aborted run through
+    // `[plumix] scheduled_failure`. What it does not reach is the invocation's
+    // own outcome: core catches rather than throws, so a firing whose tasks
+    // all failed still records as ok. Surfacing that is a separate decision.
     "    if (handler.scheduled) await handler.scheduled(event, invocation(env, ctx));",
     "  },",
     "};",

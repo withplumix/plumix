@@ -15,8 +15,16 @@ export type { DiskObjectStorage, DiskStorageConfig } from "./disk-storage.js";
 export { images } from "./images.js";
 export type { ImagesConfig, ResolvedImagesConfig } from "./images.js";
 
-// The generated entry imports these four by public specifier, and a host
-// embedding the site by hand reaches for the same names.
+// What the generated entry calls: everything it does beyond importing.
+export { createNodeSite } from "./site.js";
+export type {
+  CronOverrides,
+  NodeSite,
+  NodeSiteHandler,
+  NodeSiteOptions,
+} from "./site.js";
+
+// The layers `createNodeSite` stacks, for a host that assembles its own.
 export { createAssetsLayer } from "./http/assets.js";
 export type { AssetsLayer, AssetsLayerOptions } from "./http/assets.js";
 export { createImageLayer } from "./http/images.js";
@@ -29,4 +37,8 @@ export type {
 } from "./http/bridge.js";
 export { startScheduledRunner } from "./scheduled-runner.js";
 export type { ScheduledRunnerOptions } from "./scheduled-runner.js";
-export type { SchedulerClock, SchedulerLogger } from "./scheduler.js";
+export type {
+  Scheduler,
+  SchedulerClock,
+  SchedulerLogger,
+} from "./scheduler.js";
