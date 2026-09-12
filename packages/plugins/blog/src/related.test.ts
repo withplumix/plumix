@@ -101,13 +101,52 @@ describe("findRelatedEntries", () => {
       await readEntryType(ctx, current.id);
       const before = dbQueryCount();
       const rows = await findRelatedEntries(ctx, current.id, 3);
-      // Terms, sibling ids, and the final list — the type read replays
-      // from the request memo instead of re-querying.
-      expect(dbQueryCount() - before).toBe(3);
+      // Only the list itself — terms and siblings are subqueries, and the
+      // type read replays from the request memo instead of re-querying.
+      expect(dbQueryCount() - before).toBe(1);
       return rows;
     });
 
     expect(related.map((e) => e.id)).toEqual([sibling.id]);
+  });
+
+  test("binds no statement past D1's 100-parameter cap however many siblings share a term", async () => {
+    // libsql enforces no cap, so the statements' bound params are the only
+    // place the ceiling is visible under test.
+    const D1_BOUND_PARAMETER_CAP = 100;
+    const { harness, ctx, run, dbSpans } = await createTracedContext();
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const current = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(10_000),
+      authorId: author.id,
+    });
+    const siblings = await f.entry.createList(D1_BOUND_PARAMETER_CAP + 50, {
+      type: "post",
+      status: "published",
+      publishedAt: new Date(1000),
+      authorId: author.id,
+    });
+    await Promise.all(
+      [current, ...siblings].map((entry) =>
+        f.entryTerm.create({ entryId: entry.id, termId: topic.id }),
+      ),
+    );
+
+    const related = await run(() => findRelatedEntries(ctx, current.id, 3));
+
+    expect(related).toHaveLength(3);
+    expect(dbSpans()).not.toHaveLength(0);
+    const boundCounts = dbSpans().map((span) => {
+      const params = span.attributes["db.params"];
+      return Array.isArray(params) ? params.length : 0;
+    });
+    expect(Math.max(...boundCounts)).toBeLessThanOrEqual(
+      D1_BOUND_PARAMETER_CAP,
+    );
   });
 });
 
