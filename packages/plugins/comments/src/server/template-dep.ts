@@ -1,8 +1,7 @@
-import type { AppContext } from "plumix/plugin";
+import type { TemplateDepLoader } from "plumix";
 import { readEntryType } from "plumix";
 
 import type { ResolvedCommentsConfig } from "../config.js";
-import type { ResolvedThread } from "./load-thread.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { loadThread } from "./load-thread.js";
 
@@ -14,11 +13,10 @@ import { loadThread } from "./load-thread.js";
  * thread keyed by each declared slug. Returns `{}` (→ `null` per slug)
  * for non-entry routes or comment-disabled types.
  */
-export function createCommentsThreadLoader(config: ResolvedCommentsConfig) {
-  return async (
-    slugs: readonly string[],
-    ctx: AppContext,
-  ): Promise<Record<string, ResolvedThread | null>> => {
+export function createCommentsThreadLoader(
+  config: ResolvedCommentsConfig,
+): TemplateDepLoader<"comments"> {
+  return async ({ slugs }, ctx) => {
     const resolved = ctx.resolvedEntity;
     if (resolved?.kind !== "entry") return {};
 

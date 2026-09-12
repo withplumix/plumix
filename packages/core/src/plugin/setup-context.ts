@@ -25,9 +25,10 @@ import type { RouteIntent } from "../route/intent.js";
 import type { RedirectRule } from "../route/redirects.js";
 import type {
   RegisteredTemplateDep,
+  TemplateDepKeys,
   TemplateDepLoader,
 } from "../template-deps.js";
-import type { TemplateDepRegistry } from "../template.js";
+import type { TemplateDepKeyedBy, TemplateDepRegistry } from "../template.js";
 import type {
   EntryMetaBoxDrift,
   SettingsGroupDrift,
@@ -448,7 +449,8 @@ export interface PluginSetupContextBase {
    * request and passes the results to the template's render
    * function. The `kind` must match a key in the augmentable
    * `TemplateDepRegistry` interface; two plugins registering the
-   * same `kind` is a boot-time error.
+   * same `kind` is a boot-time error. `keyedBy` names the entry's key
+   * field — see `TemplateDepRegistry`.
    *
    * **Augmenting `TemplateDepRegistry` so consumers see the kind.**
    * TypeScript only merges the augmentation when the file declaring
@@ -471,7 +473,10 @@ export interface PluginSetupContextBase {
    */
   registerTemplateDep<TKind extends keyof TemplateDepRegistry>(
     kind: TKind,
-    options: { readonly load: TemplateDepLoader<TKind> },
+    options: {
+      readonly keyedBy: TemplateDepKeyedBy<TKind>;
+      readonly load: TemplateDepLoader<TKind>;
+    },
   ): void;
 }
 
@@ -934,7 +939,7 @@ export function createPluginSetupContext({
       });
     },
 
-    registerTemplateDep: (kind, { load }) => {
+    registerTemplateDep: (kind, { keyedBy, load }) => {
       if (RESERVED_DEP_KIND_NAMES.has(kind)) {
         // Reserved framework keys would silently no-op at request time
         // since the merger skips them on theme/template traversal.
@@ -950,12 +955,11 @@ export function createPluginSetupContext({
           identifier: kind,
         });
       }
-      // Erase the per-kind generic at storage time — the typed view is
-      // recovered when `defineTemplate` looks the loader up by kind.
-      // Safety: the loader is stored under the very kind it was registered
-      // for, and every read goes back through that key, so the slugs it
-      // receives and the results it returns are the ones it declared.
-      const erased = load as unknown as RegisteredTemplateDep["load"];
+      const name = `${keyedBy}s`;
+      const erased: RegisteredTemplateDep["load"] = (keys, ctx) =>
+        // `keyedBy` is typed to the entry's key field, so this object is
+        // exactly the one named array the loader was typed against.
+        load({ [name]: keys } as TemplateDepKeys<typeof kind>, ctx);
       registry.templateDeps.set(kind, {
         kind,
         load: erased,

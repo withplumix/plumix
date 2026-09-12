@@ -15,6 +15,7 @@ import {
   entryFactory,
   entryTermFactory,
   factoriesFor,
+  plumixRequest,
 } from "plumix/test";
 import { defineTemplate, defineTheme } from "plumix/theme";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -89,19 +90,32 @@ async function seedMenuItem(
   return entry.id;
 }
 
+async function assign(
+  b: TestBundle,
+  location: string,
+  termSlug: string,
+): Promise<void> {
+  await b.factories.setting.create({
+    group: "menu_locations",
+    key: location,
+    value: termSlug,
+  });
+}
+
 describe("@plumix/plugin-menu — menus template dep loader", () => {
   let b: TestBundle;
   beforeEach(async () => {
     b = await bundle();
   });
 
-  test("resolves a single declared slug", async () => {
+  test("resolves a declared location through its assignment", async () => {
     const term = await b.factories.term.create({
       taxonomy: "menu",
-      slug: "primary",
+      slug: "main-nav",
       name: "Primary nav",
     });
     await seedMenuItem(b, term.id, "Home", { kind: "custom", url: "/" });
+    await assign(b, "primary", "main-nav");
 
     const result = await b.load(["primary"], b.ctx);
     const primary = result.primary as ResolvedMenu | null;
@@ -109,42 +123,50 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
     expect(primary?.items.map((i) => i.label)).toEqual(["Home"]);
   });
 
-  test("batches multiple declared slugs in one loader call", async () => {
-    const primary = await b.factories.term.create({
+  test("batches multiple declared locations in one loader call", async () => {
+    const main = await b.factories.term.create({
       taxonomy: "menu",
-      slug: "primary",
+      slug: "main-nav",
       name: "Primary",
     });
-    const footer = await b.factories.term.create({
+    const legal = await b.factories.term.create({
       taxonomy: "menu",
-      slug: "footer",
+      slug: "legal",
       name: "Footer",
     });
-    await seedMenuItem(b, primary.id, "Home", { kind: "custom", url: "/" }, 0);
+    await seedMenuItem(b, main.id, "Home", { kind: "custom", url: "/" }, 0);
     await seedMenuItem(
       b,
-      footer.id,
+      legal.id,
       "Privacy",
       { kind: "custom", url: "/privacy" },
       0,
     );
+    await assign(b, "primary", "main-nav");
+    await assign(b, "footer", "legal");
 
     const result = await b.load(["primary", "footer"], b.ctx);
     expect((result.primary as ResolvedMenu | null)?.name).toBe("Primary");
     expect((result.footer as ResolvedMenu | null)?.name).toBe("Footer");
   });
 
-  test("returns null for a slug with no matching menu term", async () => {
-    const result = await b.load(["nope"], b.ctx);
-    expect(result.nope).toBeNull();
+  test("returns null for a location with no assignment", async () => {
+    await b.factories.term.create({
+      taxonomy: "menu",
+      slug: "primary",
+      name: "Primary",
+    });
+
+    const result = await b.load(["primary"], b.ctx);
+    expect(result.primary).toBeNull();
   });
 
-  test("query count stays flat as declared slugs grow", async () => {
-    for (const [index, slug] of ["primary", "footer", "aside"].entries()) {
+  test("query count stays flat as declared locations grow", async () => {
+    for (const [index, location] of ["primary", "footer", "aside"].entries()) {
       const term = await b.factories.term.create({
         taxonomy: "menu",
-        slug,
-        name: slug,
+        slug: `${location}-menu`,
+        name: location,
       });
       await seedMenuItem(
         b,
@@ -153,6 +175,7 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
         { kind: "custom", url: "/" },
         index,
       );
+      await assign(b, location, `${location}-menu`);
     }
 
     const select = vi.spyOn(b.ctx.db, "select");
@@ -167,7 +190,7 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
 });
 
 describe("@plumix/plugin-menu — end-to-end SSR", () => {
-  test("a template declaring `menus` renders the loaded menu", async () => {
+  test("a menu assigned to a location renders where a template declares that location", async () => {
     const blogPlugin = definePlugin("blog", (ctx) => {
       ctx.registerEntryType("post", {
         label: "Posts",
@@ -198,7 +221,10 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, menu()],
+      plugins: [
+        blogPlugin,
+        menu({ locations: { primary: { label: "Primary" } } }),
+      ],
       theme,
     });
     const author = await h.seedUser("admin");
@@ -213,7 +239,7 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
     });
     const term = await h.factory.term.create({
       taxonomy: "menu",
-      slug: "primary",
+      slug: "main-nav",
       name: "Primary nav",
     });
     const menuItem = await h.factory.entry.create({
@@ -222,7 +248,7 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       title: "Home",
       status: "published",
       authorId: author.id,
-      meta: { kind: "custom", url: "/" },
+      meta: { kind: "custom", url: "/main-nav" },
     });
     await h.factory.entryTerm.create({
       entryId: menuItem.id,
@@ -230,12 +256,26 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       sortOrder: 0,
     });
 
+    const assigned = await h.dispatch(
+      await h.authenticateRequest(
+        plumixRequest("/_plumix/rpc/menu/assignLocation", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            json: { location: "primary", termSlug: "main-nav" },
+          }),
+        }),
+        author.id,
+      ),
+    );
+    expect(assigned.status).toBe(200);
+
     const response = await h.dispatch(
       new Request("https://cms.example/post/menu-flow"),
     );
     expect(response.status).toBe(200);
     const body = await response.text();
-    expect(body).toContain('href="/"');
+    expect(body).toContain('href="/main-nav"');
     expect(body).toContain("Home");
   });
 });

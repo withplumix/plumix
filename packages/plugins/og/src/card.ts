@@ -15,6 +15,7 @@ import type {
   SearchData,
   TaxonomyData,
   TemplateData,
+  TemplateDepKey,
   TemplateDepRegistry,
   TemplateRenderArgs,
   TermTaxonomyName,
@@ -57,9 +58,7 @@ export type CardMode = "auto" | "card";
  * their theme declared would have nothing to extend.
  */
 type CardDeps = {
-  readonly [
-    K in keyof TemplateDepRegistry
-  ]?: readonly TemplateDepRegistry[K]["slug"][];
+  readonly [K in keyof TemplateDepRegistry]?: readonly TemplateDepKey<K>[];
 };
 
 export interface CardDefinition<TData extends TemplateData> extends CardDeps {

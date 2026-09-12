@@ -98,7 +98,7 @@ describe("createCommentsThreadLoader", () => {
     );
 
     const result = await load(
-      ["current"],
+      { slugs: ["current"] },
       ctxWith(db, { kind: "entry", id: entry.id }),
     );
 
@@ -112,7 +112,7 @@ describe("createCommentsThreadLoader", () => {
     const load = createCommentsThreadLoader(resolveConfig({}));
 
     const result = await load(
-      ["current"],
+      { slugs: ["current"] },
       ctxWith(db, { kind: "entry", id: entry.id }),
     );
 
@@ -126,7 +126,7 @@ describe("createCommentsThreadLoader", () => {
       resolveConfig({ entryTypes: ["post"] }),
     );
 
-    const result = await load(["current"], ctxWith(db, null));
+    const result = await load({ slugs: ["current"] }, ctxWith(db, null));
 
     expect(result.current).toBeUndefined();
   });
