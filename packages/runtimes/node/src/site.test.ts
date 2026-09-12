@@ -14,8 +14,17 @@ import {
 } from "plumix";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema, createTestDb } from "plumix/test";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  assert,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
+import type { NodeConfig } from "./adapter.js";
 import type { Scheduler } from "./scheduler.js";
 import type { NodeSite, ServeProcessOptions } from "./site.js";
 import { node } from "./adapter.js";
@@ -36,6 +45,9 @@ const theme = defineTheme({ templates: [fallback(() => null)] });
 
 const CRON = "*/5 * * * *";
 
+/** Where `connectScheduledDb` points the scheduler's own connection. */
+const SCHEDULED_PATH = "/_plumix/internal/scheduled";
+
 const failing = definePlugin("failing", (ctx) => {
   ctx.registerScheduledTask({
     id: "always-fails",
@@ -47,34 +59,66 @@ const failing = definePlugin("failing", (ctx) => {
 const quiet = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() });
 
 let dir: string;
+const servers: Server[] = [];
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "plumix-node-site-"));
   mkdirSync(join(dir, "server"));
   mkdirSync(join(dir, "client/assets"), { recursive: true });
+  // An ephemeral port, so nothing here can collide with a suite's fixed one.
+  vi.stubEnv("PORT", "0");
+  vi.stubEnv("HOST", "127.0.0.1");
 });
 
-afterEach(() => {
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+  // Nothing else in this worker registers these — vitest's own SIGINT handler
+  // lives in the CLI process — so this removes only what a test that failed
+  // before its drain left behind. Left in place, one would drain rather than
+  // exit when the pool terminates the worker.
+  process.removeAllListeners("SIGTERM");
+  process.removeAllListeners("SIGINT");
+  await Promise.all(
+    servers
+      .splice(0)
+      .map((server) => new Promise((shut) => server.close(shut))),
+  );
   rmSync(dir, { recursive: true, force: true });
 });
 
+interface SiteOptions {
+  readonly plugins?: PluginDescriptor[];
+  readonly runtime?: NodeConfig;
+}
+
 // The same shape `plumix build` emits: the entry in `dist/server`, the client
 // build beside it, which is how `entryUrl` resolves the assets directory.
-async function siteFor(plugins: PluginDescriptor[] = []): Promise<NodeSite> {
-  const database = nodeSqlite({ path: join(dir, "site.sqlite") });
+// `connected` records the path of every database connection the site opens.
+async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
+  const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
   await applyCoreTestSchema(
-    database.connect({}, new Request("https://cms.example/"), schema).db,
+    inner.connect({}, new Request("https://cms.example/"), schema).db,
   );
-  return createNodeSite({
-    config: plumix({ runtime: node(), database, auth, theme, plugins }),
+  const connected: string[] = [];
+  const database: typeof inner = {
+    ...inner,
+    connect: (env, request, tables) => {
+      connected.push(new URL(request.url).pathname);
+      return inner.connect(env, request, tables);
+    },
+  };
+  const site: NodeSite = createNodeSite({
+    config: plumix({ runtime: node(runtime), database, auth, theme, plugins }),
     assetManifest: {},
     entryUrl: pathToFileURL(join(dir, "server/worker.js")).href,
   });
+  return { site, connected };
 }
 
 describe("createNodeSite — scheduled", () => {
   test("answers with the run's report, so a failed task is not swallowed", async () => {
-    const site = await siteFor([failing]);
+    const { site } = await siteFor({ plugins: [failing] });
 
     const report = await site.handler.scheduled({
       cron: CRON,
@@ -89,7 +133,7 @@ describe("createNodeSite — scheduled", () => {
     // The whole chain the shipped cron path walks: firing → handler → report →
     // the one line that says the firing did not do its job. Dropping the
     // return anywhere along it leaves an operator with silence (#2303).
-    const site = await siteFor([failing]);
+    const { site } = await siteFor({ plugins: [failing] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
     const logger = quiet();
 
@@ -111,7 +155,7 @@ describe("createNodeSite — scheduled", () => {
 describe("createNodeSite — serve chain", () => {
   test("serves a built asset from disk ahead of the site", async () => {
     writeFileSync(join(dir, "client/assets/app.js"), "export const a = 1;\n");
-    const site = await siteFor();
+    const { site } = await siteFor();
 
     const { origin } = await listen(site.listener);
 
@@ -130,7 +174,7 @@ describe("createNodeSite — serve chain", () => {
       join(dir, "client/_plumix/admin/index.html"),
       "<!doctype html><title>admin</title>",
     );
-    const site = await siteFor();
+    const { site } = await siteFor();
 
     const response = await site.handler.fetch(
       new Request("https://cms.example/_plumix/admin/entries/new"),
@@ -143,39 +187,57 @@ describe("createNodeSite — serve chain", () => {
 
 describe("createNodeSite — serveWhenMain", () => {
   test("starts nothing when the entry was imported rather than run", async () => {
-    const site = await siteFor();
+    const { site } = await siteFor();
     const before = process.listenerCount("SIGTERM");
 
-    site.serveWhenMain(false);
+    expect(site.serveWhenMain(false)).toBeUndefined();
 
     expect(process.listenerCount("SIGTERM")).toBe(before);
   });
+
+  test.each([
+    { cron: undefined, starts: true },
+    { cron: false, starts: false },
+  ])(
+    "honours the runtime's `cron: $cron`, and drains through the site's own dispose",
+    async ({ cron, starts }) => {
+      // The only thing between the config and the process: `cron !== false`.
+      const exit = vi
+        .spyOn(process, "exit")
+        .mockImplementation(() => undefined as never);
+      const { site, connected } = await siteFor({ runtime: { cron } });
+
+      const running = site.serveWhenMain(true);
+      assert(running);
+      servers.push(running.server);
+      // `startCron` waits on the same `buildApp` a request does and registered
+      // first, so once a request is answered the scheduler has opened its
+      // connection or never will.
+      await site.handler.fetch(new Request("https://cms.example/"));
+
+      expect(connected.includes(SCHEDULED_PATH)).toBe(starts);
+      await running.drain("SIGTERM");
+      expect(exit).toHaveBeenCalledWith(0);
+    },
+  );
 });
 
 describe("serveProcess", () => {
   const noop: ServeProcessOptions["listener"] = (_req, res) => res.end();
-  const servers: Server[] = [];
 
   function harness(overrides: Partial<ServeProcessOptions> = {}) {
     const exit = vi.fn();
-    const dispose = vi.fn(() => Promise.resolve({ abandoned: 0 }));
     const startCron = vi.fn(() => Promise.resolve(stubScheduler()));
-    const process_ = serveProcess({
+    const running = serveProcess({
       listener: noop,
       cron: true,
       startCron,
-      dispose,
+      dispose: () => Promise.resolve({ abandoned: 0 }),
       exit,
       ...overrides,
     });
-    servers.push(process_.server);
-    return {
-      exit,
-      dispose,
-      startCron,
-      drain: process_.drain,
-      server: process_.server,
-    };
+    servers.push(running.server);
+    return { exit, startCron, drain: running.drain, server: running.server };
   }
 
   async function bound(server: Server): Promise<AddressInfo> {
@@ -191,30 +253,6 @@ describe("serveProcess", () => {
       stop: vi.fn(() => Promise.resolve()),
     };
   }
-
-  beforeEach(() => {
-    // An ephemeral port, so nothing here can collide with a suite's fixed one.
-    /* eslint-disable turbo/no-undeclared-env-vars -- what the built site reads when it runs, which is what this drives */
-    process.env.PORT = "0";
-    process.env.HOST = "127.0.0.1";
-    /* eslint-enable turbo/no-undeclared-env-vars */
-  });
-
-  afterEach(async () => {
-    /* eslint-disable turbo/no-undeclared-env-vars -- restoring what beforeEach set */
-    delete process.env.PORT;
-    delete process.env.HOST;
-    /* eslint-enable turbo/no-undeclared-env-vars */
-    // A test that fails before its drain leaves both behind, and the drain is
-    // what would have removed them.
-    process.removeAllListeners("SIGTERM");
-    process.removeAllListeners("SIGINT");
-    await Promise.all(
-      servers
-        .splice(0)
-        .map((server) => new Promise((shut) => server.close(shut))),
-    );
-  });
 
   test("cron: false hands the schedules to an external scheduler", async () => {
     const { startCron, drain } = harness({ cron: false });

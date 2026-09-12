@@ -29,6 +29,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "export default site.handler;",
     "export const listener = site.listener;",
     "export const startCron = site.startCron;",
+    "export const dispose = site.dispose;",
     "",
     // Only when run directly: an `http` server in front of the serve chain.
     // Imported to be embedded, this starts nothing.

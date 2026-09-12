@@ -95,7 +95,7 @@ export interface NodeSite {
    * says this module is the process's entry point. A no-op otherwise, so
    * importing the entry to embed it serves nothing.
    */
-  readonly serveWhenMain: (main: boolean) => void;
+  readonly serveWhenMain: (main: boolean) => ServingProcess | undefined;
 }
 
 /**
@@ -112,9 +112,6 @@ export function createNodeSite({
   assetManifest,
   entryUrl,
 }: NodeSiteOptions): NodeSite {
-  // Read once, at start. The assets directory is named on it so the handler
-  // serves `dist/client` beside the entry, the way Cloudflare's handler reads
-  // `env.ASSETS`.
   const assetsDir = resolve(dirname(fileURLToPath(entryUrl)), "../client");
   const env: PlumixEnv = { ...process.env, [ASSETS_DIR_ENV]: assetsDir };
   const nodeConfig: NodeConfig = isNodeRuntime(config.runtime)
@@ -193,16 +190,21 @@ export function createNodeSite({
     startCron,
     dispose,
     serveWhenMain(main) {
-      if (!main) return;
-      serveProcess({ listener, startCron, dispose, cron: cron !== false });
+      if (!main) return undefined;
+      return serveProcess({
+        listener,
+        startCron,
+        dispose,
+        cron: cron !== false,
+      });
     },
   };
 }
 
-export interface ServeProcessOptions {
-  readonly listener: RequestListener;
-  readonly startCron: () => Promise<Scheduler>;
-  readonly dispose: (options?: DisposeOptions) => Promise<DisposeResult>;
+export interface ServeProcessOptions extends Pick<
+  NodeSite,
+  "listener" | "startCron" | "dispose"
+> {
   /** `cron: false` hands the schedules to an external scheduler instead. */
   readonly cron: boolean;
   /** Test seam: what ends the process, so a drain can be driven without one. */
@@ -259,10 +261,8 @@ export function serveProcess({
     );
   }
 
-  // Stop accepting; in-flight responses get the deadline first, then the
-  // deferred work they leave behind gets what remains; whatever is still open
-  // is cut. Both listeners come off, so a second signal of either kind falls
-  // to Node's default and exits at once.
+  // Both listeners come off, so a second signal of either kind falls to
+  // Node's default and exits at once.
   const drain = async (signal: NodeJS.Signals): Promise<void> => {
     process.off("SIGTERM", shutdown);
     process.off("SIGINT", shutdown);
@@ -280,15 +280,16 @@ export function serveProcess({
     await scheduler?.stop({ timeoutMs: remainingMs(deadline) });
     const finished = await Promise.race([
       closed,
-      // Unref'd: a drain that has already lost its race must not be what keeps
-      // the process alive, the way the scheduler's own tick is not.
+      // Unref'd: when `closed` wins, this timer outlives the race, and a
+      // pending tick must not be what keeps the process alive — the same
+      // reason the scheduler unrefs its own.
       sleep(remainingMs(deadline), false, { ref: false }),
     ]);
     const { abandoned } = await dispose({ timeoutMs: remainingMs(deadline) });
     server.closeAllConnections();
     if (!finished) {
       console.error(
-        `plumix: exiting with in-flight responses cut after ${String(drainDeadlineMs)}ms`,
+        `plumix: exiting with in-flight responses cut; the ${String(drainDeadlineMs)}ms shutdown budget ran out`,
       );
     }
     if (abandoned > 0) {
@@ -304,7 +305,6 @@ export function serveProcess({
   return { drain, server };
 }
 
-/** What is left of the shutdown's one deadline. */
 function remainingMs(deadline: number): number {
   return Math.max(0, deadline - Date.now());
 }
