@@ -26,7 +26,7 @@ import {
 
 import type { NodeConfig } from "./adapter.js";
 import type { Scheduler } from "./scheduler.js";
-import type { NodeSite, ServeProcessOptions } from "./site.js";
+import type { ServeProcessOptions } from "./site.js";
 import { node } from "./adapter.js";
 import { listen } from "./http/test-support.js";
 import { nodeSqlite } from "./node-sqlite.js";
@@ -45,7 +45,7 @@ const theme = defineTheme({ templates: [fallback(() => null)] });
 
 const CRON = "*/5 * * * *";
 
-/** Where `connectScheduledDb` points the scheduler's own connection. */
+// `connectScheduledDb`'s request path, which core does not export.
 const SCHEDULED_PATH = "/_plumix/internal/scheduled";
 
 const failing = definePlugin("failing", (ctx) => {
@@ -73,10 +73,9 @@ beforeEach(() => {
 afterEach(async () => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
-  // Nothing else in this worker registers these — vitest's own SIGINT handler
-  // lives in the CLI process — so this removes only what a test that failed
-  // before its drain left behind. Left in place, one would drain rather than
-  // exit when the pool terminates the worker.
+  // A test that failed before its drain leaves these behind; left in place,
+  // one would drain rather than exit when the pool terminates the worker.
+  // Nothing else in this worker registers them.
   process.removeAllListeners("SIGTERM");
   process.removeAllListeners("SIGINT");
   await Promise.all(
@@ -94,26 +93,35 @@ interface SiteOptions {
 
 // The same shape `plumix build` emits: the entry in `dist/server`, the client
 // build beside it, which is how `entryUrl` resolves the assets directory.
-// `connected` records the path of every database connection the site opens.
+// Records the path of each connection the site opens, and of each it closes.
 async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
   const inner = nodeSqlite({ path: join(dir, "site.sqlite") });
   await applyCoreTestSchema(
     inner.connect({}, new Request("https://cms.example/"), schema).db,
   );
   const connected: string[] = [];
+  const closed: string[] = [];
   const database: typeof inner = {
     ...inner,
     connect: (env, request, tables) => {
-      connected.push(new URL(request.url).pathname);
-      return inner.connect(env, request, tables);
+      const path = new URL(request.url).pathname;
+      connected.push(path);
+      const connection = inner.connect(env, request, tables);
+      return {
+        ...connection,
+        close: () => {
+          closed.push(path);
+          connection.close();
+        },
+      };
     },
   };
-  const site: NodeSite = createNodeSite({
+  const site = createNodeSite({
     config: plumix({ runtime: node(runtime), database, auth, theme, plugins }),
     assetManifest: {},
     entryUrl: pathToFileURL(join(dir, "server/worker.js")).href,
   });
-  return { site, connected };
+  return { site, connected, closed };
 }
 
 describe("createNodeSite — scheduled", () => {
@@ -195,17 +203,23 @@ describe("createNodeSite — serveWhenMain", () => {
     expect(process.listenerCount("SIGTERM")).toBe(before);
   });
 
-  test.each([
+  test.for([
     { cron: undefined, starts: true },
     { cron: false, starts: false },
   ])(
     "honours the runtime's `cron: $cron`, and drains through the site's own dispose",
-    async ({ cron, starts }) => {
-      // The only thing between the config and the process: `cron !== false`.
+    async ({ cron, starts }, { signal }) => {
+      // A body that outlives its timeout keeps running after `afterEach` has
+      // cleaned up and restored `process.exit`: it must neither start serving
+      // behind that cleanup nor drain, which would exit the worker.
+      // Read through a call: TypeScript narrows `signal.aborted` after the
+      // first check and does not widen it across the await before the second.
+      const timedOut = (): boolean => signal.aborted;
       const exit = vi
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
-      const { site, connected } = await siteFor({ runtime: { cron } });
+      const { site, connected, closed } = await siteFor({ runtime: { cron } });
+      if (timedOut()) return;
 
       const running = site.serveWhenMain(true);
       assert(running);
@@ -214,10 +228,14 @@ describe("createNodeSite — serveWhenMain", () => {
       // first, so once a request is answered the scheduler has opened its
       // connection or never will.
       await site.handler.fetch(new Request("https://cms.example/"));
+      if (timedOut()) return;
 
       expect(connected.includes(SCHEDULED_PATH)).toBe(starts);
       await running.drain("SIGTERM");
       expect(exit).toHaveBeenCalledWith(0);
+      // The site's own dispose releases the connection that request bound; a
+      // stand-in resolving `{ abandoned: 0 }` would leave it open.
+      expect(closed).toContain("/");
     },
   );
 });
@@ -237,7 +255,7 @@ describe("serveProcess", () => {
       ...overrides,
     });
     servers.push(running.server);
-    return { exit, startCron, drain: running.drain, server: running.server };
+    return { exit, startCron, ...running };
   }
 
   async function bound(server: Server): Promise<AddressInfo> {
