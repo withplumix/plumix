@@ -36,7 +36,21 @@ export default plumix({
 
 ## Rendering in a theme
 
-The `/server` entry resolves menus for your theme without pulling in admin code:
+Declare the locations a template renders. Each resolves to the menu assigned to it in the admin, or `null` when none is:
+
+```tsx
+import { defineTemplate } from "plumix/theme";
+
+// Importing from `/server` is what types `menus` on the template.
+import type { ResolvedMenu } from "@plumix/plugin-menu/server";
+
+export default defineTemplate({
+  menus: ["primary", "footer"],
+  render: ({ menus }) => <Header menu={menus?.primary} />,
+});
+```
+
+The `/server` entry also resolves menus directly, without pulling in admin code:
 
 ```ts
 import { getMenuForLocation } from "@plumix/plugin-menu/server";

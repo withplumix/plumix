@@ -14,19 +14,23 @@ const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 
 /**
  * Augmentable registry of template-level dep slots. Plugins register
- * loaders via `ctx.registerTemplateDep(kind, { load })` and themes
- * declare what they need via `defineTemplate({ [kind]: slugs[], ... })`.
+ * loaders via `ctx.registerTemplateDep(kind, { keyedBy, load })` and
+ * themes declare what they need via `defineTemplate({ [kind]: keys[] })`.
  * The framework loads each declared dep in parallel per request and
  * passes results into render.
  *
- * Each entry shape: `{ slug: string; result: ResultType }`. A plugin
- * registers its kind via declaration merging (`core` registers `settings`
- * the same way):
+ * Each entry names what its keys identify: `{ slug: string; result }`
+ * when a key is looked up as-is, `{ location: string; result }` when a
+ * key names a slot resolved through a stored assignment. Both are plain
+ * strings to a theme, so the field is the only place the difference is
+ * written down — the loader receives its keys under that name, and a
+ * loader reading the wrong one does not compile. A plugin registers its
+ * kind via declaration merging (`core` registers `settings` the same way):
  *
  * ```ts
  * declare module "plumix" {
  *   interface TemplateDepRegistry {
- *     menu: { slug: string; result: ResolvedMenu };
+ *     menus: { location: string; result: ResolvedMenu };
  *   }
  * }
  * ```
@@ -34,25 +38,32 @@ const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface TemplateDepRegistry {}
 
+type TemplateDepKeyField = "slug" | "location";
+
+/** The key field kind `K`'s registry entry declares. */
+export type TemplateDepKeyedBy<K extends keyof TemplateDepRegistry> =
+  keyof TemplateDepRegistry[K] & TemplateDepKeyField;
+
+export type TemplateDepKey<K extends keyof TemplateDepRegistry> =
+  TemplateDepRegistry[K][TemplateDepKeyedBy<K>];
+
 /**
  * Per-kind declarations on a theme or template. An array replaces the
  * inherited value (override); a function `(prev) => next` receives the
- * theme's slugs and returns the composed set (extend / filter); an
+ * theme's keys and returns the composed set (extend / filter); an
  * empty array disables the dep for that template; an omitted kind
  * inherits unchanged.
  */
 export type TemplateDepDeclarations = {
   readonly [K in keyof TemplateDepRegistry]?:
-    | readonly TemplateDepRegistry[K]["slug"][]
-    | ((
-        prev: readonly TemplateDepRegistry[K]["slug"][],
-      ) => readonly TemplateDepRegistry[K]["slug"][]);
+    | readonly TemplateDepKey<K>[]
+    | ((prev: readonly TemplateDepKey<K>[]) => readonly TemplateDepKey<K>[]);
 };
 
 /**
- * Per-kind results threaded into the render function. Keyed by slug,
- * `null` when the loader didn't return a value for that slug (or
- * threw — see `template_dep_load_failed` log).
+ * Per-kind results threaded into the render function. Keyed by the
+ * declared key, `null` when the loader didn't return a value for that
+ * key (or threw — see `template_dep_load_failed` log).
  */
 type TemplateDepResults = {
   readonly [K in keyof TemplateDepRegistry]?: Readonly<
@@ -115,7 +126,7 @@ export function defineTemplate<TData extends TemplateData = TemplateData>(
 ): Template<TData> {
   // Copy every config key onto the template object. That preserves
   // any declared dep kinds (`settings`, `menus`, ...) which live as
-  // top-level slug arrays — the framework's per-request dispatch
+  // top-level key arrays — the framework's per-request dispatch
   // reads `template[kind]` to know which loaders to fire. `render` +
   // `document` come along the same way. The brand is spelled in the
   // literal so the object satisfies `Template` on its own terms.

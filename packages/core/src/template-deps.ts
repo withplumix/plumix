@@ -1,24 +1,36 @@
 import type { AppContext } from "./context/app.js";
 import type {
   TemplateDepDeclarations,
+  TemplateDepKeyedBy,
   TemplateDepRegistry,
 } from "./template.js";
 
 /**
- * Loader signature for a template dep. Receives the slugs declared by
- * every template using this kind on the current request (deduped +
- * batched) and the per-request `AppContext`. Returns a record keyed by
- * slug. Slugs not present in the returned record render as `null` in
- * the deps passed to the template's render function.
+ * The declared keys, named after the field the kind's registry entry keys
+ * by: `{ slugs }` for a slug-keyed kind, `{ locations }` for a
+ * location-keyed one.
+ */
+export type TemplateDepKeys<TKind extends keyof TemplateDepRegistry> = {
+  readonly [
+    F in TemplateDepKeyedBy<TKind> as `${F}s`
+  ]: readonly TemplateDepRegistry[TKind][F][];
+};
+
+/**
+ * Loader signature for a template dep. Receives the keys declared by
+ * the picked template for this kind on the current request and the
+ * per-request `AppContext`. Returns a record keyed by those keys; keys
+ * not present in it render as `null` in the deps passed to the
+ * template's render function.
  */
 export type TemplateDepLoader<TKind extends keyof TemplateDepRegistry> = (
-  slugs: readonly TemplateDepRegistry[TKind]["slug"][],
+  keys: TemplateDepKeys<TKind>,
   ctx: AppContext,
 ) => Promise<Record<string, TemplateDepRegistry[TKind]["result"] | null>>;
 
 /**
- * What one dep kind resolves to for the slugs a request asked for, keyed by
- * slug. Not JSON: a loader returns whatever its kind is about — a menu tree, a
+ * What one dep kind resolves to for the keys a request asked for, keyed by
+ * key. Not JSON: a loader returns whatever its kind is about — a menu tree, a
  * settings bag, a queried row — and the value reaches the template untouched.
  */
 type DepResults = Record<string, unknown>;
@@ -40,7 +52,7 @@ export type DepDeclarations = Readonly<Record<string, unknown>>;
 // been augmented with yet (e.g. early plugin boot before module
 // augmentation merges).
 type UntypedTemplateDepLoader = (
-  slugs: readonly string[],
+  keys: readonly string[],
   ctx: AppContext,
 ) => Promise<DepResults>;
 

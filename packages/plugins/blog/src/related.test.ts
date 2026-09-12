@@ -165,12 +165,14 @@ describe("createRelatedPostsLoader", () => {
     await make(new Date(2000));
     ctx.resolvedEntity = { kind: "entry", id: current.id };
 
-    const capped = await run(() => createRelatedPostsLoader(2)(["strip"], ctx));
+    const capped = await run(() =>
+      createRelatedPostsLoader(2)({ slugs: ["strip"] }, ctx),
+    );
     expect(capped.strip).toHaveLength(2);
 
     // No `limit` in the options ⇒ the loader's own default of three.
     const defaulted = await run(() =>
-      createRelatedPostsLoader(undefined)(["strip"], ctx),
+      createRelatedPostsLoader(undefined)({ slugs: ["strip"] }, ctx),
     );
     expect(defaulted.strip).toHaveLength(3);
   });
