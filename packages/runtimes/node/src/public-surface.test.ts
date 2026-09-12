@@ -12,6 +12,7 @@ test("the barrel publishes only what has a consumer outside this package", () =>
   ).toEqual([
     "createAssetsLayer",
     "createImageLayer",
+    "createNodeSite",
     "createRequestListener",
     "diskStorage",
     "images",

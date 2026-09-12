@@ -56,6 +56,10 @@ export default plumix({
 });
 ```
 
+### `createNodeSite({ config, assetManifest, entryUrl })`
+
+What the generated entry calls, and everything it does beyond importing. `handler` is the portable `{ fetch, scheduled }` pair — `scheduled` answers with the run's report, which is what says a task failed. `listener` is the serve chain described above. `startCron(overrides)` starts the schedules and hands back a handle whose `stop()` waits for the firing in flight. `dispose(options)` drains the deferred work no invocation carried away and releases the handler's database connection — a host embedding `listener` owes the site this on its own shutdown. `serveWhenMain(main)` runs the site as a process — the `http` server, cron unless `cron: false`, and the shutdown protocol — and does nothing when `main` is false, so importing the entry to embed it serves nothing. The generated entry holds imports and calls only: orchestration lives here, where a compiler and a test can reach it.
+
 ### `createRequestListener(handle, { trustProxy, bodySizeLimit })`
 
 The `node:http` bridge the production entry and the dev server share. Each request becomes a `Request` with a streamed body, an `AbortSignal` that fires when the client disconnects, and a URL built from the socket's scheme and the `Host` header (the bound port fills in when `Host` is absent). Forwarding headers are ignored unless `trustProxy` is on; then `x-forwarded-proto`, `x-forwarded-host` and the rightmost `x-forwarded-for` entry win, and the handler receives that address. A body over `bodySizeLimit` (1 GiB by default) fails when the handler consumes it. A path `decodeURI` rejects, a `Host` the URL parser refuses, or a method `fetch` forbids answers 400; a body the handler leaves unread is drained after the response so the connection stays usable.
