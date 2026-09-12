@@ -56,7 +56,7 @@ describe("session lifecycle", () => {
     expect(session.id).not.toBe(token);
     expect(session.id).toBe(await hashToken(token));
 
-    const validated = await validateSession(db, token);
+    const validated = await validateSession(db, token, DEFAULT_SESSION_POLICY);
     expect(validated?.user.id).toBe(user.id);
   });
 
@@ -65,7 +65,9 @@ describe("session lifecycle", () => {
     const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token } = await createSession(db, { userId: user.id });
     const tampered = token.slice(0, -1) + (token.endsWith("a") ? "b" : "a");
-    expect(await validateSession(db, tampered)).toBeNull();
+    expect(
+      await validateSession(db, tampered, DEFAULT_SESSION_POLICY),
+    ).toBeNull();
   });
 
   test("expired session is rejected and the row is purged", async () => {
@@ -124,7 +126,7 @@ describe("session lifecycle", () => {
       .update(users)
       .set({ disabledAt: new Date() })
       .where(eq(users.id, user.id));
-    expect(await validateSession(db, token)).toBeNull();
+    expect(await validateSession(db, token, DEFAULT_SESSION_POLICY)).toBeNull();
   });
 
   test("invalidateSession deletes by hash so the token stops working", async () => {
@@ -132,6 +134,6 @@ describe("session lifecycle", () => {
     const user = await userFactory.transient({ db }).create({ role: "admin" });
     const { token } = await createSession(db, { userId: user.id });
     await invalidateSession(db, token);
-    expect(await validateSession(db, token)).toBeNull();
+    expect(await validateSession(db, token, DEFAULT_SESSION_POLICY)).toBeNull();
   });
 });

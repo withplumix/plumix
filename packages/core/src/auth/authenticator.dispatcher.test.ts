@@ -4,8 +4,37 @@ import type { RequestAuthenticator } from "./authenticator.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { createApiToken } from "./api-tokens.js";
+import { SESSION_COOKIE_NAME } from "./cookies.js";
+import { generateToken, hashToken } from "./tokens.js";
 
 describe("RequestAuthenticator — dispatcher integration", () => {
+  test("configured auth.sessions caps session lifetime through the authenticator", async () => {
+    const h = await createDispatcherHarness({
+      sessions: {
+        maxAgeSeconds: 30,
+        absoluteMaxAgeSeconds: 60,
+        refreshThreshold: 0.5,
+      },
+    });
+    const user = await h.factory.user.create({ role: "editor" });
+    const token = generateToken();
+    // Past the configured 60s cap, well inside the default 90-day one.
+    await h.factory.session.create({
+      id: await hashToken(token),
+      userId: user.id,
+      createdAt: new Date(Date.now() - 120_000),
+      expiresAt: new Date(Date.now() + 3_600_000),
+    });
+
+    const result = await h.app.authenticator.authenticate(
+      new Request("https://cms.example/", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+      }),
+      h.db,
+    );
+    expect(result).toBeNull();
+  });
+
   test("default (session cookie) gates plugin authed routes", async () => {
     // Smoke: with no override and no session cookie, an authed RPC
     // call returns UNAUTHORIZED. This is the existing behaviour

@@ -5,6 +5,8 @@ import { credentials } from "../db/schema/credentials.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { makeMailer } from "../test/mailer.js";
 import { createRpcHarness } from "../test/rpc.js";
+import { SESSION_COOKIE_NAME } from "./cookies.js";
+import { generateToken, hashToken } from "./tokens.js";
 
 // Pins hook emissions across the auth surface so an audit-log plugin
 // can subscribe and capture every state-change without us touching
@@ -232,6 +234,34 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     spy.assertCalledOnce();
     const [user] = spy.lastArgs ?? [];
     expect(user?.id).toBe(seeded.id);
+  });
+
+  test("user:signed_out is silent for a session past the configured cap", async () => {
+    const h = await createDispatcherHarness({
+      sessions: {
+        maxAgeSeconds: 30,
+        absoluteMaxAgeSeconds: 60,
+        refreshThreshold: 0.5,
+      },
+    });
+    const seeded = await h.factory.user.create({ role: "editor" });
+    const spy = h.spyAction("user:signed_out");
+    const token = generateToken();
+    await h.factory.session.create({
+      id: await hashToken(token),
+      userId: seeded.id,
+      createdAt: new Date(Date.now() - 120_000),
+      expiresAt: new Date(Date.now() + 3_600_000),
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", {
+        method: "POST",
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+      }),
+    );
+    expect(response.status).toBe(200);
+    spy.assertNotCalled();
   });
 
   test("user:signed_out is silent when there's no session cookie", async () => {

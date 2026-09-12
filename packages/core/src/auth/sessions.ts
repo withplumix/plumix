@@ -117,7 +117,7 @@ export async function createSession(
 export async function validateSession(
   db: Db,
   rawToken: string,
-  policy: SessionPolicy = DEFAULT_SESSION_POLICY,
+  policy: SessionPolicy,
 ): Promise<ValidatedSession | null> {
   if (!rawToken) return null;
 

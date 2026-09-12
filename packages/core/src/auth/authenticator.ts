@@ -1,8 +1,9 @@
 import type { AppContext, Db } from "../context/app.js";
 import type { User } from "../db/schema/users.js";
+import type { SessionPolicy } from "./sessions.js";
 import { validateApiToken } from "./api-tokens.js";
 import { readSessionCookie } from "./cookies.js";
-import { validateSession } from "./sessions.js";
+import { DEFAULT_SESSION_POLICY, validateSession } from "./sessions.js";
 
 /**
  * Resolved auth on a request — the user plus any authenticator-specific
@@ -91,13 +92,19 @@ export interface RequestAuthenticator {
  *
  * Returns no `tokenScopes` — a browser session inherits the full role
  * caps. PAT-style scoping doesn't apply here.
+ *
+ * Pass the same policy as `auth.sessions` when composing this yourself;
+ * the cookie's `Max-Age` follows that setting, so a mismatch here leaves
+ * the server enforcing a different lifetime than the browser.
  */
-export function sessionAuthenticator(): RequestAuthenticator {
+export function sessionAuthenticator(
+  policy: SessionPolicy = DEFAULT_SESSION_POLICY,
+): RequestAuthenticator {
   return {
     async authenticate(request, db) {
       const token = readSessionCookie(request);
       if (!token) return null;
-      const validated = await validateSession(db, token);
+      const validated = await validateSession(db, token, policy);
       if (!validated) return null;
       return { user: validated.user };
     },
@@ -218,6 +225,11 @@ export function chainAuthenticators(
  * intentional "no API tokens" path for ops who want to disable
  * bearer-auth at the runtime level.
  */
-export function defaultAuthenticator(): RequestAuthenticator {
-  return chainAuthenticators(sessionAuthenticator(), apiTokenAuthenticator());
+export function defaultAuthenticator(
+  policy: SessionPolicy = DEFAULT_SESSION_POLICY,
+): RequestAuthenticator {
+  return chainAuthenticators(
+    sessionAuthenticator(policy),
+    apiTokenAuthenticator(),
+  );
 }

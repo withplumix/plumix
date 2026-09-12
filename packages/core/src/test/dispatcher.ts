@@ -8,6 +8,7 @@ import type {
 } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
+import type { SessionPolicy } from "../auth/sessions.js";
 import type {
   AnyPluginDescriptor,
   ApiConfig,
@@ -137,6 +138,8 @@ export interface CreateDispatcherHarnessOptions {
    * here; the dispatcher and RPC middleware both delegate to it.
    */
   readonly authenticator?: RequestAuthenticator;
+  /** Operator `auth.sessions` policy; omitted, the harness app runs the default. */
+  readonly sessions?: SessionPolicy;
   /**
    * Bootstrap-rail policy for tests exercising fresh-deploy signup
    * paths. `"first-method-wins"` opts the harness app into letting the
@@ -317,6 +320,7 @@ export async function createDispatcherHarness(
       oauth: options.oauth ? { providers: options.oauth } : undefined,
       magicLink: options.magicLink,
       authenticator: options.authenticator,
+      sessions: options.sessions,
       bootstrapVia: options.bootstrapVia,
       selfSignup: options.selfSignup,
     }),

@@ -159,7 +159,7 @@ const POST_AUTH_ROUTES = new Map<string, AuthFlowRoute>([
     "/_plumix/auth/device/token",
     (h) => (ctx) => h.handleDeviceTokenExchange(ctx),
   ],
-  ["/_plumix/auth/signout", (h) => (ctx) => h.handleSignout(ctx)],
+  ["/_plumix/auth/signout", (h) => h.handleSignout],
 ]);
 
 const MAGIC_LINK_VERIFY_PATH = "/_plumix/auth/magic-link/verify";
