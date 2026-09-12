@@ -92,6 +92,14 @@ updates:
       lingui:
         patterns:
           - "@lingui/*"
+      # Starlight compiles from source against whichever Sätteri copy Astro
+      # pulls in, so a version of either that the other has not caught up to
+      # stops the docs app type-checking — see apps/docs/README.md.
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+          - "starlight-*"
     ignore:
       # @types/node major version must match .nvmrc — bump manually with Node upgrades
       - dependency-name: "@types/node"

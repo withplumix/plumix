@@ -267,43 +267,43 @@ mistyped path cannot leave a roster unguarded.
 
 [#1860]: https://github.com/withplumix/plumix/issues/1860
 
-## Why `@astrojs/markdown-satteri` is capped below 0.3.7
+## Why Astro and Starlight move together
 
-`@astrojs/starlight` carries a `satteri: ^0.9.1` dependency of its own next to
-`@astrojs/markdown-satteri: ^0.3.5`. Those ranges agreed until
-`@astrojs/markdown-satteri@0.3.7` moved to `satteri@^0.10.3` on 19 August. With
-both live the tree holds two Sätteri copies, and they meet inside Starlight's
-own `integrations/markdown-plugins.ts` — which `pnpm typecheck` compiles from
-source, because Starlight ships TypeScript rather than declarations. The docs
-app then stops type-checking on a dependency it never imports: `error TS2345:
-Argument of type 'MdastPluginDefinition' is not assignable to parameter of type
-'MdastPluginEntry'`.
+Starlight depends on Sätteri directly, and so does Astro through
+`@astrojs/markdown-satteri`. Those two have to land on one copy. When they
+diverged, Starlight `0.41.x` shipped TypeScript rather than declarations, so
+`pnpm typecheck` compiled its `integrations/markdown-plugins.ts` alongside our
+own code and the docs app stopped type-checking on a dependency it never
+imports: `error TS2345: Argument of type 'MdastPluginDefinition' is not
+assignable to parameter of type 'MdastPluginEntry'`. Holding the tree to one
+copy took a root `pnpm.overrides` cap on `@astrojs/markdown-satteri` and an
+`astro` range pinned to a single patch, from 24 August until Starlight `0.42.0`
+adopted the Sätteri 0.10 APIs ([#1915][], [#1938][], [#1939][]).
 
-The root `pnpm.overrides` entry `"@astrojs/markdown-satteri": ">=0.3.1 <0.3.7"`
-is what holds the tree to one copy. Drop it and the typecheck breaks again.
-Neither neighbouring range substitutes for it, and neither is redundant.
-Lifting the `astro` cap alone leaves the typecheck green, but that cap governs
-something else — which `@astrojs/markdown-satteri` Astro itself declares, and
-it declares an exact version, `0.3.6` on `7.2.3` rising to `0.3.8` by `7.2.6`.
-The wider the gap between that and the override's window, the further the tree
-drifts from a pairing Astro ships. Starlight's `^0.41.5` floor is a third
-matter again: `0.41.4` and `0.41.5` fixed `docsSchema({ extend })` bugs with
-Zod enums and unions that the frontmatter schema needs.
+Both are gone, and so is the failure that used to catch a split: `0.42.0` ships
+`dist` alone, declarations rather than source, so nothing compiles Starlight's
+implementation any more. **Nothing enforces the one-copy invariant now.**
+`pnpm why -r satteri` reports it, and `.github/dependabot.yml` groups astro with
+`@astrojs/*` and `starlight-*` so bumps at least arrive together — but no gate
+checks the outcome. [#2318][] is open to restore one.
 
-Watch the override's own slack. Its window admits several versions, so pnpm
-keeps whichever it resolved first and `--frozen-lockfile` preserves that
-indefinitely — while no gate distinguishes the version Astro declares from one
-merely inside the window, because both compile. The tree sat a patch below
-Astro's declared `0.3.6` on exactly that footing until
-[#1939](https://github.com/withplumix/plumix/issues/1939).
+The join to watch is narrower than the group suggests. Astro pins
+`@astrojs/markdown-satteri` **exactly** — `astro@7.3.2` takes `0.4.1`, not
+`^0.4.1` — while Starlight declares `^0.4.0`. A split returns the day Astro
+moves to `0.5.x` before Starlight widens that caret, which is the same shape as
+the last one.
 
-Overriding `satteri` to `0.10.5` is the obvious inverse, and it is the wrong
-one: `0.10.5` sits outside the `satteri: ^0.9.1` Starlight declares, so
-Starlight would compile against a version its own manifest excludes. Capping
-`@astrojs/markdown-satteri` keeps Starlight's two ranges consistent with each
-other instead. That reverses once Starlight lands
-[withastro/starlight#4134](https://github.com/withastro/starlight/pull/4134),
-which moves it to the Sätteri 0.10 APIs and is unmerged as of 25 August;
-[withastro/astro#17766](https://github.com/withastro/astro/pull/17766), the
-Astro side, merged on 20 August. Nothing surfaces the fixing release
-automatically — `.github/dependabot.yml` has no astro or starlight group.
+## The `starlight-llms-txt` peer warning
+
+`starlight-llms-txt@0.11.0` depends on `@astrojs/mdx: ^7.0.0` where Starlight
+is on `^8.0.0`, so two copies of `@astrojs/mdx` resolve and pnpm warns that the
+older one's `@astrojs/markdown-satteri` peer is unmet. It uses one entry point,
+`@astrojs/mdx/server.js`, an MDX renderer that does not touch the
+markdown-satteri surface, and `llms.txt` builds correctly. Forcing it onto
+`8.x` would graft a major across a range its own manifest excludes, so the
+warning stands until upstream widens the range.
+
+[#1915]: https://github.com/withplumix/plumix/pull/1915
+[#1938]: https://github.com/withplumix/plumix/issues/1938
+[#1939]: https://github.com/withplumix/plumix/issues/1939
+[#2318]: https://github.com/withplumix/plumix/issues/2318
