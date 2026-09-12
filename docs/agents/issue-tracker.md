@@ -20,3 +20,14 @@ Create a GitHub issue.
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.
+
+## Ticket model label
+
+`to-tickets` proposes one `model:` label per ticket in its quiz step. `/ship` reads it when it
+spawns a subagent for that ticket. A ticket with no label runs on `opus`.
+
+| model    | Pick it when                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `sonnet` | Mechanical and compiler-driven: a rename, a lockstep bump, a docs edit with no rewrite. The criteria enumerate every change.       |
+| `opus`   | The default vertical slice, and anything spanning packages or surfaces, schema, auth, caching or the RPC contract.                 |
+| `fable`  | Design-heavy: a wide refactor or expand–contract sequence, security-sensitive code, or criteria that need architectural judgement. |

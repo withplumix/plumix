@@ -1,0 +1,20 @@
+{
+  "extraKnownMarketplaces": {
+    "sentry-skills": {
+      "source": {
+        "source": "github",
+        "repo": "getsentry/skills"
+      }
+    },
+    "mattpocock-skills": {
+      "source": {
+        "source": "github",
+        "repo": "mattpocock/skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "sentry-skills@sentry-skills": true,
+    "mattpocock-skills@mattpocock-skills": true
+  }
+}

@@ -18,7 +18,7 @@
   color: "1d76db"
   description: "packages/runtimes/cloudflare"
 - name: "pkg: runtime-node"
-  color: "1d76db"
+  color: "ededed"
   description: "packages/runtimes/node"
 - name: "pkg: plugin-blog"
   color: "1d76db"
@@ -42,16 +42,16 @@
 
 # Triage (mapped to the five canonical roles in docs/agents/triage-labels.md)
 - name: needs-triage
-  color: "fbca04"
+  color: "ededed"
   description: Maintainer needs to evaluate
 - name: needs-info
-  color: "fbca04"
+  color: "fef2c0"
   description: Waiting on reporter for more information
 - name: ready-for-agent
   color: "0e8a16"
   description: Fully specified, ready for an AFK agent
 - name: ready-for-human
-  color: "0e8a16"
+  color: "c2e0c6"
   description: Requires human implementation
 - name: wontfix
   color: "ffffff"
@@ -61,3 +61,85 @@
 - name: run-e2e
   color: "0e8a16"
   description: Triggers E2E tests in CI
+
+# Ship worker model (chosen by to-tickets, read by /ship; see docs/agents/issue-tracker.md)
+- name: "model: sonnet"
+  color: "5319e7"
+  description: Ship worker model
+- name: "model: opus"
+  color: "5319e7"
+  description: Ship worker model
+- name: "model: fable"
+  color: "5319e7"
+  description: Ship worker model
+
+# Live on GitHub, recorded here so labels.yml matches the repo
+- name: "app: demo"
+  color: "006b75"
+  description: "apps/demo"
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+- name: "github_actions"
+  color: "000000"
+  description: "Pull requests that update GitHub Actions code"
+- name: "javascript"
+  color: "168700"
+  description: "Pull requests that update javascript code"
+- name: "pkg: admin-editor"
+  color: "1d76db"
+  description: "packages/admin-editor"
+- name: "pkg: admin-ui"
+  color: "1d76db"
+  description: "packages/admin-ui"
+- name: "pkg: plugin-audit-log"
+  color: "1d76db"
+  description: "packages/plugins/audit-log"
+- name: "pkg: plugin-comments"
+  color: "1d76db"
+  description: "packages/plugins/comments"
+- name: "pkg: plugin-feeds"
+  color: "1d76db"
+  description: "packages/plugins/feeds"
+- name: "pkg: plugin-forms"
+  color: "1d76db"
+  description: "packages/plugins/forms"
+- name: "pkg: plugin-media"
+  color: "1d76db"
+  description: "packages/plugins/media"
+- name: "pkg: plugin-menu"
+  color: "1d76db"
+  description: "packages/plugins/menu"
+- name: "pkg: plugin-og"
+  color: "1d76db"
+  description: "packages/plugins/og"
+- name: "pkg: plugin-search"
+  color: "1d76db"
+  description: "packages/plugins/search"
+- name: "pkg: plugin-seo"
+  color: "1d76db"
+  description: "packages/plugins/seo"
+- name: "preview"
+  color: "0e8a16"
+  description: "Publish package previews to pkg.pr.new"
+- name: "wayfinder:grilling"
+  color: "fbca04"
+  description: "Wayfinder decision ticket: HITL grilling"
+- name: "wayfinder:map"
+  color: "5319e7"
+  description: "Wayfinder map (canonical route artifact)"
+- name: "wayfinder:prototype"
+  color: "1d76db"
+  description: "Wayfinder decision ticket: HITL prototype"
+- name: "wayfinder:research"
+  color: "0e8a16"
+  description: "Wayfinder decision ticket: AFK research"
+- name: "wayfinder:task"
+  color: "d93f0b"
+  description: "Wayfinder decision ticket: unblocking task"
