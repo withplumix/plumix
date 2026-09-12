@@ -34,25 +34,24 @@ export async function findRelatedEntries(
   currentId: number,
   limit: number,
 ): Promise<readonly Entry[]> {
-  const [selfType, termRows] = await Promise.all([
-    readEntryType(ctx, currentId),
-    ctx.db
-      .select({ termId: entryTerm.termId })
-      .from(entryTerm)
-      .where(eq(entryTerm.entryId, currentId)),
-  ]);
+  const selfType = await readEntryType(ctx, currentId);
   if (selfType === null) return [];
-  const termIds = termRows.map((r) => r.termId);
-  if (termIds.length === 0) return [];
 
-  const siblingRows = await ctx.db
-    .selectDistinct({ id: entryTerm.entryId })
+  // Terms and siblings stay subqueries: materialising either as an id list
+  // binds one parameter per id, and D1 caps a statement at 100.
+  const currentTermIds = ctx.db
+    .select({ termId: entryTerm.termId })
+    .from(entryTerm)
+    .where(eq(entryTerm.entryId, currentId));
+  const siblingIds = ctx.db
+    .select({ id: entryTerm.entryId })
     .from(entryTerm)
     .where(
-      and(inArray(entryTerm.termId, termIds), ne(entryTerm.entryId, currentId)),
+      and(
+        inArray(entryTerm.termId, currentTermIds),
+        ne(entryTerm.entryId, currentId),
+      ),
     );
-  const siblingIds = siblingRows.map((r) => r.id);
-  if (siblingIds.length === 0) return [];
 
   // Scope to the current entry's type. The write path doesn't enforce that a
   // term's entry matches the taxonomy's `entryTypes`, so — like core's
