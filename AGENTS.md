@@ -13,6 +13,10 @@ Request-path code in core, the plugins and the shared packages runs on Cloudflar
 - **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red — one RED→GREEN cycle at a time, never all-tests-then-all-impl.
 - **Stay in scope.** One PR per issue; no drive-by refactors, bulk cleanups, or unrelated edits. Serialize dependent PRs — ship, merge, rebase, then start the next.
 - **Localize user-facing strings.** Everything a user reads — JSX text, `aria`/`title`/`alt`, toasts, block metadata — goes through Lingui descriptors (`useLabel`), never hardcoded English.
+- **Investigate before building.** When a change is consumed in more than one place (server, admin, editor, a second bundle), find out how each consumer gets it today before you design. Say what you verified and where you stopped. Resolving a path is not a working render.
+- **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for. Comments say why, never what.
+- **Extend existing suites.** Put a new test in the suite that already covers the area rather than adding a second harness. Seed through the fishery factories, not raw writes. A spy that shares the code's own assumption cannot fail, so assert on what the code did, not on what it called.
+- **Batch by default.** One `WHERE id IN (...)` on the server, one query on the client. No N+1.
 
 ## Commands
 
@@ -235,7 +239,8 @@ Wired in every test-having package (`pnpm exec vitest run --coverage`). Tracked,
 - Use `refactor`, not `ref` — `ref` isn't in the allowed type-enum.
 - **Subject must start lowercase.** Rephrase to start with a lowercase verb if you'd otherwise lead with `CI`, `API`, `OAuth`, etc.
 - **Wrap commit body lines at ≤100 chars** — footer-max-line-length inherits from config-conventional even though body-max-line-length is disabled.
-- Never put "claude" in a branch name or commit message.
+- Branch names are `<type>/<short-desc>`. Never "claude" in a branch name or PR title. Commit and PR bodies carry the `Co-Authored-By` trailer.
+- Write `Fixes #N` only after `gh issue view N` shows a title that matches the work. A branch or worktree name is not a source for N. Use `Refs #N` when the issue stays open.
 - All PRs are squash-merged.
 
 ## Releases (changesets)
