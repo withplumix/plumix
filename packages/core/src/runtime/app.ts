@@ -398,7 +398,9 @@ export async function buildApp(
       }))
     : [];
   const authMethods = resolveAuthMethods(config.auth, oauthProviders);
-  const authenticator = config.auth.authenticator ?? defaultAuthenticator();
+  const sessionPolicy = config.auth.sessions ?? DEFAULT_SESSION_POLICY;
+  const authenticator =
+    config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
   // Aggregate `@plumix/blocks` core specs + plugin + theme contributions into
@@ -479,7 +481,7 @@ export async function buildApp(
     devCsrfLocalhost:
       runtime.devCsrfLocalhost ?? process.env.PLUMIX_DEV === "1",
     passkey,
-    sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
+    sessionPolicy,
     authenticator,
     bootstrapAllowed,
     oauthProviders,

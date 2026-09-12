@@ -161,7 +161,7 @@ export async function handlePasskeyRegisterOptions(
   const input = await parseJson(ctx.request, registerOptionsInputSchema);
   if (!input) return invalidInput();
 
-  const authed = await resolveAuthedUser(ctx);
+  const authed = await resolveAuthedUser(ctx, app);
   const policy = await decideRegistrationPolicy(ctx, authed, input.email);
   if (policy.outcome === "denied") {
     return jsonResponse({ error: policy.reason }, { status: 403 });
@@ -212,10 +212,13 @@ async function decideRegistrationPolicy(
   return { outcome: "denied", reason: "registration_closed" };
 }
 
-async function resolveAuthedUser(ctx: AppContext): Promise<User | null> {
+async function resolveAuthedUser(
+  ctx: AppContext,
+  app: PlumixApp,
+): Promise<User | null> {
   const token = readSessionCookie(ctx.request);
   if (!token) return null;
-  const validated = await validateSession(ctx.db, token, undefined);
+  const validated = await validateSession(ctx.db, token, app.sessionPolicy);
   return validated?.user ?? null;
 }
 
@@ -375,12 +378,15 @@ export async function handlePasskeyLoginVerify(
   }
 }
 
-export async function handleSignout(ctx: AppContext): Promise<Response> {
+export async function handleSignout(
+  ctx: AppContext,
+  app: PlumixApp,
+): Promise<Response> {
   const token = readSessionCookie(ctx.request);
   if (token) {
     // Resolve the user before invalidating so the hook payload carries
     // the row that was just signed out (for audit attribution).
-    const validated = await validateSession(ctx.db, token, undefined);
+    const validated = await validateSession(ctx.db, token, app.sessionPolicy);
     await invalidateSession(ctx.db, token);
     if (validated) {
       await ctx.hooks.doAction("user:signed_out", validated.user);
