@@ -200,7 +200,7 @@ export default defineTheme({
 });
 ```
 
-`forEntryType("post")` autocompletes against your registered types and rejects a typo at compile time, and both callbacks receive that type's entry projection. A card declares template deps — `settings`, `menus` and the rest — as slug arrays and receives their results alongside `data` and `ctx`.
+`forEntryType("post")` autocompletes against your registered types and rejects a typo at compile time, and both callbacks receive that type's entry projection. A card declares template deps — `settings`, `menus` and the rest — as arrays of keys and receives their results alongside `data` and `ctx`.
 
 Styling is ordinary CSS against ordinary class names. Whatever your theme declared in `tokens` is compiled to a `:root` block of custom properties and handed to the renderer ahead of the card's own stylesheet, so `var()`, `calc()` and the `--plumix-<category>-<slug>` names your site's CSS already reads all resolve. The same tokens arrive in both callbacks as resolved values, for what a card decides in JavaScript rather than in CSS.
 

@@ -90,6 +90,7 @@ export function comments(options: CommentsConfig = {}) {
         component: "CommentsShell",
       });
       ctx.registerTemplateDep("comments", {
+        keyedBy: "slug",
         load: createCommentsThreadLoader(config),
       });
       ctx.registerRoute({

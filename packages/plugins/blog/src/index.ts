@@ -248,6 +248,7 @@ export function blog(options: BlogOptions = {}): PluginDescriptor {
       // template dep here rather than in core.
       if (options.relatedPosts !== false) {
         ctx.registerTemplateDep("relatedPosts", {
+          keyedBy: "slug",
           load: createRelatedPostsLoader(options.relatedPosts?.limit),
         });
       }

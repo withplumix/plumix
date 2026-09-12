@@ -79,7 +79,7 @@ export async function findRelatedEntries(
 export function createRelatedPostsLoader(
   limit = RELATED_POSTS_LIMIT,
 ): TemplateDepLoader<"relatedPosts"> {
-  return async (slugs, ctx) => {
+  return async ({ slugs }, ctx) => {
     const current = ctx.resolvedEntity;
     if (current?.kind !== "entry") return {};
 

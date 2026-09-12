@@ -31,6 +31,7 @@ declare module "./template.js" {
   interface TemplateDepRegistry {
     "test-thing": { slug: string; result: { value: string } };
     "test-other": { slug: string; result: number };
+    "test-slot": { location: string; result: { value: string } };
   }
 }
 
@@ -38,7 +39,8 @@ describe("ctx.registerTemplateDep", () => {
   test("a plugin's registration lands in app.plugins.templateDeps", async () => {
     const probe = definePlugin("probe", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
-        load: (slugs) =>
+        keyedBy: "slug",
+        load: ({ slugs }) =>
           Promise.resolve(
             Object.fromEntries(slugs.map((s) => [s, { value: s }])),
           ),
@@ -61,11 +63,13 @@ describe("ctx.registerTemplateDep", () => {
   test("two plugins registering the same kind throw at boot", async () => {
     const first = definePlugin("first", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
+        keyedBy: "slug",
         load: () => Promise.resolve({}),
       });
     });
     const second = definePlugin("second", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
+        keyedBy: "slug",
         load: () => Promise.resolve({}),
       });
     });
@@ -85,11 +89,13 @@ describe("ctx.registerTemplateDep", () => {
   test("different kinds from different plugins coexist", async () => {
     const a = definePlugin("a", (ctx) => {
       ctx.registerTemplateDep("test-thing", {
+        keyedBy: "slug",
         load: () => Promise.resolve({ x: { value: "from-a" } }),
       });
     });
     const b = definePlugin("b", (ctx) => {
       ctx.registerTemplateDep("test-other", {
+        keyedBy: "slug",
         load: () => Promise.resolve({ y: 42 }),
       });
     });
@@ -106,12 +112,52 @@ describe("ctx.registerTemplateDep", () => {
     expect(app.plugins.templateDeps.get("test-other")?.registeredBy).toBe("b");
   });
 
+  test("a location-keyed dep hands its loader the declared keys as `locations`", async () => {
+    const slots = definePlugin("slots", (ctx) => {
+      ctx.registerTemplateDep("test-slot", {
+        keyedBy: "location",
+        load: ({ locations }) =>
+          Promise.resolve(
+            Object.fromEntries(locations.map((l) => [l, { value: l }])),
+          ),
+      });
+    });
+    definePlugin("slug-reader", (ctx) => {
+      ctx.registerTemplateDep("test-slot", {
+        keyedBy: "location",
+        // @ts-expect-error -- a location-keyed dep has no `slugs` to read
+        load: ({ slugs: _slugs }) => Promise.resolve({}),
+      });
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: stubTheme,
+        plugins: [slots],
+      }),
+    );
+
+    const deps = await loadTemplateDeps(
+      { "test-slot": ["header"] },
+      app.plugins.templateDeps,
+      {
+        logger: captureLogger().logger,
+        telemetry: NOOP_TELEMETRY,
+      } as unknown as Parameters<typeof loadTemplateDeps>[2],
+    );
+
+    expect(deps["test-slot"]).toEqual({ header: { value: "header" } });
+  });
+
   test("rejects registration when the dep kind collides with a framework key", async () => {
     const offender = definePlugin("offender", (ctx) => {
       // `render` is a framework-reserved key on every template; a dep
       // kind by that name would silently no-op at request time since
       // the merger skips it.
       ctx.registerTemplateDep("render" as never, {
+        keyedBy: "slug",
         load: () => Promise.resolve({}),
       });
     });
@@ -242,7 +288,8 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         hasArchive: true,
       });
       ctx.registerTemplateDep("test-thing", {
-        load: (slugs) =>
+        keyedBy: "slug",
+        load: ({ slugs }) =>
           Promise.resolve(
             Object.fromEntries(slugs.map((s) => [s, { value: `loaded-${s}` }])),
           ),
@@ -304,6 +351,7 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         hasArchive: true,
       });
       ctx.registerTemplateDep("test-thing", {
+        keyedBy: "slug",
         load: () => Promise.reject(new Error("loader exploded")),
       });
     });

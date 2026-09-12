@@ -2486,7 +2486,8 @@ describe("dispatcher — telemetry consumers", () => {
     const probe = definePlugin("test-probe", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerTemplateDep("probe-dep", {
-        load: (slugs) =>
+        keyedBy: "slug",
+        load: ({ slugs }) =>
           Promise.resolve(
             Object.fromEntries(slugs.map((s) => [s, { value: s }])),
           ),

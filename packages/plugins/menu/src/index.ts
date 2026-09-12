@@ -8,7 +8,7 @@ import { definePlugin } from "plumix/plugin";
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
-import { getMenusByName } from "./server/getMenuByName.js";
+import { getMenusForLocations } from "./server/getMenuForLocation.js";
 import {
   clearRegisteredLocations,
   recordLocation,
@@ -215,7 +215,9 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
       });
 
       ctx.registerTemplateDep("menus", {
-        load: (slugs, appCtx) => getMenusByName(appCtx, slugs),
+        keyedBy: "location",
+        load: ({ locations }, appCtx) =>
+          getMenusForLocations(appCtx, locations),
       });
 
       ctx.registerRpcRouter(createMenuRouter());

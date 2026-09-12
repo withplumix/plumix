@@ -343,6 +343,7 @@ export type {
 export { defineTemplate } from "./template.js";
 export type {
   Template,
+  TemplateDepKey,
   TemplateDepRegistry,
   TemplateRender,
   TemplateRenderArgs,

@@ -90,7 +90,7 @@ export interface ResolvedMenu {
 // up the augmentation without a side-effect import on the main entry.
 declare module "plumix" {
   interface TemplateDepRegistry {
-    menus: { slug: string; result: ResolvedMenu };
+    menus: { location: string; result: ResolvedMenu };
   }
 }
 
