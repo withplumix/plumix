@@ -90,20 +90,6 @@ import {
 export interface PluginSetupContextBase {
   readonly id: string;
 
-  /**
-   * What every plugin has registered so far — the very object
-   * `AppContext.plugins` hands a request handler, read-only and live.
-   *
-   * During `setup` it holds only what the plugins ahead of this one put there,
-   * so read it from the `theme:ready` action instead: by then every entry type
-   * and taxonomy exists, which is what lets a plugin enumerate them and claim
-   * concrete paths through {@link registerPublicRoute} rather than match an
-   * ambiguous pattern per request. What a plugin registers from its *own*
-   * `theme:ready` handler is only there for a subscriber that runs after it,
-   * which is why registration belongs in `setup`.
-   */
-  readonly plugins: PluginRegistry;
-
   /** Subscribe to an existing (core or other-plugin) filter. */
   addFilter<TName extends FilterName>(
     name: TName,
@@ -333,9 +319,9 @@ export interface PluginSetupContextBase {
    *
    * The route matches ahead of the redirect table and the content route map,
    * and the handler always answers: there is no fall-through to a page that
-   * would otherwise own the path. So register from the `theme:ready` action,
-   * where every entry type and taxonomy is known, and enumerate concrete paths
-   * rather than claiming an ambiguous pattern.
+   * would otherwise own the path. So register from the descriptor's
+   * `afterSetup`, where every entry type and taxonomy is known, and enumerate
+   * concrete paths rather than claiming an ambiguous pattern.
    *
    * Two plugins claiming one path, or a path inside `/_plumix/`, throws at
    * boot. `cacheable` is the same opt-in `registerRoute` documents. The route
@@ -483,6 +469,21 @@ export interface PluginSetupContextBase {
 export type PluginSetupContext = PluginSetupContextBase &
   PluginContextExtensions;
 
+export type PluginAfterSetupContext = PluginSetupContext & {
+  /**
+   * Everything every plugin registered — the very object `AppContext.plugins`
+   * hands a request handler, read-only and live.
+   *
+   * Offered here and not in `setup`, where it would hold only what the plugins
+   * ahead of that one had put there. By now every entry type and taxonomy
+   * exists, which is what lets a plugin enumerate them and claim concrete paths
+   * through `registerPublicRoute` rather than match an ambiguous pattern per
+   * request. What a plugin registers from its own `afterSetup` is there only
+   * for a plugin whose `afterSetup` runs later in the array.
+   */
+  readonly plugins: PluginRegistry;
+};
+
 interface CreatePluginContextArgs {
   readonly pluginId: string;
   readonly hooks: HookRegistry;
@@ -490,12 +491,26 @@ interface CreatePluginContextArgs {
   readonly extensions?: ReadonlyMap<string, unknown>;
 }
 
-export function createPluginSetupContext({
+export function createPluginSetupContext(
+  args: CreatePluginContextArgs,
+): PluginSetupContext {
+  return withExtensions(createContextBase(args), args.extensions);
+}
+
+export function createPluginAfterSetupContext(
+  args: CreatePluginContextArgs,
+): PluginAfterSetupContext {
+  return withExtensions(
+    { ...createContextBase(args), plugins: args.registry },
+    args.extensions,
+  );
+}
+
+function createContextBase({
   pluginId,
   hooks,
   registry,
-  extensions,
-}: CreatePluginContextArgs): PluginSetupContext {
+}: CreatePluginContextArgs): PluginSetupContextBase {
   // Pooling caps by capabilityType is safe when minRoles agree; if one
   // type applies a `capabilities` override and another doesn't, silent
   // first-writer-wins would tie the resolved cap to registration order.
@@ -520,8 +535,6 @@ export function createPluginSetupContext({
 
   const ctx: PluginSetupContextBase = {
     id: pluginId,
-
-    plugins: registry,
 
     addFilter: (name, fn, options) => {
       hooks.addFilter(name, fn, { ...options, plugin: pluginId });
@@ -757,7 +770,7 @@ export function createPluginSetupContext({
     registerPublicRoute: (options) => {
       assertValidPublicRoutePath(pluginId, options.path);
       // Collisions are a boot check, not a registration one: a plugin registers
-      // from `theme:ready`, so the full set exists only once every plugin has.
+      // from `afterSetup`, so the full set exists only once every plugin has.
       registry.publicRoutes.push({ ...options, pluginId });
     },
 
@@ -968,20 +981,29 @@ export function createPluginSetupContext({
     },
   };
 
+  return ctx;
+}
+
+function withExtensions<TContext extends PluginSetupContextBase>(
+  ctx: TContext,
+  extensions: ReadonlyMap<string, unknown> | undefined,
+): TContext & PluginContextExtensions {
   if (extensions && extensions.size > 0) {
     // Safety: the write is keyed, never structural — every key that already
     // exists is rejected below, so no declared field of the setup context can
     // be reached through this view.
     const target = ctx as unknown as Record<string, unknown>;
     for (const [key, value] of extensions) {
-      if (key in target) {
+      // `plugins` is named because the setup context lacks it, so `in` alone
+      // would reject the key only once some plugin declared `afterSetup`.
+      if (key in target || key === "plugins") {
         throw PluginContextError.extensionShadowsBuiltin({ key });
       }
       target[key] = value;
     }
   }
 
-  return ctx as PluginSetupContext;
+  return ctx as TContext & PluginContextExtensions;
 }
 
 // Three meta-box registrations (entry/term/user) only differ in their

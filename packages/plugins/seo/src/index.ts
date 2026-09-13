@@ -9,8 +9,11 @@ import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
 import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
-import { registerSeoRoutes } from "./routes.js";
-import { registerSeoSettings } from "./settings.js";
+import { registerSeoRoutes, registerSitemapRoutes } from "./routes.js";
+import {
+  registerSeoSettings,
+  registerSeoSettingsDefaults,
+} from "./settings.js";
 // Augmentation anchors. A `declare module "plumix"` block reaches a consumer
 // only if the module declaring it is in this package's declaration graph, and
 // naming them here is what stops that riding on which types the exports below
@@ -109,10 +112,9 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
-      registerSeoSettings(ctx);
+      registerSeoSettingsDefaults(ctx);
       registerSeoRoutes(ctx);
       registerIndexNow(ctx);
-      registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
       // The assembled theme + template document arrives here, which is what
       // makes gap-filling possible: a theme's own tag is already in hand.
       //
@@ -121,6 +123,13 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
       // about to set, and that subscriber appending to the manifest would then
       // put two of the same tag on the page rather than override one.
       ctx.addFilter("render:document", applySeoHead, { priority: LAST });
+    },
+    // Each of these is scoped to what the site registered, so it waits for
+    // every plugin's `setup` to have registered it.
+    afterSetup: (ctx) => {
+      registerSeoSettings(ctx);
+      registerSitemapRoutes(ctx);
+      registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
     },
   });
 }

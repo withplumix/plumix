@@ -20,9 +20,9 @@ export interface ManifestBuildOptions {
   readonly i18n?: ResolvedI18n;
   /**
    * The site's theme, handed to plugins the way the runtime hands it over.
-   * Required, because the whole SEO settings page — and every other
-   * registration a plugin defers to `theme:ready` — is missing from the
-   * manifest without it, which is the drift this function exists to prevent.
+   * Required, because every registration a plugin makes from `theme:ready` is
+   * missing from the manifest without it, which is the drift this function
+   * exists to prevent.
    */
   readonly theme: ThemeDescriptor;
   readonly projectRoot: string;
@@ -39,8 +39,8 @@ export interface ManifestBuildOptions {
  * admin-plugin-bundle's auto-register synthesis). If a plugin throws on setup
  * we surface it as-is: a broken config should fail the build, not silently ship
  * an empty manifest. Note: this runs on every dev config-file change, so
- * plugins should keep `setup()` — and the `theme:ready` handler below — free of
- * IO and of anything a repeat call would compound.
+ * plugins should keep `setup()`, `afterSetup()` and the `theme:ready` handler
+ * below free of IO and of anything a repeat call would compound.
  */
 export async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
@@ -48,13 +48,11 @@ export async function computeManifestAndRegistry(
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
   const hooks = new HookRegistry();
   const { registry } = await installPlugins({ hooks, plugins });
-  // The same handover `buildApp` makes before it reads any registry. A plugin
-  // whose registrations are derived from what every *other* plugin registered —
-  // which entry types carry the SEO box, which scopes the sitemap enumerates —
-  // can only make them once the registry is complete, so it subscribes to
-  // `theme:ready`. A manifest built without firing it would ship the admin an
-  // empty meta-box list while the running worker had one, which is exactly the
-  // drift `buildManifest` exists to prevent.
+  // The same handover `buildApp` makes before it reads any registry.
+  // `installPlugins` has already run every `setup` and `afterSetup`, but a
+  // plugin can still register from the theme it is handed, and a manifest built
+  // without firing it would ship the admin a shorter list than the running
+  // worker has, which is exactly the drift `buildManifest` exists to prevent.
   await hooks.doAction("theme:ready", options.theme);
   // Caveat on the skip below: the glob that bakes catalogs in runs when
   // @plumix/admin is built, this predicate runs when a site is configured.

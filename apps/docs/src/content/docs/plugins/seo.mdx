@@ -427,7 +427,7 @@ The plugin owns one settings page, **SEO**, composed of three groups. Each is it
 - **Index search-results pages**, **Index page 2 and beyond of an archive**, **Index pages that were not found** — the three arms of the chain that are off by default.
 - **Block AI crawlers** — adds the AI-crawler group to `robots.txt` and withholds the `llms.txt` map.
 - **IndexNow key** — turns on publish-time notification. Empty means none.
-- One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from a `theme:ready` handler in a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
+- One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from the `afterSetup` of a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
 **Site verification** holds the token each engine hands you to prove you own the site. Every one set reaches the head of every page, under the name that engine reads:
 

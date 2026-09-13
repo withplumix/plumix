@@ -207,7 +207,9 @@ export const plugins: PlumixConfigInput["plugins"] = [
 
 ## Install order
 
-The array is the order `setup` runs in. A plugin that reads what another registered has to sit after it.
+The array is the order `setup` runs in. `setup` is not handed the registry, because there it would hold only what the plugins ahead of it had registered.
+
+A descriptor's optional `afterSetup` runs once every plugin's `setup` has, with `ctx.plugins` holding everything they registered. It is where a plugin registers what it derives from other plugins' types, such as a feed per entry type or an SEO box on every public taxonomy, and it sees the whole set wherever the plugin sits in the array. `afterSetup` functions run in array order too, so what one registers there is visible only to the `afterSetup` of a plugin listed after it.
 
 One step runs earlier than that and does not care about order. A descriptor's optional `provides` function runs for every plugin in the array before any plugin's `setup` runs, so a helper published with `extendPluginContext` is on every plugin's setup context whatever the order.
 

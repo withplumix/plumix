@@ -18,7 +18,7 @@ Feeds are not a search-engine concern, which is why they are their own package r
 
 Nothing serves `/feed` until you install it. That is the boundary Plumix draws between core and a plugin: core owns what would be _wrong_ without a plugin installed, and a plugin owns what would merely be _absent_. A site with no feeds is a site with no feeds — it is not a broken one.
 
-Every path below is claimed during the `theme:ready` action, once every entry type and taxonomy is registered, so the plugin enumerates them and registers concrete routes. Nothing is guessed at from the shape of a request, which is what leaves a page slugged `feed` under some other prefix still rendering as content.
+Every path below is claimed in the plugin's `afterSetup`, once every entry type and taxonomy is registered, so the plugin enumerates them and registers concrete routes. Nothing is guessed at from the shape of a request, which is what leaves a page slugged `feed` under some other prefix still rendering as content.
 
 ### The URLs it serves
 
@@ -110,7 +110,7 @@ Then:
 
 </Steps>
 
-Array order does not decide what gets a feed. The plugin reads the registry once, at `theme:ready`, which runs after every plugin's `setup` — so it sees `blog`'s entry types wherever `blog()` sits. The one thing it cannot see is a type registered from another plugin's own `theme:ready` handler that runs later, which is a reason to register in `setup`.
+Array order does not decide what gets a feed. The plugin reads the registry once, in `afterSetup`, which runs after every plugin's `setup` — so it sees `blog`'s entry types wherever `blog()` sits. The one thing it cannot see is a type another plugin registers from its own `afterSetup` when that plugin is listed later, which is a reason to register in `setup`.
 
 ## Discovery links
 

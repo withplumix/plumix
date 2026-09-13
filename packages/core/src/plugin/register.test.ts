@@ -1171,30 +1171,79 @@ describe("registerShortcode", () => {
   });
 });
 
-describe("ctx.plugins", () => {
-  test("reads what every plugin registered once theme:ready fires", async () => {
-    const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        entryTypes: ["post"],
-      });
+describe("afterSetup", () => {
+  const blog = definePlugin("blog", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
     });
+  });
+
+  test("reads what every plugin registered, wherever it is installed", async () => {
     let seen: readonly string[] = [];
-    // Installed first, so what it reads at `theme:ready` can only come from
-    // the later plugin's registrations rather than from install order.
-    const feeds = definePlugin("feeds", (ctx) => {
-      ctx.addAction("theme:ready", () => {
-        seen = [...ctx.plugins.entryTypes.keys()].concat([
+    // Installed first, so what it reads can only come from the later plugin's
+    // registrations rather than from install order.
+    const feeds = definePlugin("feeds", {
+      setup: () => undefined,
+      afterSetup: (ctx) => {
+        seen = [
+          ...ctx.plugins.entryTypes.keys(),
           ...ctx.plugins.termTaxonomies.keys(),
-        ]);
-      });
+        ];
+      },
     });
-    await installPlugins({ hooks, plugins: [feeds, blog] });
-    await hooks.doAction("theme:ready", {} as never);
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [feeds, blog] });
 
     expect(seen).toEqual(["post", "category"]);
+  });
+
+  test("runs once every plugin's setup has", async () => {
+    const order: string[] = [];
+    const early = definePlugin("early", {
+      setup: () => void order.push("early:setup"),
+      afterSetup: () => void order.push("early:afterSetup"),
+    });
+    const late = definePlugin("late", () => void order.push("late:setup"));
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [early, late] });
+
+    expect(order).toEqual(["early:setup", "late:setup", "early:afterSetup"]);
+  });
+
+  test("lands its registrations in the registry installPlugins returns", async () => {
+    const feeds = definePlugin("feeds", {
+      setup: () => undefined,
+      afterSetup: (ctx) => {
+        for (const type of ctx.plugins.entryTypes.keys()) {
+          ctx.registerPublicRoute({
+            path: `/${type}/feed`,
+            handler: () => new Response("feed"),
+          });
+        }
+      },
+    });
+
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [feeds, blog],
+    });
+
+    expect(registry.publicRoutes.map((route) => route.path)).toEqual([
+      "/post/feed",
+    ]);
+  });
+
+  test("is the only phase offered the registry", async () => {
+    let offered: boolean | undefined;
+    const reader = definePlugin("reader", (ctx) => {
+      offered = "plugins" in ctx;
+    });
+
+    await installPlugins({ hooks: new HookRegistry(), plugins: [reader] });
+
+    expect(offered).toBe(false);
   });
 });
 

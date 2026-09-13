@@ -157,21 +157,20 @@ export const recipes = definePlugin("recipes", {
 import { definePlugin } from "plumix/plugin";
 
 export const feeds = definePlugin("feeds", {
-  setup: (ctx) => {
-    ctx.addAction("theme:ready", () => {
-      ctx.registerPublicRoute({
-        path: "/feed",
-        handler: () =>
-          new Response("<rss />", {
-            headers: { "content-type": "application/rss+xml" },
-          }),
-      });
+  setup: () => undefined,
+  afterSetup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/feed",
+      handler: () =>
+        new Response("<rss />", {
+          headers: { "content-type": "application/rss+xml" },
+        }),
     });
   },
 });
 ```
 
-Register from the `theme:ready` action rather than from `setup`. By then every entry type and taxonomy is registered, so a plugin enumerates them and claims concrete paths instead of matching an ambiguous pattern per request — the reason there is no fall-through to worry about. `ctx.plugins` is what it reads them from: the same read-only registry `AppContext.plugins` carries at request time, complete by the time that action fires.
+Register from the descriptor's `afterSetup` rather than from `setup`. It runs once every plugin's `setup` has, so every entry type and taxonomy is registered, and a plugin enumerates them and claims concrete paths instead of matching an ambiguous pattern per request — the reason there is no fall-through to worry about. `ctx.plugins` is what it reads them from: the same read-only registry `AppContext.plugins` carries at request time. Only the `afterSetup` context has it, because during `setup` it would be missing whatever later plugins register.
 
 The route answers `GET` and `HEAD`; a write method gets a 405 from the step above it. The handler runs ahead of the access gate and the principal loader, so `ctx.user` is null however the request was authenticated — a handler that lists content is listing it for an anonymous reader and has to leave out what an anonymous reader may not see. The request URL has had any `basePath` stripped, so build outbound URLs from `ctx.origin` and `ctx.basePath` rather than from `request.url`.
 
