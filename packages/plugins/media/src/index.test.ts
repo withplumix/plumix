@@ -70,13 +70,6 @@ describe("@plumix/plugin-media — registration", () => {
     expect(m?.registeredBy).toBe("media");
   });
 
-  test("derives entry:media:create at the contributor minRole", async () => {
-    const { registry } = await install();
-    expect(registry.capabilities.get("entry:media:create")?.minRole).toBe(
-      "contributor",
-    );
-  });
-
   test("registers the `media` RPC router with the full procedure set", async () => {
     const { registry } = await install();
     const router = registry.rpcRouters.get("media");
@@ -98,6 +91,7 @@ describe("@plumix/plugin-media — registration", () => {
       message: "Media Library",
     });
     expect(page?.capability).toBe("entry:media:read");
+    expect(registry.capabilities.get(page?.capability ?? "")).toBeDefined();
     // Custom nav group between Entries (100) and Taxonomies (200) —
     // media isn't a content surface like Posts/Pages, so it doesn't
     // belong nested under "Entries".

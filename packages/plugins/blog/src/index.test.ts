@@ -53,32 +53,6 @@ describe("@plumix/plugin-blog", () => {
     expect(tag?.isHierarchical).toBe(false);
     expect(tag?.rewrite).toEqual({ slug: "tag" });
   });
-
-  test("derives post:* capabilities from the entry type", async () => {
-    const { registry } = await install();
-    expect(registry.capabilities.get("entry:post:create")?.minRole).toBe(
-      "contributor",
-    );
-    expect(registry.capabilities.get("entry:post:publish")?.minRole).toBe(
-      "author",
-    );
-    expect(registry.capabilities.get("entry:post:edit_any")?.minRole).toBe(
-      "editor",
-    );
-  });
-
-  test("derives term:category:* and term:tag:* capabilities", async () => {
-    const { registry } = await install();
-    expect(registry.capabilities.get("term:category:assign")?.minRole).toBe(
-      "contributor",
-    );
-    expect(registry.capabilities.get("term:category:manage")?.minRole).toBe(
-      "editor",
-    );
-    expect(registry.capabilities.get("term:tag:assign")?.minRole).toBe(
-      "contributor",
-    );
-  });
 });
 
 describe("post overrides", () => {

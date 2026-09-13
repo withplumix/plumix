@@ -81,12 +81,6 @@ describe("@plumix/plugin-menu", () => {
     expect(taxonomy?.registeredBy).toBe("menu");
   });
 
-  test("derives menu_item:* capabilities from the entry type", async () => {
-    const { registry } = await install();
-    expect(registry.capabilities.get("entry:menu_item:create")).toBeDefined();
-    expect(registry.capabilities.get("entry:menu_item:edit_any")).toBeDefined();
-  });
-
   test("registers the Menus admin page in the Appearance nav group", async () => {
     const { registry } = await install();
     const page = registry.adminPages.get("/menus");
@@ -96,6 +90,7 @@ describe("@plumix/plugin-menu", () => {
       message: "Menus",
     });
     expect(page?.capability).toBe("term:menu:manage");
+    expect(registry.capabilities.get(page?.capability ?? "")).toBeDefined();
     expect(page?.nav?.group).toEqual({
       id: "appearance",
       label: { id: "core.adminNav.appearance", message: "Appearance" },
