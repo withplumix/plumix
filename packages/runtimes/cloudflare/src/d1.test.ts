@@ -1,11 +1,13 @@
 import type { SQL } from "drizzle-orm";
 import type {
+  AppContext,
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "plumix";
 import { sql } from "drizzle-orm";
 import { requestStore } from "plumix";
+import { createTestContext, createTestDb } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { d1 } from "./d1.js";
@@ -86,26 +88,13 @@ describe("d1() adapter — session config", () => {
   });
 });
 
-// Captures spans through the TelemetrySpanHandle contract — the same surface
-// the real collector implements — so assertions stay driver-level.
-function spanCapture(): {
-  ctx: unknown;
-  spans: { name: string; attributes: Record<string, unknown> }[];
-} {
-  const spans: { name: string; attributes: Record<string, unknown> }[] = [];
-  const telemetry = {
-    span: (name: string, fn: (s: unknown) => unknown) => {
-      const attributes: Record<string, unknown> = {};
-      spans.push({ name, attributes });
-      return fn({
-        set: (key: string, value: unknown) => {
-          attributes[key] =
-            typeof value === "function" ? (value as () => unknown)() : value;
-        },
-      });
-    },
-  };
-  return { ctx: { telemetry }, spans };
+// A consumer without `sample` votes yes, so the context carries a live collector
+// and the driver's spans land where the assertions read them.
+async function sampledContext(): Promise<AppContext> {
+  return createTestContext({
+    db: await createTestDb(),
+    telemetry: { consumers: [{ id: "test" }] },
+  });
 }
 
 function resultBinding(results: unknown[] = []): D1Database {
@@ -123,16 +112,18 @@ function resultBinding(results: unknown[] = []): D1Database {
 
 describe("d1() adapter — query span tracing", () => {
   test("times each query as a db span with sql/params/rows attributes", async () => {
-    const { ctx, spans } = spanCapture();
+    const ctx = await sampledContext();
     const db = d1({ binding: "DB" }).connect(
       { DB: resultBinding([{ id: 1 }, { id: 2 }]) },
       new Request("https://cms.example"),
       {},
     ).db as { all(query: SQL): Promise<unknown> };
 
-    await requestStore.run(ctx as never, async () => {
+    await requestStore.run(ctx, async () => {
       await db.all(sql`select id from posts where id = ${7}`);
     });
+
+    const spans = ctx.telemetry.getSpans();
 
     expect(spans.map((s) => s.name)).toEqual(["db: select"]);
     expect(spans[0]?.attributes).toEqual({
@@ -143,7 +134,7 @@ describe("d1() adapter — query span tracing", () => {
   });
 
   test("queries inside a transaction are timed spans", async () => {
-    const { ctx, spans } = spanCapture();
+    const ctx = await sampledContext();
     const db = d1({ binding: "DB" }).connect(
       { DB: resultBinding() },
       new Request("https://cms.example"),
@@ -152,7 +143,7 @@ describe("d1() adapter — query span tracing", () => {
       transaction(fn: (tx: unknown) => Promise<void>): Promise<void>;
     };
 
-    await requestStore.run(ctx as never, () =>
+    await requestStore.run(ctx, () =>
       db.transaction(async (tx) => {
         await (tx as { run(query: SQL): Promise<unknown> }).run(
           sql`update posts set title = ${"t"}`,
@@ -161,6 +152,7 @@ describe("d1() adapter — query span tracing", () => {
     );
 
     // begin / update / commit each flow through prepare and get timed.
+    const spans = ctx.telemetry.getSpans();
     expect(spans.map((s) => s.name)).toContain("db: update");
     const update = spans.find((s) => s.name === "db: update");
     expect(update?.attributes["db.sql"]).toBe("update posts set title = ?");
@@ -168,7 +160,7 @@ describe("d1() adapter — query span tracing", () => {
   });
 
   test("batch times one span and hands the real bound statements to the binding", async () => {
-    const { ctx, spans } = spanCapture();
+    const ctx = await sampledContext();
     const bound: unknown[] = [];
     const received: unknown[][] = [];
     const binding = {
@@ -206,9 +198,11 @@ describe("d1() adapter — query span tracing", () => {
       run(query: SQL): Promise<unknown>;
     };
 
-    await requestStore.run(ctx as never, () =>
+    await requestStore.run(ctx, () =>
       db.batch([db.run(sql`select 1`), db.run(sql`select 2`)]),
     );
+
+    const spans = ctx.telemetry.getSpans();
 
     expect(spans.map((s) => s.name)).toEqual(["db: select (2)"]);
     expect(spans[0]?.attributes).toEqual({

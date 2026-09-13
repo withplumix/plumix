@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { defineTemplate, isTemplate, normalizeTemplate } from "./template.js";
+import { createTestContext } from "./test/context.js";
+import { createTestDb } from "./test/harness.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 
 describe("defineTemplate", () => {
@@ -34,7 +36,7 @@ describe("defineTemplate", () => {
 });
 
 describe("normalizeTemplate", () => {
-  test("wraps a plain function into a branded Template (factory shape)", () => {
+  test("wraps a plain function into a branded Template (factory shape)", async () => {
     // The wrapper invokes the legacy fn via `createElement` so React's
     // render pass handles hooks. Asserting that the returned ReactNode
     // is a React element whose `type` points at the original fn proves
@@ -44,7 +46,7 @@ describe("normalizeTemplate", () => {
     expect(isTemplate(normalized)).toBe(true);
     const element = normalized.render({
       data: {} as unknown as Parameters<typeof normalized.render>[0]["data"],
-      ctx: {} as unknown as Parameters<typeof normalized.render>[0]["ctx"],
+      ctx: createTestContext({ db: await createTestDb() }),
     }) as unknown as { type: unknown; props: unknown };
     expect(element.type).toBe(fn);
   });
