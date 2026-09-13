@@ -6,6 +6,7 @@ import type { HydratedEntry } from "../context-bags.js";
 import type { EntryContent } from "../entry-content.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
+import type { BlockRenderFilters } from "../render-block-tree.js";
 import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
@@ -72,6 +73,10 @@ export interface PlumixContextValue {
   readonly imageResolver?: ImageResolver;
   /** Remote hosts `<Image>` is allowed to optimize; same-origin is always allowed. */
   readonly imageRemotePatterns?: readonly RemotePattern[];
+  /** Bridge into the framework's `block:before_render` / `block:after_render`
+   *  filters — populated by core with a closure over its request-scoped
+   *  `HookExecutor`. Absent in the editor canvas, which has no hook runtime. */
+  readonly renderFilters?: BlockRenderFilters;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -112,6 +117,7 @@ export function BlockRenderer({
     shortcodes: ctx.shortcodes,
     entry: ctx.entry,
     editing: ctx.mode === "edit",
+    renderFilters: ctx.renderFilters,
   });
   if (ctx.mode !== "edit") return tree;
   // Edit mode: wrap the content in a mount root the injected runtime renders

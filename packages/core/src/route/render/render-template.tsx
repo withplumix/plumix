@@ -4,6 +4,7 @@ import { renderToString } from "react-dom/server";
 
 import type {
   BlockNode,
+  BlockRenderFilters,
   HtmlAllowlist,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
@@ -474,6 +475,22 @@ function renderTree({
   const entry = "entry" in data ? { ...data.entry } : null;
   // Bind once so the resolver closure keeps the non-null narrowing.
   const imageDelivery = ctx.imageDelivery;
+  // Bridge into the framework filters so plugins can subscribe via
+  // `addFilter("block:before_render" | "block:after_render", ...)`. Sync
+  // (not `applyFilter`) because these fire mid-React-render, inside
+  // `renderBlockTree`'s walk — see `applyFilterSync`'s own doc comment.
+  const renderFilters: BlockRenderFilters = {
+    beforeRender: (element, node, blockContext) =>
+      ctx.hooks.applyFilterSync("block:before_render", element, {
+        node,
+        context: blockContext,
+      }),
+    afterRender: (element, node, blockContext) =>
+      ctx.hooks.applyFilterSync("block:after_render", element, {
+        node,
+        context: blockContext,
+      }),
+  };
   const templateTree: ReactNode = createElement(
     PlumixProvider,
     {
@@ -500,6 +517,7 @@ function renderTree({
               })
           : undefined,
         imageRemotePatterns: ctx.imageRemotePatterns,
+        renderFilters,
       },
     },
     // Edit mode drops the front-end admin bar: redundant under the editor's

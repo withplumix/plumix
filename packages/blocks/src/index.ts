@@ -52,6 +52,7 @@ export type {
   BlockNode,
   BlockNodeComponent,
   BlockNodeRenderProps,
+  BlockRenderFilters,
   BlockRenderHooks,
   MaterializedAttrs,
   RenderBlockTreeOptions,
