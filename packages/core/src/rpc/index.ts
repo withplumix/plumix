@@ -1,5 +1,3 @@
-import "./hooks.js";
-
 export { authenticated } from "./authenticated.js";
 export { registerCoreLookupAdapters } from "./procedures/lookup-adapters.js";
 export { base } from "./base.js";

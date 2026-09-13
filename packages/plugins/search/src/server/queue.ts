@@ -136,17 +136,14 @@ export function registerIndexInvalidator(ctx: PluginSetupContext): void {
     if (appCtx === null) return;
     enqueueEntryIndex(appCtx, entry.id);
   };
-  for (const action of ENTRY_ACTIONS) ctx.addAction(action as never, onEntry);
+  for (const action of ENTRY_ACTIONS) ctx.addAction(action, onEntry);
 
   const onTerm = (term: Term): void => {
     const appCtx = tryGetContext();
     if (appCtx === null) return;
     enqueueTermIndex(appCtx, term.id);
   };
-  // The handler is cast as well as the name, the way core's own purge
-  // invalidator casts its term half: the action names are a const roster, so
-  // the payload TypeScript picks for the union is whichever arm it saw first.
   for (const action of TERM_ACTIONS) {
-    ctx.addAction(action as never, onTerm as never);
+    ctx.addAction(action, onTerm);
   }
 }
