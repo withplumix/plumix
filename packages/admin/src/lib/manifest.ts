@@ -39,45 +39,49 @@ export function readManifest(doc: Document = document): PlumixManifest {
   }
 }
 
-// Only carries through fields that are arrays in the input. Missing
-// fields stay undefined; consumers `?? []` at the read site. Non-array
-// values for known fields are dropped (silent, not coerced — the
-// payload is build-time generated, malformed shape means the build is
-// broken upstream).
-const KNOWN_ARRAY_FIELDS = [
-  "entryTypes",
-  "termTaxonomies",
-  "entryMetaBoxes",
-  "termMetaBoxes",
-  "userMetaBoxes",
-  "settingsGroups",
-  "settingsPages",
-  "adminNav",
-  "fieldTypes",
-  "blocks",
-  "marks",
-  "patterns",
-] as const satisfies readonly (keyof PlumixManifest)[];
+// Declares, per manifest field, whether the wire value is expected to be an
+// array (`true`) or an object (`false`) — a boolean rather than an "array" /
+// "object" string literal so the values themselves don't trip
+// `lingui/no-unlocalized-strings`, which is live for this file. `satisfies
+// Record<keyof PlumixManifest, boolean>` makes this exhaustive over
+// `PlumixManifest` in both directions: a field added there without an entry
+// here fails typecheck, and an entry here for a field that doesn't exist
+// there does too. Unlike the old hand-maintained allowlist, a new manifest
+// field cannot be silently dropped.
+const MANIFEST_FIELD_IS_ARRAY = {
+  entryTypes: true,
+  termTaxonomies: true,
+  entryMetaBoxes: true,
+  termMetaBoxes: true,
+  userMetaBoxes: true,
+  settingsGroups: true,
+  settingsPages: true,
+  adminNav: true,
+  dashboardWidgets: true,
+  fieldTypes: true,
+  blocks: true,
+  marks: true,
+  patterns: true,
+  tokens: false,
+  breakpoints: false,
+  i18n: false,
+  pluginI18n: false,
+} as const satisfies Record<keyof PlumixManifest, boolean>;
 
+// Non-matching values for known fields are dropped (silent, not coerced —
+// the payload is build-time generated, malformed shape means the build is
+// broken upstream). Missing fields stay undefined; consumers `?? []`/`?? {}`
+// at the read site.
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return {};
   const v = value as JsonObject;
-  const result: PlumixManifest = {};
-  for (const key of KNOWN_ARRAY_FIELDS) {
-    if (Array.isArray(v[key])) {
-      // Written through a widened view: TypeScript can't correlate the loop's
-      // key with the field type it selects.
-      (result as Record<string, unknown>)[key] = v[key];
-    }
-  }
-  if (v.tokens && typeof v.tokens === "object") {
-    (result as Record<string, unknown>).tokens = v.tokens;
-  }
-  if (v.i18n && typeof v.i18n === "object") {
-    (result as Record<string, unknown>).i18n = v.i18n;
-  }
-  if (v.pluginI18n && typeof v.pluginI18n === "object") {
-    (result as Record<string, unknown>).pluginI18n = v.pluginI18n;
+  const result: Record<string, unknown> = {};
+  for (const [key, isArray] of Object.entries(MANIFEST_FIELD_IS_ARRAY)) {
+    const raw = v[key];
+    const matches = isArray
+      ? Array.isArray(raw)
+      : Boolean(raw) && typeof raw === "object";
+    if (matches) result[key] = raw;
   }
   return result;
 }

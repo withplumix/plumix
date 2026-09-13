@@ -6,6 +6,12 @@ import type {
   SettingsPageManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
+import {
+  buildManifest,
+  createPluginRegistry,
+  injectManifestIntoHtml,
+  MANIFEST_SCRIPT_ID,
+} from "@plumix/core/manifest";
 
 import {
   accessPoliciesForType,
@@ -15,6 +21,7 @@ import {
   findSettingsPageByName,
   findTermTaxonomyByName,
   getPatterns,
+  getThemeBreakpoints,
   groupsForSettingsPage,
   namedTemplatesForType,
   readManifest,
@@ -24,6 +31,19 @@ import {
   visibleTermTaxonomies,
   visibleUserMetaBoxes,
 } from "./manifest.js";
+
+// Parses a manifest through the real production path: core's `buildManifest`
+// projection, `injectManifestIntoHtml` serialization, an HTML parse, and the
+// admin's `readManifest`. Unlike the `source` param every query function
+// accepts, this is the one route that actually exercises the normalizer.
+function readManifestAcrossTheWire(manifest: PlumixManifest): PlumixManifest {
+  const html = injectManifestIntoHtml(
+    `<script id="${MANIFEST_SCRIPT_ID}" type="application/json"></script>`,
+    manifest,
+  );
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return readManifest(doc);
+}
 
 function withManifestScript(json: string): Document {
   const doc = document.implementation.createHTMLDocument("test");
@@ -160,6 +180,35 @@ describe("readManifest", () => {
       JSON.stringify({ entryTypes: [], termTaxonomies: "not-an-array" }),
     );
     expect(readManifest(doc).termTaxonomies).toBeUndefined();
+  });
+
+  test("a plugin-registered dashboard widget survives projection and normalization", () => {
+    const registry = createPluginRegistry();
+    registry.dashboardWidgets.set("widget-plugin:hello", {
+      id: "widget-plugin:hello",
+      title: "Hello",
+      component: "HelloWidget",
+      registeredBy: "widget-plugin",
+    });
+    const manifest = buildManifest(registry, { tokens: {} });
+
+    const read = readManifestAcrossTheWire(manifest);
+
+    expect(visibleDashboardWidgets([], read).map((w) => w.id)).toEqual([
+      "widget-plugin:hello",
+    ]);
+  });
+
+  test("theme breakpoints survive projection and normalization", () => {
+    const breakpoints = { tablet: 900, mobile: 500 };
+    const manifest = buildManifest(createPluginRegistry(), {
+      tokens: {},
+      breakpoints,
+    });
+
+    const read = readManifestAcrossTheWire(manifest);
+
+    expect(getThemeBreakpoints(read)).toEqual(breakpoints);
   });
 });
 
