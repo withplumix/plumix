@@ -1,3 +1,4 @@
+import type { BlockSpec } from "plumix/blocks";
 import type { CSSProperties, ReactElement } from "react";
 import { defineBlock } from "plumix/blocks";
 
@@ -30,7 +31,7 @@ const PLACEHOLDER: CSSProperties = {
   fontSize: "0.875rem",
 };
 
-export const fileBlock = defineBlock({
+export const fileBlock: BlockSpec = defineBlock({
   name: "media/file",
   title: { id: "plugin.media.block.file.title", message: "File" },
   icon: "File",

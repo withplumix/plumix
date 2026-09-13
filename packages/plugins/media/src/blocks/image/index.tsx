@@ -1,4 +1,5 @@
 import type { JsonObject } from "plumix";
+import type { BlockSpec } from "plumix/blocks";
 import type { CSSProperties, ReactElement } from "react";
 import { defineBlock } from "plumix/blocks";
 import { Image } from "plumix/blocks/renderer";
@@ -27,7 +28,7 @@ function normalizeMediaValue(raw: unknown): MediaValue | null {
   };
 }
 
-export const imageBlock = defineBlock({
+export const imageBlock: BlockSpec = defineBlock({
   name: "media/image",
   title: { id: "plugin.media.block.image.title", message: "Image" },
   icon: "Image",
