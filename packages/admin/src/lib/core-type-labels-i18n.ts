@@ -53,38 +53,10 @@ export const CORE_TYPE_LABEL_DESCRIPTORS = {
     id: "type.generic.moveToTrash",
     message: "Move to trash?",
   }),
-  itemUpdated: defineMessage({
-    id: "type.generic.itemUpdated",
-    message: "Updated",
-  }),
-  itemPublished: defineMessage({
-    id: "type.generic.itemPublished",
-    message: "Published",
-  }),
-  itemPublishedPrivately: defineMessage({
-    id: "type.generic.itemPublishedPrivately",
-    message: "Published privately",
-  }),
-  itemScheduled: defineMessage({
-    id: "type.generic.itemScheduled",
-    message: "Scheduled",
-  }),
-  itemTrashed: defineMessage({
-    id: "type.generic.itemTrashed",
-    message: "Moved to trash",
-  }),
-  itemRevertedToDraft: defineMessage({
-    id: "type.generic.itemRevertedToDraft",
-    message: "Reverted to draft",
-  }),
   itemsList: defineMessage({ id: "type.generic.itemsList", message: "List" }),
   itemsListNavigation: defineMessage({
     id: "type.generic.itemsListNavigation",
     message: "List navigation",
-  }),
-  filterItemsList: defineMessage({
-    id: "type.generic.filterItemsList",
-    message: "Filter list",
   }),
   taxonomySingular: defineMessage({
     id: "type.generic.taxonomy.singular",

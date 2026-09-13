@@ -266,15 +266,6 @@ const ENTRY_TYPE_LABELS = [
   "parentItemColon",
   "untitledItem",
   "moveToTrash",
-  "itemUpdated",
-  "itemPublished",
-  "itemPublishedPrivately",
-  "itemScheduled",
-  "itemTrashed",
-  "itemRevertedToDraft",
-  "itemsList",
-  "itemsListNavigation",
-  "filterItemsList",
 ] as const;
 
 type _EntryTypeLabelsMatchSource = Assert<
