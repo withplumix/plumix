@@ -1,18 +1,19 @@
 import { join } from "node:path";
 import type { CommandDefinition, PlumixConfig, PlumixHandler } from "plumix";
-import type { Plugin } from "vite";
+import type { Logger, Plugin } from "vite";
 import type { EvaluatedModules, ModuleRunner } from "vite/module-runner";
 import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix";
 
 import type { RequestListener } from "../http/bridge.js";
-import type { Scheduler } from "../scheduler.js";
 import type { NodeSite } from "../site.js";
+import type { LoadedSite } from "./site-reloader.js";
 import { isNodeRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createImageLayer } from "../http/images.js";
 import { createDotenvLoader } from "./dotenv.js";
+import { createSiteReloader } from "./site-reloader.js";
 import { ENTRY_FILE, serverEnvironment, serverExternals } from "./vite.js";
 
 interface DevArgs {
@@ -123,86 +124,66 @@ export const devCommand: CommandDefinition = {
     const { emitPlumixSources, plumix } = await import("plumix/vite");
     const entryPath = join(ctx.cwd, ENTRY_FILE);
     const loadDotenv = createDotenvLoader();
-    // The bridge into the entry, imported through the runner on the first
-    // request after start, a restart, or an edit that invalidated it.
-    let listener: Promise<RequestListener> | undefined;
-    // Torn down and restarted with the entry, since a reload replaces the app
-    // its firings would run against.
-    let cron: Scheduler | undefined;
-    let dispose: DevEntry["dispose"];
+    const reloader = createSiteReloader();
 
-    async function load(
+    async function loadSite(
       runner: ModuleRunner,
       publicDir: string,
-      logger: { error(message: string, options: { error?: Error }): void },
-    ): Promise<RequestListener> {
-      // Before the import, not after it: a config that fails to parse takes the
-      // catch below, and a scheduler left running there would keep firing
-      // against the app this reload replaced.
-      await cron?.stop();
-      cron = undefined;
-      // The replaced site's handler holds a connection nothing else closes.
-      // Released in the background so a reload never waits on its deferred
-      // work; a request still running on it can lose that connection mid-query,
-      // which in dev the next request recovers from.
-      void dispose?.();
-      dispose = undefined;
-      try {
-        const config = (
-          await runner.import<{ default: PlumixConfig }>(ctx.configPath)
-        ).default;
-        const entry = await runner.import<DevEntry>(entryPath);
-        dispose = entry.dispose;
-        const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
-          ? config.runtime.config
-          : {};
-        // Points at the staged public dir so admin deep links resolve to the
-        // shell Vite also serves.
-        const env = { ...process.env, [ASSETS_DIR_ENV]: publicDir };
-        const bridge = createRequestListener(
-          async (request, meta) =>
-            entry.default.fetch(request, {
-              env,
-              clientAddress: meta.clientAddress,
-            }),
-          { trustProxy, bodySizeLimit },
-        );
-        // As in the built entry: a same-origin image source is a public file
-        // Vite would serve, else the site, as an anonymous GET.
-        const images = createImageLayer(config.imageDelivery, {
-          assets: createAssetsLayer({ root: publicDir }),
-          trustProxy,
-          basePath: config.basePath,
-          fetch: (request, meta) =>
-            entry.default.fetch(request, {
-              env,
-              clientAddress: meta.clientAddress,
-            }),
-        });
-        // Dev is one process, so serialising the loop is guard enough; the
-        // lease is sized in minutes and would outlive a process that restarts
-        // every few seconds, leaving cron looking dead for the session. The
-        // claim row still stops a reload replaying a minute.
-        if (
-          isNodeRuntime(config.runtime) &&
-          config.runtime.config.cron !== false
-        ) {
-          cron = await entry.startCron?.({ lease: false });
-        }
+    ): Promise<LoadedSite> {
+      const config = (
+        await runner.import<{ default: PlumixConfig }>(ctx.configPath)
+      ).default;
+      const entry = await runner.import<DevEntry>(entryPath);
+      const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
+        ? config.runtime.config
+        : {};
+      // Points at the staged public dir so admin deep links resolve to the
+      // shell Vite also serves.
+      const env = { ...process.env, [ASSETS_DIR_ENV]: publicDir };
+      const bridge = createRequestListener(
+        async (request, meta) =>
+          entry.default.fetch(request, {
+            env,
+            clientAddress: meta.clientAddress,
+          }),
+        { trustProxy, bodySizeLimit },
+      );
+      // As in the built entry: a same-origin image source is a public file
+      // Vite would serve, else the site, as an anonymous GET.
+      const images = createImageLayer(config.imageDelivery, {
+        assets: createAssetsLayer({ root: publicDir }),
+        trustProxy,
+        basePath: config.basePath,
+        fetch: (request, meta) =>
+          entry.default.fetch(request, {
+            env,
+            clientAddress: meta.clientAddress,
+          }),
+      });
+      // Dev is one process, so serialising the loop is guard enough; the
+      // lease is sized in minutes and would outlive a process that restarts
+      // every few seconds, leaving cron looking dead for the session. The
+      // claim row still stops a reload replaying a minute.
+      const scheduler =
+        isNodeRuntime(config.runtime) && config.runtime.config.cron !== false
+          ? await entry.startCron?.({ lease: false })
+          : undefined;
+      return {
+        listener: (req, res) => images.serve(req, res, () => bridge(req, res)),
+        scheduler,
+        dispose: entry.dispose,
+      };
+    }
 
-        return (req, res) => images.serve(req, res, () => bridge(req, res));
-      } catch (error) {
-        // The entry could not even be imported — a config that fails to parse
-        // or throws on load. This request gets the page a failed `buildApp`
-        // renders; the next one tries again.
-        listener = undefined;
-        logger.error(String(error), {
-          error: error instanceof Error ? error : undefined,
-        });
-        return createRequestListener(() =>
-          Promise.resolve(renderDevBootErrorResponse(error)),
-        );
-      }
+    // Requests waiting on a load that threw get the page a failed `buildApp`
+    // renders.
+    function bootFailure(error: unknown, logger: Logger): RequestListener {
+      logger.error(String(error), {
+        error: error instanceof Error ? error : undefined,
+      });
+      return createRequestListener(() =>
+        Promise.resolve(renderDevBootErrorResponse(error)),
+      );
     }
 
     const nodeDev: Plugin = {
@@ -260,7 +241,7 @@ export const devCommand: CommandDefinition = {
         const { runner } = environment;
         // A restart hands over a new runner; nothing imported through the old
         // one may answer again.
-        listener = undefined;
+        reloader.invalidate();
 
         // Ahead of everything Vite serves: a request from a host that is not
         // loopback gets no module source, no admin shell and no site.
@@ -291,12 +272,13 @@ export const devCommand: CommandDefinition = {
         // Returned, so it lands after Vite's own middlewares: module serving,
         // HMR and the staged admin shell answer first.
         return () => {
+          const build = () => loadSite(runner, server.config.publicDir);
+          const fail = (error: unknown) =>
+            bootFailure(error, server.config.logger);
           server.middlewares.use((req, res) => {
-            void (listener ??= load(
-              runner,
-              server.config.publicDir,
-              server.config.logger,
-            )).then((bridge) => bridge(req, res));
+            void reloader
+              .current(build, fail)
+              .then((bridge) => bridge(req, res));
           });
         };
       },
@@ -309,7 +291,7 @@ export const devCommand: CommandDefinition = {
           return;
         }
         if (invalidateFile(environment.runner.evaluatedModules, file)) {
-          listener = undefined;
+          reloader.invalidate();
         }
       },
     };
