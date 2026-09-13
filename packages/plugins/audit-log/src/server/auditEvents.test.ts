@@ -12,6 +12,7 @@
 //    drift; `assertRedactionInvariants` ensures sensitive fields stay
 //    omitted on every row whose subject type carries them.
 
+import type { ActionName } from "plumix";
 import type {
   AppContext,
   AuthenticatedUser,
@@ -757,7 +758,7 @@ describe("assertRedactionInvariants", () => {
   test("throws when a user-subject diff row forgets to omit passwordHash", () => {
     const violating: AuditEventDef[] = [
       {
-        event: "user:bad",
+        event: "user:bad" as ActionName,
         subject: { kind: "extract", type: "user" },
         actor: { kind: "ctx" },
         // `passwordHash` deliberately missing from the omit list.
@@ -772,7 +773,7 @@ describe("assertRedactionInvariants", () => {
   test("ignores diff-less rows even when subject is in the required map", () => {
     const safe: AuditEventDef[] = [
       {
-        event: "user:tagged",
+        event: "user:tagged" as ActionName,
         subject: { kind: "extract", type: "user" },
         actor: { kind: "ctx" },
       },

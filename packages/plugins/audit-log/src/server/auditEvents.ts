@@ -13,7 +13,7 @@
 // must include that field in `diff.omit` or the test fails — drift
 // is caught at CI time, not in review.
 
-import type { JsonObject } from "plumix";
+import type { ActionName, JsonObject } from "plumix";
 import type {
   AppContext,
   AuthenticatedUser,
@@ -79,7 +79,7 @@ type ActorStrategy =
     };
 
 export interface AuditEventDef {
-  readonly event: string;
+  readonly event: ActionName;
   readonly subject: SubjectStrategy;
   readonly actor: ActorStrategy;
   /** Diff the top-level columns of `payload` (next) vs. `context` (previous), omitting these keys. */
@@ -640,7 +640,7 @@ export function registerAuditEvents(
   service: AuditService,
 ): void {
   for (const def of auditEvents) {
-    ctx.addAction(def.event as never, (...args: unknown[]) => {
+    ctx.addAction(def.event, (...args: unknown[]) => {
       const appCtx = tryGetContext();
       if (!appCtx) {
         service.warnNoContextOnce();
