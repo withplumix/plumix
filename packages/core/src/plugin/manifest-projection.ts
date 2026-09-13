@@ -27,6 +27,7 @@ import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
 import type { MetaBoxField } from "./fields/meta-box-field.js";
 import type {
   AdminNavGroupRef,
+  EntryMenuIcon,
   EntryTypeAccess,
   EntryTypeLabels,
   PluginComponentRef,
@@ -43,14 +44,17 @@ import type {
   RegisteredTermMetaBox,
   RegisteredTermTaxonomy,
   RegisteredUserMetaBox,
+  TaxonomyMenuIcon,
   TermTaxonomyLabels,
 } from "./registry.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
 import {
+  ENTRY_MENU_ICONS,
   resolveEntryTypeVisibility,
   resolveTermTaxonomyVisibility,
+  TAXONOMY_MENU_ICONS,
 } from "./registry.js";
 
 export function manifestEntryVisibility(
@@ -90,34 +94,27 @@ export interface DashboardWidgetManifestEntry {
  * the type level.
  */
 export type CoreIconName =
+  | EntryMenuIcon
+  | TaxonomyMenuIcon
   | "dashboard"
-  | "content"
-  | "file-text"
-  | "layout"
-  | "image"
-  | "calendar"
-  | "tag"
-  | "folder"
   | "users"
   | "settings"
   | "puzzle"
   | "mail"
   | "key";
 
-// Subset of `CoreIconName` plugins may emit on `EntryTypeOptions.menuIcon`
-// or `TermTaxonomyOptions.menuIcon`. Names outside this set fall back to
-// a sensible default at projection time.
-const ENTRY_MENU_ICONS: ReadonlySet<CoreIconName> = new Set<CoreIconName>([
-  "content",
-  "file-text",
-  "layout",
-  "image",
-  "calendar",
-]);
-const TAXONOMY_MENU_ICONS: ReadonlySet<CoreIconName> = new Set<CoreIconName>([
-  "tag",
-  "folder",
-]);
+// Runtime lookups for `resolveEntryMenuIcon`/`resolveTaxonomyMenuIcon` below,
+// built from the same rosters `EntryTypeOptions.menuIcon` and
+// `TermTaxonomyOptions.menuIcon` are typed against (`registry.ts`) — the type
+// and the fallback check can't drift apart. Names outside these sets fall
+// back to a sensible default at projection time (a stale-compiled plugin can
+// still emit one at runtime despite the closed type).
+const ENTRY_MENU_ICON_SET: ReadonlySet<EntryMenuIcon> = new Set(
+  ENTRY_MENU_ICONS,
+);
+const TAXONOMY_MENU_ICON_SET: ReadonlySet<TaxonomyMenuIcon> = new Set(
+  TAXONOMY_MENU_ICONS,
+);
 
 /**
  * Built-in nav groups core ships. Plugins target their items at these
@@ -1322,9 +1319,9 @@ function toTermTaxonomyEntry(
 function resolveEntryMenuIcon(menuIcon: string | undefined): CoreIconName {
   if (
     menuIcon !== undefined &&
-    ENTRY_MENU_ICONS.has(menuIcon as CoreIconName)
+    ENTRY_MENU_ICON_SET.has(menuIcon as EntryMenuIcon)
   ) {
-    return menuIcon as CoreIconName;
+    return menuIcon as EntryMenuIcon;
   }
   return "content";
 }
@@ -1335,9 +1332,9 @@ function resolveTaxonomyMenuIcon(
 ): CoreIconName {
   if (
     menuIcon !== undefined &&
-    TAXONOMY_MENU_ICONS.has(menuIcon as CoreIconName)
+    TAXONOMY_MENU_ICON_SET.has(menuIcon as TaxonomyMenuIcon)
   ) {
-    return menuIcon as CoreIconName;
+    return menuIcon as TaxonomyMenuIcon;
   }
   return isHierarchical === true ? "folder" : "tag";
 }

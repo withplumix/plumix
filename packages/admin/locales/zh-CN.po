@@ -14,6 +14,41 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.filterItemsList"
+#~ msgstr "筛选列表"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemTrashed"
+#~ msgstr "已移至回收站"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublished"
+#~ msgstr "已发布"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublishedPrivately"
+#~ msgstr "已私密发布"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemRevertedToDraft"
+#~ msgstr "已还原为草稿"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemScheduled"
+#~ msgstr "已计划"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemUpdated"
+#~ msgstr "已更新"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -1550,11 +1585,6 @@ msgstr "按角色筛选"
 msgid "entries.list.filterStatusAria"
 msgstr "按状态筛选"
 
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.filterItemsList"
-msgstr "筛选列表"
-
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -1897,11 +1927,6 @@ msgstr "移至回收站"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.moveToTrash"
 msgstr "移至回收站？"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemTrashed"
-msgstr "已移至回收站"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2411,16 +2436,6 @@ msgid "entries.list.statusFilter.published"
 msgstr "已发布"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublished"
-msgstr "已发布"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublishedPrivately"
-msgstr "已私密发布"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.published"
 msgstr ""
@@ -2520,11 +2535,6 @@ msgstr "限制为特定权限"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "限制为特定权限"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemRevertedToDraft"
-msgstr "已还原为草稿"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2656,11 +2666,6 @@ msgstr "保存中…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr "已计划"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemScheduled"
 msgstr "已计划"
 
 #. js-lingui-explicit-id
@@ -3536,11 +3541,6 @@ msgstr "更新您的显示名称。角色和账户状态由管理员管理。"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
 msgstr "更新于"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemUpdated"
-msgstr "已更新"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx

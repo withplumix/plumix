@@ -36,10 +36,11 @@ import type { RegisteredLookupAdapter } from "./lookup.js";
 /**
  * WP-style per-type chrome labels shared between `EntryTypeOptions.labels`
  * and `EntryTypeManifestEntry.labels`. Every field is optional on the
- * options side; `buildManifest` resolves the cascade server-side so the
- * projection (`ResolvedEntryTypeLabels`) ships every key fully populated.
- * Consumers read `entry.labels.editItem` directly — no per-call-site
- * fallback boilerplate.
+ * options side; admin consumers resolve the cascade client-side via
+ * `entryTypeLabel(entry, key)`, which falls back to
+ * `GENERIC_ENTRY_TYPE_LABELS[key]` when a plugin left a key unset — so a
+ * call site reads `entryTypeLabel(entry, "editItem")` directly rather than
+ * inlining its own fallback.
  *
  * Key set mirrors WP's `register_post_type()` labels table where the
  * mental model carries (`searchItems`, `notFound`, `addNewItem`, etc.)
@@ -49,7 +50,12 @@ import type { RegisteredLookupAdapter } from "./lookup.js";
  * `name_admin_bar` (plumix has no admin bar), media-specific keys
  * (`featured_image`, `insert_into_item`, …) that belong on the media
  * plugin, and tag-cloud affordances (`popular_items`, `most_used`)
- * that plumix's picker UX doesn't surface.
+ * that plumix's picker UX doesn't surface. Also excludes the WP-parity
+ * status-toast family (`item_updated`, `item_published`, …) and the
+ * SR-only list-region labels (`items_list`, `items_list_navigation`,
+ * `filter_items_list`): the editor's publish/save toasts and the
+ * list-table's ARIA labels each carry their own hardcoded strings, so
+ * declaring an override here would silently do nothing.
  */
 export interface EntryTypeLabels {
   // Identity
@@ -93,27 +99,27 @@ export interface EntryTypeLabels {
   // Trash / status flow
   /** "Move post to trash?" — confirmation prompt on trash action. */
   readonly moveToTrash?: Label;
-  // Status-change toasts (mirror WP's `item_*` family from 5.0+)
-  /** "Post updated" — toast after autosave or explicit save. */
-  readonly itemUpdated?: Label;
-  /** "Post published" — toast after first publish. */
-  readonly itemPublished?: Label;
-  /** "Post published privately" — toast for private visibility. */
-  readonly itemPublishedPrivately?: Label;
-  /** "Post scheduled" — toast after scheduling a future publish. */
-  readonly itemScheduled?: Label;
-  /** "Post moved to trash" — toast after trash action completes. */
-  readonly itemTrashed?: Label;
-  /** "Post reverted to draft" — toast after unpublish. */
-  readonly itemRevertedToDraft?: Label;
-  // Accessibility region labels (SR-only)
-  /** "Posts list" — SR-only region label for the data table. */
-  readonly itemsList?: Label;
-  /** "Posts list navigation" — SR-only region label for pagination. */
-  readonly itemsListNavigation?: Label;
-  /** "Filter posts list" — SR-only label for the filter row. */
-  readonly filterItemsList?: Label;
 }
+
+/**
+ * Closed set of icon names `EntryTypeOptions.menuIcon` accepts. The admin
+ * maps each to a lucide component at render time (`core-icon.tsx`); the
+ * runtime projection falls back to `"content"` for a value outside this
+ * set — see `resolveEntryMenuIcon` in `manifest-projection.ts`, which
+ * derives its own allowlist from this same array so the two can't drift.
+ */
+export const ENTRY_MENU_ICONS = [
+  "content",
+  "file-text",
+  "layout",
+  "image",
+  "calendar",
+] as const;
+export type EntryMenuIcon = (typeof ENTRY_MENU_ICONS)[number];
+
+/** Closed set `TermTaxonomyOptions.menuIcon` accepts — see `EntryMenuIcon`. */
+export const TAXONOMY_MENU_ICONS = ["tag", "folder"] as const;
+export type TaxonomyMenuIcon = (typeof TAXONOMY_MENU_ICONS)[number];
 
 export interface EntryTypeOptions {
   readonly label: Label;
@@ -151,7 +157,7 @@ export interface EntryTypeOptions {
   readonly capabilityType?: string;
   readonly capabilities?: EntryTypeCapabilityOverrides;
   readonly priority?: number;
-  readonly menuIcon?: string;
+  readonly menuIcon?: EntryMenuIcon;
   /** Synonyms the command palette matches in addition to the sidebar label. */
   readonly keywords?: readonly Label[];
   /**
@@ -218,8 +224,8 @@ export interface SelectableAccessPolicy {
 
 /**
  * WP-style per-type chrome labels for term taxonomies. Same cascade
- * semantics as `EntryTypeLabels` — `buildManifest` resolves into
- * `ResolvedTermTaxonomyLabels` server-side. Terms always have a
+ * semantics as `EntryTypeLabels` — admin consumers resolve it client-side
+ * via `termTaxonomyLabel(taxonomy, key)`. Terms always have a
  * server-supplied `name` so `untitledItem` doesn't apply here.
  */
 export interface TermTaxonomyLabels {
@@ -293,7 +299,7 @@ export interface TermTaxonomyOptions {
     readonly isHierarchical?: boolean;
   };
   readonly capabilities?: TermTaxonomyCapabilityOverrides;
-  readonly menuIcon?: string;
+  readonly menuIcon?: TaxonomyMenuIcon;
   /** Synonyms the command palette matches in addition to the sidebar label. */
   readonly keywords?: readonly Label[];
   /** Page size for this taxonomy's term archives. Default 20. */

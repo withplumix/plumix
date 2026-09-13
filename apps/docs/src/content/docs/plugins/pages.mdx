@@ -98,13 +98,12 @@ export const example = definePlugin("example", {
       label: "Pages",
       labels: { singular: "Page", plural: "Pages" },
       description: "Hierarchical static pages",
-      supports: ["title", "editor", "slug", "excerpt", "revisions", "autosave"],
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
       versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
       isHierarchical: true,
       isPublic: true,
       hasArchive: false,
       rewrite: { slug: "" },
-      capabilityType: "page",
       menuIcon: "layout",
       keywords: ["static", "page"],
     });
@@ -114,7 +113,7 @@ export const example = definePlugin("example", {
 
 `hasArchive: false` means no listing route compiles for the type. There is no `/pages` index, and adding one is not a matter of flipping the flag, because the empty prefix leaves no URL for an index to sit at. A site that wants a page index builds it as a page.
 
-`supports` carries `slug`, which nothing in core or the admin reads today. The five values that change behaviour are `title`, `editor`, `excerpt`, `revisions` and `autosave`. `slug` records intent, and [Entry Types](/content-modelling/entry-types/) explains why the list is conventional rather than closed.
+`supports` opts into the five values that change behaviour: `title`, `editor`, `excerpt`, `revisions` and `autosave`. [Entry Types](/content-modelling/entry-types/) explains why the list is conventional rather than closed.
 
 `keywords` gives the admin command palette two synonyms to match alongside the sidebar label, so typing "static" finds Pages.
 
@@ -178,7 +177,7 @@ Registering `page` derives eight capabilities under the `page` family, each mapp
 | `entry:page:read_revisions`   | editor       |
 | `entry:page:restore_revision` | editor       |
 
-The family name comes from `capabilityType: "page"`, which matches the type name here. Register a second hierarchical type with `capabilityType: "page"` and it is gated by these same eight rather than minting its own.
+The family name comes from the type name, `page`, since the registration sets no `capabilityType` override. [Entry Types](/content-modelling/entry-types/#capabilities) covers `capabilityType`, which points a second type's capabilities at this same family instead of minting its own.
 
 Because `page` opts into `revisions` and `autosave`, every write that lands on a page's stored columns captures a revision, and editing a live page writes to a per-user pending draft until you publish it. The snapshot is taken after the write commits, so a revision holds the version that write produced rather than the one it replaced. Twenty-five are kept per page, and the oldest are deleted past that.
 

@@ -48,29 +48,6 @@ export const GENERIC_ENTRY_TYPE_LABELS = {
     id: "type.generic.moveToTrash",
     message: "Move to trash?",
   },
-  // Status-change toasts (mirror WP's `item_*` family)
-  itemUpdated: { id: "type.generic.itemUpdated", message: "Updated" },
-  itemPublished: { id: "type.generic.itemPublished", message: "Published" },
-  itemPublishedPrivately: {
-    id: "type.generic.itemPublishedPrivately",
-    message: "Published privately",
-  },
-  itemScheduled: { id: "type.generic.itemScheduled", message: "Scheduled" },
-  itemTrashed: { id: "type.generic.itemTrashed", message: "Moved to trash" },
-  itemRevertedToDraft: {
-    id: "type.generic.itemRevertedToDraft",
-    message: "Reverted to draft",
-  },
-  // Accessibility region labels
-  itemsList: { id: "type.generic.itemsList", message: "List" },
-  itemsListNavigation: {
-    id: "type.generic.itemsListNavigation",
-    message: "List navigation",
-  },
-  filterItemsList: {
-    id: "type.generic.filterItemsList",
-    message: "Filter list",
-  },
 } as const satisfies Record<string, Label>;
 
 export const GENERIC_TERM_TAXONOMY_LABELS = {

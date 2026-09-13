@@ -14,6 +14,41 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.filterItemsList"
+#~ msgstr "Liste filtern"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemTrashed"
+#~ msgstr "In den Papierkorb verschoben"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublished"
+#~ msgstr "Veröffentlicht"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublishedPrivately"
+#~ msgstr "Privat veröffentlicht"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemRevertedToDraft"
+#~ msgstr "Auf Entwurf zurückgesetzt"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemScheduled"
+#~ msgstr "Geplant"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemUpdated"
+#~ msgstr "Aktualisiert"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -1550,11 +1585,6 @@ msgstr "Nach Rolle filtern"
 msgid "entries.list.filterStatusAria"
 msgstr "Nach Status filtern"
 
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.filterItemsList"
-msgstr "Liste filtern"
-
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -1897,11 +1927,6 @@ msgstr "In den Papierkorb verschieben"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.moveToTrash"
 msgstr "In den Papierkorb verschieben?"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemTrashed"
-msgstr "In den Papierkorb verschoben"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2411,16 +2436,6 @@ msgid "entries.list.statusFilter.published"
 msgstr "Veröffentlicht"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublished"
-msgstr "Veröffentlicht"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublishedPrivately"
-msgstr "Privat veröffentlicht"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.published"
 msgstr ""
@@ -2520,11 +2535,6 @@ msgstr "Auf bestimmte Berechtigungen beschränken"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Auf bestimmte Berechtigungen beschränken"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemRevertedToDraft"
-msgstr "Auf Entwurf zurückgesetzt"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2656,11 +2666,6 @@ msgstr "Wird gespeichert…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr "Geplant"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemScheduled"
 msgstr "Geplant"
 
 #. js-lingui-explicit-id
@@ -3535,11 +3540,6 @@ msgstr "Aktualisieren Sie Ihren angezeigten Namen. Rolle und Kontostatus werden 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
-msgstr "Aktualisiert"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemUpdated"
 msgstr "Aktualisiert"
 
 #. js-lingui-explicit-id

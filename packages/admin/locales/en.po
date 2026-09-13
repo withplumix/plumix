@@ -14,6 +14,41 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.filterItemsList"
+#~ msgstr "Filter list"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemTrashed"
+#~ msgstr "Moved to trash"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublished"
+#~ msgstr "Published"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublishedPrivately"
+#~ msgstr "Published privately"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemRevertedToDraft"
+#~ msgstr "Reverted to draft"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemScheduled"
+#~ msgstr "Scheduled"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemUpdated"
+#~ msgstr "Updated"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -1550,11 +1585,6 @@ msgstr "Filter by role"
 msgid "entries.list.filterStatusAria"
 msgstr "Filter by status"
 
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.filterItemsList"
-msgstr "Filter list"
-
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -1897,11 +1927,6 @@ msgstr "Move to trash"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.moveToTrash"
 msgstr "Move to trash?"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemTrashed"
-msgstr "Moved to trash"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2411,16 +2436,6 @@ msgid "entries.list.statusFilter.published"
 msgstr "Published"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublished"
-msgstr "Published"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublishedPrivately"
-msgstr "Published privately"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.published"
 msgstr "Published."
@@ -2520,11 +2535,6 @@ msgstr "Restrict to specific capabilities"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Restrict to specific capabilities"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemRevertedToDraft"
-msgstr "Reverted to draft"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2656,11 +2666,6 @@ msgstr "Saving…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr "Scheduled"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemScheduled"
 msgstr "Scheduled"
 
 #. js-lingui-explicit-id
@@ -3535,11 +3540,6 @@ msgstr "Update your display name. Role and account state are managed by administ
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
-msgstr "Updated"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemUpdated"
 msgstr "Updated"
 
 #. js-lingui-explicit-id

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { MarkSpec } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS, defineBlock } from "@plumix/blocks";
 
+import type { EntryMenuIcon } from "./manifest.js";
 import {
   anonymousPolicy,
   definePolicy,
@@ -1860,7 +1861,13 @@ describe("buildManifest adminNav projection", () => {
   test("unknown menuIcon falls back to the generic content icon", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", menuIcon: "frobnicate" });
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        // Safety: simulates a value outside the closed `EntryMenuIcon` union
+        // reaching the registry at runtime (a stale-compiled plugin) — the
+        // fallback below is what protects core from it, not the type.
+        menuIcon: "frobnicate" as unknown as EntryMenuIcon,
+      });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const item = buildManifest(registry).adminNav.find(

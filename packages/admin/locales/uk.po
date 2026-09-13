@@ -14,6 +14,41 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.filterItemsList"
+#~ msgstr "Фільтрувати список"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemTrashed"
+#~ msgstr "Переміщено в кошик"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublished"
+#~ msgstr "Опубліковано"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublishedPrivately"
+#~ msgstr "Опубліковано приватно"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemRevertedToDraft"
+#~ msgstr "Повернено до чернетки"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemScheduled"
+#~ msgstr "Заплановано"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemUpdated"
+#~ msgstr "Оновлено"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -1550,11 +1585,6 @@ msgstr "Фільтр за роллю"
 msgid "entries.list.filterStatusAria"
 msgstr "Фільтр за статусом"
 
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.filterItemsList"
-msgstr "Фільтрувати список"
-
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -1897,11 +1927,6 @@ msgstr "У кошик"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.moveToTrash"
 msgstr "Перемістити в кошик?"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemTrashed"
-msgstr "Переміщено в кошик"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2411,16 +2436,6 @@ msgid "entries.list.statusFilter.published"
 msgstr "Опубліковано"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublished"
-msgstr "Опубліковано"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublishedPrivately"
-msgstr "Опубліковано приватно"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.published"
 msgstr ""
@@ -2520,11 +2535,6 @@ msgstr "Обмежити конкретними можливостями"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "Обмежити конкретними можливостями"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemRevertedToDraft"
-msgstr "Повернено до чернетки"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2656,11 +2666,6 @@ msgstr "Збереження…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr "Заплановано"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemScheduled"
 msgstr "Заплановано"
 
 #. js-lingui-explicit-id
@@ -3535,11 +3540,6 @@ msgstr "Оновіть ваше відображуване ім'я. Роль і 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
-msgstr "Оновлено"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemUpdated"
 msgstr "Оновлено"
 
 #. js-lingui-explicit-id

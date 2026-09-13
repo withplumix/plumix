@@ -14,6 +14,41 @@ msgstr ""
 "Language-Team: \n"
 
 #. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.filterItemsList"
+#~ msgstr "تصفية القائمة"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemTrashed"
+#~ msgstr "نُقل إلى المهملات"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublished"
+#~ msgstr "منشور"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemPublishedPrivately"
+#~ msgstr "منشور بشكل خاص"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemRevertedToDraft"
+#~ msgstr "أُعيد إلى مسودة"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemScheduled"
+#~ msgstr "مجدول"
+
+#. js-lingui-explicit-id
+#: src/lib/core-type-labels-i18n.ts
+#~ msgid "type.generic.itemUpdated"
+#~ msgstr "تم التحديث"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -1550,11 +1585,6 @@ msgstr "تصفية حسب الدور"
 msgid "entries.list.filterStatusAria"
 msgstr "تصفية حسب الحالة"
 
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.filterItemsList"
-msgstr "تصفية القائمة"
-
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
 #: src/editor/revisions/PreviewBanner.tsx
@@ -1897,11 +1927,6 @@ msgstr "نقل إلى المهملات"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.moveToTrash"
 msgstr "نقل إلى المهملات؟"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemTrashed"
-msgstr "نُقل إلى المهملات"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2411,16 +2436,6 @@ msgid "entries.list.statusFilter.published"
 msgstr "منشور"
 
 #. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublished"
-msgstr "منشور"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemPublishedPrivately"
-msgstr "منشور بشكل خاص"
-
-#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.published"
 msgstr ""
@@ -2520,11 +2535,6 @@ msgstr "تقييد بقدرات محددة"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.restrict"
 msgstr "تقييد بقدرات محددة"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemRevertedToDraft"
-msgstr "أُعيد إلى مسودة"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionDiffDialog.tsx
@@ -2656,11 +2666,6 @@ msgstr "جارٍ الحفظ…"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.scheduled"
-msgstr "مجدول"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemScheduled"
 msgstr "مجدول"
 
 #. js-lingui-explicit-id
@@ -3536,11 +3541,6 @@ msgstr "حدّث اسمك الظاهر. الدور وحالة الحساب يد�
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
 msgstr "آخر تحديث"
-
-#. js-lingui-explicit-id
-#: src/lib/core-type-labels-i18n.ts
-msgid "type.generic.itemUpdated"
-msgstr "تم التحديث"
 
 #. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
