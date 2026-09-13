@@ -4,10 +4,10 @@ import { afterEach, describe, expect, test } from "vitest";
 import { defineBlock } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
-import type { AppContext } from "../../context/app.js";
 import type { User } from "../../db/schema/users.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedEntry } from "./resolved-entry.js";
+import { getContext } from "../../context/stores.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
@@ -2011,8 +2011,8 @@ const failingQueryPlugin = definePlugin("acme-failing-query", (ctx) => {
     defineBlock({
       name: "acme/failing-query",
       loaders: {
-        rows: ({ ctx: loaderCtx }: { ctx: unknown }) =>
-          (loaderCtx as AppContext).telemetry.span("db: query", (s) => {
+        rows: () =>
+          getContext().telemetry.span("db: query", (s) => {
             s.set("db.sql", "select * from broken");
             return Promise.reject(new Error("no such table: broken"));
           }),

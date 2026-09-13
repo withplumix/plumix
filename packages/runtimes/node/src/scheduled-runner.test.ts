@@ -2,22 +2,26 @@ import type { Db, PlumixApp } from "plumix";
 import { createTestDb } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
+import type { ScheduledRunnerOptions } from "./scheduled-runner.js";
 import { startScheduledRunner } from "./scheduled-runner.js";
 import { virtualClock } from "./test/virtual-clock.js";
 
-const TASKS = [
-  { id: "publish-scheduled", cron: "*/5 * * * *", registeredBy: "core" },
+const TASKS: PlumixApp["scheduledTasks"] = [
+  {
+    id: "publish-scheduled",
+    cron: "*/5 * * * *",
+    registeredBy: "core",
+    handler: () => undefined,
+  },
 ];
 
-const appWith = (tasks: readonly unknown[] = TASKS): PlumixApp =>
-  ({ scheduledTasks: tasks }) as unknown as PlumixApp;
-
-const appConnecting = (connect: () => object): PlumixApp =>
-  ({
-    scheduledTasks: TASKS,
-    schema: {},
-    config: { database: { connect } },
-  }) as unknown as PlumixApp;
+const appWith = (
+  connect: () => { db: Db; close?: () => void },
+): ScheduledRunnerOptions["app"] => ({
+  scheduledTasks: TASKS,
+  schema: {},
+  config: { database: { kind: "test", connect } },
+});
 
 const quietLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -31,7 +35,7 @@ describe("startScheduledRunner", () => {
 
     const replicas = ["a", "b"].map((replica) =>
       startScheduledRunner({
-        app: appWith(),
+        app: appWith(() => ({ db })),
         env: {},
         db,
         clock,
@@ -58,7 +62,7 @@ describe("startScheduledRunner", () => {
 
     const replicas = ["a", "b"].map(() =>
       startScheduledRunner({
-        app: appWith(),
+        app: appWith(() => ({ db })),
         env: {},
         db,
         clock,
@@ -79,7 +83,7 @@ describe("startScheduledRunner", () => {
     const connect = vi.fn(() => ({ db }));
 
     const runner = startScheduledRunner({
-      app: appConnecting(connect),
+      app: appWith(connect),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
       logger: quietLogger,
@@ -95,7 +99,7 @@ describe("startScheduledRunner", () => {
     const close = vi.fn();
 
     const runner = startScheduledRunner({
-      app: appConnecting(() => ({ db, close })),
+      app: appWith(() => ({ db, close })),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
       logger: quietLogger,
@@ -112,7 +116,7 @@ describe("startScheduledRunner", () => {
     const clock = virtualClock("2026-09-07T02:58:00Z");
 
     const runner = startScheduledRunner({
-      app: appConnecting(() => ({ db, close })),
+      app: appWith(() => ({ db, close })),
       env: {},
       clock,
       // No lease: its heartbeat would keep ticking for a firing that never ends.
@@ -131,7 +135,7 @@ describe("startScheduledRunner", () => {
     const close = vi.fn();
 
     const runner = startScheduledRunner({
-      app: appConnecting(() => ({ db, close })),
+      app: appWith(() => ({ db, close })),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
       logger: quietLogger,
@@ -148,7 +152,7 @@ describe("startScheduledRunner", () => {
     const warn = vi.fn();
 
     const runner = startScheduledRunner({
-      app: appConnecting(() => ({
+      app: appWith(() => ({
         db,
         close: () => {
           throw new Error("database is not open");

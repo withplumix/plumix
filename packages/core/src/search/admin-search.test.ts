@@ -1,11 +1,17 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { SearchGroup } from "./admin-search.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { runAdminSearch } from "./admin-search.js";
 
-const ctx = {} as AppContext;
+// Handlers receive the request context; these tests never read it.
+let ctx: AppContext;
+beforeAll(async () => {
+  ctx = createTestContext({ db: await createTestDb() });
+});
 const input = { query: "hello", limit: 5 };
 
 function group(key: string, priority: number, items = 1): SearchGroup {

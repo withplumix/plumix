@@ -16,7 +16,7 @@ import { normalizeTag } from "./tags.js";
 const pending = new WeakMap<Request, Set<string>>();
 
 export function accumulateEmbeddedTags(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "request">,
   tags: readonly string[],
 ): void {
   if (tags.length === 0) return;
@@ -29,7 +29,9 @@ export function accumulateEmbeddedTags(
 }
 
 /** The de-duplicated tags accumulated for this request, in insertion order. */
-export function embeddedPageTags(ctx: AppContext): readonly string[] {
+export function embeddedPageTags(
+  ctx: Pick<AppContext, "request">,
+): readonly string[] {
   const set = pending.get(ctx.request);
   return set === undefined ? [] : [...set];
 }

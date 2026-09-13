@@ -5,8 +5,8 @@ import { accumulateEmbeddedTags, embeddedPageTags } from "./embedded-tags.js";
 
 // The accumulator keys off `ctx.request`, so each fake context needs its
 // own `Request` to stand in for a distinct per-request AppContext.
-function fakeCtx(): AppContext {
-  return { request: new Request("https://cms.example/") } as AppContext;
+function fakeCtx(): Pick<AppContext, "request"> {
+  return { request: new Request("https://cms.example/") };
 }
 
 describe("embedded-tags accumulator", () => {
@@ -45,8 +45,8 @@ describe("embedded-tags accumulator", () => {
     // `ctx.request` by reference — tags accumulated before or after the
     // rebind must read back through either context.
     const request = new Request("https://cms.example/");
-    const before = { request } as AppContext;
-    const afterRebind = { request } as AppContext;
+    const before = { request };
+    const afterRebind = { request };
     accumulateEmbeddedTags(before, ["e:1"]);
     expect(embeddedPageTags(afterRebind)).toEqual(["e:1"]);
   });

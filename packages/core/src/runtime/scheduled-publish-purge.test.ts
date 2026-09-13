@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { PlumixApp } from "./app.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import { requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -30,9 +29,7 @@ describe("scheduled publish purges the CDN", () => {
     registerCorePurgeInvalidator(hooks);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
-    const app = {
-      scheduledTasks: registry.scheduledTasks,
-    } as unknown as PlumixApp;
+    const app = { scheduledTasks: registry.scheduledTasks };
 
     const purgeTags = vi.fn(() => Promise.resolve());
     const ctx = createTestContext({
@@ -67,9 +64,7 @@ describe("scheduled publish purges the CDN", () => {
     registerCorePurgeInvalidator(hooks);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
-    const app = {
-      scheduledTasks: registry.scheduledTasks,
-    } as unknown as PlumixApp;
+    const app = { scheduledTasks: registry.scheduledTasks };
 
     const defer = vi.fn((p: Promise<unknown>) => {
       void p;

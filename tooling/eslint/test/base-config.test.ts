@@ -369,12 +369,18 @@ describe("the existing restricted-syntax selectors", () => {
   });
 });
 
-describe("plumix/no-forged-app-context", () => {
-  it("rejects a test forging AppContext through unknown", async () => {
-    await expect(plumixReports("src/forged-context.test.ts")).resolves.toEqual([
-      { ruleId: "plumix/no-forged-app-context", line: 9 },
-      { ruleId: "plumix/no-forged-app-context", line: 11 },
-      { ruleId: "plumix/no-forged-app-context", line: 13 },
+describe("plumix/no-forged-app", () => {
+  it("rejects a test asserting an untyped or partial value into AppContext or PlumixApp", async () => {
+    await expect(plumixReports("src/forged-app.test.ts")).resolves.toEqual([
+      { ruleId: "plumix/no-forged-app", line: 18 },
+      { ruleId: "plumix/no-forged-app", line: 20 },
+      { ruleId: "plumix/no-forged-app", line: 22 },
+      { ruleId: "plumix/no-forged-app", line: 24 },
+      { ruleId: "plumix/no-forged-app", line: 26 },
+      { ruleId: "plumix/no-forged-app", line: 29 },
+      { ruleId: "plumix/no-forged-app", line: 31 },
+      { ruleId: "plumix/no-forged-app", line: 34 },
+      { ruleId: "plumix/no-forged-app", line: 36 },
     ]);
   });
 
@@ -389,7 +395,7 @@ describe("plumix/no-forged-app-context", () => {
     const [result] = await withReact.lintFiles(["src/test/forged-helper.ts"]);
     expect(
       (result?.messages ?? [])
-        .filter((message) => message.ruleId === "plumix/no-forged-app-context")
+        .filter((message) => message.ruleId === "plumix/no-forged-app")
         .map((message) => message.line),
     ).toEqual([5]);
   });

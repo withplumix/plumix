@@ -1,11 +1,17 @@
 import type { CommandContext, PlumixApp } from "plumix";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { createDispatcherHarness } from "plumix/test";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { migrateApplyCommand, migrateApplyDeps } from "./migrate-apply.js";
 
+let app: PlumixApp;
+beforeAll(async () => {
+  ({ app } = await createDispatcherHarness());
+});
+
 function ctx(overrides: Partial<CommandContext>): CommandContext {
   return {
-    app: {} as unknown as PlumixApp,
+    app,
     cwd: "/tmp/fake",
     configPath: "/tmp/fake/plumix.config.ts",
     argv: [],

@@ -200,7 +200,9 @@ export interface ConnectedScheduledDb {
  * that routes on it sees one shape however the run was triggered.
  */
 export function connectScheduledDb(
-  app: PlumixApp,
+  app: Pick<PlumixApp, "schema"> & {
+    readonly config: Pick<PlumixApp["config"], "database">;
+  },
   env: PlumixEnv,
 ): ConnectedScheduledDb {
   const request = new Request("http://localhost/_plumix/internal/scheduled", {

@@ -21,7 +21,7 @@ import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
  * the dispatcher would deliver the same collector a second time.
  */
 export async function runScheduledTasks(
-  app: PlumixApp,
+  app: Pick<PlumixApp, "scheduledTasks">,
   ctx: AppContext,
   firedCron?: string,
 ): Promise<ScheduledRunReport> {

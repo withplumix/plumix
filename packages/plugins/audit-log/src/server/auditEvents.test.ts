@@ -21,11 +21,14 @@ import type {
 } from "plumix/plugin";
 import type { Term, User } from "plumix/schema";
 import { HookRegistry, requestStore } from "plumix/plugin";
-import { describe, expect, test } from "vitest";
+import { createTestContext } from "plumix/test";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
+import type { TestDb } from "../test-support.js";
 import type { AuditEventDef } from "./auditEvents.js";
 import type { AuditService } from "./auditService.js";
+import { createDb } from "../test-support.js";
 import {
   assertRedactionInvariants,
   auditEvents,
@@ -39,8 +42,14 @@ import {
 // keep the tests readable.
 type ActionDispatcher = (name: string, ...args: unknown[]) => Promise<void>;
 
+// The fake service never writes, so one database serves every request.
+let db: TestDb;
+beforeAll(async () => {
+  db = await createDb();
+});
+
 function makeFakeAppCtx(user: AuthenticatedUser | null): AppContext {
-  return { user } as AppContext;
+  return createTestContext({ db, user });
 }
 
 interface FakeServiceState {
