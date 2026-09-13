@@ -1,5 +1,11 @@
 import { hostname } from "node:os";
-import type { Db, PlumixApp, PlumixEnv, ScheduledRunReport } from "plumix";
+import type {
+  ConnectedScheduledDb,
+  Db,
+  PlumixApp,
+  PlumixEnv,
+  ScheduledRunReport,
+} from "plumix";
 import { connectScheduledDb, createScheduledRunGuard } from "plumix";
 
 import type {
@@ -55,10 +61,14 @@ export function startScheduledRunner({
   const runsOnEveryFiring = app.scheduledTasks.some(
     (task) => task.cron === undefined,
   );
+  // A database handed in belongs to the caller.
+  const connection: ConnectedScheduledDb =
+    db === undefined ? connectScheduledDb(app, env) : { db };
+  // Cleared on first use: a second `stop` must not close it again, and
+  // node:sqlite throws when it does.
+  let release = connection.close;
   const guard = createScheduledRunGuard({
-    // The scheduler's connection is long-lived on purpose: the next firing
-    // queries through it, so it is never released here.
-    db: db ?? connectScheduledDb(app, env).db,
+    db: connection.db,
     holder: `${hostname()}:${String(process.pid)}`,
     lease,
     leaseScope: runsOnEveryFiring ? "shared" : "schedule",
@@ -73,5 +83,22 @@ export function startScheduledRunner({
     ...(logger ? { logger } : {}),
   });
   void scheduler.start();
-  return scheduler;
+  return {
+    ...scheduler,
+    async stop(options) {
+      const settled = await scheduler.stop(options);
+      // A firing `stop` gave up on still writes through the guard.
+      if (settled) {
+        try {
+          release?.();
+        } catch (error) {
+          (logger ?? console).warn(
+            `[plumix] database_close_failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        release = undefined;
+      }
+      return settled;
+    },
+  };
 }
