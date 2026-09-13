@@ -1,18 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { AppContext } from "../context/app.js";
 import { sessions } from "../db/schema/sessions.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { createTestContext } from "../test/context.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
-
-const silentLogger = {
-  debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-  error: () => undefined,
-};
 
 describe("registerCoreScheduledTasks", () => {
   it("registers a daily session-cleanup task that prunes expired sessions", async () => {
@@ -37,7 +30,7 @@ describe("registerCoreScheduledTasks", () => {
       { id: "live", userId: user.id, expiresAt: new Date(Date.now() + 60_000) },
     ]);
 
-    await task?.handler({ db, logger: silentLogger } as unknown as AppContext);
+    await task?.handler(createTestContext({ db }));
 
     const rows = await db.select({ id: sessions.id }).from(sessions);
     expect(rows).toEqual([{ id: "live" }]);

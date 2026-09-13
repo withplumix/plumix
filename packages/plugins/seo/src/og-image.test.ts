@@ -1,7 +1,8 @@
 import type { PluginRegistry, TemplateData } from "plumix";
 import type { AppContext, MetaBoxField } from "plumix/plugin";
 import { HookRegistry } from "plumix/plugin";
-import { describe, expect, test } from "vitest";
+import { createTestContext, createTestDb } from "plumix/test";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import { resolveOgImage } from "./og-image.js";
 
@@ -32,12 +33,20 @@ const registryWith = (
 const entryData = (type: string, meta: Record<string, unknown>): TemplateData =>
   ({ kind: "entry", entry: { type, meta } }) as unknown as TemplateData;
 
-// A context carrying just what the og:image chain reads: the entry-type field
-// registry and the hook pipeline the filter runs through.
-const ogContext = (plugins: PluginRegistry, hooks: HookRegistry): AppContext =>
-  ({ plugins, hooks }) as unknown as AppContext;
-
 describe("resolveOgImage", () => {
+  let db: Awaited<ReturnType<typeof createTestDb>>;
+
+  beforeAll(async () => {
+    db = await createTestDb();
+  });
+
+  // A real context, because the chain hands it on to `seo:og_image`
+  // subscribers; the registry and hooks are what the chain itself reads.
+  const ogContext = (
+    plugins: PluginRegistry,
+    hooks: HookRegistry,
+  ): AppContext => createTestContext({ db, plugins, hooks });
+
   const siteDefault = "https://cms.example/default-og.png";
   const noFields = registryWith([], []);
   const withFeatured = registryWith(["post"], [mediaField("hero", "featured")]);

@@ -51,6 +51,23 @@ export interface DebugSnapshot {
   readonly records: Readonly<Record<string, readonly TelemetryRecord[]>>;
 }
 
+export type DebugContextSource = Pick<
+  AppContext,
+  | "request"
+  | "origin"
+  | "basePath"
+  | "resolvedEntity"
+  | "user"
+  | "tokenScopes"
+  | "siteName"
+  | "locale"
+  | "cdn"
+  | "storage"
+  | "mailer"
+  | "imageDelivery"
+  | "plugins"
+>;
+
 /**
  * Projects the telemetry data and a fixed slice of the request context into a
  * {@link DebugSnapshot}. Pure: no transport, no store, no mutation — it reads
@@ -61,7 +78,7 @@ export interface DebugSnapshot {
  */
 export function projectDebugSnapshot(
   telemetry: Pick<TelemetrySnapshot, "spans" | "records">,
-  ctx: AppContext,
+  ctx: DebugContextSource,
 ): DebugSnapshot {
   const url = new URL(ctx.request.url);
   return {

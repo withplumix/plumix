@@ -27,8 +27,8 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   registry: PluginRegistry,
   basePath = "",
-): AppContext {
-  return { db, plugins: registry, basePath } as unknown as AppContext;
+): Pick<AppContext, "db" | "plugins" | "basePath"> {
+  return { db, plugins: registry, basePath };
 }
 
 describe("buildEntryPermalink", () => {

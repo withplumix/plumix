@@ -10,7 +10,7 @@ import {
 import { entries as entriesTable } from "plumix/schema";
 import {
   adminUser,
-  createRequestMemo,
+  createTestContext,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -42,15 +42,13 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   bundle: TestBundle,
 ): AppContext {
-  return {
+  return createTestContext({
     db,
     plugins: bundle.registry,
     hooks: bundle.hooks,
     request: new Request("https://test.example/"),
-    resolvedEntity: null,
     basePath: "",
-    memo: createRequestMemo(),
-  } as unknown as AppContext;
+  });
 }
 
 interface SeedItemInput {
@@ -403,16 +401,19 @@ describe("getMenuByName", () => {
   });
 
   describe("isCurrent / isAncestor", () => {
-    function ctxAtUrl(url: string, resolved: unknown): AppContext {
-      return {
+    function ctxAtUrl(
+      url: string,
+      resolved: AppContext["resolvedEntity"],
+    ): AppContext {
+      const local = createTestContext({
         db,
         plugins: ctx.plugins,
         hooks: ctx.hooks,
         request: new Request(url),
-        resolvedEntity: resolved,
         basePath: "",
-        memo: createRequestMemo(),
-      } as unknown as AppContext;
+      });
+      local.resolvedEntity = resolved;
+      return local;
     }
 
     test("entry-kind item is current when resolvedEntity matches its id", async () => {

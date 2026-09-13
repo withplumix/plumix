@@ -17,12 +17,15 @@ function publicRoutes(...paths: readonly string[]): PublicRouteTable {
   );
 }
 
-function ctxFor(url: string, basePath = ""): AppContext {
+function ctxFor(
+  url: string,
+  basePath = "",
+): Pick<AppContext, "request" | "origin" | "basePath"> {
   return {
     request: new Request(url),
     origin: "https://cms.example",
     basePath,
-  } as unknown as AppContext;
+  };
 }
 
 describe("canonicalUrl", () => {

@@ -1,13 +1,16 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
 import type {
   TelemetryRecord,
   TelemetrySpan,
 } from "../../context/telemetry.js";
+import type { DebugContextSource } from "./snapshot.js";
+import { createPluginRegistry } from "../../plugin/manifest.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
-function ctxWith(overrides: Partial<AppContext> = {}): AppContext {
+function ctxWith(
+  overrides: Partial<DebugContextSource> = {},
+): DebugContextSource {
   return {
     request: new Request("https://cms.example/blog/hello?secret=1"),
     origin: "https://cms.example",
@@ -15,14 +18,26 @@ function ctxWith(overrides: Partial<AppContext> = {}): AppContext {
     resolvedEntity: null,
     user: null,
     tokenScopes: null,
-    locale: { code: "en", direction: "ltr" },
-    plugins: {
-      pluginIds: [],
-      entryTypes: new Map(),
-      termTaxonomies: new Map(),
-    },
+    locale: { code: "en", label: "English", direction: "ltr", enabled: true },
+    plugins: createPluginRegistry(),
     ...overrides,
-  } as unknown as AppContext;
+  };
+}
+
+function blogPlugins() {
+  const plugins = createPluginRegistry();
+  plugins.pluginIds.push("blog");
+  plugins.entryTypes.set("post", {
+    name: "post",
+    label: "Posts",
+    registeredBy: "blog",
+  });
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    label: "Categories",
+    registeredBy: "blog",
+  });
+  return plugins;
 }
 
 const EMPTY = { spans: [], records: {} };
@@ -36,12 +51,8 @@ describe("projectDebugSnapshot", () => {
         tokenScopes: ["read:posts"],
         resolvedEntity: { kind: "entry", id: 7 },
         siteName: "My Site",
-        cdn: {} as never,
-        plugins: {
-          pluginIds: ["blog"],
-          entryTypes: new Map([["post", {}]]),
-          termTaxonomies: new Map([["category", {}]]),
-        } as never,
+        cdn: { decorate: (response) => response },
+        plugins: blogPlugins(),
       }),
     );
 

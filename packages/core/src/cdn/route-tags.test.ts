@@ -6,8 +6,11 @@ import { cdnTagsFor, tagCdnEntry } from "./route-tags.js";
 
 // Only the two fields the accumulator reads: the memo it keys on, and the
 // cdn slot whose absence means nothing will ever be stored.
-function context(): AppContext {
-  return { memo: createRequestMemo(), cdn: {} } as unknown as AppContext;
+function context(): Pick<AppContext, "cdn" | "memo"> {
+  return {
+    memo: createRequestMemo(),
+    cdn: { decorate: (response) => response },
+  };
 }
 
 describe("tagCdnEntry", () => {
@@ -32,7 +35,7 @@ describe("tagCdnEntry", () => {
   // or it stores untagged with nothing to say so.
   it("reaches the same entry from a derived context", () => {
     const ctx = context();
-    const derived: AppContext = { ...ctx, request: new Request("https://x/") };
+    const derived = { ...ctx, request: new Request("https://x/") };
 
     tagCdnEntry(derived, ["e:7"]);
 

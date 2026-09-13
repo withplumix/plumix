@@ -4,6 +4,8 @@ import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";
 import { matchPublicRoute } from "../route/public-routes.js";
 
+type CanonicalContext = Pick<AppContext, "request" | "origin" | "basePath">;
+
 /**
  * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
  * same content as the bare listing, so it collapses — `/shop/page/1` → `/shop`,
@@ -22,7 +24,7 @@ function canonicalPath(pathname: string): string {
  * `<link rel="canonical">` tag and the 301 normalizer + sitemap/og:url, so
  * they can never disagree.
  */
-export function canonicalUrl(ctx: AppContext): string {
+export function canonicalUrl(ctx: CanonicalContext): string {
   // The dispatcher already stripped any base prefix from the request, so the
   // pathname is root-relative; re-add the prefix on the way out.
   const canonical = canonicalPath(new URL(ctx.request.url).pathname);
@@ -68,7 +70,7 @@ export function isCanonicalExempt(
  * is preserved, and an already-canonical path returns null (loop-safe).
  */
 export function canonicalRedirectTarget(
-  ctx: AppContext,
+  ctx: CanonicalContext,
   publicRoutes: PublicRouteTable,
 ): string | null {
   // Request path is already root-relative (base stripped at the dispatcher

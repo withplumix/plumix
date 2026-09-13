@@ -63,7 +63,7 @@ export interface AdminEntryScope {
  * before touching the database.
  */
 export function adminEntryScope(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "user" | "auth" | "plugins">,
   { reach = "read" }: AdminEntryScopeOptions = {},
 ): AdminEntryScope | null {
   const userId = ctx.user?.id ?? null;

@@ -1,14 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
-import { createRequestMemo } from "../context/memo.js";
+import type { Db } from "../context/app.js";
+import { withUser } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import {
   enqueuePurgeTags,
   flushPurgeTags,
   registerCorePurgeInvalidator,
 } from "./purge.js";
+
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
 
 function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
   const purgeTags = vi.fn(() => Promise.resolve());
@@ -16,7 +24,15 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
     void p;
   });
   const store = { match: vi.fn(), put: vi.fn() };
-  const ctx = {
+  const plugins = createPluginRegistry();
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    registeredBy: "test",
+    label: "Categories",
+    entryTypes: ["post"],
+  });
+  const ctx = createTestContext({
+    db,
     cdn:
       cdn === "absent"
         ? undefined
@@ -26,12 +42,8 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
             ...(cdn === "purges" ? { purgeTags } : {}),
           },
     defer,
-    logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
-    memo: createRequestMemo(),
-    plugins: {
-      termTaxonomies: new Map([["category", { entryTypes: ["post"] }]]),
-    },
-  } as unknown as AppContext;
+    plugins,
+  });
   return { ctx, purgeTags, defer };
 }
 
@@ -53,7 +65,12 @@ describe("purge accumulator", () => {
   // handler handed a derived context would otherwise fill a set nothing reads.
   it("flushes tags enqueued against a derived context", () => {
     const { ctx, purgeTags } = fakeCtx();
-    const derived = { ...ctx, user: { id: 1 } } as unknown as AppContext;
+    const derived = withUser(ctx, {
+      id: 1,
+      email: "u@cms.example",
+      role: "admin",
+      meta: {},
+    });
 
     enqueuePurgeTags(derived, ["t:post", "e:1"]);
     flushPurgeTags(ctx);

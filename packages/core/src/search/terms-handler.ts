@@ -25,7 +25,7 @@ const PRIORITY_BASE = 100;
  */
 export async function termsSearchHandler(
   input: AdminSearchInput,
-  ctx: AppContext,
+  ctx: Pick<AppContext, "db" | "plugins" | "auth">,
 ): Promise<readonly SearchGroup[]> {
   const tokens = tokenizeSearchQuery(input.query);
   if (tokens.length === 0) return [];

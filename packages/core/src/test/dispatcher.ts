@@ -31,9 +31,11 @@ import type { RedirectRule } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { BoundSlots } from "../runtime/handler.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
+  ConnectedKv,
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
@@ -49,6 +51,7 @@ import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
+import { bindSlots, requestContextArgs } from "../runtime/handler.js";
 import { silentLogger } from "./context.js";
 import { defaultTestTheme } from "./default-theme.js";
 import { createDeferQueue } from "./defer.js";
@@ -115,6 +118,11 @@ export interface CreateDispatcherHarnessOptions {
    * path (`ctx.cdn`); the dispatcher consults it for cacheable public GETs.
    */
   readonly cdn?: ConnectedCdn;
+  /**
+   * Connected key/value store. Stub it in tests that need `ctx.kv` populated;
+   * pass `memoryKv().connect()` for a working in-memory backend.
+   */
+  readonly kv?: ConnectedKv;
   /**
    * Configured OAuth providers for tests exercising the start/callback
    * routes. Pass `{ github: github({ clientId, clientSecret }), google:
@@ -267,39 +275,30 @@ function createContextFactory(args: {
   clientAddress?: string,
 ) => AppContext {
   const { app, options, db, env, defer } = args;
+  // The harness config declares no storage, cdn or kv slot, so a test hands in
+  // the connected store directly; image delivery binds through the config.
+  const slots: BoundSlots = {
+    ...bindSlots(app, env),
+    storage: options.storage,
+    cdn: options.cdn,
+    kv: options.kv,
+  };
   return (request, user, clientAddress) =>
     createAppContext({
-      defer,
-      db,
-      env,
-      request,
-      clientAddress: clientAddress ?? options.clientAddress,
-      hooks: app.hooks,
-      plugins: app.plugins,
-      appContextExtensions: app.appContextExtensions,
-      blocks: app.blocks,
-      marks: app.marks,
-      shortcodes: app.shortcodes,
+      ...requestContextArgs({
+        app,
+        env,
+        request,
+        clientAddress: clientAddress ?? options.clientAddress,
+        db,
+        defer,
+        assets: options.assets,
+        slots,
+      }),
       logger: options.logger ?? silentLogger,
       user: user
         ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
         : undefined,
-      assets: options.assets,
-      storage: options.storage,
-      cdn: options.cdn,
-      imageDelivery: app.config.imageDelivery,
-      imageRemotePatterns: app.config.images?.remotePatterns,
-      mailer: app.config.mailer,
-      i18n: app.config.i18n,
-      oauthProviders: app.oauthProviders,
-      authMethods: app.authMethods,
-      authenticator: app.authenticator,
-      bootstrapAllowed: app.bootstrapAllowed,
-      origin: app.origin,
-      basePath: app.basePath,
-      siteName: app.config.auth.magicLink?.siteName,
-      debugBar: app.config.debugBar,
-      telemetry: app.config.telemetry,
     });
 }
 

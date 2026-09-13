@@ -1,10 +1,25 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { DevErrorContextSource } from "./context.js";
 import { createTelemetryCollector } from "../../context/collector.js";
+import { createPluginRegistry } from "../../plugin/manifest.js";
 import { collectDevErrorContext } from "./context.js";
 
-function ctxWith(overrides: Partial<AppContext>): AppContext {
+function ctxWith(
+  overrides: Partial<DevErrorContextSource>,
+): DevErrorContextSource {
+  const plugins = createPluginRegistry();
+  plugins.pluginIds.push("core");
+  plugins.entryTypes.set("post", {
+    name: "post",
+    label: "Posts",
+    registeredBy: "test",
+  });
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    label: "Categories",
+    registeredBy: "test",
+  });
   return {
     request: new Request("https://cms.example/blog/hello?draft=1", {
       headers: { accept: "text/html", "user-agent": "vitest" },
@@ -14,19 +29,11 @@ function ctxWith(overrides: Partial<AppContext>): AppContext {
     origin: "https://cms.example",
     basePath: "",
     siteName: "Demo",
-    locale: { code: "en", direction: "ltr" },
-    cdn: undefined,
-    storage: undefined,
-    mailer: undefined,
-    imageDelivery: undefined,
-    plugins: {
-      pluginIds: ["core"],
-      entryTypes: new Map([["post", {}]]),
-      termTaxonomies: new Map([["category", {}]]),
-    },
+    locale: { code: "en", label: "English", direction: "ltr", enabled: true },
+    plugins,
     telemetry: createTelemetryCollector(),
     ...overrides,
-  } as unknown as AppContext;
+  };
 }
 
 describe("collectDevErrorContext", () => {

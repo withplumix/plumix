@@ -1,10 +1,12 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext, Db } from "../../context/app.js";
 import type { DebugHistoryEntry } from "./history.js";
 import type { DebugSnapshot } from "./snapshot.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { createTestContext } from "../../test/context.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
+import { createTestDb } from "../../test/harness.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
 import { createDebugHistoryStore } from "./history.js";
 import { handleDebugRequests } from "./read-routes.js";
@@ -42,14 +44,20 @@ function entry(overrides: Partial<DebugHistoryEntry> = {}): DebugHistoryEntry {
   };
 }
 
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
 function ctxFor(path: string): AppContext {
   const hooks = new HookRegistry();
   registerCoreDebugPanels(hooks);
-  return {
+  return createTestContext({
+    db,
     hooks,
     request: new Request(`https://cms.example${path}`),
     debugBar: true,
-  } as unknown as AppContext;
+  });
 }
 
 describe("isDebugRequestsPath", () => {
@@ -147,13 +155,13 @@ describe("handleDebugRequests", () => {
   test("405s a non-GET method", () => {
     const store = createDebugHistoryStore();
     const res = handleDebugRequests(
-      {
-        hooks: new HookRegistry(),
+      createTestContext({
+        db,
         request: new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`, {
           method: "POST",
         }),
         debugBar: true,
-      } as unknown as AppContext,
+      }),
       store,
     );
 

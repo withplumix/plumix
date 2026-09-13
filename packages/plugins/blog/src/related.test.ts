@@ -1,7 +1,7 @@
 import type { AppContext } from "plumix/plugin";
 import { readEntryType } from "plumix";
 import {
-  createRequestMemo,
+  createTestContext,
   createTestDb,
   createTracedContext,
   factoriesFor,
@@ -12,9 +12,8 @@ import { createRelatedPostsLoader, findRelatedEntries } from "./related.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
-/** Minimal AppContext stand-in — `findRelatedEntries` reads `db` + `memo`. */
 function ctxFor(db: TestDb): AppContext {
-  return { db, memo: createRequestMemo() } as unknown as AppContext;
+  return createTestContext({ db });
 }
 
 describe("findRelatedEntries", () => {

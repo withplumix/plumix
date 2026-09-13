@@ -7,7 +7,7 @@ import type { Comment } from "../db/schema.js";
  * callers can fire it unconditionally on every new comment.
  */
 export async function notifyModeratorOfPending(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "mailer">,
   comment: Comment,
   recipient: string,
 ): Promise<void> {

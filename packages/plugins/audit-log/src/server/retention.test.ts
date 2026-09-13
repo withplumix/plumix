@@ -1,9 +1,13 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, Logger } from "plumix/plugin";
+import type { Mock } from "vitest";
 import { HookRegistry, installPlugins } from "plumix/plugin";
-import { describe, expect, test, vi } from "vitest";
+import { createTestContext } from "plumix/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
+import type { TestDb } from "../test-support.js";
 import type { AuditLogStorage } from "../types.js";
 import { auditLog } from "../index.js";
+import { createDb } from "../test-support.js";
 import {
   assertValidRetention,
   computeRetentionCutoff,
@@ -12,24 +16,26 @@ import {
   runRetentionPurge,
 } from "./retention.js";
 
+let db: TestDb;
+
+beforeAll(async () => {
+  db = await createDb();
+});
+
 interface FakeCtx {
-  readonly logger: {
-    debug: () => void;
-    info: () => void;
-    warn: ReturnType<typeof vi.fn>;
-    error: () => void;
-  };
+  readonly ctx: AppContext;
+  readonly warn: Mock<Logger["warn"]>;
 }
 
 function fakeCtx(): FakeCtx {
-  return {
-    logger: {
-      debug: () => undefined,
-      info: () => undefined,
-      warn: vi.fn(),
-      error: () => undefined,
-    },
+  const warn = vi.fn<Logger["warn"]>();
+  const logger: Logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn,
+    error: () => undefined,
   };
+  return { ctx: createTestContext({ db, logger }), warn };
 }
 
 function fakeStorage(opts: { withPurge: boolean }): {
@@ -149,11 +155,11 @@ describe("auditLog() factory wires retention validation", () => {
 
 describe("runRetentionPurge", () => {
   test("calls storage.purge with the cutoff computed from policy + clock", async () => {
-    const ctx = fakeCtx();
+    const { ctx } = fakeCtx();
     const { storage, purgeCalls } = fakeStorage({ withPurge: true });
     const now = new Date("2026-05-11T00:00:00Z");
 
-    await runRetentionPurge(ctx as unknown as AppContext, {
+    await runRetentionPurge(ctx, {
       storage,
       retention: { maxAgeDays: 30 },
       now,
@@ -166,11 +172,11 @@ describe("runRetentionPurge", () => {
   });
 
   test("returns the storage's deleted count", async () => {
-    const ctx = fakeCtx();
+    const { ctx } = fakeCtx();
     const { storage, purgeReturn } = fakeStorage({ withPurge: true });
     purgeReturn.deleted = 42;
 
-    const result = await runRetentionPurge(ctx as unknown as AppContext, {
+    const result = await runRetentionPurge(ctx, {
       storage,
       retention: { maxAgeDays: 7 },
     });
@@ -179,31 +185,31 @@ describe("runRetentionPurge", () => {
   });
 
   test("retention: false is a no-op (no purge call, no warn)", async () => {
-    const ctx = fakeCtx();
+    const { ctx, warn } = fakeCtx();
     const { storage, purgeCalls } = fakeStorage({ withPurge: true });
 
-    const result = await runRetentionPurge(ctx as unknown as AppContext, {
+    const result = await runRetentionPurge(ctx, {
       storage,
       retention: false,
     });
 
     expect(result).toEqual({ deleted: 0 });
     expect(purgeCalls).toHaveLength(0);
-    expect(ctx.logger.warn).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   test("storage without purge() warns once and returns deleted: 0", async () => {
-    const ctx = fakeCtx();
+    const { ctx, warn } = fakeCtx();
     const { storage } = fakeStorage({ withPurge: false });
 
-    const result = await runRetentionPurge(ctx as unknown as AppContext, {
+    const result = await runRetentionPurge(ctx, {
       storage,
       retention: { maxAgeDays: 30 },
     });
 
     expect(result).toEqual({ deleted: 0 });
-    expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
-    const message = String(ctx.logger.warn.mock.calls[0]?.[0]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const message = String(warn.mock.calls[0]?.[0]);
     expect(message).toContain("fake-no-purge");
     expect(message).toContain("retention skipped");
   });
@@ -261,7 +267,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
       warn: () => undefined,
       error: () => undefined,
     };
-    await task.handler({ logger } as unknown as AppContext);
+    await task.handler(createTestContext({ db, logger }));
 
     expect(storageStub.purgeCalls).toHaveLength(1);
     // Cutoff sits in the past by `maxAgeDays`; just check it's a Date
@@ -288,7 +294,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
       warn: () => undefined,
       error: () => undefined,
     };
-    await task.handler({ logger } as unknown as AppContext);
+    await task.handler(createTestContext({ db, logger }));
 
     expect(String(logger.info.mock.calls[0]?.[0])).toContain("deleted 1 row");
     expect(String(logger.info.mock.calls[0]?.[0])).not.toContain("1 rows");

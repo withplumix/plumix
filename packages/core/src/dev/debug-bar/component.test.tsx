@@ -1,18 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext, Db } from "../../context/app.js";
 import type { DebugBarInput } from "./config.js";
-import { NOOP_TELEMETRY } from "../../context/telemetry.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { createTestContext } from "../../test/context.js";
+import { createTestDb } from "../../test/harness.js";
 import { PlumixDebugBar } from "./component.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
 
-const emptyPlugins = {
-  pluginIds: [],
-  entryTypes: new Map(),
-  termTaxonomies: new Map(),
-};
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
 
 function ctxWith(
   debugBar: DebugBarInput | undefined,
@@ -20,20 +20,12 @@ function ctxWith(
 ): AppContext {
   const hooks = new HookRegistry();
   registerCoreDebugPanels(hooks);
-  return {
+  return createTestContext({
+    db,
     hooks,
-    telemetry: NOOP_TELEMETRY,
     request: new Request(url),
-    requestId: "req-current",
     debugBar,
-    resolvedEntity: null,
-    origin: "https://cms.example",
-    basePath: "",
-    locale: { code: "en", direction: "ltr" },
-    plugins: emptyPlugins,
-    user: null,
-    tokenScopes: null,
-  } as unknown as AppContext;
+  });
 }
 
 describe("PlumixDebugBar", () => {
@@ -51,19 +43,12 @@ describe("PlumixDebugBar", () => {
         },
       },
     ]);
-    const ctx = {
+    const ctx = createTestContext({
+      db,
       hooks,
-      telemetry: NOOP_TELEMETRY,
       request: new Request("https://cms.example/x"),
       debugBar: true,
-      resolvedEntity: null,
-      origin: "https://cms.example",
-      basePath: "",
-      locale: { code: "en", direction: "ltr" },
-      plugins: emptyPlugins,
-      user: null,
-      tokenScopes: null,
-    } as unknown as AppContext;
+    });
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
 
@@ -85,7 +70,8 @@ describe("PlumixDebugBar", () => {
   });
 
   test("renders a request switcher with the current request pre-selected", () => {
-    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctxWith(true)} />);
+    const ctx = ctxWith(true);
+    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
 
     // The switcher and its dev-only swap script are present, and the panels
     // live in the container the script swaps in place.
@@ -94,7 +80,7 @@ describe("PlumixDebugBar", () => {
     expect(html).toContain('data-testid="plumix-debug-panels"');
     // The in-flight request leads the list, labelled and pre-selected.
     expect(html).toContain("GET /blog/hello · current");
-    expect(html).toContain('value="req-current"');
+    expect(html).toContain(`value="${ctx.requestId}"`);
   });
 
   test("renders nothing when config disables the bar", () => {

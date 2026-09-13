@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import {
   AccessError,
   anonymousPolicy,
@@ -23,25 +25,16 @@ function user(role: UserRole, meta: JsonObject = {}): AuthenticatedUser {
   return { id: 1, email: "u@site.test", name: null, role, meta };
 }
 
-// The pure resolver only ever reads the principal off `ctx`; a narrow stub is
-// all the built-in policies touch.
-function ctx(u: AuthenticatedUser | null): AppContext {
-  return { user: u } as unknown as AppContext;
-}
+let db: Awaited<ReturnType<typeof createTestDb>>;
 
-// A stub with a real per-request memo — the read-through the entitlement
-// resolvers exercise. Runs each `load` once per key, replaying the settled
-// value to later callers, exactly as the request-scoped memo does.
-function memoCtx(u: AuthenticatedUser | null): AppContext {
-  const store = new Map<string, Promise<unknown>>();
-  const memo = <T>(key: string, load: () => Promise<T>): Promise<T> => {
-    const existing = store.get(key);
-    if (existing) return existing as Promise<T>;
-    const pending = load();
-    store.set(key, pending);
-    return pending;
-  };
-  return { user: u, memo } as unknown as AppContext;
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
+// One request's context per call — its memo is the request-scoped one the
+// entitlement resolvers read through.
+function ctx(u: AuthenticatedUser | null): AppContext {
+  return createTestContext({ db, user: u });
 }
 
 describe("definePolicy", () => {
@@ -189,7 +182,7 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
 
   it("grants an active entitlement the shared entitlement segment (full render)", async () => {
     await expect(
-      resolveAccess(memoCtx(user("subscriber", { premium: true })), paywall),
+      resolveAccess(ctx(user("subscriber", { premium: true })), paywall),
     ).resolves.toEqual({
       segment: "entitlement:premium",
       gate: { type: "allow" },
@@ -201,12 +194,12 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
     // lapsed subscriber caches under `authenticated`, an anonymous bot under
     // `anonymous` — both distinct from the entitled `entitlement:premium`.
     await expect(
-      resolveAccess(memoCtx(user("subscriber", { premium: false })), paywall),
+      resolveAccess(ctx(user("subscriber", { premium: false })), paywall),
     ).resolves.toEqual({
       segment: "authenticated",
       gate: { type: "challenge", kind: "subscribe", soft: true },
     });
-    await expect(resolveAccess(memoCtx(null), paywall)).resolves.toEqual({
+    await expect(resolveAccess(ctx(null), paywall)).resolves.toEqual({
       segment: "anonymous",
       gate: { type: "challenge", kind: "subscribe", soft: true },
     });
@@ -214,7 +207,7 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
 
   it("memoizes the entitlement check within a request", async () => {
     let lookups = 0;
-    const ctx = memoCtx(user("subscriber", { premium: true }));
+    const perRequest = ctx(user("subscriber", { premium: true }));
     const policy = definePolicy({
       segments: [entitlementSegment("premium")],
       resolve: (c) =>
@@ -229,8 +222,8 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
               : challenge("subscribe", { soft: true }),
           ),
     });
-    await resolveAccess(ctx, policy);
-    await resolveAccess(ctx, policy);
+    await resolveAccess(perRequest, policy);
+    await resolveAccess(perRequest, policy);
     // Both resolutions share the same request-scoped memo → one lookup.
     expect(lookups).toBe(1);
   });
@@ -242,7 +235,7 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
       resolve: () => entitlement("pro"),
     });
     await expect(
-      resolveAccess(memoCtx(user("subscriber")), policy),
+      resolveAccess(ctx(user("subscriber")), policy),
     ).rejects.toThrow(AccessError);
   });
 });
@@ -265,7 +258,7 @@ describe("challenge — hard vs soft", () => {
 
   it("keeps a hard challenge gate flag-free through resolution", async () => {
     const policy = definePolicy({ resolve: () => challenge("forbidden") });
-    const { gate } = await resolveAccess(memoCtx(user("subscriber")), policy);
+    const { gate } = await resolveAccess(ctx(user("subscriber")), policy);
     expect(gate).toEqual({ type: "challenge", kind: "forbidden" });
   });
 });

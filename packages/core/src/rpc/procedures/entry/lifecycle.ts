@@ -33,7 +33,7 @@ export async function applyEntryBeforeSave(
 }
 
 export async function fireEntryTransition(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "hooks">,
   entry: Entry,
   oldStatus: EntryStatus,
 ): Promise<void> {
@@ -43,7 +43,7 @@ export async function fireEntryTransition(
 }
 
 export async function fireEntryPublished(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "hooks">,
   entry: Entry,
 ): Promise<void> {
   await ctx.hooks.doAction(`entry:${entry.type}:published`, entry);
@@ -65,7 +65,7 @@ export function publishedAtForTransition(
 }
 
 export async function fireEntryUpdated(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "hooks">,
   entry: Entry,
   previous: Entry,
 ): Promise<void> {

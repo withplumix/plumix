@@ -196,7 +196,7 @@ function gateAllowsRender(gate: Gate): boolean {
 }
 
 interface GateResponseArgs {
-  readonly ctx: AppContext;
+  readonly ctx: Pick<AppContext, "basePath">;
   /** The current (base-stripped) request URL — the `returnTo` destination. */
   readonly url: URL;
   readonly loginPath: string;

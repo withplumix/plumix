@@ -8,13 +8,15 @@ import { exposesHierarchicalUrls, withBasePath } from "plumix";
 
 import { isPublicEntryType } from "./scope.js";
 
+type DiscoveryContext = Pick<AppContext, "origin" | "basePath" | "plugins">;
+
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
  * when it has none. Discriminates on the payload's own `kind` — a plugin
  * archive's shape is arbitrary, so a field-presence check would read one
  * plugin's `year` or `author` as core's subject.
  */
-function feedBase(data: TemplateData, ctx: AppContext): string | null {
+function feedBase(data: TemplateData, ctx: DiscoveryContext): string | null {
   switch (data.kind) {
     // A single entry advertises the site feed rather than its type's: a reader
     // subscribing from a post wants "everything new", which is the convention
@@ -65,7 +67,7 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
 export function applyFeedDiscovery(
   manifest: DocumentManifest,
   data: TemplateData,
-  ctx: AppContext,
+  ctx: DiscoveryContext,
   siteIsPrivate: boolean,
 ): DocumentManifest {
   if (siteIsPrivate) return manifest;

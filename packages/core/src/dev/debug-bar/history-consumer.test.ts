@@ -1,28 +1,29 @@
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext, Db } from "../../context/app.js";
 import type { TelemetrySnapshot } from "../../context/telemetry.js";
+import type { CreateTestContextOptions } from "../../test/context.js";
+import { createTestContext } from "../../test/context.js";
+import { createTestDb } from "../../test/harness.js";
 import { debugHistoryConsumer } from "./history-consumer.js";
 import { createDebugHistoryStore } from "./history.js";
 
-function ctxWith(overrides: Partial<AppContext> = {}): AppContext {
-  return {
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
+function ctxWith(
+  overrides: Omit<CreateTestContextOptions, "db"> = {},
+): AppContext {
+  return createTestContext({
+    db,
     request: new Request("https://cms.example/_plumix/rpc/entry/list", {
       method: "POST",
     }),
     origin: "https://cms.example",
-    basePath: "",
-    resolvedEntity: null,
-    user: null,
-    tokenScopes: null,
-    locale: { code: "en", direction: "ltr" },
-    plugins: {
-      pluginIds: [],
-      entryTypes: new Map(),
-      termTaxonomies: new Map(),
-    },
     ...overrides,
-  } as unknown as AppContext;
+  });
 }
 
 function envelope(

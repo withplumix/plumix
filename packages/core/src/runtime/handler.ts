@@ -1,4 +1,10 @@
-import type { AppContext, Db, DeferFn } from "../context/app.js";
+import type {
+  AppContext,
+  CoreSchema,
+  CreateAppContextArgs,
+  Db,
+  DeferFn,
+} from "../context/app.js";
 import type { Invocation, PlumixHandler, ScheduledEvent } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
@@ -234,14 +240,14 @@ function syntheticScheduledRequest(
 }
 
 /** The env-derived slots, bound once for the handler's life. */
-interface BoundSlots {
+export interface BoundSlots {
   readonly storage: ConnectedObjectStorage | undefined;
   readonly cdn: ConnectedCdn | undefined;
   readonly kv: ConnectedKv | undefined;
   readonly imageDelivery: ImageDelivery | undefined;
 }
 
-function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
+export function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
   return {
     storage: app.config.storage?.connect(env),
     // `cdn` connects to null when the deploy cannot purge; null → undefined
@@ -249,6 +255,75 @@ function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
     cdn: app.config.cdn?.connect(env) ?? undefined,
     kv: app.config.kv?.connect(env),
     imageDelivery: connectImageDelivery(app, env),
+  };
+}
+
+/** What one request varies; everything else comes from the app. */
+interface RequestContextInput {
+  readonly app: PlumixApp;
+  readonly env: PlumixEnv;
+  readonly request: Request;
+  readonly clientAddress: string | undefined;
+  readonly db: Db;
+  readonly defer: DeferFn;
+  readonly assets: AssetsBinding | undefined;
+  readonly slots: BoundSlots;
+}
+
+/**
+ * Every argument `createAppContext` takes, each one named. The handler and the
+ * dispatcher test harness both build their contexts from this, so a slot added
+ * to the context fails to compile here instead of reaching only one of them.
+ */
+type RequestContextArgs = {
+  readonly [
+    K in keyof Required<CreateAppContextArgs<CoreSchema>>
+  ]: CreateAppContextArgs<CoreSchema>[K];
+};
+
+export function requestContextArgs({
+  app,
+  env,
+  request,
+  clientAddress,
+  db,
+  defer,
+  assets,
+  slots,
+}: RequestContextInput): RequestContextArgs {
+  return {
+    db,
+    env,
+    request,
+    clientAddress,
+    hooks: app.hooks,
+    plugins: app.plugins,
+    blocks: app.blocks,
+    marks: app.marks,
+    shortcodes: app.shortcodes,
+    logger: undefined,
+    // Resolved per request by the dispatcher's authenticator, not up front.
+    user: undefined,
+    tokenScopes: undefined,
+    defer,
+    assets,
+    storage: slots.storage,
+    cdn: slots.cdn,
+    kv: slots.kv,
+    imageDelivery: slots.imageDelivery,
+    imageRemotePatterns: app.config.images?.remotePatterns,
+    debugBar: app.config.debugBar,
+    telemetry: app.config.telemetry,
+    mailer: app.config.mailer,
+    i18n: app.config.i18n,
+    oauthProviders: app.oauthProviders,
+    authMethods: app.authMethods,
+    authenticator: app.authenticator,
+    bootstrapAllowed: app.bootstrapAllowed,
+    origin: app.origin,
+    basePath: app.basePath,
+    siteName: app.config.auth.magicLink?.siteName,
+    appContextExtensions: app.appContextExtensions,
   };
 }
 
@@ -272,36 +347,18 @@ function buildAppContext({
   slots,
 }: AppContextArgs): AppContext {
   const { env, clientAddress } = invocation;
-  return createAppContext({
-    db: db as Db,
-    env,
-    request,
-    clientAddress,
-    hooks: app.hooks,
-    plugins: app.plugins,
-    blocks: app.blocks,
-    marks: app.marks,
-    shortcodes: app.shortcodes,
-    defer,
-    assets: options.assets?.(env),
-    storage: slots.storage,
-    cdn: slots.cdn,
-    kv: slots.kv,
-    imageDelivery: slots.imageDelivery,
-    imageRemotePatterns: app.config.images?.remotePatterns,
-    debugBar: app.config.debugBar,
-    telemetry: app.config.telemetry,
-    mailer: app.config.mailer,
-    i18n: app.config.i18n,
-    oauthProviders: app.oauthProviders,
-    authMethods: app.authMethods,
-    authenticator: app.authenticator,
-    bootstrapAllowed: app.bootstrapAllowed,
-    origin: app.origin,
-    basePath: app.basePath,
-    siteName: app.config.auth.magicLink?.siteName,
-    appContextExtensions: app.appContextExtensions,
-  });
+  return createAppContext(
+    requestContextArgs({
+      app,
+      env,
+      request,
+      clientAddress,
+      db: db as Db,
+      defer,
+      assets: options.assets?.(env),
+      slots,
+    }),
+  );
 }
 
 // `connect` owns its result, including `undefined` for "no delivery" — so it
