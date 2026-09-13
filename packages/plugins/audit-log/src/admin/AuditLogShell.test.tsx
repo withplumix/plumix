@@ -1,3 +1,5 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcStub } from "plumix/admin/test";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,6 +11,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -22,17 +25,7 @@ i18n.activate("en");
 // (they pass everywhere but a loaded runner takes ~5s just for the clicks).
 vi.setConfig({ testTimeout: 20_000 });
 
-interface CapturedCall {
-  readonly url: string;
-  readonly body: unknown;
-}
-
-let fetchMock: ReturnType<
-  typeof vi.fn<
-    (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-  >
->;
-let calls: CapturedCall[];
+let stub: PluginRpcStub;
 
 function mockListPages(
   responses: readonly {
@@ -41,38 +34,19 @@ function mockListPages(
   }[],
 ): void {
   let idx = 0;
-  fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    const bodyString = typeof init?.body === "string" ? init.body : null;
-    calls.push({
-      url,
-      body:
-        bodyString !== null ? (JSON.parse(bodyString) as unknown) : undefined,
-    });
-    const reply = responses[Math.min(idx, responses.length - 1)] ?? {
-      rows: [],
-      nextCursor: null,
-    };
-    idx += 1;
-    return Promise.resolve(
-      new Response(
-        JSON.stringify({
-          json: { rows: reply.rows, nextCursor: reply.nextCursor ?? null },
-          meta: [],
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      ),
-    );
+  stub = stubPluginRpc("audit_log", {
+    list: (): JsonValue => {
+      const reply = responses[Math.min(idx, responses.length - 1)] ?? {
+        rows: [],
+        nextCursor: null,
+      };
+      idx += 1;
+      return {
+        rows: reply.rows as JsonValue,
+        nextCursor: reply.nextCursor ?? null,
+      };
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
 }
 
 function renderShell(): void {
@@ -91,8 +65,6 @@ function renderShell(): void {
 
 describe("AuditLogShell", () => {
   beforeEach(() => {
-    fetchMock = vi.fn();
-    calls = [];
     // URL-state lives in window.location.search; isolate each test from
     // bleed-over by resetting the URL to a clean baseline path. Without
     // this, a filter set in one test would re-hydrate in the next.
@@ -313,15 +285,7 @@ describe("AuditLogShell", () => {
 });
 
 function lastJson(): Record<string, unknown> | undefined {
-  const last = calls[calls.length - 1];
-  if (!last) return undefined;
-  const body = last.body;
-  if (body === undefined || body === null || typeof body !== "object") {
-    return undefined;
-  }
-  const json = (body as { json?: unknown }).json;
-  if (json === undefined || json === null || typeof json !== "object") {
-    return undefined;
-  }
-  return json as Record<string, unknown>;
+  const input = stub.lastCallTo("list")?.input;
+  if (typeof input !== "object" || input === null) return undefined;
+  return input as Record<string, unknown>;
 }

@@ -1,3 +1,5 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcStub } from "plumix/admin/test";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,8 +11,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PluginRpcError, stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { SubmissionsShell } from "./SubmissionsShell.js";
 
@@ -21,12 +24,7 @@ i18n.activate("en");
 // on a loaded CI runner to outlast the 5s default.
 vi.setConfig({ testTimeout: 20_000 });
 
-interface CapturedCall {
-  readonly procedure: string;
-  readonly input: Record<string, unknown>;
-}
-
-let calls: CapturedCall[];
+let stub: PluginRpcStub;
 
 const CONTACT_ROW = {
   id: 7,
@@ -71,43 +69,33 @@ function isFailure(reply: unknown): reply is { failure: string } {
   );
 }
 
+/**
+ * A reply naming a `failure` is answered the way the server answers a
+ * refusal (a real oRPC error envelope), so the page meets the same shape it
+ * meets in production rather than one only this file produces.
+ */
+function answer(reply: unknown): JsonValue {
+  if (isFailure(reply)) {
+    throw new PluginRpcError("INTERNAL_SERVER_ERROR", {
+      status: 400,
+      message: reply.failure,
+    });
+  }
+  return (reply ?? {}) as JsonValue;
+}
+
 function stubRpc(replies: Replies): void {
   const pages = [...(replies.list ?? [])];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url;
-      const procedure = url.replace(/^.*\/_plumix\/rpc\/forms\//, "");
-      const body = typeof init?.body === "string" ? init.body : "{}";
-      const parsed = JSON.parse(body) as { json?: Record<string, unknown> };
-      calls.push({ procedure, input: parsed.json ?? {} });
-      const reply =
-        procedure === "list"
-          ? (pages.shift() ?? { submissions: [], nextCursor: null })
-          : ((replies as Record<string, unknown>)[procedure] ?? {});
-      // A reply naming a `failure` is answered the way the server answers
-      // a refusal, so the page meets the same envelope it meets in
-      // production rather than a shape only this file produces.
-      const failure = isFailure(reply) ? reply.failure : null;
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            json: failure === null ? reply : { message: failure },
-            meta: [],
-          }),
-          {
-            status: failure === null ? 200 : 400,
-            headers: { "content-type": "application/json" },
-          },
-        ),
-      );
-    }),
-  );
+  stub = stubPluginRpc("forms", {
+    definitions: () => (replies.definitions ?? []) as JsonValue,
+    counts: () => (replies.counts ?? {}) as JsonValue,
+    list: () =>
+      (pages.shift() ?? { submissions: [], nextCursor: null }) as JsonValue,
+    get: () => answer(replies.get),
+    setStatus: () => answer(replies.setStatus),
+    setNote: () => answer(replies.setNote),
+    remove: () => answer(replies.remove),
+  });
 }
 
 function renderShell(): void {
@@ -125,9 +113,9 @@ function renderShell(): void {
 }
 
 function inputsFor(procedure: string): Record<string, unknown>[] {
-  return calls
+  return stub.calls
     .filter((call) => call.procedure === procedure)
-    .map((call) => call.input);
+    .map((call) => call.input as Record<string, unknown>);
 }
 
 function stubInbox(replies: Replies = {}): void {
@@ -156,10 +144,6 @@ const DEFAULT_COUNTS = {
 };
 
 const DEFAULT_DEFINITIONS = [{ slug: "contact", title: "Contact us" }];
-
-beforeEach(() => {
-  calls = [];
-});
 
 afterEach(async () => {
   await act(async () => {

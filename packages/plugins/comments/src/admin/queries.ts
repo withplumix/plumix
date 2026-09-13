@@ -1,5 +1,8 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createPluginRpcClient } from "plumix/admin";
+
+const rpc = createPluginRpcClient("comments");
 
 export type CommentStatus = "pending" | "approved" | "spam" | "trash";
 
@@ -22,35 +25,10 @@ export type ModerationAction =
 
 const COMMENTS_KEY = ["comments"] as const;
 
-async function rpcCall<TOutput>(
-  procedure: string,
-  input: unknown = {},
-): Promise<TOutput> {
-  const base =
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? "";
-  const res = await fetch(`${base}/_plumix/rpc/${procedure}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-plumix-request": "1" },
-    body: JSON.stringify({ json: input, meta: [] }),
-  });
-  const envelope = (await res.json().catch(() => null)) as {
-    json?: unknown;
-  } | null;
-  if (!res.ok) {
-    const error = envelope?.json as
-      { message?: string; data?: { reason?: string } } | undefined;
-    // eslint-disable-next-line no-restricted-syntax -- rethrow server-derived rpc error
-    throw new Error(
-      error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`,
-    );
-  }
-  return envelope?.json as TOutput;
-}
-
 export function useCommentCounts(): UseQueryResult<StatusCounts> {
   return useQuery({
     queryKey: [...COMMENTS_KEY, "counts"],
-    queryFn: () => rpcCall<StatusCounts>("comments/counts"),
+    queryFn: () => rpc.call<StatusCounts>("counts"),
   });
 }
 
@@ -66,7 +44,7 @@ export function useCommentList(
   return useQuery({
     queryKey: [...COMMENTS_KEY, "list", status, filters],
     queryFn: () =>
-      rpcCall<ModerationCommentDTO[]>("comments/list", { status, ...filters }),
+      rpc.call<ModerationCommentDTO[]>("list", { status, ...filters }),
   });
 }
 
@@ -80,7 +58,7 @@ export function useBulkModeration(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, ids }) => rpcCall("comments/bulk", { action, ids }),
+    mutationFn: ({ action, ids }) => rpc.call("bulk", { action, ids }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: COMMENTS_KEY }),
   });
 }
@@ -92,7 +70,7 @@ export function useModeration(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, id }) => rpcCall(`comments/${action}`, { id }),
+    mutationFn: ({ action, id }) => rpc.call(action, { id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: COMMENTS_KEY }),
   });
 }

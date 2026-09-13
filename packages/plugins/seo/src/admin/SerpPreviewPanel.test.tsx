@@ -1,5 +1,8 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcStub } from "plumix/admin/test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -23,18 +26,14 @@ const NOTHING: SerpOverrides = {
   noindex: false,
 };
 
+let stub: PluginRpcStub;
+
 function mockRpc(reply: SerpPreview): void {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ json: reply, meta: [] }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      ),
-    ),
-  );
+  stub = stubPluginRpc("seo", {
+    // Safety: `SerpPreview` is plain data — every field is already a
+    // JSON-representable primitive or literal union.
+    preview: () => reply as unknown as JsonValue,
+  });
 }
 
 function renderPanel(
@@ -178,6 +177,6 @@ describe("SerpPreviewPanel", () => {
     expect(screen.getByTestId("preview")).toHaveTextContent(
       "Save the entry to see how it will look in search results.",
     );
-    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(stub.calls).toHaveLength(0);
   });
 });

@@ -20,7 +20,7 @@ import {
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
-import type { MenuListItem, MenuLocationRow } from "./rpc.js";
+import type { MenuListItem, MenuLocationRow } from "./queries.js";
 import type { TabId } from "./url-state.js";
 import { MenuItemEditor } from "./MenuItemEditor.js";
 import {
@@ -28,7 +28,7 @@ import {
   useCreateMenu,
   useLocationsList,
   useMenuList,
-} from "./rpc.js";
+} from "./queries.js";
 import {
   getSelectedMenuSlug,
   getSelectedTab,

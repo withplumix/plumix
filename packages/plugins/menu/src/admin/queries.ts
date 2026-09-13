@@ -1,13 +1,11 @@
-// Hand-rolled oRPC POST client for the menu plugin admin. Plumix's
-// typed admin client (`AppRouterClient`) covers core only; plugin
-// procedures speak the StandardRPC envelope (`{ json, meta: [] }`)
-// directly. Mirrors the helper in `@plumix/plugin-media`.
-
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createPluginRpcClient } from "plumix/admin";
 
 import type { MenuItemMeta } from "../server/types.js";
 import type { SaveItemPayload } from "./editor-state.js";
+
+const rpc = createPluginRpcClient("menu");
 
 export interface MenuListItem {
   readonly id: number;
@@ -56,35 +54,6 @@ interface MenuGetResponse {
 const MENU_LIST_KEY = ["menu", "list"] as const;
 const MENU_LOCATIONS_KEY = ["menu", "locations", "list"] as const;
 
-export async function rpcCall<TOutput>(
-  procedure: string,
-  input: unknown = {},
-): Promise<TOutput> {
-  const base =
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? "";
-  const res = await fetch(`${base}/_plumix/rpc/${procedure}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-plumix-request": "1",
-    },
-    body: JSON.stringify({ json: input, meta: [] }),
-  });
-  const envelope = (await res.json().catch(() => null)) as {
-    json?: unknown;
-    meta?: unknown;
-  } | null;
-  if (!res.ok) {
-    const error = envelope?.json as
-      { message?: string; data?: { reason?: string } } | undefined;
-    const reason =
-      error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`;
-    // eslint-disable-next-line no-restricted-syntax -- admin-side rpc envelope rethrow; server-derived message is the discriminator
-    throw new Error(reason);
-  }
-  return envelope?.json as TOutput;
-}
-
 interface SaveMenuInput {
   readonly termId: number;
   readonly version: number;
@@ -108,8 +77,7 @@ export function useDeleteMenu(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input) =>
-      rpcCall<{ readonly id: number }>("menu/delete", input),
+    mutationFn: (input) => rpc.call<{ readonly id: number }>("delete", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: MENU_LIST_KEY });
     },
@@ -123,7 +91,7 @@ export function useSaveMenu(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input) => rpcCall<SaveMenuResult>("menu/save", input),
+    mutationFn: (input) => rpc.call<SaveMenuResult>("save", input),
     onSuccess: (_, input) => {
       void queryClient.invalidateQueries({ queryKey: MENU_LIST_KEY });
       void queryClient.invalidateQueries({
@@ -142,7 +110,7 @@ export interface PickerTab {
 export function usePickerTabs(): UseQueryResult<readonly PickerTab[]> {
   return useQuery({
     queryKey: ["menu", "pickerTabs"] as const,
-    queryFn: () => rpcCall<readonly PickerTab[]>("menu/pickerTabs"),
+    queryFn: () => rpc.call<readonly PickerTab[]>("pickerTabs"),
   });
 }
 
@@ -151,7 +119,7 @@ export function useMenuGet(
 ): UseQueryResult<MenuGetResponse> {
   return useQuery({
     queryKey: ["menu", "get", termId] as const,
-    queryFn: () => rpcCall<MenuGetResponse>("menu/get", { termId }),
+    queryFn: () => rpc.call<MenuGetResponse>("get", { termId }),
     enabled: termId !== null,
   });
 }
@@ -159,7 +127,7 @@ export function useMenuGet(
 export function useMenuList(): UseQueryResult<readonly MenuListItem[]> {
   return useQuery({
     queryKey: MENU_LIST_KEY,
-    queryFn: () => rpcCall<readonly MenuListItem[]>("menu/list"),
+    queryFn: () => rpc.call<readonly MenuListItem[]>("list"),
   });
 }
 
@@ -170,7 +138,7 @@ export function useCreateMenu(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input) => rpcCall<CreateMenuResult>("menu/create", input),
+    mutationFn: (input) => rpc.call<CreateMenuResult>("create", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: MENU_LIST_KEY });
     },
@@ -180,7 +148,7 @@ export function useCreateMenu(): UseMutationResult<
 export function useLocationsList(): UseQueryResult<readonly MenuLocationRow[]> {
   return useQuery({
     queryKey: MENU_LOCATIONS_KEY,
-    queryFn: () => rpcCall<readonly MenuLocationRow[]>("menu/locations/list"),
+    queryFn: () => rpc.call<readonly MenuLocationRow[]>("locations/list"),
   });
 }
 
@@ -192,7 +160,7 @@ export function useAssignLocation(): UseMutationResult<
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input) =>
-      rpcCall<AssignLocationInput>("menu/assignLocation", input),
+      rpc.call<AssignLocationInput>("assignLocation", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: MENU_LOCATIONS_KEY });
     },

@@ -12,7 +12,7 @@ import {
   SERP_TITLE_LIMIT,
 } from "../serp.js";
 import { M } from "./messages.js";
-import { fetchSerpPreview } from "./rpc.js";
+import { fetchSerpPreview } from "./queries.js";
 
 // Keyed by the reason itself, so an arm added to the chain fails the build here
 // rather than reaching an author as a blank line. `default` is the page being

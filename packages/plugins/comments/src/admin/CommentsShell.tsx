@@ -13,14 +13,14 @@ import type {
   CommentStatus,
   ModerationAction,
   ModerationCommentDTO,
-} from "./rpc.js";
+} from "./queries.js";
 import {
   BULK_ACTIONS,
   useBulkModeration,
   useCommentCounts,
   useCommentList,
   useModeration,
-} from "./rpc.js";
+} from "./queries.js";
 
 const TABS: readonly CommentStatus[] = ["pending", "approved", "spam", "trash"];
 

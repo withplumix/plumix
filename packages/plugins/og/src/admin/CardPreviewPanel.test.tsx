@@ -1,3 +1,5 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcStub } from "plumix/admin/test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -6,6 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -21,25 +24,19 @@ const CARD: CardPreview = {
   src: "data:image/png;base64,AAAA",
 };
 
-let requests: number;
+let stub: PluginRpcStub;
 
 /** Answers each call with the next reply, then repeats the last one. */
 function mockRpc(...queued: readonly CardPreview[]): void {
   const replies = [...queued];
-  requests = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => {
-      requests += 1;
+  stub = stubPluginRpc("og", {
+    preview: (): JsonValue => {
       const body = replies.length > 1 ? replies.shift() : replies[0];
-      return Promise.resolve(
-        new Response(JSON.stringify({ json: body, meta: [] }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      );
-    }),
-  );
+      // Safety: `CardPreview` is plain data — every field is already a
+      // JSON-representable primitive or literal union.
+      return body as unknown as JsonValue;
+    },
+  });
 }
 
 // `entryId` is what the field reads off the editor's route; `disabled` is what
@@ -138,7 +135,7 @@ describe("CardPreviewPanel", () => {
     expect(screen.getByTestId("preview")).toHaveTextContent(
       "Save the entry to see how it will be shared.",
     );
-    expect(requests).toBe(0);
+    expect(stub.calls).toHaveLength(0);
   });
 
   test("re-renders the card on demand, since the entry moves under it", async () => {
@@ -159,7 +156,7 @@ describe("CardPreviewPanel", () => {
         "outranks the card",
       );
     });
-    expect(requests).toBe(2);
+    expect(stub.calls).toHaveLength(2);
   });
 
   test("offers no refresh a read-only form would honour", async () => {

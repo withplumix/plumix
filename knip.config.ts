@@ -136,6 +136,10 @@ const config: KnipConfig = {
         // the plugin-bundle Vite step bundles them into the plugin chunk at
         // the consumer's build time — not a static import knip can follow.
         "src/admin/ui.ts",
+        // `plumix/admin/test` is the plugin-admin RPC test stub; every
+        // consumer is a plugin package's own test file, in a different
+        // knip workspace than this one.
+        "src/admin/test.ts",
         "src/blocks/index.ts",
         "src/blocks/renderer.ts",
         "src/blocks/test.ts",

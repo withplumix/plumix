@@ -108,6 +108,10 @@
       "types": "./dist/admin/ui.d.ts",
       "default": "./dist/admin/ui.js"
     },
+    "./admin/test": {
+      "types": "./dist/admin/test.d.ts",
+      "default": "./dist/admin/test.js"
+    },
     "./test/playwright": {
       "types": "./dist/test/playwright.d.ts",
       "default": "./dist/test/playwright.js"

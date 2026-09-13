@@ -10,6 +10,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { createPluginRpcClient } from "plumix/admin";
 
 import type {
   FormSummary,
@@ -20,6 +21,8 @@ import type {
   SubmissionStatus,
 } from "../types.js";
 import { EXPORT_PATH } from "../contract.js";
+
+const rpc = createPluginRpcClient("forms");
 
 // The shapes the handlers return, read from where they are declared
 // rather than declared a second time here — a second copy is a copy that
@@ -51,37 +54,11 @@ export function submissionsExportHref(
   return `${pluginBasePath()}${EXPORT_PATH}?${query.toString()}`;
 }
 
-async function rpcCall<TOutput>(
-  procedure: string,
-  input: unknown = {},
-): Promise<TOutput> {
-  const res = await fetch(
-    `${pluginBasePath()}/_plumix/rpc/forms/${procedure}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-plumix-request": "1" },
-      body: JSON.stringify({ json: input, meta: [] }),
-    },
-  );
-  const envelope = (await res.json().catch(() => null)) as {
-    json?: unknown;
-  } | null;
-  if (!res.ok) {
-    const error = envelope?.json as
-      { message?: string; data?: { reason?: string } } | undefined;
-    // eslint-disable-next-line no-restricted-syntax -- admin-side rpc envelope rethrow; the server's message is the discriminator
-    throw new Error(
-      error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`,
-    );
-  }
-  return envelope?.json as TOutput;
-}
-
 /** The forms the plugin's registry knows about — no forms table exists. */
 export function useFormDefinitions(): UseQueryResult<readonly FormSummary[]> {
   return useQuery({
     queryKey: DEFINITIONS_KEY,
-    queryFn: () => rpcCall<readonly FormSummary[]>("definitions"),
+    queryFn: () => rpc.call<readonly FormSummary[]>("definitions"),
   });
 }
 
@@ -90,7 +67,7 @@ export function useSubmissionCounts(
 ): UseQueryResult<SubmissionCounts> {
   return useQuery({
     queryKey: [...SUBMISSIONS_KEY, "counts", filter],
-    queryFn: () => rpcCall<SubmissionCounts>("counts", filter),
+    queryFn: () => rpc.call<SubmissionCounts>("counts", filter),
   });
 }
 
@@ -103,7 +80,7 @@ export function useSubmissions(
   return useInfiniteQuery({
     queryKey: [...SUBMISSIONS_KEY, "list", filter],
     queryFn: ({ pageParam }) =>
-      rpcCall<SubmissionsPage>(
+      rpc.call<SubmissionsPage>(
         "list",
         pageParam === undefined ? filter : { ...filter, cursor: pageParam },
       ),
@@ -125,7 +102,7 @@ export function useSubmission(
 ): UseQueryResult<SubmissionDTO> {
   return useQuery({
     queryKey: [...SUBMISSIONS_KEY, "get", id],
-    queryFn: () => rpcCall<SubmissionDTO>("get", { id }),
+    queryFn: () => rpc.call<SubmissionDTO>("get", { id }),
     enabled: id !== null,
   });
 }
@@ -135,7 +112,7 @@ function useSubmissionMutation<TInput, TOutput>(
 ): UseMutationResult<TOutput, Error, TInput> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: TInput) => rpcCall<TOutput>(procedure, input),
+    mutationFn: (input: TInput) => rpc.call<TOutput>(procedure, input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: SUBMISSIONS_KEY }),
   });
