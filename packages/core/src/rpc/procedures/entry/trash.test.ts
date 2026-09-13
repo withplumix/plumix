@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { AppContext } from "../../../context/app.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -11,14 +12,16 @@ describe("entry.trash", () => {
       slug: "soft",
     });
 
-    const onTrash = vi.fn<(post: Entry) => void>();
+    const onTrash = vi.fn<(post: Entry, ctx: AppContext) => void>();
     h.hooks.addAction("entry:trashed", onTrash);
 
     const result = await h.client.entry.trash({ id: target.id });
     expect(result.status).toBe("trash");
     expect(onTrash).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: target.id }),
+      expect.anything(),
     );
+    expect(onTrash.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
   });
 
   test("contributor cannot trash (no post:delete cap)", async () => {

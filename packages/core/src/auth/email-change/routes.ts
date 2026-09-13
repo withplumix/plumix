@@ -57,9 +57,14 @@ export async function handleEmailChangeVerify(
   // applies to any "hook fires after a committed write" surface;
   // observers can record the outcome but can't fake it.
   try {
-    await ctx.hooks.doAction("user:email_changed", result.user, {
-      previousEmail: result.previousEmail,
-    });
+    await ctx.hooks.doAction(
+      "user:email_changed",
+      result.user,
+      {
+        previousEmail: result.previousEmail,
+      },
+      ctx,
+    );
   } catch (error) {
     ctx.logger.error("email_change_hook_failed", { error });
   }

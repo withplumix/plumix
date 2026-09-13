@@ -1,5 +1,12 @@
 import { HookRegistry, installPlugins, memoryStorage } from "plumix/plugin";
-import { createDispatcherHarness, plumixRequest } from "plumix/test";
+import {
+  createDispatcherHarness,
+  createTestContext,
+  createTestDb,
+  entryFactory,
+  plumixRequest,
+  userFactory,
+} from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
@@ -7,6 +14,34 @@ import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 async function install() {
   return installPlugins({ hooks: new HookRegistry(), plugins: [media()] });
 }
+
+describe("@plumix/plugin-media — variant purge", () => {
+  test.each(["trashed", "deleted"] as const)(
+    "a %s media entry forgets its rendered variants",
+    async (event) => {
+      const hooks = new HookRegistry();
+      await installPlugins({ hooks, plugins: [media()] });
+      const db = await createTestDb();
+      const author = await userFactory.transient({ db }).create({});
+      const entry = await entryFactory.transient({ db }).create({
+        type: "media",
+        authorId: author.id,
+        meta: { storageKey: "photo.png", mime: "image/png", size: 1 },
+      });
+      const purge = vi.fn(() => Promise.resolve());
+      const ctx = createTestContext({
+        db,
+        hooks,
+        storage: memoryStorage().connect({}),
+        imageDelivery: { kind: "test", url: (source) => source, purge },
+      });
+
+      await hooks.doAction(`entry:media:${event}`, entry, ctx);
+
+      expect(purge).toHaveBeenCalledOnce();
+    },
+  );
+});
 
 describe("@plumix/plugin-media — registration", () => {
   test("contributes the image + file block specs", async () => {

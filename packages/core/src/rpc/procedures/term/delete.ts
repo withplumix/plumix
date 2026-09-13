@@ -31,6 +31,6 @@ export const del = base
       throw errors.CONFLICT({ data: { reason: "delete_failed" } });
     }
 
-    await context.hooks.doAction("term:deleted", deleted);
+    await context.hooks.doAction("term:deleted", deleted, context);
     return context.hooks.applyFilter("rpc:term.delete:output", deleted);
   });

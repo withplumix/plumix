@@ -1,6 +1,7 @@
 import type { AppContext } from "plumix/plugin";
+import { HookRegistry, installPlugins } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { CommentsTestDb } from "./test/db.js";
 import type { CommentsConfig } from "./types.js";
@@ -86,6 +87,27 @@ describe("comments() plugin", () => {
     expect(captureSetup({ notifyEmail: "mod@example.test" }).actions).toContain(
       "comment:created",
     );
+  });
+});
+
+describe("moderator notification", () => {
+  test("a comment held for review is mailed to the moderator", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const comment = await commentFactory
+      .transient({ db })
+      .create({ entryId: entry.id, status: "pending" });
+    const hooks = new HookRegistry();
+    await installPlugins({
+      hooks,
+      plugins: [comments({ notifyEmail: "mod@example.test" })],
+    });
+    const send = vi.fn(() => Promise.resolve());
+    const ctx = createTestContext({ db, hooks, mailer: { send } });
+
+    await hooks.doAction("comment:created", comment, ctx);
+
+    expect(send).toHaveBeenCalledOnce();
   });
 });
 

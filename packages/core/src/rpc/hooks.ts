@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
@@ -143,6 +143,7 @@ declare module "../hooks/types.js" {
     "rpc:settings.get:output": (
       output: SettingsBag,
       context: { readonly group: string },
+      ctx: AppContext,
     ) => SettingsBag | Promise<SettingsBag>;
 
     "rpc:settings.upsert:input": (
@@ -157,6 +158,7 @@ declare module "../hooks/types.js" {
     "rpc:settings.upsert:output": (
       output: SettingsBag,
       context: { readonly group: string },
+      ctx: AppContext,
     ) => SettingsBag | Promise<SettingsBag>;
 
     /**
@@ -168,6 +170,8 @@ declare module "../hooks/types.js" {
     [K: `entry:${string}:before_save`]: (entry: NewEntry) => NewEntry;
   }
 
+  // Every action below hands its handler the context it fired from, last, so a
+  // handler accepts what it depends on rather than reaching for the ambient one.
   interface ActionRegistry {
     /**
      * Entry lifecycle. `entry:<event>` fires for every entry regardless
@@ -175,26 +179,45 @@ declare module "../hooks/types.js" {
      * one entry type without re-filtering inside a generic handler.
      * Both always fire — subscribe to whichever granularity you need.
      */
-    "entry:published": (entry: Entry) => void | Promise<void>;
-    "entry:updated": (entry: Entry, previous: Entry) => void | Promise<void>;
-    "entry:trashed": (entry: Entry) => void | Promise<void>;
-    "entry:restored": (entry: Entry) => void | Promise<void>;
-    "entry:deleted": (entry: Entry) => void | Promise<void>;
+    "entry:published": (entry: Entry, ctx: AppContext) => void | Promise<void>;
+    "entry:updated": (
+      entry: Entry,
+      previous: Entry,
+      ctx: AppContext,
+    ) => void | Promise<void>;
+    "entry:trashed": (entry: Entry, ctx: AppContext) => void | Promise<void>;
+    "entry:restored": (entry: Entry, ctx: AppContext) => void | Promise<void>;
+    "entry:deleted": (entry: Entry, ctx: AppContext) => void | Promise<void>;
     "entry:transition": (
       entry: Entry,
       oldStatus: EntryStatus,
+      ctx: AppContext,
     ) => void | Promise<void>;
-    [K: `entry:${string}:published`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:published`]: (
+      entry: Entry,
+      ctx: AppContext,
+    ) => void | Promise<void>;
     [K: `entry:${string}:updated`]: (
       entry: Entry,
       previous: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
-    [K: `entry:${string}:trashed`]: (entry: Entry) => void | Promise<void>;
-    [K: `entry:${string}:restored`]: (entry: Entry) => void | Promise<void>;
-    [K: `entry:${string}:deleted`]: (entry: Entry) => void | Promise<void>;
+    [K: `entry:${string}:trashed`]: (
+      entry: Entry,
+      ctx: AppContext,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:restored`]: (
+      entry: Entry,
+      ctx: AppContext,
+    ) => void | Promise<void>;
+    [K: `entry:${string}:deleted`]: (
+      entry: Entry,
+      ctx: AppContext,
+    ) => void | Promise<void>;
     [K: `entry:${string}:transition`]: (
       entry: Entry,
       oldStatus: EntryStatus,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -207,18 +230,22 @@ declare module "../hooks/types.js" {
     "entry:revision_created": (
       revision: Entry,
       live: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
     "entry:revision_pruned": (
       live: Entry,
       prunedCount: number,
+      ctx: AppContext,
     ) => void | Promise<void>;
     [K: `entry:${string}:revision_created`]: (
       revision: Entry,
       live: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
     [K: `entry:${string}:revision_pruned`]: (
       live: Entry,
       prunedCount: number,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -232,18 +259,22 @@ declare module "../hooks/types.js" {
     "entry:autosave_saved": (
       autosave: Entry,
       live: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
     "entry:autosave_discarded": (
       live: Entry,
       authorId: number,
+      ctx: AppContext,
     ) => void | Promise<void>;
     [K: `entry:${string}:autosave_saved`]: (
       autosave: Entry,
       live: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
     [K: `entry:${string}:autosave_discarded`]: (
       live: Entry,
       authorId: number,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -257,10 +288,12 @@ declare module "../hooks/types.js" {
     "entry:revision_restored": (
       revision: Entry,
       destination: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
     [K: `entry:${string}:revision_restored`]: (
       revision: Entry,
       destination: Entry,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -272,6 +305,7 @@ declare module "../hooks/types.js" {
     "entry:meta_changed": (
       entry: { readonly id: number; readonly type: string },
       changes: EntryMetaChanges,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -295,6 +329,7 @@ declare module "../hooks/types.js" {
         readonly invitedBy: number;
         readonly expiresAt: Date;
       },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -308,7 +343,7 @@ declare module "../hooks/types.js" {
      * row to third-party log/analytics services without the user's
      * consent. Same caveat applies to all `user:*` actions below.
      */
-    "user:registered": (user: User) => void | Promise<void>;
+    "user:registered": (user: User, ctx: AppContext) => void | Promise<void>;
 
     /**
      * Fires after a successful `user.update` row-columns write. Payload
@@ -325,7 +360,11 @@ declare module "../hooks/types.js" {
      * stale. Always subscribe to `user:meta_changed` for the
      * authoritative meta diff.
      */
-    "user:updated": (user: User, previous: User) => void | Promise<void>;
+    "user:updated": (
+      user: User,
+      previous: User,
+      ctx: AppContext,
+    ) => void | Promise<void>;
 
     /**
      * Fires after a successful meta write via `user.update`. Payload
@@ -336,6 +375,7 @@ declare module "../hooks/types.js" {
     "user:meta_changed": (
       user: { readonly id: number },
       changes: UserMetaChanges,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -347,6 +387,7 @@ declare module "../hooks/types.js" {
     "user:status_changed": (
       user: User,
       context: { readonly enabled: boolean },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -358,10 +399,11 @@ declare module "../hooks/types.js" {
     "user:deleted": (
       user: User,
       context: { readonly reassignedTo: number | null },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /** Fires after `term.create` persists a new term row. */
-    "term:created": (term: Term) => void | Promise<void>;
+    "term:created": (term: Term, ctx: AppContext) => void | Promise<void>;
 
     /**
      * Fires after a successful `term.update` row-columns write. Payload
@@ -375,10 +417,14 @@ declare module "../hooks/types.js" {
      * RPC call — use `term:meta_changed` for the authoritative meta
      * diff.
      */
-    "term:updated": (term: Term, previous: Term) => void | Promise<void>;
+    "term:updated": (
+      term: Term,
+      previous: Term,
+      ctx: AppContext,
+    ) => void | Promise<void>;
 
     /** Fires after `term.delete` removes a term row. */
-    "term:deleted": (term: Term) => void | Promise<void>;
+    "term:deleted": (term: Term, ctx: AppContext) => void | Promise<void>;
 
     /**
      * Fires after a successful meta write via `term.create` /
@@ -389,6 +435,7 @@ declare module "../hooks/types.js" {
     "term:meta_changed": (
       term: { readonly id: number; readonly taxonomy: string },
       changes: TermMetaChanges,
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -398,11 +445,14 @@ declare module "../hooks/types.js" {
      * the same pattern across bags. Subscribe for audit logs,
      * cache-invalidators, derived-setting backfills.
      */
-    "settings:group_changed": (changes: {
-      readonly group: string;
-      readonly set: SettingsBag;
-      readonly removed: readonly string[];
-    }) => void | Promise<void>;
+    "settings:group_changed": (
+      changes: {
+        readonly group: string;
+        readonly set: SettingsBag;
+        readonly removed: readonly string[];
+      },
+      ctx: AppContext,
+    ) => void | Promise<void>;
 
     // ──────────────────────────────────────────────────────────────────
     // Auth / sign-in events.
@@ -439,13 +489,14 @@ declare module "../hooks/types.js" {
         readonly provider?: string;
         readonly firstSignIn: boolean;
       },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
      * A user signed out via the dedicated `/auth/signout` route. The
      * session row is already deleted by the time this fires.
      */
-    "user:signed_out": (user: User) => void | Promise<void>;
+    "user:signed_out": (user: User, ctx: AppContext) => void | Promise<void>;
 
     /**
      * Fires after `user.requestEmailChange` writes the verification
@@ -460,6 +511,7 @@ declare module "../hooks/types.js" {
         readonly newEmail: string;
         readonly expiresAt: Date;
       },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -473,6 +525,7 @@ declare module "../hooks/types.js" {
     "user:email_changed": (
       user: User,
       context: { readonly previousEmail: string },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -487,6 +540,7 @@ declare module "../hooks/types.js" {
         "id" | "userId" | "name" | "deviceType" | "isBackedUp"
       >,
       context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -497,6 +551,7 @@ declare module "../hooks/types.js" {
     "credential:revoked": (
       credential: { readonly id: string; readonly userId: number },
       context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -506,6 +561,7 @@ declare module "../hooks/types.js" {
     "credential:renamed": (
       credential: { readonly id: string; readonly userId: number },
       context: { readonly actor: AuthenticatedUser; readonly name: string },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -521,6 +577,7 @@ declare module "../hooks/types.js" {
         readonly actor: AuthenticatedUser;
         readonly mode: "single" | "all_others";
       },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -535,6 +592,7 @@ declare module "../hooks/types.js" {
         "id" | "userId" | "name" | "prefix" | "scopes" | "expiresAt"
       >,
       context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -549,6 +607,7 @@ declare module "../hooks/types.js" {
         readonly actor: AuthenticatedUser;
         readonly mode: "self" | "admin";
       },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -565,6 +624,7 @@ declare module "../hooks/types.js" {
         readonly scopes: readonly string[] | null;
       },
       context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
     ) => void | Promise<void>;
 
     /**
@@ -574,6 +634,7 @@ declare module "../hooks/types.js" {
     "device_code:denied": (
       deviceCode: { readonly id: string; readonly userCode: string },
       context: { readonly actor: AuthenticatedUser },
+      ctx: AppContext,
     ) => void | Promise<void>;
   }
 }

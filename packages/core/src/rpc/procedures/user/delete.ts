@@ -72,9 +72,14 @@ export const del = base
     // WP's `deleted_user` parity. `reassignedTo` is `null` if the user
     // had no entries (no reassignment happened); otherwise carries the id
     // we migrated entries to so audit-log plugins can reconstruct the move.
-    await context.hooks.doAction("user:deleted", deleted, {
-      reassignedTo: entryCount > 0 ? (input.reassignTo ?? null) : null,
-    });
+    await context.hooks.doAction(
+      "user:deleted",
+      deleted,
+      {
+        reassignedTo: entryCount > 0 ? (input.reassignTo ?? null) : null,
+      },
+      context,
+    );
 
     return context.hooks.applyFilter("rpc:user.delete:output", deleted);
   });

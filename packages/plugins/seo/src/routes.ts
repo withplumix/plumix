@@ -1,6 +1,5 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import { enqueuePurgeTags, tagCdnEntry, typeTag, withBasePath } from "plumix";
-import { tryGetContext } from "plumix/plugin";
 
 import type { SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
@@ -138,12 +137,8 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
   // The indexing toggle decides whether the sitemap has any URLs at all, so a
   // save has to retire the cached set. Both groups, because the toggle answers
   // from this plugin's own key falling back to the legacy `site` one.
-  ctx.addAction("settings:group_changed", (changes) => {
+  ctx.addAction("settings:group_changed", (changes, appCtx) => {
     if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
-    // A settings write always runs inside a request; a fire outside one has no
-    // cache to purge through.
-    const appCtx = tryGetContext();
-    if (appCtx === null) return;
     enqueuePurgeTags(appCtx, [
       SITEMAP_TAG,
       ...[...ctx.plugins.entryTypes.keys()].map(typeTag),

@@ -26,6 +26,7 @@ export const revoke = base
       "api_token:revoked",
       { id: input.id, userId: context.user.id },
       { actor: context.user, mode: "self" },
+      context,
     );
     return { id: input.id };
   });

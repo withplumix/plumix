@@ -1,3 +1,5 @@
+import type { AppContext } from "plumix/plugin";
+
 import type { Comment } from "../db/schema.js";
 import type { CommentStatus } from "../types.js";
 
@@ -24,9 +26,18 @@ declare module "plumix" {
     ) => CommentStatus | Promise<CommentStatus>;
   }
   interface ActionRegistry {
-    "comment:created": (comment: Comment) => void | Promise<void>;
-    "comment:approved": (comment: Comment) => void | Promise<void>;
-    "comment:spam": (comment: Comment) => void | Promise<void>;
-    "comment:trashed": (comment: Comment) => void | Promise<void>;
+    "comment:created": (
+      comment: Comment,
+      ctx: AppContext,
+    ) => void | Promise<void>;
+    "comment:approved": (
+      comment: Comment,
+      ctx: AppContext,
+    ) => void | Promise<void>;
+    "comment:spam": (comment: Comment, ctx: AppContext) => void | Promise<void>;
+    "comment:trashed": (
+      comment: Comment,
+      ctx: AppContext,
+    ) => void | Promise<void>;
   }
 }

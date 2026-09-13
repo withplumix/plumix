@@ -100,7 +100,7 @@ export const create = base
       meta = await resolveTermMeta(context, created.taxonomy, created.meta);
     }
 
-    await context.hooks.doAction("term:created", created);
+    await context.hooks.doAction("term:created", created, context);
     return context.hooks.applyFilter("rpc:term.create:output", {
       ...created,
       meta,

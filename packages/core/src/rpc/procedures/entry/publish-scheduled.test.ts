@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { entries } from "../../../db/schema/entries.js";
 import { HookRegistry } from "../../../hooks/registry.js";
+import { createTestContext } from "../../../test/context.js";
 import { entryFactory, userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { publishDueScheduledEntries } from "./publish-scheduled.js";
@@ -15,7 +16,7 @@ async function setup() {
   hooks.addAction("entry:published", (entry: { id: number }) => {
     published.push(entry.id);
   });
-  const ctx = { db, hooks };
+  const ctx = createTestContext({ db, hooks });
   return { db, user, hooks, published, ctx };
 }
 

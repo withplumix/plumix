@@ -138,10 +138,15 @@ export async function handleMagicLinkVerify(
       selfSignup: app.config.auth.selfSignup,
     });
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
-    await ctx.hooks.doAction("user:signed_in", user, {
-      method: "magic_link",
-      firstSignIn: created,
-    });
+    await ctx.hooks.doAction(
+      "user:signed_in",
+      user,
+      {
+        method: "magic_link",
+        firstSignIn: created,
+      },
+      ctx,
+    );
     // Honour a safe return-to path that rode through the emailed link;
     // otherwise the admin, as before.
     const destination = resolveSafeRedirect(

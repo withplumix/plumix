@@ -227,7 +227,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       userAgent,
     });
 
-    await ctx.hooks.doAction("comment:created", row);
+    await ctx.hooks.doAction("comment:created", row, ctx);
 
     return accepted(status);
   };

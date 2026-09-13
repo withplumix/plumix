@@ -143,16 +143,25 @@ export const upsert = base
     // `values: {}` payload is a no-op and shouldn't wake up
     // cache-invalidators / audit-log subscribers.
     if (upsertRows.length > 0 || deletes.length > 0) {
-      await context.hooks.doAction("settings:group_changed", {
-        group: filtered.group,
-        set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
-        removed: deletes,
-      });
+      await context.hooks.doAction(
+        "settings:group_changed",
+        {
+          group: filtered.group,
+          set: Object.fromEntries(upsertRows.map((r) => [r.key, r.value])),
+          removed: deletes,
+        },
+        context,
+      );
     }
 
-    return context.hooks.applyFilter("rpc:settings.upsert:output", bag, {
-      group: filtered.group,
-    });
+    return context.hooks.applyFilter(
+      "rpc:settings.upsert:output",
+      bag,
+      {
+        group: filtered.group,
+      },
+      context,
+    );
   });
 
 // Values that blow past the per-value cap in `schemas.ts` translate to a

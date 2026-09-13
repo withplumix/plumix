@@ -95,9 +95,7 @@ const AUDIT_LABELS = {
  *   and flushes once via `ctx.defer` (the runtime shim from #177).
  *   Multiple events from one RPC become one INSERT.
  * - **Hooks** subscribe to entry lifecycle events; each listener
- *   pulls AppContext out of `requestStore.getStore()` so action
- *   handlers (which don't take a ctx arg) can still find the per-
- *   request batch.
+ *   records against the AppContext its action hands it last.
  * - **RPC** `auditLog.list` is gated on the `audit_log:read`
  *   capability (admin-only by default); slice #180 adds filter +
  *   cursor pagination.
@@ -110,12 +108,11 @@ const AUDIT_LABELS = {
  *
  *     definePlugin("comments", {
  *       setup: (ctx) => {
- *         ctx.addAction("comment:approved", (comment) => {
- *           // `tryGetContext()` returns the current AppContext, which
- *           // carries `ctx.audit` when the audit-log plugin is also
- *           // installed; the optional chain makes this a no-op when
- *           // it isn't.
- *           tryGetContext()?.audit?.log({
+ *         ctx.addAction("comment:approved", (comment, appCtx) => {
+ *           // The action hands over the AppContext, which carries
+ *           // `audit` when the audit-log plugin is also installed; the
+ *           // optional chain makes this a no-op when it isn't.
+ *           appCtx.audit?.log({
  *             event: "comment:approved",
  *             subject: { type: "comment", id: comment.id, label: comment.body.slice(0, 40) },
  *             properties: { postId: comment.postId },

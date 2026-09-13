@@ -33,21 +33,26 @@ export async function applyEntryBeforeSave(
 }
 
 export async function fireEntryTransition(
-  ctx: Pick<AppContext, "hooks">,
+  ctx: AppContext,
   entry: Entry,
   oldStatus: EntryStatus,
 ): Promise<void> {
   if (entry.status === oldStatus) return;
-  await ctx.hooks.doAction(`entry:${entry.type}:transition`, entry, oldStatus);
-  await ctx.hooks.doAction("entry:transition", entry, oldStatus);
+  await ctx.hooks.doAction(
+    `entry:${entry.type}:transition`,
+    entry,
+    oldStatus,
+    ctx,
+  );
+  await ctx.hooks.doAction("entry:transition", entry, oldStatus, ctx);
 }
 
 export async function fireEntryPublished(
-  ctx: Pick<AppContext, "hooks">,
+  ctx: AppContext,
   entry: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:published`, entry);
-  await ctx.hooks.doAction("entry:published", entry);
+  await ctx.hooks.doAction(`entry:${entry.type}:published`, entry, ctx);
+  await ctx.hooks.doAction("entry:published", entry, ctx);
 }
 
 /**
@@ -65,36 +70,36 @@ export function publishedAtForTransition(
 }
 
 export async function fireEntryUpdated(
-  ctx: Pick<AppContext, "hooks">,
+  ctx: AppContext,
   entry: Entry,
   previous: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:updated`, entry, previous);
-  await ctx.hooks.doAction("entry:updated", entry, previous);
+  await ctx.hooks.doAction(`entry:${entry.type}:updated`, entry, previous, ctx);
+  await ctx.hooks.doAction("entry:updated", entry, previous, ctx);
 }
 
 export async function fireEntryTrashed(
   ctx: AppContext,
   entry: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:trashed`, entry);
-  await ctx.hooks.doAction("entry:trashed", entry);
+  await ctx.hooks.doAction(`entry:${entry.type}:trashed`, entry, ctx);
+  await ctx.hooks.doAction("entry:trashed", entry, ctx);
 }
 
 export async function fireEntryRestored(
   ctx: AppContext,
   entry: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:restored`, entry);
-  await ctx.hooks.doAction("entry:restored", entry);
+  await ctx.hooks.doAction(`entry:${entry.type}:restored`, entry, ctx);
+  await ctx.hooks.doAction("entry:restored", entry, ctx);
 }
 
 export async function fireEntryDeleted(
   ctx: AppContext,
   entry: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:deleted`, entry);
-  await ctx.hooks.doAction("entry:deleted", entry);
+  await ctx.hooks.doAction(`entry:${entry.type}:deleted`, entry, ctx);
+  await ctx.hooks.doAction("entry:deleted", entry, ctx);
 }
 
 // Type-specific event keys on the live entry's type — the autosave row
@@ -106,8 +111,13 @@ export async function fireEntryAutosaveSaved(
   autosave: Entry,
   live: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${live.type}:autosave_saved`, autosave, live);
-  await ctx.hooks.doAction("entry:autosave_saved", autosave, live);
+  await ctx.hooks.doAction(
+    `entry:${live.type}:autosave_saved`,
+    autosave,
+    live,
+    ctx,
+  );
+  await ctx.hooks.doAction("entry:autosave_saved", autosave, live, ctx);
 }
 
 export async function fireEntryAutosaveDiscarded(
@@ -119,8 +129,9 @@ export async function fireEntryAutosaveDiscarded(
     `entry:${live.type}:autosave_discarded`,
     live,
     authorId,
+    ctx,
   );
-  await ctx.hooks.doAction("entry:autosave_discarded", live, authorId);
+  await ctx.hooks.doAction("entry:autosave_discarded", live, authorId, ctx);
 }
 
 // `destination` is the row the snapshot landed on — autosave for
@@ -138,8 +149,14 @@ export async function fireEntryRevisionRestored(
     `entry:${liveType}:revision_restored`,
     revision,
     destination,
+    ctx,
   );
-  await ctx.hooks.doAction("entry:revision_restored", revision, destination);
+  await ctx.hooks.doAction(
+    "entry:revision_restored",
+    revision,
+    destination,
+    ctx,
+  );
 }
 
 export function entryCapability(type: string, action: string): string {
@@ -327,14 +344,16 @@ export async function captureRevisionIfSupported(
     `entry:${updated.type}:revision_created`,
     revision,
     updated,
+    ctx,
   );
-  await ctx.hooks.doAction("entry:revision_created", revision, updated);
+  await ctx.hooks.doAction("entry:revision_created", revision, updated, ctx);
   if (pruned > 0) {
     await ctx.hooks.doAction(
       `entry:${updated.type}:revision_pruned`,
       updated,
       pruned,
+      ctx,
     );
-    await ctx.hooks.doAction("entry:revision_pruned", updated, pruned);
+    await ctx.hooks.doAction("entry:revision_pruned", updated, pruned, ctx);
   }
 }

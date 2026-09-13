@@ -41,6 +41,7 @@ export const revoke = base
       "session:revoked",
       { id: row.id, userId: context.user.id },
       { actor: context.user, mode: "single" },
+      context,
     );
     return row;
   });

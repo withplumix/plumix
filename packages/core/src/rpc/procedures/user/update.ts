@@ -207,7 +207,7 @@ export const update = base
     // with the previous row for diffing. Skipped on meta-only saves —
     // subscribe to `user:meta_changed` for that surface.
     if (rowWritten) {
-      await context.hooks.doAction("user:updated", updated, existing);
+      await context.hooks.doAction("user:updated", updated, existing, context);
     }
 
     return context.hooks.applyFilter("rpc:user.update:output", {

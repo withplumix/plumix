@@ -1,7 +1,7 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import type { Term } from "plumix/schema";
 import { eq } from "plumix/db";
-import { ackEntryChanges, tryGetContext } from "plumix/plugin";
+import { ackEntryChanges } from "plumix/plugin";
 import { entryChanges } from "plumix/schema";
 
 import { indexEntries, indexTerms } from "./index-writer.js";
@@ -23,33 +23,6 @@ const scheduled = new WeakMap<AppContext["memo"], Set<number>>();
 // read is bounded so a hot entry cannot return an unbounded set; what is left
 // over is drained like any other backlog.
 const CHANGES_PER_ENTRY = 100;
-
-// The lifecycle actions that can change what the index should say about an
-// entry. `entry:meta_changed` is one of them because a field can declare
-// itself searchable: a save that only wrote meta still moves the document.
-// Whether it moved anything the index holds is the feed's question, not this
-// roster's — see `indexAndAck`.
-//
-// Two consequences of it firing before `entry:updated` does, both freshness
-// rather than correctness. A save writing columns and meta claims the entry
-// at the earlier point, so a plugin that mutates the row from its own
-// `entry:updated` handler lands after this read the feed — its change stays
-// enqueued and the next drain carries it. And that save leaves two feed rows
-// where it used to leave one: the same document either way, but twice the
-// drain budget, which is counted in rows.
-const ENTRY_ACTIONS = [
-  "entry:published",
-  "entry:updated",
-  "entry:trashed",
-  "entry:restored",
-  "entry:deleted",
-  "entry:meta_changed",
-] as const;
-
-// A term's name and the description its archive carries are all that is
-// indexed, and both move on these. `term:meta_changed` is absent because term
-// meta is not indexed: a taxonomy has no searchable-field declaration.
-const TERM_ACTIONS = ["term:created", "term:updated", "term:deleted"] as const;
 
 /**
  * Index this entry after the response, and clear the feed rows it left.
@@ -127,23 +100,48 @@ async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
  * application is findable without waiting for a scheduled run.
  */
 export function registerIndexInvalidator(ctx: PluginSetupContext): void {
+  // The lifecycle actions that can change what the index should say about an
+  // entry. `entry:meta_changed` is one of them because a field can declare
+  // itself searchable: a save that only wrote meta still moves the document.
+  // Whether it moved anything the index holds is the feed's question, not this
+  // roster's — see `indexAndAck`.
+  //
+  // Two consequences of it firing before `entry:updated` does, both freshness
+  // rather than correctness. A save writing columns and meta claims the entry
+  // at the earlier point, so a plugin that mutates the row from its own
+  // `entry:updated` handler lands after this read the feed — its change stays
+  // enqueued and the next drain carries it. And that save leaves two feed rows
+  // where it used to leave one: the same document either way, but twice the
+  // drain budget, which is counted in rows.
+  //
   // Widened past `Entry` because `entry:meta_changed` carries `{ id, type }`
   // rather than the row — the id is all the fast path reads.
-  const onEntry = (entry: { readonly id: number }): void => {
-    // A lifecycle action always fires inside a request; one fired outside has
-    // no queue to defer through, and the feed catches it either way.
-    const appCtx = tryGetContext();
-    if (appCtx === null) return;
+  const onEntry = (
+    entry: { readonly id: number },
+    appCtx: AppContext,
+  ): void => {
     enqueueEntryIndex(appCtx, entry.id);
   };
-  for (const action of ENTRY_ACTIONS) ctx.addAction(action, onEntry);
+  ctx.addAction("entry:published", onEntry);
+  ctx.addAction("entry:trashed", onEntry);
+  ctx.addAction("entry:restored", onEntry);
+  ctx.addAction("entry:deleted", onEntry);
+  ctx.addAction("entry:updated", (entry, _previous, appCtx) =>
+    onEntry(entry, appCtx),
+  );
+  ctx.addAction("entry:meta_changed", (entry, _changes, appCtx) =>
+    onEntry(entry, appCtx),
+  );
 
-  const onTerm = (term: Term): void => {
-    const appCtx = tryGetContext();
-    if (appCtx === null) return;
+  // A term's name and the description its archive carries are all that is
+  // indexed, and both move on these. `term:meta_changed` is absent because term
+  // meta is not indexed: a taxonomy has no searchable-field declaration.
+  const onTerm = (term: Term, appCtx: AppContext): void => {
     enqueueTermIndex(appCtx, term.id);
   };
-  for (const action of TERM_ACTIONS) {
-    ctx.addAction(action, onTerm);
-  }
+  ctx.addAction("term:created", onTerm);
+  ctx.addAction("term:deleted", onTerm);
+  ctx.addAction("term:updated", (term, _previous, appCtx) =>
+    onTerm(term, appCtx),
+  );
 }

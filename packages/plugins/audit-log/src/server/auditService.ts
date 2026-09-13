@@ -11,14 +11,6 @@ import type { AuditLogStorage } from "../types.js";
 
 export interface AuditService {
   record(ctx: AppContext, row: NewAuditLogRow): void;
-  /**
-   * Test seam: emit a one-time warn when a hook listener fires
-   * without a `requestStore` frame. Hook subscribers call this
-   * directly (instead of `record`) when `tryGetContext()` returns
-   * null, so a developer running an out-of-context test sees a
-   * clear diagnostic the first time.
-   */
-  warnNoContextOnce(): void;
 }
 
 // Single-row JSON cap before the audit row is dropped. Mirrors the
@@ -28,23 +20,25 @@ export interface AuditService {
 // large-but-reasonable diffs through.
 const MAX_PROPERTIES_BYTES = 256 * 1024;
 
+type Buffers = WeakMap<AppContext["memo"], NewAuditLogRow[]>;
+
 export function createAuditService(storage: AuditLogStorage): AuditService {
-  // Per-request buffer keyed by AppContext so an isolated request can
-  // never flush another request's rows. WeakMap means the entries
-  // garbage-collect alongside ctx — no per-request init/teardown
-  // needed.
-  const buffers = new WeakMap<AppContext, NewAuditLogRow[]>();
-  let warnedNoContext = false;
+  // Per-request buffer, so an isolated request can never flush another
+  // request's rows. Keyed on the request's memo rather than the context:
+  // core derives contexts by spreading, and an action's context and the
+  // one `ctx.audit.log()` reads can be different objects in one request.
+  // The memo is one object per request, carried through every derivation.
+  const buffers: Buffers = new WeakMap();
 
   function record(ctx: AppContext, row: NewAuditLogRow): void {
     if (!fitsSizeCap(ctx.logger, row)) return;
-    const existing = buffers.get(ctx);
+    const existing = buffers.get(ctx.memo);
     if (existing) {
       existing.push(row);
       return;
     }
     const buffer: NewAuditLogRow[] = [row];
-    buffers.set(ctx, buffer);
+    buffers.set(ctx.memo, buffer);
     // First record for this request — schedule the flush. Wrapping
     // in `Promise.resolve().then(...)` defers the buffer drain into
     // a microtask so synchronous record() siblings (one RPC handler
@@ -67,25 +61,11 @@ export function createAuditService(storage: AuditLogStorage): AuditService {
     }
   }
 
-  function warnNoContextOnce(): void {
-    if (warnedNoContext) return;
-    warnedNoContext = true;
-    // No ctx in this branch — best we can do is log to console. A
-    // hook firing outside `requestStore.run` is a misconfigured test
-    // harness; production runtimes always wrap.
-    console.warn(
-      "[plumix/plugin-audit-log] hook fired outside requestStore — " +
-        "audit row dropped. If this is a test, wrap your harness " +
-        "in `requestStore.run(ctx, ...)` so action listeners can " +
-        "find the per-request buffer.",
-    );
-  }
-
-  return { record, warnNoContextOnce };
+  return { record };
 }
 
 async function flush(
-  buffers: WeakMap<AppContext, NewAuditLogRow[]>,
+  buffers: Buffers,
   storage: AuditLogStorage,
   ctx: AppContext,
 ): Promise<void> {
@@ -93,9 +73,9 @@ async function flush(
   // during the upcoming `await` lands in a fresh buffer with its own
   // scheduled flush — it can't append to the rows we're about to
   // write, and we can't lose its row.
-  const rows = buffers.get(ctx);
+  const rows = buffers.get(ctx.memo);
   if (!rows || rows.length === 0) return;
-  buffers.delete(ctx);
+  buffers.delete(ctx.memo);
   // Audit-write failures never bubble to the caller. ctx.defer's own
   // catch logs through ctx.logger.error already; we add a warn-level
   // breadcrumb so operators see the audit-write specifically (vs a

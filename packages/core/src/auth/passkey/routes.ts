@@ -284,11 +284,17 @@ export async function handlePasskeyRegisterVerify(
             meta: user.meta,
           },
         },
+        ctx,
       );
-      await ctx.hooks.doAction("user:signed_in", user, {
-        method: "passkey",
-        firstSignIn,
-      });
+      await ctx.hooks.doAction(
+        "user:signed_in",
+        user,
+        {
+          method: "passkey",
+          firstSignIn,
+        },
+        ctx,
+      );
     }
 
     return jsonResponse(
@@ -359,10 +365,15 @@ export async function handlePasskeyLoginVerify(
       where: eq(users.id, verified.credential.userId),
     });
     if (user) {
-      await ctx.hooks.doAction("user:signed_in", user, {
-        method: "passkey",
-        firstSignIn: false,
-      });
+      await ctx.hooks.doAction(
+        "user:signed_in",
+        user,
+        {
+          method: "passkey",
+          firstSignIn: false,
+        },
+        ctx,
+      );
     }
 
     return jsonResponse(
@@ -389,7 +400,7 @@ export async function handleSignout(
     const validated = await validateSession(ctx.db, token, app.sessionPolicy);
     await invalidateSession(ctx.db, token);
     if (validated) {
-      await ctx.hooks.doAction("user:signed_out", validated.user);
+      await ctx.hooks.doAction("user:signed_out", validated.user, ctx);
     }
   }
   const cookie = buildSessionDeletionCookie({
@@ -507,7 +518,7 @@ export async function handleInviteRegisterVerify(
     // session created). Fire after the session exists so handlers that
     // hit the DB can rely on the user being in a stable post-invite
     // state — matches WP's `user_register` firing post-save.
-    await ctx.hooks.doAction("user:registered", user);
+    await ctx.hooks.doAction("user:registered", user, ctx);
     await ctx.hooks.doAction(
       "credential:created",
       {
@@ -525,11 +536,17 @@ export async function handleInviteRegisterVerify(
           meta: user.meta,
         },
       },
+      ctx,
     );
-    await ctx.hooks.doAction("user:signed_in", user, {
-      method: "invite",
-      firstSignIn: true,
-    });
+    await ctx.hooks.doAction(
+      "user:signed_in",
+      user,
+      {
+        method: "invite",
+        firstSignIn: true,
+      },
+      ctx,
+    );
     return jsonResponse(
       { userId: user.id },
       {

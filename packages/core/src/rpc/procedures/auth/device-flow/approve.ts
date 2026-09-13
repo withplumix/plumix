@@ -45,6 +45,7 @@ export const approve = base
         scopes: input.scopes ?? null,
       },
       { actor: context.user },
+      context,
     );
     return { ok: true as const };
   });

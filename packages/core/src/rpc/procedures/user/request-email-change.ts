@@ -71,11 +71,16 @@ export const requestEmailChangeProc = base
         logger: context.logger,
       });
 
-      await context.hooks.doAction("user:email_change_requested", result.user, {
-        actor: context.user,
-        newEmail: input.newEmail.trim().toLowerCase(),
-        expiresAt: result.expiresAt,
-      });
+      await context.hooks.doAction(
+        "user:email_change_requested",
+        result.user,
+        {
+          actor: context.user,
+          newEmail: input.newEmail.trim().toLowerCase(),
+          expiresAt: result.expiresAt,
+        },
+        context,
+      );
 
       return { ok: true as const, expiresAt: result.expiresAt };
     } catch (error) {

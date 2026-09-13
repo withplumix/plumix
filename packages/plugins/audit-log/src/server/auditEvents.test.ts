@@ -1,7 +1,7 @@
 // Audit-event subscription tests. Each test wires a `HookRegistry`,
 // calls `registerAuditEvents(ctx, fakeService)`, fires the action via
-// `doAction` inside a `requestStore.run` frame, and asserts on the
-// row that landed in the fake service's record buffer. Avoids the
+// `doAction` with the context last, and asserts on the row that
+// landed in the fake service's record buffer. Avoids the
 // real DB path and keeps each assertion pinned to the row's shape.
 //
 // Three layers:
@@ -12,7 +12,6 @@
 //    drift; `assertRedactionInvariants` ensures sensitive fields stay
 //    omitted on every row whose subject type carries them.
 
-import type { ActionName } from "plumix";
 import type {
   AppContext,
   AuthenticatedUser,
@@ -20,14 +19,20 @@ import type {
   PluginSetupContext,
 } from "plumix/plugin";
 import type { Term, User } from "plumix/schema";
-import { HookRegistry, requestStore } from "plumix/plugin";
-import { createTestContext } from "plumix/test";
+import { HookRegistry } from "plumix/plugin";
+import {
+  createDispatcherHarness,
+  createTestContext,
+  plumixRequest,
+} from "plumix/test";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { TestDb } from "../test-support.js";
+import type { AuditLogStorage } from "../types.js";
 import type { AuditEventDef } from "./auditEvents.js";
 import type { AuditService } from "./auditService.js";
+import { auditLog } from "../index.js";
 import { createDb } from "../test-support.js";
 import {
   assertRedactionInvariants,
@@ -35,6 +40,44 @@ import {
   registerAuditEvents,
   SUBJECT_REQUIRED_REDACTIONS,
 } from "./auditEvents.js";
+
+// Production builds the request's ambient context before anyone is signed
+// in; an authenticated procedure works on a copy that carries the user. So
+// the session rides a cookie here, not the harness's pre-signed context.
+describe("registerAuditEvents — through a procedure", () => {
+  test("a signed-in admin's settings save is attributed to them", async () => {
+    const writes: NewAuditLogRow[] = [];
+    const storage: AuditLogStorage = {
+      kind: "capture",
+      write: (_ctx, rows) => {
+        writes.push(...rows);
+        return Promise.resolve();
+      },
+      query: () => Promise.resolve({ rows: [], nextCursor: null }),
+    };
+    const h = await createDispatcherHarness({
+      plugins: [auditLog({ storage })],
+    });
+    const admin = await h.factory.user.create({ role: "admin" });
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/rpc/settings/upsert", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          json: { group: "general", values: { site_title: "Renamed" } },
+        }),
+      }),
+      admin.id,
+    );
+
+    const response = await h.dispatch(request);
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    const row = writes.find((w) => w.event === "settings:group_changed");
+    expect(row?.actorId).toBe(admin.id);
+  });
+});
 
 // Loose-typed dispatch — slice 178's defer.test.ts uses the same
 // pattern. The action names here aren't all in `ActionRegistry`'s
@@ -55,31 +98,24 @@ function makeFakeAppCtx(user: AuthenticatedUser | null): AppContext {
 interface FakeServiceState {
   readonly service: AuditService;
   readonly rows: NewAuditLogRow[];
-  warnedNoContext: number;
 }
 
 function fakeService(): FakeServiceState {
   const rows: NewAuditLogRow[] = [];
-  const state: FakeServiceState = {
+  return {
     rows,
-    warnedNoContext: 0,
     service: {
       record: (_ctx, row) => {
         rows.push(row);
       },
-      warnNoContextOnce: () => {
-        state.warnedNoContext += 1;
-      },
     },
   };
-  return state;
 }
 
 interface HarnessHandles {
   readonly hooks: HookRegistry;
   readonly state: FakeServiceState;
   readonly fire: ActionDispatcher;
-  readonly fireOutsideRequest: ActionDispatcher;
 }
 
 function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
@@ -101,20 +137,13 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
   registerAuditEvents(ctx, state.service);
 
   const fakeCtx = makeFakeAppCtx(user);
-  // Bound so the call sites don't drop `this` — `doAction` reads
-  // private state through `this.#actions`.
-  const dispatch: ActionDispatcher = (name, ...args) =>
-    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
-      hooks,
-      name,
-      ...args,
-    );
   return {
     hooks,
     state,
+    // Bound so the call sites don't drop `this` — `doAction` reads
+    // private state through `this.#actions`.
     fire: (name, ...args) =>
-      requestStore.run(fakeCtx, () => dispatch(name, ...args)),
-    fireOutsideRequest: dispatch,
+      (hooks.doAction as ActionDispatcher).call(hooks, name, ...args, fakeCtx),
   };
 }
 
@@ -151,19 +180,6 @@ describe("registerAuditEvents — entry surface (regression)", () => {
       actorId: 7,
       actorLabel: "alice@example.com",
     });
-  });
-
-  test("hook fired outside requestStore lands on warnNoContextOnce, not the service", async () => {
-    const h = harness();
-    await h.fireOutsideRequest("entry:published", {
-      id: 5,
-      title: "Hello",
-      slug: "hello",
-      type: "post",
-      status: "published",
-    });
-    expect(h.state.rows).toHaveLength(0);
-    expect(h.state.warnedNoContext).toBe(1);
   });
 });
 
@@ -767,7 +783,7 @@ describe("assertRedactionInvariants", () => {
   test("throws when a user-subject diff row forgets to omit passwordHash", () => {
     const violating: AuditEventDef[] = [
       {
-        event: "user:bad" as ActionName,
+        event: "user:bad" as AuditEventDef["event"],
         subject: { kind: "extract", type: "user" },
         actor: { kind: "ctx" },
         // `passwordHash` deliberately missing from the omit list.
@@ -782,7 +798,7 @@ describe("assertRedactionInvariants", () => {
   test("ignores diff-less rows even when subject is in the required map", () => {
     const safe: AuditEventDef[] = [
       {
-        event: "user:tagged" as ActionName,
+        event: "user:tagged" as AuditEventDef["event"],
         subject: { kind: "extract", type: "user" },
         actor: { kind: "ctx" },
       },

@@ -102,6 +102,23 @@ describe("createAuditService", () => {
     expect(counts).toEqual([1, 2]);
   });
 
+  // Core derives a request's contexts by spreading — `withUser` hands an
+  // authenticated procedure its own copy — so an action and `ctx.audit.log()`
+  // in one request can record against different objects.
+  test("a context derived by spreading shares its request's buffer", async () => {
+    const { ctx, defer } = fakeCtx();
+    const { storage, writes } = fakeStorage();
+    const service = createAuditService(storage);
+    const derived: AppContext = { ...ctx, user: null };
+
+    service.record(ctx, sampleRow);
+    service.record(derived, sampleRow);
+
+    expect(defer).toHaveBeenCalledTimes(1);
+    await defer.mock.calls[0]?.[0];
+    expect(writes).toEqual([[sampleRow, sampleRow]]);
+  });
+
   test("storage.write failure logs a warning and does not throw to the caller", async () => {
     const { ctx, defer, warn } = fakeCtx();
     const failingStorage: AuditLogStorage = {
@@ -141,24 +158,6 @@ describe("createAuditService", () => {
     expect(defer).toHaveBeenCalledTimes(2);
     await defer.mock.calls[1]?.[0];
     expect(writes).toHaveLength(2);
-  });
-
-  test("warnNoContextOnce only logs the first time, no matter how many hook drops fire", () => {
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
-      // swallow — assertion checks call count below
-    });
-    try {
-      const { storage } = fakeStorage();
-      const service = createAuditService(storage);
-      service.warnNoContextOnce();
-      service.warnNoContextOnce();
-      service.warnNoContextOnce();
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-      const [first] = consoleWarnSpy.mock.calls;
-      expect(first?.[0]).toContain("requestStore");
-    } finally {
-      consoleWarnSpy.mockRestore();
-    }
   });
 
   test("a row whose properties exceed 256 KiB is dropped with a warning, not written", () => {

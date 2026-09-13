@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { AppContext } from "../../../context/app.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -11,14 +12,16 @@ describe("entry.restore", () => {
       slug: "binned",
     });
 
-    const onRestore = vi.fn<(post: Entry) => void>();
+    const onRestore = vi.fn<(post: Entry, ctx: AppContext) => void>();
     h.hooks.addAction("entry:restored", onRestore);
 
     const result = await h.client.entry.restore({ id: target.id });
     expect(result.status).toBe("draft");
     expect(onRestore).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: target.id, status: "draft" }),
+      expect.anything(),
     );
+    expect(onRestore.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
   });
 
   test("contributor cannot restore (no post:delete cap)", async () => {
