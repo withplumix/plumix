@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ORPCError } from "@orpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
@@ -42,7 +43,7 @@ import type {
   EditorState,
   ItemKey,
 } from "./editor-state.js";
-import type { PickerTab } from "./rpc.js";
+import type { PickerTab } from "./queries.js";
 import {
   buildSavePayload,
   computeDepths,
@@ -56,7 +57,7 @@ import {
   useMenuGet,
   usePickerTabs,
   useSaveMenu,
-} from "./rpc.js";
+} from "./queries.js";
 import { dragEndToAction, getProjection } from "./tree-state.js";
 
 const INDENTATION_WIDTH = 24;
@@ -172,6 +173,16 @@ function LocationsBindings({
   );
 }
 
+/** Narrows an `ORPCError.data` payload to check its `reason` discriminant. */
+function isReason(data: unknown, reason: string): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "reason" in data &&
+    data.reason === reason
+  );
+}
+
 function MenuSettingsPanel({
   state,
   dispatch,
@@ -190,7 +201,8 @@ function MenuSettingsPanel({
   // banner again.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const isVersionMismatch =
-    save.error instanceof Error && save.error.message === "version_mismatch";
+    save.error instanceof ORPCError &&
+    isReason(save.error.data, "version_mismatch");
   const conflict = isVersionMismatch && dismissedAt !== state.version;
   return (
     <div

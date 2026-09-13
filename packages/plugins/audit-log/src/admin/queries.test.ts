@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { presetToRange } from "./rpc.js";
+import { presetToRange } from "./queries.js";
 
 describe("presetToRange", () => {
   const now = new Date("2026-05-10T18:30:00Z");

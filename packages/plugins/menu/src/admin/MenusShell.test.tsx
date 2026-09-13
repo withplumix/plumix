@@ -1,82 +1,31 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcCall, PluginRpcStub } from "plumix/admin/test";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PluginRpcError, stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MenusShell } from "./MenusShell.js";
 
-type FetchCall = readonly [input: RequestInfo | URL, init?: RequestInit];
+let stub: PluginRpcStub;
 
-let fetchMock: ReturnType<
-  typeof vi.fn<
-    (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-  >
->;
-
-function urlOf(input: RequestInfo | URL): string {
-  if (typeof input === "string") return input;
-  if (input instanceof URL) return input.href;
-  return input.url;
-}
-
-interface ErrorResponse {
-  readonly status: number;
-  readonly error: {
-    readonly message?: string;
-    readonly data?: { reason?: string };
-  };
-}
-function isErrorResponse(value: unknown): value is ErrorResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "status" in value &&
-    "error" in value
-  );
-}
-
-function mockRpc(routes: Record<string, unknown>): void {
-  fetchMock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-    const url = urlOf(input);
-    for (const [suffix, body] of Object.entries(routes)) {
-      if (url.endsWith(suffix)) {
-        if (isErrorResponse(body)) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ json: body.error, meta: [] }), {
-              status: body.status,
-              headers: { "content-type": "application/json" },
-            }),
-          );
-        }
-        return Promise.resolve(
-          new Response(JSON.stringify({ json: body, meta: [] }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }),
-        );
-      }
-    }
-    return Promise.resolve(new Response("not-mocked", { status: 404 }));
-  });
-  vi.stubGlobal("fetch", fetchMock);
-}
-
-function findRpcCall(suffix: string): FetchCall | undefined {
-  return fetchMock.mock.calls.find((call) => {
-    const url = call[0];
-    return typeof url === "string" && url.endsWith(suffix);
-  });
-}
-
-function parseRpcInput<T>(call: FetchCall): T {
-  const init = call[1];
-  const body = init?.body;
-  if (typeof body !== "string") {
-    throw new Error("expected request body to be a JSON string");
+function mockRpc(routes: Record<string, JsonValue>): void {
+  const responders: Record<string, () => JsonValue> = {};
+  for (const [procedure, value] of Object.entries(routes)) {
+    responders[procedure] = () => value;
   }
-  return (JSON.parse(body) as { json: T }).json;
+  stub = stubPluginRpc("menu", responders);
+}
+
+function findRpcCall(procedure: string): PluginRpcCall | undefined {
+  return stub.lastCallTo(procedure);
+}
+
+function parseRpcInput<T>(call: PluginRpcCall): T {
+  return call.input as T;
 }
 
 function renderShell(): void {
@@ -108,10 +57,8 @@ describe("MenusShell", () => {
   describe("page heading", () => {
     test("renders a page-level Menus heading", async () => {
       mockRpc({
-        "/menu/list": [
-          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
+        list: [{ id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
       });
       renderShell();
 
@@ -123,8 +70,8 @@ describe("MenusShell", () => {
   describe("empty state", () => {
     test("renders the create-first-menu CTA when no menus exist", async () => {
       mockRpc({
-        "/menu/list": [],
-        "/menu/locations/list": [],
+        list: [],
+        "locations/list": [],
       });
       renderShell();
 
@@ -136,9 +83,9 @@ describe("MenusShell", () => {
   describe("create flow", () => {
     test("the create dialog names a menu and calls menu.create", async () => {
       mockRpc({
-        "/menu/list": [],
-        "/menu/locations/list": [],
-        "/menu/create": {
+        list: [],
+        "locations/list": [],
+        create: {
           termId: 99,
           slug: "header-nav",
           version: 1,
@@ -155,7 +102,7 @@ describe("MenusShell", () => {
       await user.click(screen.getByTestId("menus-create-submit"));
 
       const createCall = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/create");
+        const found = findRpcCall("create");
         if (!found) throw new Error("menu.create not called yet");
         return found;
       });
@@ -168,8 +115,8 @@ describe("MenusShell", () => {
 
     test("dismissing the create dialog is a no-op", async () => {
       mockRpc({
-        "/menu/list": [],
-        "/menu/locations/list": [],
+        list: [],
+        "locations/list": [],
       });
 
       renderShell();
@@ -178,17 +125,15 @@ describe("MenusShell", () => {
       await screen.findByTestId("menus-create-name");
       await user.keyboard("{Escape}");
 
-      expect(findRpcCall("/menu/create")).toBeUndefined();
+      expect(findRpcCall("create")).toBeUndefined();
     });
   });
 
   describe("tabs", () => {
     test("defaults to the edit tab when ?tab= is absent", async () => {
       mockRpc({
-        "/menu/list": [
-          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
+        list: [{ id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
       });
 
       renderShell();
@@ -206,10 +151,8 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?tab=locations",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
+        list: [{ id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
       });
 
       renderShell();
@@ -222,10 +165,8 @@ describe("MenusShell", () => {
 
     test("clicking a tab updates the query param and swaps panels", async () => {
       mockRpc({
-        "/menu/list": [
-          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
+        list: [{ id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
       });
 
       renderShell();
@@ -247,11 +188,11 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?tab=locations",
       );
       mockRpc({
-        "/menu/list": [
+        list: [
           { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
           { id: 2, slug: "footer", name: "Footer", version: 1, itemCount: 0 },
         ],
-        "/menu/locations/list": [
+        "locations/list": [
           { id: "footer", label: "Footer Slot", boundTermId: null },
           { id: "primary", label: "Primary Nav", boundTermId: 1 },
         ],
@@ -284,7 +225,7 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?tab=locations",
       );
       mockRpc({
-        "/menu/list": [
+        list: [
           {
             id: 30,
             slug: "primary",
@@ -294,7 +235,7 @@ describe("MenusShell", () => {
           },
           { id: 31, slug: "footer", name: "Footer", version: 1, itemCount: 3 },
         ],
-        "/menu/locations/list": [
+        "locations/list": [
           { id: "footer", label: "Footer", boundTermId: 31 },
           { id: "primary", label: "Primary", boundTermId: 30 },
         ],
@@ -319,14 +260,14 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?tab=locations",
       );
       mockRpc({
-        "/menu/list": [
+        list: [
           { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
           { id: 2, slug: "footer", name: "Footer", version: 1, itemCount: 0 },
         ],
-        "/menu/locations/list": [
+        "locations/list": [
           { id: "primary", label: "Primary Nav", boundTermId: null },
         ],
-        "/menu/assignLocation": { location: "primary", termSlug: "main" },
+        assignLocation: { location: "primary", termSlug: "main" },
       });
 
       renderShell();
@@ -338,7 +279,7 @@ describe("MenusShell", () => {
       );
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/assignLocation");
+        const found = findRpcCall("assignLocation");
         if (!found) throw new Error("assignLocation not called");
         return found;
       });
@@ -356,13 +297,11 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?tab=locations",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [
+        list: [{ id: 1, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [
           { id: "primary", label: "Primary Nav", boundTermId: 1 },
         ],
-        "/menu/assignLocation": { location: "primary", termSlug: null },
+        assignLocation: { location: "primary", termSlug: null },
       });
 
       renderShell();
@@ -374,7 +313,7 @@ describe("MenusShell", () => {
       );
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/assignLocation");
+        const found = findRpcCall("assignLocation");
         if (!found) throw new Error("assignLocation not called");
         return found;
       });
@@ -398,100 +337,52 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       let getCallCount = 0;
-      const fetchImpl = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-        const url = typeof input === "string" ? input : (input as URL).href;
-        if (url.endsWith("/menu/list")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                json: [
-                  {
-                    id: 7,
-                    slug: "main",
-                    name: "Main",
-                    version: 1,
-                    itemCount: 0,
-                  },
-                ],
-                meta: [],
-              }),
-              { status: 200 },
-            ),
-          );
-        }
-        if (url.endsWith("/menu/locations/list")) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ json: [], meta: [] }), {
-              status: 200,
-            }),
-          );
-        }
-        if (url.endsWith("/menu/pickerTabs")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                json: [{ kind: "custom", tabLabel: "Custom URL" }],
-                meta: [],
-              }),
-              { status: 200 },
-            ),
-          );
-        }
-        if (url.endsWith("/menu/get")) {
+      stubPluginRpc("menu", {
+        list: () => [
+          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+        ],
+        "locations/list": () => [],
+        pickerTabs: () => [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: () => {
           getCallCount += 1;
           // First fetch returns v1 (editor's starting point); after the
           // user clicks Reload, refetch returns v2 with a fresh item —
           // so the test can assert state actually mirrored the new
           // server data.
-          const body =
-            getCallCount === 1
-              ? {
-                  id: 7,
-                  slug: "main",
-                  name: "Main",
-                  version: 1,
-                  maxDepth: 5,
-                  items: [],
-                }
-              : {
-                  id: 7,
-                  slug: "main",
-                  name: "Main",
-                  version: 2,
-                  maxDepth: 5,
-                  items: [
-                    {
-                      id: 42,
-                      parentId: null,
-                      sortOrder: 0,
-                      title: "Reloaded",
-                      meta: { kind: "custom", url: "/r" },
-                    },
-                  ],
-                };
-          return Promise.resolve(
-            new Response(JSON.stringify({ json: body, meta: [] }), {
-              status: 200,
-            }),
-          );
-        }
-        if (url.endsWith("/menu/save")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                json: {
-                  message: "concurrent edit",
-                  data: { reason: "version_mismatch", key: "1" },
-                },
-                meta: [],
-              }),
-              { status: 409 },
-            ),
-          );
-        }
-        return Promise.resolve(new Response("not-mocked", { status: 404 }));
+          return getCallCount === 1
+            ? {
+                id: 7,
+                slug: "main",
+                name: "Main",
+                version: 1,
+                maxDepth: 5,
+                items: [],
+              }
+            : {
+                id: 7,
+                slug: "main",
+                name: "Main",
+                version: 2,
+                maxDepth: 5,
+                items: [
+                  {
+                    id: 42,
+                    parentId: null,
+                    sortOrder: 0,
+                    title: "Reloaded",
+                    meta: { kind: "custom", url: "/r" },
+                  },
+                ],
+              };
+        },
+        save: () => {
+          throw new PluginRpcError("CONFLICT", {
+            status: 409,
+            message: "concurrent edit",
+            data: { reason: "version_mismatch", key: "1" },
+          });
+        },
       });
-      vi.stubGlobal("fetch", fetchImpl);
 
       renderShell();
       const user = userEvent.setup();
@@ -530,12 +421,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 4, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 4, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -543,7 +432,7 @@ describe("MenusShell", () => {
           maxDepth: 5,
           items: [],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 5,
           itemIds: [101],
@@ -570,7 +459,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -595,12 +484,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -608,7 +495,7 @@ describe("MenusShell", () => {
           maxDepth: 5,
           items: [],
         },
-        "/menu/delete": { id: 7 },
+        delete: { id: 7 },
       });
 
       renderShell();
@@ -618,7 +505,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-delete-confirm"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/delete");
+        const found = findRpcCall("delete");
         if (!found) throw new Error("menu.delete not called");
         return found;
       });
@@ -636,12 +523,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -673,16 +558,14 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [
           { kind: "entry", tabLabel: "Pages", target: "page" },
           { kind: "entry", tabLabel: "Posts", target: "post" },
           { kind: "custom", tabLabel: "Custom URL" },
         ],
-        "/menu/get": {
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -721,15 +604,13 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [
           { id: "primary", label: "Primary Nav", boundTermId: 7 },
           { id: "footer", label: "Footer Slot", boundTermId: null },
         ],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -737,7 +618,7 @@ describe("MenusShell", () => {
           maxDepth: 5,
           items: [],
         },
-        "/menu/assignLocation": { location: "footer", termSlug: "main" },
+        assignLocation: { location: "footer", termSlug: "main" },
       });
 
       renderShell();
@@ -756,7 +637,7 @@ describe("MenusShell", () => {
       await user.click(footer);
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/assignLocation");
+        const found = findRpcCall("assignLocation");
         if (!found) throw new Error("assignLocation not called");
         return found;
       });
@@ -774,12 +655,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -795,7 +674,7 @@ describe("MenusShell", () => {
             },
           ],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 2,
           itemIds: [99],
@@ -820,7 +699,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -838,12 +717,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -872,7 +749,7 @@ describe("MenusShell", () => {
       // immediate persistence)").
       const tree = await screen.findByTestId("menu-tree");
       expect(tree).toHaveTextContent("Contact");
-      expect(findRpcCall("/menu/save")).toBeUndefined();
+      expect(findRpcCall("save")).toBeUndefined();
     });
 
     test("renders existing items as a flat list in DFS order with parent-depth indent", async () => {
@@ -882,12 +759,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 3, itemCount: 3 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 3, itemCount: 3 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -938,12 +813,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 3, itemCount: 0 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 3, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -956,7 +829,7 @@ describe("MenusShell", () => {
       renderShell();
 
       const getCall = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/get");
+        const found = findRpcCall("get");
         if (!found) throw new Error("menu.get not called");
         return found;
       });
@@ -980,12 +853,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -1012,7 +883,7 @@ describe("MenusShell", () => {
             },
           ],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 2,
           itemIds: [30],
@@ -1037,7 +908,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -1057,12 +928,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -1089,7 +958,7 @@ describe("MenusShell", () => {
             },
           ],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 2,
           itemIds: [30],
@@ -1119,7 +988,7 @@ describe("MenusShell", () => {
       // Save and assert the payload carries the new URL on the same id.
       await user.click(await screen.findByTestId("menu-save-button"));
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -1146,12 +1015,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -1174,7 +1041,7 @@ describe("MenusShell", () => {
             },
           ],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 2,
           itemIds: [10, 20],
@@ -1198,7 +1065,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -1217,12 +1084,10 @@ describe("MenusShell", () => {
         "/_plumix/admin/pages/menus?menu=main",
       );
       mockRpc({
-        "/menu/list": [
-          { id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 },
-        ],
-        "/menu/locations/list": [],
-        "/menu/pickerTabs": [{ kind: "custom", tabLabel: "Custom URL" }],
-        "/menu/get": {
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 2 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
           id: 7,
           slug: "main",
           name: "Main",
@@ -1245,7 +1110,7 @@ describe("MenusShell", () => {
             },
           ],
         },
-        "/menu/save": {
+        save: {
           termId: 7,
           version: 2,
           itemIds: [10, 20],
@@ -1268,7 +1133,7 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-save-button"));
 
       const call = await vi.waitFor(() => {
-        const found = findRpcCall("/menu/save");
+        const found = findRpcCall("save");
         if (!found) throw new Error("menu.save not called");
         return found;
       });
@@ -1280,11 +1145,11 @@ describe("MenusShell", () => {
   describe("menu selector", () => {
     test("renders one option per menu plus the Create-new sentinel", async () => {
       mockRpc({
-        "/menu/list": [
+        list: [
           { id: 1, slug: "main", name: "Main", version: 1, itemCount: 3 },
           { id: 2, slug: "footer", name: "Footer", version: 1, itemCount: 2 },
         ],
-        "/menu/locations/list": [],
+        "locations/list": [],
       });
       renderShell();
 

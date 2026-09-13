@@ -13,8 +13,12 @@ import {
 } from "plumix/admin/ui";
 import { formatDate, Trans, useLingui } from "plumix/i18n";
 
-import type { AuditLogFilter, AuditLogRowDTO, DateRangePreset } from "./rpc.js";
-import { presetToRange, useAuditLogList } from "./rpc.js";
+import type {
+  AuditLogFilter,
+  AuditLogRowDTO,
+  DateRangePreset,
+} from "./queries.js";
+import { presetToRange, useAuditLogList } from "./queries.js";
 
 const MAX_DIFF_PREVIEW_FIELDS = 3;
 

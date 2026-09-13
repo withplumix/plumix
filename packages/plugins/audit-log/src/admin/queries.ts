@@ -1,6 +1,9 @@
 import type { UseInfiniteQueryResult } from "@tanstack/react-query";
 import type { JsonObject } from "plumix";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { createPluginRpcClient } from "plumix/admin";
+
+const rpc = createPluginRpcClient("audit_log");
 
 export interface AuditLogRowDTO {
   readonly id: number;
@@ -36,35 +39,6 @@ interface ListInput extends AuditLogFilter {
 
 const AUDIT_LOG_LIST_KEY = ["auditLog", "list"] as const;
 
-async function rpcCall<TOutput>(
-  procedure: string,
-  input: unknown = {},
-): Promise<TOutput> {
-  const base =
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? "";
-  const res = await fetch(`${base}/_plumix/rpc/${procedure}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-plumix-request": "1",
-    },
-    body: JSON.stringify({ json: input, meta: [] }),
-  });
-  const envelope = (await res.json().catch(() => null)) as {
-    json?: unknown;
-    meta?: unknown;
-  } | null;
-  if (!res.ok) {
-    const error = envelope?.json as
-      { message?: string; data?: { reason?: string } } | undefined;
-    const reason =
-      error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`;
-    // eslint-disable-next-line no-restricted-syntax -- admin-side rpc envelope rethrow; server-derived message is the discriminator
-    throw new Error(reason);
-  }
-  return envelope?.json as TOutput;
-}
-
 export function useAuditLogList(
   filter: AuditLogFilter = {},
 ): UseInfiniteQueryResult<{
@@ -78,7 +52,7 @@ export function useAuditLogList(
         pageParam === undefined
           ? { ...filter }
           : { ...filter, cursor: pageParam };
-      return rpcCall<AuditLogPage>("audit_log/list", input);
+      return rpc.call<AuditLogPage>("list", input);
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

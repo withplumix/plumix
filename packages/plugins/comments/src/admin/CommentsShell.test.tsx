@@ -1,3 +1,5 @@
+import type { JsonValue } from "plumix";
+import type { PluginRpcStub } from "plumix/admin/test";
 import type { ReactElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -7,47 +9,27 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { CommentsShell } from "./CommentsShell.js";
 
 i18n.load({ en: {} });
 i18n.activate("en");
 
-interface CapturedCall {
-  readonly proc: string;
-  readonly body:
-    | {
-        json?: {
-          id?: number;
-          ids?: number[];
-          action?: string;
-          search?: string;
-        };
-      }
-    | undefined;
+let stub: PluginRpcStub;
+
+function mockRpc(handlers: Record<string, JsonValue>): void {
+  const responders: Record<string, () => JsonValue> = {};
+  for (const [procedure, value] of Object.entries(handlers)) {
+    responders[procedure] = () => value;
+  }
+  stub = stubPluginRpc("comments", responders);
 }
 
-let calls: CapturedCall[];
-
-function mockRpc(handlers: Record<string, unknown>): void {
-  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : (input as Request).url;
-    const proc = url.replace("/_plumix/rpc/comments/", "");
-    const bodyStr = typeof init?.body === "string" ? init.body : null;
-    calls.push({
-      proc,
-      body: bodyStr ? (JSON.parse(bodyStr) as CapturedCall["body"]) : undefined,
-    });
-    return Promise.resolve(
-      new Response(JSON.stringify({ json: handlers[proc] ?? {}, meta: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-  });
-  vi.stubGlobal("fetch", fetchMock);
+function inputOf<T>(procedure: string): T | undefined {
+  return stub.lastCallTo(procedure)?.input as T | undefined;
 }
 
 function renderShell(): ReactElement {
@@ -76,9 +58,6 @@ const ROW = {
   createdAt: "2026-06-01T00:00:00Z",
 };
 
-beforeEach(() => {
-  calls = [];
-});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -127,9 +106,9 @@ describe("CommentsShell", () => {
     });
     fireEvent.click(screen.getByTestId("comment-approve-1"));
     await waitFor(() => {
-      expect(calls.some((c) => c.proc === "approve")).toBe(true);
+      expect(stub.lastCallTo("approve")).toBeDefined();
     });
-    expect(calls.find((c) => c.proc === "approve")?.body?.json?.id).toBe(1);
+    expect(inputOf<{ id: number }>("approve")?.id).toBe(1);
   });
 
   test("opening a row reveals the detail panel with private context", async () => {
@@ -176,11 +155,11 @@ describe("CommentsShell", () => {
 
     fireEvent.click(screen.getByTestId("comments-bulk-approve"));
     await waitFor(() => {
-      expect(calls.some((c) => c.proc === "bulk")).toBe(true);
+      expect(stub.lastCallTo("bulk")).toBeDefined();
     });
-    const bulkCall = calls.find((c) => c.proc === "bulk");
-    expect(bulkCall?.body?.json?.ids).toEqual([1, 2]);
-    expect(bulkCall?.body?.json?.action).toBe("approve");
+    const bulkInput = inputOf<{ ids: number[]; action: string }>("bulk");
+    expect(bulkInput?.ids).toEqual([1, 2]);
+    expect(bulkInput?.action).toBe("approve");
   });
 
   test("renders a page-level heading", async () => {
@@ -225,9 +204,7 @@ describe("CommentsShell", () => {
       target: { value: "ada" },
     });
     await waitFor(() => {
-      expect(
-        calls.some((c) => c.proc === "list" && c.body?.json?.search === "ada"),
-      ).toBe(true);
+      expect(inputOf<{ search?: string }>("list")?.search).toBe("ada");
     });
   });
 });

@@ -147,6 +147,7 @@ const FACADE_SUBPATHS = [
   "plumix/admin/sonner",
   "plumix/admin/tailwind-merge",
   "plumix/admin/ui",
+  "plumix/admin/test",
   "plumix/test/playwright",
   "plumix/test/conformance",
   "plumix/blocks",

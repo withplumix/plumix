@@ -199,10 +199,16 @@ The admin ships precompiled and is closed for modification. A plugin contributes
 
 ### plumix/admin
 
-The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, plus the constants naming which specifier maps to which shim.
+The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, the constants naming which specifier maps to which shim, and `createPluginRpcClient` — the one client every plugin's admin code calls its own server-registered RPC procedures through, so no plugin hand-rolls the wire envelope, headers, or error unwrapping.
 
 ```ts
-import { getRuntime } from "plumix/admin";
+import { createPluginRpcClient, getRuntime } from "plumix/admin";
+
+const rpc = createPluginRpcClient("recipes");
+
+export function fetchRecipe(id: number): Promise<unknown> {
+  return rpc.call("get", { id });
+}
 
 export function activeQueryClient(): unknown {
   return getRuntime().reactQuery;
@@ -278,7 +284,7 @@ The class-merging helper behind `cn()`. Same mechanism as the React shim above.
 
 ### plumix/admin/ui
 
-The shared component library the admin renders. It and `plumix/admin` above are the two admin subpaths you import by hand; every other entry in this list is a shim the plugin-chunk build rewrites to. Unlike the shims it ships real source, which the plugin-chunk build bundles into your chunk with its own React and Radix imports aliased to the shims. A wrapper costs about a kilobyte; Radix itself is not duplicated.
+The shared component library the admin renders. It, `plumix/admin` above, and `plumix/admin/test` below are the three admin subpaths you import by hand; every other entry in this list is a shim the plugin-chunk build rewrites to. Unlike the shims it ships real source, which the plugin-chunk build bundles into your chunk with its own React and Radix imports aliased to the shims. A wrapper costs about a kilobyte; Radix itself is not duplicated.
 
 ```tsx
 import { Button } from "plumix/admin/ui";
@@ -286,6 +292,18 @@ import { Button } from "plumix/admin/ui";
 export function PublishButton(): React.ReactNode {
   return <Button variant="default">Publish</Button>;
 }
+```
+
+### plumix/admin/test
+
+The vitest counterpart to `createPluginRpcClient` above: `stubPluginRpc` serves a plugin's own RPC procedures from a test by substituting `fetch`, and `PluginRpcError` answers a route with a specific oRPC error shape (status, code, `data`) instead of a generic 500. Aimed at a plugin author testing an admin shell component that calls its own procedures.
+
+```tsx
+import { stubPluginRpc } from "plumix/admin/test";
+
+stubPluginRpc("recipes", {
+  list: () => [{ id: 1, title: "Caponata" }],
+});
 ```
 
 ## Blocks and rendering

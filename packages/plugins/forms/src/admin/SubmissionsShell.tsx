@@ -31,7 +31,7 @@ import { formatDate, Trans, useLingui } from "plumix/i18n";
 
 import type { AnswerWords } from "../answer-lines.js";
 import type { SubmissionStatus } from "../types.js";
-import type { SubmissionFilter } from "./rpc.js";
+import type { SubmissionFilter } from "./queries.js";
 import { answerLines, answerText } from "../answer-lines.js";
 import { submissionColumns } from "../columns.js";
 import { SUBMISSION_STATUSES } from "../types.js";
@@ -44,7 +44,7 @@ import {
   useSubmission,
   useSubmissionCounts,
   useSubmissions,
-} from "./rpc.js";
+} from "./queries.js";
 import { formFilterOptions } from "./table.js";
 
 // Radix Select forbids an empty-string item value, so "every form"

@@ -89,6 +89,7 @@
     "@axe-core/playwright": "catalog:",
     "@libsql/client": "catalog:",
     "@lingui/cli": "catalog:lingui",
+    "@orpc/client": "catalog:orpc",
     "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",

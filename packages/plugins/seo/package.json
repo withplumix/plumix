@@ -69,6 +69,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@lingui/cli": "catalog:lingui",
+    "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",

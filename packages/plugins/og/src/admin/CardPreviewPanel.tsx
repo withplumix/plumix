@@ -7,7 +7,7 @@ import { useLingui } from "plumix/i18n";
 import type { OgCardSkip } from "../chain-trace.js";
 import type { CardPreviewOutcome } from "../preview.js";
 import { M } from "./messages.js";
-import { fetchCardPreview } from "./rpc.js";
+import { fetchCardPreview } from "./queries.js";
 
 // Keyed by the outcome and the skip reason themselves, so a value added on the
 // server fails the build here rather than reaching an editor as a blank line.
