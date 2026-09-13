@@ -4,20 +4,26 @@ import { describe, expect, test, vi } from "vitest";
 import { createScheduler } from "./scheduler.js";
 import { virtualClock } from "./test/virtual-clock.js";
 
+type TaskFields = Omit<PlumixApp["scheduledTasks"][number], "handler">;
+
 // The real roster: core's two, a plugin's, and one that declares no cron and so
 // runs on every firing.
-const TASKS = [
+const TASKS: readonly TaskFields[] = [
   { id: "session-cleanup", cron: "0 3 * * *", registeredBy: "core" },
   { id: "publish-scheduled", cron: "*/5 * * * *", registeredBy: "core" },
   { id: "retention-purge", cron: "30 4 * * *", registeredBy: "audit-log" },
   { id: "index-drain", registeredBy: "search" },
 ];
 
-const appWith = (tasks: readonly unknown[]): PlumixApp =>
-  ({ scheduledTasks: tasks }) as unknown as PlumixApp;
+// The scheduler only reads when each task fires; `fire` stands in for running it.
+const appWith = (
+  tasks: readonly TaskFields[],
+): Pick<PlumixApp, "scheduledTasks"> => ({
+  scheduledTasks: tasks.map((task) => ({ ...task, handler: () => undefined })),
+});
 
 function harness(
-  tasks: readonly unknown[],
+  tasks: readonly TaskFields[],
   overrides: { fire?: (cron: string, at: number) => Promise<void> } = {},
 ) {
   const clock = virtualClock("2026-09-07T02:58:00Z");

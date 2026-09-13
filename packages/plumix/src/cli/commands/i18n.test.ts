@@ -8,9 +8,18 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
+import { createDispatcherHarness } from "@plumix/core/test";
 
 import {
   computeIdDrift,
@@ -20,25 +29,16 @@ import {
   sourceDescriptorIds,
 } from "./i18n.js";
 
-function fakeApp(): PlumixApp {
-  return {
-    config: {
-      runtime: {
-        name: "test",
-        createHandler: () => ({ fetch: () => new Response() }),
-        generateEntry: () => "",
-      },
-      database: { kind: "test", connect: () => ({ db: {} }) },
-      plugins: [],
-    },
-  } as unknown as PlumixApp;
-}
+let app: PlumixApp;
+beforeAll(async () => {
+  ({ app } = await createDispatcherHarness());
+});
 
 function ctx(
   overrides: Partial<CommandContext> & { cwd: string },
 ): CommandContext {
   return {
-    app: fakeApp(),
+    app,
     configPath: join(overrides.cwd, "plumix.config.ts"),
     argv: [],
     runtimeMigrate: {},

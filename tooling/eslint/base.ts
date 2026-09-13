@@ -157,14 +157,14 @@ export const baseConfig = defineConfig(
       "@typescript-eslint/no-unnecessary-type-parameters": "error",
     },
   },
-  // The forged-context ratchet (issue #2307) is the one earned-types check
+  // The forged-app ratchet (issues #2307, #2338) is the one earned-types check
   // that runs on tests, since forging is a test-file habit. A distinct rule
   // for the reason given above: the react config re-declares
   // `no-restricted-syntax` over `src/`, test helpers included.
   {
     files: TEST_SOURCE,
     rules: {
-      "plumix/no-forged-app-context": "error",
+      "plumix/no-forged-app": "error",
     },
   },
   // Test-id query convention (AGENTS.md) and the module-mocking ban (issue

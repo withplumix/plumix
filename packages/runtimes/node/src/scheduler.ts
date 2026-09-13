@@ -23,7 +23,7 @@ export interface SchedulerLogger {
 }
 
 export interface SchedulerOptions {
-  readonly app: PlumixApp;
+  readonly app: Pick<PlumixApp, "scheduledTasks">;
   /**
    * Fires one schedule — the entry hands this `handler.scheduled`, whose report
    * says which tasks failed. A caught task failure is otherwise invisible here.
@@ -213,7 +213,9 @@ export function createScheduler({
  * declares one this runtime cannot fire — so a throw at this point is a bug
  * rather than a config error.
  */
-function deriveSchedules(app: PlumixApp): readonly CronSchedule[] {
+function deriveSchedules(
+  app: Pick<PlumixApp, "scheduledTasks">,
+): readonly CronSchedule[] {
   const declared = declaredSchedules(app);
   const needsHeartbeat = declared.length === 0 && app.scheduledTasks.length > 0;
   return (needsHeartbeat ? [EVERY_MINUTE] : declared).map(parseCron);

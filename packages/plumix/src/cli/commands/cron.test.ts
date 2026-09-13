@@ -1,29 +1,39 @@
 import { sql } from "drizzle-orm";
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp, PlumixHandler } from "@plumix/core";
 import { createPlumixHandler } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
-import { createTestDb } from "@plumix/core/test";
+import { createDispatcherHarness, createTestDb } from "@plumix/core/test";
 
 import { report } from "../report.js";
 import { cronCommand } from "./cron.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
+type TaskFields = Omit<PlumixApp["scheduledTasks"][number], "handler">;
 
-const TASKS = [
+const TASKS: readonly TaskFields[] = [
   { id: "session-cleanup", cron: "0 3 * * *", registeredBy: "core" },
   { id: "publish-scheduled", cron: "*/5 * * * *", registeredBy: "core" },
   { id: "retention-purge", cron: "0 4 * * *", registeredBy: "audit-log" },
   { id: "index-drain", registeredBy: "search" },
 ];
 
+// The command reads the roster; running a task is the handler's job.
+const withHandlers = (tasks: readonly TaskFields[]) =>
+  tasks.map((task) => ({ ...task, handler: () => undefined }));
+
+let base: PlumixApp;
+beforeAll(async () => {
+  ({ app: base } = await createDispatcherHarness());
+});
+
 async function context(
   argv: readonly string[],
   scheduled = vi.fn(),
   options: {
     db?: TestDb;
-    tasks?: readonly unknown[];
+    tasks?: readonly TaskFields[];
     close?: () => void;
     dispose?: PlumixHandler["dispose"];
   } = {},
@@ -31,16 +41,20 @@ async function context(
   // `cron run` takes the same run guard the in-process scheduler does, so it
   // needs a real database to take it in.
   const db = options.db ?? (await createTestDb());
-  const app = {
-    scheduledTasks: options.tasks ?? TASKS,
-    schema: {},
+  const handler: PlumixHandler = {
+    fetch: () => new Response(),
+    scheduled,
+    dispose: options.dispose,
+  };
+  const app: PlumixApp = {
+    ...base,
+    scheduledTasks: withHandlers(options.tasks ?? TASKS),
     config: {
-      runtime: {
-        createHandler: () => ({ scheduled, dispose: options.dispose }),
-      },
-      database: { connect: () => ({ db, close: options.close }) },
+      ...base.config,
+      runtime: { ...base.config.runtime, createHandler: () => handler },
+      database: { kind: "test", connect: () => ({ db, close: options.close }) },
     },
-  } as unknown as PlumixApp;
+  };
   return {
     app,
     // A real directory: `runSchedule` chdirs to it so a database path resolves
@@ -400,29 +414,26 @@ describe("plumix cron run — both connections, composed", () => {
         return { db, close: () => void closed.push(id) };
       },
     };
-    const app = {
-      scheduledTasks: TASKS,
-      schema: {},
-      // The handler builds a marker request from it before connecting.
-      origin: "https://cms.example",
+    const app: PlumixApp = {
+      ...base,
+      scheduledTasks: withHandlers(TASKS),
       config: {
+        ...base.config,
         database,
-        runtime: { createHandler: () => createPlumixHandler(app) },
+        runtime: {
+          ...base.config.runtime,
+          createHandler: () => createPlumixHandler(app),
+        },
       },
-    } as unknown as PlumixApp;
+    };
 
-    try {
-      await cronCommand.run({
-        app,
-        cwd: process.cwd(),
-        configPath: `${process.cwd()}/plumix.config.ts`,
-        argv: ["run", "*/5 * * * *"],
-        runtimeMigrate: {},
-      });
-    } catch {
-      // The stub app is too thin for the tasks themselves to run; what matters
-      // here is which connections were opened and whether both were released.
-    }
+    await cronCommand.run({
+      app,
+      cwd: process.cwd(),
+      configPath: `${process.cwd()}/plumix.config.ts`,
+      argv: ["run", "*/5 * * * *"],
+      runtimeMigrate: {},
+    });
 
     // Two: the guard's, then the one the handler binds for the tasks.
     expect(opened).toEqual([0, 1]);

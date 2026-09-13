@@ -2,7 +2,6 @@ import { hostname } from "node:os";
 import type {
   ConnectedScheduledDb,
   Db,
-  PlumixApp,
   PlumixEnv,
   ScheduledRunReport,
 } from "plumix";
@@ -12,11 +11,13 @@ import type {
   Scheduler,
   SchedulerClock,
   SchedulerLogger,
+  SchedulerOptions,
 } from "./scheduler.js";
 import { createScheduler } from "./scheduler.js";
 
 export interface ScheduledRunnerOptions {
-  readonly app: PlumixApp;
+  readonly app: SchedulerOptions["app"] &
+    Parameters<typeof connectScheduledDb>[0];
   readonly env: PlumixEnv;
   /**
    * Fires one schedule. Narrowing away the report would silence every failed

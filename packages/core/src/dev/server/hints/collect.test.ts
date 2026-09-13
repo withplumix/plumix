@@ -1,12 +1,17 @@
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../../context/app.js";
 import type { DevErrorHint } from "../../ui/index.js";
 import { HookRegistry } from "../../../hooks/registry.js";
+import { createTestContext } from "../../../test/context.js";
+import { createTestDb } from "../../../test/harness.js";
 import { collectDevErrorHints } from "./collect.js";
 
-// collect passes ctx opaquely to handlers; these tests never read it.
-const ctx = {} as AppContext;
+// Handlers receive the request context; these tests never read it.
+let ctx: AppContext;
+beforeAll(async () => {
+  ctx = createTestContext({ db: await createTestDb() });
+});
 
 function hint(title: string): DevErrorHint {
   return { title };

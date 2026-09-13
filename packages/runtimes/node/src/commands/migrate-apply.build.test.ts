@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import type { CommandContext, PlumixApp } from "plumix";
 import { sql } from "drizzle-orm";
+import { createDispatcherHarness } from "plumix/test";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { nodeSqlite } from "../node-sqlite.js";
@@ -15,8 +16,10 @@ import {
 import { migrateApplyCommand } from "./migrate-apply.js";
 
 let dir: string;
+let base: PlumixApp;
 
 beforeAll(async () => {
+  ({ app: base } = await createDispatcherHarness());
   dir = scaffoldConsumerProject("plumix-node-migrate-", STUB_CONFIG);
   await promisify(execFile)(PLUMIX_BIN, ["migrate", "generate"], {
     cwd: dir,
@@ -27,9 +30,9 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function context(app: unknown): CommandContext {
+function context(database: PlumixApp["config"]["database"]): CommandContext {
   return {
-    app: app as PlumixApp,
+    app: { ...base, config: { ...base.config, database } },
     cwd: dir,
     configPath: join(dir, "plumix.config.mjs"),
     argv: [],
@@ -50,7 +53,7 @@ describe("migrate apply", () => {
       };
     };
 
-    await migrateApplyCommand.run(context({ config: { database } }));
+    await migrateApplyCommand.run(context(database));
     const first = inspect();
     expect(first.triggers).toContainEqual({
       name: "entries_change_feed_insert",
@@ -60,7 +63,7 @@ describe("migrate apply", () => {
     );
     expect(first.applied).toHaveLength(generated.length);
 
-    await migrateApplyCommand.run(context({ config: { database } }));
+    await migrateApplyCommand.run(context(database));
     expect(inspect().applied).toEqual(first.applied);
   });
 });

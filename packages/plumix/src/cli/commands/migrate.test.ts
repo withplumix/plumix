@@ -8,37 +8,37 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import type {
   CommandContext,
   CommandDefinition,
   PlumixApp,
 } from "@plumix/core";
+import { createDispatcherHarness } from "@plumix/core/test";
 
 import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
 
-function fakeApp(plugins: readonly unknown[] = []): PlumixApp {
-  return {
-    config: {
-      runtime: {
-        name: "test",
-        createHandler: () => ({ fetch: () => new Response() }),
-        generateEntry: () => "",
-      },
-      database: { kind: "test", connect: () => ({ db: {} }) },
-      auth: {
-        kind: "plumix",
-        passkey: { rpName: "x", rpId: "localhost", origin: "http://x" },
-      },
-      plugins,
-    },
-  } as unknown as PlumixApp;
+let base: PlumixApp;
+beforeAll(async () => {
+  ({ app: base } = await createDispatcherHarness());
+});
+
+function appWith(plugins: PlumixApp["config"]["plugins"]): PlumixApp {
+  return { ...base, config: { ...base.config, plugins } };
 }
 
 function ctx(overrides: Partial<CommandContext>): CommandContext {
   return {
-    app: fakeApp(),
+    app: base,
     cwd: process.cwd(),
     configPath: join(process.cwd(), "plumix.config.ts"),
     argv: [],
@@ -284,7 +284,7 @@ describe("migrate generate with raw SQL migrations", () => {
     seedDrizzleJournal(dir);
 
     await migrateCommand.run(
-      ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+      ctx({ cwd: dir, argv: ["generate"], app: appWith([SEARCH_PLUGIN]) }),
     );
 
     expect(
@@ -306,7 +306,7 @@ describe("migrate generate with raw SQL migrations", () => {
     seedDrizzleJournal(dir);
     const run = () =>
       migrateCommand.run(
-        ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+        ctx({ cwd: dir, argv: ["generate"], app: appWith([SEARCH_PLUGIN]) }),
       );
 
     await run();
@@ -350,7 +350,7 @@ describe("migrate generate with raw SQL migrations", () => {
 
     await expect(
       migrateCommand.run(
-        ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+        ctx({ cwd: dir, argv: ["generate"], app: appWith([SEARCH_PLUGIN]) }),
       ),
     ).rejects.toMatchObject({ code: "migrate_generate_journal_unreadable" });
   });

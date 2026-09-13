@@ -1,12 +1,18 @@
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../../context/app.js";
 import { HookRegistry } from "../../../hooks/registry.js";
+import { createTestContext } from "../../../test/context.js";
+import { createTestDb } from "../../../test/harness.js";
 import { ThemeRegistrationError } from "../../../theme-errors.js";
 import { collectDevErrorHints } from "./collect.js";
 import { registerCoreErrorHints } from "./core-hints.js";
 
-const ctx = {} as AppContext;
+// Handlers receive the request context; these tests never read it.
+let ctx: AppContext;
+beforeAll(async () => {
+  ctx = createTestContext({ db: await createTestDb() });
+});
 
 function hintsFor(error: unknown): readonly string[] {
   const hooks = new HookRegistry();

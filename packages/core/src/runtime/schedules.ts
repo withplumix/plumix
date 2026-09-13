@@ -12,7 +12,7 @@ import type { PlumixApp } from "./app.js";
  * rule, should not carry onto its cold path.
  */
 export function scheduledTasksFor(
-  app: PlumixApp,
+  app: Pick<PlumixApp, "scheduledTasks">,
   firedCron?: string,
 ): readonly RegisteredScheduledTask[] {
   return app.scheduledTasks.filter(
@@ -24,7 +24,9 @@ export function scheduledTasksFor(
 }
 
 /** The distinct schedules a site declares, in the order tasks registered them. */
-export function declaredSchedules(app: PlumixApp): readonly string[] {
+export function declaredSchedules(
+  app: Pick<PlumixApp, "scheduledTasks">,
+): readonly string[] {
   const seen = new Set<string>();
   for (const task of app.scheduledTasks) {
     if (task.cron !== undefined) seen.add(task.cron);

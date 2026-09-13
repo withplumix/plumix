@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
 import { createAppContext } from "../context/app.js";
 import { getContext, requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { definePlugin } from "./define.js";
 import { installPlugins } from "./register.js";
 
@@ -282,13 +283,8 @@ describe("provides phase", () => {
       plugins: [auditProvider, consumer],
     });
 
-    // Stub Db typed as the default CoreSchema so AppContext doesn't
-    // resolve to a non-default generic that breaks requestStore.run().
-    const stubDb = {} as Parameters<typeof createAppContext>[0]["db"];
-    const ctx = createAppContext({
-      db: stubDb,
-      env: {},
-      request: new Request("https://x.example/"),
+    const ctx = createTestContext({
+      db: await createTestDb(),
       hooks: result.hooks,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,
@@ -298,7 +294,7 @@ describe("provides phase", () => {
     // name isn't in the ActionRegistry, so loosen the call type.
     const doAction = (name: string): Promise<void> =>
       (result.hooks.doAction as (name: string) => Promise<void>)(name);
-    await requestStore.run(ctx as AppContext, async () => {
+    await requestStore.run(ctx, async () => {
       await doAction("consumer:ping");
     });
 

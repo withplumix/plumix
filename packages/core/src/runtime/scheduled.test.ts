@@ -11,8 +11,10 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";
 import { runScheduledTasks } from "./scheduled.js";
 
-function fakeApp(tasks: RegisteredScheduledTask[]): PlumixApp {
-  return { scheduledTasks: tasks } as unknown as PlumixApp;
+function fakeApp(
+  tasks: RegisteredScheduledTask[],
+): Pick<PlumixApp, "scheduledTasks"> {
+  return { scheduledTasks: tasks };
 }
 
 let db: Db;
