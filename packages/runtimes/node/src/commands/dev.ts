@@ -5,6 +5,8 @@ import type { EvaluatedModules, ModuleRunner } from "vite/module-runner";
 import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix";
 
 import type { RequestListener } from "../http/bridge.js";
+import type { Scheduler } from "../scheduler.js";
+import type { NodeSite } from "../site.js";
 import { isNodeRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
@@ -103,6 +105,10 @@ export function invalidateFile(
   return true;
 }
 
+interface DevEntry extends Partial<Pick<NodeSite, "startCron" | "dispose">> {
+  readonly default: PlumixHandler;
+}
+
 const SERVER_ENVIRONMENT = "server";
 
 export const devCommand: CommandDefinition = {
@@ -122,7 +128,8 @@ export const devCommand: CommandDefinition = {
     let listener: Promise<RequestListener> | undefined;
     // Torn down and restarted with the entry, since a reload replaces the app
     // its firings would run against.
-    let cron: { stop(): Promise<void> } | undefined;
+    let cron: Scheduler | undefined;
+    let dispose: DevEntry["dispose"];
 
     async function load(
       runner: ModuleRunner,
@@ -134,16 +141,18 @@ export const devCommand: CommandDefinition = {
       // against the app this reload replaced.
       await cron?.stop();
       cron = undefined;
+      // The replaced site's handler holds a connection nothing else closes.
+      // Released in the background so a reload never waits on its deferred
+      // work; a request still running on it can lose that connection mid-query,
+      // which in dev the next request recovers from.
+      void dispose?.();
+      dispose = undefined;
       try {
         const config = (
           await runner.import<{ default: PlumixConfig }>(ctx.configPath)
         ).default;
-        const entry = await runner.import<{
-          default: PlumixHandler;
-          startCron?: (overrides?: {
-            lease?: boolean;
-          }) => Promise<{ stop(): Promise<void> }>;
-        }>(entryPath);
+        const entry = await runner.import<DevEntry>(entryPath);
+        dispose = entry.dispose;
         const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
           ? config.runtime.config
           : {};

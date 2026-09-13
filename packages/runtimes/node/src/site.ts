@@ -277,7 +277,8 @@ export function serveProcess({
     // same budget the drain then spends, so a long task cannot hold the whole
     // shutdown open and leave `dispose()` nothing.
     stopping = true;
-    await scheduler?.stop({ timeoutMs: remainingMs(deadline) });
+    const cronSettled =
+      (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
     const finished = await Promise.race([
       closed,
       // Unref'd: when `closed` wins, this timer outlives the race, and a
@@ -287,6 +288,11 @@ export function serveProcess({
     ]);
     const { abandoned } = await dispose({ timeoutMs: remainingMs(deadline) });
     server.closeAllConnections();
+    if (!cronSettled) {
+      console.error(
+        `plumix: exiting with a scheduled run cut; the ${String(drainDeadlineMs)}ms shutdown budget ran out`,
+      );
+    }
     if (!finished) {
       console.error(
         `plumix: exiting with in-flight responses cut; the ${String(drainDeadlineMs)}ms shutdown budget ran out`,
@@ -297,7 +303,7 @@ export function serveProcess({
         `plumix: exiting with ${String(abandoned)} deferred task(s) abandoned`,
       );
     }
-    exit(!finished || abandoned > 0 ? 1 : 0);
+    exit(!cronSettled || !finished || abandoned > 0 ? 1 : 0);
   };
   const shutdown = (signal: NodeJS.Signals): void => void drain(signal);
   process.on("SIGTERM", shutdown);

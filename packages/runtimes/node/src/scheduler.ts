@@ -47,9 +47,10 @@ export interface Scheduler {
   start(): Promise<void>;
   /**
    * Stops scheduling and waits for the firing in flight, for at most
-   * `timeoutMs`. Unbounded when omitted.
+   * `timeoutMs`. Unbounded when omitted. Resolves false when the budget ran out
+   * with a firing still running.
    */
-  stop(options?: { timeoutMs?: number }): Promise<void>;
+  stop(options?: { timeoutMs?: number }): Promise<boolean>;
 }
 
 const systemClock: SchedulerClock = {
@@ -184,16 +185,16 @@ export function createScheduler({
       const timeoutMs = options?.timeoutMs;
       if (inFlight === undefined || timeoutMs === undefined) {
         await inFlight;
-        return;
+        return true;
       }
       // A run is only ever as long as its task; a shutdown gets one budget, and
       // the drain behind this one still needs what is left of it.
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        await Promise.race([
-          inFlight,
-          new Promise<void>((resolve) => {
-            timer = setTimeout(resolve, timeoutMs);
+        return await Promise.race([
+          inFlight.then(() => true),
+          new Promise<false>((resolve) => {
+            timer = setTimeout(() => resolve(false), timeoutMs);
           }),
         ]);
       } finally {

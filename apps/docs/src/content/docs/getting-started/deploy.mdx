@@ -73,7 +73,7 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
    PORT=3000 node dist/server/worker.js
    ```
 
-   Run this under whatever keeps a process alive on your host — systemd, a container orchestrator, `pm2`. A `SIGTERM` stops the process cleanly: it stops accepting new requests, gives in-flight ones ten seconds, drains deferred work such as telemetry delivery, and exits `0`.
+   Run this under whatever keeps a process alive on your host — systemd, a container orchestrator, `pm2`. A `SIGTERM` stops the process cleanly: it stops accepting new requests and gives in-flight work — requests, a scheduled run, deferred work such as telemetry delivery — one ten-second budget. If everything finishes it exits `0`; anything the budget cuts makes it exit `1`.
 
 6. **Claim the admin account.** Open `https://recipes.example/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused.
 
