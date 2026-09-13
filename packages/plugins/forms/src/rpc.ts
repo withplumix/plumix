@@ -1,5 +1,4 @@
-import type { AppContext } from "plumix/plugin";
-import { authenticated, base } from "plumix/plugin";
+import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
 import type { FormRegistry } from "./registry.js";
@@ -24,18 +23,6 @@ import {
   SUBMISSION_PAGE_MAX,
 } from "./server/repository.js";
 import { SUBMISSION_STATUSES } from "./types.js";
-
-interface ForbiddenErrors {
-  readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
-}
-
-function requireInboxAccess(ctx: AppContext, errors: ForbiddenErrors): void {
-  if (!ctx.auth.can(SUBMISSION_MODERATE_CAPABILITY)) {
-    throw errors.FORBIDDEN({
-      data: { capability: SUBMISSION_MODERATE_CAPABILITY },
-    });
-  }
-}
 
 const idInput = v.object({
   id: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -62,16 +49,16 @@ const listInput = v.optional(
 export function createSubmissionsRouter(registry: FormRegistry) {
   const definitions = base
     .use(authenticated)
-    .handler(({ context, errors }): readonly FormSummary[] => {
-      requireInboxAccess(context, errors);
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
+    .handler((): readonly FormSummary[] => {
       return formSummaries(registry);
     });
 
   const list = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(listInput)
-    .handler(async ({ input, context, errors }): Promise<SubmissionsPage> => {
-      requireInboxAccess(context, errors);
+    .handler(async ({ input, context }): Promise<SubmissionsPage> => {
       const page = await listSubmissions(context, {
         form: input.form,
         status: input.status,
@@ -89,17 +76,17 @@ export function createSubmissionsRouter(registry: FormRegistry) {
 
   const counts = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(filterInput)
-    .handler(({ input, context, errors }): Promise<SubmissionCounts> => {
-      requireInboxAccess(context, errors);
+    .handler(({ input, context }): Promise<SubmissionCounts> => {
       return countSubmissionFacets(context, input);
     });
 
   const get = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(idInput)
     .handler(async ({ input, context, errors }): Promise<SubmissionDTO> => {
-      requireInboxAccess(context, errors);
       const row = await getSubmission(context, input.id);
       if (!row) {
         throw errors.NOT_FOUND({
@@ -111,6 +98,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
 
   const setStatus = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(
       v.object({
         ...idInput.entries,
@@ -123,7 +111,6 @@ export function createSubmissionsRouter(registry: FormRegistry) {
         context,
         errors,
       }): Promise<{ status: SubmissionStatus }> => {
-        requireInboxAccess(context, errors);
         const row = await setSubmissionStatus(context, input.id, input.status);
         if (!row) {
           throw errors.NOT_FOUND({
@@ -136,6 +123,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
 
   const setNote = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(
       v.object({
         ...idInput.entries,
@@ -144,7 +132,6 @@ export function createSubmissionsRouter(registry: FormRegistry) {
     )
     .handler(
       async ({ input, context, errors }): Promise<{ note: string | null }> => {
-        requireInboxAccess(context, errors);
         // An empty box is no note, not a note that says nothing.
         const note = input.note?.trim() ? input.note : null;
         const row = await setSubmissionNote(context, input.id, note);
@@ -159,13 +146,11 @@ export function createSubmissionsRouter(registry: FormRegistry) {
 
   const remove = base
     .use(authenticated)
+    .use(requireCapability(SUBMISSION_MODERATE_CAPABILITY))
     .input(idInput)
-    .handler(
-      async ({ input, context, errors }): Promise<{ deleted: boolean }> => {
-        requireInboxAccess(context, errors);
-        return { deleted: await deleteSubmission(context, input.id) };
-      },
-    );
+    .handler(async ({ input, context }): Promise<{ deleted: boolean }> => {
+      return { deleted: await deleteSubmission(context, input.id) };
+    });
 
   return { definitions, list, counts, get, setStatus, setNote, remove };
 }

@@ -4,6 +4,7 @@ import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
@@ -22,12 +23,9 @@ const MAX_GROUP_ROWS_PER_READ = 500;
 // its stored ISO string, and a reference its stored id.
 export const get = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(settingsGetInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
-
     const filtered = await context.hooks.applyFilter(
       "rpc:settings.get:input",
       input,

@@ -2,6 +2,7 @@ import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { userEnableInputSchema } from "./schemas.js";
 
 const CAPABILITY = "user:edit";
@@ -12,11 +13,9 @@ const CAPABILITY = "user:edit";
 // call on an already-active user short-circuits with the existing row.
 export const enable = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(userEnableInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
     const filtered = await context.hooks.applyFilter(
       "rpc:user.enable:input",
       input,

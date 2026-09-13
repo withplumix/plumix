@@ -5,6 +5,7 @@ import { buildLocaleCookie } from "../../../i18n/cookie.js";
 import { findEnabledLocale } from "../../../i18n/locale-registry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { writeUserMeta } from "./meta.js";
 
 const inputSchema = v.object({
@@ -15,11 +16,9 @@ const EDIT_OWN_CAPABILITY = "user:edit_own";
 
 export const setLocale = base
   .use(authenticated)
+  .use(requireCapability(EDIT_OWN_CAPABILITY))
   .input(inputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(EDIT_OWN_CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: EDIT_OWN_CAPABILITY } });
-    }
     const match = findEnabledLocale(context.i18n, input.code);
     if (!match) {
       throw errors.CONFLICT({

@@ -3,6 +3,7 @@ import { and, eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import { userDisableInputSchema } from "./schemas.js";
 
@@ -10,11 +11,9 @@ const CAPABILITY = "user:edit";
 
 export const disable = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(userDisableInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
     const filtered = await context.hooks.applyFilter(
       "rpc:user.disable:input",
       input,

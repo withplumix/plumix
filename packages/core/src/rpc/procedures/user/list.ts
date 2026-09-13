@@ -3,17 +3,16 @@ import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { userListInputSchema } from "./schemas.js";
 
 const CAPABILITY = "user:list";
 
 export const list = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(userListInputSchema)
-  .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
+  .handler(async ({ input, context }) => {
     const filtered = await context.hooks.applyFilter(
       "rpc:user.list:input",
       input,

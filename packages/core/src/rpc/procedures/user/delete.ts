@@ -3,6 +3,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import { userDeleteInputSchema } from "./schemas.js";
 
@@ -10,12 +11,9 @@ const CAPABILITY = "user:delete";
 
 export const del = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(userDeleteInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
-
     const existing = await context.db.query.users.findFirst({
       where: eq(users.id, input.id),
     });

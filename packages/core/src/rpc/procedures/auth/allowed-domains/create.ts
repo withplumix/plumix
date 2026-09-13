@@ -2,17 +2,16 @@ import { isUniqueConstraintError } from "../../../../db/index.js";
 import { allowedDomains } from "../../../../db/schema/allowed_domains.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { allowedDomainsCreateInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
 
 export const create = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(allowedDomainsCreateInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
     try {
       const [row] = await context.db
         .insert(allowedDomains)
