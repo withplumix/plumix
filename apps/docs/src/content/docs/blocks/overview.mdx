@@ -101,7 +101,7 @@ The `style` buckets become a `<style>` element beside the block, scoped to that 
 
 ## Where the registry comes from
 
-Three layers contribute specs, and boot merges them in one order: the 18 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. The later layer wins a name collision, so a theme can replace a plugin's block. Neither can replace a core one. `registerBlock` rejects any name starting `core/` before it reaches the registry, and a theme's `blocks` are checked the same way, so all 18 are always present rather than opt-in and the collision rule only ever settles a plugin against the theme.
+Three layers contribute specs, and boot merges them in one order: the 17 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. The later layer wins a name collision, so a theme can replace a plugin's block. Neither can replace a core one. `registerBlock` rejects any name starting `core/` before it reaches the registry, and a theme's `blocks` are checked the same way, so all 17 are always present rather than opt-in and the collision rule only ever settles a plugin against the theme.
 
 <Aside type="caution" title="An unknown name renders nothing">
   When a node's name is not in the registry, the renderer emits no output for
@@ -119,7 +119,7 @@ Materializing is the step that makes slots work. Before it calls `render`, the w
 
 Around `render`, the walker builds the node's root element. It merges the allowlisted `htmlAttrs`, the author's classes and the generated style class into one set of props. A block that declares `selfSeam` spreads those props onto its own element, which is how `core/separator` puts them on the `<hr>` and `core/table-cell` on the `<td>`, where a wrapper `<div>` would be invalid. Every other block gets the wrapper.
 
-One name skips the registry lookup. The walker handles `core/pattern-ref` itself, looking the node's `slug` up in the pattern registry passed to `renderBlockTree` as its `patterns` option and rendering that pattern's blocks in place. No shipped caller passes that option, not `BlockRenderer` and not the editor canvas, so the lookup finds nothing today and every `core/pattern-ref` node renders nothing. A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
+A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
 
 ## Building a tree outside the editor
 
@@ -133,6 +133,6 @@ Entry content is one half of what an entry holds. The other half is its [meta-bo
 
 ## Next steps
 
-Read [Core Blocks](/blocks/core-blocks/) next. It is the complete list of what the 18 registered specs accept and what each one renders, including what the sanitizer does to markup typed into `core/html`.
+Read [Core Blocks](/blocks/core-blocks/) next. It is the complete list of what the 17 registered specs accept and what each one renders, including what the sanitizer does to markup typed into `core/html`.
 
 Seven further pages in this section are not written yet, and everything they cover already ships. Authoring a Block covers `defineBlock`, input types, and registering a spec from a plugin or a theme. Marks lists the inline formatters a rich-text body can carry. Styles goes into the style buckets, design tokens and viewport breakpoints. Entry Content and Validation covers `validateEntryContent` and the errors above in detail. Variations, Patterns and Shortcodes cover preset configurations of a block, reusable arrangements of several, and the text macros that expand at render.

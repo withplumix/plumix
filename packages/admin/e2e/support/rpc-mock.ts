@@ -150,9 +150,8 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
 };
 
 // Full editor fixture: an autosave-capable post type plus two registered
-// patterns — one copy-mode (also starter-eligible via `target`), one
-// reference-mode. Drives the patterns section, starter modal, and the
-// pattern-ref / detach surfaces, none of which render without manifest
+// patterns — one starter-eligible via `target`, one not. Drives the patterns
+// section and the starter modal, neither of which renders without manifest
 // patterns.
 export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   ...emptyManifest(),
@@ -170,7 +169,6 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
       name: "e2e/hero",
       title: "E2E Hero",
       category: "hero",
-      insert: "copy",
       target: "post-content",
       entryTypes: ["post"],
       priority: 1,
@@ -191,7 +189,6 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
       name: "e2e/promo",
       title: "E2E Promo",
       category: "cta",
-      insert: "reference",
       content: [
         {
           id: "p1",

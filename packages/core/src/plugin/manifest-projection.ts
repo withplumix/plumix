@@ -11,7 +11,6 @@ import type {
   BlockNode,
   BlockSpec,
   BlockVariation,
-  PatternInsertMode,
   PatternPreview,
   PatternTarget,
   ThemeBreakpoints,
@@ -407,10 +406,6 @@ export interface PatternManifestEntry {
   readonly title: Label;
   readonly category?: string;
   readonly keywords?: readonly Label[];
-  // `buildManifest` always populates this with the spec's value or
-  // `"copy"`; consumers that read raw manifest fixtures may still see
-  // `undefined`.
-  readonly insert?: PatternInsertMode;
   readonly preview?: PatternPreview;
   readonly target?: PatternTarget;
   readonly entryTypes?: readonly string[];
@@ -1496,7 +1491,6 @@ function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
     category,
     keywords,
     content,
-    insert,
     preview,
     target,
     entryTypes,
@@ -1507,7 +1501,6 @@ function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
     title,
     category,
     keywords,
-    insert: insert ?? "copy",
     preview,
     target,
     entryTypes,

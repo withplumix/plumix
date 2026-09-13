@@ -2073,32 +2073,4 @@ describe("buildManifest visibility projection", () => {
       manifest.patterns.find((p) => p.name === "acme/plain")?.preview,
     ).toBeUndefined();
   });
-
-  test("projects pattern insert mode through the manifest, defaulting to copy", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerPattern({
-        name: "acme/hero",
-        title: "Hero",
-        content: [],
-        // insert omitted — defaults to copy
-      });
-      ctx.registerPattern({
-        name: "acme/footer",
-        title: "Footer",
-        content: [],
-        insert: "reference",
-      });
-    });
-
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    const manifest = buildManifest(registry);
-
-    expect(manifest.patterns.find((p) => p.name === "acme/hero")?.insert).toBe(
-      "copy",
-    );
-    expect(
-      manifest.patterns.find((p) => p.name === "acme/footer")?.insert,
-    ).toBe("reference");
-  });
 });

@@ -30,16 +30,6 @@ const cta: InserterPattern = {
   content: [{ id: "p", name: "core/paragraph", attrs: { text: "Go" } }],
 };
 
-// A starter that also declares reference-mode insertion. The inserter would
-// splice a live `core/pattern-ref` for it; the starter path must not.
-const referenced: InserterPattern = {
-  name: "starter/ref",
-  title: "Reference start",
-  target: "post-content",
-  insert: "reference",
-  content: [{ id: "p", name: "core/quote", attrs: { text: "Quoted" } }],
-};
-
 const withPreview: InserterPattern = {
   ...hero,
   name: "starter/shot",
@@ -96,18 +86,6 @@ describe("StarterModal", () => {
     expect(tree[0]?.id).not.toBe("p");
     expect(storeApi?.getState().starterOpen).toBe(false);
     expect(queryByTestId("plumix-starter-modal")).toBeNull();
-  });
-
-  test("a reference-mode starter still seeds an independent copy", () => {
-    const { getByTestId } = renderModal([referenced]);
-
-    fireEvent.click(getByTestId("plumix-starter-modal-card-starter/ref"));
-
-    const tree = storeApi?.getState().tree ?? [];
-    expect(tree.map((n) => n.name)).toEqual(["core/quote"]);
-    // The body itself is seeded, not a slug pointing back at the pattern.
-    expect(tree[0]?.attrs).toEqual({ text: "Quoted" });
-    expect(tree[0]?.id).not.toBe("p");
   });
 
   test("a pattern's declared preview renders at its declared dimensions", () => {

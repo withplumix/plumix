@@ -7,7 +7,6 @@ import { detailsBlock } from "./details/index.js";
 import { embedBlock } from "./embed/index.js";
 import { groupBlock } from "./group/index.js";
 import { htmlBlock } from "./html/index.js";
-import { patternRefBlock } from "./pattern-ref/index.js";
 import { richTextBlock } from "./rich-text/index.js";
 import { sectionBlock } from "./section/index.js";
 import { separatorBlock } from "./separator/index.js";
@@ -43,5 +42,4 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   tableBodyRowBlock,
   tableHeaderCellBlock,
   tableCellBlock,
-  patternRefBlock,
 ]);

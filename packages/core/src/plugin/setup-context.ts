@@ -403,10 +403,10 @@ export interface PluginSetupContextBase {
    */
   registerShortcode(spec: ShortcodeSpec): void;
   /**
-   * Register a `BlockPattern` produced by `definePattern` from
-   * `plumix/blocks`. Plugin- and theme-contributed patterns merge into
-   * the per-app pattern registry at `buildApp` time. Duplicate slugs
-   * across plugins throw — patterns are not silently overridden.
+   * Register a `BlockPattern`: a named block arrangement the editor's
+   * inserter offers, and the starter modal too when it declares `target`.
+   * Inserting one copies its body into the entry. Duplicate slugs across
+   * plugins throw — patterns are not silently overridden.
    */
   registerPattern(spec: BlockPattern): void;
   /**

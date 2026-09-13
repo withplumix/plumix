@@ -11,13 +11,13 @@ tableOfContents:
 
 import { Aside } from "@astrojs/starlight/components";
 
-Eighteen block specs ship inside Plumix and every site boots with all of them. This page is the whole set, in the order core registers them, with the inputs each block accepts and the markup it produces.
+Seventeen block specs ship inside Plumix and every site boots with all of them. This page is the whole set, in the order core registers them, with the inputs each block accepts and the markup it produces.
 
 ## Overview
 
-The `core/` namespace is closed. `registerBlock` throws for any name starting `core/`, and the `blocks` a theme declares are checked the same way, which is why these 18 are always present rather than something a site opts into. Nothing replaces one either. Boot merges the registry core first, then plugin blocks, then the theme's, and the later layer wins a name collision, but no contributed spec is allowed a `core/` name, so that ordering only ever settles a plugin against the theme.
+The `core/` namespace is closed. `registerBlock` throws for any name starting `core/`, and the `blocks` a theme declares are checked the same way, which is why these 17 are always present rather than something a site opts into. Nothing replaces one either. Boot merges the registry core first, then plugin blocks, then the theme's, and the later layer wins a name collision, but no contributed spec is allowed a `core/` name, so that ordering only ever settles a plugin against the theme.
 
-Seventeen of the 18 declare a category, and the editor's inserter groups its palette by it. Four appear here, `text`, `layout`, `media` and `interactive`. `core/pattern-ref` declares none, and the inserter would file a category-less spec under `uncategorized`. It never files this one, because it drops every `inserter: false` spec before it buckets by category. Five of the 18 set `inserter: false` and never appear in the palette at all, because something else creates them. `core/table` seeds the four table row and cell blocks, and inserting a pattern that registers itself as a reference writes a `core/pattern-ref`.
+All 17 declare a category, and the editor's inserter groups its palette by it. Four appear here, `text`, `layout`, `media` and `interactive`. Four of the 17 set `inserter: false` and never appear in the palette at all, because `core/table` seeds them: the table row and cell blocks.
 
 The examples below are stored nodes, the shape a block takes inside an entry's content tree. Most are a value you could put straight in the `blocks` array of an entry's content. `core/column` is the exception. It declares `requiresParent: ["core/columns"]`, so a save that puts one at the top level fails validation with a `requires_parent` error, and the node belongs inside a `core/columns` node's `columns` slot instead. [Overview](/blocks/overview/) covers what those fields mean and how the renderer walks the tree.
 
@@ -455,26 +455,6 @@ One data cell, and the header cell's sibling. Same `text` and `align` inputs, re
 
 Category `text`. Hidden from the inserter.
 
-### `core/pattern-ref`
-
-A pointer to a registered pattern, resolved at render rather than copied into the entry.
-
-```ts
-import type { BlockNode } from "plumix/blocks";
-
-export const chefBio: BlockNode = {
-  id: "caponata-chef-bio",
-  name: "core/pattern-ref",
-  attrs: { slug: "recipes/chef-bio" },
-};
-```
-
-One input, `slug`. No category, and hidden from the inserter. An author writes a node of this shape by inserting a pattern that registered itself with `insert: "reference"`. The default is the other mode, which splices a copy of the pattern's body into the entry. The starter picker a new entry opens is always the copying mode, whatever `insert` says: a starter seeds an entry the author then owns, so a reference there would leave every entry made from it a live pointer at the pattern.
-
-The walker handles this name before it consults the registry. It looks the slug up in the pattern registry handed to `renderBlockTree` as its `patterns` option and renders that pattern's blocks in place, which is what would make editing the pattern change every entry referencing it.
-
-No shipped caller passes `patterns`. `BlockRenderer` does not, and neither does the editor canvas, so the lookup finds nothing today and every node of this shape takes the unresolved branch. An unresolved slug warns once per slug through `console.warn`, in production as well as in development, and renders nothing. In development it also leaves a `<template data-plumix-unresolved-pattern-ref>` marker in the markup.
-
 ## Related
 
 What a stored node holds, how boot assembles the registry and what the renderer does with a name it cannot resolve are on [Overview](/blocks/overview/). [Configuration](/getting-started/configuration/) holds the allowlist governing `core/html` and `core/rich-text`, under `blocks.htmlAllowlist`. A theme reads the rendered tree through the entry projection [template data](/themes/template-data/) describes, and the custom properties named throughout this page are what a theme declares to restyle these blocks in bulk.
@@ -483,4 +463,4 @@ What a stored node holds, how boot assembles the registry and what the renderer 
 
 Read [Fields](/fields/overview/) next. A block tree is one half of what an entry stores, and meta-box fields are the other, the declared keys of the entry's `meta` bag.
 
-Several pages that would go deeper are not written yet, and what they cover already ships. Authoring a Block covers `defineBlock`, the input types a spec may declare, and registering one from a plugin or a theme, which is the route to anything the 18 above do not do. Styles covers the style buckets and breakpoints the layout blocks lean on. Marks lists the inline formatters a `core/rich-text` body can carry. Variations and Patterns cover preset configurations of one block and reusable arrangements of several, which is what `core/pattern-ref` points at.
+Several pages that would go deeper are not written yet, and what they cover already ships. Authoring a Block covers `defineBlock`, the input types a spec may declare, and registering one from a plugin or a theme, which is the route to anything the 17 above do not do. Styles covers the style buckets and breakpoints the layout blocks lean on. Marks lists the inline formatters a `core/rich-text` body can carry. Variations and Patterns cover preset configurations of one block and reusable arrangements of several.

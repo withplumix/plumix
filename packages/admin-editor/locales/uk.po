@@ -79,6 +79,16 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+#~ msgid "block.core.pattern-ref.title"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+#~ msgid "block.core.pattern-ref.input.slug.label"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -794,11 +804,6 @@ msgid "editor.shortcut.clipboard.paste"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/block-i18n.ts
-msgid "block.core.pattern-ref.title"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.patterns"
 msgstr ""
@@ -996,11 +1001,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.size"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/block-i18n.ts
-msgid "block.core.pattern-ref.input.slug.label"
 msgstr ""
 
 #. js-lingui-explicit-id
