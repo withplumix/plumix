@@ -1,7 +1,6 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { buildEntryPermalink, withBasePath } from "plumix";
-import { tryGetContext } from "plumix/plugin";
 
 import { readSeoOverrides } from "./overrides.js";
 import { loadSeoSettings } from "./settings.js";
@@ -75,11 +74,7 @@ async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   }
 }
 
-function notify(entry: Entry): void {
-  // A lifecycle action always fires inside a request; one fired outside has no
-  // context to read settings or defer through.
-  const ctx = tryGetContext();
-  if (ctx === null) return;
+function notify(entry: Entry, ctx: AppContext): void {
   ctx.defer(
     // Memoized per entry per request: publishing fires `entry:updated` and
     // `entry:published`, and both land here, but one publish is one
@@ -107,5 +102,7 @@ export function registerIndexNow(ctx: PluginSetupContext): void {
     handler: (_request, appCtx) => handleIndexNowKey(appCtx),
   });
   ctx.addAction("entry:published", notify);
-  ctx.addAction("entry:updated", notify);
+  ctx.addAction("entry:updated", (entry, _previous, appCtx) =>
+    notify(entry, appCtx),
+  );
 }

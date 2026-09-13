@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Db } from "../context/app.js";
 import { withUser } from "../context/app.js";
-import { requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createTestContext } from "../test/context.js";
@@ -104,53 +103,55 @@ describe("purge accumulator", () => {
 });
 
 describe("registerCorePurgeInvalidator", () => {
-  const ENTRY_EVENTS = [
-    "entry:published",
-    "entry:updated",
-    "entry:meta_changed",
-    "entry:trashed",
-    "entry:restored",
-    "entry:deleted",
-  ] as const;
-
-  it.each(ENTRY_EVENTS)("%s enqueues the entry's purge tags", async (event) => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
-
-    await requestStore.run(ctx, () =>
-      hooks.doAction(
-        event as never,
-        { id: 9, type: "post" } as never,
-        { id: 9, type: "post" } as never,
-      ),
+  // Loose-typed: each action's payload differs, so the tests fire by name.
+  const fire = (hooks: HookRegistry, name: string, ...args: unknown[]) =>
+    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
+      hooks,
+      name,
+      ...args,
     );
-    flushPurgeTags(ctx);
 
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:9"]);
-  });
+  const entry = { id: 9, type: "post" };
+  const changes = { set: {}, removed: [] };
+  const ENTRY_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
+    ["entry:published", [entry]],
+    ["entry:updated", [entry, entry]],
+    ["entry:meta_changed", [entry, changes]],
+    ["entry:trashed", [entry]],
+    ["entry:restored", [entry]],
+    ["entry:deleted", [entry]],
+  ];
 
-  const TERM_EVENTS = [
-    "term:created",
-    "term:updated",
-    "term:meta_changed",
-    "term:deleted",
-  ] as const;
-
-  it.each(TERM_EVENTS)(
-    "%s enqueues purge tags for the taxonomy's entry types",
-    async (event) => {
+  it.each(ENTRY_EVENTS)(
+    "%s enqueues the entry's purge tags",
+    async (event, payload) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const { ctx, purgeTags } = fakeCtx();
 
-      await requestStore.run(ctx, () =>
-        hooks.doAction(
-          event as never,
-          { id: 3, taxonomy: "category" } as never,
-          { id: 3, taxonomy: "category" } as never,
-        ),
-      );
+      await fire(hooks, event, ...payload, ctx);
+      flushPurgeTags(ctx);
+
+      expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:9"]);
+    },
+  );
+
+  const term = { id: 3, taxonomy: "category" };
+  const TERM_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
+    ["term:created", [term]],
+    ["term:updated", [term, term]],
+    ["term:meta_changed", [term, changes]],
+    ["term:deleted", [term]],
+  ];
+
+  it.each(TERM_EVENTS)(
+    "%s enqueues purge tags for the taxonomy's entry types",
+    async (event, payload) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const { ctx, purgeTags } = fakeCtx();
+
+      await fire(hooks, event, ...payload, ctx);
       flushPurgeTags(ctx);
 
       expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
@@ -162,10 +163,8 @@ describe("registerCorePurgeInvalidator", () => {
     registerCorePurgeInvalidator(hooks);
     const { ctx, purgeTags } = fakeCtx();
 
-    await requestStore.run(ctx, async () => {
-      await hooks.doAction("entry:published", { id: 1, type: "post" } as never);
-      await hooks.doAction("entry:published", { id: 2, type: "post" } as never);
-    });
+    await fire(hooks, "entry:published", { id: 1, type: "post" }, ctx);
+    await fire(hooks, "entry:published", { id: 2, type: "post" }, ctx);
     flushPurgeTags(ctx);
 
     expect(purgeTags).toHaveBeenCalledTimes(1);

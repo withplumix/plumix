@@ -35,7 +35,7 @@ export function scheduledDateInvalid(
  * and the content was already snapshotted when it was scheduled.
  */
 export async function publishDueScheduledEntries(
-  ctx: Pick<AppContext, "db" | "hooks">,
+  ctx: AppContext,
 ): Promise<number> {
   const now = new Date();
   const due = await ctx.db

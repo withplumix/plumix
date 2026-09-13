@@ -131,8 +131,13 @@ export async function writeTermMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, terms, terms.id, term.id, patch);
-  await ctx.hooks.doAction("term:meta_changed", term, {
-    set: Object.fromEntries(patch.upserts),
-    removed: [...patch.deletes],
-  });
+  await ctx.hooks.doAction(
+    "term:meta_changed",
+    term,
+    {
+      set: Object.fromEntries(patch.upserts),
+      removed: [...patch.deletes],
+    },
+    ctx,
+  );
 }

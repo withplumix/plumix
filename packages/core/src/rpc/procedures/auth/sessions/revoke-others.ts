@@ -48,6 +48,7 @@ export const revokeOthers = base
         "session:revoked",
         { id: row.id, userId: context.user.id },
         { actor: context.user, mode: "all_others" },
+        context,
       );
     }
     return { revoked: rows.length };

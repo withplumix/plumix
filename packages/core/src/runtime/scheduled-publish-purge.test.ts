@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
-import { requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createTestContext } from "../test/context.js";
@@ -42,9 +41,7 @@ describe("scheduled publish purges the CDN", () => {
       },
     });
 
-    await requestStore.run(ctx, () =>
-      runScheduledTasks(app, ctx, "*/5 * * * *"),
-    );
+    await runScheduledTasks(app, ctx, "*/5 * * * *");
 
     expect(purgeTags).toHaveBeenCalledTimes(1);
     expect(purgeTags).toHaveBeenCalledWith(["t:post", `e:${String(due.id)}`]);
@@ -71,9 +68,7 @@ describe("scheduled publish purges the CDN", () => {
     });
     const ctx = createTestContext({ db, hooks, plugins: registry, defer });
 
-    await requestStore.run(ctx, () =>
-      runScheduledTasks(app, ctx, "*/5 * * * *"),
-    );
+    await runScheduledTasks(app, ctx, "*/5 * * * *");
 
     expect(defer).not.toHaveBeenCalled();
   });

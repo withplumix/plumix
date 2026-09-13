@@ -1,5 +1,5 @@
 import type { Label } from "plumix/i18n";
-import { definePlugin, tryGetContext } from "plumix/plugin";
+import { definePlugin } from "plumix/plugin";
 
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
@@ -121,14 +121,9 @@ export function comments(options: CommentsConfig = {}) {
 
       if (config.notifyEmail) {
         const recipient = config.notifyEmail;
-        // The action carries only the comment, so the mailer-bearing
-        // AppContext comes from the request store; skip if it's absent
-        // (the action fired outside a request).
-        ctx.addAction("comment:created", async (comment) => {
-          const appCtx = tryGetContext();
-          if (appCtx)
-            await notifyModeratorOfPending(appCtx, comment, recipient);
-        });
+        ctx.addAction("comment:created", (comment, appCtx) =>
+          notifyModeratorOfPending(appCtx, comment, recipient),
+        );
       }
     },
   });

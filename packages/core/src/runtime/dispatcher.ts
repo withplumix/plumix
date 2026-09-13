@@ -952,11 +952,10 @@ function dispatchPluginRawRoute(
 ): Promise<Response> {
   const scoped = withoutAmbientSession(route, ctx);
   if (scoped === ctx) return serveRawRoute(route, ctx);
-  // `getContext()` is the sanctioned way to read per-request state, and for a
-  // hook listener the handler fires it is the only way — a `formPost` route
-  // announcing a submission is exactly that shape. Leaving the ambient context
-  // un-swapped would shut the door the handler holds and leave the one behind
-  // it open, so the exempt context has to be the ambient one too.
+  // `getContext()` is the sanctioned way to read per-request state where no
+  // signature carries it. Leaving the ambient context un-swapped would shut the
+  // door the handler holds and leave the one behind it open, so the exempt
+  // context has to be the ambient one too.
   return requestStore.run(scoped, () => serveRawRoute(route, scoped));
 }
 

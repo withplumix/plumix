@@ -96,7 +96,7 @@ export function createCommentsRouter() {
               data: { kind: "comment", id: input.id },
             });
           }
-          await context.hooks.doAction(action, row);
+          await context.hooks.doAction(action, row, context);
           return { status: row.status };
         },
       );
@@ -131,7 +131,9 @@ export function createCommentsRouter() {
     .handler(async ({ input, context }): Promise<{ changed: number }> => {
       const { target, action } = TRANSITIONS[input.action];
       const rows = await setStatusMany(context, input.ids, target);
-      for (const row of rows) await context.hooks.doAction(action, row);
+      for (const row of rows) {
+        await context.hooks.doAction(action, row, context);
+      }
       return { changed: rows.length };
     });
 

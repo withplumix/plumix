@@ -43,9 +43,14 @@ export const enable = base
     // Mirrors the status_changed action fired by `user.disable` — one
     // hook covers both transitions so plugins observing "account
     // activity state changed" don't need to subscribe to two events.
-    await context.hooks.doAction("user:status_changed", updated, {
-      enabled: true,
-    });
+    await context.hooks.doAction(
+      "user:status_changed",
+      updated,
+      {
+        enabled: true,
+      },
+      context,
+    );
 
     return context.hooks.applyFilter("rpc:user.enable:output", updated);
   });

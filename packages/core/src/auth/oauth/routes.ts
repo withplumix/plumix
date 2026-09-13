@@ -117,11 +117,16 @@ export async function handleOAuthCallback(
 
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
 
-    await ctx.hooks.doAction("user:signed_in", user, {
-      method: "oauth",
-      provider: providerKey,
-      firstSignIn: created,
-    });
+    await ctx.hooks.doAction(
+      "user:signed_in",
+      user,
+      {
+        method: "oauth",
+        provider: providerKey,
+        firstSignIn: created,
+      },
+      ctx,
+    );
 
     // Return to the theme page the sign-in started from when a safe
     // `redirectTo` rode through the state payload; otherwise the admin, as

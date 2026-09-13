@@ -36,6 +36,7 @@ export const del = base
         "credential:revoked",
         { id: row.id, userId },
         { actor: context.user },
+        context,
       );
       return row;
     }

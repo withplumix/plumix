@@ -253,9 +253,8 @@ describe("provides phase", () => {
 
   test("hook listener reads extensions via requestStore.getStore() at fire-time", async () => {
     // The motivating use case from slice 11 deferred subscribers: a
-    // plugin's `addAction` listener can't take an AppContext arg
-    // because the action signature is fixed, so it pulls ctx out of
-    // the requestStore. Once that ctx carries plugin-contributed
+    // listener for an action that declares no AppContext pulls ctx out
+    // of the requestStore. Once that ctx carries plugin-contributed
     // extensions, the listener gets cross-plugin helpers for free.
     const captured: string[] = [];
 

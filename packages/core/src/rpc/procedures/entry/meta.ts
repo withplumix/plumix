@@ -231,8 +231,13 @@ export async function writeEntryMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, entries, entries.id, entry.id, patch);
-  await ctx.hooks.doAction("entry:meta_changed", entry, {
-    set: Object.fromEntries(patch.upserts),
-    removed: [...patch.deletes],
-  });
+  await ctx.hooks.doAction(
+    "entry:meta_changed",
+    entry,
+    {
+      set: Object.fromEntries(patch.upserts),
+      removed: [...patch.deletes],
+    },
+    ctx,
+  );
 }

@@ -33,24 +33,18 @@ beforeAll(async () => {
 interface FakeServiceState {
   readonly service: AuditService;
   readonly rows: NewAuditLogRow[];
-  warnedNoContext: number;
 }
 
 function fakeService(): FakeServiceState {
   const rows: NewAuditLogRow[] = [];
-  const state: FakeServiceState = {
+  return {
     rows,
-    warnedNoContext: 0,
     service: {
       record: (_ctx, row) => {
         rows.push(row);
       },
-      warnNoContextOnce: () => {
-        state.warnedNoContext += 1;
-      },
     },
   };
-  return state;
 }
 
 function makeCtx(user: AuthenticatedUser | null): {
@@ -134,7 +128,6 @@ describe("createAuditExtension", () => {
       subject: { type: "x", id: 1, label: "x" },
     });
     expect(state.rows).toHaveLength(0);
-    expect(state.warnedNoContext).toBe(0);
   });
 
   test("multiple log() calls in one request all land on the same service buffer", () => {
@@ -264,13 +257,17 @@ describe("createAuditExtension — integration with the real AuditService", () =
         event: "comment:approved",
         subject: { type: "comment", id: 5, label: "first" },
       });
-      await hooks.doAction("entry:published", {
-        id: 99,
-        title: "Hello",
-        slug: "hello",
-        type: "post",
-        status: "published",
-      } as unknown as Entry);
+      await hooks.doAction(
+        "entry:published",
+        {
+          id: 99,
+          title: "Hello",
+          slug: "hello",
+          type: "post",
+          status: "published",
+        } as unknown as Entry,
+        ctx,
+      );
     });
     await flush();
 

@@ -7,7 +7,6 @@ import type {
 } from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
 import { loadSettingsGroups } from "plumix";
-import { tryGetContext } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
 
@@ -490,13 +489,9 @@ export function registerSeoSettings(ctx: PluginSetupContext): void {
   // What the admin form loads. Without it the form would show the registered
   // defaults over a site's legacy answers, and saving would turn indexing back
   // on for a site that had turned it off.
-  ctx.addFilter("rpc:settings.get:output", async (bag, context) => {
+  ctx.addFilter("rpc:settings.get:output", async (bag, context, appCtx) => {
     if (context.group !== SEO_SETTINGS_GROUP) return bag;
-    // The RPC always runs inside the request store, so the null branch is
-    // unreachable in a served request — it exists because the accessor is
-    // the only way a filter handler reaches the context.
-    const request = tryGetContext();
-    return request === null ? bag : withLegacyDefaults(bag, request);
+    return withLegacyDefaults(bag, appCtx);
   });
 }
 

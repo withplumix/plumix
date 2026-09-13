@@ -13,7 +13,7 @@
 // must include that field in `diff.omit` or the test fails — drift
 // is caught at CI time, not in review.
 
-import type { ActionName, JsonObject } from "plumix";
+import type { ActionArgs, ActionName, JsonObject } from "plumix";
 import type {
   AppContext,
   AuthenticatedUser,
@@ -27,7 +27,6 @@ import type {
   SettingsBag,
   User,
 } from "plumix/schema";
-import { tryGetContext } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
@@ -78,8 +77,16 @@ type ActorStrategy =
       ) => AuditLogActor;
     };
 
+// An action that hands its handler the firing context last — the only kind
+// the interpreter can record against, since that is where it reads it.
+type ContextualAction = {
+  [K in ActionName]: ActionArgs<K> extends readonly [...unknown[], AppContext]
+    ? K
+    : never;
+}[ActionName];
+
 export interface AuditEventDef {
-  readonly event: ActionName;
+  readonly event: ContextualAction;
   readonly subject: SubjectStrategy;
   readonly actor: ActorStrategy;
   /** Diff the top-level columns of `payload` (next) vs. `context` (previous), omitting these keys. */
@@ -630,10 +637,7 @@ export const auditEvents: readonly AuditEventDef[] = [
 
 /**
  * Walk `auditEvents` and register one `ctx.addAction(...)` listener
- * per row. Each listener resolves the per-request `AppContext` from
- * the request store, falls back to `service.warnNoContextOnce()` on
- * a miss (typically a hook fired outside `requestStore.run`), and
- * otherwise routes a built row through `service.record`.
+ * per row, routing a built row through `service.record`.
  */
 export function registerAuditEvents(
   ctx: PluginSetupContext,
@@ -641,12 +645,11 @@ export function registerAuditEvents(
 ): void {
   for (const def of auditEvents) {
     ctx.addAction(def.event, (...args: unknown[]) => {
-      const appCtx = tryGetContext();
-      if (!appCtx) {
-        service.warnNoContextOnce();
-        return;
-      }
-      service.record(appCtx, buildRow(def, args[0], args[1], appCtx));
+      // Every audited action declares the firing context as its last
+      // parameter, whatever payload comes before it.
+      const [payload, context] = args.slice(0, -1);
+      const appCtx = args.at(-1) as AppContext;
+      service.record(appCtx, buildRow(def, payload, context, appCtx));
     });
   }
 }

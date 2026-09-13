@@ -99,8 +99,13 @@ export async function writeUserMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, users, users.id, user.id, patch);
-  await ctx.hooks.doAction("user:meta_changed", user, {
-    set: Object.fromEntries(patch.upserts),
-    removed: [...patch.deletes],
-  });
+  await ctx.hooks.doAction(
+    "user:meta_changed",
+    user,
+    {
+      set: Object.fromEntries(patch.upserts),
+      removed: [...patch.deletes],
+    },
+    ctx,
+  );
 }

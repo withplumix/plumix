@@ -30,6 +30,7 @@ export const deny = base
       "device_code:denied",
       { id: ok.id, userCode: input.userCode },
       { actor: context.user },
+      context,
     );
     return { ok: true as const };
   });

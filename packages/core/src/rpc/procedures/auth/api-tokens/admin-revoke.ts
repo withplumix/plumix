@@ -35,6 +35,7 @@ export const adminRevoke = base
       "api_token:revoked",
       { id: row.id, userId: row.userId },
       { actor: context.user, mode: "admin" },
+      context,
     );
     return { id: input.id };
   });

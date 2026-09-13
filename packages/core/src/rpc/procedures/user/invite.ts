@@ -73,11 +73,16 @@ export const invite = base
     // raw created user + token — e.g. an email-delivery plugin needs the
     // token here to compose the invite URL. Parallel to WordPress's
     // `user_register` action hook.
-    await context.hooks.doAction("user:invited", created, {
-      inviteToken: token,
-      invitedBy: context.user.id,
-      expiresAt,
-    });
+    await context.hooks.doAction(
+      "user:invited",
+      created,
+      {
+        inviteToken: token,
+        invitedBy: context.user.id,
+        expiresAt,
+      },
+      context,
+    );
 
     const output = { user: created, inviteToken: token };
     return context.hooks.applyFilter("rpc:user.invite:output", output);

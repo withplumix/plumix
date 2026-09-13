@@ -132,7 +132,7 @@ export const update = base
     }
 
     if (rowWritten) {
-      await context.hooks.doAction("term:updated", updated, existing);
+      await context.hooks.doAction("term:updated", updated, existing, context);
     }
     return context.hooks.applyFilter("rpc:term.update:output", {
       ...updated,

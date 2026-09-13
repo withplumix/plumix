@@ -49,7 +49,12 @@ export const get = base
       bag[field.key] = field.default as JsonValue;
     }
 
-    return context.hooks.applyFilter("rpc:settings.get:output", bag, {
-      group: filtered.group,
-    });
+    return context.hooks.applyFilter(
+      "rpc:settings.get:output",
+      bag,
+      {
+        group: filtered.group,
+      },
+      context,
+    );
   });

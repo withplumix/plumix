@@ -31,6 +31,7 @@ export const rename = base
       "credential:renamed",
       { id: row.id, userId: context.user.id },
       { actor: context.user, name: row.name ?? "" },
+      context,
     );
     return row;
   });

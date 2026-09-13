@@ -129,11 +129,11 @@ function settingsSaver(group: string): AnyPluginDescriptor {
     ctx.registerPublicRoute({
       path: "/fire-settings-change",
       handler: async (_request, appCtx) => {
-        await appCtx.hooks.doAction("settings:group_changed", {
-          group,
-          set: { indexable: false },
-          removed: [],
-        });
+        await appCtx.hooks.doAction(
+          "settings:group_changed",
+          { group, set: { indexable: false }, removed: [] },
+          appCtx,
+        );
         return new Response("ok");
       },
     });
@@ -981,10 +981,10 @@ function lifecycleFirer(action: LifecycleAction) {
         // a union of them narrows to nothing. `both` is the pair a real
         // publish transition fires, in the order `entry.update` fires them.
         if (action !== "entry:published") {
-          await appCtx.hooks.doAction("entry:updated", entry, entry);
+          await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
         }
         if (action !== "entry:updated") {
-          await appCtx.hooks.doAction("entry:published", entry);
+          await appCtx.hooks.doAction("entry:published", entry, appCtx);
         }
         return new Response("ok");
       },

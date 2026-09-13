@@ -1,7 +1,6 @@
 import type { Label } from "plumix/i18n";
 import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
-import type { Entry } from "plumix/schema";
-import { definePlugin, tryGetContext } from "plumix/plugin";
+import { definePlugin } from "plumix/plugin";
 
 import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
@@ -177,8 +176,12 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         createMediaRouter({ acceptedTypes, maxUploadSize }),
       );
 
-      ctx.addAction("entry:media:trashed", purgeOnLifecycle);
-      ctx.addAction("entry:media:deleted", purgeOnLifecycle);
+      ctx.addAction("entry:media:trashed", (entry, appCtx) =>
+        purgeVariants(appCtx, entry),
+      );
+      ctx.addAction("entry:media:deleted", (entry, appCtx) =>
+        purgeVariants(appCtx, entry),
+      );
 
       // Media's own MCP read tools, contributed through the plugin seam —
       // they ship from the plugin that owns media, not core.
@@ -255,9 +258,4 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
       },
     },
   );
-}
-
-function purgeOnLifecycle(entry: Entry): Promise<void> | undefined {
-  const ctx = tryGetContext();
-  return ctx === null ? undefined : purgeVariants(ctx, entry);
 }
