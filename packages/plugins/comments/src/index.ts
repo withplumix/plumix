@@ -1,5 +1,9 @@
 import type { Label } from "plumix/i18n";
-import { definePlugin } from "plumix/plugin";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
@@ -20,8 +24,7 @@ import { createCommentsThreadLoader } from "./server/template-dep.js";
 export type { CommentsConfig, CommentStatus, ModerationMode } from "./types.js";
 export { COMMENT_STATUSES } from "./types.js";
 
-const ADMIN_ENTRY_PATH =
-  "node_modules/@plumix/plugin-comments/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-comments");
 
 // Plain descriptor literal — plugin source runs server-side without the
 // Babel macro pipeline, so the manifest payload is authored by hand.
@@ -58,11 +61,7 @@ export function comments(options: CommentsConfig = {}) {
     // plugin's table into the host's drizzle-kit codegen.
     schemaModule: "@plumix/plugin-comments/schema",
     adminEntry: ADMIN_ENTRY_PATH,
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       // Read by `PlumixCommentForm`, which renders inside a theme template
       // and has no plugin context to reach this install's config through.

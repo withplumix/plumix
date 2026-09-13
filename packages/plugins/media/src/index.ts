@@ -1,6 +1,10 @@
 import type { Label } from "plumix/i18n";
 import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
-import { definePlugin } from "plumix/plugin";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
@@ -106,8 +110,7 @@ interface MediaPluginOptions {
  * the workspace source under the hood. Override `adminEntry` in
  * `definePlugin` if your install layout differs (e.g. pnpm hoisting tweaks).
  */
-const ADMIN_ENTRY_PATH =
-  "node_modules/@plumix/plugin-media/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-media");
 
 /**
  * Media plugin — registers the `media` entry type, the `media.*` RPC
@@ -251,11 +254,7 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
     },
     {
       adminEntry: ADMIN_ENTRY_PATH,
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "uk", "ar", "de", "zh-CN"],
-        catalogPath: "./locales",
-      },
+      i18n: PLUGIN_I18N_SLOT,
     },
   );
 }

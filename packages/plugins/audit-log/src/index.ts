@@ -2,7 +2,7 @@ import type { Label } from "plumix/i18n";
 // Imported from the root `plumix` specifier (not the `plumix/plugin` subpath)
 // so the `declare module "plumix"` augmentation below has its target loaded in
 // this plugin's own build.
-import { definePlugin } from "plumix";
+import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogRetentionConfig } from "./server/retention.js";
@@ -65,8 +65,7 @@ export interface AuditLogPluginOptions {
   readonly retention?: AuditLogRetentionConfig;
 }
 
-const ADMIN_ENTRY_PATH =
-  "node_modules/@plumix/plugin-audit-log/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-audit-log");
 
 const AUDIT_LOG_READ_CAPABILITY = "audit_log:read";
 
@@ -132,11 +131,7 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
 
   return definePlugin("audit_log", {
     adminEntry: ADMIN_ENTRY_PATH,
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     schema: storage.schemaModule ?? schema,
     // Module specifier `plumix migrate generate` uses to include this
     // plugin's table in the host's drizzle-kit codegen. Without it the

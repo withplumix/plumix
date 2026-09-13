@@ -1,12 +1,7 @@
 import type { Db } from "../context/app.js";
 import type { EntryChangeKind } from "../db/schema/entry_changes.js";
-import { asc, inArray } from "../db/index.js";
+import { asc, chunkForD1, inArray } from "../db/index.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
-
-// Cloudflare D1 caps bound parameters at 100 per statement and `inArray`
-// binds one per id, so a whole drain in one statement works on local SQLite
-// and dies in production.
-const ACK_IDS_PER_STATEMENT = 100;
 
 export interface EntryChange {
   /** Feed row id — the handle {@link ackEntryChanges} deletes by. */
@@ -61,9 +56,7 @@ export async function ackEntryChanges(
   changes: readonly EntryChange[],
 ): Promise<void> {
   const ids = changes.map((change) => change.id);
-  for (let i = 0; i < ids.length; i += ACK_IDS_PER_STATEMENT) {
-    await db
-      .delete(entryChanges)
-      .where(inArray(entryChanges.id, ids.slice(i, i + ACK_IDS_PER_STATEMENT)));
+  for (const chunk of chunkForD1(ids)) {
+    await db.delete(entryChanges).where(inArray(entryChanges.id, chunk));
   }
 }

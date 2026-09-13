@@ -7,7 +7,7 @@ import type {
   TermTaxonomyOptions,
 } from "plumix/plugin";
 import { withContext } from "plumix/i18n";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 import type { BlogOptions } from "./options.js";
 import { applyOverride } from "./options.js";
@@ -212,11 +212,7 @@ const TAXONOMY_DEFAULTS = {
 
 export function blog(options: BlogOptions = {}): PluginDescriptor {
   return definePlugin("blog", {
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       const taxonomies = POST_TAXONOMIES.filter(
         (name) => options[name] !== false,

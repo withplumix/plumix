@@ -147,6 +147,8 @@ export {
   listUserMetaFields,
   McpToolError,
   memoBatch,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
   previewableEntry,
   registerCoreLookupAdapters,
   requireCapability,

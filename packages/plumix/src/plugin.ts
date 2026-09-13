@@ -22,6 +22,8 @@ export {
   listEntryMetaFields,
   McpToolError,
   memoryStorage,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
   readEntryChanges,
   registerCoreLookupAdapters,
   requestStore,

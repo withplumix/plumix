@@ -1,7 +1,11 @@
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { definePlugin } from "./define.js";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "./define.js";
 
 const noop = (): void => undefined;
 
@@ -53,5 +57,31 @@ describe("definePlugin — schemaModule warning", () => {
     definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
     definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("pluginAdminEntryPath", () => {
+  test("resolves the standard dist location for the installed package", () => {
+    expect(pluginAdminEntryPath("@plumix/plugin-comments")).toBe(
+      "node_modules/@plumix/plugin-comments/dist/admin/index.js",
+    );
+  });
+
+  test("uses the package name as installed, independent of the plugin id", () => {
+    // audit-log's plugin id is `audit_log`, but its package name keeps the
+    // hyphen — the path must follow the package, not the id.
+    expect(pluginAdminEntryPath("@plumix/plugin-audit-log")).toBe(
+      "node_modules/@plumix/plugin-audit-log/dist/admin/index.js",
+    );
+  });
+});
+
+describe("PLUGIN_I18N_SLOT", () => {
+  test("is the shared five-locale catalog declaration every first-party plugin ships", () => {
+    expect(PLUGIN_I18N_SLOT).toEqual({
+      sourceLocale: "en",
+      locales: ["en", "uk", "ar", "de", "zh-CN"],
+      catalogPath: "./locales",
+    });
   });
 });

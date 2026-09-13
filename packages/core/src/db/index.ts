@@ -1,5 +1,6 @@
 export * from "drizzle-orm/sql";
 export type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+export { chunkForD1, D1_MAX_BOUND_PARAMETERS } from "./d1-chunk.js";
 // Table-introspection helpers that live on the `drizzle-orm` root rather than
 // its `/sql` subpath. `getTableColumns` is how a bulk upsert derives its
 // `onConflictDoUpdate` set without hand-listing columns, so a direct-write /

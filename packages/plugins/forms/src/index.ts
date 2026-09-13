@@ -2,7 +2,7 @@
 // subpath) so the `declare module "plumix"` augmentation below has its
 // target loaded — every registry seam merges through that one specifier.
 import type { Label } from "plumix/i18n";
-import { definePlugin } from "plumix";
+import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 
 // Side-effect import: the hook augmentations live beside the code that
 // fires them, and this is the edge tsc keeps so they reach a consumer's
@@ -13,7 +13,6 @@ import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
   EXPORT_ROUTE_PATH,
-  SOURCE_LOCALE,
   SUBMISSION_MODERATE_CAPABILITY,
   SUBMISSIONS_PAGE_PATH,
   SUBMISSIONS_SHELL_COMPONENT,
@@ -141,16 +140,12 @@ export function forms(options: FormsConfig = {}) {
   return definePlugin("forms", {
     // The chunk the `tel` field renderer is resolved from. Resolved
     // against the consuming site, the way every plugin admin entry is.
-    adminEntry: "node_modules/@plumix/plugin-forms/dist/admin/index.js",
+    adminEntry: pluginAdminEntryPath("@plumix/plugin-forms"),
     schema,
     // Module specifier `plumix migrate generate` uses to fold this
     // plugin's table into the host's drizzle-kit codegen.
     schemaModule: "@plumix/plugin-forms/schema",
-    i18n: {
-      sourceLocale: SOURCE_LOCALE,
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     provides: (ctx) => {
       // Core runs every `provides` before any `setup`, and a descriptor is
       // installed more than once per build (the config loader caches it;

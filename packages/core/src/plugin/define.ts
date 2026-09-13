@@ -89,6 +89,26 @@ export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly setup: PluginSetup<TConfig>;
 }
 
+/** The standard on-disk location of a plugin's compiled admin bundle, given
+ *  its installed package name — the shape every workspace plugin's
+ *  `adminEntry` follows. Takes the package name rather than the plugin id:
+ *  the two can diverge (`audit_log`'s package is `@plumix/plugin-audit-log`),
+ *  and it's the package manager that puts the file here, not the id. #2312 */
+export function pluginAdminEntryPath(packageName: string): string {
+  return `node_modules/${packageName}/dist/admin/index.js`;
+}
+
+/** The catalog roster every first-party plugin ships today. A per-plugin
+ *  declaration of *shipped* catalogs, not a re-export of the site's enabled
+ *  locales (`PluginI18nSlot.locales` is intersected with those at render
+ *  time) — so this stays a plain shared value a plugin opts into, never
+ *  something derived from site config. #2312 */
+export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
+  sourceLocale: "en",
+  locales: ["en", "uk", "ar", "de", "zh-CN"],
+  catalogPath: "./locales",
+};
+
 // URL- and SQL-identifier-safe — plugin ids become path segments,
 // RPC namespace keys, and nav-group ids without quoting.
 export const PLUGIN_ID_RE = /^[a-z][a-z0-9_-]*$/;
