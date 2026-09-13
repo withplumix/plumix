@@ -531,6 +531,7 @@ export function emptyManifest(): PlumixManifest {
     marks: [],
     patterns: [],
     tokens: {},
+    breakpoints: DEFAULT_BREAKPOINTS,
     i18n: { defaultLocale: "en", locales: [] },
     pluginI18n: {},
   };
