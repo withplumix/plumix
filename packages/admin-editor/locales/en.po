@@ -79,6 +79,16 @@ msgstr ""
 #~ msgstr "Added to the block root element."
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+#~ msgid "block.core.pattern-ref.title"
+#~ msgstr "Pattern reference"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+#~ msgid "block.core.pattern-ref.input.slug.label"
+#~ msgstr "Slug"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -794,11 +804,6 @@ msgid "editor.shortcut.clipboard.paste"
 msgstr "Paste blocks"
 
 #. js-lingui-explicit-id
-#: src/block-i18n.ts
-msgid "block.core.pattern-ref.title"
-msgstr "Pattern reference"
-
-#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.patterns"
 msgstr "Patterns"
@@ -997,11 +1002,6 @@ msgstr "Show or hide the panels"
 #: src/styles-tab.tsx
 msgid "editor.styles.size"
 msgstr "Size"
-
-#. js-lingui-explicit-id
-#: src/block-i18n.ts
-msgid "block.core.pattern-ref.input.slug.label"
-msgstr "Slug"
 
 #. js-lingui-explicit-id
 #: src/json-inspector.tsx

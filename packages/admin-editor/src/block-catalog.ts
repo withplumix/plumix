@@ -13,7 +13,6 @@ import {
 } from "@plumix/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
-const PATTERN_REF_BLOCK = "core/pattern-ref";
 /** The conventional slot a block variation seeds its `innerBlocks` into. */
 const CONTENT_SLOT = "content";
 
@@ -195,24 +194,8 @@ function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   };
 }
 
-/** The concrete block(s) a pattern inserts: a single `core/pattern-ref` node
- *  for reference patterns (the walker resolves it at render), otherwise an
- *  independent copy. */
+/** Ids are re-minted so inserting the same pattern twice cannot collide. */
 export function expandPattern(pattern: InserterPattern): readonly BlockNode[] {
-  if (pattern.insert === "reference") {
-    return rewriteBlockNodeIds([
-      { id: "seed", name: PATTERN_REF_BLOCK, attrs: { slug: pattern.name } },
-    ]);
-  }
-  return expandPatternCopy(pattern);
-}
-
-/** A pattern's body as an independent copy, whatever `insert` declares: the
- *  starter path seeds a new entry, so honouring `reference` there would leave
- *  every entry created from that starter a live pointer at the pattern. */
-export function expandPatternCopy(
-  pattern: InserterPattern,
-): readonly BlockNode[] {
   return rewriteBlockNodeIds(pattern.content);
 }
 

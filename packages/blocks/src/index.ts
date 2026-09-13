@@ -96,27 +96,17 @@ export type {
 } from "./expand-block-variations.js";
 export type { BlockVariationExample } from "./block-registry.js";
 
-// ─── Pattern registry primitives ────────────────────────────────────────────
-export {
-  block,
-  commitPatterns,
-  createPatternRegistry,
-  definePattern,
-} from "./pattern-registry.js";
+// ─── Pattern primitives ─────────────────────────────────────────────────────
+export { block, definePattern } from "./pattern-registry.js";
 export type {
   BlockPattern,
   BlockTypeRegistry,
   PatternCategoryRegistry,
-  PatternInsertMode,
   PatternPreview,
-  PatternRegistry,
   PatternTarget,
 } from "./pattern-registry.js";
-export { PatternRegistryError } from "./pattern-errors.js";
 export { resolveActiveVariation } from "./resolve-active-variation.js";
 export type { BlockVariationIsActive } from "./block-registry.js";
-export { serializePatternSource } from "./serialize-pattern-source.js";
-export type { SerializePatternSourceOptions } from "./serialize-pattern-source.js";
 export { commitBlockVariations } from "./commit-block-variations.js";
 export { BlockVariationError } from "./variation-errors.js";
 export { resolveBlockScopeVariations } from "./block-scope-variations.js";

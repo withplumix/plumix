@@ -10,7 +10,6 @@ import type {
   ResolvedBlockLoaders,
   ResolvedLoaders,
 } from "./loaders.js";
-import type { PatternRegistry } from "./pattern-registry.js";
 import type { ShortcodeRegistry } from "./shortcodes/types.js";
 import type {
   ResponsiveStyleSlot,
@@ -21,8 +20,6 @@ import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { resolveRootTag } from "./html/root-tag.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
-
-const PATTERN_REF_BLOCK = "core/pattern-ref";
 
 /**
  * Threaded through `renderBlockTree` recursion. Block components introspect
@@ -108,7 +105,6 @@ export interface RenderBlockTreeOptions {
   readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
   readonly loaderData?: ResolvedBlockLoaders;
-  readonly patterns?: PatternRegistry;
   /** Render locale for shortcode/`Intl` localization. Defaults to `"en"`. */
   readonly locale?: string;
   /** Registered shortcodes for authored-content body expansion. */
@@ -288,7 +284,6 @@ interface WalkerEnv {
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
-  readonly patterns: PatternRegistry | undefined;
   readonly editing: boolean;
   readonly addBlockLabel: string | undefined;
 }
@@ -357,9 +352,6 @@ function renderNode(
   context: BlockContext,
 ): ReactNode {
   const { registry, devState, loaderData } = env;
-  if (node.name === PATTERN_REF_BLOCK) {
-    return renderPatternRef(node, env, context);
-  }
   const spec = registry.get(node.name);
   if (!spec) {
     return createElement(
@@ -422,42 +414,6 @@ function renderNode(
 
 const EMPTY_LOADERS: Readonly<Record<string, unknown>> = Object.freeze({});
 
-function renderPatternRef(
-  node: BlockNode,
-  env: WalkerEnv,
-  context: BlockContext,
-): ReactNode {
-  const slug = typeof node.attrs?.slug === "string" ? node.attrs.slug : "";
-  const resolved = env.patterns?.get(slug);
-  if (resolved) {
-    return createElement(
-      Fragment,
-      { key: node.id },
-      renderNodes(resolved.content, env, context),
-    );
-  }
-  return createElement(
-    Fragment,
-    { key: node.id },
-    renderUnresolvedPatternRef(slug, env.devState),
-  );
-}
-
-function renderUnresolvedPatternRef(
-  slug: string,
-  devState: DevWarnState,
-): ReactNode {
-  const key = `pattern-ref:${slug}`;
-  if (!devState.seen.has(key)) {
-    devState.seen.add(key);
-    console.warn(`[plumix:blocks] Unresolved pattern reference: ${slug}`);
-  }
-  if (!isDevMode()) return null;
-  return createElement("template", {
-    "data-plumix-unresolved-pattern-ref": slug,
-  });
-}
-
 export function renderBlockTree(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
@@ -469,7 +425,6 @@ export function renderBlockTree(
     breakpoints: options?.breakpoints,
     hooks: options?.hooks,
     loaderData: options?.loaderData,
-    patterns: options?.patterns,
     editing: options?.editing ?? false,
     addBlockLabel: options?.addBlockLabel,
   };

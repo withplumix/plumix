@@ -412,7 +412,7 @@ describe("createNodeFromEntry", () => {
 });
 
 describe("expandPattern", () => {
-  test("copy patterns clone the composition with fresh ids", () => {
+  test("clones the composition with fresh ids", () => {
     const nodes = expandPattern({
       name: "hero",
       title: "Hero",
@@ -426,17 +426,5 @@ describe("expandPattern", () => {
       "core/rich-text",
     ]);
     expect(nodes.map((n) => n.id)).not.toContain("p1");
-  });
-
-  test("reference patterns insert a single core/pattern-ref node", () => {
-    const nodes = expandPattern({
-      name: "cta",
-      title: "CTA",
-      insert: "reference",
-      content: [{ id: "p1", name: "core/heading" }],
-    });
-    expect(nodes).toHaveLength(1);
-    expect(nodes[0]?.name).toBe("core/pattern-ref");
-    expect(nodes[0]?.attrs?.slug).toBe("cta");
   });
 });

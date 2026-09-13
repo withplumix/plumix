@@ -311,15 +311,6 @@ export const BLOCK_DESCRIPTORS = {
     message: "Body",
   }),
 
-  patternRefTitle: defineMessage({
-    id: "block.core.pattern-ref.title",
-    message: "Pattern reference",
-  }),
-  patternRefInputSlugLabel: defineMessage({
-    id: "block.core.pattern-ref.input.slug.label",
-    message: "Slug",
-  }),
-
   detailsTitle: defineMessage({
     id: "block.core.details.title",
     message: "Details",

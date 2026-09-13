@@ -358,7 +358,6 @@ const CORE_BLOCKS = [
   "core/table-body-row",
   "core/table-header-cell",
   "core/table-cell",
-  "core/pattern-ref",
 ] as const;
 
 /** Every inline mark, in bubble-menu order. Source: `coreMarks`. */

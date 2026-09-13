@@ -177,7 +177,7 @@ export const i18nStrictOverrides: Linter.Config = {
           // (`duplicate_key`). Real user copy never has underscores
           // between words.
           "^[a-z]+(_[a-z]+)+$",
-          // Block-name protocol values (`core/pattern-ref`,
+          // Block-name protocol values (`core/rich-text`,
           // `starter/<slug>`). Already partially covered by the
           // kebab regex above, but namespaced slug shapes need their
           // own anchor. Trailing-slash variant covers template-
