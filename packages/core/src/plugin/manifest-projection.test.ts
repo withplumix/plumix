@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { MarkSpec } from "@plumix/blocks";
-import { defineBlock } from "@plumix/blocks";
+import { DEFAULT_BREAKPOINTS, defineBlock } from "@plumix/blocks";
 
 import {
   anonymousPolicy,
@@ -1419,6 +1419,12 @@ describe("injectManifestIntoHtml", () => {
     expect(out).toMatch(
       /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\]}<\/script>$/,
     );
+  });
+});
+
+describe("emptyManifest", () => {
+  test("populates breakpoints with the theme default, like buildManifest does", () => {
+    expect(emptyManifest().breakpoints).toEqual(DEFAULT_BREAKPOINTS);
   });
 });
 
