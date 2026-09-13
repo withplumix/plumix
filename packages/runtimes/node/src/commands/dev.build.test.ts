@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
   realpathSync,
@@ -24,11 +25,28 @@ import {
 // `message.mjs` is a module the config imports, so an edit to it reaches the
 // entry only through the importer walk; `/secret` reads what `.env` carries;
 // the theme's stylesheet shows whether the emitted sources saw `.env`; a
-// duplicated plugin makes `buildApp` reject, for the boot failure.
+// duplicated plugin makes `buildApp` reject, for the boot failure; and every
+// database connection the site releases is appended to `data/closed.log`.
 const config = (plugins = "[probes]") =>
-  `import { auth, definePlugin, defineTheme, fallback, plumix } from "plumix";
+  `import { appendFileSync } from "node:fs";
+import { auth, definePlugin, defineTheme, fallback, plumix } from "plumix";
 import { node, nodeSqlite } from "@plumix/runtime-node";
 import { greeting } from "./message.mjs";
+
+const sqlite = nodeSqlite({ path: "data/site.sqlite" });
+const database = {
+  ...sqlite,
+  connect: (...args) => {
+    const connection = sqlite.connect(...args);
+    return {
+      ...connection,
+      close: () => {
+        appendFileSync("data/closed.log", "closed\\n");
+        connection.close();
+      },
+    };
+  },
+};
 
 const probes = definePlugin("probes", (ctx) => {
   ctx.registerPublicRoute({ path: "/greeting", handler: () => new Response(greeting) });
@@ -40,7 +58,7 @@ const probes = definePlugin("probes", (ctx) => {
 
 export default plumix({
   runtime: node(),
-  database: nodeSqlite({ path: "data/site.sqlite" }),
+  database,
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({
     templates: [fallback(() => null)],
@@ -151,6 +169,13 @@ let dev: DevServer;
 const text = async (path: string) =>
   (await fetch(`${dev.origin}${path}`)).text();
 
+const closedConnections = () => {
+  const log = join(dir, "data/closed.log");
+  return existsSync(log)
+    ? readFileSync(log, "utf8").split("\n").filter(Boolean).length
+    : 0;
+};
+
 beforeAll(async () => {
   // `.ts`, as a scaffolded project has: the config is re-evaluated through
   // jiti's transform, where a native `.mjs` import is cached for the process.
@@ -249,13 +274,15 @@ describe("plumix dev on the node runtime", () => {
     expect(refused.body).not.toContain("<html");
   });
 
-  test("editing a module the config imports changes what the next request serves, without a restart", async () => {
+  test("editing a module the config imports changes what the next request serves, without a restart, and releases the replaced site's connection", async () => {
     expect(await text("/greeting")).toBe("v1");
+    const released = closedConnections();
 
     writeFileSync(join(dir, "message.mjs"), greeting('"v2"'));
 
     await expect.poll(() => text("/greeting"), POLL).toBe("v2");
-  }, 60_000);
+    await expect.poll(closedConnections, POLL).toBeGreaterThan(released);
+  }, 90_000);
 
   test("a dependency first imported after start is pre-bundled and served", async () => {
     await settle();

@@ -178,6 +178,33 @@ describe("createScheduler", () => {
     expect(finished).toBe(true);
     expect(fired).toHaveLength(1);
   });
+
+  test("stop() reports a run still in flight when its budget runs out as cut", async () => {
+    const { clock, scheduler } = harness(
+      [{ id: "slow", cron: "*/5 * * * *", registeredBy: "demo" }],
+      { fire: () => clock.sleep(60 * 60_000) },
+    );
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+
+    // The firing sleeps on the virtual clock, so only the real budget ends the
+    // wait.
+    expect(await scheduler.stop({ timeoutMs: 10 })).toBe(false);
+  });
+
+  test("stop() reports a run that settles within its budget as finished", async () => {
+    let settle: () => void = () => undefined;
+    const { clock, scheduler } = harness(
+      [{ id: "quick", cron: "*/5 * * * *", registeredBy: "demo" }],
+      { fire: () => new Promise<void>((resolve) => (settle = resolve)) },
+    );
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+
+    const stopping = scheduler.stop({ timeoutMs: 1000 });
+    settle();
+    expect(await stopping).toBe(true);
+  });
 });
 
 describe("createScheduler with a run guard", () => {

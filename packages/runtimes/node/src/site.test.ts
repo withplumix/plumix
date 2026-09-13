@@ -209,17 +209,15 @@ describe("createNodeSite — serveWhenMain", () => {
   ])(
     "honours the runtime's `cron: $cron`, and drains through the site's own dispose",
     async ({ cron, starts }, { signal }) => {
-      // A body that outlives its timeout keeps running after `afterEach` has
-      // cleaned up and restored `process.exit`: it must neither start serving
-      // behind that cleanup nor drain, which would exit the worker.
-      // Read through a call: TypeScript narrows `signal.aborted` after the
-      // first check and does not widen it across the await before the second.
-      const timedOut = (): boolean => signal.aborted;
+      // A body that outlives its timeout runs on after `afterEach` cleaned up.
+      // The first check is load-bearing: past it, a late body would start a
+      // server, signal listeners and a scheduler nothing tears down. The second
+      // only saves work: the restored `process.exit` is vitest's throwing stub.
       const exit = vi
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
       const { site, connected, closed } = await siteFor({ runtime: { cron } });
-      if (timedOut()) return;
+      signal.throwIfAborted();
 
       const running = site.serveWhenMain(true);
       assert(running);
@@ -228,13 +226,11 @@ describe("createNodeSite — serveWhenMain", () => {
       // first, so once a request is answered the scheduler has opened its
       // connection or never will.
       await site.handler.fetch(new Request("https://cms.example/"));
-      if (timedOut()) return;
+      signal.throwIfAborted();
 
       expect(connected.includes(SCHEDULED_PATH)).toBe(starts);
       await running.drain("SIGTERM");
       expect(exit).toHaveBeenCalledWith(0);
-      // The site's own dispose releases the connection that request bound; a
-      // stand-in resolving `{ abandoned: 0 }` would leave it open.
       expect(closed).toContain("/");
     },
   );
@@ -268,7 +264,7 @@ describe("serveProcess", () => {
   function stubScheduler(): Scheduler {
     return {
       start: () => Promise.resolve(),
-      stop: vi.fn(() => Promise.resolve()),
+      stop: vi.fn(() => Promise.resolve(true)),
     };
   }
 
@@ -289,7 +285,7 @@ describe("serveProcess", () => {
       stop: (options) => {
         order.push("stop");
         stopBudget = options?.timeoutMs;
-        return Promise.resolve();
+        return Promise.resolve(true);
       },
     };
     const { drain } = harness({
@@ -339,7 +335,7 @@ describe("serveProcess", () => {
     const STOP = 500;
     const scheduler: Scheduler = {
       start: () => Promise.resolve(),
-      stop: () => new Promise((done) => setTimeout(done, STOP)),
+      stop: () => new Promise((done) => setTimeout(() => done(true), STOP)),
     };
     let arrive = (): void => undefined;
     const arrived = new Promise<void>((resolve) => (arrive = resolve));
@@ -364,6 +360,25 @@ describe("serveProcess", () => {
     expect(elapsed).toBeLessThan(BUDGET + STOP / 2);
     // The other side: the drain spends the budget rather than cutting short.
     expect(elapsed).toBeGreaterThanOrEqual(BUDGET);
+  });
+
+  test("exits non-zero and says so when the budget cut a scheduled run", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const scheduler: Scheduler = {
+      ...stubScheduler(),
+      stop: () => Promise.resolve(false),
+    };
+    const { exit, drain } = harness({
+      startCron: () => Promise.resolve(scheduler),
+    });
+    await Promise.resolve();
+
+    await drain("SIGTERM");
+
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/scheduled run/));
   });
 
   test("exits non-zero when deferred work is abandoned", async () => {
