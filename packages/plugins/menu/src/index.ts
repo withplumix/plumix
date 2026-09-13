@@ -4,7 +4,11 @@ import type {
   PluginDescriptor,
   TermTaxonomyLabels,
 } from "plumix/plugin";
-import { definePlugin } from "plumix/plugin";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
@@ -159,7 +163,7 @@ declare module "plumix" {
   }
 }
 
-const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-menu");
 
 export interface MenuPluginOptions {
   /**
@@ -181,11 +185,7 @@ export interface MenuPluginOptions {
 export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
   return definePlugin("menu", {
     adminEntry: ADMIN_ENTRY_PATH,
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       // Reset-then-populate: setup re-runs across dev rebuilds within
       // one module lifetime, and each build must own the full location

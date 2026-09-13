@@ -1,5 +1,5 @@
 import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 // Plain descriptor literals — plugin source runs server-side without
 // the Babel macro pipeline. Per-entity table mirrors `blog`'s shape;
@@ -49,11 +49,7 @@ const PAGE_LABELS = {
 } satisfies EntryTypeLabels;
 
 export const pages: PluginDescriptor = definePlugin("pages", {
-  i18n: {
-    sourceLocale: "en",
-    locales: ["en", "uk", "ar", "de", "zh-CN"],
-    catalogPath: "./locales",
-  },
+  i18n: PLUGIN_I18N_SLOT,
   setup: (ctx) => {
     ctx.registerEntryType("page", {
       label: PAGE_LABELS.plural,

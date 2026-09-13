@@ -1,5 +1,9 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin } from "plumix/plugin";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
@@ -23,7 +27,7 @@ import "./sitemap.js"; // seo:sitemap:urls
 const LAST = 1000;
 
 // Resolved against the consuming site, the way every plugin admin entry is.
-const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-seo/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 
 // Re-exported so a subscriber to this plugin's `seo:og_image` filter names the
 // value type from the package that declares the filter — one import pulls both.
@@ -103,11 +107,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // The chunk the SERP preview's field renderer registers from. Without it
     // the preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       registerSeoSettings(ctx);
       registerSeoRoutes(ctx);

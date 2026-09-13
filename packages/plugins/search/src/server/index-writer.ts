@@ -1,7 +1,15 @@
 import type { BlockRegistry, BlockTextRoster } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
 import { blockTextRoster, blockTextVersion } from "plumix/blocks";
-import { and, eq, inArray, ne, sql } from "plumix/db";
+import {
+  and,
+  chunkForD1,
+  D1_MAX_BOUND_PARAMETERS,
+  eq,
+  inArray,
+  ne,
+  sql,
+} from "plumix/db";
 import { entries, terms } from "plumix/schema";
 
 import type { NewSearchDocument, SearchSourceType } from "../db/schema.js";
@@ -15,12 +23,12 @@ import {
 } from "./document.js";
 import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 
-// D1 caps bound parameters at 100 per statement, and libsql — every test here
-// — enforces no cap at all, so the ceiling is invisible until production. Kept
-// below it rather than on it: a chunk of ids binds one per id plus the
-// `source_type` the delete adds (91), and a document binds its five columns
-// (90). A sixth column or a second predicate then has room to be wrong.
-const IDS_PER_STATEMENT = 90;
+// libsql — every test here — enforces no cap at all, so the ceiling is
+// invisible until production. Kept below `D1_MAX_BOUND_PARAMETERS` rather
+// than on it: a chunk of ids binds one per id plus the `source_type` the
+// delete adds (91), and a document binds its five columns (90). A sixth
+// column or a second predicate then has room to be wrong.
+const IDS_PER_STATEMENT = D1_MAX_BOUND_PARAMETERS - 10;
 
 // A term has no blocks and no searchable meta, so neither roster says anything
 // about how its text was projected. Stamping their hash on it would mark every
@@ -179,8 +187,7 @@ async function project(
   documentsFor: (chunk: readonly number[]) => Promise<NewSearchDocument[]>,
 ): Promise<void> {
   const ids = [...new Set(sourceIds)];
-  for (let i = 0; i < ids.length; i += IDS_PER_STATEMENT) {
-    const chunk = ids.slice(i, i + IDS_PER_STATEMENT);
+  for (const chunk of chunkForD1(ids, IDS_PER_STATEMENT)) {
     const documents = await documentsFor(chunk);
     await writeDocuments(ctx, documents);
     await stampVersion(ctx, sourceType, documents);
@@ -246,7 +253,7 @@ async function stampVersion(
 ): Promise<void> {
   const [version] = new Set(documents.map((doc) => doc.extractorVersion));
   if (version === undefined) return;
-  for (let i = 0; i < documents.length; i += IDS_PER_STATEMENT) {
+  for (const chunk of chunkForD1(documents, IDS_PER_STATEMENT)) {
     await ctx.db
       .update(searchDocuments)
       .set({ extractorVersion: version })
@@ -255,9 +262,7 @@ async function stampVersion(
           eq(searchDocuments.sourceType, sourceType),
           inArray(
             searchDocuments.sourceId,
-            documents
-              .slice(i, i + IDS_PER_STATEMENT)
-              .map((doc) => doc.sourceId),
+            chunk.map((doc) => doc.sourceId),
           ),
           ne(searchDocuments.extractorVersion, version),
         ),

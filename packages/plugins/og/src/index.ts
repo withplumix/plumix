@@ -1,5 +1,9 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin } from "plumix/plugin";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 // `@plumix/plugin-seo` declares the `seo:og_image` filter subscribed to below.
 // The augmentation reaches this compilation only through an import of the
@@ -26,7 +30,7 @@ import { compileThemeTokens } from "./tokens.js";
 // Where the built admin chunk sits once the package is installed. The vite
 // plugin resolves it from the consuming site's root and folds it into the
 // per-site admin bundle.
-const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-og/dist/admin/index.js";
+const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-og");
 
 export type {
   CardArgs,
@@ -148,11 +152,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
     // preview's field renderer, so with no box it would be dead weight folded
     // into every og install's admin bundle.
     ...(preview.length > 0 ? { adminEntry: ADMIN_ENTRY_PATH } : {}),
-    i18n: {
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
-    },
+    i18n: PLUGIN_I18N_SLOT,
     // Async because of the dev import below; core awaits `setup` before it
     // reads any registry, so registration order is unaffected.
     setup: async (ctx) => {

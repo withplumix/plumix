@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
+import { PLUGIN_I18N_SLOT } from "@plumix/core";
+
 // `stagePluginCatalogs` (./index.ts) copies `<installed package>/<i18n.catalogPath>/
 // <locale>.mjs` out of a consumer's `node_modules` at `plumix build` time, and throws
 // `adminAssetNotFound` when the directory is missing or a declared locale has no
@@ -26,10 +28,12 @@ const PLUGINS_DIR = resolve(
   "../../../plugins",
 );
 
-// The slot is a flat object literal, so its body carries every key whatever order
-// they are authored in — matching the body and reading keys out of it keeps a
-// reordering from being drift the scan has to model.
-const I18N_SLOT = /\bi18n:\s*\{([^}]*)\}/g;
+// The slot is either a flat object literal or a reference to the shared
+// `PLUGIN_I18N_SLOT` constant every first-party plugin's catalog roster
+// collapsed onto (#2312) — matching the body (or the bare identifier) and
+// reading keys out of it keeps a reordering, or the hoist itself, from being
+// drift the scan has to model.
+const I18N_SLOT = /\bi18n:\s*(\{[^}]*\}|PLUGIN_I18N_SLOT)/g;
 const SLOT_LOCALES = /\blocales:\s*\[([^\]]*)\]/;
 const SLOT_CATALOG_PATH = /\bcatalogPath:\s*"([^"]+)"/;
 const QUOTED = /"([^"]+)"/g;
@@ -51,12 +55,16 @@ function declaredSlots(srcDir: string): CatalogSlot[] {
     .flatMap((entry) => [
       ...readFileSync(resolve(srcDir, entry), "utf8").matchAll(I18N_SLOT),
     ])
-    .map(([, body = ""]) => ({
-      locales: [...(SLOT_LOCALES.exec(body)?.[1] ?? "").matchAll(QUOTED)].map(
-        ([, locale = ""]) => locale,
-      ),
-      catalogPath: SLOT_CATALOG_PATH.exec(body)?.[1] ?? "",
-    }));
+    .map(([, body = ""]) =>
+      body === "PLUGIN_I18N_SLOT"
+        ? PLUGIN_I18N_SLOT
+        : {
+            locales: [
+              ...(SLOT_LOCALES.exec(body)?.[1] ?? "").matchAll(QUOTED),
+            ].map(([, locale = ""]) => locale),
+            catalogPath: SLOT_CATALOG_PATH.exec(body)?.[1] ?? "",
+          },
+    );
 }
 
 const plugins = readdirSync(PLUGINS_DIR, { withFileTypes: true })

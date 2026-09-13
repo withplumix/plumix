@@ -17,7 +17,7 @@ import type {
 } from "../../plugin/manifest.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
-import { eq } from "../../db/index.js";
+import { chunkForD1, eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
@@ -968,7 +968,7 @@ async function resolveGroup(
   const idList = [...ids];
   if (adapter.hydrate) {
     const byId = new Map<string, unknown>();
-    for (const chunk of chunkIds(idList)) {
+    for (const chunk of chunkForD1(idList)) {
       const payloads = await adapter.hydrate(ctx, { ids: chunk, scope });
       for (const payload of payloads) {
         byId.set(payload.id, payload);
@@ -984,7 +984,7 @@ async function resolveGroup(
     return { kind: "hydrated", byId };
   }
   const liveIds = new Set<string>();
-  for (const chunk of chunkIds(idList)) {
+  for (const chunk of chunkForD1(idList)) {
     const rows = await adapter.list(ctx, {
       ids: chunk,
       scope,
@@ -993,18 +993,6 @@ async function resolveGroup(
     for (const row of rows) liveIds.add(row.id);
   }
   return { kind: "ids", liveIds };
-}
-
-// Per-query id cap for the read path. 100 (not the 1000 aggregate
-// ceiling) because Cloudflare D1 caps bound parameters at 100 per
-// statement and `inArray` binds one per id — a bigger chunk works on
-// local SQLite and dies in production.
-const HYDRATION_QUERY_ID_LIMIT = 100;
-
-function* chunkIds(ids: readonly string[]): Generator<readonly string[]> {
-  for (let i = 0; i < ids.length; i += HYDRATION_QUERY_ID_LIMIT) {
-    yield ids.slice(i, i + HYDRATION_QUERY_ID_LIMIT);
-  }
 }
 
 // Write one candidate's resolved value into its slot — the leaf object
