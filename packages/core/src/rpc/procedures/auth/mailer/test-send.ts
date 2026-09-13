@@ -1,5 +1,6 @@
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { mailerTestSendInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
@@ -16,11 +17,9 @@ const CAPABILITY = "settings:manage";
 // don't want every authed user able to fire emails.
 export const testSend = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(mailerTestSendInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
     if (!context.mailer) {
       throw errors.CONFLICT({ data: { reason: "mailer_not_configured" } });
     }

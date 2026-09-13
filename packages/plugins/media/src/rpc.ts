@@ -1,6 +1,11 @@
 import type { AuthenticatedAppContext, PluginRpcRouter } from "plumix/plugin";
 import { and, eq } from "plumix/db";
-import { authenticated, base, withBasePath } from "plumix/plugin";
+import {
+  authenticated,
+  base,
+  requireCapability,
+  withBasePath,
+} from "plumix/plugin";
 import { entries } from "plumix/schema";
 import * as v from "valibot";
 
@@ -108,6 +113,7 @@ export function createMediaRouter(options: MediaRpcOptions): PluginRpcRouter {
   // server-side draft GC + KV-backed counter belong here.
   const createUploadUrl = base
     .use(authenticated)
+    .use(requireCapability("entry:media:create"))
     .input(
       v.object({
         filename: v.pipe(v.string(), v.minLength(1), v.maxLength(255)),
@@ -122,11 +128,6 @@ export function createMediaRouter(options: MediaRpcOptions): PluginRpcRouter {
     )
     .handler(
       async ({ input, context, errors }): Promise<CreateUploadUrlResponse> => {
-        if (!context.auth.can("entry:media:create")) {
-          throw errors.FORBIDDEN({
-            data: { capability: "entry:media:create" },
-          });
-        }
         if (input.size > options.maxUploadSize) {
           throw errors.PAYLOAD_TOO_LARGE({
             data: { limit: options.maxUploadSize, received: input.size },

@@ -11,6 +11,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { decodeJsonValue } from "../../meta/coerce.js";
 import { runFieldPipeline } from "../../meta/field-pipeline.js";
+import { requireCapability } from "../../require-capability.js";
 import {
   MAX_SETTINGS_VALUE_BYTES,
   settingsUpsertInputSchema,
@@ -23,12 +24,9 @@ const CAPABILITY = "settings:manage";
 // keys are left alone — same partial-patch semantic as `entry.meta`.
 export const upsert = base
   .use(authenticated)
+  .use(requireCapability(CAPABILITY))
   .input(settingsUpsertInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CAPABILITY } });
-    }
-
     const filtered = await context.hooks.applyFilter(
       "rpc:settings.upsert:input",
       input,

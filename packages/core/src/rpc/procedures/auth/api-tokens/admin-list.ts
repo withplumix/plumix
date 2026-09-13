@@ -3,6 +3,7 @@ import { apiTokens } from "../../../../db/schema/api_tokens.js";
 import { users } from "../../../../db/schema/users.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { apiTokensAdminListInputSchema } from "./schemas.js";
 
 const ADMIN_CAPABILITY = "user:manage_tokens";
@@ -18,12 +19,9 @@ const ADMIN_CAPABILITY = "user:manage_tokens";
 // is the audit view.
 export const adminList = base
   .use(authenticated)
+  .use(requireCapability(ADMIN_CAPABILITY))
   .input(apiTokensAdminListInputSchema)
-  .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(ADMIN_CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: ADMIN_CAPABILITY } });
-    }
-
+  .handler(async ({ input, context }) => {
     const filters = [
       input.userId !== undefined ? eq(apiTokens.userId, input.userId) : null,
       input.includeRevoked ? null : isNull(apiTokens.revokedAt),

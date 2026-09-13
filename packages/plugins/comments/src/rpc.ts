@@ -1,5 +1,4 @@
-import type { AppContext } from "plumix/plugin";
-import { authenticated, base } from "plumix/plugin";
+import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
 import type { ModerationComment } from "./server/repository.js";
@@ -24,18 +23,6 @@ export type ModerationCommentDTO = Omit<ModerationComment, "createdAt"> & {
   readonly createdAt: string;
 };
 
-interface ForbiddenErrors {
-  readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
-}
-
-function requireModerator(ctx: AppContext, errors: ForbiddenErrors): void {
-  if (!ctx.auth.can(COMMENT_MODERATE_CAPABILITY)) {
-    throw errors.FORBIDDEN({
-      data: { capability: COMMENT_MODERATE_CAPABILITY },
-    });
-  }
-}
-
 type TransitionAction = "comment:approved" | "comment:spam" | "comment:trashed";
 
 // Single source for the status transitions a moderator can drive (single
@@ -59,6 +46,7 @@ const idInput = v.object({
 export function createCommentsRouter() {
   const list = base
     .use(authenticated)
+    .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
     .input(
       v.object({
         status: v.picklist(COMMENT_STATUSES),
@@ -68,37 +56,33 @@ export function createCommentsRouter() {
         search: v.optional(v.pipe(v.string(), v.maxLength(200))),
       }),
     )
-    .handler(
-      async ({ input, context, errors }): Promise<ModerationCommentDTO[]> => {
-        requireModerator(context, errors);
-        const rows = await listForModeration(context, {
-          status: input.status,
-          limit: Math.min(input.limit ?? DEFAULT_LIMIT, MAX_LIMIT),
-          offset: input.offset ?? 0,
-          entryId: input.entryId,
-          search: input.search,
-        });
-        return rows.map((row) => ({
-          ...row,
-          createdAt: row.createdAt.toISOString(),
-        }));
-      },
-    );
+    .handler(async ({ input, context }): Promise<ModerationCommentDTO[]> => {
+      const rows = await listForModeration(context, {
+        status: input.status,
+        limit: Math.min(input.limit ?? DEFAULT_LIMIT, MAX_LIMIT),
+        offset: input.offset ?? 0,
+        entryId: input.entryId,
+        search: input.search,
+      });
+      return rows.map((row) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+      }));
+    });
 
   const counts = base
     .use(authenticated)
-    .handler(
-      async ({ context, errors }): Promise<Record<CommentStatus, number>> => {
-        requireModerator(context, errors);
-        return countByStatus(context);
-      },
-    );
+    .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
+    .handler(async ({ context }): Promise<Record<CommentStatus, number>> => {
+      return countByStatus(context);
+    });
 
   // `restore` reuses the approved action — returning a comment to the queue
   // is re-approving it (no separate comment:restored action in v1).
   function transition(target: CommentStatus, action: TransitionAction) {
     return base
       .use(authenticated)
+      .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
       .input(idInput)
       .handler(
         async ({
@@ -106,7 +90,6 @@ export function createCommentsRouter() {
           context,
           errors,
         }): Promise<{ status: CommentStatus }> => {
-          requireModerator(context, errors);
           const row = await setStatus(context, input.id, target);
           if (!row) {
             throw errors.NOT_FOUND({
@@ -121,14 +104,13 @@ export function createCommentsRouter() {
 
   const purge = base
     .use(authenticated)
+    .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
     .input(idInput)
     .handler(
       async ({
         input,
         context,
-        errors,
       }): Promise<{ result: "tombstoned" | "deleted" | "missing" }> => {
-        requireModerator(context, errors);
         return { result: await purgeComment(context, input.id) };
       },
     );
@@ -136,6 +118,7 @@ export function createCommentsRouter() {
   // Bulk transitions fire the lifecycle action per affected comment.
   const bulk = base
     .use(authenticated)
+    .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
     .input(
       v.object({
         ids: v.pipe(
@@ -145,15 +128,12 @@ export function createCommentsRouter() {
         action: v.picklist(BULK_ACTIONS),
       }),
     )
-    .handler(
-      async ({ input, context, errors }): Promise<{ changed: number }> => {
-        requireModerator(context, errors);
-        const { target, action } = TRANSITIONS[input.action];
-        const rows = await setStatusMany(context, input.ids, target);
-        for (const row of rows) await context.hooks.doAction(action, row);
-        return { changed: rows.length };
-      },
-    );
+    .handler(async ({ input, context }): Promise<{ changed: number }> => {
+      const { target, action } = TRANSITIONS[input.action];
+      const rows = await setStatusMany(context, input.ids, target);
+      for (const row of rows) await context.hooks.doAction(action, row);
+      return { changed: rows.length };
+    });
 
   return {
     list,

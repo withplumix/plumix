@@ -1,7 +1,7 @@
 import type { JsonObject } from "plumix";
 import type { PluginRpcRouter } from "plumix/plugin";
 import { and, count, eq, inArray, sql } from "plumix/db";
-import { authenticated, base, slugify } from "plumix/plugin";
+import { authenticated, base, requireCapability, slugify } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
 import * as v from "valibot";
 
@@ -119,12 +119,8 @@ interface SaveResponse {
 export function createMenuRouter(): PluginRpcRouter {
   const list = base
     .use(authenticated)
-    .handler(async ({ context, errors }): Promise<readonly MenuListItem[]> => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .handler(async ({ context }): Promise<readonly MenuListItem[]> => {
       const rows = await context.db
         .select({
           id: terms.id,
@@ -149,13 +145,9 @@ export function createMenuRouter(): PluginRpcRouter {
 
   const get = base
     .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(v.object({ termId: idParam }))
     .handler(async ({ input, context, errors }): Promise<MenuGetResponse> => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
       const [term] = await context.db
         .select()
         .from(terms)
@@ -201,6 +193,7 @@ export function createMenuRouter(): PluginRpcRouter {
 
   const save = base
     .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(
       v.object({
         termId: idParam,
@@ -217,12 +210,6 @@ export function createMenuRouter(): PluginRpcRouter {
       }),
     )
     .handler(async ({ input, context, errors }): Promise<SaveResponse> => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
-
       const [term] = await context.db
         .select()
         .from(terms)
@@ -459,13 +446,9 @@ export function createMenuRouter(): PluginRpcRouter {
 
   const remove = base
     .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(v.object({ termId: idParam }))
     .handler(async ({ input, context, errors }) => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
       const [term] = await context.db
         .select()
         .from(terms)
@@ -513,6 +496,7 @@ export function createMenuRouter(): PluginRpcRouter {
 
   const create = base
     .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(
       v.object({
         name: v.pipe(
@@ -533,11 +517,6 @@ export function createMenuRouter(): PluginRpcRouter {
         readonly slug: string;
         readonly version: number;
       }> => {
-        if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-          throw errors.FORBIDDEN({
-            data: { capability: MENU_MANAGE_CAPABILITY },
-          });
-        }
         const baseSlug = slugify(input.name) || `menu-${cryptoRandom()}`;
         let slug = baseSlug;
         let attempt = 0;
@@ -579,6 +558,7 @@ export function createMenuRouter(): PluginRpcRouter {
 
   const assignLocation = base
     .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .input(
       v.object({
         location: locationIdSchema,
@@ -586,11 +566,6 @@ export function createMenuRouter(): PluginRpcRouter {
       }),
     )
     .handler(async ({ input, context, errors }) => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
       // Reject typos: only locations a theme has registered are
       // assignable. Otherwise `assignLocation('primry', ...)` would
       // silently write a row that no consumer would ever read.
@@ -645,34 +620,27 @@ export function createMenuRouter(): PluginRpcRouter {
       return { location: input.location, termSlug: input.termSlug };
     });
 
-  const pickerTabs = base.use(authenticated).handler(
-    async ({
-      context,
-      errors,
-    }): Promise<
-      readonly {
-        readonly kind: string;
-        readonly tabLabel: string;
-        readonly target?: string;
-      }[]
-    > => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
-      return Promise.resolve(getEligibleMenuKinds(context.plugins));
-    },
-  );
+  const pickerTabs = base
+    .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .handler(
+      async ({
+        context,
+      }): Promise<
+        readonly {
+          readonly kind: string;
+          readonly tabLabel: string;
+          readonly target?: string;
+        }[]
+      > => {
+        return Promise.resolve(getEligibleMenuKinds(context.plugins));
+      },
+    );
 
   const locationsList = base
     .use(authenticated)
-    .handler(async ({ context, errors }): Promise<readonly LocationRow[]> => {
-      if (!context.auth.can(MENU_MANAGE_CAPABILITY)) {
-        throw errors.FORBIDDEN({
-          data: { capability: MENU_MANAGE_CAPABILITY },
-        });
-      }
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .handler(async ({ context }): Promise<readonly LocationRow[]> => {
       const registered = getRegisteredLocations();
       if (registered.size === 0) return [];
 

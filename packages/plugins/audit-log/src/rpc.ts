@@ -10,7 +10,7 @@
 // - Tampered cursors decode-fail in storage and surface as a typed
 //   `BAD_REQUEST` (`reason: "invalid_cursor"`), never a 5xx.
 
-import { authenticated, base } from "plumix/plugin";
+import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
 import type { AuditLogQueryResult, AuditLogStorage } from "./types.js";
@@ -37,14 +37,10 @@ const listInputSchema = v.optional(
 export function createAuditLogRouter(storage: AuditLogStorage) {
   const list = base
     .use(authenticated)
+    .use(requireCapability(AUDIT_LOG_READ_CAPABILITY))
     .input(listInputSchema)
     .handler(
       async ({ input, context, errors }): Promise<AuditLogQueryResult> => {
-        if (!context.auth.can(AUDIT_LOG_READ_CAPABILITY)) {
-          throw errors.FORBIDDEN({
-            data: { capability: AUDIT_LOG_READ_CAPABILITY },
-          });
-        }
         const requestedLimit = input?.limit ?? DEFAULT_LIMIT;
         const limit = Math.min(requestedLimit, MAX_LIMIT);
         try {

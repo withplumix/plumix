@@ -8,6 +8,7 @@ import { users } from "../../../db/schema/users.js";
 import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../../../users/slug.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { requireCapability } from "../../require-capability.js";
 import { userInviteInputSchema } from "./schemas.js";
 
 const CREATE_CAPABILITY = "user:create";
@@ -15,11 +16,9 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const invite = base
   .use(authenticated)
+  .use(requireCapability(CREATE_CAPABILITY))
   .input(userInviteInputSchema)
   .handler(async ({ input, context, errors }) => {
-    if (!context.auth.can(CREATE_CAPABILITY)) {
-      throw errors.FORBIDDEN({ data: { capability: CREATE_CAPABILITY } });
-    }
     const filtered = await context.hooks.applyFilter(
       "rpc:user.invite:input",
       input,

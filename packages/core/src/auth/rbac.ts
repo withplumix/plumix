@@ -220,41 +220,6 @@ export function getCapabilityResolver(
   return resolver;
 }
 
-export class CapabilityError extends Error {
-  static {
-    CapabilityError.prototype.name = "CapabilityError";
-  }
-
-  readonly code: "unauthorized" | "forbidden";
-  readonly capability: string;
-
-  private constructor(
-    code: "unauthorized" | "forbidden",
-    capability: string,
-    message: string,
-  ) {
-    super(message);
-    this.code = code;
-    this.capability = capability;
-  }
-
-  static unauthorized(ctx: { capability: string }): CapabilityError {
-    return new CapabilityError(
-      "unauthorized",
-      ctx.capability,
-      "Authentication required",
-    );
-  }
-
-  static forbidden(ctx: { capability: string }): CapabilityError {
-    return new CapabilityError(
-      "forbidden",
-      ctx.capability,
-      `Missing capability: ${ctx.capability}`,
-    );
-  }
-}
-
 /**
  * Flatten every capability the given role is granted — core plus every
  * plugin-registered capability (including the derived `{type}:{action}`
@@ -284,15 +249,4 @@ export function capabilitiesForRole(
     }
   }
   return [...granted].sort();
-}
-
-export function requireCapability(
-  resolver: CapabilityResolver,
-  user: { role: UserRole } | null,
-  capability: string,
-): void {
-  if (!user) throw CapabilityError.unauthorized({ capability });
-  if (!resolver.hasCapability(user.role, capability)) {
-    throw CapabilityError.forbidden({ capability });
-  }
 }

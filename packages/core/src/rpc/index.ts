@@ -1,5 +1,6 @@
 export { authenticated } from "./authenticated.js";
 export { registerCoreLookupAdapters } from "./procedures/lookup-adapters.js";
+export { requireCapability } from "./require-capability.js";
 export { base } from "./base.js";
 export type { Base } from "./base.js";
 export { RPC_ERRORS } from "./errors.js";

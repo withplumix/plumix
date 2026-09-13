@@ -4,12 +4,10 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import {
   canAccessAdmin,
   capabilitiesForRole,
-  CapabilityError,
   CORE_CAPABILITIES,
   createCapabilityResolver,
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
-  requireCapability,
   roleLevel,
 } from "./rbac.js";
 
@@ -100,38 +98,6 @@ describe("createCapabilityResolver", () => {
     expect(resolver.hasCapability("author", "entry:landing_page:publish")).toBe(
       true,
     );
-  });
-});
-
-describe("requireCapability", () => {
-  const resolver = createCapabilityResolver(createPluginRegistry());
-
-  test("throws unauthorized when user is null", () => {
-    expect(() => requireCapability(resolver, null, "entry:post:read")).toThrow(
-      CapabilityError,
-    );
-    try {
-      requireCapability(resolver, null, "entry:post:read");
-    } catch (err) {
-      expect((err as CapabilityError).code).toBe("unauthorized");
-    }
-  });
-
-  test("throws forbidden when role is too low", () => {
-    try {
-      requireCapability(resolver, { role: "subscriber" }, "entry:post:publish");
-    } catch (err) {
-      expect((err as CapabilityError).code).toBe("forbidden");
-      expect((err as CapabilityError).capability).toBe("entry:post:publish");
-      return;
-    }
-    throw new Error("should have thrown");
-  });
-
-  test("passes silently for a satisfied capability", () => {
-    expect(() =>
-      requireCapability(resolver, { role: "admin" }, "user:edit"),
-    ).not.toThrow();
   });
 });
 
