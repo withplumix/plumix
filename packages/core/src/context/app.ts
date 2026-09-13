@@ -77,7 +77,12 @@ const DEFAULT_I18N: ResolvedI18n = resolveLocales({
   locales: ["en"],
 });
 
-export type CoreSchema = typeof coreSchema;
+// Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
+// declarations as `typeof import("@plumix/core/schema")`, which its consumers
+// cannot resolve; a mapped alias prints by name, through `plumix`.
+export type CoreSchema = {
+  [Table in keyof typeof coreSchema]: (typeof coreSchema)[Table];
+};
 
 export type Db<TSchema extends Record<string, unknown> = CoreSchema> =
   BaseSQLiteDatabase<"async" | "sync", unknown, TSchema>;

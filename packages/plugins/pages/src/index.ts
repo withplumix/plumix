@@ -1,4 +1,4 @@
-import type { EntryTypeLabels } from "plumix/plugin";
+import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
 import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 // Plain descriptor literals — plugin source runs server-side without
@@ -48,7 +48,7 @@ const PAGE_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
-export const pages = definePlugin("pages", {
+export const pages: PluginDescriptor = definePlugin("pages", {
   i18n: PLUGIN_I18N_SLOT,
   setup: (ctx) => {
     ctx.registerEntryType("page", {

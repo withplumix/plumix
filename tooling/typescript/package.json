@@ -2,15 +2,27 @@
   "name": "@plumix/typescript-config",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "files": [
-    "*.json"
+    "*.json",
+    "check-declarations.mjs"
   ],
+  "bin": {
+    "plumix-check-declarations": "./check-declarations.mjs"
+  },
   "scripts": {
-    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore"
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@plumix/prettier-config": "workspace:*",
-    "prettier": "catalog:"
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }
