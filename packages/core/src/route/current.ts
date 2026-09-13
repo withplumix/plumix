@@ -44,7 +44,7 @@ export type CurrentSource =
  *   is ignored on this path.
  */
 export function isCurrentSource(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "request" | "resolvedEntity">,
   source: CurrentSource,
 ): boolean {
   if (source.kind === "custom") {

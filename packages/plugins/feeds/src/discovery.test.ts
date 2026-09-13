@@ -1,20 +1,40 @@
 import type { AppContext, DocumentManifest, TemplateData } from "plumix";
-import { describe, expect, test } from "vitest";
+import {
+  createPluginRegistry,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+} from "plumix/plugin";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import { applyFeedDiscovery } from "./discovery.js";
 
 describe("applyFeedDiscovery", () => {
-  const ctx = {
-    origin: "https://cms.example",
-    basePath: "",
-    plugins: {
-      entryTypes: new Map([["post", { name: "post", isPublic: true }]]),
-      termTaxonomies: new Map([
-        ["category", { name: "category", isPublic: true }],
-        ["region", { name: "region", isPublic: true, isHierarchical: true }],
-      ]),
-    },
-  } as unknown as AppContext;
+  let ctx: Pick<AppContext, "origin" | "basePath" | "plugins">;
+
+  beforeAll(async () => {
+    const plugins = createPluginRegistry();
+    await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [
+        definePlugin("feeds-discovery-host", (host) => {
+          host.registerEntryType("post", { label: "Posts", isPublic: true });
+          host.registerTermTaxonomy("category", {
+            label: "Categories",
+            isPublic: true,
+          });
+          host.registerTermTaxonomy("region", {
+            label: "Regions",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        }),
+      ],
+      registry: plugins,
+    });
+    ctx = { origin: "https://cms.example", basePath: "", plugins };
+  });
+
   const empty: DocumentManifest = {};
   const alternates = (m: DocumentManifest): readonly string[] =>
     (m.link ?? [])
@@ -22,7 +42,7 @@ describe("applyFeedDiscovery", () => {
       .map((l) => `${String(l.type)} ${String(l.href)}`);
   const discover = (
     data: TemplateData,
-    override: Partial<AppContext> = {},
+    override: { readonly basePath?: string } = {},
     siteIsPrivate = false,
   ): DocumentManifest =>
     applyFeedDiscovery(empty, data, { ...ctx, ...override }, siteIsPrivate);

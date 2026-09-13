@@ -1,29 +1,31 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { adminEntryScope } from "./admin-entry-scope.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
+type ScopeContext = Pick<AppContext, "user" | "auth" | "plugins">;
 
 let db: TestDb;
+let caller: AuthenticatedUser;
 let mine: number;
 let theirs: number;
 
 beforeEach(async () => {
   db = await createTestDb();
   const factory = factoriesFor(db);
-  mine = (await factory.admin.create()).id;
+  caller = await factory.admin.create();
+  mine = caller.id;
   theirs = (await factory.user.create({ email: "other@example.com" })).id;
 });
 
 /** A caller holding exactly `capabilities` over a site with two types. */
-function contextFor(capabilities: readonly string[]): AppContext {
+function contextFor(capabilities: readonly string[]): ScopeContext {
   const plugins = createPluginRegistry();
   for (const type of ["post", "ledger"]) {
     plugins.entryTypes.set(type, {
@@ -33,10 +35,10 @@ function contextFor(capabilities: readonly string[]): AppContext {
     });
   }
   return {
-    ...createTestContext({ db, plugins }),
-    user: { id: mine },
+    user: caller,
     auth: { can: (capability: string) => capabilities.includes(capability) },
-  } as unknown as AppContext;
+    plugins,
+  };
 }
 
 /** Seed one entry and answer with the title, for asserting on titles. */
@@ -56,7 +58,7 @@ async function seed(
 }
 
 /** What this caller may be shown, by title. */
-async function shown(ctx: AppContext): Promise<string[]> {
+async function shown(ctx: ScopeContext): Promise<string[]> {
   const scope = adminEntryScope(ctx);
   if (scope === null) return [];
   const rows = await db

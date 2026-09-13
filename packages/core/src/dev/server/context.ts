@@ -17,6 +17,23 @@ import type {
 // panel components. Referenced only under the `process.env.PLUMIX_DEV` gate at
 // the dispatcher catch, so this module tree-shakes out of production builds.
 
+export type DevErrorContextSource = Pick<
+  AppContext,
+  | "request"
+  | "resolvedEntity"
+  | "resolvedTemplate"
+  | "telemetry"
+  | "siteName"
+  | "origin"
+  | "basePath"
+  | "locale"
+  | "cdn"
+  | "storage"
+  | "mailer"
+  | "imageDelivery"
+  | "plugins"
+>;
+
 /**
  * Read the request-scoped context sections (request, route/template, executed
  * queries, timeline, application) off `ctx` and its telemetry collector. The
@@ -24,7 +41,9 @@ import type {
  * degrades on its own: an unresolved route, a request that touched no database,
  * or an unsampled request each yields an empty section rather than a throw.
  */
-export function collectDevErrorContext(ctx: AppContext): DevErrorContext {
+export function collectDevErrorContext(
+  ctx: DevErrorContextSource,
+): DevErrorContext {
   const spans = ctx.telemetry.getSpans();
   const entity = describeEntity(ctx.resolvedEntity);
   return {
@@ -132,7 +151,7 @@ const wired = (slot: unknown): string => (slot ? "✓" : "—");
 const listKeys = (map: ReadonlyMap<string, unknown>): string =>
   [...map.keys()].join(", ") || "—";
 
-function collectAppFacts(ctx: AppContext): DevErrorFact[] {
+function collectAppFacts(ctx: DevErrorContextSource): DevErrorFact[] {
   return [
     { label: "Site name", value: ctx.siteName ?? "—" },
     { label: "Origin", value: ctx.origin },

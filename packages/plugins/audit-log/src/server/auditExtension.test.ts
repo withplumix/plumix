@@ -1,24 +1,34 @@
-// Public `ctx.audit.log()` API tests. Uses the same fake-service +
-// requestStore.run pattern as hooks.test.ts so we test the full
-// chokepoint (ctx resolve → actor gate → service.record) without
-// touching a real DB.
+// Public `ctx.audit.log()` API tests. A fake service under
+// requestStore.run covers the full chokepoint (ctx resolve → actor
+// gate → service.record) without writing to the DB.
 
 import type {
   AppContext,
   AuthenticatedUser,
   HookOptions,
+  Logger,
   PluginSetupContext,
 } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
+import type { Mock } from "vitest";
 import { HookRegistry, requestStore } from "plumix/plugin";
-import { describe, expect, test, vi } from "vitest";
+import { createDeferQueue, createTestContext } from "plumix/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
+import type { TestDb } from "../test-support.js";
 import type { AuditLogStorage } from "../types.js";
 import type { AuditService } from "./auditService.js";
+import { createDb } from "../test-support.js";
 import { registerAuditEvents } from "./auditEvents.js";
 import { createAuditExtension } from "./auditExtension.js";
 import { createAuditService } from "./auditService.js";
+
+let db: TestDb;
+
+beforeAll(async () => {
+  db = await createDb();
+});
 
 interface FakeServiceState {
   readonly service: AuditService;
@@ -43,21 +53,18 @@ function fakeService(): FakeServiceState {
   return state;
 }
 
-interface FakeLogger {
-  debug: ReturnType<typeof vi.fn>;
-  info: () => void;
-  warn: () => void;
-  error: () => void;
-}
-
-function makeCtx(user: AuthenticatedUser | null): AppContext {
-  const logger: FakeLogger = {
-    debug: vi.fn(),
+function makeCtx(user: AuthenticatedUser | null): {
+  ctx: AppContext;
+  debug: Mock<Logger["debug"]>;
+} {
+  const debug = vi.fn<Logger["debug"]>();
+  const logger: Logger = {
+    debug,
     info: () => undefined,
     warn: () => undefined,
     error: () => undefined,
   };
-  return { user, logger } as unknown as AppContext;
+  return { ctx: createTestContext({ db, user, logger }), debug };
 }
 
 const adminUser: AuthenticatedUser = {
@@ -71,7 +78,7 @@ describe("createAuditExtension", () => {
   test("logs a row when ctx.user is set", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser), () => {
+    requestStore.run(makeCtx(adminUser).ctx, () => {
       audit.log({
         event: "comment:approved",
         subject: { type: "comment", id: 42, label: "First post!" },
@@ -94,7 +101,7 @@ describe("createAuditExtension", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
     let result: unknown;
-    requestStore.run(makeCtx(adminUser), () => {
+    requestStore.run(makeCtx(adminUser).ctx, () => {
       result = audit.log({
         event: "x:y",
         subject: { type: "x", id: 1, label: "x" },
@@ -106,7 +113,7 @@ describe("createAuditExtension", () => {
   test("drops the call when ctx.user is null + debug-logs", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    const ctx = makeCtx(null);
+    const { ctx, debug } = makeCtx(null);
     requestStore.run(ctx, () => {
       audit.log({
         event: "comment:approved",
@@ -114,9 +121,8 @@ describe("createAuditExtension", () => {
       });
     });
     expect(state.rows).toHaveLength(0);
-    const debug = (ctx.logger as unknown as FakeLogger).debug;
     expect(debug).toHaveBeenCalledTimes(1);
-    const call = debug.mock.calls[0]?.[0] as string;
+    const call = debug.mock.calls[0]?.[0];
     expect(call).toMatch(/no user|no actor|dropped/i);
   });
 
@@ -134,7 +140,7 @@ describe("createAuditExtension", () => {
   test("multiple log() calls in one request all land on the same service buffer", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser), () => {
+    requestStore.run(makeCtx(adminUser).ctx, () => {
       audit.log({ event: "a:1", subject: { type: "a", id: 1, label: "1" } });
       audit.log({ event: "a:2", subject: { type: "a", id: 2, label: "2" } });
       audit.log({ event: "a:3", subject: { type: "a", id: 3, label: "3" } });
@@ -145,7 +151,7 @@ describe("createAuditExtension", () => {
   test("missing subject.label falls back to '(unnamed)'", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser), () => {
+    requestStore.run(makeCtx(adminUser).ctx, () => {
       audit.log({
         event: "x:y",
         subject: { type: "x", id: 1 },
@@ -157,7 +163,7 @@ describe("createAuditExtension", () => {
   test("subject.id is stringified — accepts numbers AND strings", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser), () => {
+    requestStore.run(makeCtx(adminUser).ctx, () => {
       audit.log({
         event: "x:y",
         subject: { type: "x", id: 99, label: "n" },
@@ -203,24 +209,10 @@ function realServiceCtx(user: AuthenticatedUser | null): {
   ctx: AppContext;
   flush: () => Promise<void>;
 } {
-  const deferred: Promise<unknown>[] = [];
-  const ctx = {
-    user,
-    logger: {
-      debug: () => undefined,
-      info: () => undefined,
-      warn: () => undefined,
-      error: () => undefined,
-    },
-    defer: (p: Promise<unknown>) => {
-      deferred.push(p);
-    },
-  } as unknown as AppContext;
+  const { defer, drainDeferred } = createDeferQueue();
   return {
-    ctx,
-    flush: async () => {
-      await Promise.all(deferred);
-    },
+    ctx: createTestContext({ db, user, defer }),
+    flush: drainDeferred,
   };
 }
 

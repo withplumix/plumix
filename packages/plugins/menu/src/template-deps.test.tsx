@@ -10,7 +10,7 @@ import {
 import {
   adminUser,
   createDispatcherHarness,
-  createRequestMemo,
+  createTestContext,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -54,14 +54,12 @@ async function bundle(): Promise<TestBundle> {
   const author = await adminUser
     .transient({ db })
     .create({ email: "menu-loader@example.test" });
-  const ctx = {
+  const ctx = createTestContext({
     db,
     plugins: registry,
     hooks,
     request: new Request("https://test.example/"),
-    resolvedEntity: null,
-    memo: createRequestMemo(),
-  } as unknown as AppContext;
+  });
   const dep = registry.templateDeps.get("menus");
   if (!dep) throw new Error("menus template dep not registered");
   return { db, factories, ctx, load: dep.load, authorId: author.id };

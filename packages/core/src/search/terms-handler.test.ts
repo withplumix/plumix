@@ -1,24 +1,24 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { createTestContext } from "../test/context.js";
 import { termFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { termsSearchHandler } from "./terms-handler.js";
 
-// The handler skips taxonomies the caller can't read before touching the
-// db, so a denying `auth.can` short-circuits to no groups (no db needed).
 describe("termsSearchHandler", () => {
   test("omits taxonomies the caller cannot read", async () => {
-    const ctx = {
-      auth: { can: () => false },
-      plugins: {
-        termTaxonomies: new Map([
-          ["category", { label: { id: "c", message: "Categories" } }],
-        ]),
-      },
-    } as unknown as AppContext;
+    const db = await createTestDb();
+    const plugins = createPluginRegistry();
+    plugins.termTaxonomies.set("category", {
+      name: "category",
+      registeredBy: "test",
+      label: { id: "c", message: "Categories" },
+    });
+    // A matching term, so only the capability check can empty the result.
+    await termFactory
+      .transient({ db })
+      .create({ taxonomy: "category", name: "x", slug: "x" });
+    const ctx = { db, plugins, auth: { can: () => false } };
 
     expect(await termsSearchHandler({ query: "x", limit: 5 }, ctx)).toEqual([]);
   });
@@ -49,10 +49,7 @@ describe("termsSearchHandler", () => {
     await termFactory
       .transient({ db })
       .create({ taxonomy: "internal", name: "Footer notes", slug: "notes" });
-    const ctx = {
-      ...createTestContext({ db, plugins }),
-      auth: { can: () => true },
-    } as unknown as AppContext;
+    const ctx = { db, plugins, auth: { can: () => true } };
 
     const groups = await termsSearchHandler({ query: "footer", limit: 5 }, ctx);
 

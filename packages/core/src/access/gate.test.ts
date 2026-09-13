@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
-import { resolveLocales } from "../i18n/locale-registry.js";
+import type { AccessPolicy } from "./policy.js";
+import { HookRegistry } from "../hooks/registry.js";
+import { definePlugin } from "../plugin/define.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { installPlugins } from "../plugin/register.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import {
   entryAllowsAnonymousAccess,
   gateToResponse,
@@ -34,28 +40,46 @@ function seededMemo(
     key in rows ? Promise.resolve(rows[key] as T) : load();
 }
 
-function ctx(args: {
+let db: Awaited<ReturnType<typeof createTestDb>>;
+
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
+// Types are registered through a plugin so their derived `entry:<type>:*`
+// capabilities exist: a signed-in asker really holds them, and the anonymous
+// answer must not depend on that.
+async function ctx(args: {
   user?: AuthenticatedUser | null;
-  basePath?: string;
-  entryTypes?: Map<string, unknown>;
-  archiveTypes?: Map<string, unknown>;
+  entryTypes?: Readonly<Record<string, EntryTypeAccess | undefined>>;
+  archiveTypes?: Readonly<Record<string, AccessPolicy>>;
   memo?: RequestMemoStub;
-}): AppContext {
-  const user = args.user ?? null;
-  return {
-    user,
-    request: new Request("https://cms.example/"),
-    i18n: resolveLocales({ defaultLocale: "en", locales: ["en"] }),
-    // A signed-in principal passes every capability check here; the anonymous
-    // answer must not depend on that.
-    auth: { can: () => user !== null },
-    basePath: args.basePath ?? "",
-    memo: args.memo ?? (<T>(_k: string, load: () => Promise<T>) => load()),
-    plugins: {
-      entryTypes: args.entryTypes ?? new Map(),
-      archiveTypes: args.archiveTypes ?? new Map(),
-    },
-  } as unknown as AppContext;
+}): Promise<AppContext> {
+  const plugins = createPluginRegistry();
+  await installPlugins({
+    hooks: new HookRegistry(),
+    registry: plugins,
+    plugins: [
+      definePlugin("gate-test", (setup) => {
+        for (const [name, access] of Object.entries(args.entryTypes ?? {})) {
+          setup.registerEntryType(name, {
+            label: name,
+            isPublic: true,
+            access,
+          });
+        }
+        for (const [name, access] of Object.entries(args.archiveTypes ?? {})) {
+          setup.registerArchiveType(name, {
+            routes: [`/${name}`],
+            resolve: () => null,
+            access,
+          });
+        }
+      }),
+    ],
+  });
+  const context = createTestContext({ db, plugins, user: args.user ?? null });
+  return args.memo ? { ...context, memo: args.memo } : context;
 }
 
 const match = (intent: RouteMatch["intent"]): RouteMatch => ({
@@ -108,10 +132,8 @@ describe("selectEntryPolicy", () => {
 
 describe("policyForMatch", () => {
   it("returns the entry type's default policy for a single intent", async () => {
-    const c = ctx({
-      entryTypes: new Map([
-        ["post", { access: { default: authenticatedPolicy } }],
-      ]),
+    const c = await ctx({
+      entryTypes: { post: { default: authenticatedPolicy } },
     });
     await expect(
       policyForMatch(c, match({ kind: "single", entryType: "post" })),
@@ -119,10 +141,8 @@ describe("policyForMatch", () => {
   });
 
   it("gates a type's archive route with the same default policy", async () => {
-    const c = ctx({
-      entryTypes: new Map([
-        ["post", { access: { default: authenticatedPolicy } }],
-      ]),
+    const c = await ctx({
+      entryTypes: { post: { default: authenticatedPolicy } },
     });
     await expect(
       policyForMatch(c, match({ kind: "archive", entryType: "post" })),
@@ -131,18 +151,13 @@ describe("policyForMatch", () => {
 
   it("resolves a single intent's per-entry choice over the type default", async () => {
     const editors = rolePolicy("editor");
-    const c = ctx({
-      entryTypes: new Map([
-        [
-          "post",
-          {
-            access: {
-              default: anonymousPolicy,
-              policies: [{ key: "staff", label: "Staff", policy: editors }],
-            },
-          },
-        ],
-      ]),
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: anonymousPolicy,
+          policies: [{ key: "staff", label: "Staff", policy: editors }],
+        },
+      },
       // The addressed entry stores `staff` under the reserved access key.
       memo: seededMemo({
         "single-entry:post:s:hello": {
@@ -159,20 +174,15 @@ describe("policyForMatch", () => {
   });
 
   it("falls back to the type default for a per-entry-space single with no stored choice", async () => {
-    const c = ctx({
-      entryTypes: new Map([
-        [
-          "post",
-          {
-            access: {
-              default: authenticatedPolicy,
-              policies: [
-                { key: "staff", label: "Staff", policy: rolePolicy("editor") },
-              ],
-            },
-          },
-        ],
-      ]),
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: authenticatedPolicy,
+          policies: [
+            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+          ],
+        },
+      },
       memo: seededMemo({ "single-entry:post:s:hello": { meta: {} } }),
     });
     await expect(
@@ -184,20 +194,15 @@ describe("policyForMatch", () => {
   });
 
   it("falls back to the type default when the single entry is a would-be-404", async () => {
-    const c = ctx({
-      entryTypes: new Map([
-        [
-          "post",
-          {
-            access: {
-              default: authenticatedPolicy,
-              policies: [
-                { key: "staff", label: "Staff", policy: rolePolicy("editor") },
-              ],
-            },
-          },
-        ],
-      ]),
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: authenticatedPolicy,
+          policies: [
+            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+          ],
+        },
+      },
       // No matching entry — the resolver memoizes `null`, so the type default
       // gates even a slug that doesn't exist (no existence leak).
       memo: seededMemo({ "single-entry:post:s:ghost": null }),
@@ -211,23 +216,21 @@ describe("policyForMatch", () => {
   });
 
   it("returns null for an entry type with no access declared", async () => {
-    const c = ctx({ entryTypes: new Map([["post", {}]]) });
+    const c = await ctx({ entryTypes: { post: undefined } });
     await expect(
       policyForMatch(c, match({ kind: "single", entryType: "post" })),
     ).resolves.toBe(null);
   });
 
   it("returns the route-level policy for a custom archive", async () => {
-    const c = ctx({
-      archiveTypes: new Map([["events", { access: authenticatedPolicy }]]),
-    });
+    const c = await ctx({ archiveTypes: { events: authenticatedPolicy } });
     await expect(
       policyForMatch(c, match({ kind: "custom", name: "events" })),
     ).resolves.toBe(authenticatedPolicy);
   });
 
   it("returns null for un-policied intents and an unmatched route", async () => {
-    const c = ctx({});
+    const c = await ctx({});
     await expect(
       policyForMatch(c, match({ kind: "front-page" })),
     ).resolves.toBe(null);
@@ -244,13 +247,11 @@ describe("policyForMatch", () => {
 describe("gateToResponse", () => {
   const url = new URL("https://site.test/members/secret?x=1");
   const login = "/_plumix/admin/login";
+  const root = { basePath: "" };
 
   it("lets an allow gate proceed (no short-circuit response)", () => {
     expect(
-      gateToResponse(
-        { type: "allow" },
-        { ctx: ctx({}), url, loginPath: login },
-      ),
+      gateToResponse({ type: "allow" }, { ctx: root, url, loginPath: login }),
     ).toBe(null);
   });
 
@@ -258,7 +259,7 @@ describe("gateToResponse", () => {
     const response = must(
       gateToResponse(
         { type: "redirect" },
-        { ctx: ctx({}), url, loginPath: login },
+        { ctx: root, url, loginPath: login },
       ),
     );
     expect(response.status).toBe(302);
@@ -273,7 +274,7 @@ describe("gateToResponse", () => {
     const response = must(
       gateToResponse(
         { type: "redirect" },
-        { ctx: ctx({ basePath: "/blog" }), url, loginPath: "/login" },
+        { ctx: { basePath: "/blog" }, url, loginPath: "/login" },
       ),
     );
     expect(response.headers.get("location")).toBe(
@@ -285,7 +286,7 @@ describe("gateToResponse", () => {
     const response = must(
       gateToResponse(
         { type: "challenge", kind: "forbidden" },
-        { ctx: ctx({}), url, loginPath: login },
+        { ctx: root, url, loginPath: login },
       ),
     );
     expect(response.status).toBe(403);
@@ -297,7 +298,7 @@ describe("gateToResponse", () => {
     const response = must(
       gateToResponse(
         { type: "challenge", kind: "subscribe" },
-        { ctx: ctx({}), url, loginPath: login },
+        { ctx: root, url, loginPath: login },
       ),
     );
     expect(response.status).toBe(402);
@@ -310,7 +311,7 @@ describe("gateToResponse", () => {
     expect(
       gateToResponse(
         { type: "challenge", kind: "subscribe", soft: true },
-        { ctx: ctx({}), url, loginPath: login },
+        { ctx: root, url, loginPath: login },
       ),
     ).toBe(null);
   });
@@ -325,8 +326,9 @@ describe("entryAllowsAnonymousAccess", () => {
     meta: {},
   };
 
-  const withType = (access: EntryTypeAccess | undefined) =>
-    new Map([["column", { isPublic: true, access }]]);
+  const withType = (access: EntryTypeAccess | undefined) => ({
+    column: access,
+  });
 
   // A public type carrying one selectable policy an entry may gate itself with.
   const memberSpace: EntryTypeAccess = {
@@ -337,7 +339,7 @@ describe("entryAllowsAnonymousAccess", () => {
   };
 
   it("allows an entry whose type declares no access at all", async () => {
-    const c = ctx({ entryTypes: withType(undefined) });
+    const c = await ctx({ entryTypes: withType(undefined) });
     await expect(
       entryAllowsAnonymousAccess(c, { type: "column" }),
     ).resolves.toBe(true);
@@ -346,21 +348,23 @@ describe("entryAllowsAnonymousAccess", () => {
   it("allows an entry of a type nothing registered", async () => {
     // No policy is attached to a type that isn't there. Whether such an entry
     // has a page at all is the caller's question, not this one.
-    const c = ctx({});
+    const c = await ctx({});
     await expect(
       entryAllowsAnonymousAccess(c, { type: "ghost" }),
     ).resolves.toBe(true);
   });
 
   it("refuses an entry whose type default gates anonymous visitors", async () => {
-    const c = ctx({ entryTypes: withType({ default: authenticatedPolicy }) });
+    const c = await ctx({
+      entryTypes: withType({ default: authenticatedPolicy }),
+    });
     await expect(
       entryAllowsAnonymousAccess(c, { type: "column" }),
     ).resolves.toBe(false);
   });
 
   it("refuses an entry that selected a gating policy of its own", async () => {
-    const c = ctx({ entryTypes: withType(memberSpace) });
+    const c = await ctx({ entryTypes: withType(memberSpace) });
     await expect(
       entryAllowsAnonymousAccess(c, {
         type: "column",
@@ -370,7 +374,7 @@ describe("entryAllowsAnonymousAccess", () => {
   });
 
   it("allows a sibling entry that selected nothing", async () => {
-    const c = ctx({ entryTypes: withType(memberSpace) });
+    const c = await ctx({ entryTypes: withType(memberSpace) });
     await expect(
       entryAllowsAnonymousAccess(c, { type: "column", meta: {} }),
     ).resolves.toBe(true);
@@ -380,7 +384,7 @@ describe("entryAllowsAnonymousAccess", () => {
     // The load-bearing case. Whoever asks, the artefact this answers for is
     // fetched by a scraper carrying no session — so an admin viewing the page
     // must not be told a gated entry is shareable.
-    const c = ctx({
+    const c = await ctx({
       user: admin,
       entryTypes: withType({ default: authenticatedPolicy }),
     });
@@ -392,7 +396,7 @@ describe("entryAllowsAnonymousAccess", () => {
   it("drops the asker's capabilities, not just their identity", async () => {
     // A resolver reading `ctx.auth.can()` rather than `ctx.user` must see the
     // anonymous answer too, or an admin's privileges leak into the decision.
-    const c = ctx({
+    const c = await ctx({
       user: admin,
       entryTypes: withType({
         default: definePolicy({
@@ -411,7 +415,7 @@ describe("entryAllowsAnonymousAccess", () => {
   it("allows an entry behind a soft challenge", async () => {
     // A soft gate renders a public teaser at 200 at the plain URL, so the
     // entry is shareable — and the route, asked anonymously, agrees.
-    const c = ctx({
+    const c = await ctx({
       entryTypes: withType({
         default: definePolicy({
           resolve: () => challenge("subscribe", { soft: true }),
@@ -424,7 +428,7 @@ describe("entryAllowsAnonymousAccess", () => {
   });
 
   it("refuses an entry behind a hard challenge", async () => {
-    const c = ctx({
+    const c = await ctx({
       entryTypes: withType({
         default: definePolicy({ resolve: () => challenge("forbidden") }),
       }),

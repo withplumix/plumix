@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
 import type { AnyPluginDescriptor } from "./config.js";
-import type { AppContext } from "./context/app.js";
 import type { TelemetrySnapshot } from "./context/telemetry.js";
 import type { JsonValue } from "./json.js";
 import type { OtelConsumerOptions } from "./telemetry-otel.js";
@@ -9,7 +8,9 @@ import type { ThemeDescriptor } from "./theme.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
 import { otelConsumer } from "./telemetry-otel.js";
+import { createTestContext, silentLogger } from "./test/context.js";
 import { createDispatcherHarness } from "./test/dispatcher.js";
+import { createTestDb } from "./test/harness.js";
 import { defineTheme } from "./theme.js";
 
 /** OTLP/JSON AnyValue — the subset the exporter emits. */
@@ -421,10 +422,14 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
 
   test("export failures — transport, backend refusal, unserializable payload — are logged, never rejected", async () => {
     const errors: string[] = [];
-    const fakeCtx = {
+    const fakeCtx = createTestContext({
+      db: await createTestDb(),
       request: new Request("https://cms.example/"),
-      logger: { error: (message: string) => void errors.push(message) },
-    } as unknown as AppContext;
+      logger: {
+        ...silentLogger,
+        error: (message) => void errors.push(message),
+      },
+    });
     const snapshot: TelemetrySnapshot = {
       request: {
         requestId: "req-1",

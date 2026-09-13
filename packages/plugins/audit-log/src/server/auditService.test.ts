@@ -1,30 +1,40 @@
-import type { AppContext } from "plumix/plugin";
-import { describe, expect, test, vi } from "vitest";
+import type { AppContext, Logger } from "plumix/plugin";
+import type { Mock } from "vitest";
+import { createTestContext } from "plumix/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
+import type { TestDb } from "../test-support.js";
 import type { AuditLogStorage } from "../types.js";
+import { createDb } from "../test-support.js";
 import { createAuditService } from "./auditService.js";
 
+let db: TestDb;
+
+beforeAll(async () => {
+  db = await createDb();
+});
+
 interface FakeCtx {
-  readonly logger: {
-    debug: () => void;
-    info: () => void;
-    warn: ReturnType<typeof vi.fn>;
-    error: () => void;
-  };
-  defer: ReturnType<typeof vi.fn>;
+  readonly ctx: AppContext;
+  readonly warn: Mock<Logger["warn"]>;
+  readonly defer: Mock<AppContext["defer"]>;
 }
 
 function fakeCtx(): FakeCtx {
-  return {
-    logger: {
-      debug: () => undefined,
-      info: () => undefined,
-      warn: vi.fn(),
-      error: () => undefined,
-    },
-    defer: vi.fn(),
+  const warn = vi.fn<Logger["warn"]>();
+  const defer = vi.fn<AppContext["defer"]>();
+  const logger: Logger = {
+    debug: () => undefined,
+    info: () => undefined,
+    warn,
+    error: () => undefined,
   };
+  return { ctx: createTestContext({ db, logger, defer }), warn, defer };
+}
+
+function warnMessages(warn: FakeCtx["warn"]): string[] {
+  return warn.mock.calls.map(([message]) => message);
 }
 
 function fakeStorage(): {
@@ -57,37 +67,34 @@ const sampleRow: NewAuditLogRow = {
 
 describe("createAuditService", () => {
   test("first record schedules defer once; subsequent records append to the same buffer", async () => {
-    const ctx = fakeCtx();
+    const { ctx, defer } = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);
 
-    service.record(ctx as unknown as AppContext, sampleRow);
-    service.record(ctx as unknown as AppContext, sampleRow);
-    service.record(ctx as unknown as AppContext, sampleRow);
+    service.record(ctx, sampleRow);
+    service.record(ctx, sampleRow);
+    service.record(ctx, sampleRow);
 
-    expect(ctx.defer).toHaveBeenCalledTimes(1);
+    expect(defer).toHaveBeenCalledTimes(1);
 
     // Drain the deferred flush.
-    await ctx.defer.mock.calls[0]?.[0];
+    await defer.mock.calls[0]?.[0];
 
     expect(writes).toHaveLength(1);
     expect(writes[0]).toHaveLength(3);
   });
 
   test("each AppContext gets its own buffer (no cross-request leak)", async () => {
-    const ctxA = fakeCtx();
-    const ctxB = fakeCtx();
+    const a = fakeCtx();
+    const b = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);
 
-    service.record(ctxA as unknown as AppContext, sampleRow);
-    service.record(ctxB as unknown as AppContext, sampleRow);
-    service.record(ctxA as unknown as AppContext, sampleRow);
+    service.record(a.ctx, sampleRow);
+    service.record(b.ctx, sampleRow);
+    service.record(a.ctx, sampleRow);
 
-    await Promise.all([
-      ctxA.defer.mock.calls[0]?.[0],
-      ctxB.defer.mock.calls[0]?.[0],
-    ]);
+    await Promise.all([a.defer.mock.calls[0]?.[0], b.defer.mock.calls[0]?.[0]]);
 
     // 2 writes — one per ctx. ctxA has 2 rows, ctxB has 1.
     expect(writes).toHaveLength(2);
@@ -96,7 +103,7 @@ describe("createAuditService", () => {
   });
 
   test("storage.write failure logs a warning and does not throw to the caller", async () => {
-    const ctx = fakeCtx();
+    const { ctx, defer, warn } = fakeCtx();
     const failingStorage: AuditLogStorage = {
       kind: "fake",
       write: () => Promise.reject(new Error("disk full")),
@@ -104,14 +111,15 @@ describe("createAuditService", () => {
     };
     const service = createAuditService(failingStorage);
 
-    service.record(ctx as unknown as AppContext, sampleRow);
+    service.record(ctx, sampleRow);
 
     // The deferred flush captures the rejection internally.
-    await ctx.defer.mock.calls[0]?.[0];
+    await defer.mock.calls[0]?.[0];
 
-    expect(ctx.logger.warn).toHaveBeenCalled();
-    const calls = ctx.logger.warn.mock.calls.flat().map(String);
-    expect(calls.some((c) => c.includes("storage.write failed"))).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    expect(
+      warnMessages(warn).some((c) => c.includes("storage.write failed")),
+    ).toBe(true);
   });
 
   test("a record() after the previous flush has run schedules a fresh defer (no orphan rows)", async () => {
@@ -119,19 +127,19 @@ describe("createAuditService", () => {
     // but the buffer object stayed in the WeakMap. A subsequent
     // record() found the (empty) array, pushed onto it, and returned
     // without scheduling — the row was orphaned until ctx GC'd it.
-    const ctx = fakeCtx();
+    const { ctx, defer } = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);
 
-    service.record(ctx as unknown as AppContext, sampleRow);
-    await ctx.defer.mock.calls[0]?.[0];
+    service.record(ctx, sampleRow);
+    await defer.mock.calls[0]?.[0];
     expect(writes).toHaveLength(1);
 
     // Second record after the first flush completed must schedule a
     // brand-new defer; otherwise the row never lands in storage.
-    service.record(ctx as unknown as AppContext, sampleRow);
-    expect(ctx.defer).toHaveBeenCalledTimes(2);
-    await ctx.defer.mock.calls[1]?.[0];
+    service.record(ctx, sampleRow);
+    expect(defer).toHaveBeenCalledTimes(2);
+    await defer.mock.calls[1]?.[0];
     expect(writes).toHaveLength(2);
   });
 
@@ -154,7 +162,7 @@ describe("createAuditService", () => {
   });
 
   test("a row whose properties exceed 256 KiB is dropped with a warning, not written", () => {
-    const ctx = fakeCtx();
+    const { ctx, defer, warn } = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);
 
@@ -165,18 +173,19 @@ describe("createAuditService", () => {
       properties: { diff: { content: ["", huge] } },
     };
 
-    service.record(ctx as unknown as AppContext, oversized);
+    service.record(ctx, oversized);
 
     // Defer was never scheduled — record() short-circuited.
-    expect(ctx.defer).not.toHaveBeenCalled();
+    expect(defer).not.toHaveBeenCalled();
     expect(writes).toHaveLength(0);
-    expect(ctx.logger.warn).toHaveBeenCalled();
-    const calls = ctx.logger.warn.mock.calls.flat().map(String);
-    expect(calls.some((c) => c.toLowerCase().includes("exceed"))).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    expect(
+      warnMessages(warn).some((c) => c.toLowerCase().includes("exceed")),
+    ).toBe(true);
   });
 
   test("a row whose properties contain a non-serializable value (BigInt) is dropped with a warning", () => {
-    const ctx = fakeCtx();
+    const { ctx, defer, warn } = fakeCtx();
     const { storage, writes } = fakeStorage();
     const service = createAuditService(storage);
 
@@ -185,31 +194,29 @@ describe("createAuditService", () => {
       properties: { weight: 42n as unknown as number },
     };
 
-    service.record(ctx as unknown as AppContext, unserializable);
+    service.record(ctx, unserializable);
 
-    expect(ctx.defer).not.toHaveBeenCalled();
+    expect(defer).not.toHaveBeenCalled();
     expect(writes).toHaveLength(0);
-    expect(ctx.logger.warn).toHaveBeenCalled();
-    const calls = ctx.logger.warn.mock.calls.flat().map(String);
-    expect(calls.some((c) => c.toLowerCase().includes("serializable"))).toBe(
-      true,
-    );
+    expect(warn).toHaveBeenCalled();
+    expect(
+      warnMessages(warn).some((c) => c.toLowerCase().includes("serializable")),
+    ).toBe(true);
   });
 
   test("a defer that throws synchronously is caught and warn-logged", () => {
-    const ctx = fakeCtx();
-    ctx.defer.mockImplementation(() => {
+    const { ctx, defer, warn } = fakeCtx();
+    defer.mockImplementation(() => {
       throw new Error("runtime missing defer shim");
     });
     const { storage } = fakeStorage();
     const service = createAuditService(storage);
 
-    expect(() =>
-      service.record(ctx as unknown as AppContext, sampleRow),
-    ).not.toThrow();
+    expect(() => service.record(ctx, sampleRow)).not.toThrow();
 
-    expect(ctx.logger.warn).toHaveBeenCalled();
-    const calls = ctx.logger.warn.mock.calls.flat().map(String);
-    expect(calls.some((c) => c.includes("failed to schedule"))).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    expect(
+      warnMessages(warn).some((c) => c.includes("failed to schedule")),
+    ).toBe(true);
   });
 });

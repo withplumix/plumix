@@ -7,6 +7,8 @@ import type {
 } from "../plugin/manifest.js";
 import { withBasePath } from "../base-path.js";
 
+type PermalinkContext = Pick<AppContext, "db" | "plugins" | "basePath">;
+
 /**
  * Reverse of `compileRouteMap` — given an entry, produce its public URL.
  * Symmetric to `match.ts` (URL → entity); used by sitemap, RSS, canonical
@@ -23,7 +25,7 @@ import { withBasePath } from "../base-path.js";
  * surface exists) or when the type isn't registered.
  */
 export async function buildEntryPermalink(
-  ctx: AppContext,
+  ctx: PermalinkContext,
   entry: {
     readonly type: string;
     readonly slug: string;
@@ -53,7 +55,7 @@ export async function buildEntryPermalink(
  * recursive CTE for hierarchical ones.
  */
 export async function buildTermArchiveUrl(
-  ctx: AppContext,
+  ctx: PermalinkContext,
   term: {
     readonly taxonomy: string;
     readonly slug: string;
@@ -85,7 +87,7 @@ export async function buildTermArchiveUrl(
  * can avoid the per-entry CTE.
  */
 export function buildEntryPermalinkSync(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "plugins" | "basePath">,
   entry: {
     readonly type: string;
     readonly slug: string;
@@ -108,7 +110,7 @@ export function buildEntryPermalinkSync(
  * callers (e.g. `buildResolvedEntries`) attach a `url` without a per-term CTE.
  */
 export function buildTermArchiveUrlSync(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "plugins" | "basePath">,
   term: {
     readonly taxonomy: string;
     readonly slug: string;
@@ -194,7 +196,7 @@ const MAX_ANCESTOR_DEPTH = 50;
  * helper uses. Walks ancestors root-first; one round-trip; depth-capped.
  */
 export async function loadAncestorSlugs(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "db">,
   leafParentId: number,
 ): Promise<string[]> {
   const rows = await ctx.db.all<SlugRow>(sql`
@@ -213,7 +215,7 @@ export async function loadAncestorSlugs(
 }
 
 export async function loadTermAncestorSlugs(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "db">,
   leafParentId: number,
 ): Promise<string[]> {
   const rows = await ctx.db.all<SlugRow>(sql`

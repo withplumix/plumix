@@ -1,14 +1,14 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { AuthResult } from "../auth/authenticator.js";
+import type {
+  AuthResult,
+  RequestAuthenticator,
+} from "../auth/authenticator.js";
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
-import { NOOP_TELEMETRY } from "../context/telemetry.js";
-import { resolveLocales } from "../i18n/locale-registry.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
+import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import { createTestDb } from "../test/harness.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
-
-const i18n = resolveLocales({ defaultLocale: "en", locales: ["en"] });
 
 const authenticatedUser: AuthenticatedUser = {
   id: 7,
@@ -17,15 +17,23 @@ const authenticatedUser: AuthenticatedUser = {
   meta: {},
 };
 
+async function publicContext(
+  request: Request,
+  authenticator: RequestAuthenticator,
+): Promise<AppContext> {
+  return createTestContext({
+    db: await createTestDb(),
+    request,
+    authenticator,
+  });
+}
+
 describe("loadUserForPublicRequest", () => {
   test("returns the ctx unchanged and skips authentication when the request has no plumix_session cookie", async () => {
     const authenticate = vi.fn();
-    const ctx = {
-      request: new Request("https://example.com/"),
-      user: null,
-      telemetry: NOOP_TELEMETRY,
-      authenticator: { authenticate },
-    } as unknown as AppContext;
+    const ctx = await publicContext(new Request("https://example.com/"), {
+      authenticate,
+    });
 
     const result = await loadUserForPublicRequest(ctx);
 
@@ -35,17 +43,12 @@ describe("loadUserForPublicRequest", () => {
 
   test("returns ctx unchanged when the cookie is present but the authenticator rejects it (expired or orphaned session)", async () => {
     const authenticate = vi.fn().mockResolvedValue(null);
-    const ctx = {
-      request: new Request("https://example.com/", {
+    const ctx = await publicContext(
+      new Request("https://example.com/", {
         headers: { Cookie: "plumix_session=stale" },
       }),
-      db: {},
-      user: null,
-      plugins: createPluginRegistry(),
-      i18n,
-      telemetry: NOOP_TELEMETRY,
-      authenticator: { authenticate },
-    } as unknown as AppContext;
+      { authenticate },
+    );
 
     const result = await loadUserForPublicRequest(ctx);
 
@@ -59,17 +62,12 @@ describe("loadUserForPublicRequest", () => {
       user: authenticatedUser,
       tokenScopes: null,
     });
-    const ctx = {
-      request: new Request("https://example.com/", {
+    const ctx = await publicContext(
+      new Request("https://example.com/", {
         headers: { Cookie: "plumix_session=abc" },
       }),
-      db: {},
-      user: null,
-      plugins: createPluginRegistry(),
-      i18n,
-      telemetry: NOOP_TELEMETRY,
-      authenticator: { authenticate },
-    } as unknown as AppContext;
+      { authenticate },
+    );
 
     const result = await loadUserForPublicRequest(ctx);
 
@@ -86,22 +84,17 @@ describe("loadUserForPublicRequest", () => {
       user: authenticatedUser,
       tokenScopes: null,
     });
-    const ctx = {
+    const ctx = await publicContext(
       // No `plumix_session` cookie — only the custom guard's own signal.
-      request: new Request("https://example.com/post/hello?plumix.edit", {
+      new Request("https://example.com/post/hello?plumix.edit", {
         headers: { Cookie: "plumix_demo=session-token" },
       }),
-      db: {},
-      user: null,
-      plugins: createPluginRegistry(),
-      i18n,
-      telemetry: NOOP_TELEMETRY,
-      authenticator: {
+      {
         authenticate,
         hasSession: (request: Request) =>
           (request.headers.get("cookie") ?? "").includes("plumix_demo="),
       },
-    } as unknown as AppContext;
+    );
 
     const result = await loadUserForPublicRequest(ctx);
 
@@ -111,17 +104,15 @@ describe("loadUserForPublicRequest", () => {
 
   test("skips a custom authenticator whose hasSession returns false (no wasted auth on anonymous traffic)", async () => {
     const authenticate = vi.fn();
-    const ctx = {
-      request: new Request("https://example.com/post/hello", {
+    const ctx = await publicContext(
+      new Request("https://example.com/post/hello", {
         headers: { Cookie: "plumix_demo=session-token" },
       }),
-      user: null,
-      telemetry: NOOP_TELEMETRY,
-      authenticator: {
+      {
         authenticate,
         hasSession: () => false,
       },
-    } as unknown as AppContext;
+    );
 
     const result = await loadUserForPublicRequest(ctx);
 

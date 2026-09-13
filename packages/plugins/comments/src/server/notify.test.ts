@@ -1,4 +1,5 @@
 import type { AppContext } from "plumix/plugin";
+import type { Mock } from "vitest";
 import { describe, expect, test, vi } from "vitest";
 
 import type { Comment } from "../db/schema.js";
@@ -13,13 +14,15 @@ function comment(overrides: Partial<Comment> = {}): Comment {
   } as Comment;
 }
 
-function ctxWith(send?: ReturnType<typeof vi.fn>): AppContext {
-  return { mailer: send ? { send } : undefined } as unknown as AppContext;
+type Send = NonNullable<AppContext["mailer"]>["send"];
+
+function ctxWith(send?: Mock<Send>): Pick<AppContext, "mailer"> {
+  return send ? { mailer: { send } } : {};
 }
 
 describe("notifyModeratorOfPending", () => {
   test("emails the moderator for a pending comment", async () => {
-    const send = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn<Send>().mockResolvedValue(undefined);
     await notifyModeratorOfPending(
       ctxWith(send),
       comment(),
@@ -30,7 +33,7 @@ describe("notifyModeratorOfPending", () => {
   });
 
   test("does not email for an approved comment", async () => {
-    const send = vi.fn();
+    const send = vi.fn<Send>();
     await notifyModeratorOfPending(
       ctxWith(send),
       comment({ status: "approved" }),

@@ -369,6 +369,32 @@ describe("the existing restricted-syntax selectors", () => {
   });
 });
 
+describe("plumix/no-forged-app-context", () => {
+  it("rejects a test forging AppContext through unknown", async () => {
+    await expect(plumixReports("src/forged-context.test.ts")).resolves.toEqual([
+      { ruleId: "plumix/no-forged-app-context", line: 9 },
+      { ruleId: "plumix/no-forged-app-context", line: 11 },
+      { ruleId: "plumix/no-forged-app-context", line: 13 },
+    ]);
+  });
+
+  // The react config re-declares `no-restricted-syntax` over `src/`, test
+  // helpers included, so a selector there would silently stop applying.
+  it("still reaches a test helper under the react config", async () => {
+    const withReact = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [...baseConfig, ...reactConfig],
+    });
+    const [result] = await withReact.lintFiles(["src/test/forged-helper.ts"]);
+    expect(
+      (result?.messages ?? [])
+        .filter((message) => message.ruleId === "plumix/no-forged-app-context")
+        .map((message) => message.line),
+    ).toEqual([5]);
+  });
+});
+
 describe("plumix/no-unparsed-property-typeof", () => {
   it("rejects a typeof on a property read off a value nothing decoded", async () => {
     await expect(

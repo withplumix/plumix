@@ -6,11 +6,8 @@ import { isCurrentSource } from "./current.js";
 function ctxWith(
   resolvedEntity: AppContext["resolvedEntity"],
   url = "https://cms.example/about",
-): AppContext {
-  return {
-    request: new Request(url),
-    resolvedEntity,
-  } as unknown as AppContext;
+): Pick<AppContext, "request" | "resolvedEntity"> {
+  return { request: new Request(url), resolvedEntity };
 }
 
 describe("isCurrentSource", () => {

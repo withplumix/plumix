@@ -1,18 +1,24 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { Db } from "../context/app.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type { RegisteredScheduledTask } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
 import { createAppContext } from "../context/app.js";
-import { NOOP_TELEMETRY } from "../context/telemetry.js";
+import { createTestContext, silentLogger } from "../test/context.js";
 import { createDeferQueue } from "../test/defer.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { createTestDb } from "../test/harness.js";
 import { runScheduledTasks } from "./scheduled.js";
 
 function fakeApp(tasks: RegisteredScheduledTask[]): PlumixApp {
   return { scheduledTasks: tasks } as unknown as PlumixApp;
 }
+
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
 
 // Returns the context alongside the `error` spy as a standalone handle. Asserting
 // on the handle rather than `ctx.logger.error` keeps `unbound-method` happy —
@@ -20,15 +26,7 @@ function fakeApp(tasks: RegisteredScheduledTask[]): PlumixApp {
 // reads as an unbound method reference.
 function fakeCtx() {
   const error = vi.fn();
-  const ctx = {
-    logger: {
-      debug: () => undefined,
-      info: () => undefined,
-      warn: () => undefined,
-      error,
-    },
-    telemetry: NOOP_TELEMETRY,
-  } as unknown as AppContext;
+  const ctx = createTestContext({ db, logger: { ...silentLogger, error } });
   return { ctx, error };
 }
 

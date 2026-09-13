@@ -24,7 +24,10 @@ const pending = new WeakMap<RequestMemo, Set<string>>();
  * make. Calling it twice in a request unions the tags; calling it on a route
  * that never reaches the CDN does nothing.
  */
-export function tagCdnEntry(ctx: AppContext, tags: readonly string[]): void {
+export function tagCdnEntry(
+  ctx: Pick<AppContext, "cdn" | "memo">,
+  tags: readonly string[],
+): void {
   if (ctx.cdn === undefined || tags.length === 0) return;
   let set = pending.get(ctx.memo);
   if (set === undefined) {
@@ -35,6 +38,6 @@ export function tagCdnEntry(ctx: AppContext, tags: readonly string[]): void {
 }
 
 /** What the handler declared, for the store that is about to happen. */
-export function cdnTagsFor(ctx: AppContext): string[] {
+export function cdnTagsFor(ctx: Pick<AppContext, "memo">): string[] {
   return [...(pending.get(ctx.memo) ?? [])];
 }

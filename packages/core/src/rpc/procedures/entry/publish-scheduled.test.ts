@@ -1,19 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import type { AppContext } from "../../../context/app.js";
 import { entries } from "../../../db/schema/entries.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { entryFactory, userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { publishDueScheduledEntries } from "./publish-scheduled.js";
-
-const silentLogger = {
-  debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-  error: () => undefined,
-};
 
 async function setup() {
   const db = await createTestDb();
@@ -23,7 +15,7 @@ async function setup() {
   hooks.addAction("entry:published", (entry: { id: number }) => {
     published.push(entry.id);
   });
-  const ctx = { db, hooks, logger: silentLogger } as unknown as AppContext;
+  const ctx = { db, hooks };
   return { db, user, hooks, published, ctx };
 }
 

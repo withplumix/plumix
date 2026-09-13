@@ -1,7 +1,6 @@
 import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { eq } from "../db/index.js";
@@ -178,7 +177,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
       db: h.db,
       plugins: h.app.plugins,
       basePath: "",
-    } as unknown as AppContext;
+    };
     const url = await buildEntryPermalink(ctx, {
       type: "page",
       slug: leadership.slug,
@@ -1409,7 +1408,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       db: h.db,
       plugins: h.app.plugins,
       basePath: "",
-    } as unknown as AppContext;
+    };
     const url = await buildTermArchiveUrl(ctx, {
       taxonomy: "region",
       slug: france.slug,

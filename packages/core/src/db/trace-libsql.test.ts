@@ -1,18 +1,29 @@
 import type { Client } from "@libsql/client";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
-import { createTelemetryCollector } from "../context/collector.js";
+import type { AppContext, Db } from "../context/app.js";
+import type { TelemetryCollector } from "../context/telemetry.js";
 import { requestStore } from "../context/stores.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { traceSqlClient } from "./trace-libsql.js";
 
 describe("traceSqlClient", () => {
+  let db: Db;
+  beforeAll(async () => {
+    db = await createTestDb();
+  });
+
+  // A consumer without `sample` votes yes, so the context carries a live collector.
   function telemetryContext(): {
-    telemetry: ReturnType<typeof createTelemetryCollector>;
+    telemetry: TelemetryCollector;
     ctx: AppContext;
   } {
-    const telemetry = createTelemetryCollector();
-    return { telemetry, ctx: { telemetry } as unknown as AppContext };
+    const ctx = createTestContext({
+      db,
+      telemetry: { consumers: [{ id: "test" }] },
+    });
+    return { telemetry: ctx.telemetry, ctx };
   }
 
   function fakeClient(overrides: Record<string, unknown> = {}): Client {

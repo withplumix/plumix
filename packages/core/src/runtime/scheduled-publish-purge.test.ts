@@ -1,24 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
-import { createRequestMemo } from "../context/memo.js";
 import { requestStore } from "../context/stores.js";
-import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { createTestContext } from "../test/context.js";
 import { entryFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { runScheduledTasks } from "./scheduled.js";
-
-const silentLogger = {
-  debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-  error: () => undefined,
-};
 
 // End-to-end proof of the composed path: the `publish-scheduled` cron task →
 // `entry:published` → the CDN purge subscriber → the flush at the end
@@ -44,18 +35,15 @@ describe("scheduled publish purges the CDN", () => {
     } as unknown as PlumixApp;
 
     const purgeTags = vi.fn(() => Promise.resolve());
-    const ctx = {
+    const ctx = createTestContext({
       db,
       hooks,
       plugins: registry,
-      cdn: { match: vi.fn(), put: vi.fn(), purgeTags },
-      memo: createRequestMemo(),
-      telemetry: NOOP_TELEMETRY,
-      defer: (p: Promise<unknown>) => {
+      cdn: { decorate: (response) => response, purgeTags },
+      defer: (p) => {
         void p;
       },
-      logger: silentLogger,
-    } as unknown as AppContext;
+    });
 
     await requestStore.run(ctx, () =>
       runScheduledTasks(app, ctx, "*/5 * * * *"),
@@ -86,15 +74,7 @@ describe("scheduled publish purges the CDN", () => {
     const defer = vi.fn((p: Promise<unknown>) => {
       void p;
     });
-    const ctx = {
-      db,
-      hooks,
-      plugins: registry,
-      cdn: undefined,
-      telemetry: NOOP_TELEMETRY,
-      defer,
-      logger: silentLogger,
-    } as unknown as AppContext;
+    const ctx = createTestContext({ db, hooks, plugins: registry, defer });
 
     await requestStore.run(ctx, () =>
       runScheduledTasks(app, ctx, "*/5 * * * *"),

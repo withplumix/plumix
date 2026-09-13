@@ -1,21 +1,27 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
-import { createTelemetryCollector } from "../context/collector.js";
+import type { AppContext, Db } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
-import { NOOP_TELEMETRY } from "../context/telemetry.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { traceDbQuerySync } from "./trace.js";
 
 const identity = (rows: number): number => rows;
 
-const contextWith = (telemetry: AppContext["telemetry"]): AppContext =>
-  ({ telemetry }) as unknown as AppContext;
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
+// A consumer without `sample` votes yes, so the context carries a live collector.
+const sampledContext = (): AppContext =>
+  createTestContext({ db, telemetry: { consumers: [{ id: "test" }] } });
 
 describe("traceDbQuerySync", () => {
   test("names the span by kind and carries sql, params and row count", () => {
-    const telemetry = createTelemetryCollector();
+    const ctx = sampledContext();
 
-    const rows = requestStore.run(contextWith(telemetry), () =>
+    const rows = requestStore.run(ctx, () =>
       traceDbQuerySync(
         { sql: "select * from posts where id = ?", params: [7] },
         () => [{ id: 7 }],
@@ -24,7 +30,7 @@ describe("traceDbQuerySync", () => {
     );
 
     expect(rows).toEqual([{ id: 7 }]);
-    const [span] = telemetry.getSpans();
+    const [span] = ctx.telemetry.getSpans();
     expect(span?.name).toBe("db: select");
     expect(span?.attributes).toEqual({
       "db.sql": "select * from posts where id = ?",
@@ -34,9 +40,9 @@ describe("traceDbQuerySync", () => {
   });
 
   test("omits the params attribute rather than recording an empty list", () => {
-    const telemetry = createTelemetryCollector();
+    const ctx = sampledContext();
 
-    requestStore.run(contextWith(telemetry), () =>
+    requestStore.run(ctx, () =>
       traceDbQuerySync(
         { sql: "delete from posts", params: [] },
         () => 3,
@@ -44,15 +50,17 @@ describe("traceDbQuerySync", () => {
       ),
     );
 
-    expect(telemetry.getSpans()[0]?.attributes).not.toHaveProperty("db.params");
+    expect(ctx.telemetry.getSpans()[0]?.attributes).not.toHaveProperty(
+      "db.params",
+    );
   });
 
   test("records a throwing query as a failed span and rethrows unchanged", () => {
-    const telemetry = createTelemetryCollector();
+    const ctx = sampledContext();
     const boom = new Error("constraint failed");
 
     expect(() =>
-      requestStore.run(contextWith(telemetry), () =>
+      requestStore.run(ctx, () =>
         traceDbQuerySync(
           { sql: "insert into posts", params: [] },
           () => {
@@ -63,7 +71,7 @@ describe("traceDbQuerySync", () => {
       ),
     ).toThrow(boom);
 
-    const [span] = telemetry.getSpans();
+    const [span] = ctx.telemetry.getSpans();
     expect(span?.status).toBe("error");
     expect(span?.error?.message).toBe("constraint failed");
   });
@@ -75,7 +83,7 @@ describe("traceDbQuerySync", () => {
     const at = new Date(0);
     const serialize = vi.spyOn(at, "toISOString");
 
-    requestStore.run(contextWith(NOOP_TELEMETRY), () =>
+    requestStore.run(createTestContext({ db }), () =>
       traceDbQuerySync(
         { sql: "select * from posts where at = ?", params: [at] },
         () => [],
@@ -84,7 +92,7 @@ describe("traceDbQuerySync", () => {
     );
     expect(serialize).not.toHaveBeenCalled();
 
-    requestStore.run(contextWith(createTelemetryCollector()), () =>
+    requestStore.run(sampledContext(), () =>
       traceDbQuerySync(
         { sql: "select * from posts where at = ?", params: [at] },
         () => [],

@@ -9,7 +9,7 @@ import {
 import { entries, settings } from "plumix/schema";
 import {
   adminUser,
-  createRequestMemo,
+  createTestContext,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -42,14 +42,12 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   bundle: TestRegistryBundle,
 ): AppContext {
-  return {
+  return createTestContext({
     db,
     plugins: bundle.registry,
     hooks: bundle.hooks,
     request: new Request("https://test.example/"),
-    resolvedEntity: null,
-    memo: createRequestMemo(),
-  } as unknown as AppContext;
+  });
 }
 
 describe("getMenuForLocation", () => {
