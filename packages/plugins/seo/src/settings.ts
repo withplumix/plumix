@@ -3,6 +3,7 @@ import type { Label } from "plumix/i18n";
 import type {
   AppContext,
   MetaBoxFieldInput,
+  PluginAfterSetupContext,
   PluginSetupContext,
 } from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
@@ -395,7 +396,7 @@ const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
  * A scope's own registered label is its field label — already translated by
  * whoever registered it, where a descriptor built here could not name it.
  */
-function scopeFields(ctx: PluginSetupContext): MetaBoxFieldInput[] {
+function scopeFields(ctx: PluginAfterSetupContext): MetaBoxFieldInput[] {
   // A name that cannot be a key gets no fields, rather than taking the boot
   // down over a type this plugin does not own.
   const keyable = <T extends { readonly name: string }>(targets: T[]): T[] =>
@@ -439,56 +440,54 @@ function scopeFields(ctx: PluginSetupContext): MetaBoxFieldInput[] {
 const TOKEN_MAX = 300;
 const ROBOTS_MAX = 8000;
 
-export function registerSeoSettings(ctx: PluginSetupContext): void {
-  // Deferred to `theme:ready` for the same reason the meta box is: the
-  // per-scope fields are read off the registry, which during `setup` holds
-  // only what the plugins ahead of this one registered.
-  ctx.addAction("theme:ready", () => {
-    ctx.registerSettingsGroup(SEO_SETTINGS_GROUP, {
-      label: D.groupLabel,
-      description: D.groupDescription,
-      capability: SETTINGS_CAPABILITY,
-      fields: [...SITE_WIDE_FIELDS, ...scopeFields(ctx)],
-    });
-    // Their own cards rather than more rows on the one above: an ownership
-    // proof and a crawler policy are each answered once and rarely, where
-    // everything in that card is answered while writing.
-    ctx.registerSettingsGroup(SEO_VERIFICATION_GROUP, {
-      label: D.verificationLabel,
-      description: D.verificationDescription,
-      capability: SETTINGS_CAPABILITY,
-      fields: VERIFICATION_ENGINES.map((engine) => ({
-        key: engine,
-        type: "string",
-        inputType: "text",
-        label: VERIFICATION_LABELS[engine],
-        maxLength: TOKEN_MAX,
-      })),
-    });
-    ctx.registerSettingsGroup(SEO_ROBOTS_GROUP, {
-      label: D.robotsLabel,
-      description: D.robotsDescription,
-      capability: SETTINGS_CAPABILITY,
-      fields: [
-        {
-          key: "robots_txt",
-          type: "string",
-          inputType: "textarea",
-          label: D.robotsField,
-          maxLength: ROBOTS_MAX,
-        },
-      ],
-    });
-    ctx.registerSettingsPage(SEO_SETTINGS_GROUP, {
-      label: D.pageLabel,
-      description: D.pageDescription,
-      groups: [SEO_SETTINGS_GROUP, SEO_VERIFICATION_GROUP, SEO_ROBOTS_GROUP],
-      priority: 20,
-    });
+export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
+  ctx.registerSettingsGroup(SEO_SETTINGS_GROUP, {
+    label: D.groupLabel,
+    description: D.groupDescription,
+    capability: SETTINGS_CAPABILITY,
+    fields: [...SITE_WIDE_FIELDS, ...scopeFields(ctx)],
   });
-  // What the admin form loads. Without it the form would show the registered
-  // defaults over a site's legacy answers, and saving would turn indexing back
-  // on for a site that had turned it off.
+  // Their own cards rather than more rows on the one above: an ownership
+  // proof and a crawler policy are each answered once and rarely, where
+  // everything in that card is answered while writing.
+  ctx.registerSettingsGroup(SEO_VERIFICATION_GROUP, {
+    label: D.verificationLabel,
+    description: D.verificationDescription,
+    capability: SETTINGS_CAPABILITY,
+    fields: VERIFICATION_ENGINES.map((engine) => ({
+      key: engine,
+      type: "string",
+      inputType: "text",
+      label: VERIFICATION_LABELS[engine],
+      maxLength: TOKEN_MAX,
+    })),
+  });
+  ctx.registerSettingsGroup(SEO_ROBOTS_GROUP, {
+    label: D.robotsLabel,
+    description: D.robotsDescription,
+    capability: SETTINGS_CAPABILITY,
+    fields: [
+      {
+        key: "robots_txt",
+        type: "string",
+        inputType: "textarea",
+        label: D.robotsField,
+        maxLength: ROBOTS_MAX,
+      },
+    ],
+  });
+  ctx.registerSettingsPage(SEO_SETTINGS_GROUP, {
+    label: D.pageLabel,
+    description: D.pageDescription,
+    groups: [SEO_SETTINGS_GROUP, SEO_VERIFICATION_GROUP, SEO_ROBOTS_GROUP],
+    priority: 20,
+  });
+}
+
+// What the admin form loads. Without it the form would show the registered
+// defaults over a site's legacy answers, and saving would turn indexing back on
+// for a site that had turned it off.
+export function registerSeoSettingsDefaults(ctx: PluginSetupContext): void {
   ctx.addFilter("rpc:settings.get:output", async (bag, context, appCtx) => {
     if (context.group !== SEO_SETTINGS_GROUP) return bag;
     return withLegacyDefaults(bag, appCtx);

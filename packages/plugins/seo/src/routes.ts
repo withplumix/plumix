@@ -1,4 +1,8 @@
-import type { AppContext, PluginSetupContext } from "plumix/plugin";
+import type {
+  AppContext,
+  PluginAfterSetupContext,
+  PluginSetupContext,
+} from "plumix/plugin";
 import { enqueuePurgeTags, tagCdnEntry, typeTag, withBasePath } from "plumix";
 
 import type { SitemapScope } from "./sitemap.js";
@@ -99,12 +103,10 @@ async function handleSubSitemap(
 }
 
 /**
- * Claim `/robots.txt` and the sitemap, and keep the cached sitemap honest about
- * the indexing toggle.
- *
- * The sitemap waits for `theme:ready`, where every entry type, taxonomy and
- * archive is registered; `robots.txt` depends on none of them, so it is claimed
- * straight away.
+ * Claim `/robots.txt`, `/llms.txt` and the sitemap stylesheet, and keep the
+ * cached sitemap honest about the indexing toggle. None of it depends on what
+ * the site registered; the sitemap does, so {@link registerSitemapRoutes}
+ * claims it from `afterSetup`.
  */
 export function registerSeoRoutes(ctx: PluginSetupContext): void {
   ctx.registerPublicRoute({
@@ -130,10 +132,6 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
       }),
   });
 
-  ctx.addAction("theme:ready", () => {
-    registerSitemapRoutes(ctx);
-  });
-
   // The indexing toggle decides whether the sitemap has any URLs at all, so a
   // save has to retire the cached set. Both groups, because the toggle answers
   // from this plugin's own key falling back to the legacy `site` one.
@@ -141,7 +139,7 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
     if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
     enqueuePurgeTags(appCtx, [
       SITEMAP_TAG,
-      ...[...ctx.plugins.entryTypes.keys()].map(typeTag),
+      ...[...appCtx.plugins.entryTypes.keys()].map(typeTag),
     ]);
   });
 }
@@ -152,7 +150,7 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
  * would claim the whole `sitemap-*.xml` space — answering for scopes that do
  * not exist, and shadowing anything else that wanted a path in it.
  */
-function registerSitemapRoutes(ctx: PluginSetupContext): void {
+export function registerSitemapRoutes(ctx: PluginAfterSetupContext): void {
   const scopes = sitemapScopes(ctx.plugins);
 
   ctx.registerPublicRoute({

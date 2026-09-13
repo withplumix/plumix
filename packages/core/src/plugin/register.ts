@@ -6,7 +6,10 @@ import { assertValidPluginId } from "./define.js";
 import { PluginDefinitionError } from "./errors.js";
 import { createPluginRegistry } from "./manifest.js";
 import { createPluginProvidesContext } from "./provides-context.js";
-import { createPluginSetupContext } from "./setup-context.js";
+import {
+  createPluginAfterSetupContext,
+  createPluginSetupContext,
+} from "./setup-context.js";
 
 export interface PluginInstallResult {
   readonly hooks: HookRegistry;
@@ -70,6 +73,17 @@ export async function installPlugins({
       extensions: mergedPluginExtensions,
     });
     await descriptor.setup(ctx, undefined);
+  }
+
+  for (const descriptor of plugins) {
+    if (!descriptor.afterSetup) continue;
+    const ctx = createPluginAfterSetupContext({
+      pluginId: descriptor.id,
+      hooks,
+      registry,
+      extensions: mergedPluginExtensions,
+    });
+    await descriptor.afterSetup(ctx);
   }
 
   return { hooks, registry, appContextExtensions };

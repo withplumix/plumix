@@ -1,11 +1,18 @@
 import type { SchemaModule } from "../runtime/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
-import type { PluginSetupContext } from "./setup-context.js";
+import type {
+  PluginAfterSetupContext,
+  PluginSetupContext,
+} from "./setup-context.js";
 import { PluginDefinitionError } from "./errors.js";
 
 export type PluginSetup<TConfig> = (
   ctx: PluginSetupContext,
   config: TConfig,
+) => void | Promise<void>;
+
+export type PluginAfterSetup = (
+  ctx: PluginAfterSetupContext,
 ) => void | Promise<void>;
 
 export type PluginProvides = (
@@ -49,6 +56,13 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly version?: string;
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
+  /**
+   * Runs once every plugin's `setup` has, in array order, with `ctx.plugins`
+   * holding everything they registered. For registrations derived from what
+   * other plugins registered — a route per entry type, a box on every public
+   * taxonomy.
+   */
+  readonly afterSetup?: PluginAfterSetup;
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   readonly sqlMigrations?: readonly RawSqlMigration[];
@@ -87,6 +101,7 @@ export interface DefinePluginOptions {
 export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
+  readonly afterSetup?: PluginAfterSetup;
 }
 
 /** The standard on-disk location of a plugin's compiled admin bundle, given
@@ -169,6 +184,7 @@ export function definePlugin<TConfig = undefined>(
     version: setupOrInput.version,
     provides: setupOrInput.provides,
     setup: setupOrInput.setup,
+    afterSetup: setupOrInput.afterSetup,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
     sqlMigrations: setupOrInput.sqlMigrations,

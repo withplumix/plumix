@@ -33,8 +33,8 @@ export interface PublicRouteMatch {
  * Compile the registered public routes into the table the dispatcher matches
  * against, rejecting a path two plugins claim, a path inside core's own prefix,
  * and a pattern URLPattern can't parse. Registration is spread across `setup`
- * and the `theme:ready` action, so this runs at boot — the first moment the
- * whole set exists.
+ * and `afterSetup`, so this runs at boot — the first moment the whole set
+ * exists.
  *
  * A claim is the path string: two plugins whose *patterns* merely overlap both
  * compile, and the rules below decide which answers. Nothing here can tell an

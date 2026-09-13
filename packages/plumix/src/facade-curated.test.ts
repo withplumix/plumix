@@ -202,6 +202,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "CORE_SCHEMA_MODULE",
           "generateSchemaSource",
           "createPluginSetupContext",
+          "createPluginAfterSetupContext",
           "createPluginProvidesContext",
           "assertValidPluginId",
           "PLUGIN_ID_RE",

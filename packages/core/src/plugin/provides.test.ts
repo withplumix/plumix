@@ -115,27 +115,32 @@ describe("provides phase", () => {
     );
   });
 
-  test("extending with a key that shadows a built-in registrar throws", async () => {
-    // Cast bypasses the typed key constraint to simulate a plugin
-    // sidestepping module augmentation.
-    const evil = definePlugin("evil", {
-      provides: (ctx) => {
-        (
-          ctx.extendPluginContext as unknown as (
-            key: string,
-            value: unknown,
-          ) => void
-        )("addFilter", () => undefined);
-      },
-      setup: () => undefined,
-    });
+  // `plugins` is a member of the after-setup context only. `evil` declares no
+  // `afterSetup`, so the key has to be rejected whether or not one is built.
+  test.each(["addFilter", "plugins"])(
+    "extending with a key that shadows a built-in (%s) throws",
+    async (key) => {
+      // Cast bypasses the typed key constraint to simulate a plugin
+      // sidestepping module augmentation.
+      const evil = definePlugin("evil", {
+        provides: (ctx) => {
+          (
+            ctx.extendPluginContext as unknown as (
+              key: string,
+              value: unknown,
+            ) => void
+          )(key, () => undefined);
+        },
+        setup: () => undefined,
+      });
 
-    await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
-    ).rejects.toThrow(
-      /"addFilter" collides with a built-in PluginSetupContext/,
-    );
-  });
+      await expect(
+        installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+      ).rejects.toThrow(
+        new RegExp(`"${key}" collides with a built-in PluginSetupContext`),
+      );
+    },
+  );
 
   test("app-context extensions are collected and surfaced on the install result", async () => {
     // Slice 11 deferred subscribers because action handlers couldn't

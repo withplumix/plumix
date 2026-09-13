@@ -39,10 +39,7 @@ import { pageTags } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
-import { collectDevErrorContext } from "../dev/server/context.js";
-import { collectDevErrorHints } from "../dev/server/hints/collect.js";
-import { collectDevErrorPanels } from "../dev/server/panels/collect.js";
-import { devErrorJson, renderDevErrorPage } from "../dev/server/render.js";
+import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { matchRoute } from "../route/match.js";
@@ -767,53 +764,18 @@ async function renderPublicError(
   });
 }
 
-/**
- * The dev-only answer to a caught failure: the standalone error page, which is
- * theme-independent so it renders even when the theme is what threw, or JSON
- * for a caller `wantsHtml` says can't use one (#1599). Null in production and
- * when the dev page itself broke — the caller's plain 500 covers both (#1582).
- *
- * `process.env.PLUMIX_DEV` is Vite-empty in production builds, so this body and
- * the dev-page renderer it reaches tree-shake out.
- */
+// Null in production and for an untrusted dev request, so the caller's own 500
+// answers. `process.env.PLUMIX_DEV` is Vite-empty in production builds, which
+// is what tree-shakes the dev error surface out.
 function devFailureResponse(
   ctx: AppContext,
   err: unknown,
   wantsHtml: boolean,
 ): Response | null {
-  if (process.env.PLUMIX_DEV && isTrustedDevRequest(ctx.request)) {
-    if (!wantsHtml) {
-      return jsonResponse(
-        devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
-        { status: 500 },
-      );
-    }
-    try {
-      // Match "how to fix" hints for the caught error via the dev-only
-      // `error_page:hints` filter (core's typed + untyped matchers, plus any
-      // plugin subscribers) and surface them above the stack.
-      const hints = collectDevErrorHints(ctx.hooks, err, ctx);
-      // The request/route/database/timeline/application sections, read from the
-      // same request-scoped collectors the debug bar uses (#1598). Dev sampling
-      // is ensured regardless of the debug bar, so these are populated even
-      // when the bar is off.
-      const context = collectDevErrorContext(ctx);
-      // Plugin-contributed panels via the dev-only `error_page:panels` filter
-      // (#1626), each rendered in isolation and shown below the context. No
-      // subscribers → an empty list and no extra sections.
-      const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
-      return new Response(renderDevErrorPage(err, hints, context, panels), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    } catch (devErr) {
-      ctx.logger.error("dev_error_page_failed", {
-        url: ctx.request.url,
-        err: devErr instanceof Error ? devErr.message : String(devErr),
-      });
-    }
+  if (!process.env.PLUMIX_DEV || !isTrustedDevRequest(ctx.request)) {
+    return null;
   }
-  return null;
+  return devErrorResponse(ctx, err, wantsHtml);
 }
 
 // Whether the client named HTML outright. Stricter than `acceptsHtml`: a bare

@@ -8,7 +8,7 @@ import { describe, expect, test } from "vitest";
 import { feeds } from "./index.js";
 
 // Every suite below installs the plugin over the host plugin it syndicates:
-// the plugin claims its routes at `theme:ready`, so what it serves is decided
+// the plugin claims its routes in `afterSetup`, so what it serves is decided
 // by what the site registered, not by what the request path looks like.
 function harness(
   ...plugins: readonly AnyPluginDescriptor[]

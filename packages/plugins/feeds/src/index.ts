@@ -22,7 +22,7 @@ export { FEED_LIMIT } from "./items.js";
  * archive: an entry type, a taxonomy term, an author, a date period, and any
  * archive a plugin registered with a `feed`.
  *
- * Routes are claimed at `theme:ready`, when every entry type and taxonomy is
+ * Routes are claimed in `afterSetup`, once every entry type and taxonomy is
  * registered, so each one is enumerated from what the site registered rather
  * than matched as an ambiguous shape per request — a path this plugin does not
  * claim still renders as content. Each page's own feed is advertised through
@@ -31,21 +31,6 @@ export { FEED_LIMIT } from "./items.js";
 export function feeds(): PluginDescriptor {
   return definePlugin("feeds", {
     setup: (ctx) => {
-      ctx.addAction("theme:ready", () => {
-        for (const route of feedRoutes(ctx.plugins)) {
-          ctx.registerPublicRoute({
-            path: route.path,
-            handler: (_request, appCtx, params) =>
-              handleFeed(appCtx, route.scope(params), "rss2"),
-          });
-          ctx.registerPublicRoute({
-            path: `${route.path}/atom`,
-            handler: (_request, appCtx, params) =>
-              handleFeed(appCtx, route.scope(params), "atom"),
-          });
-        }
-      });
-
       ctx.addFilter("render:document", async (manifest, data, appCtx) => {
         const site = await loadSiteSettings(appCtx);
         return applyFeedDiscovery(
@@ -55,6 +40,20 @@ export function feeds(): PluginDescriptor {
           site.public === false,
         );
       });
+    },
+    afterSetup: (ctx) => {
+      for (const route of feedRoutes(ctx.plugins)) {
+        ctx.registerPublicRoute({
+          path: route.path,
+          handler: (_request, appCtx, params) =>
+            handleFeed(appCtx, route.scope(params), "rss2"),
+        });
+        ctx.registerPublicRoute({
+          path: `${route.path}/atom`,
+          handler: (_request, appCtx, params) =>
+            handleFeed(appCtx, route.scope(params), "atom"),
+        });
+      }
     },
   });
 }
