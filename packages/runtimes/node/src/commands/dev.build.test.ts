@@ -274,14 +274,17 @@ describe("plumix dev on the node runtime", () => {
     expect(refused.body).not.toContain("<html");
   });
 
-  test("editing a module the config imports changes what the next request serves, without a restart, and releases the replaced site's connection", async () => {
+  test("editing a module the config imports changes what the next request serves, without a restart, and releases the replaced site's connections", async () => {
     expect(await text("/greeting")).toBe("v1");
     const released = closedConnections();
 
     writeFileSync(join(dir, "message.mjs"), greeting('"v2"'));
 
     await expect.poll(() => text("/greeting"), POLL).toBe("v2");
-    await expect.poll(closedConnections, POLL).toBeGreaterThan(released);
+    // The replaced site's handler connection, and its scheduler's.
+    await expect
+      .poll(closedConnections, POLL)
+      .toBeGreaterThanOrEqual(released + 2);
   }, 90_000);
 
   test("a dependency first imported after start is pre-bundled and served", async () => {

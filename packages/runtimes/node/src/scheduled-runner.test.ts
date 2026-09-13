@@ -12,6 +12,13 @@ const TASKS = [
 const appWith = (tasks: readonly unknown[] = TASKS): PlumixApp =>
   ({ scheduledTasks: tasks }) as unknown as PlumixApp;
 
+const appConnecting = (connect: () => object): PlumixApp =>
+  ({
+    scheduledTasks: TASKS,
+    schema: {},
+    config: { database: { connect } },
+  }) as unknown as PlumixApp;
+
 const quietLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 describe("startScheduledRunner", () => {
@@ -70,14 +77,9 @@ describe("startScheduledRunner", () => {
   test("connects the site's own database when none is handed in", async () => {
     const db: Db = await createTestDb();
     const connect = vi.fn(() => ({ db }));
-    const app = {
-      scheduledTasks: TASKS,
-      schema: {},
-      config: { database: { connect } },
-    } as unknown as PlumixApp;
 
     const runner = startScheduledRunner({
-      app,
+      app: appConnecting(connect),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
       logger: quietLogger,
@@ -86,5 +88,81 @@ describe("startScheduledRunner", () => {
     await runner.stop();
 
     expect(connect).toHaveBeenCalledTimes(1);
+  });
+
+  test("releases the connection it opened once stopped", async () => {
+    const db: Db = await createTestDb();
+    const close = vi.fn();
+
+    const runner = startScheduledRunner({
+      app: appConnecting(() => ({ db, close })),
+      env: {},
+      clock: virtualClock("2026-09-07T02:58:00Z"),
+      logger: quietLogger,
+      fire: () => Promise.resolve(),
+    });
+    await runner.stop();
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps the connection while a firing it gave up on is still running", async () => {
+    const db: Db = await createTestDb();
+    const close = vi.fn();
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+
+    const runner = startScheduledRunner({
+      app: appConnecting(() => ({ db, close })),
+      env: {},
+      clock,
+      // No lease: its heartbeat would keep ticking for a firing that never ends.
+      lease: false,
+      logger: quietLogger,
+      fire: () => clock.sleep(60 * 60_000),
+    });
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+
+    expect(await runner.stop({ timeoutMs: 10 })).toBe(false);
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  test("releases the connection once, however often it is stopped", async () => {
+    const db: Db = await createTestDb();
+    const close = vi.fn();
+
+    const runner = startScheduledRunner({
+      app: appConnecting(() => ({ db, close })),
+      env: {},
+      clock: virtualClock("2026-09-07T02:58:00Z"),
+      logger: quietLogger,
+      fire: () => Promise.resolve(),
+    });
+    await runner.stop();
+    await runner.stop();
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  test("a connection that fails to close does not fail the stop", async () => {
+    const db: Db = await createTestDb();
+    const warn = vi.fn();
+
+    const runner = startScheduledRunner({
+      app: appConnecting(() => ({
+        db,
+        close: () => {
+          throw new Error("database is not open");
+        },
+      })),
+      env: {},
+      clock: virtualClock("2026-09-07T02:58:00Z"),
+      logger: { ...quietLogger, warn },
+      fire: () => Promise.resolve(),
+    });
+
+    await expect(runner.stop()).resolves.toBe(true);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("database is not open"),
+    );
   });
 });
