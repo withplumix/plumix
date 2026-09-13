@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { useBasePath, useIsEditing } from "plumix/blocks/renderer";
+import { tryGetContext } from "plumix/plugin";
 
 import type { FormWire } from "./define-form.js";
 import { FormRender } from "./block/form-render.js";
 import { toFormWire } from "./define-form.js";
-import { publishedFormRegistry } from "./registry.js";
 
 export type { FormWire } from "./define-form.js";
 export type { FormFieldError } from "./types.js";
@@ -38,7 +38,7 @@ export function PlumixForm({
 }): ReactNode {
   const basePath = useBasePath();
   const editing = useIsEditing();
-  const form = publishedFormRegistry().get(slug);
+  const form = tryGetContext()?.forms?.get(slug);
   if (!form) return null;
   return (
     <FormRender
@@ -63,9 +63,10 @@ export function PlumixForm({
  *
  * Only the half that serializes — the callbacks a form declares stay on
  * the server, which is why this is not the definition itself. Undefined
- * for a slug nobody registered.
+ * for a slug nobody registered, and outside a render — it resolves against
+ * the app serving the request, so call it from a template's `render`.
  */
 export function formWire(slug: string): FormWire | undefined {
-  const form = publishedFormRegistry().get(slug);
+  const form = tryGetContext()?.forms?.get(slug);
   return form === undefined ? undefined : toFormWire(form);
 }

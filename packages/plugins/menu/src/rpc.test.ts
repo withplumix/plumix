@@ -19,13 +19,10 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
+import type { MenuPluginOptions } from "./index.js";
 import { menu } from "./index.js";
-import {
-  clearRegisteredLocations,
-  recordLocation,
-} from "./server/locations.js";
 
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 type Factories = ReturnType<typeof factoriesFor>;
@@ -71,13 +68,16 @@ function stubAuthenticator(user: User): RequestAuthenticator {
   };
 }
 
-async function buildHarness(role: UserRole = "editor"): Promise<Harness> {
+async function buildHarness(
+  role: UserRole = "editor",
+  locations: MenuPluginOptions["locations"] = {},
+): Promise<Harness> {
   const db = await createTestDb();
   const factories = factoriesFor(db);
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu()], registry });
+  await installPlugins({ hooks, plugins: [menu({ locations })], registry });
 
   const user =
     role === "admin"
@@ -122,10 +122,6 @@ async function seedMenu(
 }
 
 describe("menu RPC", () => {
-  afterEach(() => {
-    clearRegisteredLocations();
-  });
-
   describe("menu.list", () => {
     test("returns all menu terms with item counts", async () => {
       const h = await buildHarness();
@@ -565,8 +561,7 @@ describe("menu RPC", () => {
 
   describe("menu.assignLocation", () => {
     test("upserts a binding for the location", async () => {
-      const h = await buildHarness();
-      recordLocation("primary", { label: "Primary" });
+      const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await seedMenu(h.db, h.factories, "main");
 
       await h.client.menu.assignLocation({
@@ -587,8 +582,7 @@ describe("menu RPC", () => {
     });
 
     test("null termSlug clears the binding", async () => {
-      const h = await buildHarness();
-      recordLocation("primary", { label: "Primary" });
+      const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await seedMenu(h.db, h.factories, "main");
       await h.client.menu.assignLocation({
         location: "primary",
@@ -612,8 +606,7 @@ describe("menu RPC", () => {
     });
 
     test("rejects when bound termSlug doesn't match a menu", async () => {
-      const h = await buildHarness();
-      recordLocation("primary", { label: "Primary" });
+      const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await expect(
         h.client.menu.assignLocation({
           location: "primary",
@@ -624,7 +617,6 @@ describe("menu RPC", () => {
 
     test("rejects when location is not theme-registered", async () => {
       const h = await buildHarness();
-      // No recordLocation call — `primary` is not registered.
       await seedMenu(h.db, h.factories, "main");
       await expect(
         h.client.menu.assignLocation({
@@ -674,9 +666,10 @@ describe("menu RPC", () => {
 
   describe("menu.locations.list", () => {
     test("returns each registered location with its current binding", async () => {
-      const h = await buildHarness();
-      recordLocation("primary", { label: "Primary", description: "Header" });
-      recordLocation("footer", { label: "Footer" });
+      const h = await buildHarness("editor", {
+        primary: { label: "Primary", description: "Header" },
+        footer: { label: "Footer" },
+      });
       const main = await seedMenu(h.db, h.factories, "main");
       await h.client.menu.assignLocation({
         location: "primary",
@@ -699,6 +692,17 @@ describe("menu RPC", () => {
       ]);
     });
 
+    test("lists the locations its own install declared, whatever installs after it", async () => {
+      const h = await buildHarness("editor", {
+        primary: { label: "Primary" },
+        footer: { label: "Footer" },
+      });
+      await buildHarness("editor", { primary: { label: "Primary" } });
+
+      const rows = await h.client.menu.locations.list();
+      expect(rows.map((r) => r.id)).toEqual(["footer", "primary"]);
+    });
+
     test("returns an empty array when no locations are registered", async () => {
       const h = await buildHarness();
       const rows = await h.client.menu.locations.list();
@@ -706,8 +710,7 @@ describe("menu RPC", () => {
     });
 
     test("ignores stale settings rows for unregistered locations", async () => {
-      const h = await buildHarness();
-      recordLocation("primary", { label: "Primary" });
+      const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await seedMenu(h.db, h.factories, "main");
       await h.factories.setting.create({
         group: "menu_locations",
@@ -727,8 +730,9 @@ describe("menu RPC", () => {
     });
 
     test("subscriber cannot list locations", async () => {
-      const h = await buildHarness("subscriber");
-      recordLocation("primary", { label: "Primary" });
+      const h = await buildHarness("subscriber", {
+        primary: { label: "Primary" },
+      });
       await expect(h.client.menu.locations.list()).rejects.toThrow();
     });
   });

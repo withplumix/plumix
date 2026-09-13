@@ -1,31 +1,21 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import {
-  clearRegisteredLocations,
-  getRegisteredLocations,
-  recordLocation,
-} from "./locations.js";
+import { declareLocations } from "./locations.js";
 
-describe("menu locations registry", () => {
-  afterEach(() => {
-    clearRegisteredLocations();
-  });
-
-  test("stores valid registrations keyed by id", () => {
-    recordLocation("primary", { label: "Primary navigation" });
-    recordLocation("footer", {
-      label: "Footer",
-      description: "Bottom of every page",
+describe("declareLocations", () => {
+  test("keys each valid declaration by its id", () => {
+    const locations = declareLocations({
+      primary: { label: "Primary navigation" },
+      footer: { label: "Footer", description: "Bottom of every page" },
     });
 
-    const registered = getRegisteredLocations();
-    expect(registered.size).toBe(2);
-    expect(registered.get("primary")).toEqual({
+    expect(locations.size).toBe(2);
+    expect(locations.get("primary")).toEqual({
       id: "primary",
       label: "Primary navigation",
       description: undefined,
     });
-    expect(registered.get("footer")).toEqual({
+    expect(locations.get("footer")).toEqual({
       id: "footer",
       label: "Footer",
       description: "Bottom of every page",
@@ -33,27 +23,20 @@ describe("menu locations registry", () => {
   });
 
   test.each([
-    ["empty id", "", { label: "x" }],
-    ["leading digit", "1main", { label: "x" }],
-    ["uppercase", "Primary", { label: "x" }],
-    ["space", "main nav", { label: "x" }],
-    ["underscore", "main_nav", { label: "x" }],
-    ["over length", "a".repeat(65), { label: "x" }],
-  ] as const)("rejects invalid id: %s", (_name, id, options) => {
-    expect(() => recordLocation(id, options)).toThrow();
+    ["empty id", ""],
+    ["leading digit", "1main"],
+    ["uppercase", "Primary"],
+    ["space", "main nav"],
+    ["underscore", "main_nav"],
+    ["over length", "a".repeat(65)],
+  ] as const)("rejects invalid id: %s", (_name, id) => {
+    expect(() => declareLocations({ [id]: { label: "x" } })).toThrow();
   });
 
   test("rejects missing or empty label", () => {
-    expect(() => recordLocation("primary", { label: "" })).toThrow();
+    expect(() => declareLocations({ primary: { label: "" } })).toThrow();
     expect(() =>
-      recordLocation("primary", {} as unknown as { label: string }),
+      declareLocations({ primary: {} as unknown as { label: string } }),
     ).toThrow();
-  });
-
-  test("rejects duplicate id across calls", () => {
-    recordLocation("primary", { label: "A" });
-    expect(() => recordLocation("primary", { label: "B" })).toThrow(
-      /already registered/,
-    );
   });
 });

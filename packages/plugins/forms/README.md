@@ -402,13 +402,15 @@ template:
 ```tsx
 import { formWire } from "@plumix/plugin-forms/theme";
 
-const subscribe = formWire("subscribe");
-
-// `formWire` is undefined for a slug nobody registered, exactly as
-// `PlumixForm` renders nothing for one.
-{
-  subscribe ? <SubscribeBar client="load" form={subscribe} /> : null;
-}
+export default defineTemplate({
+  render: () => {
+    // Called during the render: it resolves against the app serving the
+    // request. Undefined for a slug nobody registered, exactly as
+    // `PlumixForm` renders nothing for one.
+    const subscribe = formWire("subscribe");
+    return subscribe ? <SubscribeBar client="load" form={subscribe} /> : null;
+  },
+});
 ```
 
 and drive it there:

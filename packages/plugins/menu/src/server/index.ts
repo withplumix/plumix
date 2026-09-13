@@ -4,10 +4,6 @@ export {
   getMenuForLocation,
   getMenusForLocations,
 } from "./getMenuForLocation.js";
-export {
-  getRegisteredLocations,
-  clearRegisteredLocations,
-} from "./locations.js";
 export type {
   MenuItemMeta,
   MenuItemCustomMeta,
