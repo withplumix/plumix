@@ -1,5 +1,6 @@
-import type { AnyPluginDescriptor, PlumixEnv } from "plumix";
+import type { AnyPluginDescriptor, EntryData, PlumixEnv } from "plumix";
 import type { BlockSpec } from "plumix/blocks";
+import type { ReactNode } from "react";
 import { archive, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { definePlugin } from "plumix/plugin";
@@ -18,18 +19,20 @@ const blog = definePlugin("test_blog", (ctx) => {
   });
 });
 
-// A theme that puts the entry's blocks on the page — the only way the
-// form block's own markup reaches a visitor.
-const themeWith = (blocks: readonly BlockSpec[]) =>
+// The entry's blocks on its page — the only way the form block's own
+// markup reaches a visitor.
+function entryBlocks(data: EntryData): ReactNode {
+  return data.entry.contentBlocks ? (
+    <BlockRenderer content={data.entry.contentBlocks} />
+  ) : null;
+}
+
+const themeWith = (blocks: readonly BlockSpec[], entryTemplate = entryBlocks) =>
   defineTheme({
     blocks,
     templates: [
       fallback(() => null),
-      entry(({ data }) =>
-        data.entry.contentBlocks ? (
-          <BlockRenderer content={data.entry.contentBlocks} />
-        ) : null,
-      ),
+      entry(({ data }) => entryTemplate(data)),
       // The same blocks on a page that is not one entry's — what a listing
       // rendering an excerpt does, and the only way to reach the form block
       // where there is no entry to bind.
@@ -50,6 +53,10 @@ export interface FormsHarnessOptions {
   readonly env?: PlumixEnv;
   /** The visitor's address, as a runtime adapter reports it to core. */
   readonly clientAddress?: string;
+  /** What an entry's page renders in place of its blocks — a theme's own template. */
+  readonly entryTemplate?: (data: EntryData) => ReactNode;
+  /** The subdirectory the site is served under. */
+  readonly basePath?: string;
 }
 
 export async function createFormsHarness(
@@ -58,9 +65,10 @@ export async function createFormsHarness(
 ): Promise<FormsHarness> {
   const harness = await createDispatcherHarness({
     plugins: [blog, ...plugins],
-    theme: themeWith(options.themeBlocks ?? []),
+    theme: themeWith(options.themeBlocks ?? [], options.entryTemplate),
     env: options.env,
     clientAddress: options.clientAddress,
+    basePath: options.basePath,
   });
   await applyFormsSchema(harness.db);
   return harness;

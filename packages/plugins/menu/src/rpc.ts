@@ -6,9 +6,9 @@ import { entries, entryTerm, settings, terms } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedRow } from "./server/resolveItemStates.js";
+import type { RegisteredMenuLocation } from "./server/types.js";
 import { MenuPluginError } from "./errors.js";
 import { getEligibleMenuKinds } from "./server/eligibility.js";
-import { getRegisteredLocations } from "./server/locations.js";
 import { resolveItemStates } from "./server/resolveItemStates.js";
 import { flattenSaveItems, resolveParentIds } from "./server/save.js";
 import { sanitizeMenuHref } from "./server/url.js";
@@ -116,7 +116,9 @@ interface SaveResponse {
   readonly modified: readonly number[];
 }
 
-export function createMenuRouter(): PluginRpcRouter {
+export function createMenuRouter(
+  registered: ReadonlyMap<string, RegisteredMenuLocation>,
+): PluginRpcRouter {
   const list = base
     .use(authenticated)
     .use(requireCapability(MENU_MANAGE_CAPABILITY))
@@ -569,7 +571,6 @@ export function createMenuRouter(): PluginRpcRouter {
       // Reject typos: only locations a theme has registered are
       // assignable. Otherwise `assignLocation('primry', ...)` would
       // silently write a row that no consumer would ever read.
-      const registered = getRegisteredLocations();
       if (!registered.has(input.location)) {
         throw errors.NOT_FOUND({
           data: { kind: "menu_location", id: input.location },
@@ -641,7 +642,6 @@ export function createMenuRouter(): PluginRpcRouter {
     .use(authenticated)
     .use(requireCapability(MENU_MANAGE_CAPABILITY))
     .handler(async ({ context }): Promise<readonly LocationRow[]> => {
-      const registered = getRegisteredLocations();
       if (registered.size === 0) return [];
 
       // settings.value is a JSON-encoded text column, so a SQL-level

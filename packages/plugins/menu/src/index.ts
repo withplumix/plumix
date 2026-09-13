@@ -13,10 +13,7 @@ import {
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
 import { getMenusForLocations } from "./server/getMenuForLocation.js";
-import {
-  clearRegisteredLocations,
-  recordLocation,
-} from "./server/locations.js";
+import { declareLocations } from "./server/locations.js";
 
 // Plain descriptor literals — plugin source runs server-side without
 // the Babel macro pipeline. Per-entity tables (`MENU_ITEM_LABELS` /
@@ -187,13 +184,7 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
-      // Reset-then-populate: setup re-runs across dev rebuilds within
-      // one module lifetime, and each build must own the full location
-      // set — a removed config entry has to actually disappear.
-      clearRegisteredLocations();
-      for (const [id, location] of Object.entries(options.locations ?? {})) {
-        recordLocation(id, location);
-      }
+      const registered = declareLocations(options.locations ?? {});
 
       ctx.registerEntryType("menu_item", {
         label: MENU_ITEM_LABELS.plural,
@@ -220,7 +211,7 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
           getMenusForLocations(appCtx, locations),
       });
 
-      ctx.registerRpcRouter(createMenuRouter());
+      ctx.registerRpcRouter(createMenuRouter(registered));
 
       ctx.registerAdminPage({
         path: "/menus",

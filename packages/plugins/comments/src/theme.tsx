@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { useBasePath, useIsEditing } from "plumix/blocks/renderer";
+import { tryGetContext } from "plumix/plugin";
 
 import { SUBMIT_PATH } from "./contract.js";
 import { CommentIsland } from "./form/comment-island.js";
 import { CommentMarkup } from "./form/comment-markup.js";
 import { commentFormIdBase } from "./paths.js";
-import { publishedCommentsConfig } from "./registry.js";
 
 export type { CommentFormError, CommentFormValues } from "./types.js";
 
@@ -54,14 +54,16 @@ export function PlumixCommentForm({
 }): ReactNode {
   const basePath = useBasePath();
   const editing = useIsEditing();
-  const { requireEmail } = publishedCommentsConfig();
+  const config = tryGetContext()?.comments;
+  // Without the plugin there is no endpoint for the form to post to.
+  if (!config) return null;
   const form = {
     action: `${basePath}${SUBMIT_PATH}`,
     entryId,
     parentId,
     returnTo,
     idBase: commentFormIdBase(id ?? entryId),
-    requireEmail,
+    requireEmail: config.requireEmail,
   };
   // In the visual editor the form is a thing being arranged rather than
   // filled in, so it stays as the markup — the same rule the islands

@@ -15,7 +15,7 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { menu } from "../index.js";
 import { getMenuByName } from "./getMenuByName.js";
@@ -23,7 +23,6 @@ import {
   getMenuForLocation,
   getMenusForLocations,
 } from "./getMenuForLocation.js";
-import { clearRegisteredLocations } from "./locations.js";
 
 interface TestRegistryBundle {
   readonly registry: PluginRegistry;
@@ -66,10 +65,6 @@ describe("getMenuForLocation", () => {
       .transient({ db })
       .create({ email: "menu-loc-author@example.test" });
     authorId = author.id;
-  });
-
-  afterEach(() => {
-    clearRegisteredLocations();
   });
 
   async function seedMenuWithItem(

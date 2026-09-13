@@ -58,7 +58,7 @@ import { getMenuForLocation } from "@plumix/plugin-menu/server";
 const primary = await getMenuForLocation(ctx, "primary");
 ```
 
-`getMenuByName` and `getRegisteredLocations` are available there too.
+`getMenuByName` is available there too.
 
 ## Support
 

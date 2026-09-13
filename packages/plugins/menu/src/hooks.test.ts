@@ -19,16 +19,12 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { ResolvedMenuItem } from "./server/types.js";
 import { menu } from "./index.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 import { getMenuForLocation } from "./server/getMenuForLocation.js";
-import {
-  clearRegisteredLocations,
-  recordLocation,
-} from "./server/locations.js";
 
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 type Factories = ReturnType<typeof factoriesFor>;
@@ -123,10 +119,6 @@ describe("menu hook surface", () => {
 
   beforeEach(async () => {
     b = await setup();
-  });
-
-  afterEach(() => {
-    clearRegisteredLocations();
   });
 
   describe("menu:item filter", () => {
@@ -233,7 +225,6 @@ describe("menu hook surface", () => {
     });
 
     test("location is populated when called via getMenuForLocation", async () => {
-      recordLocation("primary", { label: "Primary" });
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
       await b.factories.setting.create({

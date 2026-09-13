@@ -1,15 +1,13 @@
+// Imported from the root `plumix` specifier so the `declare module "plumix"`
+// augmentation below has its target loaded.
 import type { Label } from "plumix/i18n";
-import {
-  definePlugin,
-  PLUGIN_I18N_SLOT,
-  pluginAdminEntryPath,
-} from "plumix/plugin";
+import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 
+import type { ResolvedCommentsConfig } from "./config.js";
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import { SUBMIT_ROUTE_PATH } from "./contract.js";
 import * as schema from "./db/schema.js";
-import { publishCommentsConfig } from "./registry.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
@@ -23,6 +21,17 @@ import { createCommentsThreadLoader } from "./server/template-dep.js";
 
 export type { CommentsConfig, CommentStatus, ModerationMode } from "./types.js";
 export { COMMENT_STATUSES } from "./types.js";
+
+declare module "plumix" {
+  interface AppContextExtensions {
+    /**
+     * What this app's comment form needs — on the request context because
+     * `PlumixCommentForm` renders in a theme template, which can reach
+     * nothing else that belongs to one app.
+     */
+    readonly comments?: Pick<ResolvedCommentsConfig, "requireEmail">;
+  }
+}
 
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-comments");
 
@@ -62,10 +71,10 @@ export function comments(options: CommentsConfig = {}) {
     schemaModule: "@plumix/plugin-comments/schema",
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    provides: (ctx) => {
+      ctx.extendAppContext("comments", { requireEmail: config.requireEmail });
+    },
     setup: (ctx) => {
-      // Read by `PlumixCommentForm`, which renders inside a theme template
-      // and has no plugin context to reach this install's config through.
-      publishCommentsConfig(config);
       ctx.registerCapability(COMMENT_MODERATE_CAPABILITY, "editor");
       ctx.registerRpcRouter(createCommentsRouter());
       ctx.registerAdminPage({

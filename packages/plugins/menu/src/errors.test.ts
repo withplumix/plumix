@@ -35,17 +35,6 @@ describe("MenuPluginError.locationLabelEmpty", () => {
   });
 });
 
-describe("MenuPluginError.duplicateLocation", () => {
-  test("class identity, code, exposed id, and message", () => {
-    const err = MenuPluginError.duplicateLocation({ id: "primary" });
-    expect(err.code).toBe("duplicate_location");
-    expect(err.message).toContain(
-      'registerMenuLocation: location "primary" is already registered',
-    );
-    expect(err.message).toContain("unique across themes");
-  });
-});
-
 describe("MenuPluginError.resolveParentIdsLengthMismatch", () => {
   test("class identity, code, exposed lengths, and message", () => {
     const err = MenuPluginError.resolveParentIdsLengthMismatch({

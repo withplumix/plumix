@@ -1,7 +1,6 @@
 type MenuPluginErrorCode =
   | "invalid_location_id"
   | "location_label_empty"
-  | "duplicate_location"
   | "resolve_parent_ids_length_mismatch"
   | "menu_create_no_row_returned";
 
@@ -56,15 +55,6 @@ export class MenuPluginError extends Error {
     return new MenuPluginError(
       "location_label_empty",
       `registerMenuLocation("${ctx.id}"): \`label\` is required and must be a non-empty, non-whitespace string.`,
-      ctx,
-    );
-  }
-
-  static duplicateLocation(ctx: { id: string }): MenuPluginError {
-    return new MenuPluginError(
-      "duplicate_location",
-      `registerMenuLocation: location "${ctx.id}" is already registered. ` +
-        `Each location id must be unique across themes.`,
       ctx,
     );
   }

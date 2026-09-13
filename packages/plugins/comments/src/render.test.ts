@@ -1,4 +1,4 @@
-import type { EntryData } from "plumix";
+import type { AnyPluginDescriptor, EntryData } from "plumix";
 import { createElement as el } from "react";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 import { definePlugin } from "plumix/plugin";
@@ -9,6 +9,7 @@ import type { ResolvedThread } from "./server/load-thread.js";
 import { comments } from "./index.js";
 import { applyCommentsSchema } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
+import { PlumixCommentForm } from "./theme.js";
 
 // Minimal host plugin registering a public `post` type so the dispatcher
 // compiles a `/posts/:slug` single route.
@@ -83,6 +84,54 @@ async function seedPost(
     status: "published",
   });
 }
+
+const formTheme = defineTheme({
+  templates: [
+    fallback(() => null),
+    entry(({ data }) => el(PlumixCommentForm, { entryId: data.entry.id })),
+  ],
+});
+
+const EMAIL_REQUIRED = /data-plumix-comment-control="email"[^>]*required/;
+
+/** A site whose theme renders the comment form, booted now, and a visit to it. */
+async function formSite(
+  plugins: readonly AnyPluginDescriptor[],
+): Promise<() => Promise<string>> {
+  const harness = await createDispatcherHarness({
+    plugins: [testBlog, ...plugins],
+    theme: formTheme,
+  });
+  await applyCommentsSchema(harness.db);
+  await seedPost(harness, "hello-world");
+  return async () => {
+    const response = await harness.fetch("/posts/hello-world");
+    response.assertStatus(200);
+    return response.text();
+  };
+}
+
+describe("the comment form in a theme template", () => {
+  test("asks for an email exactly when its own install does", async () => {
+    const visitLenient = await formSite([
+      comments({ entryTypes: ["post"], requireEmail: false }),
+    ]);
+    const visitStrict = await formSite([comments({ entryTypes: ["post"] })]);
+
+    const lenientHtml = await visitLenient();
+    const strictHtml = await visitStrict();
+
+    expect(lenientHtml).toContain('data-plumix-comment-control="email"');
+    expect(lenientHtml).not.toMatch(EMAIL_REQUIRED);
+    expect(strictHtml).toMatch(EMAIL_REQUIRED);
+  });
+
+  test("renders nothing on a site without the plugin", async () => {
+    const visit = await formSite([]);
+
+    expect(await visit()).not.toContain("data-plumix-comment");
+  });
+});
 
 describe("comments read path through the dispatcher", () => {
   test("renders approved comments on a single post and excludes pending", async () => {

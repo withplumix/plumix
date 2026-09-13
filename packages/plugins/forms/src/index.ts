@@ -10,6 +10,7 @@ import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 import "./server/hooks.js";
 
 import type { FormDefinition } from "./define-form.js";
+import type { FormRegistry } from "./registry.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
   EXPORT_ROUTE_PATH,
@@ -24,7 +25,7 @@ import {
 import * as schema from "./db/schema.js";
 import { isRetentionPeriod } from "./define-form.js";
 import { FormsError } from "./errors.js";
-import { createFormRegistry, publishFormRegistry } from "./registry.js";
+import { createFormRegistry } from "./registry.js";
 import { createSubmissionsRouter } from "./rpc.js";
 import { createExportHandler } from "./server/export.js";
 import { createFormMcpTools } from "./server/mcp-tools.js";
@@ -122,6 +123,15 @@ declare module "plumix" {
      */
     registerForm(this: { readonly id: string }, form: FormDefinition): void;
   }
+
+  interface AppContextExtensions {
+    /**
+     * This app's forms, by slug — on the request context because
+     * `PlumixForm` renders in a theme template, which can reach nothing
+     * else that belongs to one app.
+     */
+    readonly forms?: Pick<FormRegistry, "get">;
+  }
 }
 
 /**
@@ -153,10 +163,7 @@ export function forms(options: FormsConfig = {}) {
       // and `buildStart`). This is the one point where the registry can be
       // emptied without dropping a form some other plugin's `setup` added.
       registry.reset();
-      // What the theme surface reads — see `publishFormRegistry`. Done
-      // here rather than in `setup` so a template resolves against the
-      // install that is booting even before its forms are in.
-      publishFormRegistry(registry);
+      ctx.extendAppContext("forms", { get: (slug) => registry.get(slug) });
       ctx.extendPluginContext("registerForm", function registerForm(form) {
         registry.register(form, this.id);
       });
