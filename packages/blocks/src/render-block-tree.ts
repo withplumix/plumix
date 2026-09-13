@@ -103,10 +103,32 @@ export interface BlockRenderHooks {
   readonly afterRender?: (node: BlockNode, context: BlockContext) => void;
 }
 
+/**
+ * Decorate-or-replace filters fired around a single block's React element.
+ * Unlike {@link BlockRenderHooks} (observational, fired around the whole node),
+ * these transform the element itself — the bridge for the framework's
+ * `block:before_render` / `block:after_render` filters. `beforeRender` sees
+ * the block's own rendered output before the seam wrapper is applied;
+ * `afterRender` sees the fully-wrapped element about to be returned.
+ */
+export interface BlockRenderFilters {
+  readonly beforeRender?: (
+    element: ReactNode,
+    node: BlockNode,
+    context: BlockContext,
+  ) => ReactNode;
+  readonly afterRender?: (
+    element: ReactNode,
+    node: BlockNode,
+    context: BlockContext,
+  ) => ReactNode;
+}
+
 export interface RenderBlockTreeOptions {
   /** Theme breakpoints driving the emitter's @media maxima (default 991/640). */
   readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
+  readonly renderFilters?: BlockRenderFilters;
   readonly loaderData?: ResolvedBlockLoaders;
   readonly patterns?: PatternRegistry;
   /** Render locale for shortcode/`Intl` localization. Defaults to `"en"`. */
@@ -287,6 +309,7 @@ interface WalkerEnv {
   readonly devState: DevWarnState;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly hooks: BlockRenderHooks | undefined;
+  readonly renderFilters: BlockRenderFilters | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly patterns: PatternRegistry | undefined;
   readonly editing: boolean;
@@ -400,24 +423,32 @@ function renderNode(
       breakpoints: env.breakpoints,
     });
   }
+  if (env.renderFilters?.beforeRender) {
+    rendered = env.renderFilters.beforeRender(rendered, node, context);
+  }
 
   // selfSeam: the block spread `blockProps` onto its own root element, so the
   // seam needs no wrapper div (which `<td>`/`<tr>` can't have, and which would
   // make a style class only inherit rather than win). The `<style>` rides as a
   // fragment sibling.
+  let final: ReactNode;
   if (spec.selfSeam) {
-    return createElement(Fragment, { key: node.id }, styleTag, rendered);
+    final = createElement(Fragment, { key: node.id }, styleTag, rendered);
+  } else if (spec.inline) {
+    // Legacy: superseded by selfSeam.
+    final = createElement(Fragment, { key: node.id }, rendered);
+  } else {
+    final = createElement(
+      tagName ?? "div",
+      { key: node.id, ...blockProps },
+      styleTag,
+      rendered,
+    );
   }
-  // Legacy: superseded by selfSeam.
-  if (spec.inline) {
-    return createElement(Fragment, { key: node.id }, rendered);
+  if (env.renderFilters?.afterRender) {
+    final = env.renderFilters.afterRender(final, node, context);
   }
-  return createElement(
-    tagName ?? "div",
-    { key: node.id, ...blockProps },
-    styleTag,
-    rendered,
-  );
+  return final;
 }
 
 const EMPTY_LOADERS: Readonly<Record<string, unknown>> = Object.freeze({});
@@ -468,6 +499,7 @@ export function renderBlockTree(
     devState: devWarnState(registry),
     breakpoints: options?.breakpoints,
     hooks: options?.hooks,
+    renderFilters: options?.renderFilters,
     loaderData: options?.loaderData,
     patterns: options?.patterns,
     editing: options?.editing ?? false,

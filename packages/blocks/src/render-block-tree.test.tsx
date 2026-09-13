@@ -623,6 +623,66 @@ describe("renderBlockTree", () => {
     });
   });
 
+  describe("render filters", () => {
+    test("beforeRender decorates the element the block is about to render", () => {
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "core/heading", attrs: { text: "Hi", level: 2 } },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, headingRegistry, {
+          renderFilters: {
+            beforeRender: (element) =>
+              createElement("mark", { "data-testid": "decorated" }, element),
+          },
+        }),
+      );
+
+      expect(html).toContain(
+        '<mark data-testid="decorated"><h2>Hi</h2></mark>',
+      );
+    });
+
+    test("afterRender receives the fully-wrapped element and can replace it", () => {
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "core/heading", attrs: { text: "Hi", level: 2 } },
+      ];
+
+      const html = renderToStaticMarkup(
+        renderBlockTree(tree, headingRegistry, {
+          renderFilters: {
+            afterRender: () =>
+              createElement("p", { "data-testid": "replaced" }, "swapped"),
+          },
+        }),
+      );
+
+      expect(html).toContain('<p data-testid="replaced">swapped</p>');
+      expect(html).not.toContain("<h2>");
+    });
+
+    test("chains beforeRender's output into afterRender", () => {
+      const tree: readonly BlockNode[] = [
+        { id: "1", name: "core/heading", attrs: { text: "Hi", level: 2 } },
+      ];
+      const seenByAfter: string[] = [];
+
+      renderToStaticMarkup(
+        renderBlockTree(tree, headingRegistry, {
+          renderFilters: {
+            beforeRender: (element) => createElement("mark", {}, element),
+            afterRender: (element, node) => {
+              seenByAfter.push(node.name);
+              return element;
+            },
+          },
+        }),
+      );
+
+      expect(seenByAfter).toEqual(["core/heading"]);
+    });
+  });
+
   describe("BlockNode serialization", () => {
     test("preserves unknown nodes byte-identical through JSON round-trip", () => {
       const tree: readonly BlockNode[] = [

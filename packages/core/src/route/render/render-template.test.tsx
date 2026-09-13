@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { createElement, useId } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { defineBlock } from "@plumix/blocks";
@@ -1838,6 +1838,58 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("Hi");
+  });
+
+  test("block:before_render / block:after_render decorate a real block render", async () => {
+    const seen: string[] = [];
+    const decorator = definePlugin("acme-decorator", (ctx) => {
+      ctx.addFilter("block:before_render", (element, hookCtx) => {
+        seen.push(`before:${hookCtx.node.name}`);
+        return createElement("mark", { "data-testid": "before" }, element);
+      });
+      ctx.addFilter("block:after_render", (element, hookCtx) => {
+        seen.push(`after:${hookCtx.node.name}`);
+        return element;
+      });
+    });
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
+          ) : null,
+        ),
+      ],
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, decorator],
+      theme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "decorated",
+      title: "Decorated",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          { id: "h", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/decorated"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="before"');
+    expect(seen).toEqual(["before:core/rich-text", "after:core/rich-text"]);
   });
 
   test("a styled block's stored `var(--plumix-…)` value is emitted verbatim", async () => {
