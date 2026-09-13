@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
+import type { Db, Logger } from "./context/app.js";
 import type { RegisteredTemplateDep } from "./template-deps.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
-import { NOOP_TELEMETRY } from "./context/telemetry.js";
 import { settings as settingsSchema } from "./db/schema/settings.js";
 import { definePlugin } from "./plugin/define.js";
 import { DuplicateRegistrationError } from "./plugin/errors.js";
@@ -11,7 +11,9 @@ import { entry, fallback } from "./route/render/template-builders.js";
 import { buildApp } from "./runtime/app.js";
 import { loadTemplateDeps } from "./template-deps.js";
 import { defineTemplate, normalizeTemplate } from "./template.js";
+import { createTestContext } from "./test/context.js";
 import { createDispatcherHarness } from "./test/dispatcher.js";
+import { createTestDb } from "./test/harness.js";
 import { defineTheme } from "./theme.js";
 
 const stubAdapter = {
@@ -142,10 +144,7 @@ describe("ctx.registerTemplateDep", () => {
     const deps = await loadTemplateDeps(
       { "test-slot": ["header"] },
       app.plugins.templateDeps,
-      {
-        logger: captureLogger().logger,
-        telemetry: NOOP_TELEMETRY,
-      } as unknown as Parameters<typeof loadTemplateDeps>[2],
+      contextLogging(captureLogger().logger),
     );
 
     expect(deps["test-slot"]).toEqual({ header: { value: "header" } });
@@ -174,6 +173,14 @@ describe("ctx.registerTemplateDep", () => {
     ).rejects.toThrow(/reserved/i);
   });
 });
+
+// Loaders are handed the request context, so they get a real one.
+let db: Db;
+beforeAll(async () => {
+  db = await createTestDb();
+});
+
+const contextLogging = (logger: Logger) => createTestContext({ db, logger });
 
 const captureLogger = () => {
   const errors: { msg: string; ctx?: Record<string, unknown> }[] = [];
@@ -231,10 +238,11 @@ describe("loadTemplateDeps", () => {
       const template = { "test-thing": ["a"], "test-other": ["b"] };
       const ctx = captureLogger();
 
-      const deps = await loadTemplateDeps(template, registry, {
-        logger: ctx.logger,
-        telemetry: NOOP_TELEMETRY,
-      } as unknown as Parameters<typeof loadTemplateDeps>[2]);
+      const deps = await loadTemplateDeps(
+        template,
+        registry,
+        contextLogging(ctx.logger),
+      );
 
       // Not implied by the gate: one loader invoked twice releases it alone.
       expect(started).toBe(2);
@@ -249,10 +257,11 @@ describe("loadTemplateDeps", () => {
     });
     const template = { "test-thing": ["present", "absent"] };
     const ctx = captureLogger();
-    const deps = await loadTemplateDeps(template, registry, {
-      logger: ctx.logger,
-      telemetry: NOOP_TELEMETRY,
-    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
+    const deps = await loadTemplateDeps(
+      template,
+      registry,
+      contextLogging(ctx.logger),
+    );
     expect(deps["test-thing"]).toEqual({
       present: { value: "yes" },
       absent: null,
@@ -265,10 +274,11 @@ describe("loadTemplateDeps", () => {
     });
     const template = { "test-thing": ["x"] };
     const ctx = captureLogger();
-    const deps = await loadTemplateDeps(template, registry, {
-      logger: ctx.logger,
-      telemetry: NOOP_TELEMETRY,
-    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
+    const deps = await loadTemplateDeps(
+      template,
+      registry,
+      contextLogging(ctx.logger),
+    );
     expect(deps["test-thing"]).toEqual({});
     expect(ctx.errors[0]?.msg).toBe("template_dep_load_failed");
     expect(ctx.errors[0]?.ctx).toMatchObject({
@@ -675,9 +685,7 @@ describe("loadTemplateDeps — legacy templates", () => {
     const deps = await loadTemplateDeps(
       legacy as unknown as Record<string, unknown>,
       registry,
-      { logger: ctx.logger } as unknown as Parameters<
-        typeof loadTemplateDeps
-      >[2],
+      contextLogging(ctx.logger),
     );
     expect(deps).toEqual({});
     expect(ctx.errors).toEqual([]);
