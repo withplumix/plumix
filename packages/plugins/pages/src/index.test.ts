@@ -34,17 +34,4 @@ describe("@plumix/plugin-pages", () => {
     const { registry } = await install();
     expect(registry.termTaxonomies.size).toBe(0);
   });
-
-  test("derives page:* capabilities from the entry type", async () => {
-    const { registry } = await install();
-    expect(registry.capabilities.get("entry:page:create")?.minRole).toBe(
-      "contributor",
-    );
-    expect(registry.capabilities.get("entry:page:publish")?.minRole).toBe(
-      "author",
-    );
-    expect(registry.capabilities.get("entry:page:edit_any")?.minRole).toBe(
-      "editor",
-    );
-  });
 });

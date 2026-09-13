@@ -8,8 +8,8 @@
 // 1. Existing per-event behavioral coverage (preserved verbatim post-rename).
 // 2. Backfill: one assertion per audit-events row so a refactor of the
 //    interpreter can't silently break a row that previously had no test.
-// 3. Snapshot + guard: a sorted-event-list snapshot catches add/remove
-//    drift; `assertRedactionInvariants` ensures sensitive fields stay
+// 3. Registration + guard: the listeners actually registered are held to a
+//    pinned list; `assertRedactionInvariants` ensures sensitive fields stay
 //    omitted on every row whose subject type carries them.
 
 import type {
@@ -731,9 +731,15 @@ describe("registerAuditEvents — term backfill", () => {
 // ──────────────────────────────────────────────────────────────────
 
 describe("auditEvents table", () => {
-  test("event list matches a pinned set — add/remove drift surfaces here", () => {
-    const events = auditEvents.map((e) => e.event).sort();
-    expect(events).toEqual([
+  test("registers one listener for each audited event, and no others", () => {
+    const registered: string[] = [];
+    const ctx = {
+      addAction: (name: string) => {
+        registered.push(name);
+      },
+    } as unknown as PluginSetupContext;
+    registerAuditEvents(ctx, fakeService().service);
+    expect(registered.sort()).toEqual([
       "api_token:created",
       "api_token:revoked",
       "credential:created",
@@ -765,11 +771,6 @@ describe("auditEvents table", () => {
       "user:status_changed",
       "user:updated",
     ]);
-  });
-
-  test("every event name is unique", () => {
-    const names = auditEvents.map((e) => e.event);
-    expect(new Set(names).size).toBe(names.length);
   });
 });
 
