@@ -9,7 +9,7 @@ import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "plumix/test";
-import { entryPurgeTags, typeTag } from "plumix";
+import { defineTheme, entryPurgeTags, fallback, typeTag } from "plumix";
 import { entries, eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -150,6 +150,7 @@ function createHarness(
     readonly basePath?: string;
     readonly logger?: Logger;
     readonly telemetry?: CreateDispatcherHarnessOptions["telemetry"];
+    readonly theme?: CreateDispatcherHarnessOptions["theme"];
   } = {},
 ): Promise<DispatcherHarness> {
   return createDispatcherHarness({ plugins: [...plugins, seo()], ...options });
@@ -1125,28 +1126,26 @@ function lifecycleFirer(action: LifecycleAction) {
   });
 }
 
-describe("IndexNow", () => {
-  const KEY = "0123456789abcdef0123456789abcdef";
+const KEY = "0123456789abcdef0123456789abcdef";
 
+function stubbedFetch(): ReturnType<typeof vi.fn> {
+  const fetch = vi.fn(() => Promise.resolve(new Response("", { status: 200 })));
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
+
+async function publish(h: DispatcherHarness): Promise<Response> {
+  const res = await h.dispatch(
+    new Request("https://cms.example/fire-lifecycle/hello"),
+  );
+  await h.drainDeferred();
+  return res;
+}
+
+describe("IndexNow", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  function stubbedFetch(): ReturnType<typeof vi.fn> {
-    const fetch = vi.fn(() =>
-      Promise.resolve(new Response("", { status: 200 })),
-    );
-    vi.stubGlobal("fetch", fetch);
-    return fetch;
-  }
-
-  async function publish(h: DispatcherHarness): Promise<Response> {
-    const res = await h.dispatch(
-      new Request("https://cms.example/fire-lifecycle/hello"),
-    );
-    await h.drainDeferred();
-    return res;
-  }
 
   function submitted(fetch: ReturnType<typeof vi.fn>): {
     readonly url: string;
@@ -1330,6 +1329,134 @@ describe("IndexNow", () => {
 
     expect(res.status).toBe(404);
   });
+});
+
+// The head asks `indexable` of one page, a sub-sitemap asks the same arms of
+// whole tables, and IndexNow asks them inline. This table holds the three to
+// one answer: an arm dropped from any of them fails a row here, and an arm
+// added to `indexable` needs a row of its own. Which scopes the index lists
+// is held by "a scope held out of the index leaves the sitemap".
+describe("the head, the sitemap and IndexNow agree on indexability", () => {
+  const theme = defineTheme({ templates: [fallback(() => null)] });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const cases: readonly {
+    readonly arm: string;
+    readonly subject: "entry" | "term";
+    readonly settings?: Readonly<Record<string, JsonValue>>;
+    readonly meta?: Record<string, JsonValue>;
+    readonly indexable: boolean;
+  }[] = [
+    { arm: "default", subject: "entry", indexable: true },
+    { arm: "default", subject: "term", indexable: true },
+    {
+      arm: "site_private",
+      subject: "entry",
+      settings: { indexable: false },
+      indexable: false,
+    },
+    {
+      arm: "site_private",
+      subject: "term",
+      settings: { indexable: false },
+      indexable: false,
+    },
+    {
+      arm: "entry_override",
+      subject: "entry",
+      meta: { seo_noindex: true },
+      indexable: false,
+    },
+    {
+      arm: "entry_override",
+      subject: "term",
+      meta: { seo_noindex: true },
+      indexable: false,
+    },
+    {
+      arm: "type_default",
+      subject: "entry",
+      settings: { "type:post:indexable": false },
+      indexable: false,
+    },
+    {
+      arm: "taxonomy_default",
+      subject: "term",
+      settings: { "taxonomy:category:indexable": false },
+      indexable: false,
+    },
+  ];
+
+  test.each(cases)(
+    "$arm on a $subject",
+    async ({ subject, settings = {}, meta, indexable }) => {
+      const fetch = stubbedFetch();
+      // A submission that throws is swallowed into a warning, which would
+      // otherwise read here as an entry nobody announced.
+      const logger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      };
+      const h = await createHarness(
+        [taxonomyPlugin, lifecycleFirer("entry:published")],
+        { theme, logger },
+      );
+      await setSettings(h, "seo", { indexnow_key: KEY, ...settings });
+      await seedPost(h, subject === "entry" && meta ? { meta } : {});
+      await h.factory.term.create({
+        taxonomy: "category",
+        name: "News",
+        slug: "news",
+        ...(subject === "term" && meta ? { meta } : {}),
+      });
+
+      const [path, sitemap] =
+        subject === "entry"
+          ? ["/post/hello", "/sitemap-post-1.xml"]
+          : ["/category/news", "/sitemap-category-1.xml"];
+      // Every request has to land: a 404 is `noindex`, lists nothing and
+      // announces nothing, so a broken route would pass each `false` row.
+      const page = await h.dispatch(new Request(`https://cms.example${path}`));
+      const listing = await h.dispatch(
+        new Request(`https://cms.example${sitemap}`),
+      );
+      const statuses = [page.status, listing.status];
+      const robots = /<meta name="robots" content="([^"]*)"/.exec(
+        await page.text(),
+      )?.[1];
+      const listed = (await listing.text()).includes(
+        `<loc>https://cms.example${path}</loc>`,
+      );
+
+      // IndexNow announces entries only; a term archive has no submission to
+      // agree or disagree with.
+      let announced: boolean | null = null;
+      if (subject === "entry") {
+        statuses.push((await publish(h)).status);
+        announced = fetch.mock.calls.some(
+          (call) => call[0] === "https://api.indexnow.org/indexnow",
+        );
+      }
+
+      expect(statuses.filter((status) => status !== 200)).toEqual([]);
+      expect({
+        head: robots === undefined ? undefined : !robots.includes("noindex"),
+        sitemap: listed,
+        indexNow: announced,
+        warnings: logger.warn.mock.calls,
+      }).toEqual({
+        head: indexable,
+        sitemap: indexable,
+        indexNow: subject === "entry" ? indexable : null,
+        warnings: [],
+      });
+    },
+  );
 });
 
 describe("the robots.txt editor", () => {
