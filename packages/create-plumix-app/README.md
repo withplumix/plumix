@@ -34,6 +34,8 @@ pnpm create plumix-app my-blog --plugins blog,pages,media
   to scaffold for Cloudflare Workers + D1 instead).
 - `-p, --plugins <ids>` — comma-separated plugins to include; replaces the
   default `seo,feeds` rather than adding to it.
+- `--auth <ids>` — comma-separated auth methods to add to passkey: `oauth`,
+  `magic-link`, and `cfAccess` on Cloudflare.
 - `--pm <name>` — package manager (npm, pnpm, yarn, bun); auto-detected.
 - `--no-install`, `--no-db`, `--no-git` — skip the matching post-scaffold step.
 - `-y, --yes` — accept defaults for whatever you did not flag.

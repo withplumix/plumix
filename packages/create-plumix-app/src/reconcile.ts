@@ -1,13 +1,15 @@
 import { DEFAULT_RUNTIME } from "./scaffold.js";
 
 /** A field the interactive wizard prompts for when it is not flagged. */
-export type PromptKey = "targetDir" | "runtime" | "plugins";
+export type PromptKey = "targetDir" | "runtime" | "plugins" | "auth";
 
 export interface Reconciliation {
   readonly targetDir: string | undefined;
   readonly runtimeId: string;
   /** Plugins as flagged; `undefined` when no `--plugins` flag was given. */
   readonly pluginIds: readonly string[] | undefined;
+  /** Auth methods as flagged; `undefined` when no `--auth` flag was given. */
+  readonly authMethodIds: readonly string[] | undefined;
   readonly yes: boolean;
   /** Package-manager override; detected from the environment when absent. */
   readonly pm: string | undefined;
@@ -22,6 +24,7 @@ interface ParsedArgs {
   readonly target: string | undefined;
   readonly runtime: string | undefined;
   readonly plugins: readonly string[] | undefined;
+  readonly auth: readonly string[] | undefined;
   readonly yes: boolean;
   readonly pm: string | undefined;
   readonly install: boolean;
@@ -43,11 +46,13 @@ export function reconcile(argv: readonly string[]): Reconciliation {
   if (parsed.target === undefined) missing.push("targetDir");
   if (parsed.runtime === undefined) missing.push("runtime");
   if (parsed.plugins === undefined) missing.push("plugins");
+  if (parsed.auth === undefined) missing.push("auth");
 
   return {
     targetDir: parsed.target,
     runtimeId: parsed.runtime ?? DEFAULT_RUNTIME,
     pluginIds: parsed.plugins,
+    authMethodIds: parsed.auth,
     yes: parsed.yes,
     pm: parsed.pm,
     install: parsed.install,
@@ -69,6 +74,7 @@ function splitCsv(csv: string): string[] {
 function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let plugins: string[] | undefined;
+  let auth: string[] | undefined;
   let pm: string | undefined;
   let yes = false;
   let install = true;
@@ -89,6 +95,11 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       i++;
     } else if (arg.startsWith("--plugins=")) {
       plugins = splitCsv(arg.slice("--plugins=".length));
+    } else if (arg === "--auth") {
+      auth = splitCsv(argv[i + 1] ?? "");
+      i++;
+    } else if (arg.startsWith("--auth=")) {
+      auth = splitCsv(arg.slice("--auth=".length));
     } else if (arg === "--pm") {
       pm = argv[i + 1] ?? "";
       i++;
@@ -107,5 +118,15 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
   }
 
-  return { target: positional[0], runtime, plugins, yes, pm, install, git, db };
+  return {
+    target: positional[0],
+    runtime,
+    plugins,
+    auth,
+    yes,
+    pm,
+    install,
+    git,
+    db,
+  };
 }

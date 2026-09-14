@@ -101,23 +101,24 @@ export async function runWizard(
     pluginIds = value;
   }
 
-  // Auth is always offered (passkey is implied); the options depend on the
-  // chosen runtime, so this runs after the runtime is known.
-  const runtime = registry.runtimes.find((r) => r.id === runtimeId);
-  const methods = runtime ? availableAuthMethods(runtime) : [];
-  if (methods.length > 0) {
-    const value = await prompter.multiselect({
-      message: "Add auth methods? (passkey is always enabled)",
-      options: methods.map((method) => ({
-        value: method.id,
-        label: method.label,
-        hint: method.description,
-      })),
-      initialValues: [...authMethodIds],
-      required: false,
-    });
-    if (value === null) return null;
-    authMethodIds = value;
+  if (prompts.includes("auth")) {
+    // The options depend on the chosen runtime, so this runs after it is known.
+    const runtime = registry.runtimes.find((r) => r.id === runtimeId);
+    const methods = runtime ? availableAuthMethods(runtime) : [];
+    if (methods.length > 0) {
+      const value = await prompter.multiselect({
+        message: "Add auth methods? (passkey is always enabled)",
+        options: methods.map((method) => ({
+          value: method.id,
+          label: method.label,
+          hint: method.description,
+        })),
+        initialValues: [...authMethodIds],
+        required: false,
+      });
+      if (value === null) return null;
+      authMethodIds = value;
+    }
   }
 
   return { targetDir, runtimeId, pluginIds, authMethodIds };

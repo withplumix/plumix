@@ -78,7 +78,7 @@ describe("runWizard", () => {
     });
 
     const result = await runWizard(
-      ["targetDir", "runtime", "plugins"],
+      ["targetDir", "runtime", "plugins", "auth"],
       defaults,
       registry,
       prompter,
@@ -98,8 +98,8 @@ describe("runWizard", () => {
     });
   });
 
-  it("only prompts for plan fields, but always offers auth", async () => {
-    const prompter = fakePrompter({ select: "cloudflare", multiselect: [[]] });
+  it("only prompts for plan fields", async () => {
+    const prompter = fakePrompter({ select: "cloudflare" });
 
     const result = await runWizard(
       ["runtime"],
@@ -107,15 +107,19 @@ describe("runWizard", () => {
         targetDir: "given",
         runtimeId: "cloudflare",
         pluginIds: ["blog"],
-        authMethodIds: [],
+        authMethodIds: ["oauth"],
       },
       registry,
       prompter,
     );
 
-    // runtime select + auth multiselect (plugins were flagged, so skipped)
-    expect(prompter.calls).toEqual(["select", "multiselect"]);
-    expect(result).toMatchObject({ targetDir: "given", pluginIds: ["blog"] });
+    // plugins and auth were flagged, so only the runtime select runs
+    expect(prompter.calls).toEqual(["select"]);
+    expect(result).toMatchObject({
+      targetDir: "given",
+      pluginIds: ["blog"],
+      authMethodIds: ["oauth"],
+    });
   });
 
   it("opens the plugin prompt preticked with the ids it was handed", async () => {
@@ -148,7 +152,7 @@ describe("runWizard", () => {
   it("records selected auth methods", async () => {
     const prompter = fakePrompter({ multiselect: [["magic-link"]] });
 
-    const result = await runWizard([], defaults, registry, prompter);
+    const result = await runWizard(["auth"], defaults, registry, prompter);
 
     expect(result?.authMethodIds).toEqual(["magic-link"]);
   });
