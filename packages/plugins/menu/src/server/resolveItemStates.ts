@@ -13,6 +13,7 @@ import type { AppContext, LookupResult } from "plumix/plugin";
 import type { ItemState } from "../admin/item-state.js";
 import type { MenuItemMeta } from "./types.js";
 import { mapItemState } from "../admin/item-state.js";
+import { isMenuEligible } from "./eligibility.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 
 /** A `menu_item` row as it comes out of the DB — `meta` still unparsed JSON. */
@@ -63,10 +64,10 @@ export async function resolveItemStates(
   }
 
   const eligibleEntryTypes = [...ctx.plugins.entryTypes.values()]
-    .filter((t) => t.isShownInMenus ?? t.isPublic ?? true)
+    .filter(isMenuEligible)
     .map((t) => t.name);
   const eligibleTaxonomies = [...ctx.plugins.termTaxonomies.values()]
-    .filter((t) => t.isShownInMenus ?? t.isPublic ?? true)
+    .filter(isMenuEligible)
     .map((t) => t.name);
 
   const canAccessKind = (kind: string): boolean => {

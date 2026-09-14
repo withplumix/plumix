@@ -530,6 +530,140 @@ describe("getMenuByName", () => {
     expect(menu?.items).toHaveLength(0);
   });
 
+  describe("renders only menu-eligible types", () => {
+    async function ctxWith(
+      thirdParty: ReturnType<typeof definePlugin>,
+    ): Promise<AppContext> {
+      return ctxFor(
+        db,
+        await buildRegistry([
+          definePlugin("menu-test-host", (setup) => {
+            setup.registerEntryType("menu_item", {
+              label: "Menu items",
+              isHierarchical: true,
+              isPublic: false,
+              termTaxonomies: ["menu"],
+            });
+            setup.registerTermTaxonomy("menu", {
+              label: "Menus",
+              isPublic: false,
+              entryTypes: ["menu_item"],
+            });
+            // An eligible type of each kind keeps the render on the adapter
+            // path, so a hidden type is excluded by the lookup scope rather
+            // than by an empty eligible list short-circuiting the lookup.
+            setup.registerEntryType("post", { label: "Posts", isPublic: true });
+            setup.registerTermTaxonomy("category", {
+              label: "Categories",
+              isPublic: true,
+            });
+          }),
+          thirdParty,
+        ]),
+      );
+    }
+
+    test("renders entry items of a type that leaves isPublic unset", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("shop", (setup) => {
+          setup.registerEntryType("product", { label: "Products" });
+        }),
+      );
+      const product = await factories.entry.create({
+        type: "product",
+        slug: "kettle",
+        title: "Kettle",
+        status: "published",
+        authorId,
+      });
+      const termId = await seedMenu("unset-entry");
+      await seedItems(termId, [
+        { title: "ignored", meta: { kind: "entry", entryId: product.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "unset-entry");
+      expect(menu?.items[0]).toMatchObject({
+        label: "Kettle",
+        href: "/product/kettle",
+      });
+    });
+
+    test("renders term items of a taxonomy that leaves isPublic unset", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("music", (setup) => {
+          setup.registerTermTaxonomy("genre", { label: "Genres" });
+        }),
+      );
+      const genre = await factories.term.create({
+        taxonomy: "genre",
+        slug: "jazz",
+        name: "Jazz",
+      });
+      const termId = await seedMenu("unset-term");
+      await seedItems(termId, [
+        { title: "ignored", meta: { kind: "term", termId: genre.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "unset-term");
+      expect(menu?.items[0]).toMatchObject({
+        label: "Jazz",
+        href: "/genre/jazz",
+      });
+    });
+
+    test("drops entry items of a public type hidden with isShownInMenus: false", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("shop", (setup) => {
+          setup.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            isShownInMenus: false,
+          });
+        }),
+      );
+      const product = await factories.entry.create({
+        type: "product",
+        slug: "kettle",
+        title: "Kettle",
+        status: "published",
+        authorId,
+      });
+      const termId = await seedMenu("hidden-entry");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "ignored", meta: { kind: "entry", entryId: product.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "hidden-entry");
+      expect(menu?.items.map((i) => i.label)).toEqual(["Home"]);
+    });
+
+    test("drops term items of a public taxonomy hidden with isShownInMenus: false", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("music", (setup) => {
+          setup.registerTermTaxonomy("genre", {
+            label: "Genres",
+            isPublic: true,
+            isShownInMenus: false,
+          });
+        }),
+      );
+      const genre = await factories.term.create({
+        taxonomy: "genre",
+        slug: "jazz",
+        name: "Jazz",
+      });
+      const termId = await seedMenu("hidden-term");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "ignored", meta: { kind: "term", termId: genre.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "hidden-term");
+      expect(menu?.items.map((i) => i.label)).toEqual(["Home"]);
+    });
+  });
+
   test("mixed-kind menu: custom + entry + term resolve together in one render", async () => {
     const post = await factories.entry.create({
       type: "post",

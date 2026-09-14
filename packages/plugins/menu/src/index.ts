@@ -98,20 +98,23 @@ const APPEARANCE_LABEL: Label = {
 // `@plumix/plugin-menu` augments the core option shapes with
 // menu-eligibility flags and the hook registries with three menu
 // hooks. TypeScript surfaces all of these only when this plugin is
-// in the project's `node_modules`. The eligibility flags are read at
-// admin time by the eligibility resolver (`getEligibleMenuKinds`);
-// the hooks are fired by `getMenuByName` and `menu.save`.
+// in the project's `node_modules`. The eligibility flags are read by
+// `isMenuEligible`; the hooks are fired by `getMenuByName` and `menu.save`.
 declare module "plumix" {
   interface EntryTypeOptions {
     /**
-     * Whether this entry type appears in the menu plugin's item picker.
-     * Defaults to `isPublic`. Mirrors WordPress's `show_in_nav_menus`.
+     * Whether this entry type is offered in the menu plugin's item picker and
+     * its entries are kept in rendered menus. Defaults to `isPublic`, and to
+     * `true` when that is unset too. Unlike WordPress's `show_in_nav_menus`,
+     * `false` also drops existing menu links to the type. A rendered link
+     * still needs a public URL, which an `isPublic: false` type does not have.
      */
     readonly isShownInMenus?: boolean;
     /** Override the picker tab label. Defaults to `labels.plural`. */
     readonly menuPickerLabel?: string;
   }
   interface TermTaxonomyOptions {
+    /** Same rule as `EntryTypeOptions.isShownInMenus`, for this taxonomy's terms. */
     readonly isShownInMenus?: boolean;
     readonly menuPickerLabel?: string;
   }
