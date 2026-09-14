@@ -27,8 +27,8 @@ interface PickerTab {
  * of picker tabs the admin's "Add menu items" rail should render.
  *
  * Eligibility rules:
- * - Entry types: eligible iff `isShownInMenus ?? isPublic ?? true`.
- * - Term taxonomies: same rule against `isShownInMenus ?? isPublic`.
+ * - Entry types and term taxonomies: one tab each for those `isMenuEligible`
+ *   accepts.
  * - Built-in lookup adapters (`entry`, `term`): NOT enumerated as their
  *   own picker tabs — entry types and term taxonomies above already
  *   surface them per-target. Skipping avoids a redundant "Entries" tab
@@ -41,7 +41,7 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
   const tabs: PickerTab[] = [];
 
   for (const entryType of registry.entryTypes.values()) {
-    if (!isMenuEligibleType(entryType)) continue;
+    if (!isMenuEligible(entryType)) continue;
     tabs.push({
       kind: "entry",
       tabLabel: pickerLabelForEntryType(entryType),
@@ -50,7 +50,7 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
   }
 
   for (const taxonomy of registry.termTaxonomies.values()) {
-    if (!isMenuEligibleTaxonomy(taxonomy)) continue;
+    if (!isMenuEligible(taxonomy)) continue;
     tabs.push({
       kind: "term",
       tabLabel: pickerLabelForTaxonomy(taxonomy),
@@ -69,17 +69,23 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
   return tabs;
 }
 
+/**
+ * Whether items of this entry type or term taxonomy belong in a menu. The
+ * picker, the editor's item resolver and the public render all ask this, so
+ * the three cannot disagree about which types are in scope.
+ */
+export function isMenuEligible(target: {
+  readonly isPublic?: boolean;
+  readonly isShownInMenus?: boolean;
+}): boolean {
+  return target.isShownInMenus ?? target.isPublic ?? true;
+}
+
 interface MenuEligibleEntryType {
   readonly name: string;
   readonly label: Label;
   readonly labels?: { readonly plural?: Label };
-  readonly isPublic?: boolean;
-  readonly isShownInMenus?: boolean;
   readonly menuPickerLabel?: string;
-}
-
-function isMenuEligibleType(entryType: MenuEligibleEntryType): boolean {
-  return entryType.isShownInMenus ?? entryType.isPublic ?? true;
 }
 
 function pickerLabelForEntryType(entryType: MenuEligibleEntryType): string {
@@ -92,13 +98,7 @@ function pickerLabelForEntryType(entryType: MenuEligibleEntryType): string {
 interface MenuEligibleTaxonomy {
   readonly name: string;
   readonly label: Label;
-  readonly isPublic?: boolean;
-  readonly isShownInMenus?: boolean;
   readonly menuPickerLabel?: string;
-}
-
-function isMenuEligibleTaxonomy(taxonomy: MenuEligibleTaxonomy): boolean {
-  return taxonomy.isShownInMenus ?? taxonomy.isPublic ?? true;
 }
 
 function pickerLabelForTaxonomy(taxonomy: MenuEligibleTaxonomy): string {

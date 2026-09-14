@@ -8,6 +8,7 @@ import { entries, entryTerm, terms } from "plumix/schema";
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
+import { isMenuEligible } from "./eligibility.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
 
@@ -227,7 +228,7 @@ async function resolveEntryRefs(
   if (!adapter) return new Map();
 
   const eligibleTypes = [...ctx.plugins.entryTypes.values()]
-    .filter((t) => t.isPublic === true)
+    .filter(isMenuEligible)
     .map((t) => t.name);
   if (eligibleTypes.length === 0) return new Map();
 
@@ -251,7 +252,7 @@ async function resolveTermRefs(
   if (!adapter) return new Map();
 
   const eligibleTaxonomies = [...ctx.plugins.termTaxonomies.values()]
-    .filter((t) => t.isPublic === true)
+    .filter(isMenuEligible)
     .map((t) => t.name);
   if (eligibleTaxonomies.length === 0) return new Map();
 
