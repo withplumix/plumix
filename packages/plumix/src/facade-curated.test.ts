@@ -285,8 +285,9 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
       {
         reason:
-          "raw-migration and schema-codegen helpers, whose only consumer is " +
-          "this package's own `migrate` command",
+          "raw-migration and schema-codegen helpers, whose consumers are " +
+          "this package's own `migrate` command and plugin tests through " +
+          "`plumix/test`",
         names: [
           "collectRawSqlMigrations",
           "planRawSqlMigrations",
