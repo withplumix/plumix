@@ -37,7 +37,8 @@ async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
 /**
  * Tell the search engines an entry moved, if it is one they may have. Every
  * gate the head and the sitemap apply is applied here too — a page nobody may
- * index is a page nobody is told about.
+ * index is a page nobody is told about. The agreement table in
+ * `routes.test.ts` holds these gates to theirs.
  */
 async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   if (entry.status !== "published") return;

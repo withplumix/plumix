@@ -23,8 +23,8 @@ export const SITEMAP_INDEX_PATH = "/sitemap.xml";
 
 // The entry-override arm of `indexable`, asked of the whole table at once —
 // membership has to be a `WHERE`, or the count driving index pagination and
-// the page it pages would disagree. Same meta key, so the head's directive and
-// this cannot say different things about one page.
+// the page it pages would disagree. The agreement table in `routes.test.ts`
+// holds it to the head's directive for the same page.
 const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
 
 // `json_type`, not `json_extract`: extraction collapses JSON `true` and JSON

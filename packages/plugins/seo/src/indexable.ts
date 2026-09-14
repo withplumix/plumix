@@ -40,10 +40,12 @@ function out(reason: IndexabilityReason): Indexability {
  * outranks the default set for its whole type.
  *
  * The sitemap answers the same questions of whole tables rather than of a page
- * — the site and per-scope arms in `routes.ts`, the entry arm as a `WHERE` in
- * `sitemap.ts` — so what they share is this module's keys and this order, not
- * a call. The arms below `taxonomy_default` describe pages the sitemap never
- * lists, so there is nothing for them to disagree about.
+ * — the site and per-scope arms in `scopeIsOffered`, the entry arm as a `WHERE`
+ * — and IndexNow asks the entry-facing ones inline, so what they share is this
+ * module's keys and this order, not a call. The agreement table in
+ * `routes.test.ts` is what holds the three to one answer. The arms below
+ * `taxonomy_default` describe pages the sitemap never lists, so there is
+ * nothing for them to disagree about.
  */
 export function indexable(
   facts: PageFacts,
