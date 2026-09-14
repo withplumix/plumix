@@ -21,7 +21,7 @@ import {
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
-import { pluginBasePath, rpcCall } from "./rpc.js";
+import { mediaRpc, pluginBasePath } from "./rpc.js";
 
 // Descriptors that need runtime indirection — used outside JSX (aria
 // strings, native attribute values). JSX-text strings stay inline at
@@ -254,8 +254,8 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
     };
     setPending((prev) => [...prev, slot]);
     try {
-      const init = await rpcCall<CreateUploadUrlResponse>(
-        "media/createUploadUrl",
+      const init = await mediaRpc.call<CreateUploadUrlResponse>(
+        "createUploadUrl",
         {
           filename: file.name,
           contentType: file.type,
@@ -282,7 +282,7 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
             );
           },
         );
-        await rpcCall<ConfirmResponse>("media/confirm", { id: init.mediaId });
+        await mediaRpc.call<ConfirmResponse>("confirm", { id: init.mediaId });
       } catch (error) {
         await tryCleanupDraft(init.mediaId);
         throw error;
@@ -383,7 +383,7 @@ export function MediaLibrary({
     queryKey,
     initialPageParam: 0,
     queryFn: ({ pageParam }: { pageParam: number }) =>
-      rpcCall<MediaListResponse>("media/list", {
+      mediaRpc.call<MediaListResponse>("list", {
         limit: PAGE_SIZE,
         offset: pageParam,
         // `accept` only flows through in picker mode. Page mode shows
@@ -420,7 +420,7 @@ export function MediaLibrary({
     useMediaUpload(invalidateList);
 
   const remove = useMutation({
-    mutationFn: (id: number) => rpcCall<{ id: number }>("media/delete", { id }),
+    mutationFn: (id: number) => mediaRpc.call<{ id: number }>("delete", { id }),
     onSuccess: invalidateList,
     onError: (error) =>
       setErrorMsg(error instanceof Error ? error.message : String(error)),
@@ -428,7 +428,7 @@ export function MediaLibrary({
 
   const update = useMutation({
     mutationFn: (input: { id: number; alt: string }) =>
-      rpcCall<{ id: number; alt: string | null }>("media/update", input),
+      mediaRpc.call<{ id: number; alt: string | null }>("update", input),
     onSuccess: invalidateList,
     onError: (error) =>
       setErrorMsg(error instanceof Error ? error.message : String(error)),
@@ -826,7 +826,7 @@ function ErrorBanner({
 
 async function tryCleanupDraft(mediaId: number): Promise<void> {
   try {
-    await rpcCall<{ id: number }>("media/delete", { id: mediaId });
+    await mediaRpc.call<{ id: number }>("delete", { id: mediaId });
   } catch {
     // Best-effort — server-side draft GC will catch it.
   }
