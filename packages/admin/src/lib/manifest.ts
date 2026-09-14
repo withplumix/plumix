@@ -17,11 +17,7 @@ import type {
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-import {
-  byPriorityThen,
-  MANIFEST_SCRIPT_ID,
-  manifestEntryVisibility,
-} from "@plumix/core/manifest";
+import { byPriorityThen, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
   const el = doc.getElementById(MANIFEST_SCRIPT_ID);
@@ -174,7 +170,7 @@ export function visibleEntryTypes(
     // dashboard quick-card grid — types that opted out of the sidebar
     // weren't meant to be a generic content surface either (e.g. the
     // media plugin renders its own Media Library page).
-    if (pt.showInSidebar === false) return false;
+    if (!pt.showInSidebar) return false;
     const cap = `entry:${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
   });
@@ -189,7 +185,7 @@ export function publicEntryTypeNames(
   source: PlumixManifest = currentManifest(),
 ): readonly string[] {
   return (source.entryTypes ?? [])
-    .filter((pt) => manifestEntryVisibility(pt).isPublic)
+    .filter((pt) => pt.isPublic)
     .map((pt) => pt.name);
 }
 

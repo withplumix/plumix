@@ -1,6 +1,7 @@
 import type { MetaBoxField, MutablePluginRegistry } from "plumix/plugin";
 import { richtext, text, textarea } from "plumix/fields";
 import { createPluginRegistry } from "plumix/plugin";
+import { toRegisteredEntryType } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -16,11 +17,10 @@ function registryWith(
 ): MutablePluginRegistry {
   const plugins = createPluginRegistry();
   for (const type of entryTypes) {
-    plugins.entryTypes.set(type, {
-      name: type,
-      registeredBy: "test",
-      label: type,
-    });
+    plugins.entryTypes.set(
+      type,
+      toRegisteredEntryType(type, { label: type }, "test"),
+    );
   }
   plugins.entryMetaBoxes.set("box", {
     id: "box",
@@ -96,11 +96,10 @@ describe("searchableMetaFields", () => {
       [text("subtitle").searchable().build()],
       ["post"],
     );
-    plugins.entryTypes.set("page", {
-      name: "page",
-      registeredBy: "test",
-      label: "page",
-    });
+    plugins.entryTypes.set(
+      "page",
+      toRegisteredEntryType("page", { label: "page" }, "test"),
+    );
 
     expect(searchableMetaFields(plugins, "page")).toEqual([]);
   });

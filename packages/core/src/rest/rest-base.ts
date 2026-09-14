@@ -23,7 +23,7 @@ export function resolvePublicEntryType(
   restBase: string,
 ): RegisteredEntryType | null {
   for (const type of registry.entryTypes.values()) {
-    if (type.isPublic !== false && pluralize(type.name) === restBase) {
+    if (type.isPublic && pluralize(type.name) === restBase) {
       return type;
     }
   }
@@ -40,7 +40,7 @@ export function resolvePublicTaxonomy(
   restBase: string,
 ): RegisteredTermTaxonomy | null {
   for (const taxonomy of registry.termTaxonomies.values()) {
-    if (taxonomy.isPublic !== false && pluralize(taxonomy.name) === restBase) {
+    if (taxonomy.isPublic && pluralize(taxonomy.name) === restBase) {
       return taxonomy;
     }
   }

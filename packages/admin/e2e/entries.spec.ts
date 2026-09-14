@@ -627,6 +627,9 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
       {
         name: "post",
         adminSlug: "posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         label: "Posts",
         labels: { singular: "Post", plural: "Posts" },
         termTaxonomies: ["category"],
@@ -636,6 +639,9 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
       {
         name: "category",
         label: "Categories",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         labels: { singular: "Category" },
         isHierarchical: true,
       },

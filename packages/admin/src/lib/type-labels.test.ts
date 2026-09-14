@@ -22,6 +22,9 @@ describe("entryTypeLabel", () => {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       labels: {
         addNewItem: { id: "blog.post.addNewItem", message: "Add Post" },
       },
@@ -37,6 +40,9 @@ describe("entryTypeLabel", () => {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       labels: { singular: "Post", plural: "Posts" },
     } as EntryTypeManifestEntry;
     expect(entryTypeLabel(entry, "addNewItem")).toBe(
@@ -49,6 +55,9 @@ describe("entryTypeLabel", () => {
       name: "post",
       adminSlug: "posts",
       label: "Posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
     } as EntryTypeManifestEntry;
     expect(entryTypeLabel(entry, "searchItems")).toBe(
       GENERIC_ENTRY_TYPE_LABELS.searchItems,
@@ -61,6 +70,9 @@ describe("termTaxonomyLabel", () => {
     const tax = {
       name: "category",
       label: "Categories",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       labels: {
         notFound: { id: "blog.cat.notFound", message: "No categories yet" },
       },
@@ -75,6 +87,9 @@ describe("termTaxonomyLabel", () => {
     const tax = {
       name: "tag",
       label: "Tags",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
     } as TermTaxonomyManifestEntry;
     // Shape equality — entry-type and taxonomy generic tables share
     // ids/messages for cross-cutting keys (notFound, search, loading,

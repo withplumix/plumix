@@ -6,6 +6,7 @@ import {
   authenticatedPolicy,
 } from "../../../access/policy.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -14,17 +15,26 @@ import { createRpcHarness } from "../../../test/rpc.js";
 function registerPostAccess(
   plugins: ReturnType<typeof createPluginRegistry>,
 ): void {
-  plugins.entryTypes.set("post", {
-    name: "post",
-    registeredBy: null,
-    label: "Posts",
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members only", policy: authenticatedPolicy },
-      ],
-    },
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            {
+              key: "members",
+              label: "Members only",
+              policy: authenticatedPolicy,
+            },
+          ],
+        },
+      },
+      null,
+    ),
+  );
 }
 
 // SEO meta box fixture used by the partial-write and null-clear tests.

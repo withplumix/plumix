@@ -4,7 +4,11 @@ import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
-import { buildManifest, createPluginRegistry } from "@plumix/core/manifest";
+import {
+  buildManifest,
+  createPluginRegistry,
+  toRegisteredEntryType,
+} from "@plumix/core/manifest";
 
 import {
   AUTHED_ADMIN,
@@ -47,19 +51,20 @@ export interface ScreenshotSubject {
 function docsManifest(): PlumixManifest {
   const registry = createPluginRegistry();
   for (const entryType of [
-    {
-      name: "post",
-      registeredBy: null,
-      label: "Posts",
-      labels: { singular: "Post", plural: "Posts" },
-    },
-    {
-      name: "page",
-      registeredBy: null,
-      label: "Pages",
-      labels: { singular: "Page", plural: "Pages" },
-      isHierarchical: true,
-    },
+    toRegisteredEntryType(
+      "post",
+      { label: "Posts", labels: { singular: "Post", plural: "Posts" } },
+      null,
+    ),
+    toRegisteredEntryType(
+      "page",
+      {
+        label: "Pages",
+        labels: { singular: "Page", plural: "Pages" },
+        isHierarchical: true,
+      },
+      null,
+    ),
   ]) {
     registry.entryTypes.set(entryType.name, entryType);
   }

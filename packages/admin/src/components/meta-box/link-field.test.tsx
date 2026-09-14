@@ -26,6 +26,8 @@ function seedEntryTypes(...names: readonly string[]): void {
       adminSlug: `${name}s`,
       label: name,
       isPublic: true,
+      showUI: true,
+      showInSidebar: true,
     })),
   });
 }

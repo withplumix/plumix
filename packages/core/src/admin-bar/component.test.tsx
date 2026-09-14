@@ -6,6 +6,7 @@ import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AuthNamespace } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { PlumixAdminBar } from "./component.js";
 import { registerCoreAdminBarContributors } from "./core-contributors.js";
 
@@ -196,7 +197,9 @@ describe("PlumixAdminBar", () => {
   test("emits a localized +New summary aria-label for screen readers", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
+    const types = new Map([
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
+    ]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
@@ -217,8 +220,8 @@ describe("PlumixAdminBar", () => {
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
     const types = new Map([
-      ["post", { name: "post", label: "Post" } as never],
-      ["page", { name: "page", label: "Page" } as never],
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
+      ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
     ]);
 
     const html = renderToStaticMarkup(

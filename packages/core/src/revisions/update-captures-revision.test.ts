@@ -3,21 +3,27 @@ import { describe, expect, test } from "vitest";
 
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { REVISION_TYPE } from "./slug-codec.js";
 
 function registryWithRevisions(opts?: { maxRevisions?: number }) {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    supports: ["revisions"],
-    versioning: {
-      maxRevisions: opts?.maxRevisions ?? 25,
-      autosaveIntervalSeconds: 60,
-    },
-    registeredBy: "test",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        supports: ["revisions"],
+        versioning: {
+          maxRevisions: opts?.maxRevisions ?? 25,
+          autosaveIntervalSeconds: 60,
+        },
+      },
+      "test",
+    ),
+  );
   return plugins;
 }
 

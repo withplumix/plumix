@@ -4,6 +4,7 @@ import type { Db } from "../context/app.js";
 import { withUser } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import {
@@ -24,12 +25,14 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
   });
   const store = { match: vi.fn(), put: vi.fn() };
   const plugins = createPluginRegistry();
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    registeredBy: "test",
-    label: "Categories",
-    entryTypes: ["post"],
-  });
+  plugins.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy(
+      "category",
+      { label: "Categories", entryTypes: ["post"] },
+      "test",
+    ),
+  );
   const ctx = createTestContext({
     db,
     cdn:

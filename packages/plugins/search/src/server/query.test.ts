@@ -1,7 +1,11 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { defineEntryContent } from "plumix/blocks";
 import { sql } from "plumix/db";
-import { factoriesFor } from "plumix/test";
+import {
+  factoriesFor,
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
@@ -176,12 +180,14 @@ describe("runSearch", () => {
   test("an entry of an excluded type is clamped out at read time", async () => {
     await publish({ title: "Hydroponics ledger", slug: "ledger" });
 
-    plugins.entryTypes.set("post", {
-      name: "post",
-      registeredBy: "test",
-      label: "Posts",
-      excludeFromSearch: true,
-    });
+    plugins.entryTypes.set(
+      "post",
+      toRegisteredEntryType(
+        "post",
+        { label: "Posts", excludeFromSearch: true },
+        "test",
+      ),
+    );
 
     // Still in the projection — an editor searches it in the admin palette —
     // and the exclusion is what a visitor gets. This clamp is the only thing
@@ -197,12 +203,14 @@ describe("runSearch", () => {
     });
     await indexTerms(ctx, [term.id]);
 
-    plugins.termTaxonomies.set("category", {
-      name: "category",
-      registeredBy: "test",
-      label: "Categories",
-      excludeFromSearch: true,
-    });
+    plugins.termTaxonomies.set(
+      "category",
+      toRegisteredTermTaxonomy(
+        "category",
+        { label: "Categories", excludeFromSearch: true },
+        "test",
+      ),
+    );
 
     // Still in the projection, because nothing has touched it — and still
     // absent from results. This is the read clamp, not the write one.
@@ -315,17 +323,22 @@ describe("runSearch", () => {
   test("an entry type under an access policy is never searchable", async () => {
     // A snippet is body text around a word the visitor chose, so indexing a
     // gated type would hand an anonymous reader its prose a query at a time.
-    plugins.entryTypes.set("members", {
-      name: "members",
-      registeredBy: "test",
-      label: "Members",
-      access: {
-        default: {
-          segments: [],
-          resolve: () => ({ type: "challenge" as const, kind: "paywall" }),
+    plugins.entryTypes.set(
+      "members",
+      toRegisteredEntryType(
+        "members",
+        {
+          label: "Members",
+          access: {
+            default: {
+              segments: [],
+              resolve: () => ({ type: "challenge" as const, kind: "paywall" }),
+            },
+          },
         },
-      },
-    });
+        "test",
+      ),
+    );
     const entry = await factoriesFor(db).entry.create({
       authorId,
       type: "members",

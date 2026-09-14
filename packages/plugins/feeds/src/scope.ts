@@ -34,8 +34,7 @@ export function isPublicEntryType(
   plugins: PluginRegistry,
   type: string,
 ): boolean {
-  const entryType = plugins.entryTypes.get(type);
-  return entryType !== undefined && entryType.isPublic !== false;
+  return plugins.entryTypes.get(type)?.isPublic ?? false;
 }
 
 /**
@@ -49,7 +48,7 @@ export function publicTaxonomiesByBaseSlug(
 ): ReadonlyMap<string, RegisteredTermTaxonomy> {
   const bySlug = new Map<string, RegisteredTermTaxonomy>();
   for (const taxonomy of plugins.termTaxonomies.values()) {
-    if (taxonomy.isPublic === false) continue;
+    if (!taxonomy.isPublic) continue;
     const slug = termTaxonomyBaseSlug(taxonomy);
     if (!bySlug.has(slug)) bySlug.set(slug, taxonomy);
   }
@@ -58,6 +57,6 @@ export function publicTaxonomiesByBaseSlug(
 
 export function publicEntryTypeNames(plugins: PluginRegistry): string[] {
   return [...plugins.entryTypes.values()]
-    .filter((type) => type.isPublic !== false)
+    .filter((type) => type.isPublic)
     .map((type) => type.name);
 }

@@ -3,6 +3,10 @@ import { describe, expect, test } from "vitest";
 import type { DevErrorContextSource } from "./context.js";
 import { createTelemetryCollector } from "../../context/collector.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
+import {
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "../../plugin/registry.js";
 import { collectDevErrorContext } from "./context.js";
 
 function ctxWith(
@@ -10,16 +14,14 @@ function ctxWith(
 ): DevErrorContextSource {
   const plugins = createPluginRegistry();
   plugins.pluginIds.push("core");
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    registeredBy: "test",
-  });
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    label: "Categories",
-    registeredBy: "test",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType("post", { label: "Posts" }, "test"),
+  );
+  plugins.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
+  );
   return {
     request: new Request("https://cms.example/blog/hello?draft=1", {
       headers: { accept: "text/html", "user-agent": "vitest" },

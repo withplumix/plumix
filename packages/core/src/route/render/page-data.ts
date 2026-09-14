@@ -74,9 +74,7 @@ export interface ResolvedListingPage {
  */
 function publicListingTypes(ctx: AppContext): string[] {
   return Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
-    )
+    .filter(([, spec]) => spec.isPublic && spec.isHierarchical !== true)
     .map(([key]) => key);
 }
 
@@ -307,8 +305,7 @@ export async function resolveListingPage(
       const registered = ctx.plugins.entryTypes.get(target.entryType);
       // Asked of the router's own helper rather than restated, so a type whose
       // archive is not routed is answered as the missing page it is.
-      if (registered === undefined || registered.isPublic === false)
-        return null;
+      if (!registered?.isPublic) return null;
       if (archiveSlugForEntryType(registered) === null) return null;
       return archiveData(ctx, target.entryType, 1);
     }
@@ -318,7 +315,7 @@ export async function resolveListingPage(
       });
       if (!term) return null;
       const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-      if (!taxonomy || taxonomy.isPublic === false) return null;
+      if (!taxonomy?.isPublic) return null;
       return termData(ctx, term, 1);
     }
     case "author": {

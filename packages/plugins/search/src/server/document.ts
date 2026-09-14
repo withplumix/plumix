@@ -1,10 +1,6 @@
 import type { BlockTextRoster } from "plumix/blocks";
 import type { PluginRegistry, RegisteredEntryType } from "plumix/plugin";
 import { extractBlockText, isEntryContent } from "plumix/blocks";
-import {
-  resolveEntryTypeVisibility,
-  resolveTermTaxonomyVisibility,
-} from "plumix/plugin";
 
 import type { SearchableMetaField } from "./meta-text.js";
 import { extractMetaText } from "./meta-text.js";
@@ -93,7 +89,7 @@ export function isSearchableEntryType(
 ): boolean {
   const spec = plugins.entryTypes.get(type);
   if (!isIndexableSpec(spec)) return false;
-  return !resolveEntryTypeVisibility(spec).excludeFromSearch;
+  return !spec.excludeFromSearch;
 }
 
 /** Every type whose entries may appear in results, for the read-side clamp. */
@@ -119,7 +115,7 @@ export function isSearchableTaxonomy(
 ): boolean {
   const spec = plugins.termTaxonomies.get(taxonomy);
   if (spec === undefined) return false;
-  return !resolveTermTaxonomyVisibility(spec).excludeFromSearch;
+  return !spec.excludeFromSearch;
 }
 
 /** Every taxonomy whose terms may appear in results, for the read-side clamp. */

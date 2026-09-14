@@ -47,6 +47,9 @@ export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
     {
       name: "author",
       adminSlug: "authors",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       label: "Authors",
       labels: { singular: "Author", plural: "Authors" },
       supports: ["title", "slug"],
@@ -103,6 +106,9 @@ export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
     {
       name: "author",
       adminSlug: "authors",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       label: "Authors",
       labels: { singular: "Author", plural: "Authors" },
       supports: ["title", "slug"],
@@ -143,6 +149,9 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
     {
       name: "post",
       adminSlug: "posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       label: "Posts",
       labels: { singular: "Entry", plural: "Posts" },
     },
@@ -159,6 +168,9 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
     {
       name: "post",
       adminSlug: "posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       label: "Posts",
       labels: { singular: "Post", plural: "Posts" },
       supports: ["title", "editor", "excerpt", "revisions", "autosave"],
@@ -209,6 +221,9 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
     {
       name: "post",
       adminSlug: "posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       label: "Posts",
       labels: { singular: "Entry", plural: "Posts" },
     },
@@ -217,6 +232,9 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
     {
       name: "category",
       label: "Categories",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       // Per-type chrome labels (WP-aligned) the admin reads via the
       // `termTaxonomyLabel` cascade. Without these, the heading
       // would fall back to the generic noun-less "Add" / "Edit"
@@ -233,6 +251,9 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
     {
       name: "tag",
       label: "Tags",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
       labels: {
         singular: "Tag",
         addNewItem: "New tag",

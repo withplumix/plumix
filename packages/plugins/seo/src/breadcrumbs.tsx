@@ -62,7 +62,7 @@ function dateName(
  */
 function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
   const registered = ctx.plugins.entryTypes.get(type);
-  if (!registered || registered.isPublic === false) return null;
+  if (!registered?.isPublic) return null;
   const slug = archiveSlugForEntryType(registered);
   if (slug === null) return null;
   return {

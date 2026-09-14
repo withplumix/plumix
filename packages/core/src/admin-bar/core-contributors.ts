@@ -2,10 +2,7 @@ import type { HookRegistry } from "../hooks/registry.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { AdminBarNode, BarRenderContext } from "./types.js";
 import { labelSourceText } from "../i18n/label.js";
-import {
-  deriveAdminSlug,
-  resolveEntryTypeVisibility,
-} from "../plugin/manifest.js";
+import { deriveAdminSlug } from "../plugin/manifest.js";
 import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
@@ -107,7 +104,7 @@ function newGroupContributor(
     // Private types (e.g. `menu_item`) are managed through their own admin
     // surface, never quick-created from the bar — mirror their `showUI`
     // visibility so they don't leak into the +New menu.
-    if (!resolveEntryTypeVisibility(type).showUI) continue;
+    if (!type.showUI) continue;
     additions.push({
       id: `+new:${name}`,
       // The type's human singular label, not the raw slug. Source-locale

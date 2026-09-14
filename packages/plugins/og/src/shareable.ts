@@ -90,6 +90,6 @@ export async function isReachableEntry(
   entry: EntryAccessSubject,
 ): Promise<boolean> {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
-  if (entryType === undefined || entryType.isPublic === false) return false;
+  if (!entryType?.isPublic) return false;
   return entryAllowsAnonymousAccess(ctx, entry);
 }

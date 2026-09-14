@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BarRenderContext } from "./types.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { collectAdminBarNodes } from "./collect.js";
 import { registerCoreAdminBarContributors } from "./core-contributors.js";
 
@@ -29,7 +30,10 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
 
 function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
   return new Map(
-    slugs.map((slug) => [slug, { name: slug, label: slug } as never]),
+    slugs.map((slug) => [
+      slug,
+      toRegisteredEntryType(slug, { label: slug }, "test"),
+    ]),
   );
 }
 
@@ -68,11 +72,15 @@ describe("registerCoreAdminBarContributors — +New group", () => {
     // `adminSlug` (`posts`) the admin's `/entries/$slug` route resolves, not
     // the raw name (`post`) — echoing the name 404s the destination.
     const types = new Map([
-      ["post", { name: "post", label: "Post" } as never],
-      ["page", { name: "page", label: "Page" } as never],
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
+      ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
       [
         "media",
-        { name: "media", label: "Media", labels: { plural: "Media" } } as never,
+        toRegisteredEntryType(
+          "media",
+          { label: "Media", labels: { plural: "Media" } },
+          "test",
+        ),
       ],
     ]);
     const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
@@ -92,8 +100,15 @@ describe("registerCoreAdminBarContributors — +New group", () => {
 
   test("titles each child with the type's human singular label, not the raw slug", () => {
     const types = new Map([
-      ["post", { name: "post", labels: { singular: "Post" } } as never],
-      ["page", { name: "page", label: "Page" } as never],
+      [
+        "post",
+        toRegisteredEntryType(
+          "post",
+          { label: "Posts", labels: { singular: "Post" } },
+          "test",
+        ),
+      ],
+      ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
     ]);
 
     const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
@@ -104,10 +119,14 @@ describe("registerCoreAdminBarContributors — +New group", () => {
 
   test("omits non-public types (showUI false) such as menu_item", () => {
     const types = new Map([
-      ["post", { name: "post", label: "Post" } as never],
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
       [
         "menu_item",
-        { name: "menu_item", label: "Menu item", isPublic: false } as never,
+        toRegisteredEntryType(
+          "menu_item",
+          { label: "Menu item", isPublic: false },
+          "test",
+        ),
       ],
     ]);
 
@@ -121,12 +140,11 @@ describe("registerCoreAdminBarContributors — +New group", () => {
     const types = new Map([
       [
         "secret",
-        {
-          name: "secret",
-          label: "Secret",
-          isPublic: false,
-          showUI: true,
-        } as never,
+        toRegisteredEntryType(
+          "secret",
+          { label: "Secret", isPublic: false, showUI: true },
+          "test",
+        ),
       ],
     ]);
 

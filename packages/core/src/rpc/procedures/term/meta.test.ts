@@ -8,15 +8,15 @@ import type {
 } from "../../../plugin/manifest.js";
 import type { ActionSpy } from "../../../test/spies.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 function taxonomyRegistry(): MutablePluginRegistry {
   const registry = createPluginRegistry();
-  registry.termTaxonomies.set("category", {
-    name: "category",
-    label: "Categories",
-    registeredBy: "test",
-  });
+  registry.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
+  );
   const caps: Record<string, UserRole> = {
     "term:category:read": "subscriber",
     "term:category:assign": "contributor",
@@ -159,11 +159,10 @@ describe("term meta: registration + round-trip via term.update", () => {
 
   test("key registered on a different taxonomy → meta_not_registered for the other scope", async () => {
     const plugins = taxonomyRegistry();
-    plugins.termTaxonomies.set("tag", {
-      name: "tag",
-      label: "Tags",
-      registeredBy: "test",
-    });
+    plugins.termTaxonomies.set(
+      "tag",
+      toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
+    );
     const tagCaps: Record<string, UserRole> = {
       "term:tag:read": "subscriber",
       "term:tag:edit": "editor",

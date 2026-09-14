@@ -129,12 +129,12 @@ export function compileRouteMap(
   // WP-faithful: `\$wp_rewrite->rules` orders taxonomy archives ahead of
   // post-type singles.
   for (const taxonomy of registry.termTaxonomies.values()) {
-    if (taxonomy.isPublic === false) continue;
+    if (!taxonomy.isPublic) continue;
     for (const rule of autoRulesForTermTaxonomy(taxonomy)) rules.push(rule);
   }
 
   for (const entryType of registry.entryTypes.values()) {
-    if (entryType.isPublic === false) continue;
+    if (!entryType.isPublic) continue;
     for (const rule of autoRulesForEntryType(entryType)) rules.push(rule);
   }
 

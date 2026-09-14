@@ -530,9 +530,7 @@ function publicIntent(match: RouteMatch | null, url: URL): RouteIntent | null {
 // the set of `t:<type>` tags the front page is stored under.
 function frontPageEntryTypes(ctx: AppContext): string[] {
   return Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
-    )
+    .filter(([, spec]) => spec.isPublic && spec.isHierarchical !== true)
     .map(([key]) => key);
 }
 

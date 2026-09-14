@@ -4,6 +4,7 @@ import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { adminEntryScope } from "./admin-entry-scope.js";
@@ -28,11 +29,10 @@ beforeEach(async () => {
 function contextFor(capabilities: readonly string[]): ScopeContext {
   const plugins = createPluginRegistry();
   for (const type of ["post", "ledger"]) {
-    plugins.entryTypes.set(type, {
-      name: type,
-      registeredBy: "test",
-      label: type,
-    });
+    plugins.entryTypes.set(
+      type,
+      toRegisteredEntryType(type, { label: type }, "test"),
+    );
   }
   return {
     user: caller,

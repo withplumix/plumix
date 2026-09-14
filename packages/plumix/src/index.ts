@@ -152,8 +152,6 @@ export {
   previewableEntry,
   registerCoreLookupAdapters,
   requireCapability,
-  resolveEntryTypeVisibility,
-  resolveTermTaxonomyVisibility,
   TAXONOMY_MENU_ICONS,
 } from "@plumix/core";
 // `tryGetContext` serves a component rendered without a context argument, such

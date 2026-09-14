@@ -133,9 +133,7 @@ async function resolveSearch(
   const query = decodeSearchQuery(params.query);
   const page = parsePageParam(params.page);
   const searchableTypes = Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.excludeFromSearch !== true,
-    )
+    .filter(([, spec]) => spec.isPublic && !spec.excludeFromSearch)
     .map(([key]) => key);
   const where =
     searchableTypes.length === 0 || query === ""

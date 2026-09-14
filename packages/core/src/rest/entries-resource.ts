@@ -37,7 +37,7 @@ function readTermFilters(
 ): Record<string, string[]> | undefined {
   const filters: Record<string, string[]> = {};
   for (const taxonomy of context.plugins.termTaxonomies.values()) {
-    if (taxonomy.isPublic === false) continue;
+    if (!taxonomy.isPublic) continue;
     if (RESERVED_QUERY_PARAMS.has(taxonomy.name)) continue;
     const slugs = url.searchParams
       .getAll(taxonomy.name)

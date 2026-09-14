@@ -6,6 +6,10 @@ import type {
 } from "../../context/telemetry.js";
 import type { DebugContextSource } from "./snapshot.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
+import {
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "../../plugin/registry.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
 function ctxWith(
@@ -27,16 +31,14 @@ function ctxWith(
 function blogPlugins() {
   const plugins = createPluginRegistry();
   plugins.pluginIds.push("blog");
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    registeredBy: "blog",
-  });
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    label: "Categories",
-    registeredBy: "blog",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType("post", { label: "Posts" }, "blog"),
+  );
+  plugins.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy("category", { label: "Categories" }, "blog"),
+  );
   return plugins;
 }
 

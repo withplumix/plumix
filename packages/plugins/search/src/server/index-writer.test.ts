@@ -1,8 +1,16 @@
-import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
+import type {
+  AppContext,
+  EntryTypeOptions,
+  MutablePluginRegistry,
+} from "plumix/plugin";
 import { defineEntryContent } from "plumix/blocks";
 import { eq } from "plumix/db";
 import { entries, terms } from "plumix/schema";
-import { factoriesFor } from "plumix/test";
+import {
+  factoriesFor,
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
@@ -31,12 +39,8 @@ const GATED = {
   },
 };
 
-const postType = (overrides: Record<string, unknown> = {}) => ({
-  name: "post",
-  registeredBy: "test",
-  label: "Posts",
-  ...overrides,
-});
+const postType = (overrides: Partial<EntryTypeOptions> = {}) =>
+  toRegisteredEntryType("post", { label: "Posts", ...overrides }, "test");
 
 beforeEach(async () => {
   ({ db, ctx, plugins, authorId } = await createSearchContext());
@@ -74,11 +78,14 @@ describe("indexEntries", () => {
   });
 
   test("indexes an entry type hidden from public search, for the palette", async () => {
-    plugins.entryTypes.set("ledger", {
-      ...postType({ excludeFromSearch: true }),
-      name: "ledger",
-      label: "Ledger",
-    });
+    plugins.entryTypes.set(
+      "ledger",
+      toRegisteredEntryType(
+        "ledger",
+        { label: "Ledger", excludeFromSearch: true },
+        "test",
+      ),
+    );
     const entry = await seed({ type: "ledger", title: "Hydroponics ledger" });
 
     await indexEntries(ctx, [entry.id]);
@@ -87,11 +94,10 @@ describe("indexEntries", () => {
   });
 
   test("never indexes an entry type under an access policy", async () => {
-    plugins.entryTypes.set("members", {
-      ...postType(GATED),
-      name: "members",
-      label: "Members",
-    });
+    plugins.entryTypes.set(
+      "members",
+      toRegisteredEntryType("members", { label: "Members", ...GATED }, "test"),
+    );
     const entry = await seed({ type: "members", title: "Hydroponics inside" });
 
     await indexEntries(ctx, [entry.id]);
@@ -144,12 +150,14 @@ describe("indexEntries", () => {
   });
 
   test("never indexes a taxonomy excluded from search", async () => {
-    plugins.termTaxonomies.set("nav-menu", {
-      name: "nav-menu",
-      registeredBy: "test",
-      label: "Menus",
-      isPublic: false,
-    });
+    plugins.termTaxonomies.set(
+      "nav-menu",
+      toRegisteredTermTaxonomy(
+        "nav-menu",
+        { label: "Menus", isPublic: false },
+        "test",
+      ),
+    );
     const term = await factoriesFor(db).term.create({
       taxonomy: "nav-menu",
       name: "Hydroponics menu",
@@ -168,12 +176,14 @@ describe("indexEntries", () => {
     await indexTerms(ctx, [term.id]);
     expect(await matches("hydroponics")).toEqual([term.id]);
 
-    plugins.termTaxonomies.set("category", {
-      name: "category",
-      registeredBy: "test",
-      label: "Categories",
-      excludeFromSearch: true,
-    });
+    plugins.termTaxonomies.set(
+      "category",
+      toRegisteredTermTaxonomy(
+        "category",
+        { label: "Categories", excludeFromSearch: true },
+        "test",
+      ),
+    );
     await indexTerms(ctx, [term.id]);
 
     expect(await matches("hydroponics")).toEqual([]);

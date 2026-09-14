@@ -22,11 +22,8 @@ import {
   emptyManifest,
   injectManifestIntoHtml,
   MANIFEST_SCRIPT_ID,
-  manifestEntryVisibility,
   pluginCatalogStagedPath,
   pluginCatalogUrl,
-  resolveEntryTypeVisibility,
-  resolveTermTaxonomyVisibility,
   serializeManifestScript,
 } from "./manifest.js";
 import { installPlugins } from "./register.js";
@@ -1053,8 +1050,8 @@ describe("buildManifest", () => {
       },
     ]);
     // `registeredBy` + server-only operational flags stay server-side.
-    // Visibility ships as the resolved triple; raw per-surface inputs
-    // and capability overrides aren't on the wire.
+    // Only `isPublic`/`showUI`/`showInSidebar` ship; the `excludeFrom*`
+    // flags and capability overrides aren't on the wire.
     const entry = manifest.termTaxonomies[0] as unknown as Record<
       string,
       unknown
@@ -1329,19 +1326,35 @@ describe("deriveAdminSlug", () => {
 describe("serializeManifestScript", () => {
   test("emits a json script tag with the expected id", () => {
     const tag = serializeManifestScript({
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     });
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
   });
 
   test("neutralises </ sequences in payload so the tag can't be broken out of", () => {
     const tag = serializeManifestScript({
       entryTypes: [
-        { name: "post", adminSlug: "posts", label: "</script><b>x</b>" },
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "</script><b>x</b>",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
       ],
     });
     expect(tag).not.toContain("</script><b>");
@@ -1350,7 +1363,16 @@ describe("serializeManifestScript", () => {
 
   test("round-trips through JSON.parse after unescaping the slash", () => {
     const manifest = {
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "x</y>" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "x</y>",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     };
     const tag = serializeManifestScript(manifest);
     const prefix = `<script id="${MANIFEST_SCRIPT_ID}" type="application/json">`;
@@ -1371,17 +1393,35 @@ describe("injectManifestIntoHtml", () => {
 
   test("replaces the placeholder with the serialised manifest", () => {
     const out = injectManifestIntoHtml(TEMPLATE, {
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
     expect(out).not.toContain(`{"entryTypes":[]}`);
   });
 
   test("is idempotent when the manifest is already injected", () => {
     const manifest = {
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     };
     const once = injectManifestIntoHtml(TEMPLATE, manifest);
     const twice = injectManifestIntoHtml(once, manifest);
@@ -1403,10 +1443,19 @@ describe("injectManifestIntoHtml", () => {
   test("matches uppercase SCRIPT tags (minifier-agnostic)", () => {
     const html = `<SCRIPT ID="plumix-manifest" TYPE="application/json">{"entryTypes":[]}</SCRIPT>`;
     const out = injectManifestIntoHtml(html, {
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts"}]}`,
+      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
   });
 
@@ -1415,10 +1464,19 @@ describe("injectManifestIntoHtml", () => {
       { "entryTypes": [] }
     </script>`;
     const out = injectManifestIntoHtml(html, {
-      entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts"\}\]}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true\}\]}<\/script>$/,
     );
   });
 });
@@ -1426,129 +1484,6 @@ describe("injectManifestIntoHtml", () => {
 describe("emptyManifest", () => {
   test("populates breakpoints with the theme default, like buildManifest does", () => {
     expect(emptyManifest().breakpoints).toEqual(DEFAULT_BREAKPOINTS);
-  });
-});
-
-describe("resolveEntryTypeVisibility", () => {
-  test("defaults isPublic=true → everything visible, nothing excluded", () => {
-    expect(resolveEntryTypeVisibility({ label: "Posts" })).toEqual({
-      isPublic: true,
-      showUI: true,
-      showInSidebar: true,
-      excludeFromGenericRpc: false,
-      excludeFromSearch: false,
-    });
-  });
-
-  test("isPublic=false cascades to hidden everywhere + excluded from RPC/search", () => {
-    expect(
-      resolveEntryTypeVisibility({ label: "Menu items", isPublic: false }),
-    ).toEqual({
-      isPublic: false,
-      showUI: false,
-      showInSidebar: false,
-      excludeFromGenericRpc: true,
-      excludeFromSearch: true,
-    });
-  });
-
-  test("explicit showUI:true overrides isPublic=false cascade (for plugin-owned admin pages)", () => {
-    const v = resolveEntryTypeVisibility({
-      label: "Menu items",
-      isPublic: false,
-      showUI: true,
-    });
-    expect(v.showUI).toBe(true);
-    expect(v.showInSidebar).toBe(true); // cascades off showUI when unset
-    expect(v.excludeFromGenericRpc).toBe(true); // still cascades off isPublic
-  });
-
-  test("explicit showInSidebar:false with showUI:true keeps admin surface but hides sidebar row", () => {
-    const v = resolveEntryTypeVisibility({
-      label: "Attachments",
-      isPublic: true,
-      showInSidebar: false,
-    });
-    expect(v.showUI).toBe(true);
-    expect(v.showInSidebar).toBe(false);
-  });
-
-  test("media-shape: public + excludeFromSearch true keeps generic RPC but hides from site search", () => {
-    const v = resolveEntryTypeVisibility({
-      label: "Attachments",
-      excludeFromSearch: true,
-    });
-    expect(v.excludeFromSearch).toBe(true);
-    expect(v.excludeFromGenericRpc).toBe(false);
-  });
-});
-
-describe("resolveTermTaxonomyVisibility", () => {
-  test("default cascade mirrors entry types", () => {
-    expect(resolveTermTaxonomyVisibility({ label: "Categories" })).toEqual({
-      isPublic: true,
-      showUI: true,
-      showInSidebar: true,
-      excludeFromGenericRpc: false,
-      excludeFromSearch: false,
-    });
-  });
-
-  test("isPublic=false hides nav-menu taxonomy from admin, RPC and search", () => {
-    // The whole reason the switch defaults from `isPublic`: a menu taxonomy
-    // is not public, so its terms stay out of results without a second
-    // declaration anyone could forget.
-    expect(
-      resolveTermTaxonomyVisibility({ label: "Nav menus", isPublic: false }),
-    ).toEqual({
-      isPublic: false,
-      showUI: false,
-      showInSidebar: false,
-      excludeFromGenericRpc: true,
-      excludeFromSearch: true,
-    });
-  });
-
-  test("a public taxonomy can still opt its terms out of search", () => {
-    const v = resolveTermTaxonomyVisibility({
-      label: "Internal",
-      excludeFromSearch: true,
-    });
-
-    expect(v.isPublic).toBe(true);
-    expect(v.excludeFromSearch).toBe(true);
-  });
-
-  test("a non-public taxonomy can opt its terms back in", () => {
-    const v = resolveTermTaxonomyVisibility({
-      label: "Hidden",
-      isPublic: false,
-      excludeFromSearch: false,
-    });
-
-    expect(v.excludeFromSearch).toBe(false);
-  });
-});
-
-describe("manifestEntryVisibility", () => {
-  test("falls through to cascade defaults when wire payload omits the fields", () => {
-    expect(
-      manifestEntryVisibility({
-        isPublic: undefined,
-        showUI: undefined,
-        showInSidebar: undefined,
-      }),
-    ).toEqual({ isPublic: true, showUI: true, showInSidebar: true });
-  });
-
-  test("honors explicit wire values", () => {
-    expect(
-      manifestEntryVisibility({
-        isPublic: false,
-        showUI: true,
-        showInSidebar: false,
-      }),
-    ).toEqual({ isPublic: false, showUI: true, showInSidebar: false });
   });
 });
 

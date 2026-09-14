@@ -22,6 +22,8 @@ import {
   createTestContext,
   createTestDb,
   factoriesFor,
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
 } from "plumix/test";
 
 import { ensureSearchIndex, SEARCH_INDEX_TRIGGER_DROP_DDL } from "../db/ddl.js";
@@ -293,16 +295,14 @@ interface SearchContext {
 export async function createSearchContext(): Promise<SearchContext> {
   const db = await createSearchTestDb();
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    registeredBy: "test",
-    label: "Posts",
-  });
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    registeredBy: "test",
-    label: "Categories",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType("post", { label: "Posts" }, "test"),
+  );
+  plugins.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
+  );
   const { defer, drainDeferred } = createDeferQueue();
   const ctx = createTestContext({
     db,

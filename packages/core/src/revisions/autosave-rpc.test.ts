@@ -6,6 +6,7 @@ import type { MetaBoxField } from "../plugin/manifest.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { createRpcHarness } from "../test/rpc.js";
@@ -13,25 +14,35 @@ import { getAutosave, upsertAutosave } from "./repository.js";
 
 function registryWithAutosave() {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    supports: ["revisions", "autosave"],
-    versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-    registeredBy: "test",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        supports: ["revisions", "autosave"],
+        versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      },
+      "test",
+    ),
+  );
   return plugins;
 }
 
 function registryWithoutAutosave() {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    supports: ["revisions"],
-    versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-    registeredBy: "test",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        supports: ["revisions"],
+        versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      },
+      "test",
+    ),
+  );
   return plugins;
 }
 

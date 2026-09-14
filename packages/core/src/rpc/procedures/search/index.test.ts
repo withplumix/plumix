@@ -3,6 +3,10 @@ import { describe, expect, test } from "vitest";
 import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
 import { deriveTermTaxonomyCapabilities } from "../../../auth/rbac.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import {
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "../../../plugin/registry.js";
 import { registerCoreSearchHandlers } from "../../../search/register-core-handlers.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -14,17 +18,26 @@ async function searchHarness(
   authAs: "editor" | "author",
 ): Promise<AuthenticatedRpcHarness> {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    label: { id: "et.post", message: "Posts" },
-    labels: { plural: { id: "et.post.plural", message: "Posts" } },
-    registeredBy: null,
-  } as never);
-  const categorySpec = {
-    label: { id: "tt.category", message: "Categories" },
-    labels: { plural: { id: "tt.category.plural", message: "Categories" } },
-    registeredBy: null,
-  };
-  plugins.termTaxonomies.set("category", categorySpec as never);
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: { id: "et.post", message: "Posts" },
+        labels: { plural: { id: "et.post.plural", message: "Posts" } },
+      },
+      null,
+    ),
+  );
+  const categorySpec = toRegisteredTermTaxonomy(
+    "category",
+    {
+      label: { id: "tt.category", message: "Categories" },
+      labels: { plural: { id: "tt.category.plural", message: "Categories" } },
+    },
+    null,
+  );
+  plugins.termTaxonomies.set("category", categorySpec);
   for (const cap of deriveTermTaxonomyCapabilities("category", categorySpec)) {
     plugins.capabilities.set(cap.name, { ...cap, registeredBy: null });
   }

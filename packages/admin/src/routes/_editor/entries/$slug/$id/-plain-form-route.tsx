@@ -171,11 +171,11 @@ export function PlainFormRouteInner({
       autosaveMs={500}
       revisionsTrigger={revisionsTrigger}
       previewLinkAction={
-        entryType.isPublic === false ? undefined : (
+        entryType.isPublic ? (
           <PreviewButton
             mintPreviewLink={() => orpc.entry.createPreviewLink.call({ id })}
           />
-        )
+        ) : undefined
       }
       onSubmit={(values) =>
         updateMutation.mutate({

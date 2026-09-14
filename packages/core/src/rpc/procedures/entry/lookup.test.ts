@@ -4,6 +4,7 @@ import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import { withUser } from "../../../context/app.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { entryFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { entryLookupAdapter } from "./lookup.js";
@@ -190,12 +191,10 @@ describe("entryLookupAdapter", () => {
     // this pins the `href` contract too. The single-reference picker
     // resolves its selected id through this same `list({ ids })` path.
     const registry: MutablePluginRegistry = createPluginRegistry();
-    registry.entryTypes.set("post", {
-      name: "post",
-      label: "Posts",
-      isPublic: true,
-      registeredBy: null,
-    });
+    registry.entryTypes.set(
+      "post",
+      toRegisteredEntryType("post", { label: "Posts", isPublic: true }, null),
+    );
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const e = await entryFactory
       .transient({ db: h.context.db })
@@ -220,12 +219,10 @@ describe("entryLookupAdapter", () => {
   test("hydrate() resolves ids into entry summaries with permalinks", async () => {
     // Register the public entry type so the summary carries a permalink.
     const registry: MutablePluginRegistry = createPluginRegistry();
-    registry.entryTypes.set("post", {
-      name: "post",
-      label: "Posts",
-      isPublic: true,
-      registeredBy: null,
-    });
+    registry.entryTypes.set(
+      "post",
+      toRegisteredEntryType("post", { label: "Posts", isPublic: true }, null),
+    );
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const e = await entryFactory
       .transient({ db: h.context.db })
