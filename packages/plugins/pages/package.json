@@ -39,7 +39,7 @@
     "provenance": true
   },
   "scripts": {
-    "i18n:extract": "lingui extract",
+    "i18n:extract": "plumix i18n extract",
     "i18n:compile": "plumix-compile-catalogs",
     "i18n:check": "plumix i18n verify",
     "attw": "attw --pack . --profile esm-only",
@@ -57,7 +57,6 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",
