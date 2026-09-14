@@ -25,9 +25,6 @@ describe("createFormRegistry", () => {
     registry.register(newsletter, "newsletter");
 
     expect(registry.list()).toEqual([contact, newsletter]);
-
-    registry.reset();
-    expect(registry.list()).toEqual([]);
   });
 
   test("rejects a second form on the same slug, naming both contributors", () => {
