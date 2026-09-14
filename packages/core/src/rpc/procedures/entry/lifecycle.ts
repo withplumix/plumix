@@ -248,45 +248,6 @@ export async function loadDeletableEntries(
   return ordered;
 }
 
-// Mirrors the readability rules in `entry.get`: any type-level `read` cap,
-// and for non-published entries also requires `edit_any` or (author +
-// `edit_own`). `entry.get` inlines its own variant that also issues an
-// errors.NOT_FOUND directly; `entry.duplicate` reuses this to gate the
-// source it copies (a create cap alone would leak unreadable drafts).
-export function canReadEntry(
-  ctx: AuthenticatedAppContext,
-  entry: Entry,
-): boolean {
-  if (!ctx.auth.can(entryCapability(entry.type, "read"))) return false;
-  if (entry.status === "published") return true;
-  if (ctx.auth.can(entryCapability(entry.type, "edit_any"))) return true;
-  return (
-    entry.authorId === ctx.user.id &&
-    ctx.auth.can(entryCapability(entry.type, "edit_own"))
-  );
-}
-
-/**
- * Load the parent referenced by a user-supplied parentId and verify it
- * (a) exists, (b) shares the child's entry type, and (c) is visible to the
- * caller per the same rules as `entry.get`. Returns null when any check
- * fails — deliberately undistinguished so a caller can't probe for entry
- * existence by reparenting. Callers should translate null into a 404.
- */
-export async function loadReadableParent(
-  ctx: AuthenticatedAppContext,
-  childType: string,
-  parentId: number,
-): Promise<Entry | null> {
-  const parent = await ctx.db.query.entries.findFirst({
-    where: eq(entries.id, parentId),
-  });
-  if (!parent) return null;
-  if (parent.type !== childType) return null;
-  if (!canReadEntry(ctx, parent)) return null;
-  return parent;
-}
-
 /**
  * Walk the parent chain upward from `candidateParentId` and decide whether
  * pointing `entryId` at it would create a cycle — i.e. whether entryId already

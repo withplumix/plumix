@@ -855,6 +855,27 @@ describe("REST API — bearer PAT auth", () => {
     expect(body.status).toBe("draft");
   });
 
+  test("a PAT scoped to edit_own lists its user's own drafts beside published", async () => {
+    const h = await restHarness();
+    await seedDraft(h);
+    const { userId, secret } = await mintPat(h, {
+      role: "editor",
+      scopes: ["entry:post:read", "entry:post:edit_own"],
+    });
+    const mine = await h.factory.entry.create({
+      type: "post",
+      status: "draft",
+      authorId: userId,
+    });
+    const live = await h.factory.published.create({ authorId: userId });
+
+    const res = await h.dispatch(bearerGet("/_plumix/api/v1/posts", secret));
+
+    const body = (await res.json()) as ListEnvelope;
+    const ids = body.data.map((row) => row.id).sort();
+    expect(ids).toEqual([mine.id, live.id].sort());
+  });
+
   test("a scoped token is gated by scope ∩ role", async () => {
     const h = await restHarness();
     const draftId = await seedDraft(h);
