@@ -72,13 +72,14 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
 /**
  * Whether items of this entry type or term taxonomy belong in a menu. The
  * picker, the editor's item resolver and the public render all ask this, so
- * the three cannot disagree about which types are in scope.
+ * the three cannot disagree about which types are in scope. A type that is not
+ * public has no URL for a menu link.
  */
 export function isMenuEligible(target: {
   readonly isPublic?: boolean;
   readonly isShownInMenus?: boolean;
 }): boolean {
-  return target.isShownInMenus ?? target.isPublic ?? true;
+  return target.isPublic !== false && (target.isShownInMenus ?? true);
 }
 
 interface MenuEligibleEntryType {
