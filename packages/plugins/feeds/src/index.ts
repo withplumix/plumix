@@ -1,8 +1,8 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin, loadSiteSettings } from "plumix";
+import { definePlugin, enqueuePurgeTags, loadSiteSettings } from "plumix";
 
 import { applyFeedDiscovery } from "./discovery.js";
-import { handleFeed } from "./respond.js";
+import { FEED_TAG, handleFeed } from "./respond.js";
 import { feedRoutes } from "./routes.js";
 // Augmentation anchors. A `declare module "plumix"` block reaches a consumer
 // only if the module declaring it is in this package's declaration graph, and
@@ -40,18 +40,24 @@ export function feeds(): PluginDescriptor {
           site.public === false,
         );
       });
+      ctx.addAction("settings:group_changed", (changes, appCtx) => {
+        if (changes.group === "site") enqueuePurgeTags(appCtx, [FEED_TAG]);
+      });
     },
     afterSetup: (ctx) => {
       for (const route of feedRoutes(ctx.plugins)) {
+        const cacheable = route.cacheable ?? true;
         ctx.registerPublicRoute({
           path: route.path,
+          cacheable,
           handler: (_request, appCtx, params) =>
-            handleFeed(appCtx, route.scope(params), "rss2"),
+            handleFeed(appCtx, route.scope(params), "rss2", cacheable),
         });
         ctx.registerPublicRoute({
           path: `${route.path}/atom`,
+          cacheable,
           handler: (_request, appCtx, params) =>
-            handleFeed(appCtx, route.scope(params), "atom"),
+            handleFeed(appCtx, route.scope(params), "atom", cacheable),
         });
       }
     },

@@ -275,12 +275,11 @@ function createContextFactory(args: {
   clientAddress?: string,
 ) => AppContext {
   const { app, options, db, env, defer } = args;
-  // The harness config declares no storage, cdn or kv slot, so a test hands in
-  // the connected store directly; image delivery binds through the config.
+  // The harness config declares no storage or kv slot, so a test hands in the
+  // connected store directly; image delivery and cdn bind through the config.
   const slots: BoundSlots = {
     ...bindSlots(app, env),
     storage: options.storage,
-    cdn: options.cdn,
     kv: options.kv,
   };
   return (request, user, clientAddress) =>
@@ -307,6 +306,7 @@ export async function createDispatcherHarness(
 ): Promise<DispatcherHarness> {
   const db = options.db ?? (await createTestDb());
   const env = options.env ?? {};
+  const { cdn } = options;
   const config = plumix({
     runtime: stubAdapter,
     database: stubDatabase,
@@ -323,6 +323,9 @@ export async function createDispatcherHarness(
       bootstrapVia: options.bootstrapVia,
       selfSignup: options.selfSignup,
     }),
+    // Declared as well as bound: core subscribes its entry-mutation purges only
+    // where the config names a cdn, so a stub bound alone would never see one.
+    cdn: cdn === undefined ? undefined : { kind: "test", connect: () => cdn },
     plugins: options.plugins,
     redirects: options.redirects,
     imageDelivery: options.imageDelivery,
