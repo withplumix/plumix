@@ -123,7 +123,7 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
   // building an app and must not pay for it (`cold-start.test.ts`). Here it is
   // a module-cache hit: `resolveCommandApp` already imported the barrel to
   // build `ctx.app`.
-  const { connectScheduledDb, createScheduledRunGuard } =
+  const { connectScheduledDb, createScheduledRunGuard, scheduledLeaseScope } =
     await import("@plumix/core");
   const handler = ctx.app.config.runtime.createHandler(ctx.app);
 
@@ -139,13 +139,7 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
     // otherwise write the same string.
     holder: `cli:${hostname()}:${String(process.pid)}`,
     lease: true,
-    // The same policy the in-process scheduler picks: a task that declares no
-    // cron runs on every firing, so its schedules must serialise against each
-    // other; without one, a slow schedule cannot shut an unrelated one out of
-    // its only matching minute.
-    leaseScope: ctx.app.scheduledTasks.some((task) => task.cron === undefined)
-      ? "shared"
-      : "schedule",
+    leaseScope: scheduledLeaseScope(ctx.app),
   });
 
   try {
