@@ -185,6 +185,22 @@ export function createScheduledRunGuard({
   };
 }
 
+/**
+ * The lease scope a site's declared tasks call for, shared by the in-process
+ * scheduler and `plumix cron run` (#2372).
+ *
+ * A task that declares no cron runs on every firing, so its schedules have to
+ * serialise against each other; without one, each schedule can hold its own
+ * lease and a slow schedule cannot shut an unrelated one out of its minute.
+ */
+export function scheduledLeaseScope(
+  app: Pick<PlumixApp, "scheduledTasks">,
+): "shared" | "schedule" {
+  return app.scheduledTasks.some((task) => task.cron === undefined)
+    ? "shared"
+    : "schedule";
+}
+
 export interface ConnectedScheduledDb {
   readonly db: Db;
   /** Release it — the adapter's own `close`, absent when it has none. */

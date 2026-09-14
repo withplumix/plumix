@@ -232,6 +232,7 @@ export {
   parseCron,
   renderDevBootErrorResponse,
   runScheduledTasks,
+  scheduledLeaseScope,
   scheduledTasksFor,
   traceDbBatch,
   traceDbQuery,

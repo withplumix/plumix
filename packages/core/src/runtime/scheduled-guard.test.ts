@@ -2,7 +2,10 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Db } from "../context/app.js";
 import { createTestDb } from "../test/harness.js";
-import { createScheduledRunGuard } from "./scheduled-guard.js";
+import {
+  createScheduledRunGuard,
+  scheduledLeaseScope,
+} from "./scheduled-guard.js";
 
 // Two guards over one database stand in for two replicas of a deploy sharing
 // one database — the configuration `plumix/db/libsql` makes possible today.
@@ -24,6 +27,27 @@ const noWork = (): Promise<void> => Promise.resolve();
 
 /** Work that never settles — the process was killed mid-run. */
 const neverFinishes = (): Promise<void> => new Promise<void>(() => undefined);
+
+describe("scheduledLeaseScope", () => {
+  test("gives shared when a task declares no cron", () => {
+    expect(
+      scheduledLeaseScope({
+        scheduledTasks: [{ cron: undefined }, { cron: "*/5 * * * *" }] as never,
+      }),
+    ).toBe("shared");
+  });
+
+  test("gives schedule when every task declares a cron", () => {
+    expect(
+      scheduledLeaseScope({
+        scheduledTasks: [
+          { cron: "*/5 * * * *" },
+          { cron: "0 * * * *" },
+        ] as never,
+      }),
+    ).toBe("schedule");
+  });
+});
 
 describe("createScheduledRunGuard", () => {
   test("runs the work and reports that it ran", async () => {

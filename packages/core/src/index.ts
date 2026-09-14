@@ -81,6 +81,7 @@ export type {
 export {
   connectScheduledDb,
   createScheduledRunGuard,
+  scheduledLeaseScope,
 } from "./runtime/scheduled-guard.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";

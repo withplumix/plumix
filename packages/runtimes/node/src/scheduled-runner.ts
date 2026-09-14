@@ -5,7 +5,11 @@ import type {
   PlumixEnv,
   ScheduledRunReport,
 } from "plumix";
-import { connectScheduledDb, createScheduledRunGuard } from "plumix";
+import {
+  connectScheduledDb,
+  createScheduledRunGuard,
+  scheduledLeaseScope,
+} from "plumix";
 
 import type {
   Scheduler,
@@ -56,12 +60,6 @@ export function startScheduledRunner({
   clock,
   db,
 }: ScheduledRunnerOptions): Scheduler {
-  // A task that declared no cron runs on every firing, so its schedules have to
-  // serialise against each other; without one, each schedule can hold its own
-  // lease and a slow schedule cannot shut an unrelated one out of its minute.
-  const runsOnEveryFiring = app.scheduledTasks.some(
-    (task) => task.cron === undefined,
-  );
   // A database handed in belongs to the caller.
   const connection: ConnectedScheduledDb =
     db === undefined ? connectScheduledDb(app, env) : { db };
@@ -72,7 +70,7 @@ export function startScheduledRunner({
     db: connection.db,
     holder: `${hostname()}:${String(process.pid)}`,
     lease,
-    leaseScope: runsOnEveryFiring ? "shared" : "schedule",
+    leaseScope: scheduledLeaseScope(app),
     ...(ttlMs === undefined ? {} : { ttlMs }),
   });
 
