@@ -204,7 +204,9 @@ export {
 export { findTermByPath } from "./route/path-chain.js";
 export {
   buildEntryPermalink,
+  buildEntryPermalinks,
   buildTermArchiveUrl,
+  buildTermArchiveUrls,
   termTaxonomyBaseSlug,
 } from "./route/permalink.js";
 // What it takes to replace an admin command palette domain: which groups a

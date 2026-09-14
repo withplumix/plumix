@@ -16,6 +16,21 @@ function harness(
   return createDispatcherHarness({ plugins: [...plugins, feeds()] });
 }
 
+// `plumix` exports no span type; this is the part of one a query count reads.
+interface SpanTree {
+  readonly name: string;
+  readonly children: readonly SpanTree[];
+}
+
+function flattenSpans(spans: readonly SpanTree[]): SpanTree[] {
+  return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
+}
+
+function countDbSpans(spans: readonly SpanTree[]): number {
+  return flattenSpans(spans).filter((span) => span.name.startsWith("db: "))
+    .length;
+}
+
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -135,6 +150,69 @@ describe("feed routes", () => {
     expect(body).toContain(
       '<link rel="alternate" type="application/atom+xml" href="https://cms.example/feed/atom"',
     );
+  });
+
+  test("a feed of nested entries costs the same queries however many it holds", async () => {
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+
+    // Each child sits under its own parent, so a per-row ancestor walk would
+    // add one query per child.
+    async function feedOfNestedPages(
+      children: number,
+    ): Promise<{ readonly queries: number; readonly body: string }> {
+      let queries = 0;
+      const h = await createDispatcherHarness({
+        plugins: [pagesPlugin, feeds()],
+        telemetry: {
+          consumers: [
+            {
+              id: "query-count",
+              onRequestEnd: (snapshot) => {
+                queries = countDbSpans(snapshot.spans);
+              },
+            },
+          ],
+        },
+      });
+      const author = await h.seedUser("admin");
+      for (let i = 0; i < children; i++) {
+        const parent = await h.factory.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          content: null,
+          status: "published",
+          authorId: author.id,
+        });
+        await h.factory.entry.create({
+          type: "page",
+          slug: `child-${String(i)}`,
+          title: "Child",
+          content: null,
+          status: "published",
+          authorId: author.id,
+          parentId: parent.id,
+        });
+      }
+      const body = await (await h.fetch("/page/feed")).text();
+      await h.drainDeferred();
+      return { queries, body };
+    }
+
+    const one = await feedOfNestedPages(1);
+    const four = await feedOfNestedPages(4);
+
+    expect(four.body).toContain(
+      "<link>https://cms.example/page/parent-3/child-3</link>",
+    );
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
   });
 });
 

@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -9,8 +11,10 @@ import { installPlugins } from "../plugin/register.js";
 import { adminUser, createTestDb, factoriesFor } from "../test/index.js";
 import {
   buildEntryPermalink,
+  buildEntryPermalinks,
   buildEntryPermalinkSync,
   buildTermArchiveUrl,
+  buildTermArchiveUrls,
   buildTermArchiveUrlSync,
 } from "./permalink.js";
 
@@ -484,6 +488,195 @@ describe("buildTermArchiveUrl", () => {
     expect(
       await buildTermArchiveUrl(ctx, { taxonomy: "category", slug: "news" }),
     ).toBe("/topic/news");
+  });
+});
+
+describe("buildEntryPermalinks", () => {
+  const typesRegistry = () =>
+    buildRegistry([
+      definePlugin("types", (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "docs", isHierarchical: false },
+        });
+        ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+      }),
+    ]);
+
+  test("builds each row's URL at its own index, whatever its shape", async () => {
+    const registry = await typesRegistry();
+    const db = await createTestDb();
+    const factories = factoriesFor(db);
+    const author = await adminUser.transient({ db }).create();
+    const page = (slug: string, parentId: number | null) =>
+      factories.entry.create({
+        type: "page",
+        slug,
+        title: slug,
+        authorId: author.id,
+        parentId,
+        status: "published",
+      });
+    const root = await page("about", null);
+    const team = await page("team", root.id);
+    const careers = await page("careers", root.id);
+    const leadership = await page("leadership", team.id);
+
+    const rows = [
+      { type: "post", slug: "hello", parentId: 7 },
+      { type: "page", slug: leadership.slug, parentId: leadership.parentId },
+      { type: "hidden", slug: "secret", parentId: root.id },
+      { type: "page", slug: careers.slug, parentId: careers.parentId },
+      { type: "ghost", slug: "x" },
+      { type: "page", slug: root.slug, parentId: null },
+      { type: "page", slug: "orphan", parentId: 9999 },
+      { type: "doc", slug: "intro", parentId: root.id },
+      { type: "page", slug: team.slug, parentId: team.parentId },
+    ];
+
+    const ctx = ctxFor(db, registry, "/site");
+    const expected = [
+      "/site/post/hello",
+      "/site/page/about/team/leadership",
+      null,
+      "/site/page/about/careers",
+      null,
+      "/site/page/about",
+      "/site/page/orphan",
+      "/site/docs/intro",
+      "/site/page/about/team",
+    ];
+    expect(await buildEntryPermalinks(ctx, rows)).toEqual(expected);
+    expect(
+      await Promise.all(rows.map((row) => buildEntryPermalink(ctx, row))),
+    ).toEqual(expected);
+  });
+
+  test("resolves more parents than one statement may bind", async () => {
+    const registry = await typesRegistry();
+    const db = await createTestDb();
+    const factories = factoriesFor(db);
+    const author = await adminUser.transient({ db }).create();
+    const parents = [];
+    for (let i = 0; i < 150; i++) {
+      parents.push(
+        await factories.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          authorId: author.id,
+          parentId: null,
+          status: "published",
+        }),
+      );
+    }
+
+    const urls = await buildEntryPermalinks(
+      ctxFor(db, registry),
+      parents.map((parent) => ({
+        type: "page",
+        slug: "child",
+        parentId: parent.id,
+      })),
+    );
+
+    expect(urls).toEqual(parents.map((parent) => `/page/${parent.slug}/child`));
+  });
+
+  test("a parent cycle yields a truncated URL rather than an error", async () => {
+    const registry = await typesRegistry();
+    const db = await createTestDb();
+    const factories = factoriesFor(db);
+    const author = await adminUser.transient({ db }).create();
+    const a = await factories.entry.create({
+      type: "page",
+      slug: "a",
+      title: "A",
+      authorId: author.id,
+      parentId: null,
+      status: "published",
+    });
+    const b = await factories.entry.create({
+      type: "page",
+      slug: "b",
+      title: "B",
+      authorId: author.id,
+      parentId: a.id,
+      status: "published",
+    });
+    // A cycle needs a row pointing at one created after it, which no single
+    // factory create can seed.
+    await db
+      .update(entries)
+      .set({ parentId: b.id })
+      .where(eq(entries.id, a.id));
+
+    const [url] = await buildEntryPermalinks(ctxFor(db, registry), [
+      { type: "page", slug: "leaf", parentId: a.id },
+    ]);
+
+    // The walk stops at the depth cap: 51 ancestors, plus base and leaf.
+    expect(url?.split("/").filter(Boolean)).toHaveLength(53);
+  });
+});
+
+describe("buildTermArchiveUrls", () => {
+  test("builds each row's URL at its own index, whatever its shape", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerTermTaxonomy("tag", { label: "Tags", isPublic: true });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isPublic: true,
+          isHierarchical: true,
+        });
+        ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+      }),
+    ]);
+    const db = await createTestDb();
+    const factories = factoriesFor(db);
+    const news = await factories.term.create({
+      taxonomy: "category",
+      slug: "news",
+      name: "News",
+    });
+    const local = await factories.term.create({
+      taxonomy: "category",
+      slug: "local",
+      name: "Local",
+      parentId: news.id,
+    });
+
+    const rows = [
+      { taxonomy: "category", slug: "city", parentId: local.id },
+      { taxonomy: "tag", slug: "js", parentId: news.id },
+      { taxonomy: "menu", slug: "main", parentId: null },
+      { taxonomy: "category", slug: "world", parentId: news.id },
+      { taxonomy: "ghost", slug: "x" },
+      { taxonomy: "category", slug: "news", parentId: null },
+    ];
+
+    const ctx = ctxFor(db, registry);
+    const expected = [
+      "/category/news/local/city",
+      "/tag/js",
+      null,
+      "/category/news/world",
+      null,
+      "/category/news",
+    ];
+    expect(await buildTermArchiveUrls(ctx, rows)).toEqual(expected);
+    expect(
+      await Promise.all(rows.map((row) => buildTermArchiveUrl(ctx, row))),
+    ).toEqual(expected);
   });
 });
 

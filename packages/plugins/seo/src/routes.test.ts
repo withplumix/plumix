@@ -5,7 +5,10 @@ import type {
   JsonValue,
   Logger,
 } from "plumix";
-import type { DispatcherHarness } from "plumix/test";
+import type {
+  CreateDispatcherHarnessOptions,
+  DispatcherHarness,
+} from "plumix/test";
 import { entryPurgeTags, typeTag } from "plumix";
 import { entries, eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
@@ -146,9 +149,25 @@ function createHarness(
     readonly cdn?: ConnectedCdn;
     readonly basePath?: string;
     readonly logger?: Logger;
+    readonly telemetry?: CreateDispatcherHarnessOptions["telemetry"];
   } = {},
 ): Promise<DispatcherHarness> {
   return createDispatcherHarness({ plugins: [...plugins, seo()], ...options });
+}
+
+// `plumix` exports no span type; this is the part of one a query count reads.
+interface SpanTree {
+  readonly name: string;
+  readonly children: readonly SpanTree[];
+}
+
+function flattenSpans(spans: readonly SpanTree[]): SpanTree[] {
+  return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
+}
+
+function countDbSpans(spans: readonly SpanTree[]): number {
+  return flattenSpans(spans).filter((span) => span.name.startsWith("db: "))
+    .length;
 }
 
 async function setSettings(
@@ -406,6 +425,120 @@ describe("a sub-sitemap", () => {
       expect(res.status).toBe(404);
     },
   );
+
+  test("a page of nested entries costs the same queries however many it holds", async () => {
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+
+    // Each child sits under its own parent, so a per-row ancestor walk would
+    // add one query per child.
+    async function sitemapOfNestedPages(
+      children: number,
+    ): Promise<{ readonly queries: number; readonly body: string }> {
+      let queries = 0;
+      const h = await createHarness([pagesPlugin], {
+        telemetry: {
+          consumers: [
+            {
+              id: "query-count",
+              onRequestEnd: (snapshot) => {
+                queries = countDbSpans(snapshot.spans);
+              },
+            },
+          ],
+        },
+      });
+      const author = await h.seedUser("admin");
+      for (let i = 0; i < children; i++) {
+        const parent = await h.factory.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          content: null,
+          status: "published",
+          authorId: author.id,
+        });
+        await h.factory.entry.create({
+          type: "page",
+          slug: `child-${String(i)}`,
+          title: "Child",
+          content: null,
+          status: "published",
+          authorId: author.id,
+          parentId: parent.id,
+        });
+      }
+      const body = await bodyOf(h, "/sitemap-page-1.xml");
+      await h.drainDeferred();
+      return { queries, body };
+    }
+
+    const one = await sitemapOfNestedPages(1);
+    const four = await sitemapOfNestedPages(4);
+
+    expect(four.body).toContain(
+      "<loc>https://cms.example/page/parent-3/child-3</loc>",
+    );
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
+  });
+
+  test("a page of nested terms costs the same queries however many it holds", async () => {
+    const nestedTaxonomyPlugin = definePlugin("nested-taxo", (ctx) => {
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        isHierarchical: true,
+      });
+    });
+
+    async function sitemapOfNestedTerms(
+      children: number,
+    ): Promise<{ readonly queries: number; readonly body: string }> {
+      let queries = 0;
+      const h = await createHarness([nestedTaxonomyPlugin], {
+        telemetry: {
+          consumers: [
+            {
+              id: "query-count",
+              onRequestEnd: (snapshot) => {
+                queries = countDbSpans(snapshot.spans);
+              },
+            },
+          ],
+        },
+      });
+      for (let i = 0; i < children; i++) {
+        const parent = await h.factory.term.create({
+          taxonomy: "category",
+          name: "Parent",
+          slug: `parent-${String(i)}`,
+        });
+        await h.factory.term.create({
+          taxonomy: "category",
+          name: "Child",
+          slug: `child-${String(i)}`,
+          parentId: parent.id,
+        });
+      }
+      const body = await bodyOf(h, "/sitemap-category-1.xml");
+      await h.drainDeferred();
+      return { queries, body };
+    }
+
+    const one = await sitemapOfNestedTerms(1);
+    const four = await sitemapOfNestedTerms(4);
+
+    expect(four.body).toContain(
+      "<loc>https://cms.example/category/parent-3/child-3</loc>",
+    );
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
+  });
 });
 
 describe("seo:sitemap:urls", () => {

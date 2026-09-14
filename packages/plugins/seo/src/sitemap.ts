@@ -1,8 +1,8 @@
 import type { PluginRegistry } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import {
-  buildEntryPermalink,
-  buildTermArchiveUrl,
+  buildEntryPermalinks,
+  buildTermArchiveUrls,
   typeTag,
   withBasePath,
   xmlEscape,
@@ -200,10 +200,11 @@ async function entryUrls(
     type,
     rows.map((row) => row.meta),
   );
+  const paths = await buildEntryPermalinks(ctx, rows);
   const urls: SitemapUrl[] = [];
   for (const [index, row] of rows.entries()) {
-    const path = await buildEntryPermalink(ctx, row);
-    if (path === null) continue;
+    const path = paths[index];
+    if (path === null || path === undefined) continue;
     urls.push({
       loc: `${ctx.origin}${path}`,
       lastmod: row.updatedAt.toISOString(),
@@ -238,12 +239,10 @@ async function termUrls(
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));
 
-  const urls: SitemapUrl[] = [];
-  for (const row of rows) {
-    const path = await buildTermArchiveUrl(ctx, row);
-    if (path !== null) urls.push({ loc: `${ctx.origin}${path}` });
-  }
-  return urls;
+  const paths = await buildTermArchiveUrls(ctx, rows);
+  return paths.flatMap((path) =>
+    path === null ? [] : [{ loc: `${ctx.origin}${path}` }],
+  );
 }
 
 /**
