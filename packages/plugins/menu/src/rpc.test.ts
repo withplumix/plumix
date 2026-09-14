@@ -6,6 +6,7 @@ import { and, eq } from "plumix/db";
 import {
   createAppContext,
   createPluginRegistry,
+  definePlugin,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
@@ -71,13 +72,18 @@ function stubAuthenticator(user: User): RequestAuthenticator {
 async function buildHarness(
   role: UserRole = "editor",
   locations: MenuPluginOptions["locations"] = {},
+  extraPlugins: readonly ReturnType<typeof definePlugin>[] = [],
 ): Promise<Harness> {
   const db = await createTestDb();
   const factories = factoriesFor(db);
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu({ locations })], registry });
+  await installPlugins({
+    hooks,
+    plugins: [menu({ locations }), ...extraPlugins],
+    registry,
+  });
 
   const user =
     role === "admin"
@@ -280,6 +286,51 @@ describe("menu RPC", () => {
       expect(result.items[0]?.resolved.state).toBe("broken");
       expect(result.items[0]?.resolved.label).toBe("Old About");
       expect(result.items[0]?.resolved.lastHref).toBe("/about-old");
+    });
+
+    test("entry-kind item of a non-public type resolves to broken even with isShownInMenus: true", async () => {
+      // The public menu can never render it (no permalink), so the editor
+      // must not show it as ok. The public `page` type keeps the lookup
+      // scope non-empty, so `memo` is excluded by the type filter rather
+      // than by an empty scope skipping the lookup.
+      const h = await buildHarness("editor", {}, [
+        definePlugin("internal", (setup) => {
+          setup.registerEntryType("page", { label: "Pages", isPublic: true });
+          setup.registerEntryType("memo", {
+            label: "Memos",
+            isPublic: false,
+            isShownInMenus: true,
+          });
+        }),
+      ]);
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "memo-owner@example.test" });
+      const memo = await entryFactory.transient({ db: h.db }).create({
+        type: "memo",
+        title: "Q3",
+        slug: `memo-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+      });
+      const item = await entryFactory.transient({ db: h.db }).create({
+        type: "menu_item",
+        title: "",
+        slug: `mi-memo-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+        meta: { kind: "entry", entryId: memo.id },
+      });
+      await entryTermFactory
+        .transient({ db: h.db })
+        .create({ entryId: item.id, termId: m.id, sortOrder: 0 });
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly { resolved: { state: string } }[];
+      };
+
+      expect(result.items[0]?.resolved.state).toBe("broken");
     });
 
     test("sends meta already parsed — null when the stored JSON matches no kind", async () => {

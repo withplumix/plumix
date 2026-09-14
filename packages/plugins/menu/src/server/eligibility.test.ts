@@ -29,7 +29,7 @@ describe("getEligibleMenuKinds", () => {
 
   test.each([
     {
-      name: "isPublic: true, no override",
+      name: "isPublic: true, isShownInMenus unset",
       register: { isPublic: true },
       eligible: true,
     },
@@ -39,21 +39,21 @@ describe("getEligibleMenuKinds", () => {
       eligible: false,
     },
     {
-      name: "isPublic: false, no override",
+      name: "isPublic: false, isShownInMenus unset",
       register: { isPublic: false },
       eligible: false,
     },
     {
-      name: "isPublic: false, isShownInMenus: true (override)",
+      name: "isPublic: false, isShownInMenus: true (no public URL to link to)",
       register: { isPublic: false, isShownInMenus: true },
-      eligible: true,
+      eligible: false,
     },
     {
-      name: "isPublic unset, no override (default true)",
+      name: "isPublic unset, isShownInMenus unset (default true)",
       register: {},
       eligible: true,
     },
-  ])("entry type cascade — $name", async ({ register, eligible }) => {
+  ])("entry type eligibility — $name", async ({ register, eligible }) => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", ...register });
@@ -68,7 +68,7 @@ describe("getEligibleMenuKinds", () => {
 
   test.each([
     {
-      name: "isPublic: true, no override",
+      name: "isPublic: true, isShownInMenus unset",
       register: { isPublic: true },
       eligible: true,
     },
@@ -78,16 +78,16 @@ describe("getEligibleMenuKinds", () => {
       eligible: false,
     },
     {
-      name: "isPublic: false, isShownInMenus: true",
+      name: "isPublic: false, isShownInMenus: true (no public URL to link to)",
       register: { isPublic: false, isShownInMenus: true },
-      eligible: true,
+      eligible: false,
     },
     {
-      name: "isPublic: false default",
+      name: "isPublic: false, isShownInMenus unset",
       register: { isPublic: false },
       eligible: false,
     },
-  ])("term taxonomy cascade — $name", async ({ register, eligible }) => {
+  ])("term taxonomy eligibility — $name", async ({ register, eligible }) => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {
         ctx.registerTermTaxonomy("category", {

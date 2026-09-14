@@ -611,6 +611,58 @@ describe("getMenuByName", () => {
       });
     });
 
+    test("drops entry items of a non-public type even with isShownInMenus: true", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("internal", (setup) => {
+          setup.registerEntryType("memo", {
+            label: "Memos",
+            isPublic: false,
+            isShownInMenus: true,
+          });
+        }),
+      );
+      const memo = await factories.entry.create({
+        type: "memo",
+        slug: "q3",
+        title: "Q3",
+        status: "published",
+        authorId,
+      });
+      const termId = await seedMenu("non-public-entry");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "ignored", meta: { kind: "entry", entryId: memo.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "non-public-entry");
+      expect(menu?.items.map((i) => i.label)).toEqual(["Home"]);
+    });
+
+    test("drops term items of a non-public taxonomy even with isShownInMenus: true", async () => {
+      const localCtx = await ctxWith(
+        definePlugin("internal", (setup) => {
+          setup.registerTermTaxonomy("team", {
+            label: "Teams",
+            isPublic: false,
+            isShownInMenus: true,
+          });
+        }),
+      );
+      const team = await factories.term.create({
+        taxonomy: "team",
+        slug: "core",
+        name: "Core",
+      });
+      const termId = await seedMenu("non-public-term");
+      await seedItems(termId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "ignored", meta: { kind: "term", termId: team.id } },
+      ]);
+
+      const menu = await getMenuByName(localCtx, "non-public-term");
+      expect(menu?.items.map((i) => i.label)).toEqual(["Home"]);
+    });
+
     test("drops entry items of a public type hidden with isShownInMenus: false", async () => {
       const localCtx = await ctxWith(
         definePlugin("shop", (setup) => {

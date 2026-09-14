@@ -104,10 +104,10 @@ declare module "plumix" {
   interface EntryTypeOptions {
     /**
      * Whether this entry type is offered in the menu plugin's item picker and
-     * its entries are kept in rendered menus. Defaults to `isPublic`, and to
-     * `true` when that is unset too. Unlike WordPress's `show_in_nav_menus`,
-     * `false` also drops existing menu links to the type. A rendered link
-     * still needs a public URL, which an `isPublic: false` type does not have.
+     * its entries are kept in rendered menus. Defaults to `true`. Has no effect
+     * on an `isPublic: false` type, which has no public URL to link to. Unlike
+     * WordPress's `show_in_nav_menus`, `false` also drops existing menu links
+     * to the type.
      */
     readonly isShownInMenus?: boolean;
     /** Override the picker tab label. Defaults to `labels.plural`. */
@@ -123,7 +123,7 @@ declare module "plumix" {
     /**
      * Opt-in for non-default kinds (`media`, `user`, future custom
      * kinds) to appear in the menu picker. Default kinds (`entry`,
-     * `term`) follow `isShownInMenus`; other adapters are off unless
+     * `term`) follow `isMenuEligible`; other adapters are off unless
      * this is set.
      */
     readonly menuPicker?: { readonly tabLabel: string };
