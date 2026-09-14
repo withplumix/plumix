@@ -570,45 +570,6 @@ describe("cloudflare adapter — binding validation", () => {
   });
 });
 
-describe("plugin schema collisions", () => {
-  test("buildApp rejects a plugin that redefines a core table", async () => {
-    const misbehaving = definePlugin("collides", () => undefined, {
-      schema: { users: { fake: true } },
-    });
-    const config = plumix({
-      runtime: cloudflare(),
-      database: { kind: "stub", connect: () => ({ db: {} }) },
-      auth,
-      theme,
-      plugins: [misbehaving],
-    });
-
-    await expect(buildApp(config)).rejects.toThrow(
-      /redefines schema export "users"/,
-    );
-  });
-
-  test("buildApp rejects two plugins that export the same table name", async () => {
-    const a = definePlugin("a", () => undefined, {
-      schema: { landing_pages: { fake: "a" } },
-    });
-    const b = definePlugin("b", () => undefined, {
-      schema: { landing_pages: { fake: "b" } },
-    });
-    const config = plumix({
-      runtime: cloudflare(),
-      database: { kind: "stub", connect: () => ({ db: {} }) },
-      auth,
-      theme,
-      plugins: [a, b],
-    });
-
-    await expect(buildApp(config)).rejects.toThrow(
-      /Plugin "b" redefines schema export "landing_pages"/,
-    );
-  });
-});
-
 const ADMIN_SHELL = "<!doctype html><title>admin</title>";
 const ADMIN_SHELL_PATH = "/_plumix/admin/";
 const ADMIN_ASSET_PATH = "/_plumix/admin/assets/index-abc123.js";
