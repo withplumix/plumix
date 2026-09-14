@@ -1,9 +1,16 @@
-import type { AppContext } from "plumix";
-import { loadSiteSettings, nonEmpty, withBasePath } from "plumix";
+import type { AppContext, PluginRegistry } from "plumix";
+import {
+  loadSiteSettings,
+  nonEmpty,
+  tagCdnEntry,
+  typeTag,
+  withBasePath,
+} from "plumix";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
 import { collectFeedItems } from "./items.js";
+import { publicEntryTypeNames } from "./scope.js";
 import { renderAtom, renderRss2 } from "./serialize.js";
 
 const CONTENT_TYPE: Record<FeedFormat, string> = {
@@ -11,11 +18,35 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
   atom: "application/atom+xml; charset=utf-8",
 };
 
+// A reader polls on its own timer, so the window that matters is the shared
+// one: an hour at the edge, cut short by the purge a publish fires, while a
+// client is told to revalidate rather than sit on a stale copy.
+const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
+
+/**
+ * Carried by every feed on top of its type tags. The channel's title and
+ * description, and whether the site syndicates at all, come from the site
+ * settings, so a save there has to retire every feed.
+ */
+export const FEED_TAG = "feeds:feed";
+
+// The `t:<type>` tags of the types a scope's query can read, which is what an
+// entry mutation purges. A plugin archive's filter is free to read any type, so
+// it carries them all.
+function typeTags(plugins: PluginRegistry, scope: FeedScope): string[] {
+  if (scope.kind === "type") return [typeTag(scope.type)];
+  if (scope.kind === "custom")
+    return [...plugins.entryTypes.keys()].map(typeTag);
+  return publicEntryTypeNames(plugins).map(typeTag);
+}
+
 export async function handleFeed(
   ctx: AppContext,
   scope: FeedScope,
   format: FeedFormat,
+  cacheable: boolean,
 ): Promise<Response> {
+  tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, scope)]);
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty
   // 200 instead — there's no "valid but empty because private" feed idiom, so
@@ -36,7 +67,9 @@ export async function handleFeed(
   };
   const body =
     format === "atom" ? renderAtom(channel, items) : renderRss2(channel, items);
-  return new Response(body, {
-    headers: { "content-type": CONTENT_TYPE[format] },
-  });
+  const headers = new Headers({ "content-type": CONTENT_TYPE[format] });
+  // A feed kept out of the CDN is out of reach of every purge, so it declares
+  // no shared freshness for a cache in front of the origin to act on.
+  if (cacheable) headers.set("cache-control", FEED_CACHE_CONTROL);
+  return new Response(body, { headers });
 }

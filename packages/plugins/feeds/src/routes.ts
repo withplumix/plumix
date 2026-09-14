@@ -29,6 +29,11 @@ const DAY = ":day(\\d{2})";
 export interface FeedRoute {
   readonly path: string;
   readonly scope: (params: Record<string, string>) => FeedScope;
+  /**
+   * Absent, the feed is cached. A plugin archive's feed follows the archive's
+   * own opt-in: core can't see what it depends on beyond entries.
+   */
+  readonly cacheable?: boolean;
 }
 
 /**
@@ -79,6 +84,7 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
       routes.push({
         path,
         scope: (params) => ({ kind: "custom", name: archive.name, params }),
+        cacheable: archive.cacheable === true,
       });
     }
   }

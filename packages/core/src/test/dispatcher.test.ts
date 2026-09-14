@@ -1,5 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
+import type { ConnectedCdn } from "../runtime/slots.js";
+import { entryPurgeTags } from "../cdn/tags.js";
+import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
 import { createDispatcherHarness } from "./dispatcher.js";
@@ -41,6 +44,10 @@ const slotsProbe = definePlugin("slots-probe", (ctx) => {
   });
 });
 
+const blog = definePlugin("blog", (ctx) => {
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+});
+
 describe("createDispatcherHarness slot binding", () => {
   test("image delivery reaches a request connected, as the handler binds it", async () => {
     const h = await createDispatcherHarness({
@@ -66,5 +73,38 @@ describe("createDispatcherHarness slot binding", () => {
     const response = await h.fetch("/slots");
 
     expect(await response.json()).toMatchObject({ kv: true });
+  });
+
+  // A stub standing in for a deployed cdn has to get what a deployed one gets,
+  // or a plugin test can prove what it stores and never what retires it.
+  test("a cdn receives the purge an entry mutation enqueues", async () => {
+    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
+      Promise.resolve(),
+    );
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      cdn: { decorate: (response) => response, purgeTags },
+    });
+    const admin = await h.seedUser("admin");
+
+    const created = await h.fetch("/_plumix/rpc/entry/create", {
+      as: admin,
+      json: {
+        json: {
+          type: "post",
+          title: "Hello",
+          slug: "hello",
+          status: "published",
+        },
+        meta: [],
+      },
+    });
+    created.assertStatus(200);
+    await h.drainDeferred();
+
+    const [entry] = await h.db.select({ id: entries.id }).from(entries);
+    expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
+      entryPurgeTags("post", entry?.id ?? 0),
+    );
   });
 });
