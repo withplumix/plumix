@@ -1,6 +1,7 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import type { ResolvedMeta } from "../../meta/core.js";
 import { entries } from "../../../db/schema/entries.js";
+import { loadReadableParent } from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -13,7 +14,6 @@ import {
   entryCapability,
   fireEntryPublished,
   fireEntryTransition,
-  loadReadableParent,
 } from "./lifecycle.js";
 import {
   loadEntryMeta,

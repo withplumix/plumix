@@ -109,6 +109,60 @@ describe("listEntries", () => {
     expect(rows.map((r) => r.slug)).toEqual(["pub"]);
   });
 
+  test("shows a contributor their own drafts beside published entries, not others' drafts", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const other = await h.factory.user.create({ role: "contributor" });
+    await h.factory.published.create({ authorId: other.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
+    await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      slug: "binned",
+      status: "trash",
+    });
+
+    const rows = await listEntries(authedCtx(h), listInput());
+
+    expect(rows.map((r) => r.slug).sort()).toEqual(["mine", "pub"]);
+  });
+
+  test("a contributor filtering to drafts gets their own, not an empty list", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const other = await h.factory.user.create({ role: "contributor" });
+    await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
+    await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
+    await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
+
+    const rows = await listEntries(
+      authedCtx(h),
+      listInput({ status: "draft" }),
+    );
+
+    expect(rows.map((r) => r.slug)).toEqual(["mine"]);
+  });
+
+  test("a contributor filtering to trash sees their own bin, as getEntry already allowed", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const other = await h.factory.user.create({ role: "contributor" });
+    await h.factory.entry.create({
+      authorId: h.user.id,
+      slug: "mine",
+      status: "trash",
+    });
+    await h.factory.entry.create({
+      authorId: other.id,
+      slug: "theirs",
+      status: "trash",
+    });
+
+    const rows = await listEntries(
+      authedCtx(h),
+      listInput({ status: "trash" }),
+    );
+
+    expect(rows.map((r) => r.slug)).toEqual(["mine"]);
+  });
+
   test("silently clamps — a subscriber asking for drafts gets an empty list", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });

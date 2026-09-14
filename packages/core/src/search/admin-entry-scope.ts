@@ -3,6 +3,10 @@ import type { SQL } from "../db/index.js";
 import type { SearchGroup, SearchResultItem } from "./admin-search.js";
 import { and, eq, not, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import {
+  canReadUnpublished,
+  readableEntryRows,
+} from "../entries/visibility.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 
 // Where the Content groups start. Terms take 100.., users later still, so
@@ -50,10 +54,8 @@ export interface AdminEntryScope {
  * what and on what each group is called, and a second copy of these rules is
  * a second place for a draft to leak from.
  *
- * Mirrors `canReadEntry`'s visibility, minus trash — a browse surface hides
- * the bin, the way the entries list does by default. Published is always
- * visible; `edit_any` sees any non-trash; `edit_own` additionally sees its
- * own non-trash; everyone else sees published only.
+ * `readableEntryRows` minus trash — a browse surface hides the bin, the way
+ * the entries list does by default.
  *
  * Group order does not follow `reach`: a group is numbered by where its type
  * sits among every type the caller may read, so two surfaces at different
@@ -66,12 +68,7 @@ export function adminEntryScope(
   ctx: Pick<AppContext, "user" | "auth" | "plugins">,
   { reach = "read" }: AdminEntryScopeOptions = {},
 ): AdminEntryScope | null {
-  const userId = ctx.user?.id ?? null;
   const notTrash = not(eq(entries.status, "trash"));
-  const canEditAny = (type: string) =>
-    ctx.auth.can(entryCapability(type, "edit_any"));
-  const canEditOwn = (type: string) =>
-    userId !== null && ctx.auth.can(entryCapability(type, "edit_own"));
 
   const readable = [...ctx.plugins.entryTypes]
     .filter(([type]) => ctx.auth.can(entryCapability(type, "read")))
@@ -82,20 +79,12 @@ export function adminEntryScope(
       priority: GROUP_PRIORITY_BASE + index,
     }));
   const groups = readable.filter(
-    ({ type }) => reach === "read" || canEditAny(type) || canEditOwn(type),
+    ({ type }) => reach === "read" || canReadUnpublished(ctx, type),
   );
   const visible = or(
-    ...groups.map(({ type }) => {
-      const ofType = eq(entries.type, type);
-      if (canEditAny(type)) return and(ofType, notTrash);
-      if (userId !== null && canEditOwn(type)) {
-        return and(
-          ofType,
-          notTrash,
-          or(eq(entries.status, "published"), eq(entries.authorId, userId)),
-        );
-      }
-      return and(ofType, eq(entries.status, "published"));
+    ...groups.flatMap(({ type }) => {
+      const rows = readableEntryRows(ctx, type);
+      return rows === null ? [] : [and(rows, notTrash)];
     }),
   );
   if (visible === undefined) return null;

@@ -49,7 +49,8 @@ function readTermFilters(
   return Object.keys(filters).length > 0 ? filters : undefined;
 }
 
-// A paginated envelope of published entries for a public content type.
+// A paginated envelope of a public content type's entries: published ones,
+// plus whatever unpublished rows the caller's own token may see.
 export async function listEntriesEnvelope(
   context: AppContext,
   entryType: RegisteredEntryType,

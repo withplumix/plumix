@@ -14,8 +14,8 @@ const SCAN_LIMIT = 50;
 /**
  * `admin:search:results` handler for the `entries` domain. Matches
  * title+excerpt (LIKE) across every entry type the caller can read, in a
- * single query, and returns one group per type. Drafts are included only
- * for types the caller can edit-any; everything is capped per group.
+ * single query, and returns one group per type. Which unpublished rows a
+ * caller is shown is `adminEntryScope`'s call; everything is capped per group.
  *
  * Stays registered when a search plugin is installed, and keeps answering
  * for whatever the plugin's index does not hold — a type under an access

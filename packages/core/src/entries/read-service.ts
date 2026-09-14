@@ -23,6 +23,11 @@ import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
 import { entrySearchCondition } from "../search/conditions.js";
 import { EntryReadError } from "./errors.js";
+import {
+  canReadEntry,
+  canReadUnpublished,
+  readableEntryRows,
+} from "./visibility.js";
 
 const PUBLIC_STATUS: EntryStatus = "published";
 const TRASH_STATUS: EntryStatus = "trash";
@@ -53,8 +58,10 @@ type EntryRead = WithResolvedMeta<Entry> & {
  * List entries of a type, clamped to what the caller may see. Capability checks
  * and status clamping live here so every transport (oRPC, MCP) reads through
  * the same policy. Throws {@link EntryReadError} for reserved types and missing
- * read capability; an explicit request for statuses the caller can't see
- * returns an empty list rather than erroring (matches WP's silent admin filter).
+ * read capability. Who may see which rows is `readableEntryRows`; the status
+ * filter sits on top, so a contributor asking for drafts gets their own. A
+ * caller who can see nothing unpublished asking for anything but `published`
+ * gets an empty list rather than an error (matches WP's silent admin filter).
  */
 export async function listEntries(
   ctx: AppContext,
@@ -62,16 +69,18 @@ export async function listEntries(
 ): Promise<readonly WithResolvedMeta<Entry>[]> {
   const type = input.type ?? "post";
   if (isReservedType(type)) throw EntryReadError.reservedType(type);
-  const readCapability = entryCapability(type, "read");
-  if (!ctx.auth.can(readCapability)) {
-    throw EntryReadError.forbidden(readCapability);
+  const readable = readableEntryRows(ctx, type);
+  if (readable === null) {
+    throw EntryReadError.forbidden(entryCapability(type, "read"));
   }
 
-  const canSeeAnyStatus = ctx.auth.can(entryCapability(type, "edit_any"));
-  const statusClause = resolveStatusClause(input.status, canSeeAnyStatus);
+  const statusClause = resolveStatusClause(
+    input.status,
+    canReadUnpublished(ctx, type),
+  );
   if (statusClause === "forbidden") return [];
 
-  const conditions: SQL[] = [eq(entries.type, type), statusClause];
+  const conditions: SQL[] = [readable, statusClause];
   if (input.authorId !== undefined) {
     conditions.push(eq(entries.authorId, input.authorId));
   }
@@ -136,17 +145,7 @@ export async function getEntry(
   });
   if (!row) throw EntryReadError.notFound(input.id);
   if (isReservedType(row.type)) throw EntryReadError.notFound(input.id);
-  if (!ctx.auth.can(entryCapability(row.type, "read"))) {
-    throw EntryReadError.notFound(input.id);
-  }
-
-  if (row.status !== PUBLIC_STATUS) {
-    const canSeeAny = ctx.auth.can(entryCapability(row.type, "edit_any"));
-    const ownsAndCanEdit =
-      row.authorId === ctx.user?.id &&
-      ctx.auth.can(entryCapability(row.type, "edit_own"));
-    if (!canSeeAny && !ownsAndCanEdit) throw EntryReadError.notFound(input.id);
-  }
+  if (!canReadEntry(ctx, row)) throw EntryReadError.notFound(input.id);
 
   const meta = await resolveEntryMeta(ctx, row, row.meta);
   const entryTerms = await loadEntryTerms(ctx, row.id);
@@ -165,29 +164,26 @@ type StatusInput =
   EntryStatus | readonly (EntryStatus | undefined)[] | undefined;
 
 /**
- * Resolve the caller's `status` input into a WHERE clause, honoring the
- * capability check.
+ * The caller's `status` input as a WHERE clause. Who may see which of those
+ * rows is `readableEntryRows`' business, `AND`ed alongside.
  *
- * - Can see any status + `undefined` → exclude trash (WP "All" tab).
- * - Can see any status + explicit list/string → match as given.
- * - Cannot see any status → pin to `published`; if they asked for anything
- *   else, return "forbidden" so the caller yields an empty result (not a 403 —
- *   WP's admin also silently filters).
+ * - `undefined` → exclude trash (WP "All" tab).
+ * - Explicit list/string → match as given.
+ * - Cannot see anything unpublished and asked for anything else → "forbidden"
+ *   so the caller yields an empty result (not a 403 — WP's admin also silently
+ *   filters).
  */
 function resolveStatusClause(
   input: StatusInput,
-  canSeeAnyStatus: boolean,
+  canSeeUnpublished: boolean,
 ): SQL | "forbidden" {
   const normalized = normalizeStatusInput(input);
-
-  if (!canSeeAnyStatus) {
-    if (normalized === undefined) return eq(entries.status, PUBLIC_STATUS);
-    if (normalized.length === 1 && normalized[0] === PUBLIC_STATUS) {
-      return eq(entries.status, PUBLIC_STATUS);
-    }
+  if (
+    !canSeeUnpublished &&
+    normalized?.some((status) => status !== PUBLIC_STATUS)
+  ) {
     return "forbidden";
   }
-
   if (normalized === undefined) return not(eq(entries.status, TRASH_STATUS));
   const [only, ...rest] = normalized;
   if (only !== undefined && rest.length === 0) return eq(entries.status, only);

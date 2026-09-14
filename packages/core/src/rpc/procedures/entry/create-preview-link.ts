@@ -1,11 +1,11 @@
 import { createPreviewToken } from "../../../auth/preview-token.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { canReadEntry } from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { canReadEntry } from "./lifecycle.js";
 import { entryCreatePreviewLinkInputSchema } from "./schemas.js";
 
 // Mint a shareable, entry-scoped, expiring preview link so a draft can be

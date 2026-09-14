@@ -1,10 +1,11 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { canReadEntry } from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { canReadEntry, entryCapability } from "./lifecycle.js";
+import { entryCapability } from "./lifecycle.js";
 import { resolveEntryMeta } from "./meta.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 import { applyTermPatch, loadEntryTerms } from "./terms.js";

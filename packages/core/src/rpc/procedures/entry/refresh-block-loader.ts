@@ -8,11 +8,11 @@ import {
 import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { canReadEntry } from "../../../entries/visibility.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { canReadEntry } from "./lifecycle.js";
 import { entryRefreshBlockLoaderInputSchema } from "./schemas.js";
 
 // Re-run a single block's loader(s) on demand — the editor's scoped refresh.

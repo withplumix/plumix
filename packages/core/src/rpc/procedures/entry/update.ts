@@ -5,6 +5,7 @@ import type { ResolvedMeta } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { loadReadableParent } from "../../../entries/visibility.js";
 import { getAutosave, upsertAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { stripReservedMeta } from "../../../revisions/snapshot-envelope.js";
@@ -33,7 +34,6 @@ import {
   fireEntryPublished,
   fireEntryTransition,
   fireEntryUpdated,
-  loadReadableParent,
   publishedAtForTransition,
   wouldCreateParentCycle,
 } from "./lifecycle.js";

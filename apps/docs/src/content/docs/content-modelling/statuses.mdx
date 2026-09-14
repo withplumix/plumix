@@ -19,7 +19,7 @@ Two rules cover most of the behaviour.
 
 A public request sees `published` and nothing else. The single-entry resolver queries for the slug and the `published` status together, and an archive adds a second condition, a publish time that is not null. Anything else 404s, unless the request carries a preview token.
 
-The read service clamps an admin read to what the caller may see. It pins a caller without `entry:<type>:edit_any` to `published` no matter what they ask for, and returns an empty list rather than an error when they ask for anything else. A caller who does hold it sees everything except `trash` by default and asks for trash explicitly.
+The read service clamps an admin read to what the caller may see. A caller with `entry:<type>:edit_any` sees everything except `trash` by default and asks for trash explicitly. A caller with `entry:<type>:edit_own` instead sees `published` plus their own entries, whatever their status, so a contributor's draft filter returns their drafts and nobody else's. A caller with neither is pinned to `published` no matter what they ask for, and gets an empty list rather than an error when they ask for anything else. The same rule answers a single-entry read and the admin search palette.
 
 Writing a status has a capability attached too. Creating an entry straight to `published` or `scheduled` needs `entry:<type>:publish` on top of `entry:<type>:create`, and so does moving an existing entry to `published`.
 
