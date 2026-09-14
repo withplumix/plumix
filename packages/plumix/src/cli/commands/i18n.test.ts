@@ -192,6 +192,26 @@ describe("i18nCommand", () => {
     );
   });
 
+  test("refuses to extract into a hand-authored catalog, without spawning lingui", async () => {
+    const localesDir = join(dir, "locales");
+    mkdirSync(localesDir, { recursive: true });
+    writeFileSync(
+      join(localesDir, "en.po"),
+      'msgid ""\nmsgstr ""\n"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\\n"\n',
+    );
+    vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(
+      "/fake/lingui.js",
+    );
+    const spawn = vi
+      .spyOn(i18nDeps, "spawnInherit")
+      .mockResolvedValue(undefined);
+
+    await expect(
+      i18nCommand.run(ctx({ cwd: dir, argv: ["extract"] })),
+    ).rejects.toThrow(/hand-authored/);
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
   test("errors when @lingui/cli isn't resolvable", async () => {
     vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(null);
     await expect(
@@ -284,6 +304,30 @@ describe("i18nCommand", () => {
   });
 
   describe("extract --check", () => {
+    test("still runs against a catalog carrying the hand-authored marker", async () => {
+      // admin/admin-editor's catalogs carry this marker from before their
+      // `--check` CI gate was wired — `--check` snapshots and restores the
+      // file regardless of what extract does to it, so it must not be
+      // refused the way bare `extract` is.
+      const localesDir = join(dir, "locales");
+      mkdirSync(localesDir, { recursive: true });
+      writeFileSync(
+        join(localesDir, "en.po"),
+        'msgid ""\nmsgstr ""\n"X-Generator: hand-authored\\n"\n',
+      );
+
+      vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(
+        "/fake/lingui.js",
+      );
+      const spawn = vi
+        .spyOn(i18nDeps, "spawnInherit")
+        .mockResolvedValue(undefined);
+
+      await i18nCommand.run(ctx({ cwd: dir, argv: ["extract", "--check"] }));
+
+      expect(spawn).toHaveBeenCalled();
+    });
+
     test("throws + restores .po contents when extract drifted the file", async () => {
       const localesDir = join(dir, "locales");
       mkdirSync(localesDir, { recursive: true });

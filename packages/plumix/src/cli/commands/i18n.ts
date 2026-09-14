@@ -48,6 +48,25 @@ export const i18nCommand: CommandDefinition = {
         supported: [...SUPPORTED],
       });
     }
+    const rest = ctx.argv.slice(1);
+    // `--check` is plumix's own flag (slice 7 CI gate). Snapshot the
+    // `.po` files, run extract, compare active msgid sets, restore — so
+    // a failed gate exits non-zero with a clean working tree regardless
+    // of what extract does to it. That safety net is why the
+    // hand-authored guard below only covers the bare, destructive form:
+    // admin's catalog carries the same marker as a historical leftover
+    // (its strings are real macro-extractable JSX/defineMessage now, so
+    // `admin`/`admin-editor`'s own `i18n:extract` calls `lingui extract`
+    // directly and never reaches this guard) — only its `i18n:check`
+    // goes through `plumix i18n extract --check`, and `--check` restores
+    // the file no matter what extract did to it.
+    if (
+      sub === "extract" &&
+      !rest.includes("--check") &&
+      hasHandAuthoredCatalog(resolve(ctx.cwd, "locales"))
+    ) {
+      throw CliError.i18nExtractHandAuthored();
+    }
     const bin = i18nDeps.resolveLinguiCliBin(ctx.cwd);
     if (bin === null) {
       throw CliError.unknownSubcommand({
@@ -56,10 +75,6 @@ export const i18nCommand: CommandDefinition = {
         supported: [...SUPPORTED],
       });
     }
-    const rest = ctx.argv.slice(1);
-    // `--check` is plumix's own flag (slice 7 CI gate). Snapshot the
-    // `.po` files, run extract, compare active msgid sets, restore — so
-    // a failed gate exits non-zero with a clean working tree.
     if (sub === "extract" && rest.includes("--check")) {
       await runExtractCheck(ctx, bin, rest);
       return;
@@ -503,6 +518,16 @@ function decodeQuoted(buf: string): string {
   const segments = buf.match(/"((?:\\.|[^"\\])*)"/g);
   if (!segments) return "";
   return segments.map((s) => s.slice(1, -1).replace(/\\(.)/g, "$1")).join("");
+}
+
+/** A catalog marked `X-Generator: hand-authored` (the convention plumix's
+ *  own plugins use for descriptors a Babel macro pass never sees) has no
+ *  extractor-visible source to regenerate from — running `lingui extract`
+ *  against it doesn't refresh translations, it wipes them. */
+function hasHandAuthoredCatalog(localesDir: string): boolean {
+  return listPoFiles(localesDir).some((path) =>
+    /X-Generator:\s*hand-authored/.test(readFileSync(path, "utf8")),
+  );
 }
 
 function listPoFiles(dir: string): readonly string[] {

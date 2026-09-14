@@ -35,8 +35,9 @@ export type { RelatedPosts } from "./related.js";
 // (`Post a comment`, `Draft this`) can diverge in translation.
 // The matching `msgctxt` lines in `locales/en.po` are hand-authored —
 // see the `X-Generator: hand-authored` header. `withContext` is not
-// macro-visible, so any future `lingui extract` integration here would
-// regress those lines silently.
+// macro-visible, so `pnpm i18n:extract` here refuses to run rather than
+// silently rewriting the catalog (see `plumix i18n extract` in
+// packages/plumix/src/cli/commands/i18n.ts).
 //
 // Action-phrase labels (`Add Post`, `Edit Tag`) intentionally OMIT
 // context — the leading English verb fixes the polyseme as a noun in
