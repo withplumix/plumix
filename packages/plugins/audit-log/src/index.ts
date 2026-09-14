@@ -98,9 +98,10 @@ const AUDIT_LABELS = {
  * - **RPC** `auditLog.list` is gated on the `audit_log:read`
  *   capability (admin-only by default); slice #180 adds filter +
  *   cursor pagination.
- * - **Public API** `ctx.audit.log({ event, subject, properties })`
+ * - **Public API** `ctx.audit.log(ctx, { event, subject, properties })`
  *   from #181 — third-party plugins emit their own events through
- *   the same buffered flush. Drops the call when `ctx.user` is null
+ *   the same buffered flush. The row is attributed to the user on the
+ *   context passed in, which has to be an `AuthenticatedAppContext`,
  *   so frontend / anonymous events can't leak into the admin feed.
  *
  * Example — a comments plugin records moderation actions:
@@ -110,8 +111,10 @@ const AUDIT_LABELS = {
  *         ctx.addAction("comment:approved", (comment, appCtx) => {
  *           // The action hands over the AppContext, which carries
  *           // `audit` when the audit-log plugin is also installed; the
- *           // optional chain makes this a no-op when it isn't.
- *           appCtx.audit?.log({
+ *           // optional chain makes this a no-op when it isn't. An action
+ *           // can fire for a visitor, so narrow on the user first.
+ *           if (!appCtx.user) return;
+ *           appCtx.audit?.log({ ...appCtx, user: appCtx.user }, {
  *             event: "comment:approved",
  *             subject: { type: "comment", id: comment.id, label: comment.body.slice(0, 40) },
  *             properties: { postId: comment.postId },

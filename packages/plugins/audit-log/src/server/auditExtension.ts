@@ -1,24 +1,25 @@
 // Public `ctx.audit.log()` API. Exposed via the plugin's `provides()`
 // callback as a declaration-merge contribution to `AppContextExtensions`
-// — third-party plugins call `ctx.audit?.log({...})` from RPC handlers,
-// route handlers, or hook listeners and the row joins the same buffered
-// flush that the internal entry/user/term/settings listeners use.
+// — third-party plugins call `ctx.audit?.log(ctx, {...})` from RPC
+// handlers, route handlers, or hook listeners and the row joins the same
+// buffered flush that the internal entry/user/term/settings listeners use.
 //
-// Chokepoint: the helper checks `ctx.user` before recording. A frontend
-// request (no signed-in user) drops with a debug log instead of writing
-// to the audit feed. This enforces "no anonymous events in the admin
-// activity log" by code, not by convention.
+// The row is recorded against the context the caller hands over, never
+// the ambient one: the ambient context is built before authentication,
+// and an authenticated procedure or route runs on a signed-in copy that
+// never enters the request store (#2343). Taking an
+// `AuthenticatedAppContext` is also what enforces "no anonymous events in
+// the admin activity log" — a listener on a hook that can fire for a
+// visitor has to narrow on `ctx.user` before it can call this.
 //
 // Contract:
 //   - Returns void (not Promise<void>) so callers can't accidentally
 //     await the deferred storage write.
-//   - Calls outside `requestStore.run` drop silently — there's no
-//     per-request buffer to attach to.
 //   - Multiple calls in one request batch into the same flush as the
 //     internal hook listeners (same WeakMap key, same `ctx.defer`).
 
 import type { JsonObject } from "plumix";
-import { tryGetContext } from "plumix/plugin";
+import type { AuthenticatedAppContext } from "plumix/plugin";
 
 import type { AuditService } from "./auditService.js";
 import { buildAuditRow } from "./buildAuditRow.js";
@@ -36,27 +37,14 @@ export interface AuditLogInput {
 }
 
 export interface AuditExtension {
-  log(input: AuditLogInput): void;
+  log(ctx: AuthenticatedAppContext, input: AuditLogInput): void;
 }
 
 const FALLBACK_LABEL = "(unnamed)";
 
 export function createAuditExtension(service: AuditService): AuditExtension {
   return {
-    log(input) {
-      const ctx = tryGetContext();
-      if (!ctx) {
-        // Outside requestStore — no per-request buffer exists. Silent
-        // drop is intentional: a stray call during plugin setup or a
-        // background task shouldn't crash.
-        return;
-      }
-      if (!ctx.user) {
-        ctx.logger.debug(
-          `ctx.audit.log("${input.event}") dropped — no user on AppContext`,
-        );
-        return;
-      }
+    log(ctx, input) {
       const row = buildAuditRow({
         event: input.event,
         actor: { id: ctx.user.id, label: ctx.user.email },
