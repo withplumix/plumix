@@ -32,10 +32,7 @@ describe("scheduledLeaseScope", () => {
   test("gives shared when a task declares no cron", () => {
     expect(
       scheduledLeaseScope({
-        scheduledTasks: [
-          { cron: undefined },
-          { cron: "*/5 * * * *" },
-        ] as never,
+        scheduledTasks: [{ cron: undefined }, { cron: "*/5 * * * *" }] as never,
       }),
     ).toBe("shared");
   });
