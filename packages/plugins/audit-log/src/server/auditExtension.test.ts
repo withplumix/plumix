@@ -1,24 +1,29 @@
-// Public `ctx.audit.log()` API tests. A fake service under
-// requestStore.run covers the full chokepoint (ctx resolve → actor
-// gate → service.record) without writing to the DB.
+// Public `ctx.audit.log()` API tests. A fake service captures what
+// `service.record` receives without writing to the DB.
 
 import type {
-  AppContext,
+  AuthenticatedAppContext,
   AuthenticatedUser,
+  DeferFn,
   HookOptions,
-  Logger,
   PluginSetupContext,
 } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
-import type { Mock } from "vitest";
-import { HookRegistry, requestStore } from "plumix/plugin";
-import { createDeferQueue, createTestContext } from "plumix/test";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { authenticated, base, definePlugin, HookRegistry } from "plumix/plugin";
+import {
+  createDeferQueue,
+  createDispatcherHarness,
+  createTestContext,
+  plumixRequest,
+} from "plumix/test";
+import { beforeAll, describe, expect, expectTypeOf, test } from "vitest";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { TestDb } from "../test-support.js";
 import type { AuditLogStorage } from "../types.js";
+import type { AuditExtension } from "./auditExtension.js";
 import type { AuditService } from "./auditService.js";
+import { auditLog } from "../index.js";
 import { createDb } from "../test-support.js";
 import { registerAuditEvents } from "./auditEvents.js";
 import { createAuditExtension } from "./auditExtension.js";
@@ -47,18 +52,11 @@ function fakeService(): FakeServiceState {
   };
 }
 
-function makeCtx(user: AuthenticatedUser | null): {
-  ctx: AppContext;
-  debug: Mock<Logger["debug"]>;
-} {
-  const debug = vi.fn<Logger["debug"]>();
-  const logger: Logger = {
-    debug,
-    info: () => undefined,
-    warn: () => undefined,
-    error: () => undefined,
-  };
-  return { ctx: createTestContext({ db, user, logger }), debug };
+function makeCtx(
+  user: AuthenticatedUser,
+  defer?: DeferFn,
+): AuthenticatedAppContext {
+  return { ...createTestContext({ db, user, defer }), user };
 }
 
 const adminUser: AuthenticatedUser = {
@@ -69,15 +67,14 @@ const adminUser: AuthenticatedUser = {
 };
 
 describe("createAuditExtension", () => {
-  test("logs a row when ctx.user is set", () => {
+  test("logs a row attributed to ctx.user", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser).ctx, () => {
-      audit.log({
-        event: "comment:approved",
-        subject: { type: "comment", id: 42, label: "First post!" },
-        properties: { approvedBy: "moderator" },
-      });
+    const ctx = makeCtx(adminUser);
+    audit.log(ctx, {
+      event: "comment:approved",
+      subject: { type: "comment", id: 42, label: "First post!" },
+      properties: { approvedBy: "moderator" },
     });
     expect(state.rows).toHaveLength(1);
     expect(state.rows[0]).toMatchObject({
@@ -94,61 +91,37 @@ describe("createAuditExtension", () => {
   test("returns void synchronously — caller cannot await the storage write", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    let result: unknown;
-    requestStore.run(makeCtx(adminUser).ctx, () => {
-      result = audit.log({
-        event: "x:y",
-        subject: { type: "x", id: 1, label: "x" },
-      });
+    const ctx = makeCtx(adminUser);
+    const result: unknown = audit.log(ctx, {
+      event: "x:y",
+      subject: { type: "x", id: 1, label: "x" },
     });
     expect(result).toBeUndefined();
   });
 
-  test("drops the call when ctx.user is null + debug-logs", () => {
-    const state = fakeService();
-    const audit = createAuditExtension(state.service);
-    const { ctx, debug } = makeCtx(null);
-    requestStore.run(ctx, () => {
-      audit.log({
-        event: "comment:approved",
-        subject: { type: "comment", id: 42, label: "x" },
-      });
-    });
-    expect(state.rows).toHaveLength(0);
-    expect(debug).toHaveBeenCalledTimes(1);
-    const call = debug.mock.calls[0]?.[0];
-    expect(call).toMatch(/no user|no actor|dropped/i);
-  });
-
-  test("drops the call when fired outside requestStore — no buffer key to write to", () => {
-    const state = fakeService();
-    const audit = createAuditExtension(state.service);
-    audit.log({
-      event: "x:y",
-      subject: { type: "x", id: 1, label: "x" },
-    });
-    expect(state.rows).toHaveLength(0);
+  test("only a signed-in context is accepted — no anonymous rows, by type", () => {
+    expectTypeOf<AuditExtension["log"]>()
+      .parameter(0)
+      .toEqualTypeOf<AuthenticatedAppContext>();
   });
 
   test("multiple log() calls in one request all land on the same service buffer", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser).ctx, () => {
-      audit.log({ event: "a:1", subject: { type: "a", id: 1, label: "1" } });
-      audit.log({ event: "a:2", subject: { type: "a", id: 2, label: "2" } });
-      audit.log({ event: "a:3", subject: { type: "a", id: 3, label: "3" } });
-    });
+    const ctx = makeCtx(adminUser);
+    audit.log(ctx, { event: "a:1", subject: { type: "a", id: 1, label: "1" } });
+    audit.log(ctx, { event: "a:2", subject: { type: "a", id: 2, label: "2" } });
+    audit.log(ctx, { event: "a:3", subject: { type: "a", id: 3, label: "3" } });
     expect(state.rows.map((r) => r.event)).toEqual(["a:1", "a:2", "a:3"]);
   });
 
   test("missing subject.label falls back to '(unnamed)'", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser).ctx, () => {
-      audit.log({
-        event: "x:y",
-        subject: { type: "x", id: 1 },
-      });
+    const ctx = makeCtx(adminUser);
+    audit.log(ctx, {
+      event: "x:y",
+      subject: { type: "x", id: 1 },
     });
     expect(state.rows[0]?.subjectLabel).toBe("(unnamed)");
   });
@@ -156,15 +129,14 @@ describe("createAuditExtension", () => {
   test("subject.id is stringified — accepts numbers AND strings", () => {
     const state = fakeService();
     const audit = createAuditExtension(state.service);
-    requestStore.run(makeCtx(adminUser).ctx, () => {
-      audit.log({
-        event: "x:y",
-        subject: { type: "x", id: 99, label: "n" },
-      });
-      audit.log({
-        event: "x:y",
-        subject: { type: "x", id: "uuid-1", label: "s" },
-      });
+    const ctx = makeCtx(adminUser);
+    audit.log(ctx, {
+      event: "x:y",
+      subject: { type: "x", id: 99, label: "n" },
+    });
+    audit.log(ctx, {
+      event: "x:y",
+      subject: { type: "x", id: "uuid-1", label: "s" },
     });
     expect(state.rows.map((r) => r.subjectId)).toEqual(["99", "uuid-1"]);
   });
@@ -198,15 +170,12 @@ function captureStorage(): {
   };
 }
 
-function realServiceCtx(user: AuthenticatedUser | null): {
-  ctx: AppContext;
+function realServiceCtx(user: AuthenticatedUser): {
+  ctx: AuthenticatedAppContext;
   flush: () => Promise<void>;
 } {
   const { defer, drainDeferred } = createDeferQueue();
-  return {
-    ctx: createTestContext({ db, user, defer }),
-    flush: drainDeferred,
-  };
+  return { ctx: makeCtx(user, defer), flush: drainDeferred };
 }
 
 describe("createAuditExtension — integration with the real AuditService", () => {
@@ -216,11 +185,9 @@ describe("createAuditExtension — integration with the real AuditService", () =
     const audit = createAuditExtension(service);
     const { ctx, flush } = realServiceCtx(adminUser);
 
-    requestStore.run(ctx, () => {
-      audit.log({ event: "a:1", subject: { type: "a", id: 1, label: "1" } });
-      audit.log({ event: "a:2", subject: { type: "a", id: 2, label: "2" } });
-      audit.log({ event: "a:3", subject: { type: "a", id: 3, label: "3" } });
-    });
+    audit.log(ctx, { event: "a:1", subject: { type: "a", id: 1, label: "1" } });
+    audit.log(ctx, { event: "a:2", subject: { type: "a", id: 2, label: "2" } });
+    audit.log(ctx, { event: "a:3", subject: { type: "a", id: 3, label: "3" } });
     await flush();
 
     expect(capture.writes).toHaveLength(1);
@@ -252,23 +219,21 @@ describe("createAuditExtension — integration with the real AuditService", () =
 
     const { ctx, flush } = realServiceCtx(adminUser);
 
-    await requestStore.run(ctx, async () => {
-      audit.log({
-        event: "comment:approved",
-        subject: { type: "comment", id: 5, label: "first" },
-      });
-      await hooks.doAction(
-        "entry:published",
-        {
-          id: 99,
-          title: "Hello",
-          slug: "hello",
-          type: "post",
-          status: "published",
-        } as unknown as Entry,
-        ctx,
-      );
+    audit.log(ctx, {
+      event: "comment:approved",
+      subject: { type: "comment", id: 5, label: "first" },
     });
+    await hooks.doAction(
+      "entry:published",
+      {
+        id: 99,
+        title: "Hello",
+        slug: "hello",
+        type: "post",
+        status: "published",
+      } as unknown as Entry,
+      ctx,
+    );
     await flush();
 
     const allRows = capture.writes.flat();
@@ -288,23 +253,70 @@ describe("createAuditExtension — integration with the real AuditService", () =
     const audit = createAuditExtension(service);
 
     const { ctx, flush } = realServiceCtx(adminUser);
-    requestStore.run(ctx, () => {
-      audit.log({ event: "x:1", subject: { type: "x", id: 1, label: "1" } });
-      // Direct service.record mirrors what an internal hook listener
-      // does — no await between, so the buffer is still alive.
-      service.record(ctx, {
-        event: "entry:published",
-        subjectType: "entry",
-        subjectId: "99",
-        subjectLabel: "Hello",
-        actorId: 7,
-        actorLabel: "alice@example.com",
-        properties: {},
-      });
+    audit.log(ctx, { event: "x:1", subject: { type: "x", id: 1, label: "1" } });
+    // Direct service.record mirrors what an internal hook listener
+    // does — no await between, so the buffer is still alive.
+    service.record(ctx, {
+      event: "entry:published",
+      subjectType: "entry",
+      subjectId: "99",
+      subjectLabel: "Hello",
+      actorId: 7,
+      actorLabel: "alice@example.com",
+      properties: {},
     });
     await flush();
 
     expect(capture.writes).toHaveLength(1);
     expect(capture.writes[0]).toHaveLength(2);
+  });
+});
+
+// Production builds the request's ambient context before anyone is signed
+// in; an authenticated procedure works on a copy that carries the user. So
+// the session rides a cookie here, not the harness's pre-signed context.
+describe("createAuditExtension — through an authenticated procedure", () => {
+  test("a row logged by a plugin's procedure is attributed to the signed-in user", async () => {
+    const { storage, capture } = captureStorage();
+    const probe = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.registerRpcRouter({
+          touch: base.use(authenticated).handler(({ context }) => {
+            context.audit?.log(context, {
+              event: "widget:touched",
+              subject: { type: "widget", id: 3, label: "Gizmo" },
+            });
+            return null;
+          }),
+        });
+      },
+    });
+    const h = await createDispatcherHarness({
+      plugins: [auditLog({ storage }), probe],
+    });
+    const admin = await h.factory.user.create({ role: "admin" });
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/rpc/probe/touch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: null }),
+      }),
+      admin.id,
+    );
+
+    const response = await h.dispatch(request);
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(capture.writes.flat()).toEqual([
+      expect.objectContaining({
+        event: "widget:touched",
+        subjectType: "widget",
+        subjectId: "3",
+        subjectLabel: "Gizmo",
+        actorId: admin.id,
+        actorLabel: admin.email,
+      }),
+    ]);
   });
 });

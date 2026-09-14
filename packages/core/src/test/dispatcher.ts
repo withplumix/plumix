@@ -353,8 +353,8 @@ export async function createDispatcherHarness(
     dispatch: async (request, user = null, clientAddress) => {
       const ctx = withRequest(request, user, clientAddress);
       // Mirror the runtime adapter, which runs dispatch inside the request
-      // store so `tryGetContext()`-based features (DB logging, debug spans,
-      // audit-log) see the context.
+      // store so `tryGetContext()`-based features (DB logging, debug spans)
+      // see the context.
       return requestStore.run(ctx, () => dispatcher(ctx));
     },
     fetch: async (path, fetchOptions = {}) => {

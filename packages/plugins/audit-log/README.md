@@ -32,14 +32,21 @@ plumix migrate generate
 - **An `/audit-log` admin page** (under Tools) — a paginated, filterable feed, gated behind an `audit_log:read` capability.
 - **Automatic capture** — subscribes to entry, user, term, and settings lifecycle events; no wiring needed.
 - **A retention purge** — a daily scheduled task trims old rows (90 days by default).
-- **`ctx.audit.log(...)`** — record your own events from a plugin or handler:
+- **`ctx.audit.log(ctx, ...)`** — record your own events. The row is attributed to the user on the context you pass, so it takes an `AuthenticatedAppContext`, which is what an authenticated procedure or route already holds:
 
   ```ts
-  ctx.audit.log({
+  ctx.audit?.log(ctx, {
     event: "widget.published",
     subject: { type: "widget", id },
     properties: { name },
   });
+  ```
+
+  A hook listener gets a plain `AppContext` whose `user` may be null, and checking the property does not narrow the object, so pin the user on a copy:
+
+  ```ts
+  if (!appCtx.user) return;
+  appCtx.audit?.log({ ...appCtx, user: appCtx.user }, { event, subject });
   ```
 
 ## Configuration
