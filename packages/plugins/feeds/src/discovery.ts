@@ -30,7 +30,7 @@ function feedBase(data: TemplateData, ctx: DiscoveryContext): string | null {
         : null;
     case "taxonomy": {
       const taxonomy = ctx.plugins.termTaxonomies.get(data.taxonomy);
-      if (!taxonomy || taxonomy.isPublic === false) return null;
+      if (!taxonomy?.isPublic) return null;
       // `term.url` is this archive's own URL, ancestors and base prefix
       // included. Its feed hangs off it only where that URL is the one the
       // term route resolves back through: the flat form for a top-level term,

@@ -5,7 +5,7 @@ import type { Label } from "plumix/i18n";
 export interface PublicTarget {
   readonly name: string;
   readonly label: Label;
-  readonly isPublic?: boolean;
+  readonly isPublic: boolean;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface PublicTarget {
 export function publicTargets<T extends PublicTarget>(
   targets: ReadonlyMap<string, T>,
 ): T[] {
-  return [...targets.values()].filter((target) => target.isPublic !== false);
+  return [...targets.values()].filter((target) => target.isPublic);
 }
 
 /**

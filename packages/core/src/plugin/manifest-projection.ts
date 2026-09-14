@@ -50,30 +50,7 @@ import type {
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
-import {
-  ENTRY_MENU_ICONS,
-  resolveEntryTypeVisibility,
-  resolveTermTaxonomyVisibility,
-  TAXONOMY_MENU_ICONS,
-} from "./registry.js";
-
-export function manifestEntryVisibility(
-  entry:
-    | Pick<EntryTypeManifestEntry, "isPublic" | "showUI" | "showInSidebar">
-    | Pick<TermTaxonomyManifestEntry, "isPublic" | "showUI" | "showInSidebar">,
-): {
-  readonly isPublic: boolean;
-  readonly showUI: boolean;
-  readonly showInSidebar: boolean;
-} {
-  const isPublic = entry.isPublic ?? true;
-  const showUI = entry.showUI ?? isPublic;
-  return {
-    isPublic,
-    showUI,
-    showInSidebar: entry.showInSidebar ?? showUI,
-  };
-}
+import { ENTRY_MENU_ICONS, TAXONOMY_MENU_ICONS } from "./registry.js";
 
 // Wire shape intentionally equals DashboardWidgetOptions (minus
 // registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
@@ -182,16 +159,9 @@ export interface EntryTypeManifestEntry {
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
-  /**
-   * Resolved visibility. `buildManifest` always emits these — consumers
-   * should read them via `manifestEntryVisibility(entry)` which applies
-   * the same cascade rules as `resolveEntryTypeVisibility` when they
-   * happen to be missing (lets admin test fixtures stay terse without
-   * the client ever branching on undefined).
-   */
-  readonly isPublic?: boolean;
-  readonly showUI?: boolean;
-  readonly showInSidebar?: boolean;
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
   readonly hasArchive?: boolean | string;
   readonly capabilityType?: string;
   readonly priority?: number;
@@ -301,10 +271,9 @@ export interface TermTaxonomyManifestEntry {
   readonly description?: string;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
-  /** Resolved visibility — see `EntryTypeManifestEntry`. */
-  readonly isPublic?: boolean;
-  readonly showUI?: boolean;
-  readonly showInSidebar?: boolean;
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
   readonly menuIcon?: string;
   /** Synonyms the command palette matches in addition to the sidebar label. */
   readonly keywords?: readonly Label[];
@@ -860,7 +829,7 @@ function addEntryNavItems(
   entries: readonly EntryTypeManifestEntry[],
 ): void {
   for (const entry of entries) {
-    if (entry.showInSidebar !== true) continue;
+    if (!entry.showInSidebar) continue;
     groups.get("content")?.items.push({
       to: `/entries/${entry.adminSlug}`,
       label: entry.labels?.plural ?? entry.label,
@@ -877,7 +846,7 @@ function addTaxonomyNavItems(
   taxonomies: readonly TermTaxonomyManifestEntry[],
 ): void {
   for (const tax of taxonomies) {
-    if (tax.showInSidebar !== true) continue;
+    if (!tax.showInSidebar) continue;
     groups.get("term-taxonomies")?.items.push({
       to: `/terms/${tax.name}`,
       label: tax.label,
@@ -1203,10 +1172,9 @@ function slugify(input: string): string {
 // Explicit allowlist — only the destructured keys ship to the browser.
 // Adding a field to `EntryTypeOptions` / `RegisteredEntryType` does NOT
 // automatically leak it; it must be added here AND to `EntryTypeManifestEntry`
-// to surface in the admin. `registeredBy`, `rewrite`, `capabilities`, and
-// the raw per-surface visibility inputs are intentionally excluded — the
-// resolved `isPublic` / `showUI` / `showInSidebar` triple is what the
-// admin consumes, and `capabilities` is server-side authorization metadata.
+// to surface in the admin. `registeredBy`, `rewrite`, `capabilities`,
+// `excludeFromGenericRpc` and `excludeFromSearch` stay server-side;
+// `capabilities` is authorization metadata.
 function toEntryTypeManifest(
   pt: RegisteredEntryType,
   namedTemplates?: readonly NamedTemplateChoice[],
@@ -1225,10 +1193,12 @@ function toEntryTypeManifest(
     menuIcon,
     keywords,
     versioning,
+    isPublic,
+    showUI,
+    showInSidebar,
   } = pt as RegisteredEntryType & {
     readonly versioning?: EntryTypeManifestEntry["versioning"];
   };
-  const visibility = resolveEntryTypeVisibility(pt);
   return {
     name,
     adminSlug: deriveAdminSlug(
@@ -1241,9 +1211,9 @@ function toEntryTypeManifest(
     supports,
     termTaxonomies,
     isHierarchical,
-    isPublic: visibility.isPublic,
-    showUI: visibility.showUI,
-    showInSidebar: visibility.showInSidebar,
+    isPublic,
+    showUI,
+    showInSidebar,
     hasArchive,
     capabilityType,
     priority,
@@ -1285,8 +1255,7 @@ function deriveVersioning(
 
 // Allowlist for termTaxonomy entries — same rationale as `toEntryTypeManifest`.
 // `registeredBy`, `capabilities`, `isInQuickEdit`, `hasAdminColumn`, and
-// `rewrite` stay server-side. Visibility is projected via the resolver so
-// the admin sees the same resolved triple as for entry types.
+// `rewrite` stay server-side.
 function toTermTaxonomyEntry(
   tax: RegisteredTermTaxonomy,
 ): TermTaxonomyManifestEntry {
@@ -1297,10 +1266,12 @@ function toTermTaxonomyEntry(
     description,
     isHierarchical,
     entryTypes,
+    isPublic,
+    showUI,
+    showInSidebar,
     menuIcon,
     keywords,
   } = tax;
-  const visibility = resolveTermTaxonomyVisibility(tax);
   return {
     name,
     label,
@@ -1308,9 +1279,9 @@ function toTermTaxonomyEntry(
     description,
     isHierarchical,
     entryTypes,
-    isPublic: visibility.isPublic,
-    showUI: visibility.showUI,
-    showInSidebar: visibility.showInSidebar,
+    isPublic,
+    showUI,
+    showInSidebar,
     menuIcon,
     keywords,
   };

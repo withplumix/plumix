@@ -100,6 +100,86 @@ describe("installPlugins", () => {
     expect(entry?.registeredBy).toBe("blog");
   });
 
+  test("resolves every visibility flag when a type or taxonomy is registered", async () => {
+    const hooks = new HookRegistry();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryType("menu_item", { label: "Items", isPublic: false });
+      ctx.registerEntryType("attachment", {
+        label: "Attachments",
+        showInSidebar: false,
+        excludeFromSearch: true,
+      });
+      ctx.registerEntryType("form", {
+        label: "Forms",
+        isPublic: false,
+        showUI: true,
+      });
+      ctx.registerTermTaxonomy("category", { label: "Categories" });
+      ctx.registerTermTaxonomy("menu", {
+        label: "Menus",
+        isPublic: false,
+        showUI: true,
+      });
+      ctx.registerTermTaxonomy("internal", {
+        label: "Internal",
+        isPublic: false,
+        excludeFromSearch: false,
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [site] });
+    expect(registry.entryTypes.get("post")).toMatchObject({
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: false,
+      excludeFromSearch: false,
+    });
+    expect(registry.entryTypes.get("menu_item")).toMatchObject({
+      isPublic: false,
+      showUI: false,
+      showInSidebar: false,
+      excludeFromGenericRpc: true,
+      excludeFromSearch: true,
+    });
+    expect(registry.entryTypes.get("attachment")).toMatchObject({
+      isPublic: true,
+      showUI: true,
+      showInSidebar: false,
+      excludeFromGenericRpc: false,
+      excludeFromSearch: true,
+    });
+    expect(registry.entryTypes.get("form")).toMatchObject({
+      isPublic: false,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: true,
+      excludeFromSearch: true,
+    });
+    expect(registry.termTaxonomies.get("category")).toMatchObject({
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: false,
+      excludeFromSearch: false,
+    });
+    expect(registry.termTaxonomies.get("menu")).toMatchObject({
+      isPublic: false,
+      showUI: true,
+      showInSidebar: true,
+      excludeFromGenericRpc: true,
+      excludeFromSearch: true,
+    });
+    expect(registry.termTaxonomies.get("internal")).toMatchObject({
+      isPublic: false,
+      showUI: false,
+      showInSidebar: false,
+      excludeFromGenericRpc: true,
+      excludeFromSearch: false,
+    });
+  });
+
   test("throws on duplicate post-type registration across plugins", async () => {
     const hooks = new HookRegistry();
     const a = definePlugin("a", (ctx) => {

@@ -46,6 +46,13 @@ export type {
   CreateDispatcherHarnessOptions,
 } from "./dispatcher.js";
 
+// A test that fills `plugins.entryTypes` / `plugins.termTaxonomies` by hand
+// builds each value the way registration does, so visibility is resolved.
+export {
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "../plugin/registry.js";
+
 export { createTestContext } from "./context.js";
 export type { CreateTestContextOptions } from "./context.js";
 

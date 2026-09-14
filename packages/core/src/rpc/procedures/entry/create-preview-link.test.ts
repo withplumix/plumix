@@ -2,18 +2,20 @@ import { describe, expect, test } from "vitest";
 
 import { verifyPreviewToken } from "../../../auth/preview-token.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // buildEntryPermalinkSync needs the type registered + public to form a URL.
 function postRegistry() {
   const registry = createPluginRegistry();
-  registry.entryTypes.set("post", {
-    name: "post",
-    registeredBy: "test",
-    label: "Posts",
-    capabilityType: "post",
-    isPublic: true,
-  });
+  registry.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      { label: "Posts", capabilityType: "post", isPublic: true },
+      "test",
+    ),
+  );
   return registry;
 }
 
@@ -36,14 +38,19 @@ describe("entry.createPreviewLink", () => {
 
   test("mints an ancestor-walked url for a nested page of a hierarchical type", async () => {
     const registry = createPluginRegistry();
-    registry.entryTypes.set("page", {
-      name: "page",
-      registeredBy: "test",
-      label: "Pages",
-      capabilityType: "page",
-      isPublic: true,
-      isHierarchical: true,
-    });
+    registry.entryTypes.set(
+      "page",
+      toRegisteredEntryType(
+        "page",
+        {
+          label: "Pages",
+          capabilityType: "page",
+          isPublic: true,
+          isHierarchical: true,
+        },
+        "test",
+      ),
+    );
     // entry:page:* aren't builtin (only entry:post:* are), so register the
     // caps canReadEntry consults — `registry.entryTypes.set` skips the
     // derivation `ctx.registerEntryType` does in the real flow.

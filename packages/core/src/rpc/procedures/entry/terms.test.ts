@@ -5,6 +5,7 @@ import { and, asc, eq } from "../../../db/index.js";
 import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 function taxonomyRegistry(
@@ -15,11 +16,10 @@ function taxonomyRegistry(
 ) {
   const registry = createPluginRegistry();
   for (const name of opts.termTaxonomies ?? ["category", "post_tag"]) {
-    registry.termTaxonomies.set(name, {
+    registry.termTaxonomies.set(
       name,
-      label: name,
-      registeredBy: "test",
-    });
+      toRegisteredTermTaxonomy(name, { label: name }, "test"),
+    );
     registry.capabilities.set(`term:${name}:read`, {
       name: `term:${name}:read`,
       minRole: "subscriber",

@@ -230,6 +230,9 @@ test.describe("editor route", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["editor", "autosave"],
@@ -470,6 +473,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug", "excerpt"],
@@ -528,6 +534,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug", "excerpt"],
@@ -601,6 +610,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug"],
@@ -650,6 +662,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug"],
@@ -714,6 +729,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug"],
@@ -774,6 +792,9 @@ test.describe("editor document tab", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "slug"],
@@ -954,6 +975,9 @@ test.describe("editor draft of a published entry", () => {
         {
           name: "post",
           adminSlug: "posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
           label: "Posts",
           labels: { singular: "Post", plural: "Posts" },
           supports: ["title", "editor", "autosave"],
@@ -1076,6 +1100,9 @@ test.describe("editor stale-draft dialog", () => {
       {
         name: "post",
         adminSlug: "posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         label: "Posts",
         labels: { singular: "Post", plural: "Posts" },
         supports: ["title", "editor", "revisions", "autosave"],
@@ -1168,6 +1195,9 @@ test.describe("editor revision preview", () => {
       {
         name: "post",
         adminSlug: "posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         label: "Posts",
         labels: { singular: "Post", plural: "Posts" },
         supports: ["title", "editor", "revisions"],

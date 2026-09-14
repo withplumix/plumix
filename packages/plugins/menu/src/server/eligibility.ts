@@ -76,10 +76,10 @@ export function getEligibleMenuKinds(registry: PluginRegistry): PickerTab[] {
  * public has no URL for a menu link.
  */
 export function isMenuEligible(target: {
-  readonly isPublic?: boolean;
+  readonly isPublic: boolean;
   readonly isShownInMenus?: boolean;
 }): boolean {
-  return target.isPublic !== false && (target.isShownInMenus ?? true);
+  return target.isPublic && (target.isShownInMenus ?? true);
 }
 
 interface MenuEligibleEntryType {

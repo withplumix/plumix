@@ -129,7 +129,7 @@ export function buildEntryPermalinkSync(
   entry: EntryPermalinkSource,
 ): string | null {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
-  if (!entryType || entryType.isPublic === false) return null;
+  if (!entryType?.isPublic) return null;
   if (shouldNestUnderEntryParent(entryType, entry.parentId ?? null))
     return null;
   return withBasePath(
@@ -152,7 +152,7 @@ export function buildTermArchiveUrlSync(
   },
 ): string | null {
   const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-  if (!taxonomy || taxonomy.isPublic === false) return null;
+  if (!taxonomy?.isPublic) return null;
   if (shouldNestUnderTermParent(taxonomy, term.parentId ?? null)) return null;
   return withBasePath(
     joinSegments([termTaxonomyBaseSlug(taxonomy), term.slug]),
@@ -179,7 +179,7 @@ function nestedEntry(
   entry: EntryPermalinkSource,
 ): NestedEntry | null {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
-  if (!entryType || entryType.isPublic === false) return null;
+  if (!entryType?.isPublic) return null;
   const parentId = entry.parentId ?? null;
   if (!shouldNestUnderEntryParent(entryType, parentId)) return null;
   return { entryType, parentId };
@@ -207,7 +207,7 @@ function nestedTerm(
   term: TermArchiveSource,
 ): NestedTerm | null {
   const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-  if (!taxonomy || taxonomy.isPublic === false) return null;
+  if (!taxonomy?.isPublic) return null;
   const parentId = term.parentId ?? null;
   if (!shouldNestUnderTermParent(taxonomy, parentId)) return null;
   return { taxonomy, parentId };

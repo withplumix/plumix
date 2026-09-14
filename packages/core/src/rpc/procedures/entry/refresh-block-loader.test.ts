@@ -1,18 +1,20 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // A registry with a public post type and a loader-backed block.
 function loaderRegistry() {
   const registry = createPluginRegistry();
-  registry.entryTypes.set("post", {
-    name: "post",
-    registeredBy: "test",
-    label: "Posts",
-    capabilityType: "post",
-    isPublic: true,
-  });
+  registry.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      { label: "Posts", capabilityType: "post", isPublic: true },
+      "test",
+    ),
+  );
   registry.blockSpecs.set("test/feed", {
     spec: {
       name: "test/feed",

@@ -306,13 +306,18 @@ export interface TermTaxonomyOptions {
   readonly archivePerPage?: number;
 }
 
-export function resolveEntryTypeVisibility(options: EntryTypeOptions): {
-  readonly isPublic: boolean;
-  readonly showUI: boolean;
-  readonly showInSidebar: boolean;
-  readonly excludeFromGenericRpc: boolean;
-  readonly excludeFromSearch: boolean;
-} {
+type ResolvedVisibility = Pick<
+  RegisteredEntryType,
+  | "isPublic"
+  | "showUI"
+  | "showInSidebar"
+  | "excludeFromGenericRpc"
+  | "excludeFromSearch"
+>;
+
+function resolveVisibility(
+  options: EntryTypeOptions | TermTaxonomyOptions,
+): ResolvedVisibility {
   const isPublic = options.isPublic ?? true;
   const showUI = options.showUI ?? isPublic;
   return {
@@ -324,21 +329,34 @@ export function resolveEntryTypeVisibility(options: EntryTypeOptions): {
   };
 }
 
-export function resolveTermTaxonomyVisibility(options: TermTaxonomyOptions): {
-  readonly isPublic: boolean;
-  readonly showUI: boolean;
-  readonly showInSidebar: boolean;
-  readonly excludeFromGenericRpc: boolean;
-  readonly excludeFromSearch: boolean;
-} {
-  const isPublic = options.isPublic ?? true;
-  const showUI = options.showUI ?? isPublic;
+/**
+ * The registered shape of an entry type. Visibility is resolved here, once, so
+ * no reader re-derives a default with its own spelling of it.
+ */
+export function toRegisteredEntryType(
+  name: string,
+  options: EntryTypeOptions,
+  registeredBy: string | null,
+): RegisteredEntryType {
   return {
-    isPublic,
-    showUI,
-    showInSidebar: options.showInSidebar ?? showUI,
-    excludeFromGenericRpc: options.excludeFromGenericRpc ?? !isPublic,
-    excludeFromSearch: options.excludeFromSearch ?? !isPublic,
+    ...options,
+    ...resolveVisibility(options),
+    name,
+    registeredBy,
+  };
+}
+
+/** The registered shape of a term taxonomy; see {@link toRegisteredEntryType}. */
+export function toRegisteredTermTaxonomy(
+  name: string,
+  options: TermTaxonomyOptions,
+  registeredBy: string | null,
+): RegisteredTermTaxonomy {
+  return {
+    ...options,
+    ...resolveVisibility(options),
+    name,
+    registeredBy,
   };
 }
 
@@ -429,11 +447,21 @@ export interface SettingsPageOptions {
 export interface RegisteredEntryType extends EntryTypeOptions {
   readonly name: string;
   readonly registeredBy: string | null;
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
+  readonly excludeFromGenericRpc: boolean;
+  readonly excludeFromSearch: boolean;
 }
 
 export interface RegisteredTermTaxonomy extends TermTaxonomyOptions {
   readonly name: string;
   readonly registeredBy: string | null;
+  readonly isPublic: boolean;
+  readonly showUI: boolean;
+  readonly showInSidebar: boolean;
+  readonly excludeFromGenericRpc: boolean;
+  readonly excludeFromSearch: boolean;
 }
 
 // Registered shapes hold *compiled* fields — fluent builders are

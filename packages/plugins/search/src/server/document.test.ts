@@ -1,5 +1,7 @@
+import type { EntryTypeOptions } from "plumix/plugin";
 import { blockTextRoster, coreBlocks, defineEntryContent } from "plumix/blocks";
 import { createPluginRegistry } from "plumix/plugin";
+import { toRegisteredEntryType } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { paragraph } from "../test/db.js";
@@ -87,14 +89,12 @@ describe("entryDocumentBody", () => {
   });
 });
 
-const registryWith = (name: string, options: Record<string, unknown>) => {
+const registryWith = (name: string, options: Partial<EntryTypeOptions>) => {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set(name, {
+  plugins.entryTypes.set(
     name,
-    registeredBy: "test",
-    label: name,
-    ...options,
-  });
+    toRegisteredEntryType(name, { label: name, ...options }, "test"),
+  );
   return plugins;
 };
 

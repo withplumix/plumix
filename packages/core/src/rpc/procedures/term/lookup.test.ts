@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { categoryTerm, tagTerm, termFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { termLookupAdapter } from "./lookup.js";
@@ -166,11 +167,10 @@ describe("termLookupAdapter", () => {
   test("hydrate() resolves ids into term summaries with archive urls", async () => {
     // Registered public taxonomy gives the summary an archive url.
     const registry = createPluginRegistry();
-    registry.termTaxonomies.set("category", {
-      name: "category",
-      label: "Categories",
-      registeredBy: "test",
-    });
+    registry.termTaxonomies.set(
+      "category",
+      toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
+    );
     const h = await createRpcHarness({ plugins: registry });
     const t = await categoryTerm
       .transient({ db: h.context.db })

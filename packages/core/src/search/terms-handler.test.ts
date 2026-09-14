@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
 import { termFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { termsSearchHandler } from "./terms-handler.js";
@@ -9,11 +10,14 @@ describe("termsSearchHandler", () => {
   test("omits taxonomies the caller cannot read", async () => {
     const db = await createTestDb();
     const plugins = createPluginRegistry();
-    plugins.termTaxonomies.set("category", {
-      name: "category",
-      registeredBy: "test",
-      label: { id: "c", message: "Categories" },
-    });
+    plugins.termTaxonomies.set(
+      "category",
+      toRegisteredTermTaxonomy(
+        "category",
+        { label: { id: "c", message: "Categories" } },
+        "test",
+      ),
+    );
     // A matching term, so only the capability check can empty the result.
     await termFactory
       .transient({ db })
@@ -31,18 +35,22 @@ describe("termsSearchHandler", () => {
     const plugins = createPluginRegistry();
     // Both ways a taxonomy is excluded: derived from `isPublic`, and declared
     // outright on one that is public.
-    plugins.termTaxonomies.set("nav-menu", {
-      name: "nav-menu",
-      registeredBy: "menu",
-      label: "Menus",
-      isPublic: false,
-    });
-    plugins.termTaxonomies.set("internal", {
-      name: "internal",
-      registeredBy: "test",
-      label: "Internal",
-      excludeFromSearch: true,
-    });
+    plugins.termTaxonomies.set(
+      "nav-menu",
+      toRegisteredTermTaxonomy(
+        "nav-menu",
+        { label: "Menus", isPublic: false },
+        "menu",
+      ),
+    );
+    plugins.termTaxonomies.set(
+      "internal",
+      toRegisteredTermTaxonomy(
+        "internal",
+        { label: "Internal", excludeFromSearch: true },
+        "test",
+      ),
+    );
     await termFactory
       .transient({ db })
       .create({ taxonomy: "nav-menu", name: "Footer", slug: "footer" });

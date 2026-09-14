@@ -28,8 +28,6 @@ export {
   registerCoreLookupAdapters,
   requestStore,
   requireCapability,
-  resolveEntryTypeVisibility,
-  resolveTermTaxonomyVisibility,
   runScheduledTasks,
   slugify,
   tryGetContext,

@@ -1,17 +1,23 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function registryWithRevisions() {
   const plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    label: "Posts",
-    supports: ["revisions"],
-    versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-    registeredBy: "test",
-  });
+  plugins.entryTypes.set(
+    "post",
+    toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        supports: ["revisions"],
+        versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      },
+      "test",
+    ),
+  );
   return plugins;
 }
 

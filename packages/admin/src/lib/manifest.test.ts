@@ -215,8 +215,22 @@ describe("readManifest", () => {
 describe("findEntryTypeBySlug", () => {
   const source: PlumixManifest = {
     entryTypes: [
-      { name: "post", adminSlug: "posts", label: "Posts" },
-      { name: "product", adminSlug: "products", label: "Products" },
+      {
+        name: "post",
+        adminSlug: "posts",
+        label: "Posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
+      {
+        name: "product",
+        adminSlug: "products",
+        label: "Products",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
     ],
   };
 
@@ -236,9 +250,19 @@ describe("namedTemplatesForType", () => {
         name: "page",
         adminSlug: "pages",
         label: "Pages",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         namedTemplates: [{ id: "landing", label: "Landing Page" }],
       },
-      { name: "post", adminSlug: "posts", label: "Posts" },
+      {
+        name: "post",
+        adminSlug: "posts",
+        label: "Posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
     ],
   };
 
@@ -261,9 +285,19 @@ describe("accessPoliciesForType", () => {
         name: "article",
         adminSlug: "articles",
         label: "Articles",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         accessPolicies: [{ key: "members", label: "Members only" }],
       },
-      { name: "post", adminSlug: "posts", label: "Posts" },
+      {
+        name: "post",
+        adminSlug: "posts",
+        label: "Posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
     ],
   };
 
@@ -286,17 +320,26 @@ describe("visibleEntryTypes", () => {
         name: "post",
         adminSlug: "posts",
         label: "Posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
       },
       {
         name: "product",
         adminSlug: "products",
         label: "Products",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         capabilityType: "product",
       },
       {
         name: "news",
         adminSlug: "news",
         label: "News",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
         capabilityType: "post",
       },
     ],
@@ -314,7 +357,7 @@ describe("visibleEntryTypes", () => {
     expect(visibleEntryTypes([], source)).toEqual([]);
   });
 
-  test("hides entry types whose `showInSidebar` is explicitly false", () => {
+  test("hides entry types whose `showInSidebar` is false", () => {
     // The dashboard quick-card grid should mirror sidebar visibility:
     // a type that opted out of the sidebar (e.g. media — it has its
     // own custom admin page) doesn't want a generic "Browse media"
@@ -327,11 +370,16 @@ describe("visibleEntryTypes", () => {
           name: "post",
           adminSlug: "posts",
           label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
         },
         {
           name: "media",
           adminSlug: "media",
           label: "Media",
+          isPublic: true,
+          showUI: true,
           showInSidebar: false,
         },
       ],
@@ -494,8 +542,21 @@ describe("visibleUserMetaBoxes", () => {
 describe("findTermTaxonomyByName", () => {
   const source: PlumixManifest = {
     termTaxonomies: [
-      { name: "category", label: "Categories", isHierarchical: true },
-      { name: "tag", label: "Tags" },
+      {
+        name: "category",
+        label: "Categories",
+        isHierarchical: true,
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
+      {
+        name: "tag",
+        label: "Tags",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
     ],
   };
 
@@ -511,9 +572,27 @@ describe("findTermTaxonomyByName", () => {
 describe("visibleTermTaxonomies", () => {
   const source: PlumixManifest = {
     termTaxonomies: [
-      { name: "category", label: "Categories" },
-      { name: "tag", label: "Tags" },
-      { name: "internal", label: "Internal" },
+      {
+        name: "category",
+        label: "Categories",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
+      {
+        name: "tag",
+        label: "Tags",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
+      {
+        name: "internal",
+        label: "Internal",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+      },
     ],
   };
 

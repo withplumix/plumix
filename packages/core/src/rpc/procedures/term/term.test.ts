@@ -4,18 +4,21 @@ import type { UserRole } from "../../../db/schema/users.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // "category" is the canonical hierarchical taxonomy in WP; used here as the
 // fixture because term RPC requires a registered taxonomy to operate.
 function taxonomyRegistry() {
   const registry = createPluginRegistry();
-  registry.termTaxonomies.set("category", {
-    name: "category",
-    label: "Categories",
-    isHierarchical: true,
-    registeredBy: "test",
-  });
+  registry.termTaxonomies.set(
+    "category",
+    toRegisteredTermTaxonomy(
+      "category",
+      { label: "Categories", isHierarchical: true },
+      "test",
+    ),
+  );
   const caps: Record<string, UserRole> = {
     "term:category:read": "subscriber",
     "term:category:assign": "contributor",
@@ -153,11 +156,10 @@ describe("term.create", () => {
 
   test("parent in a different taxonomy → CONFLICT", async () => {
     const plugins = taxonomyRegistry();
-    plugins.termTaxonomies.set("post_tag", {
-      name: "post_tag",
-      label: "Tags",
-      registeredBy: "test",
-    });
+    plugins.termTaxonomies.set(
+      "post_tag",
+      toRegisteredTermTaxonomy("post_tag", { label: "Tags" }, "test"),
+    );
     plugins.capabilities.set("term:post_tag:edit", {
       name: "term:post_tag:edit",
       minRole: "editor",

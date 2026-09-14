@@ -71,6 +71,7 @@ import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { RESERVED_DEP_KIND_NAMES } from "../template-deps.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
 import { compileMetaBoxFields } from "./manifest.js";
+import { toRegisteredEntryType, toRegisteredTermTaxonomy } from "./registry.js";
 import {
   assertComponentRef,
   assertMetaBoxFields,
@@ -566,11 +567,10 @@ function createContextBase({
           kind: "entry type",
           identifier: name,
         });
-      registry.entryTypes.set(name, {
-        ...options,
+      registry.entryTypes.set(
         name,
-        registeredBy: pluginId,
-      });
+        toRegisteredEntryType(name, options, pluginId),
+      );
       addDerivedCaps(deriveEntryTypeCapabilities(name, options));
     },
 
@@ -580,11 +580,10 @@ function createContextBase({
           kind: "termTaxonomy",
           identifier: name,
         });
-      registry.termTaxonomies.set(name, {
-        ...options,
+      registry.termTaxonomies.set(
         name,
-        registeredBy: pluginId,
-      });
+        toRegisteredTermTaxonomy(name, options, pluginId),
+      );
       addDerivedCaps(deriveTermTaxonomyCapabilities(name, options));
     },
 

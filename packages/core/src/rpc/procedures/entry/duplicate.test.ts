@@ -4,6 +4,7 @@ import type { UserRole } from "../../../db/schema/users.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // Minimal taxonomy registry so `entry.update` accepts a `category`
@@ -11,11 +12,10 @@ import { createRpcHarness } from "../../../test/rpc.js";
 function categoryRegistry() {
   const registry = createPluginRegistry();
   const name = "category";
-  registry.termTaxonomies.set(name, {
+  registry.termTaxonomies.set(
     name,
-    label: name,
-    registeredBy: "test",
-  });
+    toRegisteredTermTaxonomy(name, { label: name }, "test"),
+  );
   for (const [action, minRole] of [
     ["read", "subscriber"],
     ["assign", "contributor"],

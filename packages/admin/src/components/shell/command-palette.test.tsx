@@ -19,7 +19,16 @@ import { CommandPalette } from "./command-palette.js";
 // both come from the manifest the admin shell writes into the document, so
 // they are seeded there rather than substituted at the lookup functions.
 const NAV_MANIFEST = {
-  entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+  entryTypes: [
+    {
+      name: "post",
+      adminSlug: "posts",
+      label: "Posts",
+      isPublic: true,
+      showUI: true,
+      showInSidebar: true,
+    },
+  ],
   adminNav: [
     {
       id: "content",

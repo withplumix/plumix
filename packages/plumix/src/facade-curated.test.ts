@@ -185,7 +185,6 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "the CLI, the admin shell and the dispatcher read these from " +
           "`@plumix/core` directly.",
         names: [
-          "manifestEntryVisibility",
           "pluginCatalogUrl",
           "pluginCatalogStagedPath",
           "emptyManifest",
@@ -219,6 +218,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "templateRules",
           "interfaceEnabled",
         ],
+      },
+      {
+        reason:
+          "registration's own builders for a registered type, published on " +
+          "`plumix/test` for tests that fill a registry by hand",
+        names: ["toRegisteredEntryType", "toRegisteredTermTaxonomy"],
       },
       {
         reason: "published on `plumix/cli`",
