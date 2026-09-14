@@ -3,6 +3,7 @@ type FormsErrorCode =
   | "insert_returned_no_row"
   | "invalid_default_retention"
   | "invalid_retention"
+  | "setup_without_provides"
   | "stores_nothing"
   | "unsupported_field_type";
 
@@ -93,6 +94,16 @@ export class FormsError extends Error {
         `submission every form ever had. Use 0, or leave it out, to keep ` +
         `them indefinitely.`,
       ctx,
+    );
+  }
+
+  static setupWithoutProvides(): FormsError {
+    return new FormsError(
+      "setup_without_provides",
+      `forms: the plugin's setup ran without its own provides, so it has no ` +
+        `registry for this install. Install plugins through installPlugins, ` +
+        `which runs every provides before any setup.`,
+      {},
     );
   }
 

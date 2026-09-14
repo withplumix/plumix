@@ -1,6 +1,7 @@
 // Imported from the root `plumix` specifier (not the `plumix/plugin`
 // subpath) so the `declare module "plumix"` augmentation below has its
 // target loaded — every registry seam merges through that one specifier.
+import type { PluginContextExtensions } from "plumix";
 import type { Label } from "plumix/i18n";
 import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 
@@ -134,6 +135,15 @@ declare module "plumix" {
   }
 }
 
+type RegisterForm = PluginContextExtensions["registerForm"];
+
+/**
+ * Each install's registry, keyed by the `registerForm` its `provides` handed
+ * out — core puts that same function on the setup context, which is how
+ * `setup` finds its own install's registry.
+ */
+const registries = new WeakMap<RegisterForm, FormRegistry>();
+
 /**
  * `@plumix/plugin-forms` — forms declared in code, not stored as rows.
  *
@@ -146,7 +156,7 @@ declare module "plumix" {
  * snapshot of what every field was called at the time.
  */
 export function forms(options: FormsConfig = {}) {
-  const registry = createFormRegistry(retentionDefault(options.retentionDays));
+  const defaultRetentionDays = retentionDefault(options.retentionDays);
   return definePlugin("forms", {
     // The chunk the `tel` field renderer is resolved from. Resolved
     // against the consuming site, the way every plugin admin entry is.
@@ -157,18 +167,22 @@ export function forms(options: FormsConfig = {}) {
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: PLUGIN_I18N_SLOT,
     provides: (ctx) => {
-      // Core runs every `provides` before any `setup`, and a descriptor is
-      // installed more than once per build (the config loader caches it;
-      // the Vite plugin computes the registry from both `emitPlumixSources`
-      // and `buildStart`). This is the one point where the registry can be
-      // emptied without dropping a form some other plugin's `setup` added.
-      registry.reset();
-      ctx.extendAppContext("forms", { get: (slug) => registry.get(slug) });
-      ctx.extendPluginContext("registerForm", function registerForm(form) {
+      // One registry per install rather than per `forms()` call: a
+      // descriptor is a value, installed more than once per build and
+      // possibly into more than one app. Core runs every `provides` before
+      // any `setup`, so a form another plugin contributes lands in it.
+      const registry = createFormRegistry(defaultRetentionDays);
+      const registerForm: RegisterForm = function registerForm(form) {
         registry.register(form, this.id);
-      });
+      };
+      registries.set(registerForm, registry);
+      ctx.extendAppContext("forms", { get: (slug) => registry.get(slug) });
+      ctx.extendPluginContext("registerForm", registerForm);
     },
     setup: (ctx) => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- an identity key, never called
+      const registry = registries.get(ctx.registerForm);
+      if (registry === undefined) throw FormsError.setupWithoutProvides();
       for (const form of options.forms ?? []) registry.register(form, "config");
       // `tel` is the plugin's own contribution to the field vocabulary,
       // not a core built-in — a form may declare one, and so may any meta

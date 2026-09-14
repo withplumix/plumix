@@ -18,13 +18,6 @@ export interface FormRegistry {
    */
   list(): readonly FormDefinition[];
   /**
-   * Empty the registry so one install's contributions do not compound on
-   * the last. A plugin descriptor is a value the config loader caches and
-   * hands to `installPlugins` more than once in a build — see the call in
-   * the plugin's `provides`, which core runs before any `setup`.
-   */
-  reset(): void;
-  /**
    * The block's form picker, as one live array rather than a snapshot.
    * Block inputs are projected into the admin manifest once every
    * plugin's `setup` has run, and a plugin contributing a form may run
@@ -70,9 +63,5 @@ export function createFormRegistry(defaultRetentionDays = 0): FormRegistry {
     },
     get: (slug) => forms.get(slug)?.form,
     list: () => [...forms.values()].map((registered) => registered.form),
-    reset: () => {
-      forms.clear();
-      options.length = 0;
-    },
   };
 }

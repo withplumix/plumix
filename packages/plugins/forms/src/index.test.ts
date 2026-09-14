@@ -14,7 +14,7 @@ import {
   TEL_INPUT_TYPE,
 } from "./contract.js";
 import { defineForm } from "./define-form.js";
-import { forms, SUBMISSION_MODERATE_CAPABILITY } from "./index.js";
+import { forms, FormsError, SUBMISSION_MODERATE_CAPABILITY } from "./index.js";
 import { createFormsHarness, seedPageWithForm } from "./test/harness.js";
 
 const contact = defineForm("contact", {
@@ -79,6 +79,26 @@ describe("forms registration", () => {
     const body = await renderPage(descriptors, "newsletter");
 
     expect(body).toContain('data-plumix-form="newsletter"');
+  });
+
+  // One `forms()` value in a shared config module can boot more than one app,
+  // and each app's plugin list decides what its forms are.
+  test("keeps each app's forms when one descriptor boots two apps", async () => {
+    const descriptor = forms();
+    const first = await createFormsHarness([descriptor, newsletterPlugin]);
+    await seedPageWithForm(first, "newsletter");
+    await createFormsHarness([descriptor]);
+
+    const response = await first.fetch("/posts/page-with-form");
+
+    response.assertStatus(200);
+    expect(await response.text()).toContain('data-plumix-form="newsletter"');
+  });
+
+  // `setup` finds its registry through what `provides` handed out, so one run
+  // alone has no forms to serve — the theme's `ctx.forms` included.
+  test("refuses a setup run without its provides", () => {
+    expect(() => forms().setup({} as never, undefined)).toThrow(FormsError);
   });
 
   test("two forms sharing a slug are rejected at boot, naming both", async () => {
