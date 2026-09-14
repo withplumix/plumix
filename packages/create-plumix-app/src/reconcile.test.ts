@@ -10,12 +10,15 @@ describe("reconcile", () => {
       "cloudflare",
       "-p",
       "blog,media",
+      "--auth",
+      "oauth,magic-link",
       "-y",
     ]);
     expect(r).toEqual({
       targetDir: "my-app",
       runtimeId: "cloudflare",
       pluginIds: ["blog", "media"],
+      authMethodIds: ["oauth", "magic-link"],
       yes: true,
       prompts: [],
       pm: undefined,
@@ -48,12 +51,17 @@ describe("reconcile", () => {
     expect(r.pm).toBe("bun");
   });
 
-  it("defaults the runtime and leaves plugins unset, flagging both as prompts", () => {
+  it("defaults the runtime and leaves plugins and auth unset, flagging them as prompts", () => {
     const r = reconcile(["my-app"]);
     expect(r.runtimeId).toBe("node");
     expect(r.pluginIds).toBeUndefined();
+    expect(r.authMethodIds).toBeUndefined();
     expect(r.yes).toBe(false);
-    expect(r.prompts).toEqual(["runtime", "plugins"]);
+    expect(r.prompts).toEqual(["runtime", "plugins", "auth"]);
+  });
+
+  it("drops the auth prompt for an explicit empty --auth", () => {
+    expect(reconcile(["my-app", "--auth="]).prompts).not.toContain("auth");
   });
 
   it("suppresses all prompts under --yes, leaving plugins unset", () => {
@@ -82,11 +90,18 @@ describe("reconcile", () => {
     ]);
   });
 
-  it("accepts --runtime=<id> and --plugins=<csv> forms", () => {
-    const r = reconcile(["app", "--runtime=cloudflare", "--plugins=blog"]);
+  it("accepts --runtime=<id>, --plugins=<csv> and --auth=<csv> forms", () => {
+    const r = reconcile([
+      "app",
+      "--runtime=cloudflare",
+      "--plugins=blog",
+      "--auth=cfAccess, oauth",
+    ]);
     expect(r.runtimeId).toBe("cloudflare");
     expect(r.pluginIds).toEqual(["blog"]);
+    expect(r.authMethodIds).toEqual(["cfAccess", "oauth"]);
     expect(r.prompts).not.toContain("runtime");
     expect(r.prompts).not.toContain("plugins");
+    expect(r.prompts).not.toContain("auth");
   });
 });

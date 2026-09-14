@@ -203,6 +203,9 @@ try {
   const { loadRegistry } = await import(
     join(REPO, "packages/create-plumix-app/dist/registry.js")
   );
+  const { availableAuthMethods } = await import(
+    join(REPO, "packages/create-plumix-app/dist/auth-methods.js")
+  );
   // From the registry, so a new runtime or plugin joins the matrix on its own.
   const registry = await loadRegistry(REPO);
   // Every runtime times the two shapes. `-y` on every combo: without it the
@@ -222,6 +225,7 @@ try {
     const selected = registry.plugins
       .filter(supported)
       .map((plugin) => plugin.id);
+    const authIds = availableAuthMethods(runtime).map((method) => method.id);
     return [
       // `--plugins=` for none: a bare `-y` takes the recommended plugins.
       { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },
@@ -230,6 +234,19 @@ try {
         args: ["-y", "--runtime", id, "-p", selected.join(",")],
         secondLocale: true,
         excluded,
+      },
+      // Each auth method is a config fragment written as text, so only a
+      // generated project that typechecks and builds proves it still fits.
+      {
+        name: `${id}-all-auth`,
+        args: [
+          "-y",
+          "--runtime",
+          id,
+          "--plugins=",
+          "--auth",
+          authIds.join(","),
+        ],
       },
     ];
   });

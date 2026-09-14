@@ -31,6 +31,8 @@ Options:
   --runtime <id>       Runtime to target (default: ${DEFAULT_RUNTIME}).
   -p, --plugins <ids>  Comma-separated plugins to include (e.g. pages,comments).
                        Defaults to the recommended set; --plugins= for none.
+  --auth <ids>         Comma-separated auth methods added to passkey
+                       (oauth, magic-link; cfAccess on cloudflare).
   --pm <name>          Package manager (npm, pnpm, yarn, bun); auto-detected.
   --no-install         Skip installing dependencies.
   --no-db              Skip generating and applying local migrations.
@@ -101,7 +103,7 @@ export async function runCli(
     runtimeId: reconciled.runtimeId,
     // Doubles as the wizard's preticked set when the plugins prompt runs.
     pluginIds: reconciled.pluginIds ?? recommendedPluginIds(sources.registry),
-    authMethodIds: [],
+    authMethodIds: reconciled.authMethodIds ?? [],
   };
 
   if (interactive) {

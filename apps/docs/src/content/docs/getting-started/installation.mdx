@@ -99,18 +99,17 @@ So the first person to reach a fresh deploy owns it. Deploy and claim the accoun
 
 ## Scaffolding without the wizard
 
-Three of the four prompts have a flag, and `--yes` accepts the defaults for whatever you did not pass. That combination is what makes the scaffolder usable from a script or a CI job, where there is no terminal to prompt into. The wizard only runs on a real TTY and never under `CI`.
-
-The sign-in question is the fourth, and it has no flag behind it. A non-interactive run always scaffolds with passkeys alone, so GitHub OAuth, magic links and Cloudflare Access have to be added to `plumix.config.ts` afterwards. [Adding a sign-in method later](#adding-a-sign-in-method-later) is what each one costs.
+Every prompt has a flag, and `--yes` accepts the defaults for whatever you did not pass. That combination is what makes the scaffolder usable from a script or a CI job, where there is no terminal to prompt into. The wizard only runs on a real TTY and never under `CI`.
 
 ```sh
-pnpm create plumix-app my-site --plugins blog,pages,media,seo,feeds --pm pnpm --yes
+pnpm create plumix-app my-site --plugins blog,pages,media,seo,feeds --auth oauth --pm pnpm --yes
 ```
 
 The flags are:
 
 - `--runtime <id>` picks the runtime, `node` or `cloudflare`. Defaults to `node`.
 - `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log`, `og`, `seo` and `feeds`. Leave the flag off and you get `seo` and `feeds`. The flag replaces that pair rather than adding to it, so `--plugins blog` scaffolds blog alone, and `--plugins=` scaffolds none.
+- `--auth <ids>` adds sign-in methods to passkeys, as a comma-separated list: `oauth` for GitHub, `magic-link`, and `cfAccess` for Cloudflare Access on the `cloudflare` runtime. Leave it off and you get passkeys alone. An unknown id exits with the list of methods the runtime offers.
 - `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
 - `--no-install` skips the dependency install.
 - `--no-db` skips generating and applying the local migration.

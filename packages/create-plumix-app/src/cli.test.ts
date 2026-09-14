@@ -182,6 +182,43 @@ describe("runCli", () => {
     expect(existsSync(target)).toBe(false);
   });
 
+  test("--auth scaffolds the flagged auth methods", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "flagged-auth");
+
+    const code = await run(
+      [
+        target,
+        "-y",
+        "--runtime",
+        "cloudflare",
+        "--auth",
+        "oauth,magic-link,cfAccess",
+      ],
+      io,
+    );
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("github((env)");
+    expect(config).toContain("magicLink:");
+    expect(config).toContain("authenticator: cfAccess(");
+  });
+
+  test("exits 1 listing the available methods for an unknown --auth id", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "bad-auth");
+
+    const code = await run([target, "-y", "--auth", "oauth,nope"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(
+      /unknown auth method "nope".*oauth, magic-link/is,
+    );
+    expect(existsSync(target)).toBe(false);
+  });
+
   test("exits 1 for an unknown --pm", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "bad-pm");
