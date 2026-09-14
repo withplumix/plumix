@@ -77,6 +77,10 @@ export type { ActionSpy, ActionCall, FilterSpy, FilterCall } from "./spies.js";
 
 export { deepEqual, partialMatch } from "./match.js";
 
+// The `.plumix/schema.ts` source `plumix migrate generate` hands drizzle-kit,
+// so a plugin can assert which tables its descriptor puts in migrations.
+export { generateSchemaSource } from "../cli/schema-codegen.js";
+
 // WebAuthn fixtures — build deterministic attestation / assertion payloads
 // without touching a real browser. Used by plumix's own passkey tests and
 // available for plugin authors extending the auth surface.

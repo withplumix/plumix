@@ -7,7 +7,6 @@ import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogRetentionConfig } from "./server/retention.js";
 import type { AuditLogStorage } from "./types.js";
-import * as schema from "./db/schema.js";
 import { createAuditLogRouter } from "./rpc.js";
 import { registerAuditEvents } from "./server/auditEvents.js";
 import { createAuditExtension } from "./server/auditExtension.js";
@@ -135,12 +134,8 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
   return definePlugin("audit_log", {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
-    schema: storage.schemaModule ?? schema,
-    // Module specifier `plumix migrate generate` uses to include this
-    // plugin's table in the host's drizzle-kit codegen. Without it the
-    // generated `.plumix/schema.ts` only re-exports `plumix/schema`
-    // (core only) and `audit_log` is missing from emitted migrations.
-    schemaModule: "@plumix/plugin-audit-log/schema",
+    schema: storage.schema?.module,
+    schemaModule: storage.schema?.specifier,
     provides: (ctx) => {
       ctx.extendAppContext("audit", extension);
     },

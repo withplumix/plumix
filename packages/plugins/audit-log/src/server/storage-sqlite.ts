@@ -1,7 +1,5 @@
 // Default storage: write + query against `ctx.db` using the plugin's
-// own Drizzle table definition. The `schemaModule` field is forwarded
-// to `definePlugin({ schema })` so `plumix migrate generate` picks
-// up the table on the next codegen run.
+// own Drizzle table definition.
 
 import { and, desc, eq, gte, like, lt, lte, or } from "drizzle-orm";
 
@@ -21,7 +19,7 @@ const MAX_LIMIT = 500;
 export function sqlite(): AuditLogStorage {
   return {
     kind: "sqlite",
-    schemaModule: schema,
+    schema: { module: schema, specifier: "@plumix/plugin-audit-log/schema" },
 
     async write(ctx, rows) {
       if (rows.length === 0) return;

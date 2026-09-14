@@ -62,8 +62,16 @@ export interface AuditLogQueryResult {
  */
 export interface AuditLogStorage {
   readonly kind: string;
-  /** Drizzle module to forward into `definePlugin({ schema })`. */
-  readonly schemaModule?: SchemaModule;
+  /**
+   * The tables this storage writes, for a storage that has any. An external
+   * sink omits it, and the plugin then contributes no table to migrations.
+   */
+  readonly schema?: {
+    /** Drizzle module runtime queries bind against. */
+    readonly module: SchemaModule;
+    /** Specifier `plumix migrate generate` imports to emit the tables' migrations. */
+    readonly specifier: string;
+  };
   /** Batch insert. The audit-log service buffers per-request and calls this once. */
   write(ctx: AppContext, rows: readonly NewAuditLogRow[]): Promise<void>;
   /** Latest-first read for the admin feed; honors filter + cursor pagination. */
