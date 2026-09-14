@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix";
 import type { SQL } from "plumix/db";
-import { buildEntryPermalink, dateRange, findTermByPath } from "plumix";
+import { buildEntryPermalinks, dateRange, findTermByPath } from "plumix";
 import {
   and,
   desc,
@@ -129,10 +129,11 @@ export async function collectFeedItems(
     .orderBy(desc(entries.publishedAt))
     .limit(FEED_LIMIT);
 
+  const paths = await buildEntryPermalinks(ctx, rows);
   const items: FeedItem[] = [];
-  for (const row of rows) {
-    const path = await buildEntryPermalink(ctx, row);
-    if (path === null) continue;
+  for (const [index, row] of rows.entries()) {
+    const path = paths[index];
+    if (path === null || path === undefined) continue;
     const link = `${ctx.origin}${path}`;
     items.push({
       // Atom requires a non-empty item title; an untitled entry falls back so

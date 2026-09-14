@@ -6,8 +6,23 @@ import type {
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
 import { withBasePath } from "../base-path.js";
+import { chunkForD1, D1_MAX_BOUND_PARAMETERS, inArray } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
+import { terms } from "../db/schema/terms.js";
 
 type PermalinkContext = Pick<AppContext, "db" | "plugins" | "basePath">;
+
+interface EntryPermalinkSource {
+  readonly type: string;
+  readonly slug: string;
+  readonly parentId?: number | null;
+}
+
+interface TermArchiveSource {
+  readonly taxonomy: string;
+  readonly slug: string;
+  readonly parentId?: number | null;
+}
 
 /**
  * Reverse of `compileRouteMap` — given an entry, produce its public URL.
@@ -26,26 +41,40 @@ type PermalinkContext = Pick<AppContext, "db" | "plugins" | "basePath">;
  */
 export async function buildEntryPermalink(
   ctx: PermalinkContext,
-  entry: {
-    readonly type: string;
-    readonly slug: string;
-    readonly parentId?: number | null;
-  },
+  entry: EntryPermalinkSource,
   options?: { readonly ancestorSlugs?: readonly string[] },
 ): Promise<string | null> {
-  const sync = buildEntryPermalinkSync(ctx, entry);
-  if (sync !== null) return sync;
-  const entryType = ctx.plugins.entryTypes.get(entry.type);
-  // sync returned null → either unregistered / isPublic:false (real null) or
-  // hierarchical needing the ancestor walk. Re-check the predicate to split.
-  if (!entryType || entryType.isPublic === false) return null;
-  const parentId = entry.parentId ?? null;
-  if (!shouldNestUnderEntryParent(entryType, parentId)) return null;
+  const nested = nestedEntry(ctx, entry);
+  if (nested === null) return buildEntryPermalinkSync(ctx, entry);
   const ancestors =
-    options?.ancestorSlugs ?? (await loadAncestorSlugs(ctx, parentId));
-  return withBasePath(
-    joinSegments([entryTypeBaseSlug(entryType), ...ancestors, entry.slug]),
-    ctx.basePath,
+    options?.ancestorSlugs ?? (await loadAncestorSlugs(ctx, nested.parentId));
+  return nestedEntryPermalink(ctx, nested.entryType, ancestors, entry.slug);
+}
+
+/**
+ * `buildEntryPermalink` over a list, with every nested row's ancestor chain
+ * read in one recursive query rather than one per row. URLs line up with
+ * `rows` by index.
+ */
+export async function buildEntryPermalinks(
+  ctx: PermalinkContext,
+  rows: readonly EntryPermalinkSource[],
+): Promise<(string | null)[]> {
+  const plans = rows.map((row) => ({ row, nested: nestedEntry(ctx, row) }));
+  const chains = await loadAncestorChains(
+    ctx,
+    entries,
+    plans.flatMap(({ nested }) => (nested === null ? [] : [nested.parentId])),
+  );
+  return plans.map(({ row, nested }) =>
+    nested === null
+      ? buildEntryPermalinkSync(ctx, row)
+      : nestedEntryPermalink(
+          ctx,
+          nested.entryType,
+          chains.get(nested.parentId) ?? [],
+          row.slug,
+        ),
   );
 }
 
@@ -56,28 +85,37 @@ export async function buildEntryPermalink(
  */
 export async function buildTermArchiveUrl(
   ctx: PermalinkContext,
-  term: {
-    readonly taxonomy: string;
-    readonly slug: string;
-    readonly parentId?: number | null;
-  },
+  term: TermArchiveSource,
   options?: { readonly ancestorSlugs?: readonly string[] },
 ): Promise<string | null> {
-  const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-  if (!taxonomy || taxonomy.isPublic === false) return null;
-
-  const baseSlug = termTaxonomyBaseSlug(taxonomy);
-  const parentId = term.parentId ?? null;
-
-  if (!shouldNestUnderTermParent(taxonomy, parentId)) {
-    return withBasePath(joinSegments([baseSlug, term.slug]), ctx.basePath);
-  }
-
+  const nested = nestedTerm(ctx, term);
+  if (nested === null) return buildTermArchiveUrlSync(ctx, term);
   const ancestors =
-    options?.ancestorSlugs ?? (await loadTermAncestorSlugs(ctx, parentId));
-  return withBasePath(
-    joinSegments([baseSlug, ...ancestors, term.slug]),
-    ctx.basePath,
+    options?.ancestorSlugs ??
+    (await loadTermAncestorSlugs(ctx, nested.parentId));
+  return nestedTermArchiveUrl(ctx, nested.taxonomy, ancestors, term.slug);
+}
+
+/** `buildTermArchiveUrl` over a list — mirror of `buildEntryPermalinks`. */
+export async function buildTermArchiveUrls(
+  ctx: PermalinkContext,
+  rows: readonly TermArchiveSource[],
+): Promise<(string | null)[]> {
+  const plans = rows.map((row) => ({ row, nested: nestedTerm(ctx, row) }));
+  const chains = await loadAncestorChains(
+    ctx,
+    terms,
+    plans.flatMap(({ nested }) => (nested === null ? [] : [nested.parentId])),
+  );
+  return plans.map(({ row, nested }) =>
+    nested === null
+      ? buildTermArchiveUrlSync(ctx, row)
+      : nestedTermArchiveUrl(
+          ctx,
+          nested.taxonomy,
+          chains.get(nested.parentId) ?? [],
+          row.slug,
+        ),
   );
 }
 
@@ -88,11 +126,7 @@ export async function buildTermArchiveUrl(
  */
 export function buildEntryPermalinkSync(
   ctx: Pick<AppContext, "plugins" | "basePath">,
-  entry: {
-    readonly type: string;
-    readonly slug: string;
-    readonly parentId?: number | null;
-  },
+  entry: EntryPermalinkSource,
 ): string | null {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
   if (!entryType || entryType.isPublic === false) return null;
@@ -132,6 +166,63 @@ function entryTypeBaseSlug(entryType: RegisteredEntryType): string {
 
 export function termTaxonomyBaseSlug(taxonomy: RegisteredTermTaxonomy): string {
   return taxonomy.rewrite?.slug ?? taxonomy.name;
+}
+
+interface NestedEntry {
+  readonly entryType: RegisteredEntryType;
+  readonly parentId: number;
+}
+
+/** The public type and parent to walk from, or `null` when the URL needs no walk. */
+function nestedEntry(
+  ctx: Pick<AppContext, "plugins">,
+  entry: EntryPermalinkSource,
+): NestedEntry | null {
+  const entryType = ctx.plugins.entryTypes.get(entry.type);
+  if (!entryType || entryType.isPublic === false) return null;
+  const parentId = entry.parentId ?? null;
+  if (!shouldNestUnderEntryParent(entryType, parentId)) return null;
+  return { entryType, parentId };
+}
+
+function nestedEntryPermalink(
+  ctx: Pick<AppContext, "basePath">,
+  entryType: RegisteredEntryType,
+  ancestors: readonly string[],
+  slug: string,
+): string {
+  return withBasePath(
+    joinSegments([entryTypeBaseSlug(entryType), ...ancestors, slug]),
+    ctx.basePath,
+  );
+}
+
+interface NestedTerm {
+  readonly taxonomy: RegisteredTermTaxonomy;
+  readonly parentId: number;
+}
+
+function nestedTerm(
+  ctx: Pick<AppContext, "plugins">,
+  term: TermArchiveSource,
+): NestedTerm | null {
+  const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
+  if (!taxonomy || taxonomy.isPublic === false) return null;
+  const parentId = term.parentId ?? null;
+  if (!shouldNestUnderTermParent(taxonomy, parentId)) return null;
+  return { taxonomy, parentId };
+}
+
+function nestedTermArchiveUrl(
+  ctx: Pick<AppContext, "basePath">,
+  taxonomy: RegisteredTermTaxonomy,
+  ancestors: readonly string[],
+  slug: string,
+): string {
+  return withBasePath(
+    joinSegments([termTaxonomyBaseSlug(taxonomy), ...ancestors, slug]),
+    ctx.basePath,
+  );
 }
 
 function shouldNestUnderEntryParent(
@@ -175,7 +266,8 @@ function joinSegments(
   return "/" + parts.join("/");
 }
 
-interface SlugRow {
+interface ChainRow {
+  readonly leaf: number;
   readonly slug: string;
 }
 
@@ -186,11 +278,6 @@ interface SlugRow {
 const MAX_ANCESTOR_DEPTH = 50;
 
 /**
- * One round-trip ancestor lookup via SQLite recursive CTE. Walks the
- * `entries.parent_id` chain starting from `leafParentId`, returning slugs
- * ordered root-first.
- */
-/**
  * Exported for the path-chain matcher (`path-chain.ts`) so the inbound
  * `URL → entity` resolver can reuse the same CTE the outbound permalink
  * helper uses. Walks ancestors root-first; one round-trip; depth-capped.
@@ -199,36 +286,49 @@ export async function loadAncestorSlugs(
   ctx: Pick<AppContext, "db">,
   leafParentId: number,
 ): Promise<string[]> {
-  const rows = await ctx.db.all<SlugRow>(sql`
-    WITH RECURSIVE chain(id, parent_id, slug, depth) AS (
-      SELECT id, parent_id, slug, 0
-      FROM entries
-      WHERE id = ${leafParentId}
-      UNION ALL
-      SELECT e.id, e.parent_id, e.slug, c.depth + 1
-      FROM entries e JOIN chain c ON e.id = c.parent_id
-      WHERE c.depth < ${MAX_ANCESTOR_DEPTH}
-    )
-    SELECT slug FROM chain ORDER BY depth DESC
-  `);
-  return rows.map((r) => r.slug);
+  const chains = await loadAncestorChains(ctx, entries, [leafParentId]);
+  return chains.get(leafParentId) ?? [];
 }
 
 export async function loadTermAncestorSlugs(
   ctx: Pick<AppContext, "db">,
   leafParentId: number,
 ): Promise<string[]> {
-  const rows = await ctx.db.all<SlugRow>(sql`
-    WITH RECURSIVE chain(id, parent_id, slug, depth) AS (
-      SELECT id, parent_id, slug, 0
-      FROM terms
-      WHERE id = ${leafParentId}
-      UNION ALL
-      SELECT t.id, t.parent_id, t.slug, c.depth + 1
-      FROM terms t JOIN chain c ON t.id = c.parent_id
-      WHERE c.depth < ${MAX_ANCESTOR_DEPTH}
-    )
-    SELECT slug FROM chain ORDER BY depth DESC
-  `);
-  return rows.map((r) => r.slug);
+  const chains = await loadAncestorChains(ctx, terms, [leafParentId]);
+  return chains.get(leafParentId) ?? [];
+}
+
+/**
+ * Root-first slug chain for each id, keyed by that id, including the id's own
+ * slug. One recursive CTE per D1 chunk of distinct ids; an id with no row is
+ * absent from the map.
+ */
+async function loadAncestorChains(
+  ctx: Pick<AppContext, "db">,
+  table: typeof entries | typeof terms,
+  ids: readonly number[],
+): Promise<Map<number, string[]>> {
+  const chains = new Map<number, string[]>();
+  // The depth cap is bound alongside the ids, so each chunk leaves it a slot.
+  const chunks = chunkForD1([...new Set(ids)], D1_MAX_BOUND_PARAMETERS - 1);
+  for (const chunk of chunks) {
+    const rows = await ctx.db.all<ChainRow>(sql`
+      WITH RECURSIVE chain(leaf, id, parent_id, slug, depth) AS (
+        SELECT id, id, parent_id, slug, 0
+        FROM ${table}
+        WHERE ${inArray(table.id, chunk)}
+        UNION ALL
+        SELECT c.leaf, t.id, t.parent_id, t.slug, c.depth + 1
+        FROM ${table} t JOIN chain c ON t.id = c.parent_id
+        WHERE c.depth < ${MAX_ANCESTOR_DEPTH}
+      )
+      SELECT leaf, slug FROM chain ORDER BY leaf, depth DESC
+    `);
+    for (const row of rows) {
+      const chain = chains.get(row.leaf) ?? [];
+      chain.push(row.slug);
+      chains.set(row.leaf, chain);
+    }
+  }
+  return chains;
 }
