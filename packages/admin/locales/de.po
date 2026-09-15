@@ -3271,7 +3271,7 @@ msgstr "Die gesuchte Seite existiert nicht oder die Ressource ist nicht registri
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr "Der Passkey wurde für eine andere Einladung erstellt. Bitte neu laden und erneut versuchen."
+msgstr "Der Passkey wurde für einen anderen Registrierungsablauf erstellt. Bitte neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts

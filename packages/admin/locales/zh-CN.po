@@ -3271,7 +3271,7 @@ msgstr "您寻找的页面不存在，或资源未注册。请检查 URL 并重�
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr "Passkey 是为另一邀请创建的。请重新加载并重试。"
+msgstr "Passkey 是为另一注册流程创建的。请重新加载并重试。"
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts

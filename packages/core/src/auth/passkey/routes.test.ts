@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
+import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
 import {
   createDispatcherHarness,
@@ -210,27 +211,27 @@ describe("passkey verify — input validation", () => {
   });
 });
 
-describe("invite register — options", () => {
-  async function seedInvite(
-    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
-    opts: {
-      readonly role?: "author" | "editor" | "admin";
-      readonly expiresInMs?: number;
-    } = {},
-  ) {
-    const user = await h.seedUser(opts.role ?? "author");
-    const token = generateToken();
-    const tokenHash = await hashToken(token);
-    await h.factory.invite.create({
-      hash: tokenHash,
-      userId: user.id,
-      email: user.email,
-      role: opts.role ?? "author",
-      expiresAt: new Date(Date.now() + (opts.expiresInMs ?? 60_000)),
-    });
-    return { user, token, tokenHash };
-  }
+async function seedInvite(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  opts: {
+    readonly role?: "author" | "editor" | "admin";
+    readonly expiresInMs?: number;
+  } = {},
+) {
+  const user = await h.seedUser(opts.role ?? "author");
+  const token = generateToken();
+  const tokenHash = await hashToken(token);
+  await h.factory.invite.create({
+    hash: tokenHash,
+    userId: user.id,
+    email: user.email,
+    role: opts.role ?? "author",
+    expiresAt: new Date(Date.now() + (opts.expiresInMs ?? 60_000)),
+  });
+  return { user, token, tokenHash };
+}
 
+describe("invite register — options", () => {
   test("returns registration options + invitee metadata for a valid token", async () => {
     const h = await createDispatcherHarness();
     const { user, token } = await seedInvite(h, { role: "editor" });
@@ -429,6 +430,124 @@ describe("invite register — verify", () => {
       }),
     );
     expect(response.status).toBe(400);
+  });
+});
+
+describe("register verify — ceremony binding", () => {
+  function attestationResponse(challenge: string) {
+    const att = buildAttestation({
+      keyPair: generatePasskeyKeyPair(),
+      rpId: "cms.example",
+      origin: "https://cms.example",
+      challenge,
+      credentialId: randomCredentialId(),
+    });
+    return {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: att.clientDataJSON,
+        attestationObject: att.attestationObject,
+      },
+    };
+  }
+
+  test("passkey register verify refuses an invite challenge without enrolling the invitee", async () => {
+    const h = await createDispatcherHarness();
+    await h.seedUser("admin");
+    const { user, token, tokenHash } = await seedInvite(h);
+
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    optionsRes.assertStatus(200);
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+
+    const verifyRes = await h.fetch("/_plumix/auth/passkey/register/verify", {
+      json: attestationResponse(options.challenge),
+    });
+    verifyRes.assertStatus(400);
+    expect(await verifyRes.json<{ error: string }>()).toEqual({
+      error: "challenge_mismatch",
+    });
+    expect(verifyRes.headers.get("set-cookie")).toBeNull();
+
+    const creds = await h.db
+      .select()
+      .from(credentials)
+      .where(eq(credentials.userId, user.id));
+    expect(creds).toHaveLength(0);
+    const invite = await h.db
+      .select()
+      .from(authTokens)
+      .where(eq(authTokens.hash, tokenHash));
+    expect(invite).toHaveLength(1);
+  });
+
+  test("invite register verify refuses a passkey add-device challenge without consuming the invite", async () => {
+    const h = await createDispatcherHarness();
+    await h.seedUser("admin");
+    const { user, token, tokenHash } = await seedInvite(h);
+
+    const optionsRes = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: user.email },
+      as: user,
+    });
+    optionsRes.assertStatus(200);
+    const { challenge } = await optionsRes.json<{ challenge: string }>();
+
+    const verifyRes = await h.fetch("/_plumix/auth/invite/register/verify", {
+      json: { token, response: attestationResponse(challenge) },
+    });
+    verifyRes.assertStatus(400);
+    expect(await verifyRes.json<{ error: string }>()).toEqual({
+      error: "challenge_mismatch",
+    });
+    expect(verifyRes.headers.get("set-cookie")).toBeNull();
+
+    const creds = await h.db
+      .select()
+      .from(credentials)
+      .where(eq(credentials.userId, user.id));
+    expect(creds).toHaveLength(0);
+    const invite = await h.db
+      .select()
+      .from(authTokens)
+      .where(eq(authTokens.hash, tokenHash));
+    expect(invite).toHaveLength(1);
+  });
+
+  test("a refused challenge is consumed: replaying it to the invite route fails challenge_not_found", async () => {
+    const h = await createDispatcherHarness();
+    await h.seedUser("admin");
+    const { token } = await seedInvite(h);
+
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+    const response = attestationResponse(options.challenge);
+
+    const wrongRoute = await h.fetch("/_plumix/auth/passkey/register/verify", {
+      json: response,
+    });
+    wrongRoute.assertStatus(400);
+    expect((await wrongRoute.json<{ error: string }>()).error).toBe(
+      "challenge_mismatch",
+    );
+
+    const rightRoute = await h.fetch("/_plumix/auth/invite/register/verify", {
+      json: { token, response },
+    });
+    rightRoute.assertStatus(400);
+    expect((await rightRoute.json<{ error: string }>()).error).toBe(
+      "challenge_not_found",
+    );
   });
 });
 
