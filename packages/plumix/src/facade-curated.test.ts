@@ -107,6 +107,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "authenticator from the cookie and identity helpers that stay.",
         names: [
           "mintSessionAndCookie",
+          "announceSignIn",
           "createSession",
           "validateSession",
           "invalidateSession",
