@@ -167,7 +167,8 @@ describe("plugin hand-authored catalogs", () => {
       .filter((name) => {
         const enPo = join(pluginsDir, name, "locales", "en.po");
         return (
-          existsSync(enPo) && readFileSync(enPo, "utf8").includes("hand-authored")
+          existsSync(enPo) &&
+          readFileSync(enPo, "utf8").includes("hand-authored")
         );
       });
 
