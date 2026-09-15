@@ -177,6 +177,20 @@ describe("buildManifest", () => {
     ]);
   });
 
+  test("plugin field types project by name, sorted", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerFieldType({ type: "mediaList", component: "ListPicker" });
+      ctx.registerFieldType({ type: "focalPoint", component: "FocalPoint" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    expect(manifest.fieldTypes.map((f) => f.type)).toEqual([
+      "focalPoint",
+      "mediaList",
+    ]);
+  });
+
   test("entry-type keywords flow onto its admin-nav item", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("blog", (ctx) => {

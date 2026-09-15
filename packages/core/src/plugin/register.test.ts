@@ -722,6 +722,31 @@ describe("registerFieldType", () => {
     );
   });
 
+  test.each(["mediaList", "media-list"])(
+    "accepts %j as a type name",
+    async (type) => {
+      const hooks = new HookRegistry();
+      const plugin = definePlugin("media", (ctx) => {
+        ctx.registerFieldType({ type, component: componentRef });
+      });
+      const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+      expect(registry.fieldTypes.has(type)).toBe(true);
+    },
+  );
+
+  test.each(["Media List", "MediaList"])(
+    "rejects %j as a type name",
+    async (type) => {
+      const hooks = new HookRegistry();
+      const plugin = definePlugin("media", (ctx) => {
+        ctx.registerFieldType({ type, component: componentRef });
+      });
+      await expect(
+        installPlugins({ hooks, plugins: [plugin] }),
+      ).rejects.toThrow(`invalid name "${type}"`);
+    },
+  );
+
   test("rejects duplicate type within a plugin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {

@@ -142,13 +142,13 @@ describe("PluginContextError — registration-validation factories", () => {
     const err = PluginContextError.invalidFieldTypeName({
       pluginId: "blog",
       type: "Bad Type!",
-      pattern: "^[a-z][a-z0-9_-]*$",
+      pattern: "^[a-z][a-zA-Z0-9_-]*$",
       maxLength: 64,
     });
     expect(err.code).toBe("invalid_field_type_name");
     expect(err.type).toBe("Bad Type!");
     expect(err.message).toContain('field type with invalid name "Bad Type!"');
-    expect(err.message).toContain("^[a-z][a-z0-9_-]*$");
+    expect(err.message).toContain("^[a-z][a-zA-Z0-9_-]*$");
     expect(err.message).toContain("64");
   });
 

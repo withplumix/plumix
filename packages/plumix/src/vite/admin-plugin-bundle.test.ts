@@ -196,7 +196,7 @@ describe("assemblePluginAdminBundle", () => {
           component: "MediaLibrary",
         });
         ctx.registerFieldType({
-          type: "media_picker",
+          type: "mediaPicker",
           component: "MediaPicker",
         });
       },
@@ -228,7 +228,7 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("registerPluginPage");
     expect(bundle).toContain('"/auto"');
     expect(bundle).toContain("registerPluginFieldType");
-    expect(bundle).toContain('"media_picker"');
+    expect(bundle).toContain('"mediaPicker"');
   });
 
   test("auto-emits register* calls for plugin mark adminSchema refs", async () => {

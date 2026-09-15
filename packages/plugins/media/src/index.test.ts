@@ -187,6 +187,20 @@ interface ConfirmOutput {
   readonly height: number | null;
 }
 
+describe("@plumix/plugin-media — field types", () => {
+  // The names the media field builder, the image block and the Styles tab's
+  // background control dispatch on.
+  test("contributes every picker to the host's field vocabulary", async () => {
+    const { registry } = await install();
+    const declared = [...registry.fieldTypes.values()]
+      .filter((fieldType) => fieldType.registeredBy === "media")
+      .map((fieldType) => fieldType.type)
+      .sort();
+
+    expect(declared).toEqual(["focalPoint", "media", "mediaList", "mediaUrl"]);
+  });
+});
+
 describe("@plumix/plugin-media — media.createUploadUrl", () => {
   test("happy path: returns a presigned URL and creates a draft entry", async () => {
     const storage = memoryStorage().connect({});

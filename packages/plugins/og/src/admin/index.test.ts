@@ -1,29 +1,26 @@
-import { describe, expect, test, vi } from "vitest";
+import { HookRegistry, installPlugins } from "plumix/plugin";
+import { expect, test } from "vitest";
 
+import { og } from "../index.js";
 import { CARD_PREVIEW_INPUT_TYPE } from "../preview-box.js";
-import { registerOgAdmin } from "./index.js";
+import { createFakeRenderer } from "../test/fake-renderer.js";
+import * as adminEntry from "./index.js";
 
-describe("registerOgAdmin", () => {
-  test("registers the preview renderer under the type the meta box names", () => {
-    const registerPluginFieldType = vi.fn();
-
-    registerOgAdmin({ registerPluginFieldType });
-
-    expect(registerPluginFieldType).toHaveBeenCalledWith(
-      CARD_PREVIEW_INPUT_TYPE,
-      expect.anything(),
-    );
+// The bundler resolves the declared `component` as a named export off this
+// module, and only at build time. Kept apart from the server suites so they
+// don't pay the admin bundle's import.
+test("exports the component the plugin declares the preview with", async () => {
+  const { registry } = await installPlugins({
+    hooks: new HookRegistry(),
+    plugins: [
+      og({
+        preview: ["post"],
+        renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+      }),
+    ],
   });
 
-  test("warns and does not throw when the host global is missing", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    expect(() => {
-      registerOgAdmin(undefined);
-    }).not.toThrow();
-
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("window.plumix not initialized"),
-    );
-  });
+  expect(adminEntry).toHaveProperty(
+    registry.fieldTypes.get(CARD_PREVIEW_INPUT_TYPE)?.component ?? "",
+  );
 });

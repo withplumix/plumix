@@ -6,6 +6,7 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
+import { MEDIA_FIELD_TYPES } from "./field-types.js";
 import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
 import { mediaBlocks } from "./media-blocks.js";
@@ -158,6 +159,10 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
     (ctx) => {
       // Media blocks (`media/image`, `media/file`) under the `media/` namespace.
       ctx.registerBlocks(mediaBlocks);
+
+      for (const fieldType of MEDIA_FIELD_TYPES) {
+        ctx.registerFieldType(fieldType);
+      }
 
       ctx.registerEntryType("media", {
         label: MEDIA_LABELS.plural,
