@@ -50,7 +50,7 @@
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "i18n:check": "plumix i18n verify",
     "i18n:compile": "plumix-compile-catalogs",
-    "i18n:extract": "lingui extract",
+    "i18n:extract": "plumix i18n extract",
     "lint": "eslint",
     "publint": "publint",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
@@ -70,7 +70,6 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
