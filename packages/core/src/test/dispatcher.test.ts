@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { ConnectedCdn } from "../runtime/slots.js";
 import { entryPurgeTags } from "../cdn/tags.js";
+import { tryGetContext } from "../context/stores.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
@@ -29,6 +30,40 @@ describe("createDispatcherHarness db option", () => {
     await first.seedUser();
 
     expect(await second.db.query.users.findMany()).toEqual([]);
+  });
+});
+
+/** A route answering who the request store holds and who the handler was given. */
+const identityProbe = definePlugin("identity-probe", (ctx) => {
+  ctx.registerRoute({
+    method: "GET",
+    path: "/identity",
+    auth: "authenticated",
+    handler: (_request, appCtx) =>
+      Response.json({
+        stored: tryGetContext() !== null,
+        ambient: tryGetContext()?.user?.id ?? null,
+        session: appCtx.user?.id ?? null,
+      }),
+  });
+});
+
+// The runtime builds the stored context before authentication, so a signed-in
+// request is only ever signed in through its session (#2343 hid behind this).
+describe("createDispatcherHarness sign-in", () => {
+  test("`as` signs the request in through its session, not the request store", async () => {
+    const h = await createDispatcherHarness({ plugins: [identityProbe] });
+    const admin = await h.seedUser("admin");
+
+    const response = await h.fetch("/_plumix/identity-probe/identity", {
+      as: admin,
+    });
+
+    expect(await response.json()).toEqual({
+      stored: true,
+      ambient: null,
+      session: admin.id,
+    });
   });
 });
 

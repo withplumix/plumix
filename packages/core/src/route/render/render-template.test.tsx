@@ -471,7 +471,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
       new Request("https://cms.example/post/public"),
       author.id,
     );
-    const response = await h.dispatch(request, author);
+    const response = await h.dispatch(request);
     const body = await response.text();
     // Even with user.meta.locale = "ar", `resolveLocale` path-gates the
     // user-locale lookup to `/_plumix/*` — public-route HTML stays at the

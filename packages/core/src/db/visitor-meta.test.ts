@@ -173,7 +173,6 @@ describe("readVisitorMeta", () => {
 
     const response = await harness.dispatch(
       new Request(`https://cms.example${HASH_ROUTE}`),
-      null,
       "198.51.100.9",
     );
 

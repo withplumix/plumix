@@ -128,8 +128,10 @@ describe("the card in the page head", () => {
     // fetched by a scraper carrying no session, and the gate turns that away,
     // so the head must not name it however privileged the reader is.
     const response = await harness.dispatch(
-      new Request("https://cms.example/gated/locked"),
-      member,
+      await harness.authenticateRequest(
+        new Request("https://cms.example/gated/locked"),
+        member.id,
+      ),
     );
     const html = await response.text();
 
@@ -153,8 +155,10 @@ describe("the card in the page head", () => {
     const member = await harness.seedUser("subscriber");
 
     const response = await harness.dispatch(
-      new Request("https://cms.example/column/locked"),
-      member,
+      await harness.authenticateRequest(
+        new Request("https://cms.example/column/locked"),
+        member.id,
+      ),
     );
     const html = await response.text();
 
