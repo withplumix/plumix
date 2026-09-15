@@ -22,7 +22,12 @@ export { getRuntime } from "./runtime.js";
 export type { PlumixAdminRuntime, PlumixGlobal } from "./runtime.js";
 
 export { createPluginRpcClient } from "./plugin-rpc.js";
-export type { PluginRpcClient } from "./plugin-rpc.js";
+export type {
+  PluginRpcClient,
+  PluginRpcInputs,
+  PluginRpcOutputs,
+  PluginRpcRouter,
+} from "@plumix/core";
 
 export {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,

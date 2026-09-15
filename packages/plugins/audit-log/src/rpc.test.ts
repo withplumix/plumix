@@ -141,6 +141,7 @@ describe("auditLog.list RPC", () => {
     const result = await h.client.auditLog.list({});
     expect(result.nextCursor).toBe("cursor-from-storage");
     expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.occurredAt).toBe("2026-05-10T00:00:00.000Z");
   });
 
   test("limit > 200 is silently clamped to 200 (not an error)", async () => {

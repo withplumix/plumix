@@ -48,7 +48,7 @@ describe("lookupRpc", () => {
 
     let caught: unknown;
     try {
-      await lookupRpc.call("list", { kind: "media", ids: ["1"] });
+      await lookupRpc.list({ kind: "media", ids: ["1"] });
     } catch (error) {
       caught = error;
     }

@@ -1,4 +1,3 @@
-import type { JsonObject } from "plumix";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -472,7 +471,7 @@ function AuditLogRow({ row }: { readonly row: AuditLogRowDTO }): ReactNode {
 function DiffPreview({
   properties,
 }: {
-  readonly properties: JsonObject;
+  readonly properties: AuditLogRowDTO["properties"];
 }): ReactNode {
   const { i18n } = useLingui();
   const diff = properties.diff;
@@ -496,7 +495,7 @@ function DiffPreview({
 }
 
 function formatTimestamp(locale: string, iso: string): string {
-  // Inputs land here as ISO strings via the RPC's JSON encoder. Delegate
+  // The list procedure serializes `occurredAt` to an ISO string. Delegate
   // to plumix's locale-aware formatter so a German viewer sees German
   // month abbreviations and a 24h clock automatically; falls back to the
   // raw ISO on parse failure.

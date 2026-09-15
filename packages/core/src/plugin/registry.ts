@@ -5,7 +5,12 @@
 // traverse; the build-time `manifest-projection.ts` reads a snapshot of it.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
-import type { AnyRouter } from "@orpc/server";
+import type {
+  AnyRouter,
+  InferRouterInputs,
+  InferRouterOutputs,
+  RouterClient,
+} from "@orpc/server";
 
 import type {
   BlockPattern,
@@ -820,6 +825,23 @@ export interface RegisteredScheduledTask extends ScheduledTask {
  * interface never assigns here. `json.ts` carries the same caveat.
  */
 export type PluginRpcRouter = AnyRouter;
+
+/**
+ * What `createPluginRpcClient<TRouter>` hands a plugin's admin chunk: one
+ * async function per procedure, nested the way the router is, taking the
+ * procedure's input and resolving to its output. A renamed procedure or a
+ * reshaped output on the server is a type error at every call site.
+ */
+export type PluginRpcClient<TRouter extends PluginRpcRouter> =
+  RouterClient<TRouter>;
+
+/** Each procedure's input, keyed the way the router nests them. */
+export type PluginRpcInputs<TRouter extends PluginRpcRouter> =
+  InferRouterInputs<TRouter>;
+
+/** Each procedure's output, keyed the way the router nests them. */
+export type PluginRpcOutputs<TRouter extends PluginRpcRouter> =
+  InferRouterOutputs<TRouter>;
 
 export interface RegisteredMcpTool {
   readonly tool: McpTool;

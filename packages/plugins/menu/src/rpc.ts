@@ -1,5 +1,4 @@
 import type { JsonObject } from "plumix";
-import type { PluginRpcRouter } from "plumix/plugin";
 import { and, count, eq, inArray, sql } from "plumix/db";
 import { authenticated, base, requireCapability, slugify } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
@@ -118,7 +117,7 @@ interface SaveResponse {
 
 export function createMenuRouter(
   registered: ReadonlyMap<string, RegisteredMenuLocation>,
-): PluginRpcRouter {
+) {
   const list = base
     .use(authenticated)
     .use(requireCapability(MENU_MANAGE_CAPABILITY))
@@ -705,6 +704,12 @@ export function createMenuRouter(
     locations: { list: locationsList },
   };
 }
+
+/**
+ * The admin chunk's wire contract, imported there with `import type` so this
+ * module stays server-only.
+ */
+export type MenuRouter = ReturnType<typeof createMenuRouter>;
 
 interface LocationRow {
   readonly id: string;

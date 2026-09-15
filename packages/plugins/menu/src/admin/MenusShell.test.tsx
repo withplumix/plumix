@@ -10,6 +10,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MenusShell } from "./MenusShell.js";
 
+// What the server's resolver attaches to every row it sends back.
+function okResolved(label: string): JsonValue {
+  return { state: "ok", label, href: null, lastHref: null };
+}
+
 let stub: PluginRpcStub;
 
 function mockRpc(routes: Record<string, JsonValue>): void {
@@ -370,6 +375,7 @@ describe("MenusShell", () => {
                     parentId: null,
                     sortOrder: 0,
                     title: "Reloaded",
+                    resolved: okResolved("Reloaded"),
                     meta: { kind: "custom", url: "/r" },
                   },
                 ],
@@ -670,6 +676,7 @@ describe("MenusShell", () => {
               parentId: null,
               sortOrder: 0,
               title: "Original",
+              resolved: okResolved("Original"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -774,6 +781,7 @@ describe("MenusShell", () => {
               parentId: null,
               sortOrder: 0,
               title: "Home",
+              resolved: okResolved("Home"),
               meta: { kind: "custom", url: "/" },
             },
             {
@@ -781,6 +789,7 @@ describe("MenusShell", () => {
               parentId: null,
               sortOrder: 1,
               title: "About",
+              resolved: okResolved("About"),
               meta: { kind: "custom", url: "/about" },
             },
             {
@@ -788,6 +797,7 @@ describe("MenusShell", () => {
               parentId: 11,
               sortOrder: 0,
               title: "Team",
+              resolved: okResolved("Team"),
               meta: { kind: "custom", url: "/about/team" },
             },
           ],
@@ -1030,6 +1040,7 @@ describe("MenusShell", () => {
               parentId: null,
               sortOrder: 0,
               title: "Parent",
+              resolved: okResolved("Parent"),
               meta: { kind: "custom", url: "/p" },
             },
             {
@@ -1037,6 +1048,7 @@ describe("MenusShell", () => {
               parentId: 10,
               sortOrder: 0,
               title: "Child",
+              resolved: okResolved("Child"),
               meta: { kind: "custom", url: "/p/c" },
             },
           ],
@@ -1099,6 +1111,7 @@ describe("MenusShell", () => {
               parentId: null,
               sortOrder: 0,
               title: "Parent",
+              resolved: okResolved("Parent"),
               meta: { kind: "custom", url: "/p" },
             },
             {
@@ -1106,6 +1119,7 @@ describe("MenusShell", () => {
               parentId: 10,
               sortOrder: 0,
               title: "Child",
+              resolved: okResolved("Child"),
               meta: { kind: "custom", url: "/p/c" },
             },
           ],

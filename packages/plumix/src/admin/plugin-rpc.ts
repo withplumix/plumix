@@ -13,17 +13,10 @@
 // (see `@plumix/core/admin`'s `SHARED_ADMIN_RUNTIME_SPECIFIERS`), the same
 // way it would if the plugin had written the import itself.
 
+import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
-/**
- * Calls a procedure the plugin registered via `ctx.registerRpcRouter`.
- * `procedure` is the router path under the plugin's own namespace — e.g.
- * `"list"` or `"locations/list"` for a plugin id of `"menu"`, never
- * prefixed with the plugin id itself.
- */
-export interface PluginRpcClient {
-  call<TOutput>(procedure: string, input?: unknown): Promise<TOutput>;
-}
+import type { PluginRpcClient, PluginRpcRouter } from "@plumix/core";
 
 function basePath(): string {
   return (
@@ -32,15 +25,22 @@ function basePath(): string {
 }
 
 /**
- * `pluginId` must match what the plugin passed to `definePlugin` — procedures
- * mount at `/_plumix/rpc/<pluginId>/*` (see `registerRpcRouter`).
+ * `TRouter` is the type of what the plugin's server module hands
+ * `ctx.registerRpcRouter` — import it with `import type`, so the server code
+ * stays out of the admin bundle. `pluginId` must match what the plugin passed
+ * to `definePlugin`: procedures mount at `/_plumix/rpc/<pluginId>/*` (see
+ * `registerRpcRouter`), and the client reaches `menu.locations.list` as
+ * `rpc.locations.list(input)`.
  */
-export function createPluginRpcClient(pluginId: string): PluginRpcClient {
+export function createPluginRpcClient<TRouter extends PluginRpcRouter>(
+  pluginId: string,
+): PluginRpcClient<TRouter> {
   const link = new RPCLink<Record<never, never>>({
     // Same-origin absolute URL: a bare path like "/_plumix/rpc" throws
     // "Invalid URL" at `RPCLink`'s `new URL(...)` construction time.
     // `basePath()` adds the subdirectory prefix under a subdirectory proxy.
-    url: () => `${globalThis.location.origin}${basePath()}/_plumix/rpc`,
+    url: () =>
+      `${globalThis.location.origin}${basePath()}/_plumix/rpc/${pluginId}`,
     headers: () => ({
       // The dispatcher rejects any non-safe /_plumix/* method missing this.
       "x-plumix-request": "1",
@@ -49,10 +49,5 @@ export function createPluginRpcClient(pluginId: string): PluginRpcClient {
     // whichever implementation existed when this module first loaded.
     fetch: (request, init) => globalThis.fetch(request, init),
   });
-  return {
-    call: <TOutput>(procedure: string, input?: unknown) =>
-      link.call([pluginId, ...procedure.split("/").filter(Boolean)], input, {
-        context: {},
-      }) as Promise<TOutput>,
-  };
+  return createORPCClient<PluginRpcClient<TRouter>>(link);
 }

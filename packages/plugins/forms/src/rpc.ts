@@ -154,3 +154,9 @@ export function createSubmissionsRouter(registry: FormRegistry) {
 
   return { definitions, list, counts, get, setStatus, setNote, remove };
 }
+
+/**
+ * The admin chunk's wire contract, imported there with `import type` so this
+ * module stays server-only.
+ */
+export type SubmissionsRouter = ReturnType<typeof createSubmissionsRouter>;

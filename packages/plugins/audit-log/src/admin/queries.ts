@@ -1,41 +1,17 @@
 import type { UseInfiniteQueryResult } from "@tanstack/react-query";
-import type { JsonObject } from "plumix";
+import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createPluginRpcClient } from "plumix/admin";
 
-const rpc = createPluginRpcClient("audit_log");
+import type { AuditLogRouter } from "../rpc.js";
 
-export interface AuditLogRowDTO {
-  readonly id: number;
-  readonly occurredAt: string;
-  readonly event: string;
-  readonly subjectType: string;
-  readonly subjectId: string;
-  readonly subjectLabel: string;
-  readonly actorId: number | null;
-  readonly actorLabel: string | null;
-  /** JSON, unlike the server-side row: this is what came back off the wire. */
-  readonly properties: JsonObject;
-}
+const rpc = createPluginRpcClient<AuditLogRouter>("audit_log");
 
-export interface AuditLogFilter {
-  readonly actorId?: number;
-  readonly subjectType?: string;
-  readonly subjectId?: string;
-  readonly eventPrefix?: string;
-  readonly occurredAfter?: number;
-  readonly occurredBefore?: number;
-}
+type AuditLogPage = PluginRpcOutputs<AuditLogRouter>["list"];
+type ListInput = NonNullable<PluginRpcInputs<AuditLogRouter>["list"]>;
 
-interface AuditLogPage {
-  readonly rows: readonly AuditLogRowDTO[];
-  readonly nextCursor: string | null;
-}
-
-interface ListInput extends AuditLogFilter {
-  readonly limit?: number;
-  readonly cursor?: string;
-}
+export type AuditLogRowDTO = AuditLogPage["rows"][number];
+export type AuditLogFilter = Omit<ListInput, "limit" | "cursor">;
 
 const AUDIT_LOG_LIST_KEY = ["auditLog", "list"] as const;
 
@@ -52,7 +28,7 @@ export function useAuditLogList(
         pageParam === undefined
           ? { ...filter }
           : { ...filter, cursor: pageParam };
-      return rpc.call<AuditLogPage>("list", input);
+      return rpc.list(input);
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

@@ -1,4 +1,4 @@
-import type { AuthenticatedAppContext, PluginRpcRouter } from "plumix/plugin";
+import type { AuthenticatedAppContext } from "plumix/plugin";
 import { and, eq } from "plumix/db";
 import {
   authenticated,
@@ -31,7 +31,7 @@ interface MediaRpcOptions {
   readonly maxUploadSize: number;
 }
 
-interface CreateUploadUrlResponse {
+export interface CreateUploadUrlResponse {
   readonly uploadUrl: string;
   readonly method: "PUT";
   readonly headers: Readonly<Record<string, string>>;
@@ -40,7 +40,7 @@ interface CreateUploadUrlResponse {
   readonly expiresAt: number;
 }
 
-interface ConfirmResponse {
+export interface ConfirmResponse {
   readonly id: number;
   readonly url: string;
   readonly thumbnailUrl: string;
@@ -51,11 +51,11 @@ interface ConfirmResponse {
   readonly height: number | null;
 }
 
-interface DeleteResponse {
+export interface DeleteResponse {
   readonly id: number;
 }
 
-interface UpdateResponse {
+export interface UpdateResponse {
   readonly id: number;
   readonly title: string;
   readonly alt: string | null;
@@ -102,7 +102,7 @@ async function loadOwnedMediaRow(
   return row;
 }
 
-export function createMediaRouter(options: MediaRpcOptions): PluginRpcRouter {
+export function createMediaRouter(options: MediaRpcOptions) {
   const acceptedTypeSet = new Set(options.acceptedTypes);
 
   // Capability gating already keeps `entry:media:create` to the
@@ -464,3 +464,9 @@ function sanitizeExtension(filename: string): string | undefined {
   if (!SAFE_EXT_RE.test(ext)) return undefined;
   return ext;
 }
+
+/**
+ * The admin chunk's wire contract, imported there with `import type` so this
+ * module stays server-only.
+ */
+export type MediaRouter = ReturnType<typeof createMediaRouter>;

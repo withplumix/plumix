@@ -1,76 +1,71 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPluginRpcClient } from "plumix/admin";
 
-const rpc = createPluginRpcClient("comments");
+import type { CommentsRouter } from "../rpc.js";
+import type { CommentStatus } from "../types.js";
 
-export type CommentStatus = "pending" | "approved" | "spam" | "trash";
+const rpc = createPluginRpcClient<CommentsRouter>("comments");
 
-export interface ModerationCommentDTO {
-  readonly id: number;
-  readonly entryId: number;
-  readonly parentId: number | null;
-  readonly status: CommentStatus;
-  readonly authorName: string;
-  readonly authorEmail: string;
-  readonly bodyMd: string;
-  readonly ipHash: string | null;
-  readonly userAgent: string | null;
-  readonly createdAt: string;
-}
+type CommentsInputs = PluginRpcInputs<CommentsRouter>;
+type CommentsOutputs = PluginRpcOutputs<CommentsRouter>;
 
-type StatusCounts = Record<CommentStatus, number>;
+export type { CommentStatus };
+export type ModerationCommentDTO = CommentsOutputs["list"][number];
 export type ModerationAction =
   "approve" | "spam" | "trash" | "restore" | "purge";
 
 const COMMENTS_KEY = ["comments"] as const;
 
-export function useCommentCounts(): UseQueryResult<StatusCounts> {
+export function useCommentCounts(): UseQueryResult<CommentsOutputs["counts"]> {
   return useQuery({
     queryKey: [...COMMENTS_KEY, "counts"],
-    queryFn: () => rpc.call<StatusCounts>("counts"),
+    queryFn: () => rpc.counts(),
   });
 }
 
-interface QueueFilters {
-  readonly search?: string;
-  readonly entryId?: number;
-}
+type QueueFilters = Pick<CommentsInputs["list"], "search" | "entryId">;
 
 export function useCommentList(
   status: CommentStatus,
   filters: QueueFilters = {},
-): UseQueryResult<ModerationCommentDTO[]> {
+): UseQueryResult<CommentsOutputs["list"]> {
   return useQuery({
     queryKey: [...COMMENTS_KEY, "list", status, filters],
-    queryFn: () =>
-      rpc.call<ModerationCommentDTO[]>("list", { status, ...filters }),
+    queryFn: () => rpc.list({ status, ...filters }),
   });
 }
 
-export const BULK_ACTIONS = ["approve", "spam", "trash"] as const;
-export type BulkAction = (typeof BULK_ACTIONS)[number];
+export type BulkAction = CommentsInputs["bulk"]["action"];
+export const BULK_ACTIONS = [
+  "approve",
+  "spam",
+  "trash",
+] as const satisfies readonly BulkAction[];
 
 export function useBulkModeration(): UseMutationResult<
-  unknown,
+  CommentsOutputs["bulk"],
   Error,
-  { action: BulkAction; ids: number[] }
+  CommentsInputs["bulk"]
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, ids }) => rpc.call("bulk", { action, ids }),
+    mutationFn: (input) => rpc.bulk(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: COMMENTS_KEY }),
   });
 }
 
 export function useModeration(): UseMutationResult<
-  unknown,
+  CommentsOutputs[ModerationAction],
   Error,
   { action: ModerationAction; id: number }
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, id }) => rpc.call(action, { id }),
+    // `useMutation` wants one `Promise<T>`; a call on `rpc[action]` is a
+    // union of five promise types until `async` folds them.
+    mutationFn: async ({ action, id }) => rpc[action]({ id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: COMMENTS_KEY }),
   });
 }

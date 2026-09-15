@@ -1,3 +1,4 @@
+import type { PluginRpcOutputs } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { DragEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +22,7 @@ import {
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
+import type { MediaRouter } from "../rpc.js";
 import { mediaRpc, pluginBasePath } from "./rpc.js";
 
 // Descriptors that need runtime indirection — used outside JSX (aria
@@ -139,24 +141,7 @@ async function runWithConcurrency<T>(
   );
 }
 
-interface MediaItem {
-  readonly id: number;
-  readonly title: string;
-  readonly mime: string;
-  readonly size: number;
-  readonly url: string;
-  readonly thumbnailUrl: string;
-  readonly alt: string | null;
-  readonly uploadedAt: string;
-  readonly uploadedById: number;
-  readonly width: number | null;
-  readonly height: number | null;
-}
-
-interface MediaListResponse {
-  readonly items: readonly MediaItem[];
-  readonly hasMore: boolean;
-}
+type MediaItem = PluginRpcOutputs<MediaRouter>["list"]["items"][number];
 
 /**
  * What the picker hands back on confirm. Carries the resolved url/alt (not just
@@ -183,22 +168,6 @@ function toSelection(item: MediaItem): MediaSelection {
     width: item.width,
     height: item.height,
   };
-}
-
-interface CreateUploadUrlResponse {
-  readonly uploadUrl: string;
-  readonly method: "PUT";
-  readonly headers: Record<string, string>;
-  readonly mediaId: number;
-  readonly storageKey: string;
-}
-
-interface ConfirmResponse {
-  readonly id: number;
-  readonly url: string;
-  readonly mime: string;
-  readonly size: number;
-  readonly storageKey: string;
 }
 
 // Browser PUT with progress reporting. `fetch()` in 2026 still doesn't
@@ -254,14 +223,11 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
     };
     setPending((prev) => [...prev, slot]);
     try {
-      const init = await mediaRpc.call<CreateUploadUrlResponse>(
-        "createUploadUrl",
-        {
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        },
-      );
+      const init = await mediaRpc.createUploadUrl({
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+      });
       try {
         // Same-origin worker route needs the CSRF header that the
         // dispatcher enforces on `/_plumix/*`. R2 (cross-origin) must
@@ -282,7 +248,7 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
             );
           },
         );
-        await mediaRpc.call<ConfirmResponse>("confirm", { id: init.mediaId });
+        await mediaRpc.confirm({ id: init.mediaId });
       } catch (error) {
         await tryCleanupDraft(init.mediaId);
         throw error;
@@ -383,12 +349,16 @@ export function MediaLibrary({
     queryKey,
     initialPageParam: 0,
     queryFn: ({ pageParam }: { pageParam: number }) =>
-      mediaRpc.call<MediaListResponse>("list", {
+      mediaRpc.list({
         limit: PAGE_SIZE,
         offset: pageParam,
         // `accept` only flows through in picker mode. Page mode shows
         // the full library regardless.
-        ...(isPicker && accept !== undefined ? { accept } : {}),
+        // The wire schema types its arrays mutable; the prop keeps them
+        // readonly.
+        ...(isPicker && accept !== undefined
+          ? { accept: typeof accept === "string" ? accept : [...accept] }
+          : {}),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
       }),
     getNextPageParam: (last, allPages) =>
@@ -420,15 +390,14 @@ export function MediaLibrary({
     useMediaUpload(invalidateList);
 
   const remove = useMutation({
-    mutationFn: (id: number) => mediaRpc.call<{ id: number }>("delete", { id }),
+    mutationFn: (id: number) => mediaRpc.delete({ id }),
     onSuccess: invalidateList,
     onError: (error) =>
       setErrorMsg(error instanceof Error ? error.message : String(error)),
   });
 
   const update = useMutation({
-    mutationFn: (input: { id: number; alt: string }) =>
-      mediaRpc.call<{ id: number; alt: string | null }>("update", input),
+    mutationFn: (input: { id: number; alt: string }) => mediaRpc.update(input),
     onSuccess: invalidateList,
     onError: (error) =>
       setErrorMsg(error instanceof Error ? error.message : String(error)),
@@ -826,7 +795,7 @@ function ErrorBanner({
 
 async function tryCleanupDraft(mediaId: number): Promise<void> {
   try {
-    await mediaRpc.call<{ id: number }>("delete", { id: mediaId });
+    await mediaRpc.delete({ id: mediaId });
   } catch {
     // Best-effort — server-side draft GC will catch it.
   }

@@ -3,8 +3,10 @@ import type {
   UseMutationResult,
   UseQueryResult,
 } from "@tanstack/react-query";
+import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
 import {
   keepPreviousData,
+  skipToken,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -12,17 +14,20 @@ import {
 } from "@tanstack/react-query";
 import { createPluginRpcClient } from "plumix/admin";
 
+import type { SubmissionsRouter } from "../rpc.js";
 import type {
   FormSummary,
   SubmissionCounts,
   SubmissionDTO,
   SubmissionFilter,
   SubmissionsPage,
-  SubmissionStatus,
 } from "../types.js";
 import { EXPORT_PATH } from "../contract.js";
 
-const rpc = createPluginRpcClient("forms");
+const rpc = createPluginRpcClient<SubmissionsRouter>("forms");
+
+type FormsInputs = PluginRpcInputs<SubmissionsRouter>;
+type FormsOutputs = PluginRpcOutputs<SubmissionsRouter>;
 
 // The shapes the handlers return, read from where they are declared
 // rather than declared a second time here — a second copy is a copy that
@@ -58,7 +63,7 @@ export function submissionsExportHref(
 export function useFormDefinitions(): UseQueryResult<readonly FormSummary[]> {
   return useQuery({
     queryKey: DEFINITIONS_KEY,
-    queryFn: () => rpc.call<readonly FormSummary[]>("definitions"),
+    queryFn: () => rpc.definitions(),
   });
 }
 
@@ -67,7 +72,7 @@ export function useSubmissionCounts(
 ): UseQueryResult<SubmissionCounts> {
   return useQuery({
     queryKey: [...SUBMISSIONS_KEY, "counts", filter],
-    queryFn: () => rpc.call<SubmissionCounts>("counts", filter),
+    queryFn: () => rpc.counts(filter),
   });
 }
 
@@ -80,8 +85,7 @@ export function useSubmissions(
   return useInfiniteQuery({
     queryKey: [...SUBMISSIONS_KEY, "list", filter],
     queryFn: ({ pageParam }) =>
-      rpc.call<SubmissionsPage>(
-        "list",
+      rpc.list(
         pageParam === undefined ? filter : { ...filter, cursor: pageParam },
       ),
     initialPageParam: undefined as string | undefined,
@@ -102,42 +106,42 @@ export function useSubmission(
 ): UseQueryResult<SubmissionDTO> {
   return useQuery({
     queryKey: [...SUBMISSIONS_KEY, "get", id],
-    queryFn: () => rpc.call<SubmissionDTO>("get", { id }),
-    enabled: id !== null,
+    // `skipToken` rather than `enabled`: it narrows `id` for the typed call.
+    queryFn: id === null ? skipToken : () => rpc.get({ id }),
   });
 }
 
 function useSubmissionMutation<TInput, TOutput>(
-  procedure: string,
+  mutationFn: (input: TInput) => Promise<TOutput>,
 ): UseMutationResult<TOutput, Error, TInput> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: TInput) => rpc.call<TOutput>(procedure, input),
+    mutationFn,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: SUBMISSIONS_KEY }),
   });
 }
 
 export function useSetSubmissionStatus(): UseMutationResult<
-  { status: SubmissionStatus },
+  FormsOutputs["setStatus"],
   Error,
-  { id: number; status: SubmissionStatus }
+  FormsInputs["setStatus"]
 > {
-  return useSubmissionMutation("setStatus");
+  return useSubmissionMutation((input) => rpc.setStatus(input));
 }
 
 export function useSetSubmissionNote(): UseMutationResult<
-  { note: string | null },
+  FormsOutputs["setNote"],
   Error,
-  { id: number; note: string | null }
+  FormsInputs["setNote"]
 > {
-  return useSubmissionMutation("setNote");
+  return useSubmissionMutation((input) => rpc.setNote(input));
 }
 
 export function useDeleteSubmission(): UseMutationResult<
-  { deleted: boolean },
+  FormsOutputs["remove"],
   Error,
-  { id: number }
+  FormsInputs["remove"]
 > {
-  return useSubmissionMutation("remove");
+  return useSubmissionMutation((input) => rpc.remove(input));
 }

@@ -57,3 +57,9 @@ export function createOgRouter(options: OgRouterOptions) {
 
   return { preview };
 }
+
+/**
+ * The admin chunk's wire contract, imported there with `import type` so this
+ * module stays server-only.
+ */
+export type OgRouter = ReturnType<typeof createOgRouter>;
