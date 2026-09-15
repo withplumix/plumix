@@ -2,7 +2,7 @@ import type { AppContext } from "../context/app.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import {
-  listedEntryTypeNames,
+  publicEntryTypeNames,
   termPageEntryTypeNames,
 } from "../plugin/registry.js";
 import {
@@ -82,11 +82,15 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onEntry(entry, ctx),
   );
 
-  // An author archive, and every feed that prints an author's name, is stored
-  // under the tags of the types it lists — a rename or re-slug has to retire it.
-  hooks.addAction("user:updated", (_user, _previous, ctx) => {
-    enqueuePurgeTags(ctx, listedEntryTypeNames(ctx.plugins).map(typeTag));
-  });
+  // Author feeds and every public entry's permalink and listing print the
+  // author, and each is stored under a public type's tag — so a rename, a
+  // re-slug, or a delete (which reassigns entries without an entry action)
+  // purges them all, whatever type the author wrote.
+  const onUser = (ctx: AppContext): void => {
+    enqueuePurgeTags(ctx, publicEntryTypeNames(ctx.plugins).map(typeTag));
+  };
+  hooks.addAction("user:updated", (_user, _previous, ctx) => onUser(ctx));
+  hooks.addAction("user:deleted", (_user, _deletion, ctx) => onUser(ctx));
 
   // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
   // A term archive is stored under the `t:<type>` tags of its taxonomy's entry

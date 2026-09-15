@@ -228,10 +228,15 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
       {
         reason:
-          "which entry types a listing page lists and is cache-tagged under — " +
-          "one rule the dispatcher, the listing resolvers and the CDN purge " +
-          "invalidator share, so stored and purged tags cannot drift (#2391)",
-        names: ["listedEntryTypeNames", "termPageEntryTypeNames"],
+          "which entry types a listing page lists and is cache-tagged under, " +
+          "and which types a user change can touch — rules the dispatcher, " +
+          "the listing resolvers and the CDN purge invalidator share, so " +
+          "stored and purged tags cannot drift (#2391, #2400)",
+        names: [
+          "listedEntryTypeNames",
+          "termPageEntryTypeNames",
+          "publicEntryTypeNames",
+        ],
       },
       {
         reason: "published on `plumix/cli`",

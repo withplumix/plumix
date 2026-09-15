@@ -153,9 +153,9 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
-  // Author archives list the public, non-hierarchical types — `page` is
-  // hierarchical and `note` is private, so neither is purged.
-  it("user:updated enqueues the tags of the types an author archive lists", async () => {
+  // Any public entry can render its author — a hierarchical `page` permalink
+  // included — so every public type is purged; only the private `note` is not.
+  it("user:updated enqueues the tags of every public entry type", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
     const { ctx, purgeTags } = fakeCtx();
@@ -164,7 +164,21 @@ describe("registerCorePurgeInvalidator", () => {
     await fire(hooks, "user:updated", user, user, ctx);
     flushPurgeTags(ctx);
 
-    expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
+    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
+  });
+
+  // Deleting a user reassigns their entries without firing an entry action, so
+  // their cached author feed and every page showing those entries stay stale.
+  it("user:deleted enqueues the tags of every public entry type", async () => {
+    const hooks = new HookRegistry();
+    registerCorePurgeInvalidator(hooks);
+    const { ctx, purgeTags } = fakeCtx();
+    const user = { id: 4, name: "Jane", slug: "jane" };
+
+    await fire(hooks, "user:deleted", user, { reassignedTo: 1 }, ctx);
+    flushPurgeTags(ctx);
+
+    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
   });
 
   const term = { id: 3, taxonomy: "category" };

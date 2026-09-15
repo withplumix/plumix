@@ -1759,13 +1759,16 @@ describe("dispatcher — public read-through CDN", () => {
 
   function cdnStub(hit?: Response, store = true) {
     const match = vi.fn(() => Promise.resolve(hit));
-    const put = vi.fn(() => Promise.resolve());
+    const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
+    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
+      Promise.resolve(),
+    );
     const cdn: ConnectedCdn = {
       decorate,
       ...(store ? { store: { match, put } } : {}),
-      purgeTags: vi.fn(() => Promise.resolve()),
+      purgeTags,
     };
-    return { cdn, match, put };
+    return { cdn, match, put, purgeTags };
   }
 
   // The cookie a site carrying its own session signal signs visitors in under —
@@ -1850,6 +1853,51 @@ describe("dispatcher — public read-through CDN", () => {
       "t:post",
       "t:page",
     ]);
+  });
+
+  // A page is hierarchical, so it sits outside the types an author archive
+  // lists — yet its permalink still prints the author.
+  test("renaming the author of a hierarchical entry purges its cached permalink", async () => {
+    const { cdn, put, purgeTags } = cdnStub();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [site], cdn });
+    const admin = await h.seedUser("admin");
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      status: "published",
+      authorId: jane.id,
+      publishedAt: new Date(),
+    });
+    const page = await h.dispatch(
+      new Request("https://cms.example/page/about"),
+    );
+    expect(page.status).toBe(200);
+    await h.drainDeferred();
+
+    const renamed = await h.fetch("/_plumix/rpc/user/update", {
+      as: admin,
+      json: { json: { id: jane.id, name: "Janet" }, meta: [] },
+    });
+    renamed.assertStatus(200);
+    await h.drainDeferred();
+
+    const stored =
+      put.mock.calls.find(
+        ([request]) => new URL(request.url).pathname === "/page/about",
+      )?.[2] ?? [];
+    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
+    expect(stored).not.toEqual([]);
+    expect(stored.some((tag) => purged.has(tag))).toBe(true);
   });
 
   test("a storeless provider still sends the visitor a decorated page", async () => {
