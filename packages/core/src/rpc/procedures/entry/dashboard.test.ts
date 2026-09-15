@@ -72,6 +72,25 @@ describe("entry.stats", () => {
     expect(byStatus.draft).toBeUndefined();
     expect(byStatus.trash).toBeUndefined();
   });
+
+  test("a contributor counts their own drafts but not another author's", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: postRegistry(),
+    });
+    const other = await h.factory.contributor.create();
+    await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
+    await h.factory.trashed.create({ authorId: h.user.id, slug: "binned" });
+    await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
+    await h.factory.trashed.create({ authorId: other.id, slug: "their-bin" });
+    await h.factory.published.create({ authorId: other.id, slug: "pub" });
+
+    const stats = await h.client.entry.stats();
+    const byStatus = Object.fromEntries(
+      stats.filter((s) => s.type === "post").map((s) => [s.status, s.count]),
+    );
+    expect(byStatus).toEqual({ published: 1, draft: 1, trash: 1 });
+  });
 });
 
 describe("entry.recentActivity", () => {
@@ -89,5 +108,20 @@ describe("entry.recentActivity", () => {
     expect(recent.length).toBe(2);
     // Newest-first: the later-created row sorts ahead.
     expect(recent[0]?.slug).toBe("new");
+  });
+
+  test("a contributor sees their own drafts but not another author's, and never trash", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: postRegistry(),
+    });
+    const other = await h.factory.contributor.create();
+    await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
+    await h.factory.trashed.create({ authorId: h.user.id, slug: "binned" });
+    await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
+    await h.factory.published.create({ authorId: other.id, slug: "pub" });
+
+    const recent = await h.client.entry.recentActivity({ limit: 10 });
+    expect(recent.map((r) => r.slug).sort()).toEqual(["mine", "pub"]);
   });
 });
