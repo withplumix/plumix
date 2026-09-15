@@ -42,6 +42,10 @@ import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import {
+  listedEntryTypeNames,
+  termPageEntryTypeNames,
+} from "../plugin/registry.js";
 import { matchRoute } from "../route/match.js";
 import { matchPublicRoute } from "../route/public-routes.js";
 import { matchRedirect } from "../route/redirects.js";
@@ -526,14 +530,6 @@ function publicIntent(match: RouteMatch | null, url: URL): RouteIntent | null {
   return null;
 }
 
-// Public, non-hierarchical entry types — the set the front page lists, and so
-// the set of `t:<type>` tags the front page is stored under.
-function frontPageEntryTypes(ctx: AppContext): string[] {
-  return Array.from(ctx.plugins.entryTypes.entries())
-    .filter(([, spec]) => spec.isPublic && spec.isHierarchical !== true)
-    .map(([key]) => key);
-}
-
 async function dispatchPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
@@ -627,9 +623,9 @@ async function dispatchPublicRoute(
             : pageTags({
                 intent,
                 resolvedEntity: ctx.resolvedEntity,
-                frontPageEntryTypes: () => frontPageEntryTypes(ctx),
+                frontPageEntryTypes: () => listedEntryTypeNames(ctx.plugins),
                 taxonomyEntryTypes: (taxonomy) =>
-                  ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
+                  termPageEntryTypeNames(ctx.plugins, taxonomy),
               });
         const embedded = embeddedPageTags(ctx);
         return embedded.length === 0

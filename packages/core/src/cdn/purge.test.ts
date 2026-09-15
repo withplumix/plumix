@@ -4,7 +4,10 @@ import type { Db } from "../context/app.js";
 import { withUser } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
+import {
+  toRegisteredEntryType,
+  toRegisteredTermTaxonomy,
+} from "../plugin/registry.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import {
@@ -25,6 +28,13 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
   });
   const store = { match: vi.fn(), put: vi.fn() };
   const plugins = createPluginRegistry();
+  for (const [name, options] of [
+    ["post", { label: "Posts", isPublic: true }],
+    ["page", { label: "Pages", isPublic: true, isHierarchical: true }],
+    ["note", { label: "Notes", isPublic: false }],
+  ] as const) {
+    plugins.entryTypes.set(name, toRegisteredEntryType(name, options, "test"));
+  }
   plugins.termTaxonomies.set(
     "category",
     toRegisteredTermTaxonomy(
@@ -32,6 +42,10 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
       { label: "Categories", entryTypes: ["post"] },
       "test",
     ),
+  );
+  plugins.termTaxonomies.set(
+    "tag",
+    toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
   );
   const ctx = createTestContext({
     db,
@@ -139,6 +153,20 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
+  // Author archives list the public, non-hierarchical types — `page` is
+  // hierarchical and `note` is private, so neither is purged.
+  it("user:updated enqueues the tags of the types an author archive lists", async () => {
+    const hooks = new HookRegistry();
+    registerCorePurgeInvalidator(hooks);
+    const { ctx, purgeTags } = fakeCtx();
+    const user = { id: 4, name: "Jane", slug: "jane" };
+
+    await fire(hooks, "user:updated", user, user, ctx);
+    flushPurgeTags(ctx);
+
+    expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
+  });
+
   const term = { id: 3, taxonomy: "category" };
   const TERM_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
     ["term:created", [term]],
@@ -158,6 +186,25 @@ describe("registerCorePurgeInvalidator", () => {
       flushPurgeTags(ctx);
 
       expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
+    },
+  );
+
+  // A taxonomy that lists no entry types still has term feeds, which list every
+  // public type attached to the term — so its term changes purge those types.
+  it.each(TERM_EVENTS)(
+    "%s in a taxonomy without entryTypes enqueues the public types' tags",
+    async (event, payload) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const { ctx, purgeTags } = fakeCtx();
+      const untyped = payload.map((arg) =>
+        arg === term ? { ...term, taxonomy: "tag" } : arg,
+      );
+
+      await fire(hooks, event, ...untyped, ctx);
+      flushPurgeTags(ctx);
+
+      expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
     },
   );
 

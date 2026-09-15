@@ -1,7 +1,16 @@
 import type { AppContext } from "../context/app.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import { entryPurgeTags, normalizeTag, termPurgeTags } from "./tags.js";
+import {
+  listedEntryTypeNames,
+  termPageEntryTypeNames,
+} from "../plugin/registry.js";
+import {
+  entryPurgeTags,
+  normalizeTag,
+  termPurgeTags,
+  typeTag,
+} from "./tags.js";
 
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
@@ -73,6 +82,12 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onEntry(entry, ctx),
   );
 
+  // An author archive, and every feed that prints an author's name, is stored
+  // under the tags of the types it lists — a rename or re-slug has to retire it.
+  hooks.addAction("user:updated", (_user, _previous, ctx) => {
+    enqueuePurgeTags(ctx, listedEntryTypeNames(ctx.plugins).map(typeTag));
+  });
+
   // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
   // A term archive is stored under the `t:<type>` tags of its taxonomy's entry
   // types, so creating, renaming, meta-changing, or deleting a term purges those.
@@ -80,9 +95,10 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     term: { readonly taxonomy: string },
     ctx: AppContext,
   ): void => {
-    const entryTypes =
-      ctx.plugins.termTaxonomies.get(term.taxonomy)?.entryTypes ?? [];
-    enqueuePurgeTags(ctx, termPurgeTags(entryTypes));
+    enqueuePurgeTags(
+      ctx,
+      termPurgeTags(termPageEntryTypeNames(ctx.plugins, term.taxonomy)),
+    );
   };
   hooks.addAction("term:created", onTerm);
   hooks.addAction("term:deleted", onTerm);

@@ -30,7 +30,7 @@ interface PageTagSources {
   readonly resolvedEntity: ResolvedEntity | null;
   /** Entry types the front page lists (public, non-hierarchical). */
   readonly frontPageEntryTypes: () => readonly string[];
-  /** Entry types attached to the named taxonomy. */
+  /** Entry types the named taxonomy's term pages depend on. */
   readonly taxonomyEntryTypes: (taxonomy: string) => readonly string[];
 }
 

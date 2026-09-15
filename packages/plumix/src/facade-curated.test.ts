@@ -227,6 +227,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
         names: ["toRegisteredEntryType", "toRegisteredTermTaxonomy"],
       },
       {
+        reason:
+          "which entry types a listing page lists and is cache-tagged under — " +
+          "one rule the dispatcher, the listing resolvers and the CDN purge " +
+          "invalidator share, so stored and purged tags cannot drift (#2391)",
+        names: ["listedEntryTypeNames", "termPageEntryTypeNames"],
+      },
+      {
         reason: "published on `plumix/cli`",
         names: [
           "CliError",
