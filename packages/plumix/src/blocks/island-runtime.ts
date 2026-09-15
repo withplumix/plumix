@@ -3,11 +3,9 @@
 // workspace-internal `@plumix/blocks`.
 //
 // `island-runtime.ts` runs `bootstrapIslandRuntime()` at module load
-// (registers the custom element + strategies). A bare `export *`
-// re-export here would strip the side effect through Rolldown's
-// tree-shake; the side-effect `import` below preserves it AND the
-// named exports.
+// (registers the custom element + strategies), which is all a page loads it
+// for. The side-effect `import` keeps that through Rolldown's tree-shake. The
+// entry republishes no value: the bootstrap is idempotent, so an importer has
+// nothing left to call.
 
 import "@plumix/blocks/island-runtime";
-
-export * from "@plumix/blocks/island-runtime";

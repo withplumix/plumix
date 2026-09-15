@@ -4,25 +4,44 @@ import { describe, expect, test } from "vitest";
 
 import * as adminEditor from "@plumix/admin-editor";
 import * as blocksPackage from "@plumix/blocks";
+import * as blocksIslandRendererPackage from "@plumix/blocks/island-renderer";
 import * as blocksRendererPackage from "@plumix/blocks/renderer";
 import * as blocksTestPackage from "@plumix/blocks/test";
 import * as core from "@plumix/core";
 import * as coreAdmin from "@plumix/core/admin";
+import * as coreCdnCloudflare from "@plumix/core/cdn/cloudflare";
 import * as coreCli from "@plumix/core/cli";
+import * as coreDb from "@plumix/core/db";
+import * as coreDbLibsql from "@plumix/core/db/libsql";
 import * as coreDevClient from "@plumix/core/dev-client";
+import * as coreFields from "@plumix/core/fields";
 import * as coreI18n from "@plumix/core/i18n";
+import * as coreSchema from "@plumix/core/schema";
+import * as coreStorageS3 from "@plumix/core/storage/s3";
+import * as coreTest from "@plumix/core/test";
+import * as coreTestConformance from "@plumix/core/test/conformance";
+import * as coreTestPlaywright from "@plumix/core/test/playwright";
 
 import * as admin from "./admin/index.js";
 import * as blocks from "./blocks/index.js";
+import * as blocksIslandRenderer from "./blocks/island-renderer.js";
 import * as blocksRenderer from "./blocks/renderer.js";
 import * as blocksTest from "./blocks/test.js";
+import * as cdnCloudflare from "./cdn/cloudflare.js";
 import * as cli from "./cli/kit.js";
 import * as devClient from "./core/dev-client.js";
+import * as db from "./db/index.js";
+import * as dbLibsql from "./db/libsql.js";
 import * as editorRuntime from "./editor-runtime.js";
 import * as fields from "./fields/index.js";
 import * as i18n from "./i18n/index.js";
 import * as root from "./index.js";
 import * as plugin from "./plugin.js";
+import * as schema from "./schema/index.js";
+import * as storageS3 from "./storage/s3.js";
+import * as testConformance from "./test/conformance.js";
+import * as testSubpath from "./test/index.js";
+import * as testPlaywright from "./test/playwright.js";
 import * as theme from "./theme/index.js";
 
 // A curated subpath names what it publishes, so the internal package behind it
@@ -51,6 +70,39 @@ type Curated =
       readonly narrows: object;
       readonly adds?: readonly string[];
     };
+
+const ROW_SCHEMAS: Withholding = {
+  reason:
+    "the valibot row schemas, published on `plumix/schema` beside the " +
+    "tables they are generated from",
+  publishedBy: schema,
+  names: [
+    "allowedDomainInsertSchema",
+    "allowedDomainSelectSchema",
+    "apiTokenInsertSchema",
+    "apiTokenSelectSchema",
+    "authTokenInsertSchema",
+    "authTokenSelectSchema",
+    "credentialInsertSchema",
+    "credentialSelectSchema",
+    "deviceCodeInsertSchema",
+    "deviceCodeSelectSchema",
+    "entryInsertSchema",
+    "entrySelectSchema",
+    "entryTermInsertSchema",
+    "entryTermSelectSchema",
+    "oauthAccountInsertSchema",
+    "oauthAccountSelectSchema",
+    "sessionInsertSchema",
+    "sessionSelectSchema",
+    "settingInsertSchema",
+    "settingSelectSchema",
+    "termInsertSchema",
+    "termSelectSchema",
+    "userInsertSchema",
+    "userSelectSchema",
+  ],
+};
 
 const CURATED: Readonly<Record<string, Curated>> = {
   ".": {
@@ -225,6 +277,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "registration's own builders for a registered type, published on " +
           "`plumix/test` for tests that fill a registry by hand",
         names: ["toRegisteredEntryType", "toRegisteredTermTaxonomy"],
+        publishedBy: testSubpath,
       },
       {
         reason:
@@ -417,6 +470,103 @@ const CURATED: Readonly<Record<string, Curated>> = {
     mirrors: blocksTestPackage,
     withheld: [],
   },
+  "./blocks/island-renderer": {
+    module: blocksIslandRenderer,
+    mirrors: blocksIslandRendererPackage,
+    withheld: [],
+  },
+  // Whole by value, not by `export *`: `Db` is typed over every key of core's
+  // schema module, so a client built from this subpath needs each one.
+  "./schema": { module: schema, mirrors: coreSchema, withheld: [] },
+  "./db": {
+    module: db,
+    mirrors: coreDb,
+    withheld: [
+      ROW_SCHEMAS,
+      {
+        reason:
+          "drizzle's Postgres-only operators — array containment, `ilike` " +
+          "and the pgvector distances. `ctx.db` is SQLite.",
+        names: [
+          "arrayContained",
+          "arrayContains",
+          "arrayOverlaps",
+          "ilike",
+          "notIlike",
+          "cosineDistance",
+          "hammingDistance",
+          "innerProduct",
+          "jaccardDistance",
+          "l1Distance",
+          "l2Distance",
+        ],
+      },
+      {
+        reason:
+          "the pieces drizzle's `sql` template is assembled from, and its " +
+          "driver codecs. A query composes them through `sql` and its " +
+          "`sql.placeholder` / `sql.param` / `sql.identifier` helpers.",
+        names: [
+          "FakePrimitiveParam",
+          "Name",
+          "Param",
+          "Placeholder",
+          "StringChunk",
+          "View",
+          "bindIfParam",
+          "fillPlaceholders",
+          "getViewName",
+          "isDriverValueEncoder",
+          "isSQLWrapper",
+          "isView",
+          "name",
+          "noopDecoder",
+          "noopEncoder",
+          "noopMapper",
+          "param",
+          "placeholder",
+        ],
+      },
+    ],
+  },
+  "./db/libsql": { module: dbLibsql, mirrors: coreDbLibsql, withheld: [] },
+  "./cdn/cloudflare": {
+    module: cdnCloudflare,
+    mirrors: coreCdnCloudflare,
+    withheld: [],
+  },
+  "./storage/s3": { module: storageS3, mirrors: coreStorageS3, withheld: [] },
+  "./fields": { module: fields, mirrors: coreFields, withheld: [] },
+  "./test": {
+    module: testSubpath,
+    mirrors: coreTest,
+    withheld: [
+      {
+        reason:
+          "the request memo for hand-rolled `AppContext` stand-ins that " +
+          "predate `createTestContext`, which a new test takes instead",
+        names: ["createRequestMemo"],
+      },
+    ],
+  },
+  "./test/conformance": {
+    module: testConformance,
+    mirrors: coreTestConformance,
+    withheld: [],
+  },
+  "./test/playwright": {
+    module: testPlaywright,
+    mirrors: coreTestPlaywright,
+    withheld: [
+      {
+        reason:
+          "this repo's own e2e plumbing — the port offset its suites share " +
+          "under a parallel `turbo run test:e2e`, and a chunk build that " +
+          "resolves shims out of plumix's source tree (`plumixAdminSrc`)",
+        names: ["resolveE2EPort", "buildAdminPluginChunkForE2E"],
+      },
+    ],
+  },
   "./core/dev-client": {
     module: devClient,
     mirrors: coreDevClient,
@@ -527,19 +677,46 @@ describe.each(Object.entries(CURATED))("the %s façade subpath", (_, entry) => {
   });
 });
 
+// A subpath that republishes an internal package whole, on purpose. Anything
+// that package exports is published `plumix` API the moment it lands, so each
+// one says why nobody needs to decide name by name.
+const PASSTHROUGH: Readonly<Record<string, string>> = {
+  "./admin/ui":
+    "the vendored shadcn set, published as the admin shell renders it; the " +
+    "entry documents that it carries no stability promise beyond pre-1.0",
+};
+
+const pkg = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "..", "package.json"), "utf8"),
+) as { exports: Record<string, { default: string }> };
+
+const entrySources = Object.entries(pkg.exports).map(([subpath, spec]) => {
+  const src = resolve(
+    import.meta.dirname,
+    spec.default.replace(/^\.\/dist\//, "").replace(/\.js$/, ".ts"),
+  );
+  return [subpath, readFileSync(src, "utf8")] as const;
+});
+
+function subpathsMatching(pattern: RegExp): string[] {
+  return entrySources
+    .filter(([, source]) => pattern.test(source))
+    .map(([subpath]) => subpath)
+    .sort();
+}
+
 // A subpath curates when its entry re-exports named values from an internal
 // package; every one of those needs a row above.
 test("every curated subpath has a drift guard", () => {
-  const pkg = JSON.parse(
-    readFileSync(resolve(import.meta.dirname, "..", "package.json"), "utf8"),
-  ) as { exports: Record<string, { default: string }> };
-  const namedValueReexport = /export\s+\{[^}]*\}\s+from\s+["']@plumix\//;
-  const curating = Object.entries(pkg.exports).flatMap(([subpath, spec]) => {
-    const src = resolve(
-      import.meta.dirname,
-      spec.default.replace(/^\.\/dist\//, "").replace(/\.js$/, ".ts"),
-    );
-    return namedValueReexport.test(readFileSync(src, "utf8")) ? [subpath] : [];
-  });
-  expect(Object.keys(CURATED).sort()).toEqual(curating.sort());
+  expect(Object.keys(CURATED).sort()).toEqual(
+    subpathsMatching(/export\s+\{[^}]*\}\s+from\s+["']@plumix\//),
+  );
+});
+
+// Types stay wholesale (`export type *`); a value `export *` is invisible to
+// every row above, so it has to be a passthrough someone wrote down.
+test("no subpath republishes an internal package wholesale unless it is a passthrough", () => {
+  expect(
+    subpathsMatching(/export\s+\*\s+(?:as\s+[\w$]+\s+)?from\s+["']@plumix\//),
+  ).toEqual(Object.keys(PASSTHROUGH).sort());
 });

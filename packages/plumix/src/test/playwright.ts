@@ -1,1 +1,21 @@
-export * from "@plumix/core/test/playwright";
+export type * from "@plumix/core/test/playwright";
+export {
+  actingAs,
+  anonymousSession,
+  AUTHED_ADMIN,
+  CONTENT_LIST_ROWS,
+  definePlumixE2EConfig,
+  emptyManifest,
+  expect,
+  mockManifest,
+  mockRpc,
+  mockRpcWithCapture,
+  mockSession,
+  openPlaygroundDb,
+  PNG_1X1,
+  rpcErrorBody,
+  rpcOkBody,
+  runtimeSpec,
+  test,
+  withCapabilities,
+} from "@plumix/core/test/playwright";
