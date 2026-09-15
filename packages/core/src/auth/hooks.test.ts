@@ -5,7 +5,7 @@ import { eq } from "../db/index.js";
 import { credentials } from "../db/schema/credentials.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import {
-  buildAttestation,
+  buildRegisterVerifyEnvelope,
   generatePasskeyKeyPair,
   randomCredentialId,
 } from "../test/fixtures/webauthn.js";
@@ -486,20 +486,11 @@ async function registerPasskey(
 }
 
 function attestationResponse(challenge: string) {
-  const attestation = buildAttestation({
+  return buildRegisterVerifyEnvelope({
     keyPair: generatePasskeyKeyPair(),
     rpId: "cms.example",
     origin: "https://cms.example",
     challenge,
     credentialId: randomCredentialId(),
   });
-  return {
-    id: attestation.credentialIdBase64Url,
-    rawId: attestation.credentialIdBase64Url,
-    type: "public-key",
-    response: {
-      clientDataJSON: attestation.clientDataJSON,
-      attestationObject: attestation.attestationObject,
-    },
-  };
 }
