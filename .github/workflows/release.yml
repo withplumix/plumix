@@ -108,7 +108,7 @@ jobs:
         # by the CHANGESETS_OUTPUT env var it injects, which only the v3 CLI
         # writes — pair it with a v2 CLI and the publish succeeds while every tag
         # and GitHub release is silently skipped. Move both together or neither.
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           # v2 ignores the GITHUB_TOKEN env var and falls back to `github.token`
           # when this input is absent — whose pushes don't trigger the required
