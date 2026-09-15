@@ -10,7 +10,7 @@ import {
 } from "../../test/dispatcher.js";
 import {
   buildAssertion,
-  buildAttestation,
+  buildRegisterVerifyEnvelope,
   generatePasskeyKeyPair,
   randomCredentialId,
 } from "../../test/fixtures/webauthn.js";
@@ -181,28 +181,18 @@ describe("passkey verify — input validation", () => {
     // challenge directly so the userId === null branch is reachable.
     const h = await createDispatcherHarness();
     const { challenge } = await issueChallenge(h.db, 60_000);
-    const keyPair = generatePasskeyKeyPair();
-    const credentialId = randomCredentialId();
-    const att = buildAttestation({
-      keyPair,
+    const envelope = buildRegisterVerifyEnvelope({
+      keyPair: generatePasskeyKeyPair(),
       rpId: "cms.example",
       origin: "https://cms.example",
       challenge,
-      credentialId,
+      credentialId: randomCredentialId(),
     });
     const response = await h.dispatch(
       plumixRequest("/_plumix/auth/passkey/register/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          id: att.credentialIdBase64Url,
-          rawId: att.credentialIdBase64Url,
-          type: "public-key",
-          response: {
-            clientDataJSON: att.clientDataJSON,
-            attestationObject: att.attestationObject,
-          },
-        }),
+        body: JSON.stringify(envelope),
       }),
     );
     expect(response.status).toBe(400);
@@ -435,22 +425,13 @@ describe("invite register — verify", () => {
 
 describe("register verify — ceremony binding", () => {
   function attestationResponse(challenge: string) {
-    const att = buildAttestation({
+    return buildRegisterVerifyEnvelope({
       keyPair: generatePasskeyKeyPair(),
       rpId: "cms.example",
       origin: "https://cms.example",
       challenge,
       credentialId: randomCredentialId(),
     });
-    return {
-      id: att.credentialIdBase64Url,
-      rawId: att.credentialIdBase64Url,
-      type: "public-key",
-      response: {
-        clientDataJSON: att.clientDataJSON,
-        attestationObject: att.attestationObject,
-      },
-    };
   }
 
   test("passkey register verify refuses an invite challenge without enrolling the invitee", async () => {
@@ -667,7 +648,7 @@ describe("passkey end-to-end happy path", () => {
     }>();
 
     // 2. register/verify — complete ceremony with the fixture key pair
-    const attestation = buildAttestation({
+    const envelope = buildRegisterVerifyEnvelope({
       keyPair,
       rpId,
       origin,
@@ -675,15 +656,7 @@ describe("passkey end-to-end happy path", () => {
       credentialId,
     });
     const verifyRes = await h.fetch("/_plumix/auth/passkey/register/verify", {
-      json: {
-        id: attestation.credentialIdBase64Url,
-        rawId: attestation.credentialIdBase64Url,
-        type: "public-key",
-        response: {
-          clientDataJSON: attestation.clientDataJSON,
-          attestationObject: attestation.attestationObject,
-        },
-      },
+      json: envelope,
     });
     verifyRes.assertStatus(200).assertCookieSet(SESSION_COOKIE_NAME);
 
@@ -715,8 +688,8 @@ describe("passkey end-to-end happy path", () => {
     });
     const loginVerifyRes = await h.fetch("/_plumix/auth/passkey/login/verify", {
       json: {
-        id: attestation.credentialIdBase64Url,
-        rawId: attestation.credentialIdBase64Url,
+        id: envelope.id,
+        rawId: envelope.id,
         type: "public-key",
         response: {
           clientDataJSON: assertion.clientDataJSON,

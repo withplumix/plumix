@@ -312,3 +312,29 @@ export function randomCredentialId(): Uint8Array {
   crypto.getRandomValues(out);
   return out;
 }
+
+export interface RegisterVerifyEnvelope {
+  readonly id: string;
+  readonly rawId: string;
+  readonly type: "public-key";
+  readonly response: {
+    readonly clientDataJSON: string;
+    readonly attestationObject: string;
+  };
+}
+
+/** The register/verify request body a WebAuthn client would POST for `input`. */
+export function buildRegisterVerifyEnvelope(
+  input: BuildAttestationInput,
+): RegisterVerifyEnvelope {
+  const attestation = buildAttestation(input);
+  return {
+    id: attestation.credentialIdBase64Url,
+    rawId: attestation.credentialIdBase64Url,
+    type: "public-key",
+    response: {
+      clientDataJSON: attestation.clientDataJSON,
+      attestationObject: attestation.attestationObject,
+    },
+  };
+}
