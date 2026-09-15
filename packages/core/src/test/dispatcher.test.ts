@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { ConnectedCdn } from "../runtime/slots.js";
+import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { tryGetContext } from "../context/stores.js";
 import { entries } from "../db/schema/entries.js";
@@ -8,6 +9,7 @@ import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
 import { createDispatcherHarness } from "./dispatcher.js";
 import { createTestDb } from "./harness.js";
+import { buildRequest } from "./request.js";
 
 describe("createDispatcherHarness db option", () => {
   test("a supplied database is the one requests run against", async () => {
@@ -48,6 +50,20 @@ const identityProbe = definePlugin("identity-probe", (ctx) => {
   });
 });
 
+/** A route answering whether the request carries an "a" cookie and who's signed in. */
+const cookieProbe = definePlugin("cookie-probe", (ctx) => {
+  ctx.registerRoute({
+    method: "GET",
+    path: "/cookie",
+    auth: "authenticated",
+    handler: (request, appCtx) =>
+      Response.json({
+        hasA: (request.headers.get("cookie") ?? "").includes("a=b"),
+        session: appCtx.user?.id ?? null,
+      }),
+  });
+});
+
 // The runtime builds the stored context before authentication, so a signed-in
 // request is only ever signed in through its session (#2343 hid behind this).
 describe("createDispatcherHarness sign-in", () => {
@@ -64,6 +80,45 @@ describe("createDispatcherHarness sign-in", () => {
       ambient: null,
       session: admin.id,
     });
+  });
+
+  test("authenticateRequest appends the session cookie, preserving cookies the request already carried", async () => {
+    const h = await createDispatcherHarness({ plugins: [cookieProbe] });
+    const admin = await h.seedUser("admin");
+
+    const bare = new Request(
+      "https://cms.example/_plumix/cookie-probe/cookie",
+      {
+        headers: { cookie: "a=b" },
+      },
+    );
+    const authed = await h.authenticateRequest(bare, admin.id);
+
+    expect(authed.headers.get("cookie")).toContain("a=b");
+
+    const response = await h.dispatch(authed);
+    expect(await response.json()).toMatchObject({
+      hasA: true,
+      session: admin.id,
+    });
+  });
+
+  test("`fetch({ as })` and `authenticateRequest` produce the same cookie-header shape for the same input", async () => {
+    const h = await createDispatcherHarness({ db: await createTestDb() });
+    const admin = await h.seedUser("admin");
+    const cookieHeaderShape = new RegExp(`^a=b; ${SESSION_COOKIE_NAME}=.+$`);
+
+    const viaFetch = await buildRequest(h.db, "/", {
+      headers: { cookie: "a=b" },
+      as: admin,
+    });
+    const viaAuthenticate = await h.authenticateRequest(
+      new Request("https://cms.example/", { headers: { cookie: "a=b" } }),
+      admin.id,
+    );
+
+    expect(viaFetch.headers.get("cookie")).toMatch(cookieHeaderShape);
+    expect(viaAuthenticate.headers.get("cookie")).toMatch(cookieHeaderShape);
   });
 });
 

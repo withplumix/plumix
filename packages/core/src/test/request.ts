@@ -47,6 +47,16 @@ export interface HarnessFetchOptions extends FetchOptions {
 
 const ORIGIN = "https://cms.example";
 
+/**
+ * Appends a cookie to a `Headers`, preserving any cookie already there.
+ * `Headers.set` replaces the whole header, which drops cookies a test set
+ * on the request before signing it in.
+ */
+export function appendCookie(headers: Headers, cookie: string): void {
+  const existing = headers.get("cookie");
+  headers.set("cookie", existing ? `${existing}; ${cookie}` : cookie);
+}
+
 export async function buildRequest(
   db: Db,
   path: string,
@@ -72,9 +82,7 @@ export async function buildRequest(
 
   if (options.as) {
     const { token } = await createSession(db, { userId: options.as.id });
-    const existing = headers.get("cookie");
-    const cookie = `${SESSION_COOKIE_NAME}=${token}`;
-    headers.set("cookie", existing ? `${existing}; ${cookie}` : cookie);
+    appendCookie(headers, `${SESSION_COOKIE_NAME}=${token}`);
   }
 
   const init: RequestInit = {
