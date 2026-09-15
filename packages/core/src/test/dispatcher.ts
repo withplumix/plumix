@@ -57,7 +57,7 @@ import { defaultTestTheme } from "./default-theme.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
-import { buildRequest, TestResponse } from "./request.js";
+import { appendCookie, buildRequest, TestResponse } from "./request.js";
 import { spyAction, spyFilter } from "./spies.js";
 
 const stubAdapter = {
@@ -366,7 +366,7 @@ export async function createDispatcherHarness(
     authenticateRequest: async (request, userId) => {
       const { token } = await createSession(db, { userId });
       const headers = new Headers(request.headers);
-      headers.set("cookie", `${SESSION_COOKIE_NAME}=${token}`);
+      appendCookie(headers, `${SESSION_COOKIE_NAME}=${token}`);
       return new Request(request, { headers });
     },
     seedUser: async (role = "subscriber") =>
