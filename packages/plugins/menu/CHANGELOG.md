@@ -1,5 +1,25 @@
 # @plumix/plugin-menu
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2349](https://github.com/withplumix/plumix/pull/2349) [`8d68b43`](https://github.com/withplumix/plumix/commit/8d68b439a40f1c2ee53ad8ab35d4ced945881e4d) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `getRegisteredLocations` and `clearRegisteredLocations` from `@plumix/plugin-menu/server`. The locations declared in `menu({ locations })` now belong to the install that declared them, so a second app booted in the same process no longer replaces the locations the menu admin validates against.
+
+- [#2326](https://github.com/withplumix/plumix/pull/2326) [`a47bd1a`](https://github.com/withplumix/plumix/commit/a47bd1a5ccfe841b038823c401275dcab8fb47ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes menu locations never reaching the rendered site. The `menus` template dep is now keyed by location id: `defineTemplate({ menus: ["primary"] })` renders the menu assigned to the `primary` location in the admin, or `null` when nothing is assigned. Before, the dep looked the key up as a menu slug and ignored the assignment. A theme that declared menu slugs should declare the locations those menus are assigned to instead. `menu:tree` subscribers now see the `location` on renders that go through the dep.
+
+### Patch Changes
+
+- [#2379](https://github.com/withplumix/plumix/pull/2379) [`e686d78`](https://github.com/withplumix/plumix/commit/e686d781f731f23a7dd74684d4ab349893382a5f) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes menu items silently disappearing from the rendered menu when they link to an entry type or taxonomy that leaves `isPublic` unset. The public render now uses the same eligibility rule as the menu editor, so items of a public type marked `isShownInMenus: false` are also left out of the render, matching the editor, which already shows them as broken.
+
+- [#2383](https://github.com/withplumix/plumix/pull/2383) [`a4b88f0`](https://github.com/withplumix/plumix/commit/a4b88f03f2847535200317cfbe26abcb7aad7372) Thanks [@nasyrov](https://github.com/nasyrov)! - Stops the menu item picker from offering entry types and taxonomies registered with `isPublic: false`, even when they set `isShownInMenus: true`. Such types have no public URL, so their items never rendered in a menu. Menu items already saved against such a type now show as broken in the menu editor, so they can be removed or replaced with a custom URL. `isShownInMenus` now only hides a public type.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2393](https://github.com/withplumix/plumix/pull/2393) [`4017430`](https://github.com/withplumix/plumix/commit/401743028e66c974f51a18e2461815f5a1cb4eac) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads entry type and taxonomy visibility from the registered type, so these plugins now need the plumix release that resolves visibility at registration. On an older plumix they treat a type that never set `isPublic` as not public.
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `createPluginRpcClient` by the plugin's router: `createPluginRpcClient<typeof router>("menu")` now returns a client with one function per procedure, nested the way the router is (`rpc.locations.list()`), with inputs and outputs inferred from the server's handlers. `PluginRpcClient`, `PluginRpcInputs`, `PluginRpcOutputs` and `PluginRpcRouter`, on `plumix/admin`, name the router, the client and its procedure types. The untyped `rpc.call<T>("procedure", input)` form is gone: import the router type from the plugin's server module with `import type` and pass it as the type argument. The first-party plugins call through the typed client and now require `plumix` 0.23.0 or later.
+
 ## 0.2.1
 
 ### Patch Changes

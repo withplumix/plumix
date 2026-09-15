@@ -1,5 +1,0 @@
----
-"plumix": minor
----
-
-Curates the `plumix` and `plumix/plugin` specifiers to named re-exports instead of republishing every value `@plumix/core` exports. The root keeps what a site, theme, plugin or runtime adapter uses; `plumix/plugin` becomes the plugin-authoring subset of it plus `v`. Withheld from both: core's own RPC routers and input schemas, the sign-in flows' internals (`mintSessionAndCookie`, session and token primitives, passkey and magic-link ceremonies, CSRF checks), the ambient `hookStore`/`traceStore`/`txStore`, and the manifest, codegen and migration helpers the tooling reads. Names with their own subpath are imported from it: `CliError` and the spawn helpers from `plumix/cli`, `compileMetaBoxFields`/`toMetaBoxFieldEntry`/`isFieldVisible` from `plumix/fields`, `withContext` from `plumix/i18n`, the CSRF header constants from `plumix/blocks`, and the admin runtime shim names from `plumix/admin`. Types are unchanged. Also publishes `SignedIn`, `SignedOut` and `useAuthMethods` from `plumix/blocks/renderer`, which themes could not import before.

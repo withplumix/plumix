@@ -1,5 +1,25 @@
 # @plumix/runtime-node
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2320](https://github.com/withplumix/plumix/pull/2320) [`41aee82`](https://github.com/withplumix/plumix/commit/41aee82275e5a3d0c462a04d38493727d35ee71e) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes scheduled-run failures going unreported on Node. The generated entry dropped `handler.scheduled`'s return, so the `ScheduledRunReport` the scheduler logs failures from never arrived: a task that threw under `cron: true` said nothing. The entry's orchestration — the portable `{ fetch, scheduled }` pair, the assets → images → site serve chain, the cron start and the shutdown protocol — now lives in `createNodeSite`, and the generated entry is imports and calls. `listener`, `startCron` and the default export keep their shapes. The entry also exports `dispose`, so a host embedding `listener` can drain the site on its own shutdown the way the standalone process does on `SIGTERM`. Also changed: the handler is now built on the first request or firing rather than when cron starts, so a process that starts cron and receives neither has nothing for `dispose()` to release.
+
+- [#2320](https://github.com/withplumix/plumix/pull/2320) [`41aee82`](https://github.com/withplumix/plumix/commit/41aee82275e5a3d0c462a04d38493727d35ee71e) Thanks [@nasyrov](https://github.com/nasyrov)! - Bounds a Node shutdown by one deadline, as it was documented to be, and reports each piece of work that deadline cuts. `SIGTERM` gives the scheduler stop, the in-flight drain and the deferred-work drain a shared ten seconds — but the in-flight drain raced a fresh full ten rather than what was left, so a scheduler stop that took four seconds pushed the process to fourteen, past a grace period sized for ten. Every step now spends from the same clock.
+
+  A scheduled run still going when the budget runs out is now reported. It used to be dropped silently, and the process could exit 0 even though the run guard never replays that minute; it now logs the cut run and exits 1, as it already did for cut responses and abandoned deferred work. Breaking for implementers: `Scheduler.stop()` now resolves a boolean — `false` when its budget ran out with a firing in flight, `true` otherwise — so an implementation or stub returning `Promise<void>` no longer type-checks. Each cut line names the budget, `the 10000ms shutdown budget ran out`, rather than implying one step had all of it.
+
+### Patch Changes
+
+- [#2334](https://github.com/withplumix/plumix/pull/2334) [`c5ab6da`](https://github.com/withplumix/plumix/commit/c5ab6da406f3419a985beb3a4c1525db7eae2c5d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix dev` leaving a scheduler running when two reloads overlap. A request that arrived while an earlier reload was still importing started a second load, and whichever finished last took over, so the other load's scheduler kept firing against the app it was built for until the process exited. A load that a newer one overtook now stops its scheduler and hands the requests waiting on it to the newest site. One that fails no longer shows its error or forces a rebuild that tears down the site that just loaded.
+
+- [#2331](https://github.com/withplumix/plumix/pull/2331) [`2cc2d0d`](https://github.com/withplumix/plumix/commit/2cc2d0d0385da349c38395090c02334a8198f16b) Thanks [@nasyrov](https://github.com/nasyrov)! - `plumix dev` now releases the database connection a replaced site's handler bound. Each edit that invalidated the entry built a new site and left the old handler's connection open. A reload now disposes the replaced site in the background: its deferred work finishes, then that connection closes.
+
+- [#2333](https://github.com/withplumix/plumix/pull/2333) [`269cbfc`](https://github.com/withplumix/plumix/commit/269cbfc57507502d1e60c1c88721db837031c46b) Thanks [@nasyrov](https://github.com/nasyrov)! - `plumix dev` no longer leaks the scheduler's database connection on every reload. The scheduler that `startScheduledRunner` and `startCron` return now closes the connection it opened once `stop()` resolves `true`; a firing that `stop({ timeoutMs })` gave up on keeps it, since that firing may still write through it. `stop()` stays safe to call more than once, and a connection that fails to close is logged rather than failing the stop.
+
+- [#2340](https://github.com/withplumix/plumix/pull/2340) [`25587dd`](https://github.com/withplumix/plumix/commit/25587ddad5754470ec0de14aa4f46f752865df8f) Thanks [@nasyrov](https://github.com/nasyrov)! - Widens `runScheduledTasks`, `scheduledTasksFor`, `declaredSchedules` and `connectScheduledDb`, and the `app` option of the Node runtime's `startScheduledRunner`, to accept any object carrying the app fields they read (`scheduledTasks`, or `schema` plus `config.database`) rather than a whole `PlumixApp`. Code passing a full app keeps working.
+
 ## 0.1.0
 
 ### Minor Changes
