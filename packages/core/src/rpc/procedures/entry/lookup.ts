@@ -1,6 +1,5 @@
 import type { SQL } from "drizzle-orm";
 
-import type { AppContext } from "../../../context/app.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type {
   EntryReferenceSummary,
@@ -10,7 +9,7 @@ import type {
 import { entryTag } from "../../../cdn/tags.js";
 import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
-import { buildEntryPermalink } from "../../../route/permalink.js";
+import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 import { entryCapability } from "./lifecycle.js";
 
@@ -68,7 +67,8 @@ export const entryLookupAdapter = {
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(entries.title)
       .limit(limit);
-    return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
+    const hrefs = await buildEntryPermalinks(ctx, rows);
+    return rows.map((row, i) => toLookupResult(row, hrefs[i] ?? null));
   },
 
   async hydrate(ctx, options) {
@@ -105,7 +105,8 @@ export const entryLookupAdapter = {
       .from(entries)
       .where(and(...conditions))
       .limit(numericIds.length);
-    return Promise.all(rows.map((row) => toEntrySummary(ctx, row)));
+    const urls = await buildEntryPermalinks(ctx, rows);
+    return rows.map((row, i) => toEntrySummary(row, urls[i] ?? null));
   },
 
   // A page embedding entry B carries B's precise entry tag, so B's
@@ -159,20 +160,15 @@ function clampLimit(requested: number | undefined): number {
   return Math.min(Math.floor(requested), MAX_LIST_LIMIT);
 }
 
-async function toLookupResult(
-  ctx: AppContext,
+function toLookupResult(
   row: EntryLookupRow,
-): Promise<LookupResult> {
+  href: string | null,
+): LookupResult {
   const trimmedTitle = row.title.trim();
   // `null` (not an English "Untitled <type>" string) so consumers
   // render their own localized fallback — menu items and reference
   // fields fall through to their own deletion-resilient chain.
   const label: string | null = trimmedTitle !== "" ? trimmedTitle : null;
-  const href = await buildEntryPermalink(ctx, {
-    type: row.type,
-    slug: row.slug,
-    parentId: row.parentId,
-  });
   return {
     id: String(row.id),
     label,
@@ -182,10 +178,10 @@ async function toLookupResult(
   };
 }
 
-async function toEntrySummary(
-  ctx: AppContext,
+function toEntrySummary(
   row: EntryLookupRow,
-): Promise<EntryReferenceSummary> {
+  url: string | null,
+): EntryReferenceSummary {
   const trimmedTitle = row.title.trim();
   return {
     id: String(row.id),
@@ -193,6 +189,6 @@ async function toEntrySummary(
     // `null` mirrors `LookupResult.label` — consumers localize the fallback.
     title: trimmedTitle !== "" ? trimmedTitle : null,
     slug: row.slug,
-    url: await buildEntryPermalink(ctx, row),
+    url,
   };
 }

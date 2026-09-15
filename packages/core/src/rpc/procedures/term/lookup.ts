@@ -1,6 +1,5 @@
 import type { SQL } from "drizzle-orm";
 
-import type { AppContext } from "../../../context/app.js";
 import type { TermFieldScope } from "../../../plugin/fields/term.js";
 import type {
   LookupAdapter,
@@ -9,7 +8,7 @@ import type {
 } from "../../../plugin/lookup.js";
 import { and, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { buildTermArchiveUrl } from "../../../route/permalink.js";
+import { buildTermArchiveUrls } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
 const DEFAULT_LIST_LIMIT = 20;
@@ -68,7 +67,8 @@ export const termLookupAdapter = {
       .where(conditions.length === 0 ? undefined : and(...conditions))
       .orderBy(terms.name)
       .limit(limit);
-    return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
+    const hrefs = await buildTermArchiveUrls(ctx, rows);
+    return rows.map((row, i) => toLookupResult(row, hrefs[i] ?? null));
   },
 
   async hydrate(ctx, options) {
@@ -83,7 +83,8 @@ export const termLookupAdapter = {
       .from(terms)
       .where(and(...conditions))
       .limit(numericIds.length);
-    return Promise.all(rows.map((row) => toTermSummary(ctx, row)));
+    const urls = await buildTermArchiveUrls(ctx, rows);
+    return rows.map((row, i) => toTermSummary(row, urls[i] ?? null));
   },
 } satisfies LookupAdapter<TermFieldScope>;
 
@@ -111,17 +112,7 @@ function clampLimit(requested: number | undefined): number {
   return Math.min(Math.floor(requested), MAX_LIST_LIMIT);
 }
 
-async function toLookupResult(
-  ctx: AppContext,
-  row: TermLookupRow,
-): Promise<LookupResult> {
-  // Same `href` contract as the entry adapter — menu resolution
-  // renders links from it at read time.
-  const href = await buildTermArchiveUrl(ctx, {
-    taxonomy: row.taxonomy,
-    slug: row.slug,
-    parentId: row.parentId,
-  });
+function toLookupResult(row: TermLookupRow, href: string | null): LookupResult {
   return {
     id: String(row.id),
     label: row.name,
@@ -131,15 +122,15 @@ async function toLookupResult(
   };
 }
 
-async function toTermSummary(
-  ctx: AppContext,
+function toTermSummary(
   row: TermLookupRow,
-): Promise<TermReferenceSummary> {
+  url: string | null,
+): TermReferenceSummary {
   return {
     id: String(row.id),
     taxonomy: row.taxonomy,
     name: row.name,
     slug: row.slug,
-    url: await buildTermArchiveUrl(ctx, row),
+    url,
   };
 }

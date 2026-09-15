@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 
+import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { categoryTerm, tagTerm, termFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { createTracedContext } from "../../../test/traced-context.js";
 import { termLookupAdapter } from "./lookup.js";
 
 const CATEGORY = { termTaxonomies: ["category"] } as const;
@@ -201,5 +203,114 @@ describe("termLookupAdapter", () => {
       scope: CATEGORY,
     });
     expect(rows.map((row) => row.id)).toEqual([String(category.id)]);
+  });
+
+  test("hydrate() over nested terms costs the same queries however many it holds", async () => {
+    const regionsPlugin = definePlugin("regions", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        entryTypes: ["post"],
+        isHierarchical: true,
+      });
+    });
+    const REGION_SCOPE = { termTaxonomies: ["region"] } as const;
+
+    // Each leaf sits under its own parent, so a per-row ancestor walk
+    // would add one query per leaf.
+    async function hydrateNestedTerms(
+      leaves: number,
+    ): Promise<{ readonly queries: number; readonly urls: (string | null)[] }> {
+      const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+        plugins: [regionsPlugin],
+      });
+      const ids: string[] = [];
+      for (let i = 0; i < leaves; i++) {
+        const parent = await harness.factory.term.create({
+          taxonomy: "region",
+          slug: `parent-${String(i)}`,
+          name: "Parent",
+        });
+        const child = await harness.factory.term.create({
+          taxonomy: "region",
+          slug: `child-${String(i)}`,
+          name: "Child",
+          parentId: parent.id,
+        });
+        ids.push(String(child.id));
+      }
+      const rows = await run(() =>
+        termLookupAdapter.hydrate(ctx, { ids, scope: REGION_SCOPE }),
+      );
+      return { queries: dbQueryCount(), urls: rows.map((row) => row.url) };
+    }
+
+    const one = await hydrateNestedTerms(1);
+    const four = await hydrateNestedTerms(4);
+
+    expect(four.urls).toEqual([
+      "/region/parent-0/child-0",
+      "/region/parent-1/child-1",
+      "/region/parent-2/child-2",
+      "/region/parent-3/child-3",
+    ]);
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
+  });
+
+  test("list({ ids }) over nested terms costs the same queries however many it holds", async () => {
+    const regionsPlugin = definePlugin("regions", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        entryTypes: ["post"],
+        isHierarchical: true,
+      });
+    });
+    const REGION_SCOPE = { termTaxonomies: ["region"] } as const;
+
+    async function listNestedTerms(leaves: number): Promise<{
+      readonly queries: number;
+      readonly hrefs: (string | undefined)[];
+    }> {
+      const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+        plugins: [regionsPlugin],
+      });
+      const ids: string[] = [];
+      for (let i = 0; i < leaves; i++) {
+        const parent = await harness.factory.term.create({
+          taxonomy: "region",
+          slug: `parent-${String(i)}`,
+          name: "Parent",
+        });
+        const child = await harness.factory.term.create({
+          taxonomy: "region",
+          slug: `child-${String(i)}`,
+          name: "Child",
+          parentId: parent.id,
+        });
+        ids.push(String(child.id));
+      }
+      const rows = await run(() =>
+        termLookupAdapter.list(ctx, {
+          ids,
+          scope: REGION_SCOPE,
+          limit: leaves,
+        }),
+      );
+      return { queries: dbQueryCount(), hrefs: rows.map((row) => row.href) };
+    }
+
+    const one = await listNestedTerms(1);
+    const four = await listNestedTerms(4);
+
+    expect(four.hrefs).toEqual([
+      "/region/parent-0/child-0",
+      "/region/parent-1/child-1",
+      "/region/parent-2/child-2",
+      "/region/parent-3/child-3",
+    ]);
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
   });
 });
