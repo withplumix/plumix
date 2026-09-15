@@ -19,6 +19,7 @@ interface IssuedChallenge {
 
 interface ChallengeRecord {
   readonly userId: number | null;
+  readonly enrolling: boolean;
   readonly expiresAt: Date;
 }
 
@@ -31,6 +32,7 @@ export async function issueChallenge(
   db: Db,
   ttlMs: number,
   userId: number | null = null,
+  enrolling = false,
 ): Promise<IssuedChallenge> {
   const challenge = generateToken();
   const hash = await hashToken(challenge);
@@ -39,6 +41,9 @@ export async function issueChallenge(
     hash,
     type: CHALLENGE_TYPE,
     userId,
+    // Decided when the options request still knew who was signed in; the
+    // session may be gone by the time verify consumes the challenge.
+    payload: enrolling ? { enrolling: true } : null,
     expiresAt,
   });
   if (Math.random() < OPPORTUNISTIC_PRUNE_PROBABILITY) {
@@ -74,5 +79,9 @@ export async function consumeChallenge(
     .returning();
   if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
-  return { userId: row.userId, expiresAt: row.expiresAt };
+  return {
+    userId: row.userId,
+    enrolling: row.payload?.enrolling === true,
+    expiresAt: row.expiresAt,
+  };
 }

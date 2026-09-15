@@ -10,7 +10,7 @@ import {
   redirectTo,
 } from "../../runtime/http.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
-import { mintSessionAndCookie } from "../sign-in.js";
+import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { MagicLinkError } from "./errors.js";
 import { requestMagicLink } from "./request.js";
 import { verifyMagicLink } from "./verify.js";
@@ -138,15 +138,10 @@ export async function handleMagicLinkVerify(
       selfSignup: app.config.auth.selfSignup,
     });
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
-    await ctx.hooks.doAction(
-      "user:signed_in",
-      user,
-      {
-        method: "magic_link",
-        firstSignIn: created,
-      },
-      ctx,
-    );
+    await announceSignIn(ctx, user, {
+      method: "magic_link",
+      firstSignIn: created,
+    });
     // Honour a safe return-to path that rode through the emailed link;
     // otherwise the admin, as before.
     const destination = resolveSafeRedirect(

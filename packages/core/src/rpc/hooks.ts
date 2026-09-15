@@ -477,9 +477,10 @@ declare module "../hooks/types.js" {
      *
      * `method` distinguishes the surface; `provider` is set only for
      * `oauth` so subscribers can branch on `github` vs `google` etc.
-     * `firstSignIn` is true when this is the user's first session
-     * ever (signup-then-signin paths set it once, subsequent logins
-     * are false).
+     * `firstSignIn` is true when the sign-in enrolled the user — a
+     * magic-link or OAuth signup, the bootstrap passkey, an accepted
+     * invite — and false for every later sign-in, including an
+     * existing user registering another (or their first) passkey.
      */
     "user:signed_in": (
       user: User,

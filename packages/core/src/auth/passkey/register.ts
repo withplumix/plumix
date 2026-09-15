@@ -31,6 +31,8 @@ interface BeginRegistrationInput {
   readonly userEmail: string;
   readonly userDisplayName?: string;
   readonly excludeCredentials?: readonly Credential[];
+  /** The ceremony enrols the user (bootstrap, invite) rather than adding a device. */
+  readonly enrolling: boolean;
 }
 
 export async function beginRegistration(
@@ -42,6 +44,7 @@ export async function beginRegistration(
     db,
     config.challengeTtlMs,
     input.userId,
+    input.enrolling,
   );
   const userIdBytes = new TextEncoder().encode(String(input.userId));
   return {
@@ -80,6 +83,7 @@ interface VerifiedRegistration {
   readonly transports: readonly CredentialTransport[];
   /** User the original challenge was issued for. Null for discoverable-cred flows. */
   readonly userId: number | null;
+  readonly enrolling: boolean;
 }
 
 /**
@@ -172,6 +176,7 @@ export async function finishRegistration(
     signatureCounter: authenticatorData.signatureCounter,
     transports: response.response.transports ?? [],
     userId: challenge.userId,
+    enrolling: challenge.enrolling,
   };
 }
 

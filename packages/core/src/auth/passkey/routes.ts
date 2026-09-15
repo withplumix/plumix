@@ -22,7 +22,7 @@ import {
   validateInviteToken,
 } from "../invite.js";
 import { invalidateSession, validateSession } from "../sessions.js";
-import { mintSessionAndCookie } from "../sign-in.js";
+import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
 import { resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
@@ -186,6 +186,7 @@ export async function handlePasskeyRegisterOptions(
     userEmail: user.email,
     userDisplayName: user.name ?? user.email,
     excludeCredentials,
+    enrolling: policy.outcome === "bootstrap",
   });
 
   return jsonResponse(options);
@@ -259,14 +260,6 @@ export async function handlePasskeyRegisterVerify(
     );
 
     if (user) {
-      const userCount = await ctx.db.$count(
-        credentials,
-        eq(credentials.userId, user.id),
-      );
-      // First credential ever → this is the bootstrap path; subsequent
-      // verifies are "add another device". Audit-log subscribers branch
-      // on `firstSignIn` to render onboarding-specific copy.
-      const firstSignIn = userCount === 1;
       await ctx.hooks.doAction(
         "credential:created",
         {
@@ -286,15 +279,10 @@ export async function handlePasskeyRegisterVerify(
         },
         ctx,
       );
-      await ctx.hooks.doAction(
-        "user:signed_in",
-        user,
-        {
-          method: "passkey",
-          firstSignIn,
-        },
-        ctx,
-      );
+      await announceSignIn(ctx, user, {
+        method: "passkey",
+        firstSignIn: verified.enrolling,
+      });
     }
 
     return jsonResponse(
@@ -365,15 +353,10 @@ export async function handlePasskeyLoginVerify(
       where: eq(users.id, verified.credential.userId),
     });
     if (user) {
-      await ctx.hooks.doAction(
-        "user:signed_in",
-        user,
-        {
-          method: "passkey",
-          firstSignIn: false,
-        },
-        ctx,
-      );
+      await announceSignIn(ctx, user, {
+        method: "passkey",
+        firstSignIn: false,
+      });
     }
 
     return jsonResponse(
@@ -481,6 +464,10 @@ export async function handleInviteRegisterOptions(
     userId: user.id,
     userEmail: user.email,
     userDisplayName: pickDisplayName(input.name, user.name, user.email),
+    // Invite verify reports the enrolment itself, once, as it consumes the
+    // token. Marking this challenge would let it be replayed through
+    // passkey register verify as another first sign-in.
+    enrolling: false,
   });
   return jsonResponse({
     options,
@@ -538,15 +525,7 @@ export async function handleInviteRegisterVerify(
       },
       ctx,
     );
-    await ctx.hooks.doAction(
-      "user:signed_in",
-      user,
-      {
-        method: "invite",
-        firstSignIn: true,
-      },
-      ctx,
-    );
+    await announceSignIn(ctx, user, { method: "invite", firstSignIn: true });
     return jsonResponse(
       { userId: user.id },
       {

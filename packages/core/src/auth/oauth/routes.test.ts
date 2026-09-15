@@ -405,6 +405,7 @@ describe("oauth callback route", () => {
     });
 
     const state = await seedState(h, "github", "v-1");
+    const signedIn = h.spyAction("user:signed_in");
 
     answer({
       "https://github.com/login/oauth/access_token": {
@@ -442,6 +443,13 @@ describe("oauth callback route", () => {
     const sessionRows = await h.db.select().from(sessions);
     expect(sessionRows).toHaveLength(1);
     expect(sessionRows[0]?.userId).toBe(seeded.id);
+
+    signedIn.assertCalledOnce();
+    const [user, context] = signedIn.lastArgs ?? [];
+    expect(user?.id).toBe(seeded.id);
+    expect(context?.method).toBe("oauth");
+    expect(context?.provider).toBe("github");
+    expect(context?.firstSignIn).toBe(false);
   });
 
   test("returns the visitor to a safe redirectTo carried in state", async () => {
@@ -525,6 +533,7 @@ describe("oauth callback route", () => {
     });
 
     const state = await seedState(h, "google", "v-2");
+    const signedIn = h.spyAction("user:signed_in");
 
     answer({
       "https://oauth2.googleapis.com/token": {
@@ -552,6 +561,12 @@ describe("oauth callback route", () => {
       where: eq(users.email, "newcomer@example.com"),
     });
     expect(created?.role).toBe("author");
+
+    signedIn.assertCalledOnce();
+    const [user, context] = signedIn.lastArgs ?? [];
+    expect(user?.id).toBe(created?.id);
+    expect(context?.method).toBe("oauth");
+    expect(context?.firstSignIn).toBe(true);
   });
 
   test("self-signup provisions an unlisted email at the default role", async () => {
