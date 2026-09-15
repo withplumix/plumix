@@ -215,9 +215,13 @@ export interface DispatcherHarness {
   readonly app: PlumixApp;
   /** Pass-through env bindings. Empty by default; override via harness options. */
   readonly env: PlumixEnv;
+  /**
+   * Dispatch as the runtime adapter does: the context carries no user, so a
+   * signed-in request says so through its session — see
+   * {@link DispatcherHarness.authenticateRequest}.
+   */
   readonly dispatch: (
     request: Request,
-    user?: User | null,
     /** See {@link HarnessFetchOptions.clientAddress}; wins over the harness's own. */
     clientAddress?: string,
   ) => Promise<Response>;
@@ -269,11 +273,7 @@ function createContextFactory(args: {
   readonly db: Db;
   readonly env: PlumixEnv;
   readonly defer: DeferFn;
-}): (
-  request: Request,
-  user: User | null,
-  clientAddress?: string,
-) => AppContext {
+}): (request: Request, clientAddress?: string) => AppContext {
   const { app, options, db, env, defer } = args;
   // The harness config declares no storage or kv slot, so a test hands in the
   // connected store directly; image delivery and cdn bind through the config.
@@ -282,7 +282,7 @@ function createContextFactory(args: {
     storage: options.storage,
     kv: options.kv,
   };
-  return (request, user, clientAddress) =>
+  return (request, clientAddress) =>
     createAppContext({
       ...requestContextArgs({
         app,
@@ -295,9 +295,6 @@ function createContextFactory(args: {
         slots,
       }),
       logger: options.logger ?? silentLogger,
-      user: user
-        ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
-        : undefined,
     });
 }
 
@@ -353,8 +350,8 @@ export async function createDispatcherHarness(
     db,
     app,
     env,
-    dispatch: async (request, user = null, clientAddress) => {
-      const ctx = withRequest(request, user, clientAddress);
+    dispatch: async (request, clientAddress) => {
+      const ctx = withRequest(request, clientAddress);
       // Mirror the runtime adapter, which runs dispatch inside the request
       // store so `tryGetContext()`-based features (DB logging, debug spans)
       // see the context.
@@ -362,11 +359,7 @@ export async function createDispatcherHarness(
     },
     fetch: async (path, fetchOptions = {}) => {
       const request = await buildRequest(db, path, fetchOptions);
-      const ctx = withRequest(
-        request,
-        fetchOptions.as ?? null,
-        fetchOptions.clientAddress,
-      );
+      const ctx = withRequest(request, fetchOptions.clientAddress);
       const response = await requestStore.run(ctx, () => dispatcher(ctx));
       return new TestResponse(response);
     },

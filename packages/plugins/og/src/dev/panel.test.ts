@@ -83,8 +83,10 @@ describe("the og:image debug panel", () => {
     // by an anonymous scraper the gate turns away. Without the panel the only
     // symptom is a head that quietly kept the site-wide default.
     const response = await harness.dispatch(
-      new Request(`${DEV_ORIGIN}/gated/locked`),
-      member,
+      await harness.authenticateRequest(
+        new Request(`${DEV_ORIGIN}/gated/locked`),
+        member.id,
+      ),
     );
     const html = await response.text();
 

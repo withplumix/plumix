@@ -97,8 +97,7 @@ describe("access gate — hard gate through the dispatcher", () => {
     });
     const subscriber = await h.seedUser("subscriber");
     const response = await h.dispatch(
-      new Request("https://cms.example/members"),
-      subscriber,
+      await authed(h, "/members", subscriber.id),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('data-testid="members"');
@@ -110,10 +109,7 @@ describe("access gate — hard gate through the dispatcher", () => {
       theme: gatedTheme,
     });
     const subscriber = await h.seedUser("subscriber");
-    const response = await h.dispatch(
-      new Request("https://cms.example/staff"),
-      subscriber,
-    );
+    const response = await h.dispatch(await authed(h, "/staff", subscriber.id));
     expect(response.status).toBe(403);
     expect(response.headers.get("x-plumix-challenge")).toBe("forbidden");
   });
@@ -124,10 +120,7 @@ describe("access gate — hard gate through the dispatcher", () => {
       theme: gatedTheme,
     });
     const editor = await h.seedUser("editor");
-    const response = await h.dispatch(
-      new Request("https://cms.example/staff"),
-      editor,
-    );
+    const response = await h.dispatch(await authed(h, "/staff", editor.id));
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('data-testid="staff"');
   });
@@ -188,8 +181,7 @@ describe("access gate — entry-type-level policy", () => {
     await seedArticle(h);
     const subscriber = await h.seedUser("subscriber");
     const response = await h.dispatch(
-      new Request("https://cms.example/article/gated"),
-      subscriber,
+      await authed(h, "/article/gated", subscriber.id),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Gated Article");
@@ -690,8 +682,7 @@ describe("access gate — per-entry visibility (#1742)", () => {
     const subscriber = await h.seedUser("subscriber");
 
     const response = await h.dispatch(
-      new Request("https://cms.example/column/locked"),
-      subscriber,
+      await authed(h, "/column/locked", subscriber.id),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("locked title");
