@@ -5,4 +5,5 @@
 // custom element dynamic-imports on first hydration. It's the target of
 // the generated `.plumix/islands-renderer-entry.ts` Rollup input.
 
-export * from "@plumix/blocks/island-renderer";
+export type * from "@plumix/blocks/island-renderer";
+export { mount } from "@plumix/blocks/island-renderer";
