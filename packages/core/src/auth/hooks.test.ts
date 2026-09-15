@@ -1,8 +1,14 @@
 import { describe, expect, test } from "vitest";
 
+import type { User } from "../db/schema/users.js";
 import { eq } from "../db/index.js";
 import { credentials } from "../db/schema/credentials.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import {
+  buildAttestation,
+  generatePasskeyKeyPair,
+  randomCredentialId,
+} from "../test/fixtures/webauthn.js";
 import { makeMailer } from "../test/mailer.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
@@ -23,8 +29,8 @@ import { generateToken, hashToken } from "./tokens.js";
 //   credential:renamed   — auth.credentials.rename
 //   credential:created   — passkey register, invite-accept (dispatcher)
 //   session:revoked      — auth.sessions.{revoke, revokeOthers}
-//   user:signed_in       — passkey login, magic-link verify, oauth callback,
-//                          invite-accept (dispatcher; covered with passkey)
+//   user:signed_in       — passkey register, magic-link verify, oauth
+//                          callback, invite-accept (dispatcher)
 //   user:signed_out      — /_plumix/auth/signout (dispatcher)
 //
 // `user:registered` was already emitted before this PR (invite-accept),
@@ -347,13 +353,97 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(ctx?.firstSignIn).toBe(true);
   });
 
+  test("user:signed_in fires with firstSignIn=false when a signed-in user registers their first passkey", async () => {
+    const h = await createDispatcherHarness();
+    const seeded = await h.factory.user.create({ email: "alice@cms.example" });
+    const spy = h.spyAction("user:signed_in");
+
+    const verifyRes = await registerPasskey(h, seeded.email, { as: seeded });
+    verifyRes.assertStatus(200);
+
+    spy.assertCalledOnce();
+    const [user, ctx] = spy.lastArgs ?? [];
+    expect(user?.id).toBe(seeded.id);
+    expect(ctx?.method).toBe("passkey");
+    expect(ctx?.firstSignIn).toBe(false);
+  });
+
+  test("user:signed_in fires with firstSignIn=true on the bootstrap passkey registration", async () => {
+    const h = await createDispatcherHarness();
+    const spy = h.spyAction("user:signed_in");
+
+    const verifyRes = await registerPasskey(h, "admin@cms.example");
+    verifyRes.assertStatus(200);
+
+    spy.assertCalledOnce();
+    const [user, ctx] = spy.lastArgs ?? [];
+    expect(user?.email).toBe("admin@cms.example");
+    expect(ctx?.method).toBe("passkey");
+    expect(ctx?.firstSignIn).toBe(true);
+  });
+
+  test("user:signed_in fires with firstSignIn=true on invite accept", async () => {
+    const h = await createDispatcherHarness();
+    const invitee = await h.seedUser("author");
+    const token = generateToken();
+    await h.factory.invite.create({
+      hash: await hashToken(token),
+      userId: invitee.id,
+      email: invitee.email,
+      role: "author",
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const spy = h.spyAction("user:signed_in");
+
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    optionsRes.assertStatus(200);
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+    const verifyRes = await h.fetch("/_plumix/auth/invite/register/verify", {
+      json: { token, response: attestationResponse(options.challenge) },
+    });
+    verifyRes.assertStatus(200);
+
+    spy.assertCalledOnce();
+    const [user, ctx] = spy.lastArgs ?? [];
+    expect(user?.id).toBe(invitee.id);
+    expect(ctx?.method).toBe("invite");
+    expect(ctx?.firstSignIn).toBe(true);
+  });
+
+  test("user:signed_in fires with firstSignIn=false when an invite challenge is completed through passkey register verify", async () => {
+    const h = await createDispatcherHarness();
+    const invitee = await h.seedUser("author");
+    const token = generateToken();
+    await h.factory.invite.create({
+      hash: await hashToken(token),
+      userId: invitee.id,
+      email: invitee.email,
+      role: "author",
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const spy = h.spyAction("user:signed_in");
+
+    const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
+      json: { token },
+    });
+    optionsRes.assertStatus(200);
+    const { options } = await optionsRes.json<{
+      options: { challenge: string };
+    }>();
+    const verifyRes = await h.fetch("/_plumix/auth/passkey/register/verify", {
+      json: attestationResponse(options.challenge),
+    });
+    verifyRes.assertStatus(200);
+
+    spy.assertCalledOnce();
+    expect(spy.lastArgs?.[1]?.firstSignIn).toBe(false);
+  });
+
   test("credential:created fires when a passkey is added directly via the credentials table (smoke)", async () => {
-    // The full passkey register-verify flow requires a WebAuthn
-    // dance that the harness doesn't simulate. Smoke-test the hook
-    // wiring by directly invoking the credential factory via the RPC
-    // path that emits — the rename path was already covered. The
-    // emission point on register-verify is exercised indirectly by
-    // the e2e suite's bootstrap flow.
     const h = await createRpcHarness({ authAs: "editor" });
     const cred = await h.factory.credential.create({
       userId: h.user.id,
@@ -375,3 +465,40 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(stored?.id).toBe(cred.id);
   });
 });
+
+async function registerPasskey(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  email: string,
+  options: { readonly as?: User } = {},
+) {
+  const optionsRes = await h.fetch("/_plumix/auth/passkey/register/options", {
+    json: { email },
+    as: options.as,
+  });
+  optionsRes.assertStatus(200);
+  const { challenge } = await optionsRes.json<{ challenge: string }>();
+  // No cookie on verify: the options request decided add-device vs
+  // bootstrap, and a session may end mid-ceremony.
+  return h.fetch("/_plumix/auth/passkey/register/verify", {
+    json: attestationResponse(challenge),
+  });
+}
+
+function attestationResponse(challenge: string) {
+  const attestation = buildAttestation({
+    keyPair: generatePasskeyKeyPair(),
+    rpId: "cms.example",
+    origin: "https://cms.example",
+    challenge,
+    credentialId: randomCredentialId(),
+  });
+  return {
+    id: attestation.credentialIdBase64Url,
+    rawId: attestation.credentialIdBase64Url,
+    type: "public-key",
+    response: {
+      clientDataJSON: attestation.clientDataJSON,
+      attestationObject: attestation.attestationObject,
+    },
+  };
+}

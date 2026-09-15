@@ -1,4 +1,6 @@
 import type { AppContext } from "../context/app.js";
+import type { User } from "../db/schema/users.js";
+import type { ActionArgs } from "../hooks/types.js";
 import type { PlumixApp } from "../runtime/app.js";
 import { withBasePath } from "../base-path.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
@@ -40,4 +42,18 @@ export async function mintSessionAndCookie(
     path: withBasePath("/", app.basePath),
   });
   return { token, cookieHeader };
+}
+
+/**
+ * The one place `user:signed_in` fires for the built-in flows. Each flow
+ * takes `firstSignIn` from its own ceremony, never from stored rows:
+ * sessions are deleted on sign-out, and a credential count can't tell a
+ * new user from an existing one adding their first passkey.
+ */
+export async function announceSignIn(
+  ctx: AppContext,
+  user: User,
+  signIn: ActionArgs<"user:signed_in">[1],
+): Promise<void> {
+  await ctx.hooks.doAction("user:signed_in", user, signIn, ctx);
 }

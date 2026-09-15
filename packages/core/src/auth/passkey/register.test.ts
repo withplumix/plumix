@@ -238,6 +238,7 @@ describe("persistCredential", () => {
       signatureCounter: 0,
       transports: [] as const,
       userId: null,
+      enrolling: false,
     };
     await persistCredential(db, {
       userId,
@@ -266,6 +267,7 @@ describe("persistCredential", () => {
         signatureCounter: 0,
         transports: [],
         userId: null,
+        enrolling: false,
       },
       maxPerUser: 1,
     });
@@ -278,6 +280,7 @@ describe("persistCredential", () => {
           signatureCounter: 0,
           transports: [],
           userId: null,
+          enrolling: false,
         },
         maxPerUser: 1,
       }),

@@ -26,9 +26,9 @@ export const authTokens = sqliteTable(
     type: t.text({ enum: AUTH_TOKEN_TYPES }).notNull(),
     role: t.text({ enum: USER_ROLES }),
     invitedBy: t.integer().references(() => users.id, { onDelete: "set null" }),
-    // Free-form per-type payload. Today only `oauth_state` populates this
-    // (PKCE verifier + provider key + return path); kept nullable so the
-    // existing token types keep their narrow column footprint.
+    // Free-form per-type payload, read only after filtering by `type`
+    // (`oauth_state`, `preview_link`, `webauthn_challenge`); kept nullable so
+    // the other token types keep their narrow column footprint.
     payload: t.text({ mode: "json" }).$type<JsonObject>(),
     expiresAt: t.integer({ mode: "timestamp" }).notNull(),
     createdAt: t

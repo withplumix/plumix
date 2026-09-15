@@ -6,7 +6,7 @@ import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
-import { mintSessionAndCookie } from "../sign-in.js";
+import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
 import { resolveOAuthUser } from "./signup.js";
@@ -117,16 +117,11 @@ export async function handleOAuthCallback(
 
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
 
-    await ctx.hooks.doAction(
-      "user:signed_in",
-      user,
-      {
-        method: "oauth",
-        provider: providerKey,
-        firstSignIn: created,
-      },
-      ctx,
-    );
+    await announceSignIn(ctx, user, {
+      method: "oauth",
+      provider: providerKey,
+      firstSignIn: created,
+    });
 
     // Return to the theme page the sign-in started from when a safe
     // `redirectTo` rode through the state payload; otherwise the admin, as
