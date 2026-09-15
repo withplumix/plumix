@@ -2,12 +2,14 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   afterEach,
   beforeAll,
@@ -147,6 +149,40 @@ describe("computeIdDrift", () => {
       missingInCatalog: ["a", "c"],
       orphanedInCatalog: ["b", "d"],
     });
+  });
+});
+
+describe("plugin hand-authored catalogs", () => {
+  // This file is packages/plumix/src/cli/commands/i18n.test.ts; climbing
+  // five directories from its own directory reaches the repo root.
+  const reposRoot = dirname(
+    dirname(dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))))),
+  );
+  const pluginsDir = join(reposRoot, "packages", "plugins");
+
+  test("every plugin whose catalog carries the hand-authored marker routes i18n:extract through the guard", () => {
+    const handAuthored = readdirSync(pluginsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((name) => {
+        const enPo = join(pluginsDir, name, "locales", "en.po");
+        return (
+          existsSync(enPo) && readFileSync(enPo, "utf8").includes("hand-authored")
+        );
+      });
+
+    // Sanity check: the marker itself must still exist in at least one
+    // plugin, otherwise this test would pass vacuously.
+    expect(handAuthored.length).toBeGreaterThan(0);
+
+    const offenders = handAuthored.filter((name) => {
+      const pkg = JSON.parse(
+        readFileSync(join(pluginsDir, name, "package.json"), "utf8"),
+      ) as { scripts?: Record<string, string> };
+      return pkg.scripts?.["i18n:extract"] !== "plumix i18n extract";
+    });
+
+    expect(offenders).toEqual([]);
   });
 });
 
