@@ -76,7 +76,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "catalog:tanstack",
-    "plumix": "workspace:>=0.1.0 <1.0.0",
+    "plumix": "workspace:>=0.23.0 <1.0.0",
     "react": "catalog:react",
     "react-dom": "catalog:react"
   },

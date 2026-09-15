@@ -199,15 +199,20 @@ The admin ships precompiled and is closed for modification. A plugin contributes
 
 ### plumix/admin
 
-The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, the constants naming which specifier maps to which shim, and `createPluginRpcClient` — the one client every plugin's admin code calls its own server-registered RPC procedures through, so no plugin hand-rolls the wire envelope, headers, or error unwrapping.
+The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, the constants naming which specifier maps to which shim, and `createPluginRpcClient` — the one client every plugin's admin code calls its own server-registered RPC procedures through, so no plugin hand-rolls the wire envelope, headers, or error unwrapping. It takes the type of the router the plugin handed `ctx.registerRpcRouter`, imported with `import type` so the server module stays out of the admin bundle, and infers every procedure's name, input and output from it — a renamed procedure or a reshaped output on the server is a type error at the call site.
 
-```ts
+```ts no-typecheck
+import type { PluginRpcOutputs } from "plumix/admin";
 import { createPluginRpcClient, getRuntime } from "plumix/admin";
 
-const rpc = createPluginRpcClient("recipes");
+import type { RecipesRouter } from "../rpc.js";
 
-export function fetchRecipe(id: number): Promise<unknown> {
-  return rpc.call("get", { id });
+const rpc = createPluginRpcClient<RecipesRouter>("recipes");
+
+export type Recipe = PluginRpcOutputs<RecipesRouter>["get"];
+
+export function fetchRecipe(id: number): Promise<Recipe> {
+  return rpc.get({ id });
 }
 
 export function activeQueryClient(): unknown {

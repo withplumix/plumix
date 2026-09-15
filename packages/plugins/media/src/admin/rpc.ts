@@ -1,6 +1,10 @@
+import type { AppRouter } from "plumix";
+import type { PluginRpcOutputs } from "plumix/admin";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createPluginRpcClient } from "plumix/admin";
+
+import type { MediaRouter } from "../rpc.js";
 
 // The subdirectory mount the host exposes (see plumix-globals), used to prefix
 // the worker-routed `/_plumix/...` URLs the admin components build.
@@ -11,17 +15,15 @@ export function pluginBasePath(): string {
 }
 
 // Media's own `media/*` procedures.
-export const mediaRpc = createPluginRpcClient("media");
+export const mediaRpc = createPluginRpcClient<MediaRouter>("media");
 
 // `lookup/list` is a core namespace (see `CORE_RPC_NAMESPACES`), not
 // media's own — reference-field label resolution calls through it directly.
-export const lookupRpc = createPluginRpcClient("lookup");
+type LookupRouter = AppRouter["lookup"];
+export const lookupRpc = createPluginRpcClient<LookupRouter>("lookup");
 
-export interface MediaLookupItem {
-  readonly id: string;
-  readonly label: string | null;
-  readonly subtitle?: string;
-}
+export type MediaLookupItem =
+  PluginRpcOutputs<LookupRouter>["list"]["items"][number];
 
 /**
  * Resolve display labels for picked media ids in one batched
@@ -36,11 +38,8 @@ export function useMediaLabels(
   const query = useQuery({
     enabled: ids.length > 0,
     queryKey: ["plugin-media", "lookup", [...ids].sort().join(" ")],
-    queryFn: () =>
-      lookupRpc.call<{ items: readonly MediaLookupItem[] }>("list", {
-        kind: "media",
-        ids,
-      }),
+    // The wire schema types its arrays mutable; the param keeps them readonly.
+    queryFn: () => lookupRpc.list({ kind: "media", ids: [...ids] }),
   });
   const items = query.data?.items;
   return useMemo(

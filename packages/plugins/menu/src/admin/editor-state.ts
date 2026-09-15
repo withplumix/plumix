@@ -1,5 +1,6 @@
 import type { MenuItemMeta } from "../server/types.js";
 import type { ItemState } from "./item-state.js";
+import type { MenuGetResponse, SaveMenuInput } from "./queries.js";
 
 export type ItemKey = string;
 
@@ -57,34 +58,12 @@ export const initialEditorState: EditorState = {
   nextTmpId: 0,
 };
 
-interface ServerItemRow {
-  readonly id: number;
-  readonly parentId: number | null;
-  readonly sortOrder: number;
-  readonly title: string;
-  /** Parsed server-side; `null` when the stored JSON matched no known kind. */
-  readonly meta: MenuItemMeta | null;
-  readonly resolved?: {
-    readonly state: ItemState;
-    readonly label: string;
-    readonly href: string | null;
-    readonly lastHref: string | null;
-  };
-}
-
-interface ServerMenuResponse {
-  readonly id: number;
-  readonly slug: string;
-  readonly name: string;
-  readonly version: number;
-  readonly maxDepth: number;
-  readonly items: readonly ServerItemRow[];
-}
+type ServerItemRow = MenuGetResponse["items"][number];
 
 export type EditorAction =
   | {
       readonly type: "loadFromServer";
-      readonly response: ServerMenuResponse;
+      readonly response: MenuGetResponse;
     }
   | {
       readonly type: "addItem";
@@ -354,17 +333,9 @@ export function editorReducer(
   }
 }
 
-export interface SaveItemPayload {
-  readonly id?: number;
-  readonly parentIndex: number | null;
-  readonly sortOrder: number;
-  readonly title: string | null;
-  readonly meta: MenuItemMeta;
-}
+export type SaveItemPayload = SaveMenuInput["items"][number];
 
-export function buildSavePayload(
-  state: EditorState,
-): readonly SaveItemPayload[] {
+export function buildSavePayload(state: EditorState): SaveItemPayload[] {
   const indexByKey = new Map<ItemKey, number>();
   state.items.forEach((item, index) => {
     indexByKey.set(item.key, index);
@@ -372,11 +343,14 @@ export function buildSavePayload(
   return state.items.map((item) => {
     const parentIndex =
       item.parentKey === null ? null : (indexByKey.get(item.parentKey) ?? null);
+    // The wire schema types its arrays mutable; the editor's meta keeps
+    // them readonly.
+    const { cssClasses, ...meta } = item.meta;
     const base: SaveItemPayload = {
       parentIndex,
       sortOrder: item.sortOrder,
       title: item.title,
-      meta: item.meta,
+      meta: cssClasses ? { ...meta, cssClasses: [...cssClasses] } : meta,
     };
     return item.id === null ? base : { id: item.id, ...base };
   });
@@ -497,9 +471,8 @@ function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
         // row was deleted. The trade is that saving replaces the unreadable
         // JSON, which no consumer could interpret in the first place.
         meta: row.meta ?? { kind: "custom", url: "" },
-        state: row.resolved?.state ?? "ok",
-        resolvedLabel:
-          row.resolved?.label ?? (row.title === "" ? "(unnamed)" : row.title),
+        state: row.resolved.state,
+        resolvedLabel: row.resolved.label,
       });
       walk(row.id, key);
     }

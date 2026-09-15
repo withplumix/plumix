@@ -37,7 +37,7 @@ export const mediaListInputSchema = v.object({
 
 type MediaListInput = v.InferOutput<typeof mediaListInputSchema>;
 
-interface MediaItem {
+export interface MediaItem {
   readonly id: number;
   readonly title: string;
   readonly mime: string;
@@ -52,7 +52,7 @@ interface MediaItem {
   readonly height: number | null;
 }
 
-interface MediaListResult {
+export interface MediaListResult {
   readonly items: readonly MediaItem[];
   readonly hasMore: boolean;
 }

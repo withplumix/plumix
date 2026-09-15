@@ -36,3 +36,9 @@ export function createSeoRouter(options: SeoRouterOptions) {
 
   return { preview };
 }
+
+/**
+ * The admin chunk's wire contract, imported there with `import type` so this
+ * module stays server-only.
+ */
+export type SeoRouter = ReturnType<typeof createSeoRouter>;

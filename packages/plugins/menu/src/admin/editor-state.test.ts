@@ -6,6 +6,11 @@ import {
   initialEditorState,
 } from "./editor-state.js";
 
+// What the server's resolver attaches to every row it sends back.
+function okResolved(label: string) {
+  return { state: "ok", label, href: null, lastHref: null } as const;
+}
+
 describe("editorReducer", () => {
   describe("loadFromServer", () => {
     test("populates termId / slug / name / version / maxDepth from the response", () => {
@@ -90,6 +95,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Home",
+              resolved: okResolved("Home"),
               meta: { kind: "custom", url: "/" },
             },
             {
@@ -97,6 +103,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "About",
+              resolved: okResolved("About"),
               meta: { kind: "custom", url: "/about" },
             },
             {
@@ -104,6 +111,7 @@ describe("editorReducer", () => {
               parentId: 11,
               sortOrder: 0,
               title: "Team",
+              resolved: okResolved("Team"),
               meta: { kind: "custom", url: "/about/team" },
             },
           ],
@@ -141,6 +149,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "",
+              resolved: okResolved("(unnamed)"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -148,6 +157,7 @@ describe("editorReducer", () => {
       });
 
       expect(next.items[0]?.title).toBeNull();
+      expect(next.items[0]?.resolvedLabel).toBe("(unnamed)");
     });
   });
 
@@ -171,6 +181,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Existing",
+              resolved: okResolved("Existing"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -282,6 +293,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Parent",
+              resolved: okResolved("Parent"),
               meta: { kind: "custom", url: "/parent" },
             },
             {
@@ -289,6 +301,7 @@ describe("editorReducer", () => {
               parentId: 10,
               sortOrder: 0,
               title: "Child",
+              resolved: okResolved("Child"),
               meta: { kind: "custom", url: "/parent/child" },
             },
             {
@@ -296,6 +309,7 @@ describe("editorReducer", () => {
               parentId: 20,
               sortOrder: 0,
               title: "Grandchild",
+              resolved: okResolved("Grandchild"),
               meta: { kind: "custom", url: "/parent/child/g" },
             },
             {
@@ -303,6 +317,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "Sibling",
+              resolved: okResolved("Sibling"),
               meta: { kind: "custom", url: "/sibling" },
             },
           ],
@@ -336,6 +351,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Broken",
+              resolved: okResolved("Broken"),
               meta: { kind: "entry", entryId: 99999 },
             },
           ],
@@ -370,6 +386,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Only",
+              resolved: okResolved("Only"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -408,6 +425,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Only",
+              resolved: okResolved("Only"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -440,6 +458,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Original",
+              resolved: okResolved("Original"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -474,6 +493,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Original",
+              resolved: okResolved("Original"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -504,6 +524,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Site",
+              resolved: okResolved("Site"),
               meta: { kind: "custom", url: "/old" },
             },
           ],
@@ -591,6 +612,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "First",
+              resolved: okResolved("First"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -628,6 +650,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "First",
+              resolved: okResolved("First"),
               meta: { kind: "custom", url: "/1" },
             },
             {
@@ -635,6 +658,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "Second",
+              resolved: okResolved("Second"),
               meta: { kind: "custom", url: "/2" },
             },
             {
@@ -642,6 +666,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 2,
               title: "Third",
+              resolved: okResolved("Third"),
               meta: { kind: "custom", url: "/3" },
             },
           ],
@@ -677,6 +702,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
             {
@@ -684,6 +710,7 @@ describe("editorReducer", () => {
               parentId: 10,
               sortOrder: 0,
               title: "A.child",
+              resolved: okResolved("A.child"),
               meta: { kind: "custom", url: "/a/child" },
             },
             {
@@ -691,6 +718,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "B",
+              resolved: okResolved("B"),
               meta: { kind: "custom", url: "/b" },
             },
           ],
@@ -733,6 +761,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
           ],
@@ -767,6 +796,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
             {
@@ -774,6 +804,7 @@ describe("editorReducer", () => {
               parentId: 10,
               sortOrder: 0,
               title: "A.child",
+              resolved: okResolved("A.child"),
               meta: { kind: "custom", url: "/a/c" },
             },
           ],
@@ -862,6 +893,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
             {
@@ -869,6 +901,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "B",
+              resolved: okResolved("B"),
               meta: { kind: "custom", url: "/b" },
             },
           ],
@@ -905,6 +938,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
             {
@@ -912,6 +946,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 1,
               title: "B",
+              resolved: okResolved("B"),
               meta: { kind: "custom", url: "/b" },
             },
             {
@@ -919,6 +954,7 @@ describe("editorReducer", () => {
               parentId: 11,
               sortOrder: 0,
               title: "B.child",
+              resolved: okResolved("B.child"),
               meta: { kind: "custom", url: "/b/child" },
             },
             {
@@ -926,6 +962,7 @@ describe("editorReducer", () => {
               parentId: 20,
               sortOrder: 0,
               title: "B.grandchild",
+              resolved: okResolved("B.grandchild"),
               meta: { kind: "custom", url: "/b/child/grand" },
             },
           ],
@@ -962,6 +999,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "About",
+              resolved: okResolved("About"),
               meta: {
                 kind: "entry",
                 entryId: 99999,
@@ -997,6 +1035,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Home",
+              resolved: okResolved("Home"),
               meta: { kind: "custom", url: "/" },
             },
           ],
@@ -1030,6 +1069,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "Old",
+              resolved: okResolved("Old"),
               meta: { kind: "entry", entryId: 99999 },
             },
           ],
@@ -1064,6 +1104,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "About",
+              resolved: okResolved("About"),
               meta: {
                 kind: "entry",
                 entryId: 99999,
@@ -1155,6 +1196,7 @@ describe("editorReducer", () => {
               parentId: null,
               sortOrder: 0,
               title: "A",
+              resolved: okResolved("A"),
               meta: { kind: "custom", url: "/a" },
             },
             {
@@ -1162,6 +1204,7 @@ describe("editorReducer", () => {
               parentId: 10,
               sortOrder: 0,
               title: "A.child",
+              resolved: okResolved("A.child"),
               meta: { kind: "custom", url: "/a/child" },
             },
           ],
@@ -1220,6 +1263,7 @@ describe("buildSavePayload", () => {
             parentId: null,
             sortOrder: 0,
             title: "About",
+            resolved: okResolved("About"),
             meta: { kind: "entry", entryId: 99 },
           },
         ],
@@ -1258,6 +1302,7 @@ describe("buildSavePayload", () => {
             parentId: null,
             sortOrder: 0,
             title: "Parent",
+            resolved: okResolved("Parent"),
             meta: { kind: "custom", url: "/parent" },
           },
           {
@@ -1265,6 +1310,7 @@ describe("buildSavePayload", () => {
             parentId: 10,
             sortOrder: 0,
             title: "Child",
+            resolved: okResolved("Child"),
             meta: { kind: "custom", url: "/parent/child" },
           },
         ],
