@@ -1,7 +1,9 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { defineEntryContent } from "plumix/blocks";
 import { sql } from "plumix/db";
+import { definePlugin } from "plumix/plugin";
 import {
+  createTracedContext,
   factoriesFor,
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
@@ -10,6 +12,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
 import {
+  applySearchSchema,
   assertIndexIntact,
   createSearchContext,
   dropSearchIndex,
@@ -350,6 +353,133 @@ describe("runSearch", () => {
     await indexEntries(ctx, [entry.id]);
 
     expect((await search("hydroponics")).results).toEqual([]);
+  });
+
+  test("a page of nested results costs the same queries however many it holds", async () => {
+    const pagesPlugin = definePlugin("pages", (regCtx) => {
+      regCtx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+
+    // Each child sits under its own parent, so a per-row ancestor walk
+    // would add one query per child.
+    async function searchNestedPages(
+      children: number,
+    ): Promise<{ readonly queries: number; readonly urls: string[] }> {
+      const {
+        harness,
+        ctx: tracedCtx,
+        run,
+        dbQueryCount,
+      } = await createTracedContext({ plugins: [pagesPlugin] });
+      await applySearchSchema(harness.db);
+      const author = await harness.factory.user.create();
+      for (let i = 0; i < children; i++) {
+        const parent = await harness.factory.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          status: "published",
+          authorId: author.id,
+        });
+        const child = await harness.factory.entry.create({
+          type: "page",
+          slug: `child-${String(i)}`,
+          title: "Wombat",
+          status: "published",
+          authorId: author.id,
+          parentId: parent.id,
+        });
+        await indexEntries(tracedCtx, [child.id]);
+      }
+      const found = await run(() =>
+        runSearch(tracedCtx, { query: "wombat", page: 1, perPage: children }),
+      );
+      return {
+        queries: dbQueryCount(),
+        urls: found.results.map((result) => result.url).sort(),
+      };
+    }
+
+    const one = await searchNestedPages(1);
+    const four = await searchNestedPages(4);
+
+    expect(four.urls).toEqual([
+      "/page/parent-0/child-0",
+      "/page/parent-1/child-1",
+      "/page/parent-2/child-2",
+      "/page/parent-3/child-3",
+    ]);
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
+  });
+
+  test("a mixed page of nested entries and terms resolves both kinds' urls", async () => {
+    // Exercises the reassembly in `toResults`: entry and term rows are
+    // bucketed apart to batch each kind's ancestor walk separately, then
+    // zipped back by their original row index.
+    plugins.entryTypes.set(
+      "page",
+      toRegisteredEntryType(
+        "page",
+        { label: "Pages", isHierarchical: true },
+        "test",
+      ),
+    );
+    plugins.termTaxonomies.set(
+      "region",
+      toRegisteredTermTaxonomy(
+        "region",
+        { label: "Regions", isHierarchical: true },
+        "test",
+      ),
+    );
+
+    const parentPage = await factoriesFor(db).entry.create({
+      authorId,
+      type: "page",
+      status: "published",
+      publishedAt: new Date(),
+      title: "Parent Page",
+      slug: "parent-page",
+    });
+    const childPage = await factoriesFor(db).entry.create({
+      authorId,
+      type: "page",
+      status: "published",
+      publishedAt: new Date(),
+      title: "Wombat Page",
+      slug: "child-page",
+      parentId: parentPage.id,
+    });
+    await indexEntries(ctx, [childPage.id]);
+
+    const parentRegion = await factoriesFor(db).term.create({
+      taxonomy: "region",
+      name: "Parent Region",
+      slug: "parent-region",
+    });
+    const childRegion = await factoriesFor(db).term.create({
+      taxonomy: "region",
+      name: "Wombat Region",
+      slug: "child-region",
+      parentId: parentRegion.id,
+    });
+    await indexTerms(ctx, [childRegion.id]);
+
+    const found = await search("wombat");
+
+    expect(
+      found.results
+        .map((result) => ({ kind: result.kind, url: result.url }))
+        .sort((a, b) => a.kind.localeCompare(b.kind)),
+    ).toEqual([
+      { kind: "entry", url: "/page/parent-page/child-page" },
+      { kind: "term", url: "/region/parent-region/child-region" },
+    ]);
   });
 });
 

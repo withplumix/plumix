@@ -3,10 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import { withUser } from "../../../context/app.js";
+import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { entryFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { createTracedContext } from "../../../test/traced-context.js";
 import { entryLookupAdapter } from "./lookup.js";
 
 const POST = { entryTypes: ["post"] } as const;
@@ -336,5 +338,122 @@ describe("entryLookupAdapter", () => {
       limit: 1,
     });
     expect(result?.label).toBeNull();
+  });
+
+  test("hydrate() over nested entries costs the same queries however many it holds", async () => {
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+    const PAGE_SCOPE = { entryTypes: ["page"] } as const;
+
+    // Each child sits under its own parent, so a per-row ancestor walk
+    // would add one query per child.
+    async function hydrateNestedPages(
+      children: number,
+    ): Promise<{ readonly queries: number; readonly urls: (string | null)[] }> {
+      const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+        plugins: [pagesPlugin],
+      });
+      const author = await harness.factory.user.create();
+      const ids: string[] = [];
+      for (let i = 0; i < children; i++) {
+        const parent = await harness.factory.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          status: "published",
+          authorId: author.id,
+        });
+        const child = await harness.factory.entry.create({
+          type: "page",
+          slug: `child-${String(i)}`,
+          title: "Child",
+          status: "published",
+          authorId: author.id,
+          parentId: parent.id,
+        });
+        ids.push(String(child.id));
+      }
+      const rows = await run(() =>
+        entryLookupAdapter.hydrate(ctx, { ids, scope: PAGE_SCOPE }),
+      );
+      return { queries: dbQueryCount(), urls: rows.map((row) => row.url) };
+    }
+
+    const one = await hydrateNestedPages(1);
+    const four = await hydrateNestedPages(4);
+
+    expect(four.urls).toEqual([
+      "/page/parent-0/child-0",
+      "/page/parent-1/child-1",
+      "/page/parent-2/child-2",
+      "/page/parent-3/child-3",
+    ]);
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
+  });
+
+  test("list({ ids }) over nested entries costs the same queries however many it holds", async () => {
+    const pagesPlugin = definePlugin("pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+    const PAGE_SCOPE = { entryTypes: ["page"] } as const;
+
+    async function listNestedPages(children: number): Promise<{
+      readonly queries: number;
+      readonly hrefs: (string | undefined)[];
+    }> {
+      const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+        plugins: [pagesPlugin],
+      });
+      const author = await harness.factory.user.create();
+      const ids: string[] = [];
+      for (let i = 0; i < children; i++) {
+        const parent = await harness.factory.entry.create({
+          type: "page",
+          slug: `parent-${String(i)}`,
+          title: "Parent",
+          status: "published",
+          authorId: author.id,
+        });
+        const child = await harness.factory.entry.create({
+          type: "page",
+          slug: `child-${String(i)}`,
+          title: "Child",
+          status: "published",
+          authorId: author.id,
+          parentId: parent.id,
+        });
+        ids.push(String(child.id));
+      }
+      const rows = await run(() =>
+        entryLookupAdapter.list(ctx, {
+          ids,
+          scope: PAGE_SCOPE,
+          limit: children,
+        }),
+      );
+      return { queries: dbQueryCount(), hrefs: rows.map((row) => row.href) };
+    }
+
+    const one = await listNestedPages(1);
+    const four = await listNestedPages(4);
+
+    expect(four.hrefs).toEqual([
+      "/page/parent-0/child-0",
+      "/page/parent-1/child-1",
+      "/page/parent-2/child-2",
+      "/page/parent-3/child-3",
+    ]);
+    expect(one.queries).toBeGreaterThan(0);
+    expect(four.queries).toBe(one.queries);
   });
 });

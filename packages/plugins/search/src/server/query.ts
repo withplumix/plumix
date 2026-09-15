@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { buildEntryPermalink, buildTermArchiveUrl } from "plumix";
+import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix";
 import { inArray, sql } from "plumix/db";
 import { entries, terms } from "plumix/schema";
 
@@ -124,9 +124,7 @@ export async function runSearch(
     threshold: options.commonTermThreshold ?? DEFAULT_COMMON_TERM_THRESHOLD,
   });
 
-  const results = await Promise.all(
-    rows.slice(0, perPage).map((row) => toResult(ctx, row)),
-  );
+  const results = await toResults(ctx, rows.slice(0, perPage));
   return {
     // An entry whose type stopped being public has no URL to send a visitor
     // to, so it is not a result — the next index write drops it for good.
@@ -325,26 +323,66 @@ async function recentRows(
   }));
 }
 
-async function toResult(
+/**
+ * `toResult` over a page: every nested row's ancestor chain is read in one
+ * batched call per kind rather than one per row. Both kinds still
+ * short-circuit to pure substitution for a flat type, so a page of flat
+ * results costs no query at all.
+ */
+async function toResults(
   ctx: AppContext,
-  row: MatchedRow,
-): Promise<SearchResult | null> {
-  // Both short-circuit to pure substitution for a flat type, so a page of
-  // results costs no extra query. A hierarchical one pays an ancestor walk per
-  // nested result — the price of a result a visitor can actually click, where
-  // core's own listings settle for a null URL.
-  const { slug, parentId } = row;
-  const url =
-    row.kind === "entry"
-      ? await buildEntryPermalink(ctx, { type: row.scope, slug, parentId })
-      : await buildTermArchiveUrl(ctx, { taxonomy: row.scope, slug, parentId });
-  if (url === null) return null;
-  return {
-    kind: row.kind,
-    id: row.id,
-    title: row.title,
-    url,
-    snippet: highlightSnippet(row.snippet),
-    score: row.score,
-  };
+  rows: readonly MatchedRow[],
+): Promise<(SearchResult | null)[]> {
+  const entryRows: {
+    index: number;
+    type: string;
+    slug: string;
+    parentId: number | null;
+  }[] = [];
+  const termRows: {
+    index: number;
+    taxonomy: string;
+    slug: string;
+    parentId: number | null;
+  }[] = [];
+  rows.forEach((row, index) => {
+    if (row.kind === "entry") {
+      entryRows.push({
+        index,
+        type: row.scope,
+        slug: row.slug,
+        parentId: row.parentId,
+      });
+    } else {
+      termRows.push({
+        index,
+        taxonomy: row.scope,
+        slug: row.slug,
+        parentId: row.parentId,
+      });
+    }
+  });
+  const [entryUrls, termUrls] = await Promise.all([
+    buildEntryPermalinks(ctx, entryRows),
+    buildTermArchiveUrls(ctx, termRows),
+  ]);
+  const urls = new Array<string | null>(rows.length).fill(null);
+  entryRows.forEach(({ index }, i) => {
+    urls[index] = entryUrls[i] ?? null;
+  });
+  termRows.forEach(({ index }, i) => {
+    urls[index] = termUrls[i] ?? null;
+  });
+  return rows.map((row, i) => {
+    const url = urls[i];
+    if (url === null || url === undefined) return null;
+    return {
+      kind: row.kind,
+      id: row.id,
+      title: row.title,
+      url,
+      snippet: highlightSnippet(row.snippet),
+      score: row.score,
+    };
+  });
 }
