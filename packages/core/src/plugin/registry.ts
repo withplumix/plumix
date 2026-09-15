@@ -943,6 +943,37 @@ export function createPluginRegistry(): MutablePluginRegistry {
 }
 
 /**
+ * The public, non-hierarchical entry types — a site's posts, not its standalone
+ * pages. The front page, author archives, and date archives all list this set,
+ * so it is also the set of `t:<type>` tags those pages are stored under.
+ */
+export function listedEntryTypeNames(
+  registry: PluginRegistry,
+): readonly string[] {
+  return [...registry.entryTypes.values()]
+    .filter((type) => type.isPublic && type.isHierarchical !== true)
+    .map((type) => type.name);
+}
+
+/**
+ * The entry types a taxonomy's term pages depend on: the types the taxonomy
+ * lists, or — when it lists none — every public type, since a term's feed still
+ * lists whatever public entries are attached to it. Term archives are stored
+ * under these types' tags and term changes purge the same ones, so both read
+ * this rule rather than keeping two answers that can drift.
+ */
+export function termPageEntryTypeNames(
+  registry: PluginRegistry,
+  taxonomy: string,
+): readonly string[] {
+  const listed = registry.termTaxonomies.get(taxonomy)?.entryTypes ?? [];
+  if (listed.length > 0) return listed;
+  return [...registry.entryTypes.values()]
+    .filter((type) => type.isPublic)
+    .map((type) => type.name);
+}
+
+/**
  * Look up the `MetaBoxField` declaration for a meta key within the
  * entry meta surface, scoped to a given entry type. Returns the first
  * matching field across all registered entry meta boxes — key

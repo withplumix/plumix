@@ -21,6 +21,7 @@ import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { labelSourceText } from "../../i18n/label.js";
+import { listedEntryTypeNames } from "../../plugin/registry.js";
 import { resolveTermMeta } from "../../rpc/procedures/term/meta.js";
 import { archiveSlugForEntryType } from "../compile.js";
 import { dateRange } from "../date-range.js";
@@ -69,16 +70,6 @@ export interface ResolvedListingPage {
 }
 
 /**
- * The public, non-hierarchical entry types — a site's posts, not its standalone
- * pages. The front page, author archives, and date archives all list this set.
- */
-function publicListingTypes(ctx: AppContext): string[] {
-  return Array.from(ctx.plugins.entryTypes.entries())
-    .filter(([, spec]) => spec.isPublic && spec.isHierarchical !== true)
-    .map(([key]) => key);
-}
-
-/**
  * What every listing page lists: published entries of the types the page is
  * about, plus whatever else that page narrows on. Null where the site has no
  * such type at all, which `paginatedEntries` answers with no round-trip.
@@ -103,7 +94,7 @@ export async function frontPageData(
   // The latest-posts front feed excludes hierarchical types (pages) — they
   // are standalone content, not blog entries. (A configurable front-page /
   // posts-page model is the larger follow-up.)
-  const where = listingWhere(publicListingTypes(ctx));
+  const where = listingWhere(listedEntryTypeNames(ctx.plugins));
   const listing = await listingFor(ctx, where, page, DEFAULT_ARCHIVE_PER_PAGE);
   if (listing === null) return null;
 
@@ -212,7 +203,7 @@ export async function authorData(
   // Author archives list the same type set as the front page — a person's
   // posts, not their standalone pages.
   const where = listingWhere(
-    publicListingTypes(ctx),
+    listedEntryTypeNames(ctx.plugins),
     eq(entries.authorId, author.id),
   );
   const listing = await listingFor(ctx, where, page, DEFAULT_ARCHIVE_PER_PAGE);
@@ -248,7 +239,7 @@ export async function dateData(
 
   // The same type set as the front page, in a published-at window.
   const where = listingWhere(
-    publicListingTypes(ctx),
+    listedEntryTypeNames(ctx.plugins),
     gte(entries.publishedAt, range.start),
     lt(entries.publishedAt, range.end),
   );

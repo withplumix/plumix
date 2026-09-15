@@ -1822,6 +1822,36 @@ describe("dispatcher — public read-through CDN", () => {
     );
   });
 
+  // Stored under no tags, the archive would outlive every purge until its TTL.
+  test("a term archive in a taxonomy listing no entry types is stored under the public types' tags", async () => {
+    const { cdn, put } = cdnStub();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    });
+    const h = await createDispatcherHarness({ plugins: [site], cdn });
+    await h.factory.term.create({
+      taxonomy: "tag",
+      slug: "news",
+      name: "News",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/tag/news"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(put).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
+      "t:post",
+      "t:page",
+    ]);
+  });
+
   test("a storeless provider still sends the visitor a decorated page", async () => {
     const { cdn } = cdnStub(undefined, false);
     const h = await createDispatcherHarness({ cdn });
