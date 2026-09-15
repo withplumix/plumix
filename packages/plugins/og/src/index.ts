@@ -148,7 +148,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const advertised = advertisedExtension(renderer.contentType);
 
   return definePlugin("og", {
-    // Only when a site asked for the box: the chunk exists to register the
+    // Only when a site asked for the box: the chunk exists to ship the
     // preview's field renderer, so with no box it would be dead weight folded
     // into every og install's admin bundle.
     ...(preview.length > 0 ? { adminEntry: ADMIN_ENTRY_PATH } : {}),
@@ -175,6 +175,13 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         handler,
       });
       if (preview.length > 0) {
+        // Under the same gate as `adminEntry`: the bundler only registers
+        // from plugins that ship a chunk, so a declaration without one would
+        // have the manifest advertise a type nothing renders.
+        ctx.registerFieldType({
+          type: CARD_PREVIEW_INPUT_TYPE,
+          component: "CardPreviewField",
+        });
         ctx.registerRpcRouter(
           createOgRouter({
             cards,

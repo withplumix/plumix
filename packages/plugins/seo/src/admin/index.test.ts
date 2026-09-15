@@ -1,29 +1,20 @@
-import { describe, expect, test, vi } from "vitest";
+import { HookRegistry, installPlugins } from "plumix/plugin";
+import { expect, test } from "vitest";
 
+import { seo } from "../index.js";
 import { SERP_PREVIEW_INPUT_TYPE } from "../preview-box.js";
-import { registerSeoAdmin } from "./index.js";
+import * as adminEntry from "./index.js";
 
-describe("registerSeoAdmin", () => {
-  test("registers the preview renderer under the type the meta box names", () => {
-    const registerPluginFieldType = vi.fn();
-
-    registerSeoAdmin({ registerPluginFieldType });
-
-    expect(registerPluginFieldType).toHaveBeenCalledWith(
-      SERP_PREVIEW_INPUT_TYPE,
-      expect.anything(),
-    );
+// The bundler resolves the declared `component` as a named export off this
+// module, and only at build time. Kept apart from the server suites so they
+// don't pay the admin bundle's import.
+test("exports the component the plugin declares the preview with", async () => {
+  const { registry } = await installPlugins({
+    hooks: new HookRegistry(),
+    plugins: [seo()],
   });
 
-  test("warns and does not throw when the host global is missing", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    expect(() => {
-      registerSeoAdmin(undefined);
-    }).not.toThrow();
-
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("window.plumix not initialized"),
-    );
-  });
+  expect(adminEntry).toHaveProperty(
+    registry.fieldTypes.get(SERP_PREVIEW_INPUT_TYPE)?.component ?? "",
+  );
 });

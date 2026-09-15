@@ -9,6 +9,7 @@ import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
 import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
+import { SERP_PREVIEW_INPUT_TYPE } from "./preview-box.js";
 import { registerSeoRoutes, registerSitemapRoutes } from "./routes.js";
 import {
   registerSeoSettings,
@@ -107,14 +108,19 @@ export interface SeoOptions {
  */
 export function seo(options: SeoOptions = {}): PluginDescriptor {
   return definePlugin("seo", {
-    // The chunk the SERP preview's field renderer registers from. Without it
-    // the preview falls through to the admin's text-input fallback.
+    // The chunk the SERP preview's field renderer ships in. Without it the
+    // preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
       registerSeoRoutes(ctx);
       registerIndexNow(ctx);
+      // Declared here so the bundler synthesises the admin-chunk registration.
+      ctx.registerFieldType({
+        type: SERP_PREVIEW_INPUT_TYPE,
+        component: "SerpPreviewField",
+      });
       // The assembled theme + template document arrives here, which is what
       // makes gap-filling possible: a theme's own tag is already in hand.
       //

@@ -3,12 +3,17 @@ import { PluginContextError } from "../errors.js";
 
 const IDENTIFIER_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
+// A field type is the `inputType` the admin dispatches a renderer on, never a
+// storage key or a URL segment, so it can carry camelCase. Separators stay for
+// the snake and kebab names plugins already register.
+const FIELD_TYPE_NAME_RE = /^[a-z][a-zA-Z0-9_-]*$/;
+
 export function assertValidFieldTypeName(pluginId: string, type: string): void {
-  if (!IDENTIFIER_NAME_RE.test(type) || type.length > 64) {
+  if (!FIELD_TYPE_NAME_RE.test(type) || type.length > 64) {
     throw PluginContextError.invalidFieldTypeName({
       pluginId,
       type,
-      pattern: IDENTIFIER_NAME_RE.source,
+      pattern: FIELD_TYPE_NAME_RE.source,
       maxLength: 64,
     });
   }

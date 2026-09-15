@@ -12,8 +12,8 @@ import { useMediaLabels } from "./rpc.js";
 
 export { M } from "./messages.js";
 
-// `media` field admin renderer. Registered into the host admin's
-// plugin-field-type registry on module load (see admin/index.tsx),
+// `media` field admin renderer. The bundler registers it with the host
+// admin from the `ctx.registerFieldType` declaration in `field-types.ts`,
 // dispatched from the meta-box-field renderer's plugin path.
 //
 // Meta storage is the plain media id — the preview resolves its label

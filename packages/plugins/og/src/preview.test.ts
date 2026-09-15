@@ -9,6 +9,7 @@ import { describe, expect, test } from "vitest";
 import type { CardPreview } from "./preview.js";
 import type { HarnessOptions } from "./test/harness.js";
 import { card, cardKey } from "./index.js";
+import { CARD_PREVIEW_INPUT_TYPE } from "./preview-box.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
 import { createHarness, seedEntry } from "./test/harness.js";
 
@@ -309,5 +310,25 @@ describe("the card preview in the entry editor", () => {
     });
 
     expect(response.assertStatus(404)).toBeDefined();
+  });
+});
+
+describe("the card preview field type", () => {
+  test("is contributed to the host's field vocabulary with the box", async () => {
+    const harness = await previewHarness();
+
+    expect(
+      harness.app.plugins.fieldTypes.get(CARD_PREVIEW_INPUT_TYPE),
+    ).toMatchObject({ registeredBy: "og" });
+  });
+
+  // No box, no admin chunk — and a declaration without the chunk would have
+  // the manifest advertise a type nothing renders.
+  test("is absent when no site asked for the box", async () => {
+    const harness = await previewHarness({ preview: [] });
+
+    expect(harness.app.plugins.fieldTypes.has(CARD_PREVIEW_INPUT_TYPE)).toBe(
+      false,
+    );
   });
 });

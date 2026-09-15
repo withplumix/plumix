@@ -6,7 +6,10 @@ import { describe, expect, test } from "vitest";
 import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
 import { SEO_META_KEYS } from "./overrides.js";
-import { SERP_PREVIEW_FIELD_KEY } from "./preview-box.js";
+import {
+  SERP_PREVIEW_FIELD_KEY,
+  SERP_PREVIEW_INPUT_TYPE,
+} from "./preview-box.js";
 
 // One public entry type and one internal one, plus a public taxonomy and a
 // private one — the four cases scope derivation has to separate.
@@ -110,6 +113,16 @@ describe("SEO meta box scope", () => {
       Object.values(SEO_META_KEYS).filter(
         (key) => key !== SEO_META_KEYS.schemaType,
       ),
+    );
+  });
+});
+
+describe("the SERP preview field type", () => {
+  test("is contributed to the host's field vocabulary", async () => {
+    const h = await createHarness();
+
+    expect(h.app.plugins.fieldTypes.get(SERP_PREVIEW_INPUT_TYPE)).toMatchObject(
+      { registeredBy: "seo" },
     );
   });
 });
