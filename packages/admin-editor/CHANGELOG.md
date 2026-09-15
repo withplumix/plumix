@@ -1,5 +1,14 @@
 # @plumix/admin-editor
 
+## 0.23.0
+
+### Patch Changes
+
+- Updated dependencies [[`542b9ae`](https://github.com/withplumix/plumix/commit/542b9aecaaacd52025a1895b136665b32a811fda), [`65d8cac`](https://github.com/withplumix/plumix/commit/65d8cacceaa3b09ceff75c6477acf5b82b9ef932), [`6514303`](https://github.com/withplumix/plumix/commit/65143032f1e3e134fdfefbbb72f87198edcbfabf), [`6cf3863`](https://github.com/withplumix/plumix/commit/6cf386317aa061f377842dc33ba8995bb61d0b6a), [`40fc77d`](https://github.com/withplumix/plumix/commit/40fc77d172ce2647fa1db142731ee04b165b9380), [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4), [`84b45fc`](https://github.com/withplumix/plumix/commit/84b45fca41a1ed87c783ed1ec34b4f2971301d3d), [`ec33f37`](https://github.com/withplumix/plumix/commit/ec33f37a7577937d14b89a9674b21af63f94c91a), [`aa2b144`](https://github.com/withplumix/plumix/commit/aa2b144415d4e680b0e36082a257b49bc6eda4ce), [`2436a20`](https://github.com/withplumix/plumix/commit/2436a2058c629fb82cebe9751a6f852220d7d90a), [`a3c8fdd`](https://github.com/withplumix/plumix/commit/a3c8fdd0caa2f8b0809134e1b200d52b7b94e887), [`25587dd`](https://github.com/withplumix/plumix/commit/25587ddad5754470ec0de14aa4f46f752865df8f), [`ee02c6c`](https://github.com/withplumix/plumix/commit/ee02c6c33677795c0231574cebf6cc2f28966a04)]:
+  - @plumix/core@0.23.0
+  - @plumix/admin-ui@0.23.0
+  - @plumix/blocks@0.23.0
+
 ## 0.22.0
 
 ### Patch Changes

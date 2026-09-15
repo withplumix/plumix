@@ -1,5 +1,19 @@
 # @plumix/plugin-forms
 
+## 0.2.1
+
+### Patch Changes
+
+- [#2347](https://github.com/withplumix/plumix/pull/2347) [`61efc2e`](https://github.com/withplumix/plumix/commit/61efc2ee7b57b53f3342a1f5652d68ad08e85ad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes published type declarations that imported `@plumix/core` or `@plumix/blocks`, packages a consumer does not depend on, so the affected types resolved to nothing. `pages`, `fileBlock` and `imageBlock` now name their types through `plumix/plugin` and `plumix/blocks`, and the RPC routers of audit-log, comments, forms, og and seo name the default database schema as `CoreSchema` from `plumix` instead of through `@plumix/core/schema`.
+
+- [#2354](https://github.com/withplumix/plumix/pull/2354) [`b58b17d`](https://github.com/withplumix/plumix/commit/b58b17dd39d246dd51fc049b46ce242173b07fdc) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a `forms()` descriptor installed into two apps sharing one form registry. Booting the second app no longer drops the forms other plugins contributed to the first, or shows the first app the second app's forms.
+
+- [#2349](https://github.com/withplumix/plumix/pull/2349) [`8d68b43`](https://github.com/withplumix/plumix/commit/8d68b439a40f1c2ee53ad8ab35d4ced945881e4d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `PlumixForm` and `formWire` resolving a slug against whichever app booted last in the process. They now read the forms of the app serving the request, so call `formWire` from a template's `render` rather than at module scope, where it returns `undefined`.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `createPluginRpcClient` by the plugin's router: `createPluginRpcClient<typeof router>("menu")` now returns a client with one function per procedure, nested the way the router is (`rpc.locations.list()`), with inputs and outputs inferred from the server's handlers. `PluginRpcClient`, `PluginRpcInputs`, `PluginRpcOutputs` and `PluginRpcRouter`, on `plumix/admin`, name the router, the client and its procedure types. The untyped `rpc.call<T>("procedure", input)` form is gone: import the router type from the plugin's server module with `import type` and pass it as the type argument. The first-party plugins call through the typed client and now require `plumix` 0.23.0 or later.
+
 ## 0.2.0
 
 ### Minor Changes

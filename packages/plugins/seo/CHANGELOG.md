@@ -1,5 +1,29 @@
 # @plumix/plugin-seo
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2350](https://github.com/withplumix/plumix/pull/2350) [`29f9dec`](https://github.com/withplumix/plumix/commit/29f9dece355cc29c97611435e78ab7888fbe9326) Thanks [@nasyrov](https://github.com/nasyrov)! - Registers the routes, settings and meta boxes scoped to the site's entry types and taxonomies from the plugin descriptor's `afterSetup` rather than a `theme:ready` subscriber. Requires the `plumix` release that adds `afterSetup`: on an earlier one those registrations never run, so upgrade both together.
+
+### Patch Changes
+
+- [#2347](https://github.com/withplumix/plumix/pull/2347) [`61efc2e`](https://github.com/withplumix/plumix/commit/61efc2ee7b57b53f3342a1f5652d68ad08e85ad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes published type declarations that imported `@plumix/core` or `@plumix/blocks`, packages a consumer does not depend on, so the affected types resolved to nothing. `pages`, `fileBlock` and `imageBlock` now name their types through `plumix/plugin` and `plumix/blocks`, and the RPC routers of audit-log, comments, forms, og and seo name the default database schema as `CoreSchema` from `plumix` instead of through `@plumix/core/schema`.
+
+- [#2412](https://github.com/withplumix/plumix/pull/2412) [`276792e`](https://github.com/withplumix/plumix/commit/276792e281d78c45718d54a69145fb602e329a91) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the media, og and seo admin field types through `ctx.registerFieldType`, so they appear in the plugin manifest and register once from the synthesised admin chunk instead of an imperative call in each plugin's admin entry.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the request context from the lifecycle action a handler receives rather than from the ambient request store. `comment:created`, `comment:approved`, `comment:spam` and `comment:trashed` now hand their handlers the `AppContext` last as well, so code that fires them itself must pass it.
+
+  Fixes the audit log recording no actor for entry, term, user and settings changes made through an authenticated RPC: the ambient context is built before the request is signed in, so the listener now attributes each row to the user the procedure ran as.
+
+- [#2393](https://github.com/withplumix/plumix/pull/2393) [`4017430`](https://github.com/withplumix/plumix/commit/401743028e66c974f51a18e2461815f5a1cb4eac) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads entry type and taxonomy visibility from the registered type, so these plugins now need the plumix release that resolves visibility at registration. On an older plumix they treat a type that never set `isPublic` as not public.
+
+- [#2381](https://github.com/withplumix/plumix/pull/2381) [`381ded5`](https://github.com/withplumix/plumix/commit/381ded59d9a0ad133f280d53883e6430e15d32d3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the sitemap and feeds running one ancestor query per nested page or term, so a sitemap page of hierarchical content now costs a fixed number of queries. Requires the `plumix` release that adds `buildEntryPermalinks` and `buildTermArchiveUrls`.
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `createPluginRpcClient` by the plugin's router: `createPluginRpcClient<typeof router>("menu")` now returns a client with one function per procedure, nested the way the router is (`rpc.locations.list()`), with inputs and outputs inferred from the server's handlers. `PluginRpcClient`, `PluginRpcInputs`, `PluginRpcOutputs` and `PluginRpcRouter`, on `plumix/admin`, name the router, the client and its procedure types. The untyped `rpc.call<T>("procedure", input)` form is gone: import the router type from the plugin's server module with `import type` and pass it as the type argument. The first-party plugins call through the typed client and now require `plumix` 0.23.0 or later.
+
 ## 0.1.2
 
 ### Patch Changes

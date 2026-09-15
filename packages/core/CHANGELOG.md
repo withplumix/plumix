@@ -1,5 +1,42 @@
 # @plumix/core
 
+## 0.23.0
+
+### Minor Changes
+
+- [#2330](https://github.com/withplumix/plumix/pull/2330) [`6cf3863`](https://github.com/withplumix/plumix/commit/6cf386317aa061f377842dc33ba8995bb61d0b6a) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `registerEntryType`'s `menuIcon` and `registerTermTaxonomy`'s `menuIcon` as the closed set of icon names the admin actually renders, so an unrecognized icon name is now a compile error instead of a silent fallback to a generic icon. Drops the nine `EntryTypeLabels` keys no plugin or admin surface ever read (`itemUpdated`, `itemPublished`, `itemPublishedPrivately`, `itemScheduled`, `itemTrashed`, `itemRevertedToDraft`, `itemsList`, `itemsListNavigation`, `filterItemsList`) — a plugin declaring one of these was configuring a no-op. `capabilityType` and `supports` stay open: `capabilityType` is a real, intentionally shareable namespace, and `supports` is documented as conventional rather than closed.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds the firing `AppContext` as the last argument of every core lifecycle action — `entry:*`, `term:*`, `user:*`, `settings:group_changed`, `credential:*`, `session:*`, `api_token:*` and `device_code:*` — and of the `rpc:settings.get:output` and `rpc:settings.upsert:output` filters, so a handler reads the context from its arguments instead of calling `tryGetContext()`. Handlers that ignore the new argument keep working; code that fires one of these hooks itself must now pass the context.
+
+- [#2341](https://github.com/withplumix/plumix/pull/2341) [`a3c8fdd`](https://github.com/withplumix/plumix/commit/a3c8fdd0caa2f8b0809134e1b200d52b7b94e887) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a `requireCapability(cap)` RPC middleware to `plumix/plugin`, composed after `authenticated` to gate a procedure on a single capability without hand-rolling `if (!ctx.auth.can(...)) throw errors.FORBIDDEN(...)`. Core's own settings, allowed-domains, api-tokens, mailer, and user procedures now use it. Because the middleware is composed before `.input()`, converted procedures now reject an unauthorized caller with `FORBIDDEN` even when their input also fails schema validation, rather than surfacing the validation error first. Removes the unused `requireCapability`/`CapabilityError` pair from `@plumix/core`'s rbac module, superseded by this middleware.
+
+### Patch Changes
+
+- [#2335](https://github.com/withplumix/plumix/pull/2335) [`542b9ae`](https://github.com/withplumix/plumix/commit/542b9aecaaacd52025a1895b136665b32a811fda) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the RPC lifecycle actions (`entry:*`, `term:*`, `user:*`, `settings:*`) sometimes disappearing from `ActionName` for a plugin's build. The module that declares them wasn't anchored into the published declaration graph, so a plugin whose bundler didn't otherwise pull it in saw `ctx.addAction` reject every real action name and had to write `as never` to work around it.
+
+- [#2327](https://github.com/withplumix/plumix/pull/2327) [`65d8cac`](https://github.com/withplumix/plumix/commit/65d8cacceaa3b09ceff75c6477acf5b82b9ef932) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `block:before_render` and `block:after_render` never firing. Both filters are documented and declared on `FilterRegistry`, but nothing called them — a plugin that subscribed via `addFilter("block:before_render", ...)` registered successfully and was never invoked. They now fire synchronously around every block's React element as `renderBlockTree` walks the content tree, letting a plugin decorate or replace a block's rendered output.
+
+- [#2332](https://github.com/withplumix/plumix/pull/2332) [`6514303`](https://github.com/withplumix/plumix/commit/65143032f1e3e134fdfefbbb72f87198edcbfabf) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `emptyManifest()` omitting `breakpoints`, so a manifest fixture built
+  from it (including via the public `@plumix/core/test/playwright` helpers) now
+  carries the theme's default breakpoints instead of `undefined`, matching what
+  `buildManifest()` itself always populates.
+
+- [#2396](https://github.com/withplumix/plumix/pull/2396) [`40fc77d`](https://github.com/withplumix/plumix/commit/40fc77d172ce2647fa1db142731ee04b165b9380) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `user:signed_in` reporting `firstSignIn: true` when an existing user registers their first passkey. The flag is now true only when the sign-in enrolled the user (a magic-link or OAuth signup, the bootstrap passkey, an accepted invite), so audit logs no longer record a second first sign-in.
+
+- [#2376](https://github.com/withplumix/plumix/pull/2376) [`84b45fc`](https://github.com/withplumix/plumix/commit/84b45fca41a1ed87c783ed1ec34b4f2971301d3d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin entries list hiding a contributor's or author's own drafts: `entry.list` now admits the caller's own unpublished entries when they hold `edit_own`, so the "Draft" and "Trash" filters return their own rather than an empty list. One visibility rule now answers `entry.get`, `entry.list`, the REST collection and the admin search palette.
+
+- [#2406](https://github.com/withplumix/plumix/pull/2406) [`ec33f37`](https://github.com/withplumix/plumix/commit/ec33f37a7577937d14b89a9674b21af63f94c91a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `POST /_plumix/auth/passkey/register/verify` accepting a WebAuthn challenge issued by `/_plumix/auth/invite/register/options`. An invite holder could complete enrolment through the passkey route, which minted a session and credential without consuming the invite token, running the invite checks, or firing `user:registered`. Each register-verify route now records which ceremony issued the challenge and refuses the other's with `challenge_mismatch`; the challenge is still consumed. The admin's `challenge_mismatch` message no longer assumes an invite, since the passkey route now returns it too.
+
+- [#2399](https://github.com/withplumix/plumix/pull/2399) [`aa2b144`](https://github.com/withplumix/plumix/commit/aa2b144415d4e680b0e36082a257b49bc6eda4ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes stale edge-cached pages after two content changes. Updating a user now purges cached author archives and the feeds that show an author's name. Changing a term in a taxonomy registered without `entryTypes` now purges its cached term archive and term feed, which are stored under the public entry types' tags instead of none.
+
+- [#2403](https://github.com/withplumix/plumix/pull/2403) [`2436a20`](https://github.com/withplumix/plumix/commit/2436a2058c629fb82cebe9751a6f852220d7d90a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes stale edge-cached pages after user changes: deleting a user now purges cached pages such as their author feed, and user updates now also purge cached permalinks of hierarchical types like pages.
+
+- [#2340](https://github.com/withplumix/plumix/pull/2340) [`25587dd`](https://github.com/withplumix/plumix/commit/25587ddad5754470ec0de14aa4f46f752865df8f) Thanks [@nasyrov](https://github.com/nasyrov)! - Widens `runScheduledTasks`, `scheduledTasksFor`, `declaredSchedules` and `connectScheduledDb`, and the `app` option of the Node runtime's `startScheduledRunner`, to accept any object carrying the app fields they read (`scheduledTasks`, or `schema` plus `config.database`) rather than a whole `PlumixApp`. Code passing a full app keeps working.
+
+- [#2336](https://github.com/withplumix/plumix/pull/2336) [`ee02c6c`](https://github.com/withplumix/plumix/commit/ee02c6c33677795c0231574cebf6cc2f28966a04) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `createDispatcherHarness` wiring request contexts differently from the runtime handler: it now connects an `imageDelivery` slot that declares `connect` instead of handing requests the unconnected slot, and takes a `kv` option so a test can put a store on `ctx.kv`. Both build their contexts from one argument list, so a new context slot has to be wired into both. Several helpers that take a request context (`canonicalUrl`, `tagCdnEntry` and others) now accept just the fields they read, so a test can call them with a small object instead of a full `AppContext`.
+- Updated dependencies []:
+  - @plumix/blocks@0.23.0
+
 ## 0.22.0
 
 ### Minor Changes
