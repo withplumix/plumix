@@ -1,10 +1,19 @@
 import { and, eq, lt } from "drizzle-orm";
+import * as v from "valibot";
 
 import type { Db } from "../../context/app.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 
 const CHALLENGE_TYPE = "webauthn_challenge" as const;
+
+/**
+ * Which registration ceremony issued a challenge. Each register-verify route
+ * accepts only its own kind, so an attestation cannot be redirected to the
+ * route that skips that ceremony's checks (#2402).
+ */
+const ceremonySchema = v.picklist(["bootstrap", "add-device", "invite"]);
+export type RegistrationCeremony = v.InferOutput<typeof ceremonySchema>;
 
 // Run the opportunistic sweep on a fraction of issueChallenge calls so the
 // amortised cost is ~O(1) per request while still bounding table growth.
@@ -19,7 +28,8 @@ interface IssuedChallenge {
 
 interface ChallengeRecord {
   readonly userId: number | null;
-  readonly enrolling: boolean;
+  /** Null for authentication challenges, which no registration route accepts. */
+  readonly ceremony: RegistrationCeremony | null;
   readonly expiresAt: Date;
 }
 
@@ -32,7 +42,7 @@ export async function issueChallenge(
   db: Db,
   ttlMs: number,
   userId: number | null = null,
-  enrolling = false,
+  ceremony: RegistrationCeremony | null = null,
 ): Promise<IssuedChallenge> {
   const challenge = generateToken();
   const hash = await hashToken(challenge);
@@ -43,7 +53,7 @@ export async function issueChallenge(
     userId,
     // Decided when the options request still knew who was signed in; the
     // session may be gone by the time verify consumes the challenge.
-    payload: enrolling ? { enrolling: true } : null,
+    payload: ceremony ? { ceremony } : null,
     expiresAt,
   });
   if (Math.random() < OPPORTUNISTIC_PRUNE_PROBABILITY) {
@@ -79,9 +89,10 @@ export async function consumeChallenge(
     .returning();
   if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
+  const parsed = v.safeParse(ceremonySchema, row.payload?.ceremony);
   return {
     userId: row.userId,
-    enrolling: row.payload?.enrolling === true,
+    ceremony: parsed.success ? parsed.output : null,
     expiresAt: row.expiresAt,
   };
 }

@@ -414,7 +414,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(ctx?.firstSignIn).toBe(true);
   });
 
-  test("user:signed_in fires with firstSignIn=false when an invite challenge is completed through passkey register verify", async () => {
+  test("no sign-in or credential action fires when an invite challenge is sent to passkey register verify", async () => {
     const h = await createDispatcherHarness();
     const invitee = await h.seedUser("author");
     const token = generateToken();
@@ -425,7 +425,8 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       role: "author",
       expiresAt: new Date(Date.now() + 60_000),
     });
-    const spy = h.spyAction("user:signed_in");
+    const signedIn = h.spyAction("user:signed_in");
+    const created = h.spyAction("credential:created");
 
     const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
       json: { token },
@@ -437,10 +438,10 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     const verifyRes = await h.fetch("/_plumix/auth/passkey/register/verify", {
       json: attestationResponse(options.challenge),
     });
-    verifyRes.assertStatus(200);
+    verifyRes.assertStatus(400);
 
-    spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]?.firstSignIn).toBe(false);
+    signedIn.assertNotCalled();
+    created.assertNotCalled();
   });
 
   test("credential:created fires when a passkey is added directly via the credentials table (smoke)", async () => {

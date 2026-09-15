@@ -3271,7 +3271,7 @@ msgstr "الصفحة التي تبحث عنها غير موجودة أو لم ي
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr "تم إنشاء passkey لدعوة مختلفة. أعد التحميل وحاول مرة أخرى."
+msgstr "تم إنشاء passkey لمسار تسجيل مختلف. أعد التحميل وحاول مرة أخرى."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts

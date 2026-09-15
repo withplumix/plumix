@@ -19,6 +19,7 @@ import type {
   Credential,
   CredentialTransport,
 } from "../../db/schema/credentials.js";
+import type { RegistrationCeremony } from "./challenges.js";
 import type { ResolvedPasskeyConfig } from "./config.js";
 import type { RegistrationOptions, RegistrationResponse } from "./types.js";
 import { credentials } from "../../db/schema/credentials.js";
@@ -31,8 +32,7 @@ interface BeginRegistrationInput {
   readonly userEmail: string;
   readonly userDisplayName?: string;
   readonly excludeCredentials?: readonly Credential[];
-  /** The ceremony enrols the user (bootstrap, invite) rather than adding a device. */
-  readonly enrolling: boolean;
+  readonly ceremony: RegistrationCeremony;
 }
 
 export async function beginRegistration(
@@ -44,7 +44,7 @@ export async function beginRegistration(
     db,
     config.challengeTtlMs,
     input.userId,
-    input.enrolling,
+    input.ceremony,
   );
   const userIdBytes = new TextEncoder().encode(String(input.userId));
   return {
@@ -83,7 +83,7 @@ interface VerifiedRegistration {
   readonly transports: readonly CredentialTransport[];
   /** User the original challenge was issued for. Null for discoverable-cred flows. */
   readonly userId: number | null;
-  readonly enrolling: boolean;
+  readonly ceremony: RegistrationCeremony | null;
 }
 
 /**
@@ -176,7 +176,7 @@ export async function finishRegistration(
     signatureCounter: authenticatorData.signatureCounter,
     transports: response.response.transports ?? [],
     userId: challenge.userId,
-    enrolling: challenge.enrolling,
+    ceremony: challenge.ceremony,
   };
 }
 

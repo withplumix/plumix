@@ -3271,7 +3271,7 @@ msgstr "Сторінка, яку ви шукаєте, не існує, або р
 #. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.challengeMismatch"
-msgstr "Passkey було створено для іншого запрошення. Перезавантажте та спробуйте знову."
+msgstr "Passkey було створено для іншого процесу реєстрації. Перезавантажте та спробуйте знову."
 
 #. js-lingui-explicit-id
 #: src/lib/oauth-errors.ts

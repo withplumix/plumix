@@ -186,7 +186,7 @@ export async function handlePasskeyRegisterOptions(
     userEmail: user.email,
     userDisplayName: user.name ?? user.email,
     excludeCredentials,
-    enrolling: policy.outcome === "bootstrap",
+    ceremony: policy.outcome,
   });
 
   return jsonResponse(options);
@@ -239,6 +239,14 @@ export async function handlePasskeyRegisterVerify(
         { status: 400 },
       );
     }
+    // An invite challenge completed here would enrol the invitee without
+    // consuming the token or running invite verify's checks (#2402).
+    if (
+      verified.ceremony !== "bootstrap" &&
+      verified.ceremony !== "add-device"
+    ) {
+      return jsonResponse({ error: "challenge_mismatch" }, { status: 400 });
+    }
 
     const credential = await persistCredential(ctx.db, {
       userId: verified.userId,
@@ -281,7 +289,7 @@ export async function handlePasskeyRegisterVerify(
       );
       await announceSignIn(ctx, user, {
         method: "passkey",
-        firstSignIn: verified.enrolling,
+        firstSignIn: verified.ceremony === "bootstrap",
       });
     }
 
@@ -464,10 +472,7 @@ export async function handleInviteRegisterOptions(
     userId: user.id,
     userEmail: user.email,
     userDisplayName: pickDisplayName(input.name, user.name, user.email),
-    // Invite verify reports the enrolment itself, once, as it consumes the
-    // token. Marking this challenge would let it be replayed through
-    // passkey register verify as another first sign-in.
-    enrolling: false,
+    ceremony: "invite",
   });
   return jsonResponse({
     options,
@@ -489,9 +494,10 @@ export async function handleInviteRegisterVerify(
   try {
     const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
     const verified = await finishRegistration(ctx.db, passkey, input.response);
-    // The challenge issued in register/options was bound to invite.userId.
-    // A mismatch means the response is for a different user — refuse.
-    if (verified.userId === null || verified.userId !== user.id) {
+    // The challenge issued in invite register/options was bound to
+    // invite.userId. A different user or a passkey-route challenge means the
+    // response belongs to another ceremony — refuse.
+    if (verified.ceremony !== "invite" || verified.userId !== user.id) {
       return jsonResponse({ error: "challenge_mismatch" }, { status: 400 });
     }
     const credential = await persistCredential(ctx.db, {

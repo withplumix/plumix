@@ -216,7 +216,7 @@ const MESSAGES: Record<PasskeyErrorCode, MessageDescriptor> = {
   challenge_mismatch: defineMessage({
     id: "passkey.error.challengeMismatch",
     message:
-      "The passkey was created for a different invite. Please reload and try again.",
+      "The passkey was created for a different registration flow. Please reload and try again.",
   }),
 };
 
