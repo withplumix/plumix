@@ -968,6 +968,17 @@ export function termPageEntryTypeNames(
 ): readonly string[] {
   const listed = registry.termTaxonomies.get(taxonomy)?.entryTypes ?? [];
   if (listed.length > 0) return listed;
+  return publicEntryTypeNames(registry);
+}
+
+/**
+ * Every public entry type, hierarchical or not. Any public entry renders its
+ * author, so a change to a user can touch a page stored under any of these
+ * types' tags — the set a user purge has to reach.
+ */
+export function publicEntryTypeNames(
+  registry: PluginRegistry,
+): readonly string[] {
   return [...registry.entryTypes.values()]
     .filter((type) => type.isPublic)
     .map((type) => type.name);

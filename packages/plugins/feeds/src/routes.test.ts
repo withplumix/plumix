@@ -835,6 +835,40 @@ describe("a feed at the edge", () => {
     expect(stored.some((tag) => purged.has(tag))).toBe(true);
   });
 
+  // A delete reassigns the author's entries without firing an entry action, so
+  // only the user purge can retire the feed that names them.
+  test("deleting an author purges their cached feed", async () => {
+    const { cdn, put, purgeTags } = cdnStub();
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, feeds()],
+      cdn,
+    });
+    const admin = await h.seedUser("admin");
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "by-jane",
+      title: "By Jane",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+    });
+    (await h.fetch("/authors/jane/feed")).assertStatus(200);
+    await h.drainDeferred();
+
+    const deleted = await h.fetch("/_plumix/rpc/user/delete", {
+      as: admin,
+      json: { json: { id: jane.id, reassignTo: admin.id }, meta: [] },
+    });
+    deleted.assertStatus(200);
+    await h.drainDeferred();
+
+    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
+    const stored = tagsFor(put, "/authors/jane/feed");
+    expect(stored).not.toEqual([]);
+    expect(stored.some((tag) => purged.has(tag))).toBe(true);
+  });
+
   // Core can't see what a custom archive depends on, so it stays live unless
   // the archive opted in; its feed reads the same things.
   test("a plugin archive that never opted into caching serves its feed live", async () => {
