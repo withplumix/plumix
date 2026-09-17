@@ -45,7 +45,6 @@ import { resolveMailer } from "../auth/mailer/resolve.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/debug-bar/history-consumer.js";
-import { devErrorTelemetryConsumer } from "../dev/server/telemetry-consumer.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
@@ -627,13 +626,13 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
 
 /**
  * The gate: which registered consumers want this request collected. In dev the
- * debug bar registers first (the `PLUMIX_DEV` branch is Vite-empty in a build,
- * so the bar and its config never reach production bundles); alongside it the
- * request-history writer captures every finished request into the store the
- * switcher reads. When the bar is off, a minimal dev-error consumer takes their
- * place so the collector still activates and the dev error page has context to
- * show (#1574). Config consumers follow. A consumer without `sample` always
- * votes yes.
+ * request-history writer registers unconditionally — its readers (the bar, the
+ * history read routes, the MCP tracing and error tools, the dev error page) are
+ * reached by separate switches, so gating the one writer on any of them leaves
+ * the rest empty (#2369, #1574). The `PLUMIX_DEV` branch is Vite-empty in a
+ * build, so neither the writer nor the bar's config reaches production. The bar
+ * needs no writer of its own — it reads the live collector while rendering.
+ * Config consumers follow. A consumer without `sample` always votes yes.
  */
 function sampleTelemetryConsumers(
   ctx: AppContext,
@@ -643,8 +642,8 @@ function sampleTelemetryConsumers(
   const consumers: TelemetryConsumer[] = [];
   if (process.env.PLUMIX_DEV) {
     const bar = debugBarTelemetryConsumer(debugBar);
-    if (bar) consumers.push(bar, debugHistoryConsumer());
-    else consumers.push(devErrorTelemetryConsumer());
+    if (bar) consumers.push(bar);
+    consumers.push(debugHistoryConsumer());
   }
   consumers.push(...(config?.consumers ?? []));
   return consumers.filter((c) => c.sample?.(ctx) ?? true);

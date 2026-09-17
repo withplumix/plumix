@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
@@ -29,6 +30,19 @@ const blog = definePlugin("test-blog", (ctx) => {
     label: "Categories",
     isHierarchical: true,
     entryTypes: ["post"],
+  });
+});
+
+// Reports how much the live collector holds mid-request, from inside a real
+// plugin tool — the only reader of `ctx.telemetry` on the MCP path that isn't
+// itself a telemetry consumer, so it can't vote the collection it measures into
+// existence.
+const spanProbe = definePlugin("test-span-probe", (ctx) => {
+  ctx.registerMcpTool({
+    name: "probe_spans",
+    description: "Test-only: how many spans the live collector holds.",
+    inputSchema: v.object({}),
+    run: (toolCtx) => ({ spans: toolCtx.telemetry.getSpans().length }),
   });
 });
 
@@ -728,6 +742,46 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
     expect(names).toContain("telemetry_requests_list");
     expect(names).toContain("telemetry_request_get");
   });
+
+  // The tools are registered on the dev gate alone, so turning the overlay off
+  // must not silently turn the capture behind them off too — the developer who
+  // sets `debugBar: false` is typically the one driving the site over MCP.
+  test("requests are captured with the debug bar off, and the trace still resolves", async () => {
+    const h = await mcpHarness({ plugins: [blog], debugBar: false });
+    const secret = await mintPat(h);
+
+    const rows = await seedAndList(
+      h,
+      secret,
+      "https://cms.example/bar-off-trace",
+    );
+    const row = rows.find((candidate) => candidate.path === "/bar-off-trace");
+    expect(row).toBeDefined();
+    expect(row?.method).toBe("GET");
+
+    const { json } = await callTool(h, secret, 2, "telemetry_request_get", {
+      id: row?.id ?? "",
+    });
+    const detail = parseToolResult<RequestDetail>(json);
+    expect(detail.context.path).toBe("/bar-off-trace");
+    expect(flattenSpans(detail.spans).some((s) => s.name === "dispatch")).toBe(
+      true,
+    );
+  });
+
+  // The writer keeps the MCP endpoint out of the ring so listing never evicts a
+  // real request. That must stay a decision about what gets *saved*: with the
+  // bar off the writer is the only consumer, so declining to collect would
+  // switch the collector off for the whole request and hand every other
+  // mid-request reader of `ctx.telemetry` — a plugin's own tool here — a no-op.
+  test("the collector is still active on the endpoint the writer keeps out of the ring", async () => {
+    const h = await mcpHarness({ plugins: [blog, spanProbe], debugBar: false });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 1, "probe_spans", {});
+
+    expect(parseToolResult<{ spans: number }>(json).spans).toBeGreaterThan(0);
+  });
 });
 
 // One entry as read off the merged error_list stream — a superset of the server
@@ -854,6 +908,38 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     expect(json.result.isError).toBeUndefined();
     expect(Array.isArray(errors)).toBe(true);
     expect(errors.some((e) => e.path === "/post/healthy")).toBe(false);
+  });
+
+  // The server half projects out of the same ring the tracing tools read, so it
+  // carries the same exposure to the overlay being switched off.
+  test("server failures are listed with the debug bar off", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      debugBar: false,
+      theme: throwingTheme("bar-off boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({
+      authorId: author.id,
+      slug: "bar-off-error",
+    });
+    const secret = await mintPat(h);
+
+    const failed = await h.dispatch(
+      new Request("https://cms.example/post/bar-off-error"),
+    );
+    await h.drainDeferred();
+    expect(failed.status).toBe(500);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const entry = parseToolResult<MergedErrorRow[]>(json).find(
+      (candidate) => candidate.path === "/post/bar-off-error",
+    );
+
+    expect(entry).toBeDefined();
+    expect(entry?.source).toBe("server");
+    expect(entry?.message).toBe("bar-off boom");
+    expect(typeof entry?.requestId).toBe("string");
   });
 
   test("error_list is advertised in tools/list under the dev gate", async () => {
