@@ -5,9 +5,15 @@
 // matching, envelope construction, error-body shape) independently; this is
 // the one copy.
 
+import type { StandardRPCJsonSerializedMetaItem } from "@orpc/client/standard";
+import { StandardRPCJsonSerializer } from "@orpc/client/standard";
 import { vi } from "vitest";
 
 import type { JsonValue } from "@plumix/core";
+
+// The same serializer the real server encodes with, so the envelope this stub
+// builds carries the `meta` type hints the client revives from.
+const serializer = new StandardRPCJsonSerializer();
 
 /** One RPC request the client sent, decoded from the wire envelope. */
 export interface PluginRpcCall {
@@ -17,12 +23,46 @@ export interface PluginRpcCall {
 }
 
 /**
+ * What a responder may hand back: plain JSON, plus every value
+ * `StandardRPCJsonSerializer` encodes with a `meta` type hint, nested at any
+ * depth. Returning a `Date` here is the point — the client revives one, as it
+ * does from the real server.
+ *
+ * `undefined` is admitted at the top level, not only nested, because a real
+ * procedure that returns nothing serializes exactly that way. The cost is that
+ * a responder missing its `return` now type-checks where `JsonValue` rejected
+ * it — accepted, because a type that refuses what the server produces is the
+ * defect this one replaces.
+ *
+ * `Blob` is deliberately absent. A real server switches the whole response to
+ * multipart `FormData` once a blob appears in the payload, and this stub
+ * speaks JSON only; admitting one would hand back a shape the server never
+ * produces, which is the bug this type exists to prevent.
+ */
+type PluginRpcValue =
+  | JsonValue
+  | Date
+  | bigint
+  | URL
+  | RegExp
+  | undefined
+  | ReadonlySet<PluginRpcValue>
+  | ReadonlyMap<PluginRpcValue, PluginRpcValue>
+  | readonly PluginRpcValue[]
+  | { readonly [key: string]: PluginRpcValue };
+
+/**
  * Produces the procedure's result — the serializable value the wire envelope
- * carries. Throwing a `PluginRpcError` responds with that error's status and
+ * carries. `input` arrives revived, as a real handler's would: a `Date` the
+ * caller passed is a `Date` here, not its JSON projection.
+ *
+ * Throwing a `PluginRpcError` responds with that error's status and
  * code/data, matching what a real `errors.XXX({data})` throw on the server
  * produces; throwing anything else responds with a 500.
  */
-type PluginRpcResponder = (input: unknown) => JsonValue | Promise<JsonValue>;
+type PluginRpcResponder = (
+  input: unknown,
+) => PluginRpcValue | Promise<PluginRpcValue>;
 
 export interface PluginRpcStub {
   /** Every request the client sent, in order. */
@@ -56,12 +96,14 @@ export class PluginRpcError extends Error {
 }
 
 function envelope(body: unknown, status: number): Response {
-  // StandardRPC's wire shape. `meta` carries type hints for values JSON can't
-  // represent; nothing these tests return needs one.
-  return new Response(JSON.stringify({ json: body, meta: [] }), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  const [json, meta] = serializer.serialize(body);
+  // A real server omits `meta` rather than sending an empty array, and
+  // `JSON.stringify` drops an `undefined` member — so the two agree byte for
+  // byte on a payload that needs no hints.
+  return new Response(
+    JSON.stringify({ json, meta: meta.length === 0 ? undefined : meta }),
+    { status, headers: { "content-type": "application/json" } },
+  );
 }
 
 function errorEnvelope(error: PluginRpcError): Response {
@@ -96,7 +138,11 @@ export function stubPluginRpc(
       const prefixAt = pathname.indexOf(prefix);
       if (prefixAt === -1) return envelope({ message: "not rpc" }, 404);
       const procedure = pathname.slice(prefixAt + prefix.length);
-      const { json: input } = (await request.json()) as { json?: unknown };
+      const body = (await request.json()) as {
+        json?: unknown;
+        meta?: readonly StandardRPCJsonSerializedMetaItem[];
+      };
+      const input = serializer.deserialize(body.json, body.meta ?? []);
       // Recorded before the route lookup, so an unrouted procedure shows up
       // in `calls` rather than only in a 404 nobody asserts on.
       calls.push({ procedure, input });

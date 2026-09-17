@@ -22,6 +22,16 @@ const _menuRouter = {
   locations: {
     list: base.handler((): readonly { id: string }[] => []),
   },
+  sync: base
+    .input(v.object({ since: v.date() }))
+    .handler((): { at: Date } => ({ at: new Date() })),
+  rows: base.input(v.object({ termId: v.number() })).handler(
+    (): readonly {
+      id: number;
+      seenAt: Date;
+      tags: ReadonlySet<string>;
+    }[] => [],
+  ),
 };
 
 beforeEach(() => {
@@ -46,6 +56,53 @@ describe("stubPluginRpc", () => {
       procedure: "list",
       input: { termId: 7 },
     });
+  });
+
+  test("a Date a responder returns resolves as a Date, not its JSON projection", async () => {
+    const at = new Date("2026-05-10T10:00:00.000Z");
+    stubPluginRpc("menu", { sync: () => ({ at }) });
+    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+
+    const result = await rpc.sync({ since: at });
+
+    expect(result.at).toBeInstanceOf(Date);
+    expect(result.at.getTime()).toBe(at.getTime());
+  });
+
+  test("a Date the client sends reaches the responder, and the record, as a Date", async () => {
+    const since = new Date("2026-05-10T10:00:00.000Z");
+    let seen: unknown;
+    const stub = stubPluginRpc("menu", {
+      sync: (input) => {
+        seen = input;
+        return { at: since };
+      },
+    });
+    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+
+    await rpc.sync({ since });
+
+    expect(seen).toEqual({ since });
+    expect((seen as { since: unknown }).since).toBeInstanceOf(Date);
+    expect(stub.lastCallTo("sync")?.input).toEqual({ since });
+  });
+
+  test("a nested non-JSON value revives at its own path, not just at the root", async () => {
+    const first = new Date("2026-05-10T10:00:00.000Z");
+    const second = new Date("2026-05-11T09:30:00.000Z");
+    stubPluginRpc("menu", {
+      rows: () => [
+        { id: 1, seenAt: first, tags: new Set(["nav"]) },
+        { id: 2, seenAt: second, tags: new Set<string>() },
+      ],
+    });
+    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+
+    const rows = await rpc.rows({ termId: 7 });
+
+    expect(rows[0]?.seenAt).toBeInstanceOf(Date);
+    expect(rows[1]?.seenAt).toEqual(second);
+    expect(rows[0]?.tags).toEqual(new Set(["nav"]));
   });
 
   test("an unrouted procedure answers 404 and still shows up in calls", async () => {
@@ -85,6 +142,26 @@ describe("stubPluginRpc", () => {
       status: 409,
       data: { reason: "version_mismatch", key: "4" },
     });
+  });
+
+  test("a PluginRpcError's data revives too, with its code and status intact", async () => {
+    const expiresAt = new Date("2026-05-10T10:00:00.000Z");
+    stubPluginRpc("menu", {
+      save: () => {
+        throw new PluginRpcError("CONFLICT", {
+          status: 409,
+          data: { reason: "version_mismatch", expiresAt },
+        });
+      },
+    });
+    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+
+    const error = await rpc.save({}).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: "CONFLICT", status: 409 });
+    const { data } = error as { data: { expiresAt: unknown } };
+    expect(data.expiresAt).toBeInstanceOf(Date);
+    expect(data.expiresAt).toEqual(expiresAt);
   });
 
   test("a plain throw answers 500", async () => {
