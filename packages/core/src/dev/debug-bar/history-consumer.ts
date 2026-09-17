@@ -5,9 +5,6 @@ import { debugHistory } from "./history.js";
 import { isDebugRequestsPath } from "./requests-path.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
-// The MCP endpoint is a second reader of the ring (the dev telemetry tracing
-// tools), so it is excluded from capture too — otherwise every list/inspect
-// call would evict a real request from the window the tools exist to expose.
 // Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
 // rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.
 const MCP_PATH = "/_plumix/mcp";
@@ -19,27 +16,27 @@ const MCP_PATH = "/_plumix/mcp";
  * `onRequestEnd` runs after the response via `waitUntil`, so capture adds no
  * latency — mirroring the OTLP exporter. It captures every request kind (HTML,
  * RPC, REST/`api`, 5xx) because it never inspects the response body — the one
- * exception being its own read endpoint, which `sample` votes out so listing
- * the history never pollutes it. The store is exactly where an API/RPC call —
- * which never gets an inline bar — becomes inspectable. Referenced only under
- * the `PLUMIX_DEV` gate, so it and its store tree-shake out of production.
+ * exception being the two endpoints that *read* the ring, its own read routes
+ * and the MCP endpoint behind the tracing tools, which it declines to save so
+ * listing the history never evicts a real request from the window those tools
+ * exist to expose. The store is exactly where an API/RPC call — which never
+ * gets an inline bar — becomes inspectable. Referenced only under the
+ * `PLUMIX_DEV` gate, so it and its store tree-shake out of production.
+ *
+ * Declining is a decision about saving, not about collecting. With the bar off
+ * this is the only consumer a dev server is guaranteed to have, so a `sample`
+ * vote of no deactivates the collector for the whole request rather than just
+ * skipping the write — which on the read routes is what blanks the dev error
+ * page (#1574), and on either path leaves anything else reading `ctx.telemetry`
+ * mid-request, a plugin's MCP tool included, looking at a no-op (#2369).
  */
 export function debugHistoryConsumer(
   history: DebugHistoryStore = debugHistory,
 ): TelemetryConsumer {
   return {
     id: "debug-history",
-    // The `sample` vote runs at context creation, before the base-path prefix
-    // is stripped, so normalize against `ctx.basePath` before matching.
-    sample: (ctx) => {
-      const stripped = stripBasePath(
-        new URL(ctx.request.url).pathname,
-        ctx.basePath,
-      );
-      if (stripped === null) return true;
-      return !isDebugRequestsPath(stripped) && stripped !== MCP_PATH;
-    },
     onRequestEnd: (snapshot, ctx) => {
+      if (isRingReader(new URL(ctx.request.url).pathname, ctx.basePath)) return;
       history.save({
         id: snapshot.request.requestId,
         startedAt: snapshot.request.startedAt,
@@ -49,4 +46,12 @@ export function debugHistoryConsumer(
       });
     },
   };
+}
+
+/** The request URL still carries any base-path mount, so strip it before
+ *  matching; a path outside the mount is never one of ours. */
+function isRingReader(pathname: string, basePath: string): boolean {
+  const stripped = stripBasePath(pathname, basePath);
+  if (stripped === null) return false;
+  return isDebugRequestsPath(stripped) || stripped === MCP_PATH;
 }
