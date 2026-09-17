@@ -792,9 +792,10 @@ describe("noindex keeps a page out of the sitemap", () => {
 
   test("a bag holding something other than true stays listed", async () => {
     const h = await createHarness();
-    // Everything the head's reader answers `false` to. The two have to agree,
-    // or a page is indexable in its head and missing from the sitemap — and
-    // `1` is the one a JSON extraction cannot tell from `true`.
+    // The sitemap half of what the agreement table holds all three surfaces
+    // to: only a stored `true` hides a page, so a bag holding anything else
+    // stays listed. `1` is the one a JSON extraction cannot tell from `true`,
+    // which is why the predicate asks `json_type` instead.
     await seedPost(h, { slug: "texty", meta: { seo_noindex: "yes" } });
     await seedPost(h, { slug: "numeric", meta: { seo_noindex: 1 } });
 
@@ -1375,6 +1376,22 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
       subject: "term",
       meta: { seo_noindex: true },
       indexable: false,
+    },
+    // A bag holding a token the write path would have settled — only a direct
+    // write or an import puts one there. All three read it as stored, so the
+    // page stays indexable rather than being hidden from two surfaces and
+    // listed by the third.
+    {
+      arm: "numeric_token",
+      subject: "entry",
+      meta: { seo_noindex: 1 },
+      indexable: true,
+    },
+    {
+      arm: "string_token",
+      subject: "term",
+      meta: { seo_noindex: "true" },
+      indexable: true,
     },
     {
       arm: "type_default",

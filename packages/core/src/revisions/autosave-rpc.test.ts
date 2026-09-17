@@ -200,6 +200,37 @@ describe("entry.update saveAs", () => {
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
 
+  // Where a legacy token finally settles (`coerceOnRead` covers why one reads
+  // as stored until then). The autosave base is the live row, so the token
+  // rides into the promoted bag even from an edit that never touched the
+  // field, and publish's strict pass resolves it.
+  test("publishing settles an untouched legacy boolean token to a real boolean", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "sealed",
+        label: "Sealed",
+        type: "boolean",
+        inputType: "toggle",
+      }),
+    );
+    // As an import or a direct write leaves it — never through sanitize.
+    await h.context.db
+      .update(entries)
+      .set({ meta: { sealed: 1 } })
+      .where(eq(entries.id, h.entryId));
+
+    const before = await h.client.entry.get({ id: h.entryId });
+    expect(before.meta.sealed).toBe(1);
+
+    await h.client.entry.update({ id: h.entryId, excerpt: "unrelated edit" });
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: h.liveUpdatedAt,
+    });
+
+    expect(promoted.meta.sealed).toBe(true);
+  });
+
   test("autosave is draft-lenient: keeps an out-of-bounds value instead of rejecting", async () => {
     const h = await publishedPostFixture(registryWithMetaField(RATING_FIELD));
     // A strict write rejects 99 (max 5); autosave tolerates it so a

@@ -1362,19 +1362,6 @@ function assertEncodedSize(key: string, value: unknown): void {
   }
 }
 
-// Mirror the write-side accepted tokens instead of `Boolean(value)` — the
-// latter would flip `"false"` → `true`, silently inverting rows persisted
-// via `type: "json"` before a plugin tightened the field to `boolean`.
-const TRUTHY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([1, "1", "true"]);
-const FALSY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([0, "0", "false"]);
-
-function coerceBooleanOnRead(value: JsonValue): JsonValue {
-  if (typeof value === "boolean") return value;
-  if (TRUTHY_BOOLEAN_TOKENS.has(value)) return true;
-  if (FALSY_BOOLEAN_TOKENS.has(value)) return false;
-  return value;
-}
-
 // A container has no scalar form to fall back to, so it reads as its JSON
 // rather than as `String()`'s "[object Object]".
 function stringifyOnRead(value: JsonValue): string {
@@ -1393,8 +1380,13 @@ function coerceOnRead(type: MetaScalarType, value: JsonValue): JsonValue {
       return typeof value === "string" ? value : stringifyOnRead(value);
     case "number":
       return typeof value === "number" ? value : Number(value);
+    // The exception, and why it shares `json`'s arm: a boolean's stored value
+    // is the one a `WHERE` over the JSON column, a raw row off a lifecycle
+    // event, and `storedMeta` behind `whereMeta` all read without decoding.
+    // Widening `1` here would answer a question those three answer the other
+    // way. The write path settles every token it accepts, so a row holding
+    // one bypassed the pipeline, and the next save through it settles that.
     case "boolean":
-      return coerceBooleanOnRead(value);
     case "json":
       return value;
   }

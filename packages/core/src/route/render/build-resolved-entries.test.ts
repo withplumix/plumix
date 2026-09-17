@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 
+import type { JsonObject } from "../../json.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";
 import { date } from "../../plugin/fields/temporal.js";
+import { toggle } from "../../plugin/fields/toggle.js";
 import { createTracedContext } from "../../test/traced-context.js";
 import { buildResolvedEntries } from "./build-resolved-entries.js";
 import { forEntryType } from "./template-builders.js";
@@ -17,6 +19,10 @@ import { resolveTemplate } from "./template-hierarchy.js";
 const _dossierFields = [
   date("filedOn").returns("date"),
   entryRef("subject", ["post"]),
+  // The scalar decoding leaves alone, so `whereMeta` — which is typed from
+  // the stored shape and compares against `storedMeta` — asks the same
+  // question of it as a template reading the decoded bag does.
+  toggle("sealed"),
 ];
 // The same two decode moves, on a term. Before the render path decoded
 // term meta these read back as the raw ISO string and the raw id.
@@ -225,6 +231,66 @@ describe("whereMeta against a real row", () => {
     // Both values are what `whereMeta` types against, so both have to fire.
     expect(resolveTemplate([filed], node, data)).toBe(filed);
     expect(resolveTemplate([referenced], node, data)).toBe(referenced);
+  });
+
+  // `whereMeta` is typed `boolean` here, from the field's declared type, and
+  // compares against `storedMeta`. A decode that widened a stored token to
+  // `true` would leave the signature telling the truth about one bag and not
+  // the other: a template branching on `entry.meta.sealed` would fire where
+  // the rule did not.
+  test("a boolean reads alike from both bags, so whereMeta agrees with the decoded value", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const seed = (meta: JsonObject) =>
+      harness.factory.entry.create({
+        authorId: author.id,
+        type: "post",
+        status: "published",
+        meta,
+      });
+    // What the RPC path stores, beside what a direct write or an import can
+    // leave behind — the token the write path would have settled to `true`.
+    const canonical = await seed({ sealed: true });
+    const token = await seed({ sealed: 1 });
+
+    const resolved = await run(() =>
+      buildResolvedEntries(ctx, [canonical, token]),
+    );
+    const sealed = forEntryType("post")
+      .whereMeta("sealed", true)
+      .template(() => null);
+    const fires = (row: (typeof resolved)[number]) =>
+      resolveTemplate(
+        [sealed],
+        {
+          kind: "content",
+          entryType: "post",
+          slug: row.slug,
+          databaseId: row.id,
+        } satisfies ResolvedNode,
+        { kind: "entry", entry: row } satisfies TemplateData,
+      ) === sealed;
+
+    const read = (id: number) => {
+      const row = resolved.find((candidate) => candidate.id === id);
+      if (!row) throw new Error(`no resolved entry for ${String(id)}`);
+      return {
+        decoded: row.meta.sealed,
+        stored: row.storedMeta.sealed,
+        rule: fires(row),
+      };
+    };
+
+    // The canonical row is what keeps the token row honest: a predicate that
+    // never fired would pass that case for the wrong reason.
+    expect(read(canonical.id)).toEqual({
+      decoded: true,
+      stored: true,
+      rule: true,
+    });
+    expect(read(token.id)).toEqual({ decoded: 1, stored: 1, rule: false });
   });
 });
 

@@ -127,10 +127,9 @@ describe("user meta: registration + round-trip via user.update", () => {
     expect(spy.calls).toHaveLength(0);
   });
 
-  // Regression: `Boolean("false") === true` would silently flip rows
-  // written via `type: "json"` before a plugin tightened the field to
-  // `boolean`. `coerceOnRead` mirrors the write-side token set instead.
-  test("coerceOnRead maps legacy string booleans to their real values", async () => {
+  // The entry surface's twin: a boolean field reads as stored, handed back as
+  // the string itself rather than resolved either way.
+  test("a legacy string boolean reads back as the stored string", async () => {
     const plugins = createPluginRegistry();
     registerUserFields(plugins, [
       {
@@ -149,7 +148,7 @@ describe("user meta: registration + round-trip via user.update", () => {
       .where(eq(users.id, h.user.id));
 
     expect(await loadUserMeta(h.context, { id: h.user.id })).toEqual({
-      newsletter: false,
+      newsletter: "false",
     });
   });
 });

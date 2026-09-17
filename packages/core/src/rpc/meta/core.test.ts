@@ -11,6 +11,7 @@ import {
   select,
   text,
   time,
+  toggle,
   url,
 } from "../../plugin/fields/index.js";
 import {
@@ -331,6 +332,43 @@ describe("decodeMetaBag (forgiving scalar coercion)", () => {
     expect(decodeMetaBag(metaScope(fields), { title: null }).title).toBe(
       "null",
     );
+  });
+
+  // A boolean's stored value is the one other surfaces read without decoding
+  // — a `WHERE` over the JSON column, a raw row off a lifecycle event, and
+  // `storedMeta` behind `whereMeta`. None can run this coercion, so widening
+  // `1` here would answer a question those three answer the other way.
+  const flagField = toggle("flag").build();
+  const flagScope = metaScope([flagField]);
+
+  test.each([1, "1", "true", 0, "0", "false", "yes", true, false])(
+    "reads a stored %o under a boolean field as itself",
+    (stored) => {
+      expect(decodeMetaBag(flagScope, { flag: stored }).flag).toBe(stored);
+    },
+  );
+
+  // What makes that literal read affordable: a token is settled on the way in
+  // instead, so a row holding one never went through here.
+  test.each([
+    [1, true],
+    ["1", true],
+    ["true", true],
+    [0, false],
+    ["0", false],
+    ["false", false],
+  ] as const)(
+    "stores %o written under a boolean field as %o",
+    async (written, stored) => {
+      const patch = await sanitizeMetaInput(() => flagField, { flag: written });
+      expect(patch?.upserts.get("flag")).toBe(stored);
+    },
+  );
+
+  test("a token written through the pipeline reads back as a real boolean", async () => {
+    const patch = await sanitizeMetaInput(() => flagField, { flag: "true" });
+    const stored = Object.fromEntries(patch?.upserts ?? []);
+    expect(decodeMetaBag(flagScope, stored).flag).toBe(true);
   });
 });
 
