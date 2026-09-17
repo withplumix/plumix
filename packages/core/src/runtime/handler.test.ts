@@ -1,8 +1,12 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
-import type { Invocation, PlumixHandler } from "./adapter.js";
+import type {
+  Invocation,
+  PlumixHandler,
+  ScheduledRunReport,
+} from "./adapter.js";
 import type { PlumixHandlerOptions } from "./handler.js";
 import type { DatabaseAdapter } from "./slots.js";
 import { auth } from "../auth/config.js";
@@ -564,12 +568,26 @@ describe("createPlumixHandler — deferred work", () => {
   });
 });
 
+/**
+ * A schedule none of core's own tasks declare, so a firing on it runs only the
+ * untagged tasks a test registers — those run on every firing.
+ */
+const UNCLAIMED_CRON = "0 9 * * MON";
+
+const oneTask = definePlugin("reports", (ctx) => {
+  ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+});
+
+/** A database whose per-request seam is whatever the test needs to fail. */
+const scopedDatabase = (
+  connectRequest: DatabaseAdapter["connectRequest"],
+): DatabaseAdapter => ({ ...stubDatabase, connectRequest });
+
 describe("createPlumixHandler — scheduled reporting", () => {
   test("returns what the run did, so a caller outside can act on it", async () => {
-    // Task failures are caught so siblings still run, which leaves an external
-    // caller — `plumix cron run` under a CronJob — unable to tell a good run
-    // from one where everything failed.
-    const plugin = definePlugin("reports", (ctx) => {
+    // The report survives the handler's own path — cron routing, the commit,
+    // the return — not just `runScheduledTasks`, which is covered on its own.
+    const oneTaskOneFailure = definePlugin("reports", (ctx) => {
       ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
       ctx.registerScheduledTask({
         id: "boom",
@@ -578,16 +596,134 @@ describe("createPlumixHandler — scheduled reporting", () => {
         },
       });
     });
-    const handler = await handlerFor({ plugins: [plugin] });
+    const handler = await handlerFor({ plugins: [oneTaskOneFailure] });
 
-    // A schedule none of core's own tasks declare, so only the two untagged
-    // ones above run — they run on every firing.
     const report = await handler.scheduled?.(
-      { scheduledTime: 0, cron: "0 9 * * MON" },
+      { scheduledTime: 0, cron: UNCLAIMED_CRON },
       { env: {} },
     );
 
-    expect(report).toEqual({ ran: 1, failed: ["reports:boom"] });
+    expect(report).toStrictEqual({ ran: 1, failed: ["reports:boom"] });
+  });
+
+  test("keeps the tasks it ran when the commit after them throws", async () => {
+    // Committing the scoped write is the last thing the run does, and its
+    // response has no reader here. A `database` slot that throws there has not
+    // stopped the run from reaching its tasks, so it must not produce `aborted`.
+    const handler = await handlerFor({
+      plugins: [oneTask],
+      database: scopedDatabase(() => ({
+        db: {},
+        commit: () => {
+          throw new Error("commit failed");
+        },
+      })),
+    });
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    try {
+      const report = await handler.scheduled?.(
+        { scheduledTime: 0, cron: UNCLAIMED_CRON },
+        { env: {} },
+      );
+
+      expect(report).toStrictEqual({ ran: 1, failed: [] });
+      // Kept out of the report, so the log is the only place it surfaces.
+      const logged = error.mock.calls.filter((args) =>
+        args.some((arg) => String(arg).includes("commit failed")),
+      );
+      expect(logged).toHaveLength(1);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  test("reports aborted when setup throws before the tasks run", async () => {
+    // The same slot, failing at the other end: a connection the run never got
+    // means the tasks never ran, which is what `aborted` exists to say.
+    const handler = await handlerFor({
+      plugins: [oneTask],
+      database: scopedDatabase(() => {
+        throw new Error("no connection");
+      }),
+    });
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    try {
+      const report = await handler.scheduled?.(
+        { scheduledTime: 0, cron: UNCLAIMED_CRON },
+        { env: {} },
+      );
+
+      expect(report).toStrictEqual({
+        ran: 0,
+        failed: [],
+        aborted: "no connection",
+      });
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  test("keeps the tasks it ran when the commit throws and logging it throws too", async () => {
+    // The guard around the commit reports through the same logger that may be
+    // the thing failing, so it cannot assume its own report lands.
+    const handler = await handlerFor({
+      plugins: [oneTask],
+      database: scopedDatabase(() => ({
+        db: {},
+        commit: () => {
+          throw new Error("commit failed");
+        },
+      })),
+    });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {
+      throw new Error("transport down");
+    });
+
+    try {
+      const report = await handler.scheduled?.(
+        { scheduledTime: 0, cron: UNCLAIMED_CRON },
+        { env: {} },
+      );
+      expect(report).toStrictEqual({ ran: 1, failed: [] });
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  test("the report type only admits an abort from before any task ran", () => {
+    // The invariant the tests above rely on, where a third-party adapter
+    // writing its own report has to meet it too: prose on the field is what
+    // let the handler contradict it in the first place. `expectTypeOf`
+    // compiles away, so `pnpm typecheck` is what runs these, not vitest.
+    expectTypeOf<{
+      readonly ran: 1;
+      readonly failed: readonly [];
+      readonly aborted: string;
+    }>().not.toExtend<ScheduledRunReport>();
+
+    expectTypeOf<{
+      readonly ran: 0;
+      readonly failed: readonly [];
+      readonly aborted: string;
+    }>().toExtend<ScheduledRunReport>();
+
+    // Nothing ran, so there is nothing to have failed either.
+    expectTypeOf<{
+      readonly ran: 0;
+      readonly failed: readonly string[];
+      readonly aborted: string;
+    }>().not.toExtend<ScheduledRunReport>();
+
+    expectTypeOf<{
+      readonly ran: 2;
+      readonly failed: readonly string[];
+    }>().toExtend<ScheduledRunReport>();
   });
 });
 

@@ -53,20 +53,33 @@ export interface ScheduledEvent {
  * outside the process — `plumix cron run` under a CronJob — cannot tell a run
  * where everything worked from one where nothing did, and would report success
  * either way.
+ *
+ * A union rather than one shape with an optional `aborted`, so "aborted means
+ * nothing ran" is a thing the compiler checks rather than a sentence an adapter
+ * can contradict.
  */
-export interface ScheduledRunReport {
-  /** How many tasks completed without throwing. */
-  readonly ran: number;
-  /** `plugin:task` for each that threw, in the order they ran. */
-  readonly failed: readonly string[];
-  /**
-   * Why the run never reached its tasks — a database that will not connect, a
-   * binding that is missing. Distinct from `failed` because nothing ran: a
-   * caller that conflated the two would send an operator looking for a task
-   * that never started.
-   */
-  readonly aborted?: string;
-}
+export type ScheduledRunReport =
+  | {
+      /** How many tasks completed without throwing. */
+      readonly ran: number;
+      /** `plugin:task` for each that threw, in the order they ran. */
+      readonly failed: readonly string[];
+      /**
+       * Declared so the key is known to both arms: excess-property checking
+       * would otherwise let an aborted report pass as this one.
+       */
+      readonly aborted?: never;
+    }
+  | {
+      readonly ran: 0;
+      readonly failed: readonly [];
+      /**
+       * Why the run never reached its tasks — a database that will not
+       * connect, a binding that is missing. A caller that conflated this with
+       * `failed` would send an operator looking for a task that never started.
+       */
+      readonly aborted: string;
+    };
 
 export interface PlumixHandler {
   readonly fetch: (

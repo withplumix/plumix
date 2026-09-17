@@ -2,13 +2,21 @@ import type { AppContext } from "../context/app.js";
 import type { ScheduledRunReport } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cdn/purge.js";
+import { logErrorSafely } from "../context/log.js";
 import { scheduledTasksFor } from "./schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 /**
- * Run the registered scheduled tasks against the given `AppContext`. Each task
- * is wrapped in its own `try/catch` so a single failure can't abort siblings —
- * failures are surfaced through `ctx.logger.error` with `{ taskId, cron }`.
+ * Run the registered scheduled tasks against the given `AppContext`, and report
+ * what they did. Each task is wrapped in its own `try/catch` so a single
+ * failure can't abort siblings: the report's `failed` is where a failure
+ * surfaces, and the log is secondary — it is best-effort, because a logger that
+ * throws must not cost the run the accounting it has already done. The epilogue
+ * below is guarded for the same reason.
+ *
+ * Never returns the report's `aborted` arm. Reaching this function means the
+ * run reached its tasks, which is precisely what that arm denies; only the
+ * handler, which does the setup that can fail first, can produce one.
  *
  * `firedCron` is the schedule that triggered this invocation (Cloudflare's
  * `event.cron`). A task with a declared `cron` runs only when it matches; a
@@ -41,11 +49,11 @@ export async function runScheduledTasks(
     } catch (error) {
       const label = `${task.registeredBy}:${task.id}`;
       failed.push(label);
-      ctx.logger.error(
-        `[plumix] scheduled task "${label}" failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        { error, taskId: task.id, plugin: task.registeredBy, cron: task.cron },
+      logErrorSafely(
+        ctx.logger,
+        `[plumix] scheduled task "${label}" failed`,
+        error,
+        { taskId: task.id, plugin: task.registeredBy, cron: task.cron },
       );
     }
   }
@@ -60,12 +68,7 @@ export async function runScheduledTasks(
     // A CDN adapter that throws synchronously must not discard the accounting
     // the loop just did: the tasks ran, and the caller is about to be told
     // whether they worked.
-    ctx.logger.error(
-      `[plumix] scheduled run epilogue failed: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-      { error },
-    );
+    logErrorSafely(ctx.logger, "[plumix] scheduled run epilogue failed", error);
   }
   return { ran, failed };
 }

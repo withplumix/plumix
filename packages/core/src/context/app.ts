@@ -50,6 +50,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
+import { logErrorSafely } from "./log.js";
 import { createRequestMemo } from "./memo.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
@@ -456,26 +457,7 @@ function normalizeClientAddress(value: string | undefined): string | undefined {
 }
 
 function logRejection(logger: Logger, error: unknown): void {
-  // Both the error message and the raw value land in the log — the
-  // message is the grep-friendly bit; the raw value (with stack) goes
-  // through the logger's `meta` channel for structured backends.
-  // Wrapped in try/catch because a custom logger backend can throw
-  // (broken transport, fs full, etc.); a fire-and-forget task must
-  // not surface a downstream rejection just because logging failed.
-  const message = errorMessage(error);
-  try {
-    logger.error(`[plumix] deferred promise rejected: ${message}`, {
-      error,
-    });
-  } catch {
-    // Best-effort logging — swallow.
-  }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return String(error);
+  logErrorSafely(logger, "[plumix] deferred promise rejected", error);
 }
 
 function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
