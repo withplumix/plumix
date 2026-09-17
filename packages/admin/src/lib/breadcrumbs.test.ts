@@ -11,6 +11,7 @@ const FIXTURE: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
+      capabilityType: "post",
       adminSlug: "posts",
       label: "Posts",
       isPublic: true,
@@ -20,6 +21,7 @@ const FIXTURE: PlumixManifest = {
     },
     {
       name: "page",
+      capabilityType: "page",
       adminSlug: "pages",
       label: "Pages",
       isPublic: true,

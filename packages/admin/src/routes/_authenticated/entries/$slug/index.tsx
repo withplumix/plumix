@@ -813,13 +813,13 @@ function ContentListRoute(): ReactNode {
   const renderLabel = useLabel();
   const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
 
-  // Capability gate for the "New" button. Uses the capability namespace
-  // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
-  // button — the new-post route also redirects on `beforeLoad` but we
-  // shouldn't surface the button at all.
-  const createCapability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
+  // Capability gate for the "New" button, under the namespace the manifest
+  // resolved for the type. Missing the cap? Hide the button — the new-post
+  // route also redirects on `beforeLoad` but we shouldn't surface the button
+  // at all.
+  const createCapability = `entry:${entryType.capabilityType}:create`;
   const canCreate = hasCap(user.capabilities, createCapability);
-  const deleteCapability = `entry:${entryType.capabilityType ?? entryType.name}:delete`;
+  const deleteCapability = `entry:${entryType.capabilityType}:delete`;
   const canDelete = hasCap(user.capabilities, deleteCapability);
 
   const {

@@ -1,8 +1,11 @@
+import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
 import { getEntry } from "../../../entries/read-service.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { entryCapability } from "./lifecycle.js";
 import { resolveEntryMeta } from "./meta.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
@@ -25,16 +28,15 @@ export const get = base
       // Preview mode: overlay the caller's autosave (if any) onto the live
       // row's read fields. Gated by edit_own / edit_any because previewing a
       // pending draft is an editor concern.
+      const namespace = entryCapabilityNamespace(context.plugins, live.type);
+      const editOwn = entryCapability(namespace, "edit_own");
       const canSeeAny = context.auth.can(
-        entryCapability(live.type, "edit_any"),
+        entryCapability(namespace, "edit_any"),
       );
       const ownsAndCanEdit =
-        live.authorId === context.user.id &&
-        context.auth.can(entryCapability(live.type, "edit_own"));
+        live.authorId === context.user.id && context.auth.can(editOwn);
       if (!canSeeAny && !ownsAndCanEdit) {
-        throw errors.FORBIDDEN({
-          data: { capability: entryCapability(live.type, "edit_own") },
-        });
+        throw errors.FORBIDDEN({ data: { capability: editOwn } });
       }
 
       const autosave = await getAutosave(context.db, {

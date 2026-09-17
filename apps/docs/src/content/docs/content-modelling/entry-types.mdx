@@ -186,7 +186,7 @@ Registering a type mints eight capabilities named `entry:<type>:<action>`, each 
 | `entry:recipe:read_revisions`   | editor       |
 | `entry:recipe:restore_revision` | editor       |
 
-`capabilities` raises or lowers the minimum role per action. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two.
+`capabilities` raises or lowers the minimum role per action. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two. The namespace is resolved once, at registration: the registered type always carries a `capabilityType`, the type's own name unless it pools, and every capability check reads it from there, so a pooled type is gated by `entry:recipe:*` on every surface.
 
 ```ts
 import { definePlugin } from "plumix/plugin";

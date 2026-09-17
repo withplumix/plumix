@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
+import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // Stats/activity scope to *registered* entry types, so the harness needs
@@ -20,6 +21,25 @@ function postRegistry() {
 }
 
 describe("entry.stats", () => {
+  test("counts a type pooled onto another's capabilities", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      type: "news",
+      slug: "n1",
+    });
+
+    const stats = await h.client.entry.stats();
+    expect(stats).toContainEqual({
+      type: "news",
+      status: "published",
+      count: 1,
+    });
+  });
+
   test("returns per-type counts grouped by status", async () => {
     const h = await createRpcHarness({
       authAs: "editor",

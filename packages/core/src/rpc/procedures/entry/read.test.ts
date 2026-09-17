@@ -3,7 +3,41 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+
+describe("a type pooled onto another's capabilities", () => {
+  test("entry.list reaches it through the pooled namespace", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      type: "news",
+      slug: "news-1",
+    });
+
+    const rows = await h.client.entry.list({ type: "news" });
+    expect(rows).toEqual([expect.objectContaining({ slug: "news-1" })]);
+  });
+
+  test("entry.get reaches it through the pooled namespace", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    const row = await h.factory.published.create({
+      authorId: h.user.id,
+      type: "news",
+      slug: "news-2",
+    });
+
+    await expect(h.client.entry.get({ id: row.id })).resolves.toMatchObject({
+      slug: "news-2",
+    });
+  });
+});
 
 describe("entry.list", () => {
   test("returns published entries by default for subscriber", async () => {

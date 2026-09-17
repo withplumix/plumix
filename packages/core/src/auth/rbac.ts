@@ -1,7 +1,7 @@
 import type { UserRole } from "../db/schema/users.js";
 import type {
-  EntryTypeOptions,
   PluginRegistry,
+  RegisteredEntryType,
   TermTaxonomyOptions,
 } from "../plugin/manifest.js";
 import { USER_ROLES } from "../db/schema/users.js";
@@ -148,15 +148,12 @@ function deriveCapabilities(
 }
 
 export function deriveEntryTypeCapabilities(
-  entryTypeName: string,
-  options: EntryTypeOptions,
+  type: Pick<RegisteredEntryType, "capabilityType" | "capabilities">,
 ): readonly DerivedCapability[] {
-  // Sharing `capabilityType` across entry types pools their permissions —
-  // two plugins both with `capabilityType: "post"` share `entry:post:*`.
   return deriveCapabilities(
-    `entry:${options.capabilityType ?? entryTypeName}`,
+    `entry:${type.capabilityType}`,
     POST_TYPE_CAPABILITY_ACTIONS,
-    options.capabilities,
+    type.capabilities,
   );
 }
 

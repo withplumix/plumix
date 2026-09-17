@@ -290,6 +290,37 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
     expect(seen).toContain("entry:post:edit_any");
   });
 
+  test("gates a type pooled onto post by entry:post:*, never entry:news:*", () => {
+    const seen: string[] = [];
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({
+        queriedEntry: { kind: "entry", id: 42 },
+        queriedEntryDetails: { type: "news", authorId: 999 },
+        entryTypes: new Map([
+          [
+            "news",
+            toRegisteredEntryType(
+              "news",
+              { label: "News", capabilityType: "post" },
+              "test",
+            ),
+          ],
+        ]),
+        auth: {
+          can: (cap: string) => {
+            seen.push(cap);
+            return cap === "entry:post:edit_any";
+          },
+        },
+      }),
+    );
+
+    expect(nodes.find((n) => n.id === "edit-this")).toBeDefined();
+    expect(seen).toContain("entry:post:edit_any");
+    expect(seen).not.toContain("entry:news:edit_any");
+  });
+
   test("appears for the entry's author when auth allows edit_own", () => {
     const seen: string[] = [];
     const nodes = collectAdminBarNodes(

@@ -23,6 +23,7 @@ function seedEntryTypes(...names: readonly string[]): void {
   seedManifest({
     entryTypes: names.map((name) => ({
       name,
+      capabilityType: name,
       adminSlug: `${name}s`,
       label: name,
       isPublic: true,

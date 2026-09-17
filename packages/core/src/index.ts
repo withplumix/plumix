@@ -101,6 +101,7 @@ export type {
   WithResolvedMeta,
 } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
+export { entryCapability } from "./entries/capabilities.js";
 // The entry change feed (#2121): read a bounded batch, do the work, then
 // acknowledge it.
 export { ackEntryChanges, readEntryChanges } from "./entries/change-feed.js";

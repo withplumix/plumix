@@ -2,11 +2,14 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AuthenticatedUser } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
+import type { PluginRegistry } from "../plugin/registry.js";
 import type { EntryViewer } from "./visibility.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { canReadEntry, readableEntryRows } from "./visibility.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -52,6 +55,7 @@ function viewer(
   return {
     user,
     auth: { can: (capability: string) => capabilities.includes(capability) },
+    plugins: createPluginRegistry(),
   };
 }
 
@@ -131,5 +135,92 @@ describe("readableEntryRows", () => {
     expect(readableEntryRows(viewer(["entry:post:edit_any"]), "post")).toBe(
       null,
     );
+  });
+});
+
+// `news` pools its permissions with `post`: a caller holding `entry:post:*`
+// reaches news rows, and the rows are still matched by their own type name.
+describe("a type pooled onto another's capabilities", () => {
+  let newsRows: Entry[];
+  let pooled: PluginRegistry;
+
+  beforeAll(async () => {
+    pooled = await pooledEntryTypeRegistry();
+    const factory = factoriesFor(db);
+    const other = await factory.user.create({
+      email: "other-news@example.com",
+    });
+    newsRows = [];
+    for (const [who, authorId] of [
+      ["mine", caller.id],
+      ["theirs", other.id],
+    ] as const) {
+      for (const status of ["published", "draft"] as const) {
+        newsRows.push(
+          await factory.entry.create({
+            type: "news",
+            authorId,
+            status,
+            slug: `news-${status}-${who}`,
+            publishedAt: status === "published" ? new Date() : null,
+          }),
+        );
+      }
+    }
+  });
+
+  function pooledViewer(capabilities: readonly string[]): EntryViewer {
+    return { ...viewer(capabilities), plugins: pooled };
+  }
+
+  async function selectedOf(ctx: EntryViewer, type: string): Promise<string[]> {
+    const clause = readableEntryRows(ctx, type);
+    if (clause === null) return [];
+    const found = await db
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(clause)
+      .orderBy(asc(entries.id));
+    return found.map((row) => row.slug);
+  }
+
+  test("a contributor holding entry:post:edit_own sees their own draft and not another's", async () => {
+    const ctx = pooledViewer(TIERS.contributor.capabilities);
+    const sees = [
+      "news-published-mine",
+      "news-draft-mine",
+      "news-published-theirs",
+    ];
+
+    const byPredicate = newsRows
+      .filter((row) => canReadEntry(ctx, row))
+      .map((row) => row.slug);
+
+    expect(byPredicate).toEqual(sees);
+    expect(await selectedOf(ctx, "news")).toEqual(sees);
+  });
+
+  test("a subscriber holding only entry:post:read sees published rows and no drafts", async () => {
+    const ctx = pooledViewer(TIERS.reader.capabilities);
+    const sees = ["news-published-mine", "news-published-theirs"];
+
+    const byPredicate = newsRows
+      .filter((row) => canReadEntry(ctx, row))
+      .map((row) => row.slug);
+
+    expect(byPredicate).toEqual(sees);
+    expect(await selectedOf(ctx, "news")).toEqual(sees);
+  });
+
+  test("rows are matched by the registered name, so neither type's clause admits the other's rows", async () => {
+    const ctx = pooledViewer(TIERS.editor.capabilities);
+
+    const news = await selectedOf(ctx, "news");
+    const posts = await selectedOf(ctx, "post");
+
+    expect(news).toEqual(newsRows.map((row) => row.slug));
+    expect(news.some((slug) => !slug.startsWith("news-"))).toBe(false);
+    expect(posts.some((slug) => slug.startsWith("news-"))).toBe(false);
+    expect(posts).toEqual(TIERS.editor.sees);
   });
 });

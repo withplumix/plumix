@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { deleteAutosave, getAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
@@ -12,7 +13,6 @@ import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
-  entryCapability,
   fireEntryTransition,
   fireEntryUpdated,
 } from "./lifecycle.js";
@@ -49,7 +49,11 @@ export const publish = base
     if (!live || isReservedType(live.type)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
-    const publishCapability = entryCapability(live.type, "publish");
+    const publishCapability = entryCapabilityByName(
+      context.plugins,
+      live.type,
+      "publish",
+    );
     if (!context.auth.can(publishCapability)) {
       throw errors.FORBIDDEN({ data: { capability: publishCapability } });
     }

@@ -567,11 +567,9 @@ function createContextBase({
           kind: "entry type",
           identifier: name,
         });
-      registry.entryTypes.set(
-        name,
-        toRegisteredEntryType(name, options, pluginId),
-      );
-      addDerivedCaps(deriveEntryTypeCapabilities(name, options));
+      const registered = toRegisteredEntryType(name, options, pluginId);
+      registry.entryTypes.set(name, registered);
+      addDerivedCaps(deriveEntryTypeCapabilities(registered));
     },
 
     registerTermTaxonomy: (name, options) => {

@@ -4,12 +4,12 @@ import * as v from "valibot";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
+import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { listActiveAutosaves } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../validation.js";
-import { entryCapability } from "./lifecycle.js";
 
 const listInput = v.object({ entryId: idParam });
 
@@ -42,7 +42,11 @@ export const list = base
     // Same gate as `entry.revisions.list` — co-author awareness
     // depends on reading other users' pending edits, which is the
     // same trust level as reading their historical revisions.
-    const capability = entryCapability(live.type, "read_revisions");
+    const capability = entryCapabilityByName(
+      context.plugins,
+      live.type,
+      "read_revisions",
+    );
     if (!context.auth.can(capability)) {
       throw errors.FORBIDDEN({ data: { capability } });
     }

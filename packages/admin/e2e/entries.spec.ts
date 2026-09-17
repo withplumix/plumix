@@ -618,6 +618,56 @@ test.describe("/entries/$slug (list)", () => {
   });
 });
 
+test.describe("/entries/$slug (list) — a type pooled onto another's capabilities", () => {
+  // `news` pools onto `post`, so the manifest's resolved `capabilityType` is
+  // what the New button and the Trash row action read — never `entry:news:*`.
+  const MANIFEST_WITH_POOLED_TYPE: PlumixManifest = {
+    ...emptyManifest(),
+    entryTypes: [
+      {
+        name: "news",
+        capabilityType: "post",
+        adminSlug: "news",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+        label: "News",
+        labels: { singular: "News item", plural: "News" },
+      },
+    ],
+  };
+
+  test("entry:post:create and entry:post:delete show the New button and the Trash row action", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_POOLED_TYPE);
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 6,
+          email: "newsdesk@example.test",
+          name: "Newsdesk",
+          avatarUrl: null,
+          role: "editor",
+          capabilities: [
+            "entry:post:read",
+            "entry:post:create",
+            "entry:post:delete",
+          ],
+        },
+        needsBootstrap: false,
+      },
+      "/entry/list": [entry({ id: 1, title: "Hello news", type: "news" })],
+    });
+
+    await page.goto("entries/news");
+    await expect(page.getByTestId("content-list-row-1")).toBeVisible();
+    await expect(page.getByTestId("content-list-new-button")).toBeVisible();
+    await page.getByTestId("content-list-row-1").hover();
+    await expect(page.getByTestId("content-list-row-trash-1")).toBeVisible();
+  });
+});
+
 test.describe("/entries/$slug (list) — taxonomy filters", () => {
   // Entry type wired to one hierarchical taxonomy so the filter
   // dropdown renders; single consumer, so the manifest stays local.
@@ -626,6 +676,7 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
     entryTypes: [
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         isPublic: true,
         showUI: true,

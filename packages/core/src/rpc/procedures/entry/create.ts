@@ -1,6 +1,10 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import type { ResolvedMeta } from "../../meta/core.js";
 import { entries } from "../../../db/schema/entries.js";
+import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
@@ -11,7 +15,6 @@ import {
 } from "./content.js";
 import {
   applyEntryBeforeSave,
-  entryCapability,
   fireEntryPublished,
   fireEntryTransition,
 } from "./lifecycle.js";
@@ -45,7 +48,8 @@ export const create = base
       throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
 
-    const createCapability = entryCapability(filtered.type, "create");
+    const namespace = entryCapabilityNamespace(context.plugins, filtered.type);
+    const createCapability = entryCapability(namespace, "create");
     if (!context.auth.can(createCapability)) {
       throw errors.FORBIDDEN({ data: { capability: createCapability } });
     }
@@ -53,7 +57,7 @@ export const create = base
     const requiresPublishCap =
       filtered.status === "published" || filtered.status === "scheduled";
     if (requiresPublishCap) {
-      const publishCapability = entryCapability(filtered.type, "publish");
+      const publishCapability = entryCapability(namespace, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }

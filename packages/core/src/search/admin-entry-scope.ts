@@ -3,11 +3,11 @@ import type { SQL } from "../db/index.js";
 import type { SearchGroup, SearchResultItem } from "./admin-search.js";
 import { and, eq, not, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entryCapability } from "../entries/capabilities.js";
 import {
   canReadUnpublished,
   readableEntryRows,
 } from "../entries/visibility.js";
-import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 
 // Where the Content groups start. Terms take 100.., users later still, so
 // there is room for one group per entry type between them.
@@ -71,7 +71,7 @@ export function adminEntryScope(
   const notTrash = not(eq(entries.status, "trash"));
 
   const readable = [...ctx.plugins.entryTypes]
-    .filter(([type]) => ctx.auth.can(entryCapability(type, "read")))
+    .filter(([, spec]) => ctx.auth.can(entryCapability(spec, "read")))
     .map(([type, spec], index) => ({
       type,
       key: `entry:${type}`,

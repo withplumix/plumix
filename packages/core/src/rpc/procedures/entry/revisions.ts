@@ -7,6 +7,11 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import {
+  entryCapability,
+  entryCapabilityByName,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
+import {
   getRevision as repoGetRevision,
   listRevisions as repoListRevisions,
   setRevisionMessage as repoSetRevisionMessage,
@@ -32,7 +37,6 @@ import {
 } from "./content.js";
 import {
   applyEntryBeforeSave,
-  entryCapability,
   fireEntryAutosaveSaved,
   fireEntryPublished,
   fireEntryRevisionRestored,
@@ -75,7 +79,11 @@ export const list = base
     if (isReservedType(live.type)) {
       throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
-    const capability = entryCapability(live.type, "read_revisions");
+    const capability = entryCapabilityByName(
+      context.plugins,
+      live.type,
+      "read_revisions",
+    );
     if (!context.auth.can(capability)) {
       throw errors.FORBIDDEN({ data: { capability } });
     }
@@ -130,7 +138,11 @@ export const get = base
     });
     if (!live || isReservedType(live.type)) throw notFound();
 
-    const capability = entryCapability(live.type, "read_revisions");
+    const capability = entryCapabilityByName(
+      context.plugins,
+      live.type,
+      "read_revisions",
+    );
     if (!context.auth.can(capability)) {
       throw errors.FORBIDDEN({ data: { capability } });
     }
@@ -167,7 +179,8 @@ export const restore = base
     });
     if (!live || isReservedType(live.type)) throw notFound();
 
-    const readCapability = entryCapability(live.type, "read_revisions");
+    const namespace = entryCapabilityNamespace(context.plugins, live.type);
+    const readCapability = entryCapability(namespace, "read_revisions");
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
@@ -176,13 +189,13 @@ export const restore = base
     // directly (legacy types). `restore_revision` gates both — pair
     // it with `edit_*` so a viewer who can't edit the entry can't
     // restore on it either.
-    const restoreCapability = entryCapability(live.type, "restore_revision");
+    const restoreCapability = entryCapability(namespace, "restore_revision");
     if (!context.auth.can(restoreCapability)) {
       throw errors.FORBIDDEN({ data: { capability: restoreCapability } });
     }
     const isAuthor = live.authorId === context.user.id;
-    const editOwnCapability = entryCapability(live.type, "edit_own");
-    const editAnyCapability = entryCapability(live.type, "edit_any");
+    const editOwnCapability = entryCapability(namespace, "edit_own");
+    const editAnyCapability = entryCapability(namespace, "edit_any");
     const canEdit =
       (isAuthor && context.auth.can(editOwnCapability)) ||
       context.auth.can(editAnyCapability);
@@ -253,7 +266,7 @@ export const restore = base
     const isPublishTransition =
       revision.status === "published" && live.status !== "published";
     if (isPublishTransition) {
-      const publishCapability = entryCapability(live.type, "publish");
+      const publishCapability = entryCapability(namespace, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }
@@ -339,13 +352,14 @@ export const setMessage = base
     });
     if (!live || isReservedType(live.type)) throw notFound();
 
-    const readCapability = entryCapability(live.type, "read_revisions");
+    const namespace = entryCapabilityNamespace(context.plugins, live.type);
+    const readCapability = entryCapability(namespace, "read_revisions");
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
     const isAuthor = live.authorId === context.user.id;
-    const editOwnCapability = entryCapability(live.type, "edit_own");
-    const editAnyCapability = entryCapability(live.type, "edit_any");
+    const editOwnCapability = entryCapability(namespace, "edit_own");
+    const editAnyCapability = entryCapability(namespace, "edit_any");
     const canEdit =
       (isAuthor && context.auth.can(editOwnCapability)) ||
       context.auth.can(editAnyCapability);

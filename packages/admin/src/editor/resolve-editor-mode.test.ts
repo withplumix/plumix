@@ -4,11 +4,20 @@ import { resolveEditorMode } from "./resolve-editor-mode.js";
 
 const POST_TYPE_WITH_AUTOSAVE = {
   name: "post",
+  capabilityType: "post",
   supports: ["editor", "revisions", "autosave"],
 };
 const POST_TYPE_WITHOUT_AUTOSAVE = {
   name: "post",
+  capabilityType: "post",
   supports: ["editor", "revisions"],
+};
+// Pooled onto `post`: the manifest resolved its namespace, so the gate reads
+// `entry:post:*` and never `entry:news:*`.
+const NEWS_TYPE_POOLED_ONTO_POST = {
+  name: "news",
+  capabilityType: "post",
+  supports: ["editor", "revisions", "autosave"],
 };
 
 const EDIT_OWN = new Set(["entry:post:edit_own"]);
@@ -19,6 +28,17 @@ const EDIT_ANY = new Set([
 ]);
 
 describe("resolveEditorMode", () => {
+  test("a type pooled onto post is gated by entry:post:* for an editor → edit-with-draft", () => {
+    expect(
+      resolveEditorMode({
+        entryType: NEWS_TYPE_POOLED_ONTO_POST,
+        currentStatus: "published",
+        isAuthor: false,
+        capabilities: EDIT_ANY,
+      }),
+    ).toBe("edit-with-draft");
+  });
+
   test("status='draft' on an autosave-supporting type for a writer → edit-live", () => {
     expect(
       resolveEditorMode({
