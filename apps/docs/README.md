@@ -282,10 +282,15 @@ adopted the Sätteri 0.10 APIs ([#1915][], [#1938][], [#1939][]).
 
 Both are gone, and so is the failure that used to catch a split: `0.42.0` ships
 `dist` alone, declarations rather than source, so nothing compiles Starlight's
-implementation any more. **Nothing enforces the one-copy invariant now.**
-`pnpm why -r satteri` reports it, and `.github/dependabot.yml` groups astro with
-`@astrojs/*` and `starlight-*` so bumps at least arrive together — but no gate
-checks the outcome. [#2318][] is open to restore one.
+implementation any more. `.github/dependabot.yml` groups astro with
+`@astrojs/*` and `starlight-*` so bumps at least arrive together, but a grouped
+bump can still install two copies and go green — grouping addresses how a split
+gets proposed, not whether one gets caught.
+
+`test/dependency-tree.test.ts` is the gate: it shells out to `pnpm why <pkg>
+--json` for `satteri` and `@astrojs/markdown-satteri` and fails unless each
+resolves to exactly one copy. It runs in `test:unit`, so it checks the tree on
+every push without needing a docs build.
 
 The join to watch is narrower than the group suggests. Astro pins
 `@astrojs/markdown-satteri` **exactly** — `astro@7.3.2` takes `0.4.1`, not
@@ -306,4 +311,3 @@ warning stands until upstream widens the range.
 [#1915]: https://github.com/withplumix/plumix/pull/1915
 [#1938]: https://github.com/withplumix/plumix/issues/1938
 [#1939]: https://github.com/withplumix/plumix/issues/1939
-[#2318]: https://github.com/withplumix/plumix/issues/2318
