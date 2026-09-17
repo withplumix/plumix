@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { TelemetrySpan } from "../../../context/telemetry.js";
-import { makeSnapshot } from "../snapshot-fixture.js";
+import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
 import { timelinePanel } from "./timeline.js";
 
 function span(

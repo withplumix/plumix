@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import type { DebugPanel } from "./types.js";
+import { makeSnapshot } from "../request-history/snapshot-fixture.js";
 import { renderDebugPanels } from "./render-panels.js";
-import { makeSnapshot } from "./snapshot-fixture.js";
 
 const okPanel: DebugPanel = {
   id: "ok",

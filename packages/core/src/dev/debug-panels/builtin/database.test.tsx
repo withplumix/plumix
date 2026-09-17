@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { TelemetryCollector } from "../../../context/telemetry.js";
 import { createTelemetryCollector } from "../../../context/collector.js";
-import { makeSnapshot } from "../snapshot-fixture.js";
+import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
 import { databasePanel } from "./database.js";
 
 function render(seed: (telemetry: TelemetryCollector) => void): string {

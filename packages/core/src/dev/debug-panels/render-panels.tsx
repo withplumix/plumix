@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { Label } from "../../i18n/label.js";
-import type { DebugSnapshot } from "./snapshot.js";
+import type { DebugSnapshot } from "../request-history/snapshot.js";
 import type { DebugPanel } from "./types.js";
 
 /** One panel rendered to inert HTML — the unit the bar and the read route swap in. */

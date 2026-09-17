@@ -5,8 +5,8 @@ import type { TelemetrySnapshot } from "../../context/telemetry.js";
 import type { CreateTestContextOptions } from "../../test/context.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
-import { debugHistoryConsumer } from "./history-consumer.js";
-import { createDebugHistoryStore } from "./history.js";
+import { createDebugHistoryStore } from "./store.js";
+import { debugHistoryConsumer } from "./writer.js";
 
 let db: Db;
 beforeAll(async () => {

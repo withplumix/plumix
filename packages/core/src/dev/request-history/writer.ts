@@ -1,9 +1,9 @@
 import type { TelemetryConsumer } from "../../context/telemetry.js";
-import type { DebugHistoryStore } from "./history.js";
+import type { DebugHistoryStore } from "./store.js";
 import { stripBasePath } from "../../base-path.js";
-import { debugHistory } from "./history.js";
-import { isDebugRequestsPath } from "./requests-path.js";
+import { isDebugRequestsPath } from "./path.js";
 import { projectDebugSnapshot } from "./snapshot.js";
+import { debugHistory } from "./store.js";
 
 // Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
 // rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.

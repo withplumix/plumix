@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { TemplateResolution } from "../../../route/render/template-hierarchy.js";
 import { createTelemetryCollector } from "../../../context/collector.js";
-import { makeSnapshot } from "../snapshot-fixture.js";
+import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 import { templatePanel } from "./template.js";
 

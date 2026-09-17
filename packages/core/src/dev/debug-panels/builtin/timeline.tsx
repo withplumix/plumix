@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { DebugSnapshot } from "../snapshot.js";
+import type { DebugSnapshot } from "../../request-history/snapshot.js";
 import type { Timeline } from "../timeline-model.js";
 import type { DebugPanel } from "../types.js";
 import { DebugSection } from "../primitives.js";

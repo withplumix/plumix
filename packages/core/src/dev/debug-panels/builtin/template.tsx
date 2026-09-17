@@ -3,7 +3,7 @@ import type {
   ResolutionStep,
   TemplateResolution,
 } from "../../../route/render/template-hierarchy.js";
-import type { DebugSnapshot } from "../snapshot.js";
+import type { DebugSnapshot } from "../../request-history/snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";

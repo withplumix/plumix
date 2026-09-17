@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import type { TelemetrySpan } from "../../context/telemetry.js";
 import type { JsonValue } from "../../json.js";
-import type { DebugHistoryEntry } from "./history.js";
-import { createDebugHistoryStore } from "./history.js";
+import type { DebugHistoryEntry } from "./store.js";
 import { makeSnapshot } from "./snapshot-fixture.js";
+import { createDebugHistoryStore } from "./store.js";
 
 function entry(overrides: Partial<DebugHistoryEntry> = {}): DebugHistoryEntry {
   return {

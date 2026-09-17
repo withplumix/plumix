@@ -76,10 +76,10 @@ const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
 // Dev request-history read routes. Inlined rather than imported so the
-// dispatcher's eager graph references no debug-bar module at all — it reaches
-// the feature only through the dev-gated dynamic import below (Vite-empty in a
-// build, so the branch and its import drop out). Keep in step with
-// `DEBUG_REQUESTS_PATH`.
+// dispatcher's eager graph references no module of the dev debug cluster at
+// all — it reaches the feature only through the dev-gated dynamic import below
+// (Vite-empty in a build, so the branch and its import drop out). Keep in step
+// with `DEBUG_REQUESTS_PATH`.
 const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
 // The `/_plumix/` sub-prefixes core answers itself, ahead of the plugin table.
 // A plugin whose id names one of them registers routes it can never serve, so
@@ -380,8 +380,7 @@ async function tryPlumixRoutes(
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
-    const { handleDebugRequests } =
-      await import("../dev/debug-bar/read-routes.js");
+    const { handleDebugRequests } = await import("../dev/history-routes.js");
     return handleDebugRequests(ctx);
   }
 

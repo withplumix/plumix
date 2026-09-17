@@ -20,9 +20,10 @@ export interface DebugHistoryEntry {
 }
 
 /**
- * A bounded, transport-agnostic store of the most recent requests, standalone
- * so later readers — the dev read route and a future MCP tool — reuse it
- * unchanged. The in-memory ring is dev-only and tree-shaken from production.
+ * A bounded, transport-agnostic store of the most recent requests. Four
+ * readers share it unchanged — the debug bar, the HTTP read routes and the two
+ * dev MCP tools — which is why it is the capture layer's and not any one
+ * surface's. The in-memory ring is dev-only and tree-shaken from production.
  */
 export interface DebugHistoryStore {
   /**

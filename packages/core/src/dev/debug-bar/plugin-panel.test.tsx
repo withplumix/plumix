@@ -5,7 +5,7 @@ import { definePlugin } from "../../plugin/define.js";
 import { fallback } from "../../route/render/template-builders.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
-import { DebugSection, DebugTable } from "./primitives.js";
+import { DebugSection, DebugTable } from "../debug-panels/primitives.js";
 
 // A plugin panel author's happy path: record per-request data during render,
 // then read it back when the panel renders. `render:document` fires during a

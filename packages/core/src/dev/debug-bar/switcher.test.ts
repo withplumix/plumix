@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { DebugHistoryEntry } from "./history.js";
-import type { DebugSnapshot } from "./snapshot.js";
+import type { DebugSnapshot } from "../request-history/snapshot.js";
+import type { DebugHistoryEntry } from "../request-history/store.js";
 import { buildSwitcherEntries, switcherOptionLabel } from "./switcher.js";
 
 function snapshotWith(
