@@ -48,12 +48,23 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("handler.fetch(request, invocation(env, ctx))");
   });
 
-  test("exports a scheduled handler that calls the runtime handler's scheduled", () => {
+  test("hands the scheduled run report to the invocation-status rule, and branches on nothing itself", () => {
     const source = entry("./config.ts");
     expect(source).toContain("async scheduled(event, env, ctx)");
     expect(source).toContain(
-      "await handler.scheduled(event, invocation(env, ctx))",
+      'import { surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
     );
+    const start = source.indexOf("async scheduled(event, env, ctx)");
+    // Bounded to the handler, because the `fetch` above it does carry a branch
+    // and a throw; the positive assertions double as the guard against bounds
+    // that slipped to empty, which the negative ones would pass in silence.
+    const scheduled = source.slice(start, source.indexOf("\n  },", start));
+    expect(scheduled).toContain(
+      "const report = await handler.scheduled?.(event, invocation(env, ctx));",
+    );
+    expect(scheduled).toContain("surfaceScheduledFailure(report, event);");
+    expect(scheduled).not.toContain("if (");
+    expect(scheduled).not.toContain("throw ");
   });
 
   test("imports the asset manifest virtual module and threads it into buildApp", () => {
@@ -71,9 +82,7 @@ describe("cloudflare generateEntry", () => {
   });
 
   test("no-ops cleanly when the runtime handler omits scheduled", () => {
-    expect(entry("./config.ts")).toContain(
-      "if (handler.scheduled) await handler.scheduled",
-    );
+    expect(entry("./config.ts")).toContain("handler.scheduled?.(");
   });
 
   test("guards app construction so a dev boot failure serves the dev error page", () => {
