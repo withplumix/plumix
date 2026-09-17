@@ -378,10 +378,14 @@ describe("applyMetaPatch + loadEntryMeta", () => {
     expect(await loadEntryMeta(h.context, post)).toEqual({ title: "new" });
   });
 
-  // Regression: `Boolean("false") === true` would silently flip rows
-  // written via `type: "json"` before a plugin tightened the field to
-  // `boolean`. `coerceOnRead` mirrors the write-side token set instead.
-  test("coerceOnRead maps legacy string booleans to their real values", async () => {
+  // A boolean field reads as stored, so the bag a template gets agrees with
+  // the one a `WHERE` and `storedMeta` read. The string is handed back as
+  // itself rather than resolved either way: `Boolean("false") === true` would
+  // read a row written via `type: "json"` — before a plugin tightened the
+  // field to `boolean` — as the opposite of what it says. A reader testing
+  // `=== true`, which is what core and the first-party plugins do, sees no
+  // flag here; one testing truthiness sees a non-empty string.
+  test("a legacy string boolean reads back as the stored string", async () => {
     const plugins = registryWithMeta({ featured: { type: "boolean" } });
     const h = await createRpcHarness({ authAs: "admin", plugins });
     const post = await h.factory.draft.create({
@@ -395,6 +399,8 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       .set({ meta: { featured: "false" } })
       .where(eq(entries.id, post.id));
 
-    expect(await loadEntryMeta(h.context, post)).toEqual({ featured: false });
+    expect(await loadEntryMeta(h.context, post)).toEqual({
+      featured: "false",
+    });
   });
 });
