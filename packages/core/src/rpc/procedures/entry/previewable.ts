@@ -2,8 +2,11 @@ import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
 import { getAutosave } from "../../../revisions/repository.js";
-import { entryCapability } from "./lifecycle.js";
 
 /**
  * Taken as a parameter rather than built here so each caller's procedure keeps
@@ -56,11 +59,12 @@ export async function previewableEntry(
   if (row === undefined || !entryTypes.includes(row.type)) {
     throw errors.NOT_FOUND({ data: { kind: "entry", id: entryId } });
   }
-  const editAny = entryCapability(row.type, "edit_any");
+  const namespace = entryCapabilityNamespace(ctx.plugins, row.type);
+  const editAny = entryCapability(namespace, "edit_any");
   const mayEdit =
     ctx.auth.can(editAny) ||
     (row.authorId === ctx.user.id &&
-      ctx.auth.can(entryCapability(row.type, "edit_own")));
+      ctx.auth.can(entryCapability(namespace, "edit_own")));
   if (!mayEdit) {
     throw errors.FORBIDDEN({ data: { capability: editAny } });
   }

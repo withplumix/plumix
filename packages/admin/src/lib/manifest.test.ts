@@ -222,9 +222,11 @@ describe("findEntryTypeBySlug", () => {
         isPublic: true,
         showUI: true,
         showInSidebar: true,
+        capabilityType: "post",
       },
       {
         name: "product",
+        capabilityType: "product",
         adminSlug: "products",
         label: "Products",
         isPublic: true,
@@ -248,6 +250,7 @@ describe("namedTemplatesForType", () => {
     entryTypes: [
       {
         name: "page",
+        capabilityType: "page",
         adminSlug: "pages",
         label: "Pages",
         isPublic: true,
@@ -257,6 +260,7 @@ describe("namedTemplatesForType", () => {
       },
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         label: "Posts",
         isPublic: true,
@@ -283,6 +287,7 @@ describe("accessPoliciesForType", () => {
     entryTypes: [
       {
         name: "article",
+        capabilityType: "article",
         adminSlug: "articles",
         label: "Articles",
         isPublic: true,
@@ -292,6 +297,7 @@ describe("accessPoliciesForType", () => {
       },
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         label: "Posts",
         isPublic: true,
@@ -318,6 +324,7 @@ describe("visibleEntryTypes", () => {
     entryTypes: [
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         label: "Posts",
         isPublic: true,
@@ -345,10 +352,10 @@ describe("visibleEntryTypes", () => {
     ],
   };
 
-  test("filters by `${capabilityType}:edit_own`; unset capabilityType uses name", () => {
+  test("filters by the manifest's resolved `${capabilityType}:edit_own`", () => {
     const caps = ["entry:post:edit_own", "entry:post:read"];
     const visible = visibleEntryTypes(caps, source).map((pt) => pt.name);
-    // `post` → "entry:post:edit_own" ✓; `news` shares capabilityType "post" ✓;
+    // `post` → "entry:post:edit_own" ✓; `news` pools onto "post" ✓;
     // `product` needs "entry:product:edit_own" which isn't granted ✗
     expect(visible).toEqual(["post", "news"]);
   });
@@ -368,6 +375,7 @@ describe("visibleEntryTypes", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -376,6 +384,7 @@ describe("visibleEntryTypes", () => {
         },
         {
           name: "media",
+          capabilityType: "media",
           adminSlug: "media",
           label: "Media",
           isPublic: true,

@@ -1,11 +1,11 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { canReadEntry } from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { entryCapability } from "./lifecycle.js";
 import { resolveEntryMeta } from "./meta.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 import { applyTermPatch, loadEntryTerms } from "./terms.js";
@@ -45,7 +45,11 @@ export const duplicate = base
 
     // Duplicating is also a create on the source's type — gate on the same
     // capability `entry.create` uses, not the source's delete/edit caps.
-    const createCapability = entryCapability(source.type, "create");
+    const createCapability = entryCapabilityByName(
+      context.plugins,
+      source.type,
+      "create",
+    );
     if (!context.auth.can(createCapability)) {
       throw errors.FORBIDDEN({ data: { capability: createCapability } });
     }

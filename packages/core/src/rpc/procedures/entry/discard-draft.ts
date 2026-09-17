@@ -2,12 +2,16 @@ import * as v from "valibot";
 
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
 import { deleteAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../validation.js";
-import { entryCapability, fireEntryAutosaveDiscarded } from "./lifecycle.js";
+import { fireEntryAutosaveDiscarded } from "./lifecycle.js";
 
 const discardDraftInput = v.object({ id: idParam });
 
@@ -27,8 +31,9 @@ export const discardDraft = base
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
     const isAuthor = live.authorId === context.user.id;
-    const editOwnCapability = entryCapability(live.type, "edit_own");
-    const editAnyCapability = entryCapability(live.type, "edit_any");
+    const namespace = entryCapabilityNamespace(context.plugins, live.type);
+    const editOwnCapability = entryCapability(namespace, "edit_own");
+    const editAnyCapability = entryCapability(namespace, "edit_any");
     const canEdit =
       (isAuthor && context.auth.can(editOwnCapability)) ||
       context.auth.can(editAnyCapability);

@@ -12,7 +12,7 @@ import "../rpc/hooks.js";
 import type { Lazy } from "@orpc/server";
 
 import type { NewEntry } from "../db/schema/entries.js";
-import type { PluginRpcRouter } from "./registry.js";
+import type { PluginRpcRouter, RegisteredEntryType } from "./registry.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -178,6 +178,21 @@ describe("installPlugins", () => {
       excludeFromGenericRpc: true,
       excludeFromSearch: false,
     });
+  });
+
+  test("resolves the capability namespace when a type is registered", async () => {
+    const hooks = new HookRegistry();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [site] });
+    expect(registry.entryTypes.get("post")?.capabilityType).toBe("post");
+    expect(registry.entryTypes.get("news")?.capabilityType).toBe("post");
+    expectTypeOf<RegisteredEntryType>()
+      .toHaveProperty("capabilityType")
+      .toEqualTypeOf<string>();
   });
 
   test("throws on duplicate post-type registration across plugins", async () => {

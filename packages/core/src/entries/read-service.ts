@@ -14,7 +14,6 @@ import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { isReservedType } from "../revisions/slug-codec.js";
-import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import {
   resolveEntriesMeta,
   resolveEntryMeta,
@@ -22,6 +21,7 @@ import {
 import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
 import { entrySearchCondition } from "../search/conditions.js";
+import { entryCapabilityByName } from "./capabilities.js";
 import { EntryReadError } from "./errors.js";
 import {
   canReadEntry,
@@ -71,7 +71,9 @@ export async function listEntries(
   if (isReservedType(type)) throw EntryReadError.reservedType(type);
   const readable = readableEntryRows(ctx, type);
   if (readable === null) {
-    throw EntryReadError.forbidden(entryCapability(type, "read"));
+    throw EntryReadError.forbidden(
+      entryCapabilityByName(ctx.plugins, type, "read"),
+    );
   }
 
   const statusClause = resolveStatusClause(

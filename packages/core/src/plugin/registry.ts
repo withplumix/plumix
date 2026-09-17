@@ -335,8 +335,9 @@ function resolveVisibility(
 }
 
 /**
- * The registered shape of an entry type. Visibility is resolved here, once, so
- * no reader re-derives a default with its own spelling of it.
+ * The registered shape of an entry type. Visibility and the capability
+ * namespace are resolved here, once, so no reader re-derives a default with
+ * its own spelling of it.
  */
 export function toRegisteredEntryType(
   name: string,
@@ -348,6 +349,7 @@ export function toRegisteredEntryType(
     ...resolveVisibility(options),
     name,
     registeredBy,
+    capabilityType: options.capabilityType ?? name,
   };
 }
 
@@ -452,6 +454,11 @@ export interface SettingsPageOptions {
 export interface RegisteredEntryType extends EntryTypeOptions {
   readonly name: string;
   readonly registeredBy: string | null;
+  /**
+   * The namespace this type's `entry:<capabilityType>:*` capabilities live
+   * under: the type's own name unless it pools with another.
+   */
+  readonly capabilityType: string;
   readonly isPublic: boolean;
   readonly showUI: boolean;
   readonly showInSidebar: boolean;

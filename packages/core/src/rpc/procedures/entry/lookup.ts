@@ -9,9 +9,9 @@ import type {
 import { entryTag } from "../../../cdn/tags.js";
 import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
+import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
-import { entryCapability } from "./lifecycle.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -87,7 +87,7 @@ export const entryLookupAdapter = {
     if (options.scope?.status === undefined) {
       const types = options.scope?.entryTypes ?? [];
       const visibleUnpublished = types.filter((type) =>
-        ctx.auth.can(entryCapability(type, "edit_any")),
+        ctx.auth.can(entryCapabilityByName(ctx.plugins, type, "edit_any")),
       );
       if (visibleUnpublished.length < types.length) {
         const published = eq(entries.status, "published");

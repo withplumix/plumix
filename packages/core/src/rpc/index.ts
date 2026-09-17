@@ -18,7 +18,6 @@ export {
   fireEntryTransition,
   fireEntryTrashed,
   fireEntryUpdated,
-  entryCapability,
 } from "./procedures/entry/lifecycle.js";
 export { previewableEntry } from "./procedures/entry/previewable.js";
 export { entryRouter } from "./procedures/entry/index.js";

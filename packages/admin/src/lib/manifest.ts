@@ -171,8 +171,7 @@ export function visibleEntryTypes(
     // weren't meant to be a generic content surface either (e.g. the
     // media plugin renders its own Media Library page).
     if (!pt.showInSidebar) return false;
-    const cap = `entry:${pt.capabilityType ?? pt.name}:edit_own`;
-    return caps.has(cap);
+    return caps.has(`entry:${pt.capabilityType}:edit_own`);
   });
 }
 

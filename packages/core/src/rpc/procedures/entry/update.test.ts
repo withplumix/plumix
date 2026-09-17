@@ -8,6 +8,7 @@ import {
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
+import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // Register a `post` entry type carrying a selectable per-entry access space, so
@@ -86,6 +87,50 @@ function registerRequiredSubtitle(
 }
 
 describe("entry.update", () => {
+  test("editor can update a type pooled onto post's capabilities", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    const row = await h.factory.draft.create({
+      authorId: h.user.id,
+      type: "news",
+      slug: "news-draft",
+    });
+    const updated = await h.client.entry.update({
+      id: row.id,
+      title: "renamed",
+    });
+    expect(updated.title).toBe("renamed");
+  });
+
+  test("contributor edits their own draft of a pooled type via entry:post:edit_own, not another's", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      type: "news",
+      slug: "news-own",
+    });
+    const other = await h.factory.author.create();
+    const theirs = await h.factory.draft.create({
+      authorId: other.id,
+      type: "news",
+      slug: "news-theirs",
+    });
+
+    const updated = await h.client.entry.update({ id: own.id, title: "mine" });
+    expect(updated.title).toBe("mine");
+    await expect(
+      h.client.entry.update({ id: theirs.id, title: "hax" }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:edit_any" },
+    });
+  });
+
   test("author can update their own draft via edit_own", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({

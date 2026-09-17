@@ -496,6 +496,7 @@ describe("buildManifest", () => {
     expect(manifest.entryTypes).toEqual([
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         label: "Posts",
         labels: { singular: "Entry" },
@@ -1329,6 +1330,7 @@ describe("serializeManifestScript", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -1340,7 +1342,7 @@ describe("serializeManifestScript", () => {
     expect(tag).toContain(`id="${MANIFEST_SCRIPT_ID}"`);
     expect(tag).toContain(`type="application/json"`);
     expect(tag).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
+      `{"entryTypes":[{"name":"post","capabilityType":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
   });
 
@@ -1349,6 +1351,7 @@ describe("serializeManifestScript", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "</script><b>x</b>",
           isPublic: true,
@@ -1366,6 +1369,7 @@ describe("serializeManifestScript", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "x</y>",
           isPublic: true,
@@ -1396,6 +1400,7 @@ describe("injectManifestIntoHtml", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -1405,7 +1410,7 @@ describe("injectManifestIntoHtml", () => {
       ],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
+      `{"entryTypes":[{"name":"post","capabilityType":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
     expect(out).not.toContain(`{"entryTypes":[]}`);
   });
@@ -1415,6 +1420,7 @@ describe("injectManifestIntoHtml", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -1446,6 +1452,7 @@ describe("injectManifestIntoHtml", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -1455,7 +1462,7 @@ describe("injectManifestIntoHtml", () => {
       ],
     });
     expect(out).toContain(
-      `{"entryTypes":[{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
+      `{"entryTypes":[{"name":"post","capabilityType":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true}]}`,
     );
   });
 
@@ -1467,6 +1474,7 @@ describe("injectManifestIntoHtml", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           label: "Posts",
           isPublic: true,
@@ -1476,7 +1484,7 @@ describe("injectManifestIntoHtml", () => {
       ],
     });
     expect(out).toMatch(
-      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true\}\]}<\/script>$/,
+      /^<script id="plumix-manifest" type="application\/json">\{"entryTypes":\[\{"name":"post","capabilityType":"post","adminSlug":"posts","label":"Posts","isPublic":true,"showUI":true,"showInSidebar":true\}\]}<\/script>$/,
     );
   });
 });

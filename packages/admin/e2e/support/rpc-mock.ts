@@ -46,6 +46,7 @@ export const MANIFEST_WITH_CAPABILITY_GATES: PlumixManifest = {
   entryTypes: [
     {
       name: "author",
+      capabilityType: "author",
       adminSlug: "authors",
       isPublic: true,
       showUI: true,
@@ -105,6 +106,7 @@ export const MANIFEST_WITH_PLAIN_FORM_TYPE: PlumixManifest = {
   entryTypes: [
     {
       name: "author",
+      capabilityType: "author",
       adminSlug: "authors",
       isPublic: true,
       showUI: true,
@@ -148,6 +150,7 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
+      capabilityType: "post",
       adminSlug: "posts",
       isPublic: true,
       showUI: true,
@@ -167,6 +170,7 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
+      capabilityType: "post",
       adminSlug: "posts",
       isPublic: true,
       showUI: true,
@@ -220,6 +224,7 @@ export const MANIFEST_WITH_TAXONOMIES: PlumixManifest = {
   entryTypes: [
     {
       name: "post",
+      capabilityType: "post",
       adminSlug: "posts",
       isPublic: true,
       showUI: true,

@@ -47,6 +47,7 @@ import type {
   TaxonomyMenuIcon,
   TermTaxonomyLabels,
 } from "./registry.js";
+import { entryCapability } from "../entries/capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
@@ -163,7 +164,8 @@ export interface EntryTypeManifestEntry {
   readonly showUI: boolean;
   readonly showInSidebar: boolean;
   readonly hasArchive?: boolean | string;
-  readonly capabilityType?: string;
+  /** The namespace the type's `entry:<capabilityType>:*` capabilities live under. */
+  readonly capabilityType: string;
   readonly priority?: number;
   readonly menuIcon?: string;
   /** Synonyms the command palette matches in addition to the sidebar label. */
@@ -835,7 +837,7 @@ function addEntryNavItems(
       label: entry.labels?.plural ?? entry.label,
       order: entry.priority,
       coreIcon: resolveEntryMenuIcon(entry.menuIcon),
-      capability: `entry:${entry.capabilityType ?? entry.name}:edit_own`,
+      capability: entryCapability(entry, "edit_own"),
       ...(entry.keywords ? { keywords: entry.keywords } : {}),
     });
   }

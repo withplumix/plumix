@@ -3,9 +3,9 @@ import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import { and, eq, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
+import { entryCapability, entryCapabilityNamespace } from "./capabilities.js";
 
-export type EntryViewer = Pick<AppContext, "user" | "auth">;
+export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
 
 // `authorId` admits `null` so a caller can ask about a hypothetical row "by
 // the current user", who may be nobody.
@@ -22,11 +22,12 @@ export interface EntryRow {
  * two to the same rows, so a change to one fails until the other follows.
  */
 export function canReadEntry(ctx: EntryViewer, entry: EntryRow): boolean {
-  if (!ctx.auth.can(entryCapability(entry.type, "read"))) return false;
+  const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
+  if (!ctx.auth.can(entryCapability(namespace, "read"))) return false;
   if (entry.status === "published") return true;
   if (!canReadUnpublished(ctx, entry.type)) return false;
   return (
-    ctx.auth.can(entryCapability(entry.type, "edit_any")) ||
+    ctx.auth.can(entryCapability(namespace, "edit_any")) ||
     entry.authorId === ctx.user?.id
   );
 }
@@ -36,9 +37,10 @@ export function canReadEntry(ctx: EntryViewer, entry: EntryRow): boolean {
  * `edit_any`, or `edit_own` with someone signed in to own a row.
  */
 export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
+  const namespace = entryCapabilityNamespace(ctx.plugins, type);
   return (
-    ctx.auth.can(entryCapability(type, "edit_any")) ||
-    (ctx.user !== null && ctx.auth.can(entryCapability(type, "edit_own")))
+    ctx.auth.can(entryCapability(namespace, "edit_any")) ||
+    (ctx.user !== null && ctx.auth.can(entryCapability(namespace, "edit_own")))
   );
 }
 
@@ -48,12 +50,14 @@ export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
  * `AND`ed onto a caller's own predicate.
  */
 export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
-  if (!ctx.auth.can(entryCapability(type, "read"))) return null;
+  const namespace = entryCapabilityNamespace(ctx.plugins, type);
+  if (!ctx.auth.can(entryCapability(namespace, "read"))) return null;
   const ofType = eq(entries.type, type);
-  if (ctx.auth.can(entryCapability(type, "edit_any"))) return sql`(${ofType})`;
+  if (ctx.auth.can(entryCapability(namespace, "edit_any")))
+    return sql`(${ofType})`;
   const published = eq(entries.status, "published");
   const rows =
-    ctx.user !== null && ctx.auth.can(entryCapability(type, "edit_own"))
+    ctx.user !== null && ctx.auth.can(entryCapability(namespace, "edit_own"))
       ? and(ofType, or(published, eq(entries.authorId, ctx.user.id)))
       : and(ofType, published);
   return sql`(${rows})`;

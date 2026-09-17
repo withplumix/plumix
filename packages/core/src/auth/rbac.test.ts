@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
 import {
   canAccessAdmin,
   capabilitiesForRole,
@@ -125,7 +126,9 @@ describe("CORE_CAPABILITIES baseline", () => {
 
 describe("deriveEntryTypeCapabilities", () => {
   test("defaults match POST_TYPE_CAPABILITY_ACTIONS when no override is set", () => {
-    const caps = deriveEntryTypeCapabilities("post", { label: "Posts" });
+    const caps = deriveEntryTypeCapabilities(
+      toRegisteredEntryType("post", { label: "Posts" }, null),
+    );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
     expect(byName["entry:post:read"]).toBe("subscriber");
     expect(byName["entry:post:edit_own"]).toBe("contributor");
@@ -137,19 +140,25 @@ describe("deriveEntryTypeCapabilities", () => {
 
   test("`capabilities` override raises minRole on specified actions only", () => {
     // Menu-item-shape: every action requires admin — editors lose access.
-    const caps = deriveEntryTypeCapabilities("nav_menu_item", {
-      label: "Menu items",
-      capabilities: {
-        read: "admin",
-        create: "admin",
-        edit_own: "admin",
-        publish: "admin",
-        edit_any: "admin",
-        delete: "admin",
-        read_revisions: "admin",
-        restore_revision: "admin",
-      },
-    });
+    const caps = deriveEntryTypeCapabilities(
+      toRegisteredEntryType(
+        "nav_menu_item",
+        {
+          label: "Menu items",
+          capabilities: {
+            read: "admin",
+            create: "admin",
+            edit_own: "admin",
+            publish: "admin",
+            edit_any: "admin",
+            delete: "admin",
+            read_revisions: "admin",
+            restore_revision: "admin",
+          },
+        },
+        null,
+      ),
+    );
     for (const cap of caps) {
       expect(cap.minRole).toBe("admin");
     }
@@ -157,10 +166,16 @@ describe("deriveEntryTypeCapabilities", () => {
 
   test("partial override leaves non-overridden actions at their default minRole", () => {
     // Media-shape: only `create` is remapped (author+ can upload).
-    const caps = deriveEntryTypeCapabilities("attachment", {
-      label: "Attachments",
-      capabilities: { create: "author" },
-    });
+    const caps = deriveEntryTypeCapabilities(
+      toRegisteredEntryType(
+        "attachment",
+        {
+          label: "Attachments",
+          capabilities: { create: "author" },
+        },
+        null,
+      ),
+    );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
     expect(byName["entry:attachment:create"]).toBe("author");
     // Other actions remain at defaults.
@@ -172,11 +187,17 @@ describe("deriveEntryTypeCapabilities", () => {
   test("overrides compose with capabilityType pooling", () => {
     // capabilityType pools derived cap names; override still applies to
     // the pooled name.
-    const caps = deriveEntryTypeCapabilities("story", {
-      label: "Stories",
-      capabilityType: "post",
-      capabilities: { delete: "admin" },
-    });
+    const caps = deriveEntryTypeCapabilities(
+      toRegisteredEntryType(
+        "story",
+        {
+          label: "Stories",
+          capabilityType: "post",
+          capabilities: { delete: "admin" },
+        },
+        null,
+      ),
+    );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
     expect(byName["entry:post:delete"]).toBe("admin");
     expect(byName["entry:post:publish"]).toBe("author");
@@ -185,10 +206,16 @@ describe("deriveEntryTypeCapabilities", () => {
   test("override resolves through the capability resolver (hasCapability gates correctly)", () => {
     const registry = createPluginRegistry();
     // Simulate registration side-effect: derive caps and add them.
-    for (const cap of deriveEntryTypeCapabilities("nav_menu_item", {
-      label: "Menu items",
-      capabilities: { edit_any: "admin" },
-    })) {
+    for (const cap of deriveEntryTypeCapabilities(
+      toRegisteredEntryType(
+        "nav_menu_item",
+        {
+          label: "Menu items",
+          capabilities: { edit_any: "admin" },
+        },
+        null,
+      ),
+    )) {
       registry.capabilities.set(cap.name, { ...cap, registeredBy: "menus" });
     }
     const resolver = createCapabilityResolver(registry);

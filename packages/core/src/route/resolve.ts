@@ -17,9 +17,12 @@ import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../entries/capabilities.js";
 import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
-import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { entrySearchCondition } from "../search/conditions.js";
 import { resolveEditMode } from "./edit-mode.js";
@@ -289,12 +292,13 @@ async function resolveSingle(
 
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
+  const namespace = entryCapabilityNamespace(ctx.plugins, row.type);
   const editMode = resolveEditMode({
     editParam: new URL(ctx.request.url).searchParams.has("plumix.edit"),
     canEdit:
-      ctx.auth.can(entryCapability(row.type, "edit_any")) ||
+      ctx.auth.can(entryCapability(namespace, "edit_any")) ||
       (ctx.user?.id === row.authorId &&
-        ctx.auth.can(entryCapability(row.type, "edit_own"))),
+        ctx.auth.can(entryCapability(namespace, "edit_own"))),
     previewGrant: await previewTokenGrantsEntry(ctx, row),
   });
 

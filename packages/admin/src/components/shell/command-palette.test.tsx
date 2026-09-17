@@ -22,6 +22,7 @@ const NAV_MANIFEST = {
   entryTypes: [
     {
       name: "post",
+      capabilityType: "post",
       adminSlug: "posts",
       label: "Posts",
       isPublic: true,

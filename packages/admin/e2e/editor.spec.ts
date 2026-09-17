@@ -229,6 +229,7 @@ test.describe("editor route", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -472,6 +473,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -533,6 +535,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -609,6 +612,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -661,6 +665,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -728,6 +733,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -791,6 +797,7 @@ test.describe("editor document tab", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -974,6 +981,7 @@ test.describe("editor draft of a published entry", () => {
       entryTypes: [
         {
           name: "post",
+          capabilityType: "post",
           adminSlug: "posts",
           isPublic: true,
           showUI: true,
@@ -1099,6 +1107,7 @@ test.describe("editor stale-draft dialog", () => {
     entryTypes: [
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         isPublic: true,
         showUI: true,
@@ -1194,6 +1203,7 @@ test.describe("editor revision preview", () => {
     entryTypes: [
       {
         name: "post",
+        capabilityType: "post",
         adminSlug: "posts",
         isPublic: true,
         showUI: true,

@@ -23,7 +23,7 @@ interface ResolveEditorModeInput {
   readonly entryType:
     | {
         readonly name: string;
-        readonly capabilityType?: string;
+        readonly capabilityType: string;
         readonly supports?: readonly string[];
       }
     | undefined;
@@ -57,13 +57,12 @@ export function resolveEditorMode({
     currentStatus === "published" || currentStatus === "scheduled";
   if (!isLiveStatus) return "edit-live";
 
-  // Capability namespace matches the server: by default it's the entry
-  // type name, but plugins may share a `capabilityType` to pool
-  // permissions across types (two plugins both `capabilityType: "post"`
-  // share `entry:post:*`).
-  const capType = entryType.capabilityType ?? entryType.name;
-  const canEditAny = capabilities.has(`entry:${capType}:edit_any`);
-  const canEditOwn = capabilities.has(`entry:${capType}:edit_own`);
+  const canEditAny = capabilities.has(
+    `entry:${entryType.capabilityType}:edit_any`,
+  );
+  const canEditOwn = capabilities.has(
+    `entry:${entryType.capabilityType}:edit_own`,
+  );
   // Author flag is required for the `edit_own` branch — a viewer who
   // can edit their own posts but isn't the author of THIS row falls
   // through to edit-live.

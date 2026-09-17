@@ -44,8 +44,8 @@ export const Route = createFileRoute("/_editor/entries/$slug/create")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw notFound();
     }
-    const capabilityType = entryType.capabilityType ?? entryType.name;
-    if (!hasCap(context.user.capabilities, `entry:${capabilityType}:create`)) {
+    const createCapability = `entry:${entryType.capabilityType}:create`;
+    if (!hasCap(context.user.capabilities, createCapability)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw notFound();
     }

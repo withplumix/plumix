@@ -10,6 +10,10 @@ import type {
 import { eq, inArray } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
+  entryCapability,
+  entryCapabilityNamespace,
+} from "../../../entries/capabilities.js";
+import {
   pruneOldRevisions,
   snapshotAsRevision,
 } from "../../../revisions/repository.js";
@@ -159,10 +163,6 @@ export async function fireEntryRevisionRestored(
   );
 }
 
-export function entryCapability(type: string, action: string): string {
-  return `entry:${type}:${action}`;
-}
-
 /**
  * Shared prelude for the trash-lifecycle procedures (trash / restore /
  * deletePermanent): load-or-404, then gate on the `delete` capability
@@ -199,10 +199,11 @@ function assertDeletable(
   entry: Entry,
   guards: DeletableGuards,
 ): void {
-  const deleteCapability = entryCapability(entry.type, "delete");
+  const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
+  const deleteCapability = entryCapability(namespace, "delete");
   if (!ctx.auth.can(deleteCapability)) guards.forbidden(deleteCapability);
   if (entry.authorId !== ctx.user.id) {
-    const editAnyCapability = entryCapability(entry.type, "edit_any");
+    const editAnyCapability = entryCapability(namespace, "edit_any");
     if (!ctx.auth.can(editAnyCapability)) guards.forbidden(editAnyCapability);
   }
 }
