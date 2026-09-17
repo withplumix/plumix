@@ -109,6 +109,36 @@ describe("runScheduledTasks", () => {
     });
   });
 
+  test("a logger that throws does not cost the run its accounting", async () => {
+    // An operator's sink can throw — a dead transport, a payload it cannot
+    // stringify. It is reached only after a task has failed, so letting it out
+    // would discard what every task did on the way there, and leave the
+    // handler with no report to return.
+    const tasks: RegisteredScheduledTask[] = [
+      { id: "ok", registeredBy: "p", handler: () => undefined },
+      {
+        id: "failing",
+        registeredBy: "p",
+        handler: () => {
+          throw new Error("boom");
+        },
+      },
+    ];
+    const ctx = createTestContext({
+      db,
+      logger: {
+        ...silentLogger,
+        error: () => {
+          throw new Error("transport down");
+        },
+      },
+    });
+
+    await expect(runScheduledTasks(fakeApp(tasks), ctx)).resolves.toStrictEqual(
+      { ran: 1, failed: ["p:failing"] },
+    );
+  });
+
   test("empty task list is a no-op (no logger calls)", async () => {
     const { ctx, error } = fakeCtx();
     await runScheduledTasks(fakeApp([]), ctx);

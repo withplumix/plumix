@@ -32,9 +32,9 @@ export interface ScheduledFiring {
  * Whether Cloudflare may replay the firing turns on `ran`. Workers replays the
  * whole handler, not the tasks that failed, and nothing here deduplicates that:
  * the run guard is a Node and CLI concern. So a firing that got no work done
- * keeps its retry, which is the transient case a retry is for. Reading `ran`
- * rather than inferring it from `aborted` also survives core reporting an abort
- * over a run whose tasks had already done work.
+ * keeps its retry, which is the transient case a retry is for. An aborted run
+ * reports `ran: 0` by construction, so the check below reaches `noRetry` only
+ * for a run whose tasks did work and then failed.
  *
  * Deferred work is unaffected either way: the purges and telemetry core hands
  * to `waitUntil` still settle after an uncaught throw here — verified against

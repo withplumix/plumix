@@ -21,6 +21,7 @@ import type {
 import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
 import { createAppContext } from "../context/app.js";
+import { logErrorSafely } from "../context/log.js";
 import { requestStore } from "../context/stores.js";
 import { createPlumixDispatcher } from "./dispatcher.js";
 import { resolveEnvInput } from "./env-input.js";
@@ -162,6 +163,10 @@ export function createPlumixHandler(
     },
 
     scheduled: async (event, invocation) => {
+      // Hoisted so the guard below can end before the tasks start: only setup
+      // can report that the run never reached them.
+      let scoped: RequestScopedDb;
+      let ctx: AppContext;
       try {
         // Inside the try, not above it: a missing binding is exactly the
         // "the run never started" case the report below exists to name, and
@@ -170,13 +175,13 @@ export function createPlumixHandler(
         const request = syntheticScheduledRequest(app, invocation.env, event);
         // A scheduled run always writes (purges mutate state), so deploys that
         // route writes to a primary do so for scheduled work too.
-        const scoped = connectDatabase({
+        scoped = connectDatabase({
           env: invocation.env,
           request,
           isAuthenticated: false,
           isWrite: true,
         });
-        const ctx = buildAppContext({
+        ctx = buildAppContext({
           app,
           options,
           invocation,
@@ -185,22 +190,31 @@ export function createPlumixHandler(
           defer: invocation.waitUntil ?? track,
           slots: bindOnce(invocation.env),
         });
-        const report = await requestStore.run(ctx, () =>
-          runScheduledTasks(app, ctx, event.cron),
-        );
-        // The response `commit` decorates has no reader on the cron path.
-        scoped.commit(new Response(null));
-        return report;
       } catch (error) {
+        // No `ctx` to log through — the build of it is what may have failed.
         console.error("[plumix] scheduled_failure", error);
-        // `aborted`, not `failed`: no task ran, so naming one would send an
-        // operator looking for a task that never started.
         return {
           ran: 0,
           failed: [],
           aborted: error instanceof Error ? error.message : String(error),
         };
       }
+      const report = await requestStore.run(ctx, () =>
+        runScheduledTasks(app, ctx, event.cron),
+      );
+      try {
+        // The response `commit` decorates has no reader on the cron path.
+        scoped.commit(new Response(null));
+      } catch (error) {
+        // The tasks already ran, so surfacing this as `aborted` would tell
+        // every caller that nothing did. The log is where it surfaces instead.
+        logErrorSafely(
+          ctx.logger,
+          "[plumix] scheduled run commit failed",
+          error,
+        );
+      }
+      return report;
     },
   };
 }
