@@ -46,7 +46,7 @@ import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
-import { registerCoreDebugPanels } from "../dev/debug-bar/core-panels.js";
+import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
 import {
@@ -276,9 +276,9 @@ export async function buildApp(
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
   registerCoreAdminBarContributors(hooks);
-  // Dev-only debug bar. `process.env.PLUMIX_DEV` is Vite-substituted at
+  // Dev-only debug panels. `process.env.PLUMIX_DEV` is Vite-substituted at
   // bundle time (empty in `plumix build`), so this dead branch — and, with
-  // core's `sideEffects: false`, the whole debug-bar module — is tree-shaken
+  // core's `sideEffects: false`, the whole debug-panels module — is tree-shaken
   // from prod, matching the injection site in render-template.
   if (process.env.PLUMIX_DEV) {
     registerCoreDebugPanels(hooks);

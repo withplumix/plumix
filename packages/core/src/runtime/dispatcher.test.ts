@@ -23,7 +23,7 @@ import { readSessionCookie } from "../auth/cookies.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { getContext } from "../context/stores.js";
-import { debugHistory } from "../dev/debug-bar/history.js";
+import { debugHistory } from "../dev/request-history/store.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
-import { DEBUG_REQUESTS_PATH } from "./requests-path.js";
+import { DEBUG_REQUESTS_PATH } from "../request-history/path.js";
 
 interface DebugRequestListShape {
   readonly id: string;

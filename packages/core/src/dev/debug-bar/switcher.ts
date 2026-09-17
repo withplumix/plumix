@@ -1,5 +1,5 @@
-import type { DebugHistoryEntry } from "./history.js";
-import { DEBUG_REQUESTS_PATH } from "./requests-path.js";
+import type { DebugHistoryEntry } from "../request-history/store.js";
+import { DEBUG_REQUESTS_PATH } from "../request-history/path.js";
 
 /** The in-flight request the inline bar is rendering — not yet in history. */
 export interface CurrentRequest {

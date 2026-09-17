@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { normalizeDebugBar } from "./config.js";
+import { normalizeDebugBar } from "./debug-bar-config.js";
 
 describe("normalizeDebugBar", () => {
   test("defaults to on-in-dev with sensible chrome defaults when unconfigured", () => {

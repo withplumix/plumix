@@ -1,16 +1,16 @@
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "../../context/app.js";
-import type { DebugHistoryEntry } from "./history.js";
-import type { DebugSnapshot } from "./snapshot.js";
-import { HookRegistry } from "../../hooks/registry.js";
-import { createTestContext } from "../../test/context.js";
-import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
-import { createTestDb } from "../../test/harness.js";
-import { registerCoreDebugPanels } from "./core-panels.js";
-import { createDebugHistoryStore } from "./history.js";
-import { handleDebugRequests } from "./read-routes.js";
-import { DEBUG_REQUESTS_PATH, isDebugRequestsPath } from "./requests-path.js";
+import type { AppContext, Db } from "../context/app.js";
+import type { DebugSnapshot } from "./request-history/snapshot.js";
+import type { DebugHistoryEntry } from "./request-history/store.js";
+import { HookRegistry } from "../hooks/registry.js";
+import { createTestContext } from "../test/context.js";
+import { createDispatcherHarness, DEV_ORIGIN } from "../test/dispatcher.js";
+import { createTestDb } from "../test/harness.js";
+import { registerCoreDebugPanels } from "./debug-panels/core-panels.js";
+import { handleDebugRequests } from "./history-routes.js";
+import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
+import { createDebugHistoryStore } from "./request-history/store.js";
 
 function snapshotWith(overrides: Partial<DebugSnapshot["context"]> = {}) {
   return {
@@ -59,18 +59,6 @@ function ctxFor(path: string): AppContext {
     debugBar: true,
   });
 }
-
-describe("isDebugRequestsPath", () => {
-  test("matches the collection and any detail path", () => {
-    expect(isDebugRequestsPath(DEBUG_REQUESTS_PATH)).toBe(true);
-    expect(isDebugRequestsPath(`${DEBUG_REQUESTS_PATH}/req-1`)).toBe(true);
-  });
-
-  test("does not match a sibling path", () => {
-    expect(isDebugRequestsPath("/_plumix/debug/requestsx")).toBe(false);
-    expect(isDebugRequestsPath("/_plumix/rpc/entry/list")).toBe(false);
-  });
-});
 
 describe("handleDebugRequests", () => {
   test("lists captured requests newest-first as bounded metadata", async () => {

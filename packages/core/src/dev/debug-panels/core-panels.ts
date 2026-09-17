@@ -1,10 +1,10 @@
 import type { HookRegistry } from "../../hooks/registry.js";
 import type { DebugPanel } from "./types.js";
-import { appPanel } from "./panels/app.js";
-import { databasePanel } from "./panels/database.js";
-import { requestPanel } from "./panels/request.js";
-import { templatePanel } from "./panels/template.js";
-import { timelinePanel } from "./panels/timeline.js";
+import { appPanel } from "./builtin/app.js";
+import { databasePanel } from "./builtin/database.js";
+import { requestPanel } from "./builtin/request.js";
+import { templatePanel } from "./builtin/template.js";
+import { timelinePanel } from "./builtin/timeline.js";
 
 /**
  * Registers core's built-in debug panels. Wired at `buildApp` time behind

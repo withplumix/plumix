@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 
 import type { AppContext } from "../../context/app.js";
-import { collectDebugPanels } from "./collect.js";
-import { normalizeDebugBar } from "./config.js";
-import { debugHistory } from "./history.js";
-import { DebugPanelTabs } from "./panels-view.js";
-import { renderDebugPanels } from "./render-panels.js";
-import { projectDebugSnapshot } from "./snapshot.js";
+import { normalizeDebugBar } from "../debug-bar-config.js";
+import { collectDebugPanels } from "../debug-panels/collect.js";
+import { DebugPanelTabs } from "../debug-panels/panels-view.js";
+import { renderDebugPanels } from "../debug-panels/render-panels.js";
+import { projectDebugSnapshot } from "../request-history/snapshot.js";
+import { debugHistory } from "../request-history/store.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
 import {
   buildSwitcherEntries,

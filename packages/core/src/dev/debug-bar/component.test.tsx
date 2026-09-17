@@ -2,12 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "../../context/app.js";
-import type { DebugBarInput } from "./config.js";
+import type { DebugBarInput } from "../debug-bar-config.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
+import { registerCoreDebugPanels } from "../debug-panels/core-panels.js";
 import { PlumixDebugBar } from "./component.js";
-import { registerCoreDebugPanels } from "./core-panels.js";
 
 let db: Db;
 beforeAll(async () => {

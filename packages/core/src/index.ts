@@ -147,10 +147,10 @@ export type { OgImage } from "./seo/entry-image.js";
 // a Request and apply the check themselves. Only `configureServer` calls it,
 // which is why it carries no `PLUMIX_DEV` gate of its own.
 export { isTrustedDevHost } from "./dev/trust.js";
-export { DebugKV, DebugSection } from "./dev/debug-bar/primitives.js";
-export type { DebugKVRow } from "./dev/debug-bar/primitives.js";
-export type { DebugPanel } from "./dev/debug-bar/types.js";
-export type { DebugSnapshot } from "./dev/debug-bar/snapshot.js";
+export { DebugKV, DebugSection } from "./dev/debug-panels/primitives.js";
+export type { DebugKVRow } from "./dev/debug-panels/primitives.js";
+export type { DebugPanel } from "./dev/debug-panels/types.js";
+export type { DebugSnapshot } from "./dev/request-history/snapshot.js";
 // The dev error page's equivalents, for `error_page:hints` and
 // `error_page:panels`: the contribution shapes and the pieces a panel body is
 // built from.

@@ -1,19 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { AppContext } from "../../context/app.js";
-import type { DebugHistoryEntry, DebugHistoryStore } from "./history.js";
-import type { DebugSnapshot } from "./snapshot.js";
-import {
-  jsonResponse,
-  methodNotAllowed,
-  notFound,
-} from "../../runtime/http.js";
-import { collectDebugPanels } from "./collect.js";
-import { normalizeDebugBar } from "./config.js";
-import { debugHistory } from "./history.js";
-import { DebugPanelTabs } from "./panels-view.js";
-import { renderDebugPanels } from "./render-panels.js";
-import { DEBUG_REQUESTS_PATH } from "./requests-path.js";
+import type { AppContext } from "../context/app.js";
+import type { DebugSnapshot } from "./request-history/snapshot.js";
+import type {
+  DebugHistoryEntry,
+  DebugHistoryStore,
+} from "./request-history/store.js";
+import { jsonResponse, methodNotAllowed, notFound } from "../runtime/http.js";
+import { normalizeDebugBar } from "./debug-bar-config.js";
+import { collectDebugPanels } from "./debug-panels/collect.js";
+import { DebugPanelTabs } from "./debug-panels/panels-view.js";
+import { renderDebugPanels } from "./debug-panels/render-panels.js";
+import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
+import { debugHistory } from "./request-history/store.js";
 
 /** The newest-first metadata a `GET /_plumix/debug/requests` list item carries. */
 interface DebugRequestListItem {
@@ -38,9 +37,10 @@ function toListItem(entry: DebugHistoryEntry): DebugRequestListItem {
 }
 
 /**
- * Serves the dev request-history over HTTP so the bar's switcher (and a future
- * MCP reader) can list and replay past requests. JSON is canonical; HTML is a
- * rendering over it:
+ * Serves the dev request-history over HTTP so the bar's switcher can list and
+ * replay past requests. One of the store's surfaces, not its owner — the two
+ * dev MCP tools read the same ring in-process rather than through here. JSON
+ * is canonical; HTML is a rendering over it:
  *
  * - `GET /_plumix/debug/requests` → newest-first metadata list, bounded to the
  *   store's ring size.

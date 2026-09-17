@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import ts from "typescript";
 import { describe, expect, test } from "vitest";
+
+import {
+  importsOf,
+  resolveWithinCore,
+  staticClosureOf,
+} from "../test/import-graph.js";
 
 // A runtime adapter builds the app and then dispatches every request through
 // it, so the graph a public render pays for is what these two modules reach
@@ -20,6 +25,11 @@ const COLD_PATH_ENTRIES = ["runtime/app.ts", "runtime/dispatcher.ts"] as const;
 // render must never pay for. Core ships as unbundled `tsc` output, so within
 // the executed graph nothing keeps them out of a consumer's main chunk except
 // the absence of a static import somewhere above.
+//
+// `app.ts` holds a whole-statement `import type` to each of them for its own
+// signatures; rewriting one into a value import is the regression this file
+// exists to catch. That distinction lives in `importsOf` — see the note there
+// on why an inline `type` specifier still counts as a link.
 const DEFERRED = [
   { importer: "runtime/app.ts", specifier: "../mcp/dispatch.js" },
   { importer: "runtime/app.ts", specifier: "../rest/build-handler.js" },
@@ -28,107 +38,6 @@ const DEFERRED = [
 ] as const;
 
 const SRC = path.resolve(import.meta.dirname, "..");
-
-// Only a whole-statement `import type` is erased, and `app.ts` holds one to
-// each deferred module for its own signatures; rewriting one into a value
-// import is the regression this file exists to catch. Inline specifiers do not
-// count as erased: under `verbatimModuleSyntax` TS keeps the statement and
-// emits `import {} from "…"`, which still loads the module and drags its graph
-// along. `import defer` counts as static too — a deferred module is linked.
-function isErased(clause: ts.ImportClause | undefined): boolean {
-  return clause?.phaseModifier === ts.SyntaxKind.TypeKeyword;
-}
-
-interface FileImports {
-  readonly static: readonly string[];
-  readonly dynamic: readonly string[];
-}
-
-function importsOf(file: string): FileImports {
-  const source = ts.createSourceFile(
-    file,
-    fs.readFileSync(file, "utf8"),
-    ts.ScriptTarget.ESNext,
-  );
-  const statics: string[] = [];
-  const dynamics: string[] = [];
-
-  for (const statement of source.statements) {
-    if (
-      ts.isImportDeclaration(statement) &&
-      ts.isStringLiteral(statement.moduleSpecifier) &&
-      !isErased(statement.importClause)
-    ) {
-      statics.push(statement.moduleSpecifier.text);
-    }
-    if (
-      ts.isExportDeclaration(statement) &&
-      statement.moduleSpecifier !== undefined &&
-      ts.isStringLiteral(statement.moduleSpecifier) &&
-      !statement.isTypeOnly
-    ) {
-      statics.push(statement.moduleSpecifier.text);
-    }
-  }
-
-  function collectDynamic(node: ts.Node): void {
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
-      const [specifier] = node.arguments;
-      if (specifier && ts.isStringLiteral(specifier)) {
-        dynamics.push(specifier.text);
-      }
-    }
-    ts.forEachChild(node, collectDynamic);
-  }
-  collectDynamic(source);
-
-  return { static: statics, dynamic: dynamics };
-}
-
-// Only relative specifiers can re-enter core's own graph; a bare specifier is a
-// leaf as far as this walk is concerned.
-function resolveWithinCore(
-  from: string,
-  specifier: string,
-): string | undefined {
-  if (!specifier.startsWith(".")) return undefined;
-  const base = path.resolve(path.dirname(from), specifier).replace(/\.js$/, "");
-  for (const candidate of [
-    `${base}.ts`,
-    `${base}.tsx`,
-    path.join(base, "index.ts"),
-    path.join(base, "index.tsx"),
-  ]) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
-
-// Maps each reachable file to the one that imported it, so a failure can name
-// the chain instead of only the destination. Breadth-first, so that chain is
-// the shortest one — the longest is rarely the one worth deleting.
-function staticClosureOf(
-  entries: readonly string[],
-): ReadonlyMap<string, string | undefined> {
-  const importedBy = new Map<string, string | undefined>(
-    entries.map((entry) => [entry, undefined]),
-  );
-  const queue = [...entries];
-  let file: string | undefined;
-  while ((file = queue.shift()) !== undefined) {
-    for (const specifier of importsOf(file).static) {
-      const resolved = resolveWithinCore(file, specifier);
-      if (resolved !== undefined && !importedBy.has(resolved)) {
-        importedBy.set(resolved, file);
-        queue.push(resolved);
-      }
-    }
-  }
-  return importedBy;
-}
 
 const ENTRY_FILES = COLD_PATH_ENTRIES.map((entry) => path.join(SRC, entry));
 const COLD_PATH = staticClosureOf(ENTRY_FILES);

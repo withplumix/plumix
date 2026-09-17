@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { DebugContext } from "../snapshot.js";
-import { makeSnapshot } from "../snapshot-fixture.js";
+import type { DebugContext } from "../../request-history/snapshot.js";
+import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
 import { appPanel } from "./app.js";
 
 function render(context: Partial<DebugContext>): string {

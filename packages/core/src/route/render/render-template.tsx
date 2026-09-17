@@ -41,7 +41,7 @@ import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
 import {
   TEMPLATE_PANEL_ID,
   templateNodeLabel,
-} from "../../dev/debug-bar/template-node-label.js";
+} from "../../dev/debug-panels/template-node-label.js";
 import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
