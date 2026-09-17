@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url";
-
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { ResolvedCopy } from "./dependency-tree";
