@@ -202,6 +202,19 @@ So every distinct schedule a task declares has to appear in `triggers.crons`, sp
 
 A trigger with no task behind it is harmless: the invocation runs, matches nothing, and ends. A task with no trigger behind it never runs at all, which is the failure worth checking for after adding a plugin or changing a schedule.
 
+### When a firing fails
+
+A failing task is caught so its siblings still run, and the failure is logged with its error — visible in `wrangler tail` and Workers Logs. The invocation itself is then marked failed, so the Cron Trigger Past Events table, Workers analytics and anything alerting on them agree with the logs. One failed task is enough, which is the rule `plumix cron run` already applies on a Node deploy.
+
+Whether Cloudflare replays the firing turns on whether any task succeeded, because that is what decides if a replay duplicates work. Cloudflare re-runs the whole handler, not the tasks that failed, and nothing on Workers deduplicates that — the run guard that does is a Node deploy's.
+
+- **No task succeeded.** The run never started, or every task it reached threw, so a replay repeats nothing. Plumix leaves Cloudflare's retry in place, which is the transient case a retry is for.
+- **Some tasks succeeded and some failed.** A replay would run the successful ones a second time, so Plumix declines it and the firing waits for its next scheduled minute.
+
+Work handed to `waitUntil` is unaffected either way: the CDN purges and telemetry a successful task queued still settle, even though the invocation ends in an error.
+
+There is no way to exempt a task from any of this — a flaky task reddens every firing it fails in. If that is the situation you are in, catch inside the task and decide there whether the failure is worth reporting.
+
 ## Passkey origins across deploys
 
 A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so a credential anchored to one of those hosts means re-enrolling on every preview. Anchoring it to the registrable domain they share is what avoids that.

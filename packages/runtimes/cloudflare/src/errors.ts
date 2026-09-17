@@ -201,3 +201,54 @@ export class DemoError extends Error {
     );
   }
 }
+
+/**
+ * A cron firing that did not do its job. Thrown out of the generated entry's
+ * `scheduled` so Workers records the invocation as failed rather than ok.
+ *
+ * The two message bodies are the ones the Node in-process scheduler logs for
+ * the same pair of cases, so an operator who runs both runtimes greps one
+ * vocabulary. `cron` is the only field: it is what both cases share and what
+ * an operator filters a firing by; everything else is already in the message.
+ */
+export class ScheduledRunError extends Error {
+  static {
+    ScheduledRunError.prototype.name = "ScheduledRunError";
+  }
+
+  readonly code: "tasks_failed" | "never_started";
+  readonly cron: string;
+
+  private constructor(
+    code: "tasks_failed" | "never_started",
+    message: string,
+    cron: string,
+  ) {
+    super(message);
+    this.code = code;
+    this.cron = cron;
+  }
+
+  static tasksFailed(ctx: {
+    cron: string;
+    failed: readonly string[];
+  }): ScheduledRunError {
+    return new ScheduledRunError(
+      "tasks_failed",
+      `@plumix/runtime-cloudflare: cron "${ctx.cron}": ` +
+        `${String(ctx.failed.length)} task(s) failed: ${ctx.failed.join(", ")}`,
+      ctx.cron,
+    );
+  }
+
+  static neverStarted(ctx: {
+    cron: string;
+    reason: string;
+  }): ScheduledRunError {
+    return new ScheduledRunError(
+      "never_started",
+      `@plumix/runtime-cloudflare: cron "${ctx.cron}" never started: ${ctx.reason}`,
+      ctx.cron,
+    );
+  }
+}

@@ -4,6 +4,7 @@ import {
   CfAccessError,
   D1Error,
   R2Error,
+  ScheduledRunError,
   WranglerConfigError,
 } from "./errors.js";
 
@@ -106,5 +107,51 @@ describe("WranglerConfigError.parseFailed", () => {
     });
     expect(err.message).toContain("Failed to parse wrangler.toml");
     expect(err.message).toContain("3 syntax error(s)");
+  });
+});
+
+describe("ScheduledRunError.tasksFailed", () => {
+  test("class identity, code, and exposed schedule", () => {
+    const err = ScheduledRunError.tasksFailed({
+      cron: "0 3 * * *",
+      failed: ["blog:publish-scheduled"],
+    });
+    expect(err).toBeInstanceOf(ScheduledRunError);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.name).toBe("ScheduledRunError");
+    expect(err.code).toBe("tasks_failed");
+    expect(err.cron).toBe("0 3 * * *");
+  });
+
+  test("message counts the failures and names each one", () => {
+    const err = ScheduledRunError.tasksFailed({
+      cron: "*/5 * * * *",
+      failed: ["blog:publish-scheduled", "og:warm-cards"],
+    });
+    expect(err.message).toContain('cron "*/5 * * * *"');
+    expect(err.message).toContain("2 task(s) failed");
+    expect(err.message).toContain("blog:publish-scheduled, og:warm-cards");
+  });
+});
+
+describe("ScheduledRunError.neverStarted", () => {
+  test("class identity, code, and exposed schedule", () => {
+    const err = ScheduledRunError.neverStarted({
+      cron: "0 3 * * *",
+      reason: "no database",
+    });
+    expect(err).toBeInstanceOf(ScheduledRunError);
+    expect(err.name).toBe("ScheduledRunError");
+    expect(err.code).toBe("never_started");
+    expect(err.cron).toBe("0 3 * * *");
+  });
+
+  test("message distinguishes a run that never reached its tasks", () => {
+    const err = ScheduledRunError.neverStarted({
+      cron: "0 3 * * *",
+      reason: 'D1 binding "DB" missing from env',
+    });
+    expect(err.message).toContain('cron "0 3 * * *" never started');
+    expect(err.message).toContain('D1 binding "DB" missing from env');
   });
 });
