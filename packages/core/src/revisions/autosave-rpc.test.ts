@@ -200,8 +200,8 @@ describe("entry.update saveAs", () => {
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
 
-  // Where a legacy token finally settles (`coerceOnRead` covers why one reads
-  // as stored until then). The autosave base is the live row, so the token
+  // Where a legacy token finally settles; until then the decode hands it back
+  // as stored. The autosave base is the live row, so the token
   // rides into the promoted bag even from an edit that never touched the
   // field, and publish's strict pass resolves it.
   test("publishing settles an untouched legacy boolean token to a real boolean", async () => {

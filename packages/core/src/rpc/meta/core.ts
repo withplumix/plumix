@@ -10,7 +10,6 @@ import type {
 } from "../../plugin/lookup.js";
 import type {
   MetaBoxField,
-  MetaScalarType,
   ReferenceTarget,
   TemporalInputType,
   TemporalMetaBoxField,
@@ -1256,7 +1255,13 @@ function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
   if (isTemporalField(field) && field.returns === "date") {
     return projectTemporalDate(field.inputType, value);
   }
-  return coerceOnRead(field.type, value);
+  // Everything reaching here reads as it is stored, scalars included. Three
+  // readers cannot decode — a `WHERE` over the JSON column, a raw row off a
+  // lifecycle event, and `storedMeta` behind `whereMeta` — so widening a
+  // value to its declared type would answer the other way from all three.
+  // The write path settles every form it accepts, so only a row that bypassed
+  // it holds an off-schema value, and the next save settles that.
+  return value;
 }
 
 function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
@@ -1274,8 +1279,10 @@ function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
 // the admin formats in the viewer's browser). Consumers read the
 // parts back with `getUTC*` or `timeZone: "UTC"` formatting; the
 // projection is the exact inverse of the write-side `Date` encoding
-// (`formatTemporalValue`). Unparseable stored values round to "no
-// value", matching the forgiving-read posture of `coerceOnRead`.
+// (`formatTemporalValue`). An unparseable stored value rounds to "no
+// value": unlike a scalar, a `.returns("date")` field has no honest way
+// to hand one back, since its read type is `Date` and the projection is
+// the whole reason the bag is not the stored JSON here.
 function projectTemporalDate(
   inputType: TemporalInputType,
   value: unknown,
@@ -1359,36 +1366,6 @@ function assertEncodedSize(key: string, value: unknown): void {
   const byteLength = new TextEncoder().encode(encoded).length;
   if (byteLength > MAX_META_VALUE_BYTES) {
     throw MetaSanitizationError.valueTooLarge({ key });
-  }
-}
-
-// A container has no scalar form to fall back to, so it reads as its JSON
-// rather than as `String()`'s "[object Object]".
-function stringifyOnRead(value: JsonValue): string {
-  return typeof value === "object" && value !== null
-    ? JSON.stringify(value)
-    : String(value);
-}
-
-function coerceOnRead(type: MetaScalarType, value: JsonValue): JsonValue {
-  // Reads are forgiving — the row was validated on write but a
-  // schema change (e.g. a plugin flipping `number` → `string`)
-  // shouldn't 500 the editor. We coerce when we can and fall through
-  // to the raw value otherwise.
-  switch (type) {
-    case "string":
-      return typeof value === "string" ? value : stringifyOnRead(value);
-    case "number":
-      return typeof value === "number" ? value : Number(value);
-    // The exception, and why it shares `json`'s arm: a boolean's stored value
-    // is the one a `WHERE` over the JSON column, a raw row off a lifecycle
-    // event, and `storedMeta` behind `whereMeta` all read without decoding.
-    // Widening `1` here would answer a question those three answer the other
-    // way. The write path settles every token it accepts, so a row holding
-    // one bypassed the pipeline, and the next save through it settles that.
-    case "boolean":
-    case "json":
-      return value;
   }
 }
 

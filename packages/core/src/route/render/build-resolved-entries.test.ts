@@ -6,6 +6,7 @@ import type { ResolvedNode } from "./rule-resolver.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";
+import { number } from "../../plugin/fields/number.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { toggle } from "../../plugin/fields/toggle.js";
 import { createTracedContext } from "../../test/traced-context.js";
@@ -19,10 +20,12 @@ import { resolveTemplate } from "./template-hierarchy.js";
 const _dossierFields = [
   date("filedOn").returns("date"),
   entryRef("subject", ["post"]),
-  // The scalar decoding leaves alone, so `whereMeta` — which is typed from
+  // The scalars decoding leaves alone, so `whereMeta` — which is typed from
   // the stored shape and compares against `storedMeta` — asks the same
-  // question of it as a template reading the decoded bag does.
+  // question of them as a template reading the decoded bag does.
   toggle("sealed"),
+  text("codename"),
+  number("clearance"),
 ];
 // The same two decode moves, on a term. Before the render path decoded
 // term meta these read back as the raw ISO string and the raw id.
@@ -291,6 +294,68 @@ describe("whereMeta against a real row", () => {
       rule: true,
     });
     expect(read(token.id)).toEqual({ decoded: 1, stored: 1, rule: false });
+  });
+
+  // The other two scalars, which used to widen on read. What made the miss
+  // unfixable from the call site: `whereMeta`'s value is typed from the
+  // field's declared type, so the only value it accepted was the one the
+  // comparison could not match.
+  test("a string and a number read alike from both bags, so whereMeta agrees with the decoded value", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const seed = (meta: JsonObject) =>
+      harness.factory.entry.create({
+        authorId: author.id,
+        type: "post",
+        status: "published",
+        meta,
+      });
+    const canonical = await seed({ codename: "42", clearance: 7 });
+    const offSchema = await seed({ codename: 42, clearance: "7" });
+
+    const resolved = await run(() =>
+      buildResolvedEntries(ctx, [canonical, offSchema]),
+    );
+    const named = forEntryType("post")
+      .whereMeta("codename", "42")
+      .template(() => null);
+    const cleared = forEntryType("post")
+      .whereMeta("clearance", 7)
+      .template(() => null);
+    const read = (id: number) => {
+      const row = resolved.find((candidate) => candidate.id === id);
+      if (!row) throw new Error(`no resolved entry for ${String(id)}`);
+      const node: ResolvedNode = {
+        kind: "content",
+        entryType: "post",
+        slug: row.slug,
+        databaseId: row.id,
+      };
+      const data: TemplateData = { kind: "entry", entry: row };
+      return {
+        codename: {
+          decoded: row.meta.codename,
+          stored: row.storedMeta.codename,
+          rule: resolveTemplate([named], node, data) === named,
+        },
+        clearance: {
+          decoded: row.meta.clearance,
+          stored: row.storedMeta.clearance,
+          rule: resolveTemplate([cleared], node, data) === cleared,
+        },
+      };
+    };
+
+    expect(read(canonical.id)).toEqual({
+      codename: { decoded: "42", stored: "42", rule: true },
+      clearance: { decoded: 7, stored: 7, rule: true },
+    });
+    expect(read(offSchema.id)).toEqual({
+      codename: { decoded: 42, stored: 42, rule: false },
+      clearance: { decoded: "7", stored: "7", rule: false },
+    });
   });
 });
 

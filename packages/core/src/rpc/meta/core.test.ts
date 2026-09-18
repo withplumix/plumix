@@ -304,40 +304,45 @@ describe("decodeMetaBag (legacy reference self-heal)", () => {
   });
 });
 
-describe("decodeMetaBag (forgiving scalar coercion)", () => {
+describe("decodeMetaBag (scalars read as stored)", () => {
   const titleField = {
     key: "title",
     label: "Title",
     type: "string",
     inputType: "text",
   } as MetaBoxField;
-  const fields = [titleField];
+  const titleScope = metaScope([titleField]);
 
-  test("coerces a number stored under a string field", () => {
-    expect(decodeMetaBag(metaScope(fields), { title: 42 }).title).toBe("42");
-  });
+  // An array case has to be wrapped in its own row: `test.each` spreads a bare
+  // array element across parameters, which would quietly test `"a"` instead.
+  // `toBe` is the claim the block title makes — the decoded bag hands back the
+  // stored value itself, not an equal copy.
+  test.each([[42], [{ a: 1 }], [["a", "b"]], [null]])(
+    "reads a stored %o under a string field as itself",
+    (stored) => {
+      expect(decodeMetaBag(titleScope, { title: stored }).title).toBe(stored);
+    },
+  );
 
-  // A container has no scalar form, so it reads as its JSON rather than as
-  // `String()`'s "[object Object]" / "a,b".
-  test("reads a container stored under a string field as its JSON", () => {
-    expect(decodeMetaBag(metaScope(fields), { title: { a: 1 } }).title).toBe(
-      '{"a":1}',
-    );
-    expect(decodeMetaBag(metaScope(fields), { title: ["a", "b"] }).title).toBe(
-      '["a","b"]',
-    );
-  });
+  const ratingField = {
+    key: "rating",
+    label: "Rating",
+    type: "number",
+    inputType: "number",
+  } as MetaBoxField;
+  const ratingScope = metaScope([ratingField]);
 
-  test('reads a stored null under a string field as "null"', () => {
-    expect(decodeMetaBag(metaScope(fields), { title: null }).title).toBe(
-      "null",
-    );
-  });
+  test.each(["7", "", "nope", true, null])(
+    "reads a stored %o under a number field as itself",
+    (stored) => {
+      expect(decodeMetaBag(ratingScope, { rating: stored }).rating).toBe(
+        stored,
+      );
+    },
+  );
 
-  // A boolean's stored value is the one other surfaces read without decoding
-  // — a `WHERE` over the JSON column, a raw row off a lifecycle event, and
-  // `storedMeta` behind `whereMeta`. None can run this coercion, so widening
-  // `1` here would answer a question those three answer the other way.
+  // Booleans were the documented exception to a forgiving decode; they are
+  // now just the third scalar following the rule.
   const flagField = toggle("flag").build();
   const flagScope = metaScope([flagField]);
 
@@ -369,6 +374,23 @@ describe("decodeMetaBag (forgiving scalar coercion)", () => {
     const patch = await sanitizeMetaInput(() => flagField, { flag: "true" });
     const stored = Object.fromEntries(patch?.upserts ?? []);
     expect(decodeMetaBag(flagScope, stored).flag).toBe(true);
+  });
+
+  // The same bargain for the other two scalars: the decode stopped widening,
+  // so what keeps a field reading as its declared type is that the write
+  // settled it. Both round-trips go through the pipeline, not a raw bag.
+  test("a number written under a string field stores and reads back as text", async () => {
+    const patch = await sanitizeMetaInput(() => titleField, { title: 42 });
+    expect(patch?.upserts.get("title")).toBe("42");
+    const stored = Object.fromEntries(patch?.upserts ?? []);
+    expect(decodeMetaBag(titleScope, stored).title).toBe("42");
+  });
+
+  test("text written under a number field stores and reads back as a number", async () => {
+    const patch = await sanitizeMetaInput(() => ratingField, { rating: "7" });
+    expect(patch?.upserts.get("rating")).toBe(7);
+    const stored = Object.fromEntries(patch?.upserts ?? []);
+    expect(decodeMetaBag(ratingScope, stored).rating).toBe(7);
   });
 });
 
@@ -509,7 +531,7 @@ describe("decodeMetaBag (.default() application)", () => {
   });
 
   test("a stored null is a value, not an absence", () => {
-    expect(decodeMetaBag(metaScope(fields), { tone: null }).tone).toBe("null");
+    expect(decodeMetaBag(metaScope(fields), { tone: null }).tone).toBeNull();
   });
 
   test("a default is decoded like a stored value", () => {
