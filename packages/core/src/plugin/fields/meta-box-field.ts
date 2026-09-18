@@ -61,10 +61,11 @@ export interface MetaBoxFieldBase {
   readonly key: string;
   readonly label: Label;
   /**
-   * Storage type. Drives server-side sanitization on write and
-   * coercion on read (`entry.meta` / `term.meta` columns store JSON,
-   * but the type informs the expected shape). `json` accepts any
-   * JSON-serialisable value.
+   * Storage type. Drives server-side sanitization on write, which is the
+   * only place it is enforced: a value is settled into this type on the way
+   * in, and read back as the `entry.meta` / `term.meta` column holds it.
+   * A row that bypassed the write pipeline therefore reads as whatever it
+   * stores, not as this type. `json` accepts any JSON-serialisable value.
    */
   readonly type: MetaScalarType;
   /**
