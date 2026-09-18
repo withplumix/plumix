@@ -36,9 +36,10 @@ redesign is the evidence the shape holds.
 `debug:panels` filter, including a one-off in a test or an app-local panel
 nobody wants to declare a type for. Only _naming_ a panel in config is closed.
 
-A denylist of free strings is silently wrong when mistyped — `disable:
-["databse"]` type-checks and does nothing — and offers no autocomplete, so the
-five core ids had to be looked up in the docs each time. Typo safety comes from
+A denylist of free strings is silently wrong when mistyped: any string
+type-checks, so a misspelled panel id was a setting that did nothing rather
+than an error. It offered no autocomplete either, so the five core ids had to
+be looked up in the docs each time. Typo safety comes from
 closing the key set, not from the shape of the setting; a closed-union array
 would have been equally safe. The map wins on reading, because its keys _are_
 the extension point, so the registry closes them structurally.
