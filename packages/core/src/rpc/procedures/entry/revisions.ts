@@ -11,6 +11,7 @@ import {
   entryCapabilityByName,
   entryCapabilityNamespace,
 } from "../../../entries/capabilities.js";
+import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
   getRevision as repoGetRevision,
   listRevisions as repoListRevisions,
@@ -193,15 +194,7 @@ export const restore = base
     if (!context.auth.can(restoreCapability)) {
       throw errors.FORBIDDEN({ data: { capability: restoreCapability } });
     }
-    const isAuthor = live.authorId === context.user.id;
-    const editOwnCapability = entryCapability(namespace, "edit_own");
-    const editAnyCapability = entryCapability(namespace, "edit_any");
-    const canEdit =
-      (isAuthor && context.auth.can(editOwnCapability)) ||
-      context.auth.can(editAnyCapability);
-    if (!canEdit) {
-      throw errors.FORBIDDEN({ data: { capability: editAnyCapability } });
-    }
+    assertCanEditEntry(context, live, errors);
 
     // Snapshots survive block deregistration — a block removed since
     // capture would render but never validate via `entry.update`. Run
@@ -357,15 +350,7 @@ export const setMessage = base
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
-    const isAuthor = live.authorId === context.user.id;
-    const editOwnCapability = entryCapability(namespace, "edit_own");
-    const editAnyCapability = entryCapability(namespace, "edit_any");
-    const canEdit =
-      (isAuthor && context.auth.can(editOwnCapability)) ||
-      context.auth.can(editAnyCapability);
-    if (!canEdit) {
-      throw errors.FORBIDDEN({ data: { capability: editAnyCapability } });
-    }
+    assertCanEditEntry(context, live, errors);
 
     // Normalize empty string to null at the input boundary so the
     // repository writes a canonical shape (delete-key vs set-key)

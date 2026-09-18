@@ -102,6 +102,11 @@ export type {
 } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
 export { entryCapability } from "./entries/capabilities.js";
+// The entry edit gate (#2416), so a plugin asks whether a caller may edit a
+// row instead of assembling an `entry:<type>:*` string and missing the
+// namespace a pooled type gates under.
+export { assertCanEditEntry, canEditEntry } from "./entries/editability.js";
+export type { EntryEditErrors } from "./entries/editability.js";
 // The entry change feed (#2121): read a bounded batch, do the work, then
 // acknowledge it.
 export { ackEntryChanges, readEntryChanges } from "./entries/change-feed.js";

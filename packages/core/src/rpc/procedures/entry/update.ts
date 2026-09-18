@@ -1,15 +1,13 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
+import type { EntryEditErrors } from "../../../entries/editability.js";
 import type { JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import {
-  entryCapability,
-  entryCapabilityByName,
-  entryCapabilityNamespace,
-} from "../../../entries/capabilities.js";
+import { entryCapabilityByName } from "../../../entries/capabilities.js";
+import { assertCanEditEntry } from "../../../entries/editability.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { getAutosave, upsertAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
@@ -56,10 +54,6 @@ import {
   buildTermsPatchGuards,
 } from "./terms.js";
 
-interface AccessGuards {
-  readonly forbidden: (capability: string) => never;
-}
-
 interface ParentGuards {
   readonly notFound: (parentId: number) => never;
   readonly cycle: () => never;
@@ -70,32 +64,19 @@ interface ColumnWriteGuards {
   readonly updateFailed: () => never;
 }
 
-function assertCanEditEntry(
-  context: AuthenticatedAppContext,
-  existing: Entry,
-  guards: AccessGuards,
-): void {
-  const isAuthor = existing.authorId === context.user.id;
-  const namespace = entryCapabilityNamespace(context.plugins, existing.type);
-  const editOwnCapability = entryCapability(namespace, "edit_own");
-  const editAnyCapability = entryCapability(namespace, "edit_any");
-  const canEdit =
-    (isAuthor && context.auth.can(editOwnCapability)) ||
-    context.auth.can(editAnyCapability);
-  if (!canEdit) guards.forbidden(editAnyCapability);
-}
-
 function assertCanPublishTransition(
   context: AuthenticatedAppContext,
   existing: Entry,
-  guards: AccessGuards,
+  errors: EntryEditErrors,
 ): void {
   const publishCapability = entryCapabilityByName(
     context.plugins,
     existing.type,
     "publish",
   );
-  if (!context.auth.can(publishCapability)) guards.forbidden(publishCapability);
+  if (!context.auth.can(publishCapability)) {
+    throw errors.FORBIDDEN({ data: { capability: publishCapability } });
+  }
 }
 
 // Reparenting: caller may only point at entries they can see, and the
@@ -186,12 +167,7 @@ export const update = base
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 
-    const accessGuards: AccessGuards = {
-      forbidden: (capability) => {
-        throw errors.FORBIDDEN({ data: { capability } });
-      },
-    };
-    assertCanEditEntry(context, existing, accessGuards);
+    assertCanEditEntry(context, existing, errors);
 
     // An editor may only select a per-entry access policy the type declares —
     // enforced here (before either the autosave or the live write folds it in)
@@ -322,7 +298,7 @@ export const update = base
     const isPublishTransition =
       filtered.status === "published" && existing.status !== "published";
     if (isPublishTransition) {
-      assertCanPublishTransition(context, existing, accessGuards);
+      assertCanPublishTransition(context, existing, errors);
     }
 
     if (filtered.parentId != null && filtered.parentId !== existing.parentId) {

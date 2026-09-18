@@ -135,7 +135,10 @@ describe("@plumix/plugin-media — registration", () => {
 
 interface OrpcErrorPayload {
   readonly message?: string;
-  readonly data?: { readonly reason?: string };
+  readonly data?: {
+    readonly reason?: string;
+    readonly capability?: string;
+  };
 }
 
 interface RpcResult<TOutput> {
@@ -1003,6 +1006,48 @@ describe("@plumix/plugin-media — media.update", () => {
     expect(listed.output?.items[0]?.alt).toBe(
       "A black cat looking at the camera",
     );
+  });
+
+  // Owning a row is not on its own a licence to edit it — the caller still
+  // needs `edit_own`, which is what core's entry procedures ask. A subscriber
+  // holds neither edit capability, so their own row is out of reach; this is
+  // the gate answering, so it lands before the meta parse would.
+  test("returns FORBIDDEN for an owner who holds no edit capability", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("subscriber");
+    const row = await h.factory.entry.create({
+      type: "media",
+      authorId: owner.id,
+      status: "published",
+      slug: "subscriber-owned",
+    });
+
+    const result = await rpcDispatch(
+      h,
+      "media/update",
+      { id: row.id, alt: "mine, surely" },
+      owner.id,
+    );
+    expect(result.status).toBe(403);
+    expect(result.error?.data?.capability).toBe("entry:media:edit_any");
+  });
+
+  test("a non-owner holding edit_any can set alt text", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "theirs.png");
+
+    const result = await rpcDispatch<{ alt: string | null }>(
+      h,
+      "media/update",
+      { id: seeded.id, alt: "described by an editor" },
+      editor.id,
+    );
+    expect(result.status).toBe(200);
+    expect(result.output?.alt).toBe("described by an editor");
   });
 
   test("returns FORBIDDEN for a non-owner without edit_any", async () => {

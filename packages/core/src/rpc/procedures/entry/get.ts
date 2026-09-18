@@ -1,7 +1,4 @@
-import {
-  entryCapability,
-  entryCapabilityNamespace,
-} from "../../../entries/capabilities.js";
+import { assertCanEditEntry } from "../../../entries/editability.js";
 import { getEntry } from "../../../entries/read-service.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
@@ -26,18 +23,9 @@ export const get = base
       }
 
       // Preview mode: overlay the caller's autosave (if any) onto the live
-      // row's read fields. Gated by edit_own / edit_any because previewing a
+      // row's read fields. Gated by the editor's own rule because previewing a
       // pending draft is an editor concern.
-      const namespace = entryCapabilityNamespace(context.plugins, live.type);
-      const editOwn = entryCapability(namespace, "edit_own");
-      const canSeeAny = context.auth.can(
-        entryCapability(namespace, "edit_any"),
-      );
-      const ownsAndCanEdit =
-        live.authorId === context.user.id && context.auth.can(editOwn);
-      if (!canSeeAny && !ownsAndCanEdit) {
-        throw errors.FORBIDDEN({ data: { capability: editOwn } });
-      }
+      assertCanEditEntry(context, live, errors);
 
       const autosave = await getAutosave(context.db, {
         entryId: live.id,
