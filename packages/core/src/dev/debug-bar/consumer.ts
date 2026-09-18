@@ -1,6 +1,6 @@
 import type { TelemetryConsumer } from "../../context/telemetry.js";
-import type { DebugBarInput } from "../debug-bar-config.js";
-import { normalizeDebugBar } from "../debug-bar-config.js";
+import type { DebugBarInput } from "./config.js";
+import { normalizeDebugBar } from "./config.js";
 
 /**
  * The debug bar as a telemetry consumer — it registers so the collector is

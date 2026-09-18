@@ -150,7 +150,7 @@ export { canonicalUrl } from "./seo/canonical.js";
 // that owns the chain the roles feed.
 export type { OgImage } from "./seo/entry-image.js";
 // The debug bar's presentational primitives, so a plugin panel contributed
-// through `debug_bar:panels` reads like the ones core registers instead of
+// through `debug:panels` reads like the ones core registers instead of
 // re-spelling their class names. Dev-only in effect — nothing collects
 // outside the `PLUMIX_DEV` gate — but exported here because a plugin's panel
 // module is its own, and it has nowhere else to import them from.
@@ -162,6 +162,14 @@ export { isTrustedDevHost } from "./dev/trust.js";
 export { DebugKV, DebugSection } from "./dev/debug-panels/primitives.js";
 export type { DebugKVRow } from "./dev/debug-panels/primitives.js";
 export type { DebugPanel } from "./dev/debug-panels/types.js";
+// `DebugPanelRegistry` is the interface a plugin augments to make its panel
+// nameable in `dev.panels`; the other two are what that augmentation produces.
+export type {
+  DebugPanelId,
+  DebugPanelRegistry,
+  DebugPanelsInput,
+} from "./dev/debug-panels/config.js";
+export type { DebugBarInput } from "./dev/debug-bar/config.js";
 export type { DebugSnapshot } from "./dev/request-history/snapshot.js";
 // The dev error page's equivalents, for `error_page:hints` and
 // `error_page:panels`: the contribution shapes and the pieces a panel body is

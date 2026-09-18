@@ -10,6 +10,12 @@ import {
 // package that declares it, and a side-effect import is the edge tsc keeps —
 // same idiom as core's `public-hooks.ts` anchor (#1698).
 import "@plumix/plugin-seo";
+// Anchors this plugin's own `DebugPanelRegistry` augmentation — which makes
+// `dev: { panels: { og: false } }` type-check on a site that installs it —
+// into the published declaration graph. `chain-trace.js` is otherwise reached
+// only transitively, and tsc keeps a side-effect edge where it drops a value
+// one (#1698).
+import "./chain-trace.js";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardPalette } from "./default-card.js";

@@ -9,6 +9,15 @@ import type { JsonObject } from "plumix";
 /** The namespace both records use, which is also the panel's id. */
 export const OG_PANEL_ID = "og";
 
+// Declaring the id is what makes `dev: { panels: { og: false } }` type-check
+// on a site with this plugin installed — and a mistyped one an error rather
+// than a silent no-op.
+declare module "plumix" {
+  interface DebugPanelRegistry {
+    og: true;
+  }
+}
+
 /** Which link of the chain the page's `og:image` came off. */
 export type OgChainOutcome =
   /** An earlier `seo:og_image` subscriber's image, which a card never outranks. */

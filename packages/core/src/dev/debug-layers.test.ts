@@ -26,7 +26,7 @@ import {
 // the bar's telemetry consumer and the history writer: a composition root
 // naming every unit is what a composition root is for, and forbidding it
 // would only push the wiring somewhere less visible.
-const UNIT_NAMES = ["config", "capture", "panels", "bar", "routes"] as const;
+const UNIT_NAMES = ["capture", "panels", "bar", "routes"] as const;
 type UnitName = (typeof UNIT_NAMES)[number];
 
 interface Unit {
@@ -42,20 +42,18 @@ interface Unit {
 }
 
 const UNITS: Readonly<Record<UnitName, Unit>> = {
-  // `DebugBarInput` is the app's config, not the overlay's — `plumix()` takes
-  // it and `createAppContext` resolves it — and the module imports nothing at
-  // all. Kept a leaf so both surfaces can read the panel denylist off it
-  // without importing each other through it.
-  config: { base: "dev/debug-bar-config", mayImport: [] },
   capture: { base: "dev/request-history", mayImport: [] },
+  // Owns `dev.panels` as well as the panels themselves: both surfaces resolve
+  // the setting from here, which is what lets the leaf that used to hold it
+  // disappear rather than be relocated (#2425).
   panels: { base: "dev/debug-panels", mayImport: ["capture"] },
   // Two surfaces. Same rank, and they must not import each other either: the
   // bar's switcher reaches the read routes over HTTP, and a direct import
   // would quietly delete that seam.
-  bar: { base: "dev/debug-bar", mayImport: ["config", "capture", "panels"] },
+  bar: { base: "dev/debug-bar", mayImport: ["capture", "panels"] },
   routes: {
     base: "dev/history-routes",
-    mayImport: ["config", "capture", "panels"],
+    mayImport: ["capture", "panels"],
   },
 };
 
@@ -137,7 +135,7 @@ describe("the dev MCP tools read the capture layer only", () => {
     const reached = [...closure.keys()]
       .filter((file) => {
         const unit = unitOf(file);
-        return unit !== undefined && unit !== "capture" && unit !== "config";
+        return unit !== undefined && unit !== "capture";
       })
       .map((file) => path.relative(SRC, file));
     expect(reached).toEqual([]);

@@ -55,5 +55,5 @@ export function registerDevSurfaces(
     }));
     return manifest;
   });
-  ctx.addFilter("debug_bar:panels", (panels) => [...panels, ogDebugPanel()]);
+  ctx.addFilter("debug:panels", (panels) => [...panels, ogDebugPanel()]);
 }

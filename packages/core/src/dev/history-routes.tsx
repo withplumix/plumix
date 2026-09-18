@@ -7,8 +7,8 @@ import type {
   DebugHistoryStore,
 } from "./request-history/store.js";
 import { jsonResponse, methodNotAllowed, notFound } from "../runtime/http.js";
-import { normalizeDebugBar } from "./debug-bar-config.js";
 import { collectDebugPanels } from "./debug-panels/collect.js";
+import { disabledPanelIds } from "./debug-panels/config.js";
 import { DebugPanelTabs } from "./debug-panels/panels-view.js";
 import { renderDebugPanels } from "./debug-panels/render-panels.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
@@ -85,10 +85,15 @@ export function handleDebugRequests(
 // Render the stored snapshot through the same panels the inline bar collects
 // for this request. Panels render purely from the snapshot (never live ctx),
 // so a past request replays faithfully; `ctx` supplies only the panel set (the
-// `debug_bar:panels` filter) and the disable denylist.
+// `debug:panels` filter) and which of them `dev.panels` switched off — read
+// here exactly as the bar reads it, which is the point of it being panel-layer
+// config rather than the bar's (#2425).
 function renderPanelsHtml(ctx: AppContext, snapshot: DebugSnapshot): string {
-  const { disabled } = normalizeDebugBar(ctx.debugBar);
-  const panels = collectDebugPanels(ctx.hooks, ctx, disabled);
+  const panels = collectDebugPanels(
+    ctx.hooks,
+    ctx,
+    disabledPanelIds(ctx.dev?.panels),
+  );
   const rendered = renderDebugPanels(panels, snapshot);
   return renderToStaticMarkup(<DebugPanelTabs rendered={rendered} />);
 }

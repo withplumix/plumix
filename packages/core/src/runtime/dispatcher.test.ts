@@ -2917,7 +2917,7 @@ describe("dispatcher — telemetry consumers", () => {
       const { plugin, seen } = spanObserver();
       const h = await createDispatcherHarness({
         plugins: [plugin],
-        debugBar: false,
+        dev: { bar: false },
       });
 
       await h.dispatch(new Request("https://cms.example/"));

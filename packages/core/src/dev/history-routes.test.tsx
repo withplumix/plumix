@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { DevInput } from "../config.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
 import type { DebugHistoryEntry } from "./request-history/store.js";
@@ -49,14 +50,14 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-function ctxFor(path: string): AppContext {
+function ctxFor(path: string, dev: DevInput = { bar: true }): AppContext {
   const hooks = new HookRegistry();
   registerCoreDebugPanels(hooks);
   return createTestContext({
     db,
     hooks,
     request: new Request(`https://cms.example${path}`),
-    debugBar: true,
+    dev,
   });
 }
 
@@ -131,6 +132,26 @@ describe("handleDebugRequests", () => {
     expect(html).toContain('data-testid="plumix-debug-panel-request"');
   });
 
+  // The property #2425 exists for: `dev.panels` is panel-layer config, so the
+  // surface with no bar in it honours it identically to the one with a bar.
+  test("omits a panel `dev.panels` switches off, with no bar in sight", async () => {
+    const store = createDebugHistoryStore();
+    store.save(entry({ id: "req-1" }));
+
+    const res = handleDebugRequests(
+      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1?format=html`, {
+        bar: false,
+        panels: { request: false },
+      }),
+      store,
+    );
+    const html = await res.text();
+
+    expect(html).not.toContain('data-testid="plumix-debug-panel-request"');
+    // A panel it did not name still renders — the bar being off changes nothing.
+    expect(html).toContain('data-testid="plumix-debug-panel-app"');
+  });
+
   test("404s an unknown request id", () => {
     const res = handleDebugRequests(
       ctxFor(`${DEBUG_REQUESTS_PATH}/nope`),
@@ -148,7 +169,7 @@ describe("handleDebugRequests", () => {
         request: new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`, {
           method: "POST",
         }),
-        debugBar: true,
+        dev: { bar: true },
       }),
       store,
     );

@@ -30,7 +30,7 @@ function renderPaneHtml(panel: DebugPanel, snapshot: DebugSnapshot): string {
 /**
  * The single rendering entry: turns a {@link DebugSnapshot} into each panel's
  * HTML. Pure — no `ctx`, no store, no worker globals. Panel collection stays
- * the caller's job, since the `debug_bar:panels` filter is keyed on live app
+ * the caller's job, since the `debug:panels` filter is keyed on live app
  * hooks, not the snapshot.
  */
 export function renderDebugPanels(
