@@ -67,6 +67,7 @@ catalogs:
     "@orpc/client": ^1.15.0
     "@orpc/openapi": ^1.15.0
     "@orpc/server": ^1.15.0
+    "@orpc/standard-server-fetch": ^1.15.0
     "@orpc/tanstack-query": ^1.15.0
     "@orpc/valibot": ^1.15.0
   oslojs:

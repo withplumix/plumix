@@ -60,7 +60,14 @@ export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
 export { createPlumixHandler } from "./runtime/handler.js";
 export type { PlumixHandlerOptions } from "./runtime/handler.js";
-export { forbidden, jsonResponse, methodNotAllowed } from "./runtime/http.js";
+// `notFound` is already the template-rule builder's name on this surface, so
+// the refusal that answers a request is published under the longer one.
+export {
+  forbidden,
+  jsonResponse,
+  methodNotAllowed,
+  notFound as notFoundResponse,
+} from "./runtime/http.js";
 export { memoryKv } from "./runtime/memory-kv.js";
 export type { MemoryKV, MemoryKvConfig } from "./runtime/memory-kv.js";
 export { memoryStorage } from "./runtime/memory-storage.js";
