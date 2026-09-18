@@ -32,10 +32,11 @@ export const refreshBlockLoader = base
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
 
-    const autosave = await getAutosave(context.db, {
-      entryId: live.id,
-      authorId: context.user.id,
-    });
+    const autosave = await getAutosave(
+      context.db,
+      { entryId: live.id, authorId: context.user.id },
+      live,
+    );
     const content = autosave?.content ?? live.content;
     const node = isEntryContent(content)
       ? findBlockNode(content.blocks, input.blockId)

@@ -4,6 +4,7 @@ import {
   decodeRevisionMessage,
   decodeSnapshotEnvelope,
   encodeSnapshotEnvelope,
+  mergeAutosaveMeta,
   REVISION_MESSAGE_META_KEY,
   SNAPSHOT_META_KEY,
   stripReservedMeta,
@@ -18,7 +19,55 @@ describe("snapshot envelope codec", () => {
     expect(decodeSnapshotEnvelope(encoded)).toEqual({
       slug: "hello-world",
       parentId: 42,
+      deletes: [],
     });
+  });
+
+  test("round-trips the keys an autosave cleared", () => {
+    const encoded = encodeSnapshotEnvelope({
+      slug: "hello-world",
+      parentId: null,
+      deletes: ["subtitle", "seo_noindex"],
+    });
+    expect(decodeSnapshotEnvelope(encoded)).toEqual({
+      slug: "hello-world",
+      parentId: null,
+      deletes: ["subtitle", "seo_noindex"],
+    });
+  });
+
+  // A revision has nothing to clear, so it stores no `deletes` at all — and an
+  // autosave written before the envelope carried them decodes the same way.
+  test("reads an envelope stored without deletes as having cleared nothing", () => {
+    expect(
+      decodeSnapshotEnvelope({
+        __plumix_snapshot: { slug: "legacy", parentId: null },
+      }),
+    ).toEqual({ slug: "legacy", parentId: null, deletes: [] });
+  });
+});
+
+describe("mergeAutosaveMeta", () => {
+  test("lays the author's edits over the live bag", () => {
+    expect(
+      mergeAutosaveMeta(
+        { subtitle: "live", untouched: "kept" },
+        { subtitle: "drafted" },
+      ),
+    ).toEqual({ subtitle: "drafted", untouched: "kept" });
+  });
+
+  test("drops a key the author cleared", () => {
+    expect(
+      mergeAutosaveMeta(
+        { subtitle: "live", untouched: "kept" },
+        encodeSnapshotEnvelope({
+          slug: "s",
+          parentId: null,
+          deletes: ["subtitle"],
+        }),
+      ).subtitle,
+    ).toBeUndefined();
   });
 });
 

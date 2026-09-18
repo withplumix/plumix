@@ -119,6 +119,7 @@ describe("previewableEntry", () => {
         content: null,
         excerpt: "Drafted excerpt",
         meta: { drafted: true },
+        metaDeletes: [],
       },
     });
 
@@ -153,6 +154,7 @@ describe("previewableEntry", () => {
         content: null,
         excerpt: "Their draft",
         meta: {},
+        metaDeletes: [],
       },
     });
 

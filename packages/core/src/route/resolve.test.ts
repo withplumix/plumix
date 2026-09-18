@@ -348,6 +348,7 @@ describe("resolvePublicRoute — single", () => {
         },
         excerpt: null,
         meta: {},
+        metaDeletes: [],
       },
     });
     const token = await createPreviewToken(h.db, {
@@ -405,6 +406,7 @@ describe("resolvePublicRoute — single", () => {
         },
         excerpt: null,
         meta: {},
+        metaDeletes: [],
       },
     });
     // A `saveAs: "live"` title edit lands on the live row only.
@@ -468,6 +470,7 @@ describe("resolvePublicRoute — single", () => {
         content: TIPTAP_BODY,
         excerpt: null,
         meta: { [ACCESS_POLICY_META_KEY]: "public" },
+        metaDeletes: [],
       },
     });
     const token = await createPreviewToken(h.db, {
@@ -516,6 +519,7 @@ describe("resolvePublicRoute — single", () => {
         content: TIPTAP_BODY,
         excerpt: null,
         meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+        metaDeletes: [],
       },
     });
     const token = await createPreviewToken(h.db, {
@@ -595,7 +599,13 @@ describe("resolvePublicRoute — single", () => {
     await upsertAutosave(h.db, {
       entry: live,
       authorId: author.id,
-      patch: { title: "Draft Title", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "Draft Title",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     // Token is scoped to `other`, so it can't unlock hello's autosave.
     const token = await createPreviewToken(h.db, {

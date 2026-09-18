@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { Entry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
+import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -121,6 +122,54 @@ describe("entry.update saveAs", () => {
     expect(live.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
+  // Clearing a pick is an edit like any other, and the reserved keys ride
+  // outside the meta-box patch — so the draft has to name them as cleared or
+  // the merge reads them as untouched and hands back the live row's pick.
+  test("clearing a named-template pick in a draft survives the merge and the publish", async () => {
+    const h = await publishedPostFixture();
+    await h.context.db
+      .update(entries)
+      .set({ meta: { [NAMED_TEMPLATE_META_KEY]: "landing" } })
+      .where(eq(entries.id, h.entryId));
+    const live = await h.client.entry.get({ id: h.entryId });
+
+    const drafted = await h.client.entry.update({
+      id: h.entryId,
+      template: null,
+    });
+    expect(drafted.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
+
+    const previewed = await h.client.entry.get({
+      id: h.entryId,
+      preview: true,
+    });
+    expect(previewed.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
+
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
+  });
+
+  // The access pick runs through the same clearing path as the template one.
+  test("clearing an access pick in a draft survives the merge and the publish", async () => {
+    const h = await publishedPostFixture();
+    await h.context.db
+      .update(entries)
+      .set({ meta: { [ACCESS_POLICY_META_KEY]: "members" } })
+      .where(eq(entries.id, h.entryId));
+    const live = await h.client.entry.get({ id: h.entryId });
+
+    await h.client.entry.update({ id: h.entryId, access: null });
+
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta[ACCESS_POLICY_META_KEY]).toBeUndefined();
+  });
+
   test("explicit saveAs: 'live' bypasses the default and writes to live even when supports has 'autosave'", async () => {
     const h = await publishedPostFixture();
     const result = await h.client.entry.update({
@@ -200,11 +249,11 @@ describe("entry.update saveAs", () => {
     expect(promoted.meta.accent_color).toBe("#ffa500");
   });
 
-  // Where a legacy token finally settles; until then the decode hands it back
-  // as stored. The autosave base is the live row, so the token
-  // rides into the promoted bag even from an edit that never touched the
-  // field, and publish's strict pass resolves it.
-  test("publishing settles an untouched legacy boolean token to a real boolean", async () => {
+  // An unsettled value the author never submitted stays as stored: promotion
+  // runs the field pipeline over the keys the patch carries, and re-running an
+  // input decoder over the rest would re-interpret a value nobody sent. What
+  // the author saw (unset, per `coerceOnRead`) is what publishing leaves.
+  test("publishing an unrelated edit leaves an untouched unsettled value as stored", async () => {
     const h = await publishedPostFixture(
       registryWithMetaField({
         key: "sealed",
@@ -228,7 +277,10 @@ describe("entry.update saveAs", () => {
       expectedLiveUpdatedAt: h.liveUpdatedAt,
     });
 
-    expect(promoted.meta.sealed).toBe(true);
+    // The toggle read unset before the publish, so it reads unset after.
+    expect(promoted.meta.sealed).toBe(1);
+    const after = await h.client.entry.get({ id: h.entryId });
+    expect(after.meta.sealed).toBe(1);
   });
 
   test("autosave is draft-lenient: keeps an out-of-bounds value instead of rejecting", async () => {
@@ -535,10 +587,48 @@ describe("entry.publish", () => {
         content: live.content,
         excerpt: live.excerpt,
         meta,
+        metaDeletes: [],
       },
     });
     return live;
   }
+
+  // A draft written before an autosave stored edits held a whole copy of the
+  // row. Read as edits, every key in it is simply touched — the pre-ADR-0003
+  // reading — so it still merges and publishes, and the shape clears itself as
+  // open drafts are published or discarded.
+  test("publishes an autosave stored as a whole-row copy", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "subtitle",
+        label: "Subtitle",
+        type: "string",
+        inputType: "text",
+      }),
+    );
+    await h.context.db
+      .update(entries)
+      .set({ meta: { subtitle: "from live" } })
+      .where(eq(entries.id, h.entryId));
+
+    const live = await stalePendingAutosave(h, {
+      subtitle: "from live",
+      excerpt_note: "an unregistered sibling",
+    });
+
+    const previewed = await h.client.entry.get({
+      id: h.entryId,
+      preview: true,
+    });
+    expect(previewed.meta.subtitle).toBe("from live");
+
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta.subtitle).toBe("from live");
+    expect(promoted.meta.excerpt_note).toBe("an unregistered sibling");
+  });
 
   test("re-sanitizes a registered meta key promoted from a pre-#1533 autosave", async () => {
     const h = await publishedPostFixture(

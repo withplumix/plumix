@@ -14,7 +14,10 @@ import {
   upsertAutosave,
 } from "./repository.js";
 import { AUTOSAVE_TYPE, REVISION_TYPE } from "./slug-codec.js";
-import { decodeSnapshotEnvelope } from "./snapshot-envelope.js";
+import {
+  decodeSnapshotEnvelope,
+  SNAPSHOT_META_KEY,
+} from "./snapshot-envelope.js";
 
 async function seedLiveEntry(db: Awaited<ReturnType<typeof createTestDb>>) {
   const author = await userFactory.transient({ db }).create({ role: "author" });
@@ -54,9 +57,16 @@ describe("snapshotAsRevision", () => {
       entry,
       authorId: author.id,
     });
+    // A revision is a whole snapshot, so it stores no cleared keys at all —
+    // the decoder normalizes that to an empty list.
+    expect(revision.meta[SNAPSHOT_META_KEY]).toEqual({
+      slug: "hello",
+      parentId: null,
+    });
     expect(decodeSnapshotEnvelope(revision.meta)).toEqual({
       slug: "hello",
       parentId: null,
+      deletes: [],
     });
   });
 });
@@ -217,6 +227,7 @@ describe("upsertAutosave", () => {
         content: { type: "doc", content: [{ type: "paragraph" }] },
         excerpt: null,
         meta: { foo: "bar" },
+        metaDeletes: [],
       },
     });
     expect(autosave.type).toBe(AUTOSAVE_TYPE);
@@ -243,6 +254,7 @@ describe("upsertAutosave", () => {
         content: null,
         excerpt: null,
         meta: {},
+        metaDeletes: [],
       },
     });
     const second = await upsertAutosave(db, {
@@ -253,6 +265,7 @@ describe("upsertAutosave", () => {
         content: { type: "doc", content: [{ type: "paragraph" }] },
         excerpt: "summary",
         meta: { foo: "bar" },
+        metaDeletes: [],
       },
     });
     expect(second.id).toBe(first.id);
@@ -268,12 +281,24 @@ describe("upsertAutosave", () => {
     const adaSave = await upsertAutosave(db, {
       entry,
       authorId: ada.id,
-      patch: { title: "Ada's draft", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "Ada's draft",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     const beaSave = await upsertAutosave(db, {
       entry,
       authorId: bea.id,
-      patch: { title: "Bea's draft", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "Bea's draft",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     expect(adaSave.id).not.toBe(beaSave.id);
     expect(adaSave.title).toBe("Ada's draft");
@@ -291,7 +316,13 @@ describe("getAutosave + deleteAutosave", () => {
     await upsertAutosave(db, {
       entry,
       authorId: author.id,
-      patch: { title: "Hi", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "Hi",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     const fetched = await getAutosave(db, {
       entryId: entry.id,
@@ -308,12 +339,24 @@ describe("getAutosave + deleteAutosave", () => {
     await upsertAutosave(db, {
       entry,
       authorId: ada.id,
-      patch: { title: "A", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "A",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     await upsertAutosave(db, {
       entry,
       authorId: bea.id,
-      patch: { title: "B", content: null, excerpt: null, meta: {} },
+      patch: {
+        title: "B",
+        content: null,
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
     });
     expect(
       await deleteAutosave(db, { entryId: entry.id, authorId: ada.id }),

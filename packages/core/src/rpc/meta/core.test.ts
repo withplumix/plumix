@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { JsonObject } from "../../json.js";
 import type { MetaBoxField } from "../../plugin/manifest.js";
 import {
   color,
@@ -123,8 +124,14 @@ describe("validateAndPromoteMetaBag (publish strict gate)", () => {
     color("tint").build(),
   ];
 
+  // What the author submitted. Publish promotes a bag the author only partly
+  // wrote, so most of these pin the gate independently of that split.
+  const allOf = (bag: JsonObject): ReadonlySet<string> =>
+    new Set(Object.keys(bag));
+
   test("rejects a required field absent from the bag", async () => {
-    const error = await validateAndPromoteMetaBag(fields, { cols: 2 }).then(
+    const bag = { cols: 2 };
+    const error = await validateAndPromoteMetaBag(fields, bag, allOf(bag)).then(
       () => null,
       (thrown: unknown) => thrown,
     );
@@ -136,27 +143,30 @@ describe("validateAndPromoteMetaBag (publish strict gate)", () => {
   });
 
   test("rejects a required field stored empty", async () => {
+    const bag = { heading: "", cols: 2 };
     await expect(
-      validateAndPromoteMetaBag(fields, { heading: "", cols: 2 }),
+      validateAndPromoteMetaBag(fields, bag, allOf(bag)),
     ).rejects.toBeInstanceOf(MetaValidationError);
   });
 
   test("rejects a business-rule violation carried by a draft", async () => {
+    const bag = { heading: "Hi", cols: 99 };
     await expect(
-      validateAndPromoteMetaBag(fields, { heading: "Hi", cols: 99 }),
+      validateAndPromoteMetaBag(fields, bag, allOf(bag)),
     ).rejects.toBeInstanceOf(MetaValidationError);
   });
 
   test("canonicalizes registered values and passes unregistered keys through", async () => {
-    const bag = await validateAndPromoteMetaBag(fields, {
+    const bag = {
       heading: "Hi",
       cols: 2,
       tint: "#ABCDEF",
       legacyPluginKey: "kept",
-    });
-    expect(bag.tint).toBe("#abcdef");
-    expect(bag.legacyPluginKey).toBe("kept");
-    expect(bag.heading).toBe("Hi");
+    };
+    const promoted = await validateAndPromoteMetaBag(fields, bag, allOf(bag));
+    expect(promoted.tint).toBe("#abcdef");
+    expect(promoted.legacyPluginKey).toBe("kept");
+    expect(promoted.heading).toBe("Hi");
   });
 
   test("omits an absent optional field without erroring", async () => {
@@ -164,8 +174,46 @@ describe("validateAndPromoteMetaBag (publish strict gate)", () => {
       text("heading").required().build(),
       text("subtitle").build(),
     ];
-    const bag = await validateAndPromoteMetaBag(optional, { heading: "Hi" });
-    expect(bag).toEqual({ heading: "Hi" });
+    const bag = { heading: "Hi" };
+    const promoted = await validateAndPromoteMetaBag(optional, bag, allOf(bag));
+    expect(promoted).toEqual({ heading: "Hi" });
+  });
+
+  // The transform follows what the author submitted; the validation does not.
+  test("returns a key the author did not submit exactly as stored", async () => {
+    const promoted = await validateAndPromoteMetaBag(
+      fields,
+      { heading: "Hi", cols: 2, tint: "#ABCDEF" },
+      new Set(["heading"]),
+    );
+    expect(promoted.tint).toBe("#ABCDEF");
+    expect(promoted.heading).toBe("Hi");
+  });
+
+  // A submitted `null` is how a caller clears a field, so the pipeline reads it
+  // as a deletion. Stored under a key nobody submitted it is just a value, and
+  // promoting it as a deletion would drop a key on an unrelated publish.
+  test("promotes a stored null under an unsubmitted key instead of deleting it", async () => {
+    const optional: readonly MetaBoxField[] = [
+      text("heading").required().build(),
+      text("subtitle").build(),
+    ];
+    const promoted = await validateAndPromoteMetaBag(
+      optional,
+      { heading: "Hi", subtitle: null },
+      new Set(["heading"]),
+    );
+    expect(promoted.subtitle).toBeNull();
+  });
+
+  test("still rejects a violation on a key the author did not submit", async () => {
+    await expect(
+      validateAndPromoteMetaBag(
+        fields,
+        { heading: "Hi", cols: 99 },
+        new Set(["heading"]),
+      ),
+    ).rejects.toBeInstanceOf(MetaValidationError);
   });
 });
 
