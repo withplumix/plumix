@@ -4,7 +4,8 @@ import type { RemotePattern } from "@plumix/blocks/renderer";
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { MailerInput } from "./auth/mailer/resolve.js";
 import type { TelemetryConfig } from "./context/telemetry.js";
-import type { DebugBarInput } from "./dev/debug-bar-config.js";
+import type { DebugBarInput } from "./dev/debug-bar/config.js";
+import type { DebugPanelsInput } from "./dev/debug-panels/config.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RedirectRule } from "./route/redirects.js";
@@ -43,6 +44,27 @@ export type AnyDatabaseAdapter = DatabaseAdapter<any>;
  * trips.
  */
 export type ViteUserConfig = Readonly<Record<string, unknown>>;
+
+/**
+ * Development-only configuration. Its members are the dev debug layers: the
+ * overlay (`bar`) and the panel vocabulary both dev surfaces render (`panels`).
+ * Composed here rather than under `dev/` so no module in that tree has to name
+ * all of its layers to declare the shape — which is what kept the panel
+ * denylist homeless while it was spelled as bar config (#2425).
+ *
+ * The whole block is carried through raw (like {@link mcp}) and interpreted
+ * only inside dev-gated modules, which are tree-shaken from production builds.
+ */
+export interface DevInput {
+  /** The dev debug bar. `false` suppresses it; defaults on in development. */
+  readonly bar?: DebugBarInput;
+  /**
+   * Which debug panels this site shows, keyed by panel id — `{ database:
+   * false }` hides one. Read by the bar *and* by the request-history read
+   * routes, which render stored snapshots with no bar in sight.
+   */
+  readonly panels?: DebugPanelsInput;
+}
 
 /**
  * Shared on/off switch for an external interface surface (MCP today, the
@@ -134,12 +156,11 @@ export interface PlumixConfigInput {
    */
   readonly api?: ApiConfig;
   /**
-   * Development-only debug bar. Carried through raw (like {@link mcp}) and
-   * interpreted only inside the dev-gated debug-bar module, which is
-   * tree-shaken from production builds. Defaults on in dev; set `false`
-   * to suppress it or `{ disable: [...] }` to silence individual panels.
+   * Development-only configuration: the debug bar and its panels. Carried
+   * through raw (like {@link mcp}) and interpreted only inside dev-gated
+   * modules, which are tree-shaken from production builds.
    */
-  readonly debugBar?: DebugBarInput;
+  readonly dev?: DevInput;
   /**
    * Telemetry consumers, registered once here. Each consumer head-samples
    * per request and receives a serializable snapshot post-response; with no
@@ -192,7 +213,7 @@ export interface PlumixConfig {
   readonly basePath: string;
   readonly mcp?: InterfaceToggle;
   readonly api?: ApiConfig;
-  readonly debugBar?: DebugBarInput;
+  readonly dev?: DevInput;
   readonly telemetry?: TelemetryConfig;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
@@ -228,7 +249,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     basePath: normalizeBasePath(config.basePath),
     mcp: config.mcp,
     api: config.api,
-    debugBar: config.debugBar,
+    dev: config.dev,
     telemetry: config.telemetry,
     blocks: config.blocks,
     images: config.images,

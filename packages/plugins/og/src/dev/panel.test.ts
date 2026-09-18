@@ -1,3 +1,4 @@
+import type { DebugPanelsInput } from "plumix";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { CardRenderer } from "../renderer.js";
@@ -10,6 +11,26 @@ import {
 } from "../test/harness.js";
 
 const PANEL = 'data-testid="plumix-debug-panel-og"';
+
+// This plugin's `DebugPanelRegistry` augmentation is spelled against the
+// `plumix` façade, which is the specifier a plugin author writes — so this is
+// where it is proved to merge rather than shadow. `tsc` fails on an unused
+// `@ts-expect-error`, so the negative case stops being satisfied the moment
+// the key set reopens.
+describe("the og panel is nameable in dev.panels", () => {
+  test("its declared id type-checks", () => {
+    const input: DebugPanelsInput = { og: false };
+
+    expect(input.og).toBe(false);
+  });
+
+  test("a misspelled id does not", () => {
+    // @ts-expect-error `ogg` is not a registered panel id.
+    const input: DebugPanelsInput = { ogg: false };
+
+    expect(input).toBeDefined();
+  });
+});
 const PHOTO = "https://media.example/hero.jpg";
 
 const original = process.env.PLUMIX_DEV;

@@ -7,7 +7,7 @@ import type { DevErrorHint } from "../../ui/index.js";
  * thrown value, and the request context, and returns the next hint list. Core
  * registers a low-priority subscriber matching its typed errors and a curated
  * set of untyped pitfalls; plugins subscribe to add or override hints. This
- * filter IS the plugin-facing hint API — it mirrors `debug_bar:panels`.
+ * filter IS the plugin-facing hint API — it mirrors `debug:panels`.
  */
 declare module "../../../hooks/types.js" {
   interface FilterRegistry {

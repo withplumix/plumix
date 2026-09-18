@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import type { DevInput } from "../../config.js";
 import type { AppContext, Db } from "../../context/app.js";
-import type { DebugBarInput } from "../debug-bar-config.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
@@ -15,7 +15,7 @@ beforeAll(async () => {
 });
 
 function ctxWith(
-  debugBar: DebugBarInput | undefined,
+  dev: DevInput | undefined,
   url = "https://cms.example/blog/hello",
 ): AppContext {
   const hooks = new HookRegistry();
@@ -24,7 +24,7 @@ function ctxWith(
     db,
     hooks,
     request: new Request(url),
-    debugBar,
+    dev,
   });
 }
 
@@ -32,7 +32,7 @@ describe("PlumixDebugBar", () => {
   test("isolates a panel that throws in render — bar and other panels survive", () => {
     const hooks = new HookRegistry();
     registerCoreDebugPanels(hooks);
-    hooks.addFilter("debug_bar:panels", (panels) => [
+    hooks.addFilter("debug:panels", (panels) => [
       ...panels,
       {
         id: "boom",
@@ -47,7 +47,7 @@ describe("PlumixDebugBar", () => {
       db,
       hooks,
       request: new Request("https://cms.example/x"),
-      debugBar: true,
+      dev: { bar: true },
     });
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
@@ -61,7 +61,9 @@ describe("PlumixDebugBar", () => {
   });
 
   test("renders the bar shell with the Request panel when enabled in dev", () => {
-    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctxWith(true)} />);
+    const html = renderToStaticMarkup(
+      <PlumixDebugBar ctx={ctxWith({ bar: true })} />,
+    );
 
     expect(html).toContain('data-testid="plumix-debug-bar"');
     // Request panel surfaces this request's method and path.
@@ -70,7 +72,7 @@ describe("PlumixDebugBar", () => {
   });
 
   test("renders a request switcher with the current request pre-selected", () => {
-    const ctx = ctxWith(true);
+    const ctx = ctxWith({ bar: true });
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
 
     // The switcher and its dev-only swap script are present, and the panels
@@ -83,17 +85,21 @@ describe("PlumixDebugBar", () => {
     expect(html).toContain(`value="${ctx.requestId}"`);
   });
 
-  test("renders nothing when config disables the bar", () => {
-    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctxWith(false)} />);
+  test("renders nothing when `dev.bar` is false", () => {
+    const html = renderToStaticMarkup(
+      <PlumixDebugBar ctx={ctxWith({ bar: false })} />,
+    );
 
     expect(html).toBe("");
   });
 
-  test("omits a panel whose id is in the disable denylist", () => {
+  test("omits a panel `dev.panels` switches off", () => {
     const html = renderToStaticMarkup(
-      <PlumixDebugBar ctx={ctxWith({ disable: ["request"] })} />,
+      <PlumixDebugBar ctx={ctxWith({ panels: { request: false } })} />,
     );
 
     expect(html).not.toContain('data-testid="plumix-debug-panel-request"');
+    // A panel it did not name is untouched.
+    expect(html).toContain('data-testid="plumix-debug-panel-app"');
   });
 });

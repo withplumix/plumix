@@ -745,9 +745,9 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
 
   // The tools are registered on the dev gate alone, so turning the overlay off
   // must not silently turn the capture behind them off too — the developer who
-  // sets `debugBar: false` is typically the one driving the site over MCP.
+  // sets `dev.bar: false` is typically the one driving the site over MCP.
   test("requests are captured with the debug bar off, and the trace still resolves", async () => {
-    const h = await mcpHarness({ plugins: [blog], debugBar: false });
+    const h = await mcpHarness({ plugins: [blog], dev: { bar: false } });
     const secret = await mintPat(h);
 
     const rows = await seedAndList(
@@ -775,7 +775,10 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   // switch the collector off for the whole request and hand every other
   // mid-request reader of `ctx.telemetry` — a plugin's own tool here — a no-op.
   test("the collector is still active on the endpoint the writer keeps out of the ring", async () => {
-    const h = await mcpHarness({ plugins: [blog, spanProbe], debugBar: false });
+    const h = await mcpHarness({
+      plugins: [blog, spanProbe],
+      dev: { bar: false },
+    });
     const secret = await mintPat(h);
 
     const { json } = await callTool(h, secret, 1, "probe_spans", {});
@@ -915,7 +918,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
   test("server failures are listed with the debug bar off", async () => {
     const h = await mcpHarness({
       plugins: [blog],
-      debugBar: false,
+      dev: { bar: false },
       theme: throwingTheme("bar-off boom"),
     });
     const author = await h.factory.user.create({ role: "editor" });

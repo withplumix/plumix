@@ -12,13 +12,13 @@ import type { SessionPolicy } from "../auth/sessions.js";
 import type {
   AnyPluginDescriptor,
   ApiConfig,
+  DevInput,
   InterfaceToggle,
   PlumixConfigInput,
 } from "../config.js";
 import type { AppContext, Db, DeferFn, Logger } from "../context/app.js";
 import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
-import type { DebugBarInput } from "../dev/debug-bar-config.js";
 import type {
   ActionArgs,
   ActionName,
@@ -181,8 +181,8 @@ export interface CreateDispatcherHarnessOptions {
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
   readonly api?: ApiConfig;
-  /** Dev debug-bar config; set to exercise disable/collection gating. */
-  readonly debugBar?: DebugBarInput;
+  /** Dev config (`bar`, `panels`); set to exercise panel gating. */
+  readonly dev?: DevInput;
   /**
    * Telemetry consumers — the config seam telemetry tests assert through.
    * Register an in-test consumer, dispatch, then `drainDeferred()` to
@@ -331,7 +331,7 @@ export async function createDispatcherHarness(
     basePath: options.basePath,
     mcp: options.mcp,
     api: options.api,
-    debugBar: options.debugBar,
+    dev: options.dev,
     telemetry: options.telemetry,
     images: options.images,
     blocks: options.blocks,

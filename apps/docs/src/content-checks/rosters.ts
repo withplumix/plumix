@@ -191,7 +191,7 @@ const CONFIG_OPTIONS = [
   "basePath",
   "mcp",
   "api",
-  "debugBar",
+  "dev",
   "telemetry",
   "blocks",
   "images",
@@ -725,7 +725,7 @@ export type SourceHookName<TName extends string> =
  * `@plumix/core`'s barrel anchors (`hooks/public-hooks.ts`). That is the same
  * boundary a plugin author sees, so a hook missing from here is a hook they
  * cannot type either — which is why the roster follows the façade rather than
- * the repo. The dev-only `debug_bar:panels`, `error_page:hints` and
+ * the repo. The dev-only `debug:panels`, `error_page:hints` and
  * `error_page:panels` are inside it: each exists so a plugin can contribute to
  * a dev surface, and a hook nothing outside core can name serves no one.
  */
@@ -735,7 +735,7 @@ const FILTER_HOOKS = [
   "block:before_render",
   "block:after_render",
   "blocks:loader:error",
-  "debug_bar:panels",
+  "debug:panels",
   "entry:before_save",
   "entry:*:before_save",
   "error_page:hints",

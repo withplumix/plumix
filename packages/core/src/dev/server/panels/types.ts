@@ -5,7 +5,7 @@ import type { AppContext } from "../../../context/app.js";
 /**
  * A plugin-contributed dev error page panel (#1626). Plugins add theirs via the
  * dev-only `error_page:panels` filter, mirroring how they contribute to the
- * debug bar via `debug_bar:panels`. `render` runs server-side in its own
+ * debug bar via `debug:panels`. `render` runs server-side in its own
  * isolated SSR pass — so a throw can't crash the very page meant to surface it —
  * and receives the caught value and the live request context, the same pair the
  * `error_page:hints` filter passes.
@@ -31,7 +31,7 @@ export interface DevErrorPanel {
  * value, and the request context, and returns the next panel list. Core
  * contributes none of its own — its built-in context sections cover that — so
  * this filter is purely the plugin-facing panel API. Mirrors `error_page:hints`
- * and `debug_bar:panels`.
+ * and `debug:panels`.
  */
 declare module "../../../hooks/types.js" {
   interface FilterRegistry {

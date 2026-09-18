@@ -318,18 +318,22 @@ export const api: PlumixConfigInput["api"] = {
 };
 ```
 
-### debugBar
+### dev
 
-The development-only debug bar. It defaults on in development and is compiled out of a production build. Pass `false` to suppress it, or an object to move it, open it by default, or silence panels by id. The core panels are `app`, `request`, `database`, `template` and `timeline`.
+Development-only configuration. Everything under it defaults on in development and is compiled out of a production build.
+
+`bar` is the debug bar itself — pass `false` to suppress it, or an object to move it or open it by default. `panels` says which debug panels the site shows, keyed by panel id; an absent key shows the panel. The core panels are `app`, `request`, `database`, `template` and `timeline`, and a plugin that contributes one declares its id so you can name it here too.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";
 
-export const debugBar: PlumixConfigInput["debugBar"] = {
-  position: "bottom-left",
-  disable: ["database"],
+export const dev: PlumixConfigInput["dev"] = {
+  bar: { position: "bottom-left" },
+  panels: { database: false },
 };
 ```
+
+Panel ids are checked: naming a panel no installed plugin contributes is a type error rather than a setting that quietly does nothing. `panels` is read by the debug bar _and_ by the request-history viewer at `/_plumix/debug/requests`, so switching a panel off hides it in both.
 
 ### telemetry
 

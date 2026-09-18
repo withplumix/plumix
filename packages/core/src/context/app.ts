@@ -13,9 +13,9 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { CapabilityResolver, KnownCapability } from "../auth/rbac.js";
+import type { DevInput } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
-import type { DebugBarInput } from "../dev/debug-bar-config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
@@ -330,11 +330,11 @@ export interface AppContextBase<
    */
   readonly basePath: string;
   /**
-   * Raw development-only debug-bar config, carried through from
-   * `config.debugBar` (like {@link mcp}) as inert data. Interpreted only by
-   * the dev-gated debug-bar module, which is tree-shaken from prod builds.
+   * Raw development-only config, carried through from `config.dev` (like
+   * {@link mcp}) as inert data. Interpreted only by dev-gated modules, which
+   * are tree-shaken from prod builds.
    */
-  readonly debugBar?: DebugBarInput;
+  readonly dev?: DevInput;
   /**
    * Operator-set site name from `auth.magicLink.siteName`, used as
    * the human-friendly label in mailer subjects ("Confirm your email
@@ -416,7 +416,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: EnvInput<string>;
   readonly basePath?: string;
-  readonly debugBar?: DebugBarInput;
+  readonly dev?: DevInput;
   /** App-config telemetry slot — registered consumers vote per request. */
   readonly telemetry?: TelemetryConfig;
   readonly siteName?: string;
@@ -551,7 +551,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         ? resolveEnvInput(args.origin, args.env)
         : new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
-    debugBar: args.debugBar,
+    dev: args.dev,
     // Provisional no-op — swapped for the real collector below iff a consumer
     // votes to sample this request. Consumers see the assembled context when
     // voting, so `telemetry` must exist (inactive) before the vote runs.
@@ -590,7 +590,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const coreSchemaView = ctx as unknown as AppContext;
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
-    args.debugBar,
+    args.dev,
     args.telemetry,
   );
   if (sampled.length > 0) {
@@ -618,12 +618,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
  */
 function sampleTelemetryConsumers(
   ctx: AppContext,
-  debugBar: DebugBarInput | undefined,
+  dev: DevInput | undefined,
   config: TelemetryConfig | undefined,
 ): readonly TelemetryConsumer[] {
   const consumers: TelemetryConsumer[] = [];
   if (process.env.PLUMIX_DEV) {
-    const bar = debugBarTelemetryConsumer(debugBar);
+    const bar = debugBarTelemetryConsumer(dev?.bar);
     if (bar) consumers.push(bar);
     consumers.push(debugHistoryConsumer());
   }

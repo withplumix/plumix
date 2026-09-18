@@ -6,7 +6,7 @@ import type { DebugSnapshot } from "../request-history/snapshot.js";
 
 /**
  * A contributed debug-bar panel. Core registers its panels at `buildApp`
- * time; plugins add theirs via the `debug_bar:panels` filter. `render` runs
+ * time; plugins add theirs via the `debug:panels` filter. `render` runs
  * server-side over a serializable {@link DebugSnapshot}, never live request
  * context.
  */
@@ -27,7 +27,7 @@ export interface DebugPanel {
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
-    "debug_bar:panels": (
+    "debug:panels": (
       panels: readonly DebugPanel[],
       ctx: AppContext,
     ) => readonly DebugPanel[];

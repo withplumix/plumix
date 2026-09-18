@@ -13,7 +13,7 @@ import { timelinePanel } from "./builtin/timeline.js";
  */
 export function registerCoreDebugPanels(hooks: HookRegistry): void {
   hooks.addFilter(
-    "debug_bar:panels",
+    "debug:panels",
     (panels: readonly DebugPanel[]) => [
       ...panels,
       requestPanel,

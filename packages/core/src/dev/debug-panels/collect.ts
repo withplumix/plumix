@@ -7,7 +7,7 @@ import type { DebugPanel } from "./types.js";
 const DEFAULT_PANEL_ORDER = Number.MAX_SAFE_INTEGER;
 
 /**
- * Gathers the request's debug panels: runs the `debug_bar:panels` filter
+ * Gathers the request's debug panels: runs the `debug:panels` filter
  * chain — isolating each handler so a throw or non-array return during
  * *collection* can't take down the bar — then drops denylisted ids, dedupes
  * by id (last contributor wins), and returns them ordered by ascending
@@ -19,7 +19,7 @@ export function collectDebugPanels(
   ctx: AppContext,
   disabled: ReadonlySet<string>,
 ): readonly DebugPanel[] {
-  const panels = hooks.applyFilterIsolated("debug_bar:panels", [], ctx);
+  const panels = hooks.applyFilterIsolated("debug:panels", [], ctx);
 
   const byId = new Map<string, DebugPanel>();
   for (const p of panels) {

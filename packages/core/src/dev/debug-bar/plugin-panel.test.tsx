@@ -7,6 +7,14 @@ import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 import { DebugSection, DebugTable } from "../debug-panels/primitives.js";
 
+// What a plugin shipping a panel writes, spelled against the internal module
+// here rather than the `plumix` façade a real plugin augments.
+declare module "../debug-panels/config.js" {
+  interface DebugPanelRegistry {
+    "debug-demo": true;
+  }
+}
+
 // A plugin panel author's happy path: record per-request data during render,
 // then read it back when the panel renders. `render:document` fires during a
 // real page render (before the bar), so the entry is present by panel time.
@@ -20,7 +28,7 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
     appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
     return manifest;
   });
-  ctx.addFilter("debug_bar:panels", (panels) => [
+  ctx.addFilter("debug:panels", (panels) => [
     ...panels,
     {
       id: "debug-demo",
@@ -74,12 +82,15 @@ describe("debug bar plugin panel", () => {
     expect(html).toContain("recorded during render");
   });
 
+  // A plugin panel is nameable in `dev.panels` only once its plugin declares
+  // it — the registry is what makes a mistyped id a compile error rather than
+  // a silent no-op, so an undeclared panel simply isn't addressable (#2425).
   test("disabling the panel removes both its render and its data", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
       plugins: [demoPlugin],
       theme,
-      debugBar: { disable: ["debug-demo"] },
+      dev: { panels: { "debug-demo": false } },
     });
 
     const html = await seedAndRender(h);

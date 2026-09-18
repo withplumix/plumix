@@ -3,19 +3,24 @@
 type DebugBarPosition =
   "bottom-right" | "bottom-left" | "top-right" | "top-left";
 
+/**
+ * `dev.bar`: the overlay itself. Only what the bar alone reads lives here —
+ * which panels it shows is `dev.panels`, read identically by the history read
+ * routes, a surface with no bar in it.
+ *
+ * `false` is the only spelling of off; there is no `enabled` key, because two
+ * spellings of one thing is how the slot this replaced grew four settings with
+ * three meanings.
+ */
 export type DebugBarInput =
   | boolean
   | {
-      readonly enabled?: boolean;
-      readonly disable?: readonly string[];
       readonly position?: DebugBarPosition;
       readonly defaultOpen?: boolean;
     };
 
 export interface NormalizedDebugBar {
   readonly enabled: boolean;
-  /** Denylist of panel ids, as a Set for O(1) `.has(id)` at collect time. */
-  readonly disabled: ReadonlySet<string>;
   readonly position: DebugBarPosition;
   readonly defaultOpen: boolean;
 }
@@ -24,12 +29,10 @@ export function normalizeDebugBar(
   input: DebugBarInput | undefined,
 ): NormalizedDebugBar {
   const options = typeof input === "object" ? input : {};
-  // Default-on: only an explicit `false` (bare or via `enabled`) suppresses
-  // the bar. The compile-time dev gate is separate — this resolves intent.
-  const enabled = input === false ? false : options.enabled !== false;
+  // Default-on: only an explicit `false` suppresses the bar. The compile-time
+  // dev gate is separate — this resolves intent.
   return {
-    enabled,
-    disabled: new Set(options.disable ?? []),
+    enabled: input !== false,
     position: options.position ?? "bottom-right",
     defaultOpen: options.defaultOpen ?? false,
   };

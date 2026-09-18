@@ -27,10 +27,7 @@ describe("collectDebugPanels", () => {
 
   test("returns panels contributed through the filter", () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("debug_bar:panels", (panels) => [
-      ...panels,
-      panel("request"),
-    ]);
+    hooks.addFilter("debug:panels", (panels) => [...panels, panel("request")]);
 
     expect(collectDebugPanels(hooks, ctx, none).map((p) => p.id)).toEqual([
       "request",
@@ -39,7 +36,7 @@ describe("collectDebugPanels", () => {
 
   test("orders panels by ascending `order`, unordered last", () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("debug_bar:panels", (panels) => [
+    hooks.addFilter("debug:panels", (panels) => [
       ...panels,
       panel("c", 30),
       panel("late"),
@@ -57,7 +54,7 @@ describe("collectDebugPanels", () => {
 
   test("omits panels whose id is in the disabled denylist", () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("debug_bar:panels", (panels) => [
+    hooks.addFilter("debug:panels", (panels) => [
       ...panels,
       panel("request", 10),
       panel("timeline", 20),
@@ -72,17 +69,11 @@ describe("collectDebugPanels", () => {
 
   test("isolates a handler that throws so other panels survive", () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("debug_bar:panels", (panels) => [
-      ...panels,
-      panel("a", 10),
-    ]);
-    hooks.addFilter("debug_bar:panels", () => {
+    hooks.addFilter("debug:panels", (panels) => [...panels, panel("a", 10)]);
+    hooks.addFilter("debug:panels", () => {
       throw new Error("boom");
     });
-    hooks.addFilter("debug_bar:panels", (panels) => [
-      ...panels,
-      panel("b", 20),
-    ]);
+    hooks.addFilter("debug:panels", (panels) => [...panels, panel("b", 20)]);
 
     expect(collectDebugPanels(hooks, ctx, none).map((p) => p.id)).toEqual([
       "a",
@@ -92,7 +83,7 @@ describe("collectDebugPanels", () => {
 
   test("dedupes by id — last contributor wins", () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("debug_bar:panels", (panels) => [
+    hooks.addFilter("debug:panels", (panels) => [
       ...panels,
       { id: "request", title: "first", order: 10, render: () => null },
       { id: "request", title: "second", order: 10, render: () => null },

@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
 import type { AppContext } from "../../context/app.js";
-import { normalizeDebugBar } from "../debug-bar-config.js";
 import { collectDebugPanels } from "../debug-panels/collect.js";
+import { disabledPanelIds } from "../debug-panels/config.js";
 import { DebugPanelTabs } from "../debug-panels/panels-view.js";
 import { renderDebugPanels } from "../debug-panels/render-panels.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
 import { debugHistory } from "../request-history/store.js";
+import { normalizeDebugBar } from "./config.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
 import {
   buildSwitcherEntries,
@@ -31,10 +32,14 @@ export function PlumixDebugBar({
 }: {
   readonly ctx: AppContext;
 }): ReactNode {
-  const config = normalizeDebugBar(ctx.debugBar);
+  const config = normalizeDebugBar(ctx.dev?.bar);
   if (!config.enabled) return null;
 
-  const panels = collectDebugPanels(ctx.hooks, ctx, config.disabled);
+  const panels = collectDebugPanels(
+    ctx.hooks,
+    ctx,
+    disabledPanelIds(ctx.dev?.panels),
+  );
   if (panels.length === 0) return null;
 
   const snapshot = projectDebugSnapshot(
