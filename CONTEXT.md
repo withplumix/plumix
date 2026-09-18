@@ -44,6 +44,15 @@ An entry's publication state: `draft`, `published`, `scheduled`, or `trash`.
 The per-entity JSON bag of custom fields backing meta-box fields. The `__plumix_*` key prefix is framework-reserved and off-limits to authors.
 _Avoid_: custom fields (as the storage; "meta-box field" is the declared field)
 
+**Stored meta**:
+A meta bag as the row holds it — what a `WHERE` over the JSON column, a raw row
+off a lifecycle event, and a rule selector all read without decoding.
+
+**Resolved meta**:
+The same bag as a read surface hands it back, each value read against its
+meta-box field and every reference id hydrated. The counterpart to stored meta;
+the two are meant to answer the same question the same way.
+
 **Permalink**:
 The public canonical URL of an entry or term archive.
 
@@ -68,6 +77,20 @@ _Avoid_: custom field. Bare "field" is overloaded (block inputs, settings); pref
 
 **Field type**:
 The concrete kind of a meta-box field (`text`, `number`, `richtext`, `select`, `repeater`, `reference`, …), discriminated by its input type.
+
+**Settled value**:
+A stored value already in the form its meta-box field's declared type implies.
+Everything written through the field pipeline is settled: the pipeline accepts
+the looser forms a form post or a direct caller may send and settles them on the
+way in.
+
+**Unsettled value**:
+A stored value that is not in that form — left by an import, a direct database
+write, or a row persisted before a plugin tightened the field. A valid state,
+not a corrupt one: a declared type is a contract on what the pipeline accepts
+and returns, not an invariant the column enforces. Readers answer from the value
+as stored, so an unsettled value reads as unrecognized rather than as the value
+it resembles.
 
 **Reference field**:
 A meta-box field whose value is a foreign id (or list) into another entity — user, entry, term, or media — resolved at read time.
@@ -350,6 +373,9 @@ them distinct by **always qualifying** them; bare use is a smell.
 - **handler** — the **runtime handler** (this glossary) vs a **route handler**
   (what answers one registered path) vs a **hook handler** (a filter or action
   listener). Qualify when more than one is in play.
+- **canonical** — reserved for the **canonical URL**. For a stored value already
+  in the form its field's declared type implies, say **settled**, never
+  "canonical".
 - **entry vs post** — the canonical noun is **entry**. "post" is a specific
   entry type only; storage defaults and permalink helpers still say "post" but
   that is drift, not the domain word.

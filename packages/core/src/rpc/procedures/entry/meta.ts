@@ -147,24 +147,44 @@ export async function sanitizeAndValidateEntryMeta(
  * check: they can't fix such a field, so a co-author's required/invalid
  * value must not block their publish (its stored value still passes through
  * untouched, and was validated when whoever set it wrote it).
+ *
+ * `touched` is the set of keys the author submitted — see
+ * {@link validateAndPromoteMetaBag} for why only those are rewritten. Use
+ * {@link assertPromotedEntryMetaValid} where only the gate is wanted.
  */
 export async function sanitizePromotedEntryMeta(
   ctx: AppContext,
   entryType: string,
   bag: JsonObject,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
+  touched: ReadonlySet<string>,
 ): Promise<JsonObject> {
   const fields = listEntryMetaFields(ctx.plugins, entryType).filter(
     (field) => !field.capability || ctx.auth.can(field.capability),
   );
   try {
-    return await validateAndPromoteMetaBag(fields, bag);
+    return await validateAndPromoteMetaBag(fields, bag, touched);
   } catch (error) {
     if (error instanceof MetaValidationError) {
       throw metaValidationConflict(error, errors);
     }
     throw error;
   }
+}
+
+/**
+ * Run the same gate for its rejection alone, where the caller writes its own
+ * patch and the rest of the row is already settled storage — a live write that
+ * crosses into the published surface. Nothing is rewritten, so there is no
+ * promoted bag to hand back.
+ */
+export async function assertPromotedEntryMetaValid(
+  ctx: AppContext,
+  entryType: string,
+  bag: JsonObject,
+  errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
+): Promise<void> {
+  await sanitizePromotedEntryMeta(ctx, entryType, bag, errors, new Set());
 }
 
 /**

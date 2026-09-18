@@ -378,10 +378,11 @@ async function overlayPreviewAutosave(
   const grant = await verifyPreviewGrant(ctx.db, token);
   if (grant === null) return entry;
   if (grant.entryId !== entry.id) return entry;
-  const autosave = await getAutosave(ctx.db, {
-    entryId: entry.id,
-    authorId: grant.userId,
-  });
+  const autosave = await getAutosave(
+    ctx.db,
+    { entryId: entry.id, authorId: grant.userId },
+    entry,
+  );
   if (!autosave) return entry;
   // Overlay only the drafted fields. `title` / `slug` / `parentId` / terms are
   // live fields (the editor writes them with `saveAs: "live"`), so they come

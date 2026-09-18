@@ -13,6 +13,7 @@ import {
   REVISION_TYPE,
 } from "./slug-codec.js";
 import {
+  asDraftRow,
   encodeSnapshotEnvelope,
   REVISION_MESSAGE_META_KEY,
 } from "./snapshot-envelope.js";
@@ -164,7 +165,10 @@ interface UpsertAutosaveInput {
     readonly title: string;
     readonly content: EntryContent | null;
     readonly excerpt: string | null;
+    // The keys the author touched, and the keys they cleared. Not the whole
+    // bag — see ADR 0003.
     readonly meta: JsonObject;
+    readonly metaDeletes: readonly string[];
   };
 }
 
@@ -180,7 +184,11 @@ export async function upsertAutosave(
   const { entry, authorId, patch } = input;
   const meta = {
     ...patch.meta,
-    ...encodeSnapshotEnvelope({ slug: entry.slug, parentId: entry.parentId }),
+    ...encodeSnapshotEnvelope({
+      slug: entry.slug,
+      parentId: entry.parentId,
+      deletes: patch.metaDeletes,
+    }),
   };
   const slug = buildAutosaveSlug({ entryId: entry.id, authorId });
   const [row] = await db
@@ -224,7 +232,40 @@ export interface AutosavePairInput {
   readonly authorId: number;
 }
 
+/**
+ * The pending draft as a whole row: the author's edits laid over the live entry
+ * (ADR 0003). Every surface that renders a draft wants this — a preview is a
+ * page, not a diff. Use {@link getAutosaveEdits} on the write path, where which
+ * keys the author touched is the question being asked.
+ */
 export async function getAutosave(
+  db: Db,
+  input: AutosavePairInput,
+  // Pass the live row to spare the round trip. Stored, not resolved: the merge
+  // lays edits over the bag as the column holds it, so a caller holding a
+  // resolved row omits this and lets the fetch below get the stored one.
+  storedLive?: Entry,
+): Promise<Entry | undefined> {
+  const edits = await getAutosaveEdits(db, input);
+  if (!edits) return undefined;
+  const liveRow =
+    storedLive ??
+    (await db.query.entries.findFirst({
+      where: eq(entries.id, input.entryId),
+    }));
+  // An autosave outliving its entry has no draft to show: there is no bag to
+  // lay the edits over, and handing back the bare patch would read as a whole
+  // row that happens to be missing most of its fields.
+  if (!liveRow) return undefined;
+  return asDraftRow(liveRow, edits);
+}
+
+/**
+ * The autosave row as stored — its meta is the author's edits, not the whole
+ * bag. Promotion runs the field pipeline over exactly these keys, so a value
+ * nobody submitted is never re-decoded.
+ */
+export async function getAutosaveEdits(
   db: Db,
   input: AutosavePairInput,
 ): Promise<Entry | undefined> {

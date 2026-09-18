@@ -4,8 +4,16 @@ import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
-import { deleteAutosave, getAutosave } from "../../../revisions/repository.js";
+import {
+  deleteAutosave,
+  getAutosaveEdits,
+} from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
+import {
+  autosaveTouchedKeys,
+  mergeAutosaveMeta,
+  SNAPSHOT_META_KEY,
+} from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../validation.js";
@@ -64,7 +72,7 @@ export const publish = base
         });
       },
     });
-    const autosave = await getAutosave(context.db, {
+    const autosave = await getAutosaveEdits(context.db, {
       entryId: live.id,
       authorId: context.user.id,
     });
@@ -80,15 +88,16 @@ export const publish = base
     const patch = {
       content: autosave.content,
       excerpt: autosave.excerpt,
-      // Strip the snapshot envelope, then strict-validate the promoted
-      // bag: autosaves are draft-lenient, so publish is where required
-      // fields, bounds, and formats are finally enforced — a violation
-      // rejects the publish with per-field errors the admin surfaces.
+      // The bag that goes live is the author's edits laid over the live row.
+      // Strict-validate all of it: autosaves are draft-lenient, so publish is
+      // where required fields, bounds, and formats are finally enforced — a
+      // violation rejects the publish with per-field errors the admin surfaces.
       meta: await sanitizePromotedEntryMeta(
         context,
         live.type,
-        stripSnapshotEnvelope(autosave.meta),
+        stripSnapshotEnvelope(mergeAutosaveMeta(live.meta, autosave.meta)),
         errors,
+        autosaveTouchedKeys(autosave.meta),
       ),
     };
     const prepared = await applyEntryBeforeSave(context, live.type, {
@@ -122,11 +131,6 @@ export const publish = base
     await captureRevisionIfSupported(context, updatedRow);
     return updatedRow;
   });
-
-// Snapshot envelope key — duplicated rather than imported to keep this
-// file's dependency surface tight. Worth folding into a shared helper
-// if a third consumer appears.
-const SNAPSHOT_META_KEY = "__plumix_snapshot";
 
 function stripSnapshotEnvelope(meta: JsonObject): JsonObject {
   const next = { ...meta };

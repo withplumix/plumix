@@ -9,9 +9,16 @@ import { entries } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
-import { getAutosave, upsertAutosave } from "../../../revisions/repository.js";
+import {
+  getAutosaveEdits,
+  upsertAutosave,
+} from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
-import { stripReservedMeta } from "../../../revisions/snapshot-envelope.js";
+import {
+  asDraftRow,
+  decodeSnapshotEnvelope,
+  stripReservedMeta,
+} from "../../../revisions/snapshot-envelope.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -22,8 +29,6 @@ import {
   assertContentWithinByteCap,
 } from "./content.js";
 import {
-  applyAccessChoiceToMeta,
-  applyTemplateChoiceToMeta,
   assertAccessChoiceDeclared,
   stripUndefined,
   withAccessChoice,
@@ -40,10 +45,10 @@ import {
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
+  assertPromotedEntryMetaValid,
   loadEntryMeta,
   resolveEntryMeta,
   sanitizeAndValidateEntryMeta,
-  sanitizePromotedEntryMeta,
   writeEntryMeta,
 } from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
@@ -230,32 +235,51 @@ export const update = base
         errors,
         "draft",
       );
-      // The autosave row accumulates the author's in-progress edits, so base
-      // each write on the *existing draft* (falling back to the live row for
-      // the first write) and apply only this patch on top. Rebasing on live
-      // every time would drop keys/fields an earlier partial autosave changed
-      // — the editor sends only what changed. The optimistic token above
-      // guards against a diverged live row, so the frozen base is safe.
-      const currentDraft = await getAutosave(context.db, {
+      // The autosave accumulates the author's in-progress edits, so base each
+      // write on the existing draft and apply only this patch on top — the
+      // editor sends only what changed, so rebasing would drop keys an earlier
+      // partial write changed. The base is the draft's own meta, never the live
+      // row's: a key the author never touched must not ride into a bag that
+      // publish re-decodes (ADR 0003).
+      const currentEdits = await getAutosaveEdits(context.db, {
         entryId: existing.id,
         authorId: context.user.id,
       });
-      const draftBase = currentDraft ?? existing;
+      // The columns snapshot where the meta bag patches, so these two still
+      // fall back to the live row's values when the author left them alone.
+      const columnBase = currentEdits ?? existing;
       // Reserved envelope keys (snapshot, revision message) are re-derived by
       // `upsertAutosave`; drop them from the base, but keep the template and
       // access picks so a prior unsaved choice survives a write that doesn't
       // change it.
-      const autosaveMeta: Record<string, JsonValue> = stripReservedMeta(
-        draftBase.meta,
-        [NAMED_TEMPLATE_META_KEY, ACCESS_POLICY_META_KEY],
+      const autosaveMeta: Record<string, JsonValue> = currentEdits
+        ? stripReservedMeta(currentEdits.meta, [
+            NAMED_TEMPLATE_META_KEY,
+            ACCESS_POLICY_META_KEY,
+          ])
+        : {};
+      // Absence means untouched, so a cleared key is carried rather than simply
+      // dropped — and touching a key again un-clears it.
+      const autosaveDeletes = new Set(
+        currentEdits
+          ? (decodeSnapshotEnvelope(currentEdits.meta)?.deletes ?? [])
+          : [],
       );
-      if (autosaveMetaPatch) {
-        for (const key of autosaveMetaPatch.deletes) {
-          delete autosaveMeta[key];
-        }
-        for (const [key, value] of autosaveMetaPatch.upserts) {
-          autosaveMeta[key] = value;
-        }
+      // The framework's template and access picks fold in at patch level, the
+      // same way the live branch takes them, so one loop applies every edit the
+      // author made and a cleared key lands in `deletes` rather than merely
+      // going missing.
+      const draftPatch = withAccessChoice(
+        withTemplateChoice(autosaveMetaPatch, filtered.template),
+        filtered.access,
+      );
+      for (const key of draftPatch?.deletes ?? []) {
+        delete autosaveMeta[key];
+        autosaveDeletes.add(key);
+      }
+      for (const [key, value] of draftPatch?.upserts ?? []) {
+        autosaveMeta[key] = value;
+        autosaveDeletes.delete(key);
       }
       const autosave = await upsertAutosave(context.db, {
         entry: existing,
@@ -271,26 +295,25 @@ export const update = base
           content:
             filtered.content !== undefined
               ? filtered.content
-              : draftBase.content,
+              : columnBase.content,
           excerpt:
             filtered.excerpt !== undefined
               ? filtered.excerpt
-              : draftBase.excerpt,
-          // The framework template + access choices ride along (bypassing the
-          // meta-box sanitizer by design) so the preview overlay can honor an
-          // unsaved pick.
-          meta: applyAccessChoiceToMeta(
-            applyTemplateChoiceToMeta(autosaveMeta, filtered.template),
-            filtered.access,
-          ),
+              : columnBase.excerpt,
+          meta: autosaveMeta,
+          metaDeletes: [...autosaveDeletes],
         },
       });
-      await fireEntryAutosaveSaved(context, autosave, existing);
+      // The stored row carries only the edits, so lay them over live before
+      // anything outside the write path sees it: a subscriber and a caller
+      // both asked for the pending draft, which is a whole row.
+      const draft = asDraftRow(existing, autosave);
+      await fireEntryAutosaveSaved(context, draft, existing);
       // Decode + resolve against the LIVE row's type — the autosave
       // row's own reserved type matches no registered meta fields.
-      const decoded = await resolveEntryMeta(context, existing, autosave.meta);
+      const decoded = await resolveEntryMeta(context, existing, draft.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
-        ...autosave,
+        ...draft,
         meta: decoded,
       });
     }
@@ -376,7 +399,7 @@ export const update = base
           resultingMeta[key] = value;
         for (const key of metaPatch.deletes) delete resultingMeta[key];
       }
-      await sanitizePromotedEntryMeta(
+      await assertPromotedEntryMetaValid(
         context,
         existing.type,
         resultingMeta,

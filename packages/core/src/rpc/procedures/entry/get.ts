@@ -27,6 +27,9 @@ export const get = base
       // pending draft is an editor concern.
       assertCanEditEntry(context, live, errors);
 
+      // No live row passed: `live` here is already resolved, and the merge
+      // needs the stored bag — a hydrated reference laid under the edits would
+      // be promoted back as whatever the lookup adapter returned.
       const autosave = await getAutosave(context.db, {
         entryId: live.id,
         authorId: context.user.id,

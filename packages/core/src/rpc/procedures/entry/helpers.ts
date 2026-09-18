@@ -1,4 +1,3 @@
-import type { JsonObject } from "../../../json.js";
 import type { SelectableAccessPolicy } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
@@ -46,22 +45,6 @@ export function withTemplateChoice(
 }
 
 /**
- * The plain-object counterpart of {@link withTemplateChoice}, for the autosave
- * path which merges a full meta object rather than applying a patch. Returns a
- * fresh object (never mutates the input); `undefined` leaves it untouched.
- */
-export function applyTemplateChoiceToMeta(
-  meta: JsonObject,
-  template: string | null | undefined,
-): JsonObject {
-  if (template === undefined) return { ...meta };
-  const next = { ...meta };
-  if (template === null) delete next[NAMED_TEMPLATE_META_KEY];
-  else next[NAMED_TEMPLATE_META_KEY] = template;
-  return next;
-}
-
-/**
  * Fold a per-entry access-policy choice into a meta patch under the reserved
  * `__plumix_access` key. Like the template choice, the key is reserved with no
  * registered field, so the create/update handlers merge it after the plugin
@@ -90,22 +73,6 @@ export function withAccessChoice(
     upserts.set(ACCESS_POLICY_META_KEY, access);
   }
   return { upserts, deletes: [...deletes] };
-}
-
-/**
- * The plain-object counterpart of {@link withAccessChoice}, for the autosave
- * path which merges a full meta object rather than a patch. Returns a fresh
- * object (never mutates the input); `undefined` leaves it untouched.
- */
-export function applyAccessChoiceToMeta(
-  meta: JsonObject,
-  access: string | null | undefined,
-): JsonObject {
-  if (access === undefined) return { ...meta };
-  const next = { ...meta };
-  if (access === null) delete next[ACCESS_POLICY_META_KEY];
-  else next[ACCESS_POLICY_META_KEY] = access;
-  return next;
 }
 
 interface AccessChoiceErrors {

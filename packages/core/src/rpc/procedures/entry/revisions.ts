@@ -23,9 +23,11 @@ import {
   isReservedType,
 } from "../../../revisions/slug-codec.js";
 import {
+  asDraftRow,
   decodeRevisionMessage,
   decodeSnapshotEnvelope,
   REVISION_MESSAGE_MAX_LENGTH,
+  REVISION_MESSAGE_META_KEY,
   SNAPSHOT_META_KEY,
 } from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
@@ -221,6 +223,18 @@ export const restore = base
       // own envelope from the live row's current slug + parentId.
       const cleanedMeta: Record<string, JsonValue> = { ...revision.meta };
       delete cleanedMeta[SNAPSHOT_META_KEY];
+      // A restore replays a whole snapshot, so every key in it is a deliberate
+      // edit — and a key live gained since has to go. An autosave stores edits
+      // (ADR 0003), where absence reads as untouched, so those are named as
+      // cleared instead of being left out of the bag. That includes the
+      // framework's own picks, which a revision snapshots like any other meta;
+      // only the two keys `upsertAutosave` re-derives are exempt.
+      const metaDeletes = Object.keys(live.meta).filter(
+        (key) =>
+          key !== SNAPSHOT_META_KEY &&
+          key !== REVISION_MESSAGE_META_KEY &&
+          !(key in cleanedMeta),
+      );
       const autosave = await repoUpsertAutosave(context.db, {
         entry: live,
         authorId: context.user.id,
@@ -233,11 +247,16 @@ export const restore = base
           content: revision.content,
           excerpt: revision.excerpt,
           meta: cleanedMeta,
+          metaDeletes,
         },
       });
-      await fireEntryRevisionRestored(context, revision, autosave, live.type);
-      await fireEntryAutosaveSaved(context, autosave, live);
-      return autosave;
+      // The autosave stores only the edits the restore makes, so hand the whole
+      // draft outward — a subscriber reading `meta` wants the row as it would
+      // render, not the delta that produced it.
+      const draft = asDraftRow(live, autosave);
+      await fireEntryRevisionRestored(context, revision, draft, live.type);
+      await fireEntryAutosaveSaved(context, draft, live);
+      return draft;
     }
 
     // Legacy live-write path for types without autosave support.

@@ -55,10 +55,11 @@ export async function previewableEntry(
   }
   assertCanEditEntry(ctx, row, errors);
 
-  const autosave = await getAutosave(ctx.db, {
-    entryId: row.id,
-    authorId: ctx.user.id,
-  });
+  const autosave = await getAutosave(
+    ctx.db,
+    { entryId: row.id, authorId: ctx.user.id },
+    row,
+  );
   return autosave === undefined
     ? row
     : {

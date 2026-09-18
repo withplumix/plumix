@@ -95,6 +95,7 @@ describe("entry change feed", () => {
       content: {},
       excerpt: null,
       meta: {},
+      metaDeletes: [],
     };
 
     await upsertAutosave(db, { entry, authorId, patch });

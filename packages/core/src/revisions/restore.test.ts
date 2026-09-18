@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { REVISION_TYPE } from "./slug-codec.js";
 
@@ -252,6 +253,85 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     });
     expect(liveAfter?.title).toBe("X3");
     expect(liveAfter?.excerpt).toBe("e3");
+  });
+
+  // Restoring is "make the row look like this again", so a key added to live
+  // after the snapshot has to go. An autosave stores edits, where absence means
+  // untouched, so the restore names that key as cleared rather than relying on
+  // it simply not being in the bag.
+  test("clears a meta key the live row gained after the restored revision", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "X1",
+      slug: "x",
+      status: "published",
+      excerpt: "e1",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      excerpt: "e2",
+      saveAs: "live",
+    });
+    const revisions = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    const snapshot = revisions.find((r) => r.excerpt === "e2");
+    if (!snapshot) throw new Error("expected an e2 revision");
+    // Added to live only after the snapshot was taken — as a direct write, so
+    // the key is not one the revision could ever have held.
+    await h.db
+      .update(entries)
+      .set({ meta: { added_after: "gone on restore" } })
+      .where(eq(entries.id, created.id));
+
+    await h.client.entry.revisions.restore({ revisionId: snapshot.id });
+
+    const previewed = await h.client.entry.get({
+      id: created.id,
+      preview: true,
+    });
+    expect(previewed.meta.added_after).toBeUndefined();
+  });
+
+  // The framework's own picks are stored meta like any other, and a revision
+  // taken before one was made does not carry it — so restoring that revision
+  // has to clear it, exactly as it clears an author's key.
+  test("clears a named-template pick the live row gained after the restored revision", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithAutosave(),
+    });
+    const created = await h.client.entry.create({
+      title: "X1",
+      slug: "x",
+      status: "published",
+      excerpt: "e1",
+    });
+    await h.client.entry.update({
+      id: created.id,
+      excerpt: "e2",
+      saveAs: "live",
+    });
+    const revisions = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    const snapshot = revisions.find((r) => r.excerpt === "e2");
+    if (!snapshot) throw new Error("expected an e2 revision");
+    await h.db
+      .update(entries)
+      .set({ meta: { [NAMED_TEMPLATE_META_KEY]: "landing" } })
+      .where(eq(entries.id, created.id));
+
+    await h.client.entry.revisions.restore({ revisionId: snapshot.id });
+
+    const previewed = await h.client.entry.get({
+      id: created.id,
+      preview: true,
+    });
+    expect(previewed.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
   test("fires entry:<type>:revision_restored AND entry:<type>:autosave_saved — but NOT entry:updated", async () => {

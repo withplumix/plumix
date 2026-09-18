@@ -288,18 +288,23 @@ export async function sanitizeMetaForRpc(
  * `undefined` and rejects it in strict mode.
  *
  * Rejections aggregate across the bag into one `MetaValidationError` the
- * RPC layer maps onto the admin inputs, blocking the publish. A passing bag
- * comes back canonicalized (each registered value re-run through
- * `.sanitize()`); a conditionally-hidden field can't be required, so it's
- * skipped; keys the field system doesn't own (e.g. from an uninstalled
- * plugin) pass through untouched, matching the read path. Field
- * capabilities and reference existence are not re-checked here — a
- * whole-bag gate would block a publisher over a co-author's field, and both
- * were already enforced at write time.
+ * RPC layer maps onto the admin inputs, blocking the publish. A conditionally-
+ * hidden field can't be required, so it's skipped; keys the field system
+ * doesn't own (e.g. from an uninstalled plugin) pass through untouched,
+ * matching the read path. Field capabilities and reference existence are not
+ * re-checked here — a whole-bag gate would block a publisher over a co-author's
+ * field, and both were already enforced at write time.
+ *
+ * `touched` names the keys the author actually submitted, and only those come
+ * back re-run through `.sanitize()`. Everything else is validated and returned
+ * as stored: the pipeline decodes input, and the rest of the bag is not input
+ * (ADR 0003). Pass every key the caller is promoting to get the whole bag
+ * settled.
  */
 export async function validateAndPromoteMetaBag(
   fields: readonly MetaBoxField[],
   bag: JsonObject,
+  touched: ReadonlySet<string>,
 ): Promise<JsonObject> {
   const out: Record<string, JsonValue> = {};
   const owned = new Set<string>();
@@ -318,6 +323,14 @@ export async function validateAndPromoteMetaBag(
     const result = await runFieldPipeline(field, bag[field.key], field.key);
     if (result.errors.length > 0) {
       fieldErrors.push(...result.errors);
+      continue;
+    }
+    // Validated above, so skipping the rewrite here costs the publish gate no
+    // coverage. What it skips is a decode: the pipeline reads *input*, and a
+    // key the author never sent is not input (ADR 0003).
+    if (!touched.has(field.key)) {
+      const stored = bag[field.key];
+      if (stored !== undefined) out[field.key] = stored;
       continue;
     }
     if (result.isDeletion === true) continue;
