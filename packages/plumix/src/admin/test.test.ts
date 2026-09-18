@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -25,6 +26,12 @@ const _menuRouter = {
   sync: base
     .input(v.object({ since: v.date() }))
     .handler((): { at: Date } => ({ at: new Date() })),
+  upload: base
+    .input(v.object({ file: v.instance(File), name: v.string() }))
+    .handler((): { size: number } => ({ size: 0 })),
+  thumbnail: base
+    .input(v.object({ id: v.number() }))
+    .handler((): { body: Blob } => ({ body: new Blob([]) })),
   rows: base.input(v.object({ termId: v.number() })).handler(
     (): readonly {
       id: number;
@@ -33,6 +40,8 @@ const _menuRouter = {
     }[] => [],
   ),
 };
+
+type MenuRouter = typeof _menuRouter;
 
 beforeEach(() => {
   vi.stubGlobal("location", new URL("https://cms.example/admin"));
@@ -47,7 +56,7 @@ describe("stubPluginRpc", () => {
     const stub = stubPluginRpc("menu", {
       list: () => [{ id: 1, name: "Main" }],
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     const result = await rpc.list({ termId: 7 });
 
@@ -61,7 +70,7 @@ describe("stubPluginRpc", () => {
   test("a Date a responder returns resolves as a Date, not its JSON projection", async () => {
     const at = new Date("2026-05-10T10:00:00.000Z");
     stubPluginRpc("menu", { sync: () => ({ at }) });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     const result = await rpc.sync({ since: at });
 
@@ -78,7 +87,7 @@ describe("stubPluginRpc", () => {
         return { at: since };
       },
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     await rpc.sync({ since });
 
@@ -96,7 +105,7 @@ describe("stubPluginRpc", () => {
         { id: 2, seenAt: second, tags: new Set<string>() },
       ],
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     const rows = await rpc.rows({ termId: 7 });
 
@@ -107,19 +116,160 @@ describe("stubPluginRpc", () => {
 
   test("an unrouted procedure answers 404 and still shows up in calls", async () => {
     const stub = stubPluginRpc("menu", {});
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     await expect(rpc.delete({ id: 1 })).rejects.toThrow();
     expect(stub.calls).toEqual([{ procedure: "delete", input: { id: 1 } }]);
+  });
+
+  test("a fetch the stub doesn't serve throws, naming the URL and the prefix", async () => {
+    stubPluginRpc("menu", {});
+
+    await expect(
+      fetch("https://cms.example/_plumix/rpc/pages/list"),
+    ).rejects.toThrow(
+      /https:\/\/cms\.example\/_plumix\/rpc\/pages\/list[\s\S]*\/_plumix\/rpc\/menu\b/,
+    );
+  });
+
+  test("a File in the input reaches the responder as a real File", async () => {
+    let seen: unknown;
+    const stub = stubPluginRpc("menu", {
+      upload: (input) => {
+        seen = (input as { file: unknown }).file;
+        return { size: (seen as Blob).size };
+      },
+    });
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
+
+    // A payload carrying a blob is posted as multipart `FormData`, not JSON —
+    // the branch that used to throw a bare SyntaxError inside the stub.
+    const result = await rpc.upload({
+      file: new File(["hello world"], "a.txt", { type: "text/plain" }),
+      name: "a.txt",
+    });
+
+    expect(seen).toBeInstanceOf(Blob);
+    expect(await (seen as Blob).text()).toBe("hello world");
+    expect(result.size).toBe(11);
+    expect(stub.lastCallTo("upload")?.input).toMatchObject({ name: "a.txt" });
+  });
+
+  test("a Blob a responder returns reaches the client as a Blob", async () => {
+    stubPluginRpc("menu", {
+      thumbnail: () => ({
+        body: new Blob(["png-bytes"], { type: "image/png" }),
+      }),
+    });
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
+
+    const result = await rpc.thumbnail({ id: 1 });
+
+    expect(result.body).toBeInstanceOf(Blob);
+    expect(await result.body.text()).toBe("png-bytes");
+  });
+
+  test("an unrouted procedure answers exactly what the dispatcher answers", async () => {
+    stubPluginRpc("menu", {});
+
+    const response = await fetch(
+      "https://cms.example/_plumix/rpc/menu/delete",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: { id: 1 } }),
+      },
+    );
+
+    // Not an oRPC error envelope: oRPC reports the miss without producing a
+    // response at all, and the dispatcher answers its own plain-text 404. A
+    // client rejection from here is therefore a malformed-response one, which
+    // is what a real deployment produces.
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+    expect(response.headers.get("x-plumix-hint")).toBe(
+      "rpc-procedure-not-found",
+    );
+    expect(await response.text()).toBe("Not Found");
+  });
+
+  test("a subdirectory deploy's base path still routes", async () => {
+    const stub = stubPluginRpc("menu", {
+      list: () => [{ id: 1, name: "Main" }],
+    });
+
+    // `createPluginRpcClient` prepends `globalThis.plumix.basePath`, so the
+    // procedures mount below it rather than at the root.
+    const response = await fetch(
+      "https://cms.example/site/_plumix/rpc/menu/list",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: { termId: 7 } }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(stub.lastCallTo("list")?.input).toEqual({ termId: 7 });
+  });
+
+  test("a non-POST request answers 405, as the dispatcher does", async () => {
+    stubPluginRpc("menu", { list: () => [] });
+
+    const response = await fetch("https://cms.example/_plumix/rpc/menu/list", {
+      method: "GET",
+    });
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("POST");
   });
 
   test("a nested procedure path round-trips through the prefix", async () => {
     stubPluginRpc("menu", {
       "locations/list": () => [{ id: "primary" }],
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     expect(await rpc.locations.list()).toEqual([{ id: "primary" }]);
+  });
+
+  test("a route map mounting under a procedure is refused, either order", () => {
+    const both = {
+      list: () => [],
+      "list/count": () => 0,
+    };
+
+    expect(() => stubPluginRpc("menu", both)).toThrow(/list\/count/);
+    expect(() =>
+      stubPluginRpc("menu", {
+        "list/count": both["list/count"],
+        list: both.list,
+      }),
+    ).toThrow(/list\/count/);
+  });
+
+  test("an ORPCError a responder throws reaches the client untouched", async () => {
+    stubPluginRpc("menu", {
+      save: () => {
+        throw new ORPCError("PAYMENT_REQUIRED", {
+          status: 402,
+          data: { plan: "pro" },
+        });
+      },
+    });
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
+
+    const error: unknown = await rpc
+      .save({})
+      .catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: "PAYMENT_REQUIRED",
+      status: 402,
+      data: { plan: "pro" },
+    });
   });
 
   test("a thrown PluginRpcError surfaces its code, status and data on the client", async () => {
@@ -131,7 +281,7 @@ describe("stubPluginRpc", () => {
         });
       },
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     const error: unknown = await rpc
       .save({})
@@ -154,9 +304,11 @@ describe("stubPluginRpc", () => {
         });
       },
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
-    const error = await rpc.save({}).catch((caught: unknown) => caught);
+    const error: unknown = await rpc
+      .save({})
+      .catch((caught: unknown) => caught);
 
     expect(error).toMatchObject({ code: "CONFLICT", status: 409 });
     const { data } = error as { data: { expiresAt: unknown } };
@@ -164,18 +316,26 @@ describe("stubPluginRpc", () => {
     expect(data.expiresAt).toEqual(expiresAt);
   });
 
-  test("a plain throw answers 500", async () => {
+  test("a plain throw answers 500 with the envelope a real handler sends", async () => {
     stubPluginRpc("menu", {
       save: () => {
         throw new Error("boom");
       },
     });
-    const rpc = createPluginRpcClient<typeof _menuRouter>("menu");
+    const rpc = createPluginRpcClient<MenuRouter>("menu");
 
     const error: unknown = await rpc
       .save({})
       .catch((caught: unknown) => caught);
 
-    expect(error).toMatchObject({ status: 500 });
+    expect(error).toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      status: 500,
+    });
+    // A real handler's error envelope carries no `data`. The client only
+    // populates one when the body failed `isORPCErrorJson` and it fell back to
+    // the malformed-response path, so an undefined `data` is what proves the
+    // body was a genuine envelope.
+    expect((error as { data?: unknown }).data).toBeUndefined();
   });
 });

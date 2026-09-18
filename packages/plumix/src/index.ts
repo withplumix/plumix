@@ -211,6 +211,7 @@ export {
   forbidden,
   jsonResponse,
   methodNotAllowed,
+  notFoundResponse,
   responseAllowsSharedStorage,
   serveRenderedAsset,
   tagCdnEntry,

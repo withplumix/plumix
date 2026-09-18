@@ -209,6 +209,8 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
+    "@orpc/server": "catalog:orpc",
+    "@orpc/standard-server-fetch": "catalog:orpc",
     "@plumix/admin": "workspace:*",
     "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",

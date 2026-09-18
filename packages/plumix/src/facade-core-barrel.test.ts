@@ -38,6 +38,10 @@ const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   "./plugin": "plugin config is authored and loaded server-side",
   "./theme": "defineTheme / defineTemplate run at config / SSR time",
   "./vite": "the Vite plugin runs in Node at build time",
+  "./admin/test":
+    "the RPC stub serves a plugin's procedures from a vitest worker, and " +
+    "answers a miss with the dispatcher's own refusal helpers — test-only, " +
+    "never part of an admin bundle",
   // `./admin` is intentionally absent: it's a browser entry held to the same
   // rule as the rest, reaching core through the `@plumix/core/admin` subpath.
 };
