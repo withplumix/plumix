@@ -13,13 +13,14 @@ import {
 const PANEL = 'data-testid="plumix-debug-panel-og"';
 
 // This plugin's `DebugPanelRegistry` augmentation is spelled against the
-// `plumix` façade, which is the specifier a plugin author writes — so this is
-// where it is proved to merge rather than shadow. `tsc` fails on an unused
-// `@ts-expect-error`, so the negative case stops being satisfied the moment
-// the key set reopens.
+// `plumix` façade, which is the specifier a plugin author writes. The
+// positive case names a core id beside this plugin's own: a shadowing
+// interface holding only `og` would reject `database`, so only a real merge
+// satisfies it. `tsc` fails on an unused `@ts-expect-error`, so the negative
+// case stops being satisfied the moment the key set reopens.
 describe("the og panel is nameable in dev.panels", () => {
-  test("its declared id type-checks", () => {
-    const input: DebugPanelsInput = { og: false };
+  test("its declared id type-checks beside core's", () => {
+    const input: DebugPanelsInput = { database: false, og: false };
 
     expect(input.og).toBe(false);
   });

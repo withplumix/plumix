@@ -163,13 +163,20 @@ export { DebugKV, DebugSection } from "./dev/debug-panels/primitives.js";
 export type { DebugKVRow } from "./dev/debug-panels/primitives.js";
 export type { DebugPanel } from "./dev/debug-panels/types.js";
 // `DebugPanelRegistry` is the interface a plugin augments to make its panel
-// nameable in `dev.panels`; the other two are what that augmentation produces.
+// nameable in `dev.panels`; `DebugPanelsInput` is what that augmentation
+// produces. `DebugPanelId` stays internal — it is `keyof DebugPanelRegistry`,
+// derivable by anyone who wants it.
 export type {
-  DebugPanelId,
   DebugPanelRegistry,
   DebugPanelsInput,
 } from "./dev/debug-panels/config.js";
 export type { DebugBarInput } from "./dev/debug-bar/config.js";
+// Named by `AppContext.debugHistory`, `PlumixApp.debugHistory` and
+// `DevInput.history`, so a consumer annotating any of them can spell the type.
+export type {
+  DebugHistoryStore,
+  DebugHistoryStoreOptions,
+} from "./dev/request-history/store.js";
 export type { DebugSnapshot } from "./dev/request-history/snapshot.js";
 // The dev error page's equivalents, for `error_page:hints` and
 // `error_page:panels`: the contribution shapes and the pieces a panel body is

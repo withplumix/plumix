@@ -374,14 +374,18 @@ async function tryPlumixRoutes(
 
   // Dev-only: the captured request-history read routes (dead-code-eliminated
   // in a build; see DEBUG_REQUESTS_PREFIX for the tree-shaking rationale).
+  // Bound so the ring narrows for the handler, which has no answer without
+  // one — its presence is the same dev gate that builds it.
+  const debugHistory = ctx.debugHistory;
   if (
     process.env.PLUMIX_DEV &&
+    debugHistory !== undefined &&
     isTrustedDevRequest(ctx.request) &&
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
     const { handleDebugRequests } = await import("../dev/history-routes.js");
-    return handleDebugRequests(ctx);
+    return handleDebugRequests(ctx, debugHistory);
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {

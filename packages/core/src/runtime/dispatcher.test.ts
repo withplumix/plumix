@@ -23,7 +23,6 @@ import { readSessionCookie } from "../auth/cookies.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { getContext } from "../context/stores.js";
-import { debugHistory } from "../dev/request-history/store.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -2956,11 +2955,43 @@ describe("dispatcher — telemetry consumers", () => {
       // The response is JSON, not HTML — exactly the request an inline bar can
       // never show, so history is the only place it becomes inspectable.
       expect(response.headers.get("content-type")).not.toContain("text/html");
-      const entry = debugHistory.find(requestId ?? "");
+      const entry = h.app.debugHistory?.find(requestId ?? "");
       expect(entry).toBeDefined();
       expect(entry?.snapshot.context.path).toBe("/_plumix/rpc/entry/list");
       expect(entry?.snapshot.context.method).toBe("POST");
       expect(entry?.status).toBe(response.status);
+    });
+
+    test("`dev.history.maxEntries` bounds what the ring keeps", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const h = await createDispatcherHarness({
+        dev: { history: { maxEntries: 2 } },
+      });
+
+      for (const path of ["/a", "/b", "/c"]) {
+        await h.dispatch(new Request(`https://cms.example${path}`));
+        await h.drainDeferred();
+      }
+
+      // Oldest-out: the ring is the app's, built from its own config, so the
+      // bound is observable rather than a module default nothing can reach.
+      const paths = h.app.debugHistory
+        ?.get()
+        .map((e) => e.snapshot.context.path);
+      expect(paths).toEqual(["/c", "/b"]);
+    });
+
+    test("`dev.history.maxStringLength` truncates what the ring stores", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const h = await createDispatcherHarness({
+        dev: { history: { maxStringLength: 4 } },
+      });
+
+      await h.dispatch(new Request("https://cms.example/abcdefgh"));
+      await h.drainDeferred();
+
+      const [entry] = h.app.debugHistory?.get() ?? [];
+      expect(entry?.snapshot.context.path).toBe("/abc… [5 chars truncated]");
     });
 
     test("with the dev flag unset, nothing is captured", async () => {
@@ -2983,7 +3014,7 @@ describe("dispatcher — telemetry consumers", () => {
       // The probe fired (so the request finished), yet no history writer was
       // registered without the dev gate.
       expect(requestId).toBeDefined();
-      expect(debugHistory.find(requestId ?? "")).toBeUndefined();
+      expect(h.app.debugHistory?.find(requestId ?? "")).toBeUndefined();
     });
   });
 });

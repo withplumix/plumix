@@ -102,15 +102,6 @@ export function createDebugHistoryStore(
   };
 }
 
-/**
- * The process-wide dev request-history. A module singleton because the ring
- * must outlive any one request — the worker isolate keeps it across requests,
- * the writer appends to it, a later read route reads it. Referenced only under
- * the `PLUMIX_DEV` gate, so it and this whole module are tree-shaken from
- * production builds.
- */
-export const debugHistory: DebugHistoryStore = createDebugHistoryStore();
-
 // Force-resolved to inert JSON: sentinel for a value JSON would drop
 // (function, symbol, undefined). Callers skip the key / substitute null,
 // mirroring `JSON.stringify`.

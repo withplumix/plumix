@@ -33,8 +33,8 @@ interface Unit {
   /**
    * Path under `src/`, with no extension and no trailing slash. It names
    * either a directory or a single module, and {@link unitOf} decides which
-   * structurally — `dev/debug-bar` must not end up claiming
-   * `dev/debug-bar-config.ts`, and a prefix match alone would.
+   * structurally — `dev/history-routes` is a module, and a prefix match alone
+   * would let it claim a sibling that merely shares the prefix.
    */
   readonly base: string;
   /** The other units it may name. Its own files are always allowed. */
@@ -119,11 +119,13 @@ describe("the dev debug layers import one way", () => {
   });
 });
 
-// The two dev MCP tools are the readers that prove the point: they want the
-// captured requests and nothing else. While the store lived in `debug-bar/`,
-// asking for it meant importing a React overlay's directory into the MCP tool
-// registry — the panel graph travelled with it, held out of production only by
-// the dev gate above.
+// The two dev MCP tools want the captured requests and nothing else. While the
+// store lived in `debug-bar/`, asking for it meant importing a React overlay's
+// directory into the MCP tool registry — the panel graph travelled with it,
+// held out of production only by the dev gate. Since #2442 they read the app's
+// ring off the context and import nothing in the cluster at all; this pins the
+// graph there. Whether they still *read* the ring is behaviour, and the MCP
+// dispatch suite asserts it.
 const MCP_READERS = ["mcp/telemetry-tools.ts", "mcp/error-tools.ts"] as const;
 
 describe("the dev MCP tools read the capture layer only", () => {

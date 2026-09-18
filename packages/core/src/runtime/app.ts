@@ -22,6 +22,7 @@ import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
+import type { DebugHistoryStore } from "../dev/request-history/store.js";
 import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
@@ -47,6 +48,7 @@ import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
+import { createDebugHistoryStore } from "../dev/request-history/store.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
 import {
@@ -150,6 +152,15 @@ export interface PlumixApp {
    * into `config`.
    */
   readonly basePath: string;
+  /**
+   * The dev request-history ring, bounded by `config.dev.history`. Four
+   * readers share this one instance — the debug bar, the history read routes
+   * and the two dev MCP tools — which is why the app holds it rather than the
+   * capture module: a module binding is reachable by everyone and configurable
+   * by no one (#2442). `undefined` outside the dev gate, so a production build
+   * has no ring at all.
+   */
+  readonly debugHistory?: DebugHistoryStore;
   /** See RuntimeContext.devCsrfLocalhost — false in production builds. */
   readonly devCsrfLocalhost: boolean;
   readonly passkey: PasskeyRuntimeConfig;
@@ -284,6 +295,14 @@ export async function buildApp(
     registerCoreDebugPanels(hooks);
     registerCoreErrorHints(hooks);
   }
+  // Same gate, same reason: the ring, its writer and the sanitizer behind it
+  // never enter a production bundle. Read here once, at build time — the
+  // writer's registration and the read routes' mount read the gate per
+  // request, and both no-op without a ring, so `PLUMIX_DEV` has to be set
+  // before `buildApp` for capture to happen at all.
+  const debugHistory = process.env.PLUMIX_DEV
+    ? createDebugHistoryStore(config.dev?.history)
+    : undefined;
   registerCoreSearchHandlers(hooks);
   // Only subscribe the CDN purge invalidator when a cdn is configured;
   // without one every entry mutation would accumulate tags no flush consumes.
@@ -478,6 +497,7 @@ export async function buildApp(
     loadMcpHandler,
     origin: passkey.origin,
     basePath: config.basePath,
+    debugHistory,
     devCsrfLocalhost:
       runtime.devCsrfLocalhost ?? process.env.PLUMIX_DEV === "1",
     passkey,

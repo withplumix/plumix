@@ -7,6 +7,8 @@ import { HookRegistry } from "../../hooks/registry.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
 import { registerCoreDebugPanels } from "../debug-panels/core-panels.js";
+import { projectDebugSnapshot } from "../request-history/snapshot.js";
+import { createDebugHistoryStore } from "../request-history/store.js";
 import { PlumixDebugBar } from "./component.js";
 
 let db: Db;
@@ -83,6 +85,32 @@ describe("PlumixDebugBar", () => {
     // The in-flight request leads the list, labelled and pre-selected.
     expect(html).toContain("GET /blog/hello · current");
     expect(html).toContain(`value="${ctx.requestId}"`);
+  });
+
+  test("lists the app's captured requests in the switcher", () => {
+    const debugHistory = createDebugHistoryStore();
+    const past = ctxWith({ bar: true }, "https://cms.example/earlier");
+    debugHistory.save({
+      id: "past-1",
+      startedAt: 1,
+      status: 200,
+      durationMs: 3,
+      snapshot: projectDebugSnapshot({ spans: [], records: {} }, past),
+    });
+    const hooks = new HookRegistry();
+    registerCoreDebugPanels(hooks);
+    const ctx = createTestContext({
+      db,
+      hooks,
+      request: new Request("https://cms.example/now"),
+      dev: { bar: true },
+      debugHistory,
+    });
+
+    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
+
+    // The ring the app handed down, not a module default nothing configured.
+    expect(html).toContain('value="past-1"');
   });
 
   test("renders nothing when `dev.bar` is false", () => {

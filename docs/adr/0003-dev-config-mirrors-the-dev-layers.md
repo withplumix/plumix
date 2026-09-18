@@ -24,11 +24,14 @@ outside the dev tree, so no module under `dev/` has to name all of its layers to
 declare the shape. The leaf disappears because nothing needs it, not because it
 was moved somewhere else.
 
-The rule generalises, which is the point: a dev-only setting now has an obvious
-home instead of a new top-level slot. `dev.history` — the request-history ring's
-bounds — is the member that will complete the correspondence once #2442 gives
-the store an owner that config can reach. That it is a fill-in rather than a
-redesign is the evidence the shape holds.
+The rule generalises, which is the point: a dev-only setting has an obvious home
+instead of a new top-level slot. `dev.history` — the request-history ring's
+bounds — is the third member, and getting it there forced the corresponding
+ownership fix. The ring was a module binding created at import time, so it was
+reachable by everyone and configurable by no one; the app now builds it from
+`config.dev.history` and hands it down the context, which is the same shape the
+rest of the cluster already had (#2442). A setting the config tree can express
+but the code cannot receive is the tell that ownership is in the wrong place.
 
 ## Why the extension point is open and the configuration surface is closed
 
@@ -58,6 +61,9 @@ block a silent-typo risk.
   plugin authors twice.
 - `enabled` is gone from the bar: `false` is the only spelling of off.
 - The dev layers guard drops its `config` unit. Four units, one direction.
+- The request-history module exports no singleton. Every reader — the bar, the
+  read routes, both dev MCP tools — takes the app's instance off the context,
+  so a production build has no ring at all rather than an unreachable one.
 - A plugin that contributes a panel and wants it nameable must augment
   `DebugPanelRegistry` and anchor that augmentation into its published
   declaration graph, the same way a hook augmentation is anchored (#1698).

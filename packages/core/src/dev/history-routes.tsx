@@ -12,7 +12,6 @@ import { disabledPanelIds } from "./debug-panels/config.js";
 import { DebugPanelTabs } from "./debug-panels/panels-view.js";
 import { renderDebugPanels } from "./debug-panels/render-panels.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
-import { debugHistory } from "./request-history/store.js";
 
 /** The newest-first metadata a `GET /_plumix/debug/requests` list item carries. */
 interface DebugRequestListItem {
@@ -50,12 +49,12 @@ function toListItem(entry: DebugHistoryEntry): DebugRequestListItem {
  *   swap in.
  *
  * The dispatcher mounts this only under the `PLUMIX_DEV` gate, so the route —
- * and this whole module — is absent from production builds. `store` is
- * injectable for tests; production wiring passes the module singleton.
+ * and this whole module — is absent from production builds. The ring is passed
+ * in: the dispatcher hands over the app's, a test hands over its own.
  */
 export function handleDebugRequests(
   ctx: AppContext,
-  store: DebugHistoryStore = debugHistory,
+  store: DebugHistoryStore,
 ): Response {
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
@@ -84,10 +83,7 @@ export function handleDebugRequests(
 
 // Render the stored snapshot through the same panels the inline bar collects
 // for this request. Panels render purely from the snapshot (never live ctx),
-// so a past request replays faithfully; `ctx` supplies only the panel set (the
-// `debug:panels` filter) and which of them `dev.panels` switched off — read
-// here exactly as the bar reads it, which is the point of it being panel-layer
-// config rather than the bar's (#2425).
+// so a past request replays faithfully; `ctx` supplies only the panel set.
 function renderPanelsHtml(ctx: AppContext, snapshot: DebugSnapshot): string {
   const panels = collectDebugPanels(
     ctx.hooks,

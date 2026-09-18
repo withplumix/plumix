@@ -7,7 +7,6 @@ import type {
 } from "../context/telemetry.js";
 import type { DevErrorFrame } from "../dev/ui/index.js";
 import type { McpTool } from "./tool.js";
-import { debugHistory } from "../dev/request-history/store.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 
 // The dev-only error surface: server 5xx failures (projected from the same
@@ -78,15 +77,14 @@ export const errorListTool: McpTool<typeof errorListInput> = {
   async run(ctx): Promise<ErrorEntry[]> {
     // Client entries carry no timestamp (no request behind them), so the two
     // newest-first runs are concatenated — client first — not interleaved.
-    return [...(await clientErrors(ctx)), ...serverErrors()];
+    return [...(await clientErrors(ctx)), ...serverErrors(ctx)];
   },
 };
 
 /** Project the 5xx responses in the request-history ring into server entries.
- *  `debugHistory.get()` is already newest-first. */
-function serverErrors(): ServerErrorEntry[] {
-  return debugHistory
-    .get()
+ *  The ring is already newest-first. */
+function serverErrors(ctx: AppContext): ServerErrorEntry[] {
+  return (ctx.debugHistory?.get() ?? [])
     .filter((entry) => entry.status >= 500)
     .map((entry) => {
       const error = fatalError(entry.snapshot.spans);
