@@ -1,6 +1,7 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
 import { and, eq } from "plumix/db";
 import {
+  assertCanEditEntry,
   authenticated,
   base,
   requireCapability,
@@ -66,40 +67,50 @@ export interface UpdateResponse {
 // a File via XHR; anything else here is a sign of a malformed client.
 const CONTENT_TYPE_RE = /^[\x21-\x7E]+$/;
 
-interface MediaRowGuards {
+interface MediaRpcErrors {
   readonly NOT_FOUND: (opts: {
     data: { kind: string; id: string | number };
   }) => Error;
   readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
 }
 
-/**
- * Load a media-entry row and verify the caller is either the owner or
- * holds the supplied capability. Used by `update` and `remove`, which
- * share the same load + ownership pattern but differ on the capability
- * a non-owner needs.
- */
-async function loadOwnedMediaRow(
+/** Load a media-entry row, or 404. Each caller applies its own gate. */
+async function loadMediaRow(
   context: AuthenticatedAppContext,
   id: number,
-  options: { readonly capability: string; readonly errors: MediaRowGuards },
+  errors: Pick<MediaRpcErrors, "NOT_FOUND">,
 ): Promise<typeof entries.$inferSelect> {
-  const { capability, errors } = options;
-  const notFound = (): Error =>
-    errors.NOT_FOUND({ data: { kind: "media", id } });
-
   const [row] = await context.db
     .select()
     .from(entries)
     .where(eq(entries.id, id))
     .limit(1);
-  if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
-
-  const isOwner = row.authorId === context.user.id;
-  if (!isOwner && !context.auth.can(capability)) {
-    throw errors.FORBIDDEN({ data: { capability } });
+  if (row?.type !== MEDIA_ENTRY_TYPE) {
+    throw errors.NOT_FOUND({ data: { kind: "media", id } });
   }
   return row;
+}
+
+/**
+ * Binning someone else's asset turns on the `delete` capability; an owner is
+ * carried through by ownership alone. Looser than core's own trash gate, which
+ * asks `delete` of everyone including the author — left as it was rather than
+ * tightened on the way past.
+ *
+ * The capability is spelled out rather than resolved through the registry, so
+ * it would miss the namespace a pooled media type gates under; #2436 covers
+ * the gates that still have that defect.
+ */
+function assertCanDeleteMedia(
+  context: AuthenticatedAppContext,
+  row: typeof entries.$inferSelect,
+  errors: Pick<MediaRpcErrors, "FORBIDDEN">,
+): void {
+  if (row.authorId === context.user.id) return;
+  const capability = "entry:media:delete";
+  if (!context.auth.can(capability)) {
+    throw errors.FORBIDDEN({ data: { capability } });
+  }
 }
 
 export function createMediaRouter(options: MediaRpcOptions) {
@@ -358,10 +369,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
     .handler(async ({ input, context, errors }): Promise<UpdateResponse> => {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
-      const row = await loadOwnedMediaRow(context, input.id, {
-        capability: "entry:media:edit_any",
-        errors,
-      });
+      const row = await loadMediaRow(context, input.id, errors);
+      assertCanEditEntry(context, row, errors);
 
       const meta = parseMediaMeta(row.meta);
       if (!meta) {
@@ -395,10 +404,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
     .handler(async ({ input, context, errors }): Promise<DeleteResponse> => {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
-      const row = await loadOwnedMediaRow(context, input.id, {
-        capability: "entry:media:delete",
-        errors,
-      });
+      const row = await loadMediaRow(context, input.id, errors);
+      assertCanDeleteMedia(context, row, errors);
 
       // Delete the row first, then the bytes. If the storage delete
       // fails we'd rather leave an orphan in the bucket (admin can
@@ -435,7 +442,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
 // for anything else, which the caller rethrows as it caught it.
 function mapMediaReadError(
   error: unknown,
-  errors: MediaRowGuards,
+  errors: MediaRpcErrors,
 ): Error | undefined {
   if (!(error instanceof MediaReadError)) return undefined;
   switch (error.data.code) {

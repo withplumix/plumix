@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
 import { and, eq } from "plumix/db";
+import { canEditEntry } from "plumix/plugin";
 import { entries } from "plumix/schema";
 
 import { parseMediaMeta } from "./meta.js";
@@ -54,10 +55,7 @@ export async function handleWorkerUpload(
   if (!row) return jsonError(404, "not_found");
   if (row.status !== "draft") return jsonError(409, "not_a_draft");
 
-  const isOwner = row.authorId === user.id;
-  if (!isOwner && !ctx.auth.can("entry:media:edit_any")) {
-    return jsonError(403, "forbidden");
-  }
+  if (!canEditEntry(ctx, row)) return jsonError(403, "forbidden");
 
   const meta = parseMediaMeta(row.meta);
   if (!meta) return jsonError(409, "media_meta_invalid");

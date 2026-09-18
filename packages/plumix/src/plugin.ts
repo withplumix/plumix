@@ -4,10 +4,15 @@
 export type * from "@plumix/core";
 export * as v from "valibot";
 
+// Prefer `canEditEntry` / `assertCanEditEntry` to a hand-built
+// `entry:<type>:edit_any`, which misses the namespace a pooled type gates
+// under; `requireCapability` still covers row-independent checks.
 export {
   ackEntryChanges,
+  assertCanEditEntry,
   authenticated,
   base,
+  canEditEntry,
   buildManifest,
   createAppContext,
   createPluginRegistry,

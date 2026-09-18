@@ -590,6 +590,33 @@ describe("entry.get", () => {
     expect(got.id).toBe(theirs.id);
   });
 
+  // `preview` overlays the caller's pending draft, so it asks the editor's
+  // gate rather than the read one. Denials name `edit_any` like every other
+  // edit-gated procedure — telling an author `edit_own` and a stranger
+  // `edit_any` would answer "did I write this?" for a row they cannot see.
+  test("a subscriber asking to preview their own published row is told edit_any", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    const mine = await h.factory.published.create({ authorId: h.user.id });
+    await expect(
+      h.client.entry.get({ id: mine.id, preview: true }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:edit_any" },
+    });
+  });
+
+  test("a contributor asking to preview another's published row is told the same", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const other = await h.factory.author.create();
+    const theirs = await h.factory.published.create({ authorId: other.id });
+    await expect(
+      h.client.entry.get({ id: theirs.id, preview: true }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:edit_any" },
+    });
+  });
+
   test("response includes a `meta` bag — empty object on a fresh post", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const post = await h.factory.published.create({ authorId: h.user.id });

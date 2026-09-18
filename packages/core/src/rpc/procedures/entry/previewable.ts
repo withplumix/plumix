@@ -1,19 +1,13 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry } from "../../../db/schema/entries.js";
+import type { EntryEditErrors } from "../../../entries/editability.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import {
-  entryCapability,
-  entryCapabilityNamespace,
-} from "../../../entries/capabilities.js";
+import { assertCanEditEntry } from "../../../entries/editability.js";
 import { getAutosave } from "../../../revisions/repository.js";
 
-/**
- * Taken as a parameter rather than built here so each caller's procedure keeps
- * its own error shapes.
- */
-export interface PreviewableEntryErrors {
-  readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
+/** Extends the edit gate's own shape, so the two cannot drift apart. */
+export interface PreviewableEntryErrors extends EntryEditErrors {
   readonly NOT_FOUND: (opts: { data: { kind: string; id: number } }) => Error;
 }
 
@@ -59,15 +53,7 @@ export async function previewableEntry(
   if (row === undefined || !entryTypes.includes(row.type)) {
     throw errors.NOT_FOUND({ data: { kind: "entry", id: entryId } });
   }
-  const namespace = entryCapabilityNamespace(ctx.plugins, row.type);
-  const editAny = entryCapability(namespace, "edit_any");
-  const mayEdit =
-    ctx.auth.can(editAny) ||
-    (row.authorId === ctx.user.id &&
-      ctx.auth.can(entryCapability(namespace, "edit_own")));
-  if (!mayEdit) {
-    throw errors.FORBIDDEN({ data: { capability: editAny } });
-  }
+  assertCanEditEntry(ctx, row, errors);
 
   const autosave = await getAutosave(ctx.db, {
     entryId: row.id,
