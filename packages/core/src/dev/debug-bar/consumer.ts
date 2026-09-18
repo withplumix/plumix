@@ -12,7 +12,7 @@ import { normalizeDebugBar } from "./config.js";
  * production builds.
  */
 export function debugBarTelemetryConsumer(
-  debugBar: DebugBarInput | undefined,
+  bar: DebugBarInput | undefined,
 ): TelemetryConsumer | null {
-  return normalizeDebugBar(debugBar).enabled ? { id: "debug-bar" } : null;
+  return normalizeDebugBar(bar).enabled ? { id: "debug-bar" } : null;
 }

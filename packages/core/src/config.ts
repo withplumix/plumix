@@ -6,6 +6,7 @@ import type { MailerInput } from "./auth/mailer/resolve.js";
 import type { TelemetryConfig } from "./context/telemetry.js";
 import type { DebugBarInput } from "./dev/debug-bar/config.js";
 import type { DebugPanelsInput } from "./dev/debug-panels/config.js";
+import type { DebugHistoryStoreOptions } from "./dev/request-history/store.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RedirectRule } from "./route/redirects.js";
@@ -47,13 +48,15 @@ export type ViteUserConfig = Readonly<Record<string, unknown>>;
 
 /**
  * Development-only configuration. Its members are the dev debug layers: the
- * overlay (`bar`) and the panel vocabulary both dev surfaces render (`panels`).
- * Composed here rather than under `dev/` so no module in that tree has to name
- * all of its layers to declare the shape — which is what kept the panel
- * denylist homeless while it was spelled as bar config (#2425).
+ * overlay (`bar`), the panel vocabulary both dev surfaces render (`panels`),
+ * and the captured request-history ring (`history`). Composed here rather than
+ * under `dev/` so no module in that tree has to name all of its layers to
+ * declare the shape — which is what kept the panel denylist homeless while it
+ * was spelled as bar config (#2425).
  *
- * The whole block is carried through raw (like {@link mcp}) and interpreted
- * only inside dev-gated modules, which are tree-shaken from production builds.
+ * The whole block is carried through raw, like
+ * {@link PlumixConfigInput.mcp}, and interpreted only inside dev-gated
+ * modules, which are tree-shaken from production builds.
  */
 export interface DevInput {
   /** The dev debug bar. `false` suppresses it; defaults on in development. */
@@ -64,6 +67,12 @@ export interface DevInput {
    * routes, which render stored snapshots with no bar in sight.
    */
   readonly panels?: DebugPanelsInput;
+  /**
+   * Bounds on the dev request-history ring the debug bar, its read routes and
+   * the two dev MCP tools all share. The ring belongs to the app, which is
+   * what makes these reachable at all (#2442).
+   */
+  readonly history?: DebugHistoryStoreOptions;
 }
 
 /**

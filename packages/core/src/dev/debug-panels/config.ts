@@ -19,15 +19,26 @@
  *
  * The value type carries nothing; the key is the whole declaration.
  */
-export interface DebugPanelRegistry {
-  app: true;
-  request: true;
-  database: true;
-  template: true;
-  timeline: true;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
+export interface DebugPanelRegistry extends Record<CoreDebugPanelId, true> {}
 
-export type DebugPanelId = keyof DebugPanelRegistry;
+/**
+ * The ids of the panels core registers. A runtime list rather than five
+ * interface members so a test can hold it equal to what `registerCoreDebugPanels`
+ * actually contributes — a registry key with no panel behind it would be the
+ * same silent no-op this registry exists to rule out.
+ */
+export const CORE_DEBUG_PANEL_IDS = [
+  "app",
+  "request",
+  "database",
+  "template",
+  "timeline",
+] as const;
+
+type CoreDebugPanelId = (typeof CORE_DEBUG_PANEL_IDS)[number];
+
+type DebugPanelId = keyof DebugPanelRegistry;
 
 /**
  * `dev.panels`: which panels this site shows. An absent key shows the panel,
@@ -42,15 +53,15 @@ export type DebugPanelsInput = Partial<Readonly<Record<DebugPanelId, boolean>>>;
  * it belongs to the panel layer and not to either of them.
  */
 export function disabledPanelIds(
-  input: DebugPanelsInput | undefined,
+  input: DebugPanelsInput = {},
 ): ReadonlySet<string> {
   const disabled = new Set<string>();
-  // `Object.entries` drops the `undefined` that `Partial` put on every value,
-  // and only an explicit `false` hides a panel — a key written as `undefined`
-  // is enumerated but means nothing, so the comparison has to stay a
-  // comparison rather than become a truthiness test.
+  // An absent key — or one written as `undefined` — shows the panel, so the
+  // test below has to stay a comparison. `Object.entries` drops the
+  // `undefined` that `Partial` put on every value, and the annotation puts it
+  // back; without it the comparison reads as redundant and lint rejects it.
   const entries: readonly (readonly [string, boolean | undefined])[] =
-    Object.entries(input ?? {});
+    Object.entries(input);
   for (const [id, shown] of entries) {
     if (shown === false) disabled.add(id);
   }

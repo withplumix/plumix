@@ -1,13 +1,33 @@
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../../context/app.js";
 import type { DebugPanelsInput } from "./config.js";
-import { disabledPanelIds } from "./config.js";
+import { HookRegistry } from "../../hooks/registry.js";
+import { createTestContext } from "../../test/context.js";
+import { createTestDb } from "../../test/harness.js";
+import { collectDebugPanels } from "./collect.js";
+import { CORE_DEBUG_PANEL_IDS, disabledPanelIds } from "./config.js";
+import { registerCoreDebugPanels } from "./core-panels.js";
 
 // The point of the registry, and the reason this is a type and not a runtime
 // check: the old free-string denylist accepted a typo and silently did nothing.
 // `tsc` fails on an unused `@ts-expect-error`, so these stop being satisfied
 // the moment the key set reopens.
 describe("panel ids are closed", () => {
+  // Closed is only worth anything if the closed set is the real one: a
+  // registry key with no panel behind it type-checks and hides nothing.
+  test("core's registry ids are exactly the panels core registers", async () => {
+    const hooks = new HookRegistry();
+    registerCoreDebugPanels(hooks);
+    const ctx: AppContext = createTestContext({ db: await createTestDb() });
+
+    const registered = collectDebugPanels(hooks, ctx, new Set())
+      .map((p) => p.id)
+      .sort();
+
+    expect(registered).toEqual([...CORE_DEBUG_PANEL_IDS].sort());
+  });
+
   test("a registered core id is nameable", () => {
     const input: DebugPanelsInput = { database: false };
 

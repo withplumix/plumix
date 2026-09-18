@@ -16,6 +16,7 @@ import type { CapabilityResolver, KnownCapability } from "../auth/rbac.js";
 import type { DevInput } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { DebugHistoryStore } from "../dev/request-history/store.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
@@ -336,6 +337,12 @@ export interface AppContextBase<
    */
   readonly dev?: DevInput;
   /**
+   * The app's dev request-history ring, or undefined outside the dev gate.
+   * Handed down rather than imported so every reader shares the instance the
+   * app configured (#2442).
+   */
+  readonly debugHistory?: DebugHistoryStore;
+  /**
    * Operator-set site name from `auth.magicLink.siteName`, used as
    * the human-friendly label in mailer subjects ("Confirm your email
    * for {siteName}"). Undefined when magic-link isn't configured —
@@ -417,6 +424,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly origin?: EnvInput<string>;
   readonly basePath?: string;
   readonly dev?: DevInput;
+  readonly debugHistory?: DebugHistoryStore;
   /** App-config telemetry slot — registered consumers vote per request. */
   readonly telemetry?: TelemetryConfig;
   readonly siteName?: string;
@@ -552,6 +560,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         : new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
     dev: args.dev,
+    debugHistory: args.debugHistory,
     // Provisional no-op — swapped for the real collector below iff a consumer
     // votes to sample this request. Consumers see the assembled context when
     // voting, so `telemetry` must exist (inactive) before the vote runs.
@@ -591,6 +600,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
     args.dev,
+    args.debugHistory,
     args.telemetry,
   );
   if (sampled.length > 0) {
@@ -619,13 +629,14 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
 function sampleTelemetryConsumers(
   ctx: AppContext,
   dev: DevInput | undefined,
+  history: DebugHistoryStore | undefined,
   config: TelemetryConfig | undefined,
 ): readonly TelemetryConsumer[] {
   const consumers: TelemetryConsumer[] = [];
   if (process.env.PLUMIX_DEV) {
     const bar = debugBarTelemetryConsumer(dev?.bar);
     if (bar) consumers.push(bar);
-    consumers.push(debugHistoryConsumer());
+    if (history) consumers.push(debugHistoryConsumer(history));
   }
   consumers.push(...(config?.consumers ?? []));
   return consumers.filter((c) => c.sample?.(ctx) ?? true);

@@ -327,6 +327,7 @@ export function requestContextArgs({
     imageDelivery: slots.imageDelivery,
     imageRemotePatterns: app.config.images?.remotePatterns,
     dev: app.config.dev,
+    debugHistory: app.debugHistory,
     telemetry: app.config.telemetry,
     mailer: app.config.mailer,
     i18n: app.config.i18n,

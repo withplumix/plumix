@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import type { McpTool } from "./tool.js";
-import { debugHistory } from "../dev/request-history/store.js";
 import { McpToolError } from "./errors.js";
 
 // Both tools read the dev request-history ring the debug bar already writes to
@@ -15,8 +14,8 @@ export const telemetryRequestsListTool: McpTool<typeof requestsListInput> = {
   description:
     "List the requests the dev server recently handled, newest-first — each with request id, method, path, status, and duration (ms). Pick one and read its trace with telemetry_request_get.",
   inputSchema: requestsListInput,
-  run() {
-    return debugHistory.get().map((entry) => ({
+  run(ctx) {
+    return (ctx.debugHistory?.get() ?? []).map((entry) => ({
       id: entry.id,
       method: entry.snapshot.context.method,
       path: entry.snapshot.context.path,
@@ -49,8 +48,8 @@ export const telemetryRequestGetTool: McpTool<typeof requestGetInput> = {
   description:
     "Read one recent request's trace by id: the context projection and the span tree (name, timing, status, captured error, attributes, nested children). Records are opt-in via `include` so a large snapshot doesn't flood context.",
   inputSchema: requestGetInput,
-  run(_ctx, input) {
-    const entry = debugHistory.find(input.id);
+  run(ctx, input) {
+    const entry = ctx.debugHistory?.find(input.id);
     if (entry === undefined) {
       throw McpToolError.notFound(`no captured request with id "${input.id}"`);
     }

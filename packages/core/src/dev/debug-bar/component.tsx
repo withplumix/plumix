@@ -6,7 +6,6 @@ import { disabledPanelIds } from "../debug-panels/config.js";
 import { DebugPanelTabs } from "../debug-panels/panels-view.js";
 import { renderDebugPanels } from "../debug-panels/render-panels.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
-import { debugHistory } from "../request-history/store.js";
 import { normalizeDebugBar } from "./config.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
 import {
@@ -57,7 +56,7 @@ export function PlumixDebugBar({
       method: snapshot.context.method,
       path: snapshot.context.path,
     },
-    debugHistory.get(),
+    ctx.debugHistory?.get() ?? [],
   );
 
   return (
