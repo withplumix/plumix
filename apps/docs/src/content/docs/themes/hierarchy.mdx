@@ -44,9 +44,8 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 1. **Cover the tiers first.** A theme with `fallback` alone is already complete, because every node reaches it. Add tiers as the pages diverge.
 
    ```tsx
-   import type { ArchiveData, EntryData } from "plumix";
-   import { archive, entry, fallback } from "plumix";
-   import { defineTemplate } from "plumix/theme";
+   import type { ArchiveData, EntryData } from "plumix/theme";
+   import { archive, defineTemplate, entry, fallback } from "plumix/theme";
 
    const anything = defineTemplate({
      render: ({ data }) => <main data-kind={data.kind} />,
@@ -67,8 +66,7 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 
    ```tsx
    import type { EntryData, ResolvedEntry } from "plumix";
-   import { entry, forEntryType } from "plumix";
-   import { defineTemplate } from "plumix/theme";
+   import { defineTemplate, entry, forEntryType } from "plumix/theme";
 
    declare module "plumix" {
      interface EntryTypeRegistry {
@@ -112,8 +110,7 @@ A matcher holds a node kind and a type name, plus whichever narrowing the builde
 
 ```tsx
 import type { EntryData, ResolvedEntry } from "plumix";
-import { forEntryType } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, forEntryType } from "plumix/theme";
 
 declare module "plumix" {
   interface EntryTypeRegistry {

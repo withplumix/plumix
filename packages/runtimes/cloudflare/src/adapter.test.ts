@@ -1,23 +1,19 @@
+import type { TelemetrySnapshot } from "plumix";
+import type { PluginDescriptor } from "plumix/plugin";
 import type {
   AssetsBinding,
   DatabaseAdapter,
   Invocation,
-  PluginDescriptor,
   RequestScopedDb,
   RequestScopedDbArgs,
-  TelemetrySnapshot,
-} from "plumix";
+} from "plumix/runtime";
 import type { AssetsNotFound } from "plumix/test/conformance";
-import {
-  auth as authConfig,
-  buildApp,
-  definePlugin,
-  defineTheme,
-  plumix,
-  requestStore,
-  SESSION_COOKIE_NAME,
-} from "plumix";
+import { plumix } from "plumix";
+import { auth as authConfig, SESSION_COOKIE_NAME } from "plumix/auth";
+import { definePlugin, requestStore } from "plumix/plugin";
+import { buildApp } from "plumix/runtime";
 import { describeAssetsContract } from "plumix/test/conformance";
+import { defineTheme } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import { cloudflare } from "./adapter.js";

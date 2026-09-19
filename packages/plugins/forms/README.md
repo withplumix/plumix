@@ -709,8 +709,8 @@ to the new step's heading, and the step being filled in is marked
 A plugin can ship a form of its own:
 
 ```ts
-import { definePlugin } from "plumix";
 import { email } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
 
 import { defineForm } from "@plumix/plugin-forms";
 

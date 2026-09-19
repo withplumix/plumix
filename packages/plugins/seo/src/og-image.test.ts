@@ -1,5 +1,6 @@
-import type { PluginRegistry, TemplateData } from "plumix";
-import type { AppContext, MetaBoxField } from "plumix/plugin";
+import type { TemplateData } from "plumix";
+import type { MetaBoxField } from "plumix/fields";
+import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { HookRegistry } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
 import { beforeAll, describe, expect, test } from "vitest";

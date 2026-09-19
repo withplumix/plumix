@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { readEntryType } from "plumix";
+import { readEntryType } from "plumix/plugin";
 import {
   createTestContext,
   createTestDb,

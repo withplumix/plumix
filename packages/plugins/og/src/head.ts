@@ -4,7 +4,7 @@
 // subscription in `index.ts` typecheck.
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { resolveListingPage, ruleLabel } from "plumix";
+import { resolveListingPage, ruleLabel } from "plumix/plugin";
 
 import type { OgImage } from "@plumix/plugin-seo";
 

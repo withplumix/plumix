@@ -1,6 +1,6 @@
-import type { ConnectedObjectStorage } from "plumix";
+import type { ConnectedObjectStorage } from "plumix/runtime";
 import type { DispatcherHarness } from "plumix/test";
-import { memoryStorage } from "plumix";
+import { memoryStorage } from "plumix/runtime";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { CardRule } from "./card.js";

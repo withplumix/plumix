@@ -1,12 +1,12 @@
 import type { SQL } from "drizzle-orm";
 import type {
-  AppContext,
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "plumix";
+import type { AppContext } from "plumix/plugin";
 import { sql } from "drizzle-orm";
-import { requestStore } from "plumix";
+import { requestStore } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
 import { describe, expect, test } from "vitest";
 

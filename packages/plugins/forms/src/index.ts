@@ -3,7 +3,11 @@
 // target loaded — every registry seam merges through that one specifier.
 import type { PluginContextExtensions } from "plumix";
 import type { Label } from "plumix/i18n";
-import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 // Side-effect import: the hook augmentations live beside the code that
 // fires them, and this is the edge tsc keeps so they reach a consumer's

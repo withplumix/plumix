@@ -3,7 +3,9 @@ import type {
   PluginAfterSetupContext,
   PluginSetupContext,
 } from "plumix/plugin";
-import { enqueuePurgeTags, tagCdnEntry, typeTag, withBasePath } from "plumix";
+import { enqueuePurgeTags, typeTag } from "plumix/db";
+import { tagCdnEntry } from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 import type { SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";

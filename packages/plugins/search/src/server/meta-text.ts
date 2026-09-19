@@ -1,4 +1,5 @@
-import type { MetaBoxField, PluginRegistry } from "plumix/plugin";
+import type { MetaBoxField } from "plumix/fields";
+import type { PluginRegistry } from "plumix/plugin";
 import { listEntryMetaFields } from "plumix/plugin";
 
 // Bumped when the extraction below changes — a different way of walking a

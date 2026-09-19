@@ -30,7 +30,7 @@ import {
 } from "drizzle-orm";
 import { BetterSQLiteSession } from "drizzle-orm/better-sqlite3/session";
 import { BaseSQLiteDatabase, SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
-import { traceDbQuerySync } from "plumix";
+import { traceDbQuerySync } from "plumix/runtime";
 
 const BUSY_TIMEOUT_MS = 5_000;
 

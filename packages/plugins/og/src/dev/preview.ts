@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { ruleLabel, withBasePath } from "plumix";
+import { ruleLabel } from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 import type { CardInputs } from "../card-identity.js";
 import type { CardRule } from "../card.js";

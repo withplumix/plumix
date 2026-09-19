@@ -13,7 +13,8 @@ pnpm add @plumix/runtime-node
 ## Usage
 
 ```ts
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import { node, nodeSqlite } from "@plumix/runtime-node";
 

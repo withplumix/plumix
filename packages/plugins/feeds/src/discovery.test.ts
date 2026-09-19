@@ -1,4 +1,5 @@
-import type { AppContext, DocumentManifest, TemplateData } from "plumix";
+import type { DocumentManifest, TemplateData } from "plumix";
+import type { AppContext } from "plumix/plugin";
 import {
   createPluginRegistry,
   definePlugin,

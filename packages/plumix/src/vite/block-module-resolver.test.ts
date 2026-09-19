@@ -8,7 +8,7 @@ import {
 
 // Real config modules always import the factory from `plumix`; the extractor
 // requires that provenance, so fixtures carry the import too.
-const THEME = `import { defineTheme } from "plumix";`;
+const THEME = `import { defineTheme } from "plumix/theme";`;
 const PLUGIN = `import { definePlugin } from "plumix/plugin";`;
 
 const ref = (module: string, exportName = "default") => ({
@@ -89,7 +89,7 @@ describe("extractBlockModules", () => {
   test("finds the factory even when imported under an alias", () => {
     const result = extractBlockModules(
       `import blocks from "./blocks";
-       import { defineTheme as dt } from "plumix";
+       import { defineTheme as dt } from "plumix/theme";
        export default dt({ blocks });`,
     );
     expect(result).toEqual({ ok: true, modules: [ref("./blocks")] });
@@ -157,7 +157,8 @@ describe("extractBlockModules", () => {
 
   test("ignores a nested factory call and keeps the outer config's blocks", () => {
     const result = extractBlockModules(
-      `import { defineTheme, definePlugin } from "plumix";
+      `import { defineTheme } from "plumix/theme";
+import { definePlugin } from "plumix/plugin";
        import blocks from "./blocks";
        export default defineTheme({
          blocks,
@@ -169,7 +170,7 @@ describe("extractBlockModules", () => {
 
   test("a nested factory's own blocks never overwrite the outer config's", () => {
     const result = extractBlockModules(
-      `import { defineTheme, definePlugin } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        import blocks from "./blocks";
        import other from "./other";
        export default defineTheme({
@@ -182,7 +183,7 @@ describe("extractBlockModules", () => {
 
   test("picks the top-level factory call that actually declares blocks", () => {
     const result = extractBlockModules(
-      `import { defineTheme, definePlugin } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        import blocks from "./blocks";
        export const theme = defineTheme({ blocks });
        export const plugin = definePlugin({ templates: [] });`,
@@ -192,7 +193,7 @@ describe("extractBlockModules", () => {
 
   test("a local look-alike (not imported from plumix) is not treated as a factory", () => {
     const result = extractBlockModules(
-      `import { defineTheme } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        import blocks from "./blocks";
        export const theme = defineTheme({ blocks });
        function definePlugin(x) { return x; }
@@ -283,7 +284,7 @@ describe("resolveBlockModulePaths", () => {
 
   test("resolves a relative specifier against the module's directory", () => {
     const paths = resolveBlockModulePaths(
-      `import { defineTheme } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        import blocks from "./blocks.js";
        export default defineTheme({ blocks });`,
       "/app/theme/index.ts",
@@ -303,7 +304,7 @@ describe("resolveBlockModulePaths", () => {
 
   test("returns no paths when the module declares no blocks", () => {
     const paths = resolveBlockModulePaths(
-      `import { defineTheme } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        export default defineTheme({ templates: [] });`,
       "/app/theme/index.ts",
     );
@@ -313,7 +314,7 @@ describe("resolveBlockModulePaths", () => {
   test("throws with the module path when the blocks binding is unresolvable", () => {
     expect(() =>
       resolveBlockModulePaths(
-        `import { defineTheme } from "plumix";
+        `import { defineTheme } from "plumix/theme";
          export default defineTheme({ blocks: loadBlocks() });`,
         "/app/theme/index.ts",
       ),

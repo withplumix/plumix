@@ -1,5 +1,9 @@
-import { buildResolvedEntries, previewableEntry } from "plumix";
-import { authenticated, base } from "plumix/plugin";
+import {
+  authenticated,
+  base,
+  buildResolvedEntries,
+  previewableEntry,
+} from "plumix/plugin";
 import * as v from "valibot";
 
 import type { SerpPreview } from "./serp.js";

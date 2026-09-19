@@ -1,8 +1,9 @@
-import type { TemplateData } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { defineTheme, fallback, memoryStorage } from "plumix";
+import type { TemplateData } from "plumix/theme";
 import { definePlugin } from "plumix/plugin";
+import { memoryStorage } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import type { CardArgs, CardRule } from "./card.js";

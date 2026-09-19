@@ -1,5 +1,5 @@
-import type { ErrorData } from "plumix";
-import { defineTemplate } from "plumix";
+import type { ErrorData } from "plumix/theme";
+import { defineTemplate } from "plumix/theme";
 
 import { Layout } from "../components/Layout";
 import { NotFound } from "../components/NotFound";

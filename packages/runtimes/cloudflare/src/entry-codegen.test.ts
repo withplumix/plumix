@@ -97,7 +97,7 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("if (process.env.PLUMIX_DEV)");
     expect(source).toContain("renderDevBootErrorResponse(bootError)");
     expect(source).toContain(
-      'import { buildApp, renderDevBootErrorResponse } from "plumix";',
+      'import { buildApp, renderDevBootErrorResponse } from "plumix/runtime";',
     );
   });
 

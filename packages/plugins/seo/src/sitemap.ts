@@ -1,13 +1,9 @@
 import type { PluginRegistry } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import {
-  buildEntryPermalinks,
-  buildTermArchiveUrls,
-  typeTag,
-  withBasePath,
-  xmlEscape,
-} from "plumix";
-import { and, entries, eq, sql, terms } from "plumix/db";
+import { and, eq, sql, typeTag } from "plumix/db";
+import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
+import { entries, terms } from "plumix/schema";
+import { withBasePath, xmlEscape } from "plumix/support";
 
 import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";

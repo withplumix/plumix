@@ -66,7 +66,8 @@ yarn add -D wrangler @cloudflare/workers-types
 1. **Point the config at the runtime.** In `plumix.config.ts`:
 
    ```ts no-typecheck
-   import { auth, plumix } from "plumix";
+   import { plumix } from "plumix";
+   import { auth } from "plumix/auth";
 
    import { cloudflare, d1 } from "@plumix/runtime-cloudflare";
 
@@ -168,7 +169,7 @@ Presigned uploads need S3 credentials, because an R2 binding cannot mint a presi
 
 ## KV
 
-`kv({ binding })` binds a Workers KV namespace onto the request context as `ctx.kv`, with `get`, `put`, `delete` and `list` over string values. Core reads nothing from it. The slot is there for plugin handlers that want a cheap key/value store, and `memoryKv()` from `plumix` stands in for it in tests.
+`kv({ binding })` binds a Workers KV namespace onto the request context as `ctx.kv`, with `get`, `put`, `delete` and `list` over string values. Core reads nothing from it. The slot is there for plugin handlers that want a cheap key/value store, and `memoryKv()` from `plumix/runtime` stands in for it in tests.
 
 Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat that as the floor.
 
@@ -222,7 +223,7 @@ A passkey is bound to a hostname. Workers Builds gives production `recipes.your-
 `cloudflareDeployOrigin` hands you that span. Spread it into `passkey` and it returns `rpId: "your-account.workers.dev"`, the `origin` of whichever host this build is served on, and `allowedOrigins: ["https://*.your-account.workers.dev"]`.
 
 ```ts no-typecheck
-import { auth } from "plumix";
+import { auth } from "plumix/auth";
 
 import { cloudflareDeployOrigin } from "@plumix/runtime-cloudflare";
 
@@ -243,7 +244,7 @@ It reads that host out of `WORKERS_CI` and `WORKERS_CI_BRANCH`, which only Cloud
 A locally built deploy whose passkeys have to work therefore states the origin in the config itself. Anchor `rpId` to `your-account.workers.dev` with the wildcard `https://*.your-account.workers.dev` in `allowedOrigins`, so one passkey still spans production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the plugin substitutes as a literal too, `"1"` under `plumix dev` and empty under `plumix build`.
 
 ```ts no-typecheck
-import { auth } from "plumix";
+import { auth } from "plumix/auth";
 
 export const recipeAuth = auth({
   passkey: {
@@ -268,7 +269,7 @@ Production on a custom domain drops `allowedOrigins` and writes `rpId: "recipes.
 `cfAccess` replaces the request authenticator with a check on the `Cf-Access-Jwt-Assertion` header that Cloudflare Access sets once a request has passed the application's policy.
 
 ```ts no-typecheck
-import { auth } from "plumix";
+import { auth } from "plumix/auth";
 
 import { cfAccess } from "@plumix/runtime-cloudflare";
 

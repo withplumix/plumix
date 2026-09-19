@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { resolveReturnUrl } from "plumix";
+import { resolveReturnUrl } from "plumix/auth";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 

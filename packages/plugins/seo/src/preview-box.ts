@@ -1,4 +1,4 @@
-import type { MetaBoxFieldInput } from "plumix/plugin";
+import type { MetaBoxFieldInput } from "plumix/fields";
 
 /**
  * The field type the SERP preview renders under. The server names it on the

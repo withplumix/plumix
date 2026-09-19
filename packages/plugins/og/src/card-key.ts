@@ -1,4 +1,4 @@
-import { entryTag } from "plumix";
+import { entryTag } from "plumix/db";
 
 /**
  * What a card's `key` callback returns: what the card read, and the tag a

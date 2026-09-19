@@ -1,8 +1,9 @@
-import type { AnyPluginDescriptor, EntryData } from "plumix";
+import type { AnyPluginDescriptor } from "plumix";
+import type { EntryData } from "plumix/theme";
 import { createElement as el } from "react";
-import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import type { ResolvedThread } from "./server/load-thread.js";

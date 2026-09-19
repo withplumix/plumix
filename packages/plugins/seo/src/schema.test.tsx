@@ -1,9 +1,10 @@
-import type { JsonValue, TemplateData, ThemeDescriptor } from "plumix";
+import type { JsonValue, ThemeDescriptor } from "plumix";
 import type { PluginDescriptor } from "plumix/plugin";
 import type { DispatcherHarness } from "plumix/test";
-import { defineTheme, fallback } from "plumix";
+import type { TemplateData } from "plumix/theme";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import type { SchemaPiece } from "./schema.js";

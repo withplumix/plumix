@@ -1,5 +1,5 @@
-import type { EntryData } from "plumix";
-import { defineTemplate } from "plumix";
+import type { EntryData } from "plumix/theme";
+import { defineTemplate } from "plumix/theme";
 
 import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";

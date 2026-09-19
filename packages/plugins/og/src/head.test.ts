@@ -1,5 +1,5 @@
 import type { ImageDelivery } from "plumix";
-import { ACCESS_POLICY_META_KEY } from "plumix";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 

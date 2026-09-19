@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { withBasePath } from "plumix";
 import { labelSourceText } from "plumix/i18n";
+import { withBasePath } from "plumix/support";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { CommentFormError, CommentFormValues } from "../types.js";

@@ -121,6 +121,19 @@ describe("subpath-only modules stay off the root barrel", () => {
   );
 });
 
+// `@plumix/core/support` is what `plumix/support` promises an admin chunk or an
+// island can import. The ambient stores import `node:async_hooks`, which a
+// browser bundle cannot resolve, so one static edge into them from a helper
+// breaks every bundle that takes the subpath.
+describe("the support entry stays browser-safe", () => {
+  test("never reaches the ambient stores", () => {
+    expectUnreachable(
+      staticClosureOf([path.join(SRC, "support.ts")]),
+      "context/stores.ts",
+    );
+  });
+});
+
 // `cli/raw-migrations.ts` is loaded by every `plumix migrate generate`, and all
 // it wants from the change feed is a pair of `readonly string[]` constants.
 // While those lived beside the feed's drizzle-backed helpers, asking for two

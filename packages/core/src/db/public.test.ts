@@ -21,7 +21,6 @@ describe("@plumix/core/db surface", () => {
       "getTableColumns",
       "getTableName",
       "is",
-      "entries",
       "typeTag",
       "entryTag",
       "entryPurgeTags",
@@ -32,6 +31,10 @@ describe("@plumix/core/db surface", () => {
     ]) {
       expect(db, name).toHaveProperty(name);
     }
+  });
+
+  it("leaves the tables to @plumix/core/schema, their one import path", () => {
+    expect(db).not.toHaveProperty("entries");
   });
 
   it("does not leak core-owned purge lifecycle internals", () => {

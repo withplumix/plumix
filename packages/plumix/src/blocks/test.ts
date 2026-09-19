@@ -3,5 +3,4 @@ export {
   mockRegistry,
   renderBlockSpecToHtml,
   renderBlockTreeToHtml,
-  validateContent,
 } from "@plumix/blocks/test";

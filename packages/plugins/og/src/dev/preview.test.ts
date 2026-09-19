@@ -1,4 +1,4 @@
-import { memoryStorage } from "plumix";
+import { memoryStorage } from "plumix/runtime";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { cardKey } from "../card-key.js";

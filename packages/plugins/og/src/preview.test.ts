@@ -1,7 +1,7 @@
 import type { ImageDelivery } from "plumix";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
-import { ACCESS_POLICY_META_KEY } from "plumix";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
 import { describe, expect, test } from "vitest";

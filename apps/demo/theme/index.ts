@@ -1,4 +1,10 @@
-import { defineTheme, entry, fallback, forEntryType, notFound } from "plumix";
+import {
+  defineTheme,
+  entry,
+  fallback,
+  forEntryType,
+  notFound,
+} from "plumix/theme";
 
 import { fallback as fallbackTemplate } from "./templates/fallback";
 import { notFound as notFoundTemplate } from "./templates/not-found";

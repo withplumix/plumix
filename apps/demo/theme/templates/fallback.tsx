@@ -5,8 +5,8 @@ import type {
   FrontPageData,
   SearchData,
   TaxonomyData,
-} from "plumix";
-import { defineTemplate } from "plumix";
+} from "plumix/theme";
+import { defineTemplate } from "plumix/theme";
 
 import { Layout } from "../components/Layout";
 import { paginationInfo } from "../components/Pagination";

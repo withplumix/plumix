@@ -1,7 +1,7 @@
-import type { EntryData } from "plumix";
+import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
-import { defineTemplate, defineTheme, entry, fallback } from "plumix";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
 // Importing the result type also pulls the plugin's `TemplateDepRegistry`
 // augmentation, so `comments` is typed on the render args below.

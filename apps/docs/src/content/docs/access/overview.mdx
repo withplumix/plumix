@@ -34,7 +34,7 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 1. **Declare the auth slot.** The `auth()` call lives in `plumix.config.ts`, which is where the scaffolder writes it:
 
    ```ts
-   import { auth } from "plumix";
+   import { auth } from "plumix/auth";
 
    export const recipeAuth = auth({
      passkey: {
@@ -125,8 +125,8 @@ The [shared cache](/deployment/cdn/) asks the same predicate, so what you answer
 Declaring no session opens a narrow but real hole. Core then treats the request as anonymous throughout, so a route handler or theme that calls `authenticate` itself and personalizes what it renders has that render stored under the public URL and served on to the next visitor.
 
 ```ts
-import type { RequestAuthenticator } from "plumix";
-import { apiTokenAuthenticator, chainAuthenticators } from "plumix";
+import type { RequestAuthenticator } from "plumix/auth";
+import { apiTokenAuthenticator, chainAuthenticators } from "plumix/auth";
 import { eq } from "plumix/db";
 import { users } from "plumix/schema";
 

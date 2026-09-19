@@ -26,7 +26,7 @@ describe("collectEditorBlockModules", () => {
     write("theme/blocks.ts", "export default [];");
     write(
       "theme/index.ts",
-      `import { defineTheme } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        import blocks from "./blocks.js";
        export default defineTheme({ blocks });`,
     );
@@ -68,7 +68,7 @@ describe("collectEditorBlockModules", () => {
   test("returns nothing for a theme that declares no blocks", () => {
     write(
       "theme/index.ts",
-      `import { defineTheme } from "plumix";
+      `import { defineTheme } from "plumix/theme";
        export default defineTheme({ templates: [] });`,
     );
     const source = `import { plumix } from "plumix";

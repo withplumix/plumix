@@ -111,7 +111,8 @@ Then:
 1. **Put it in the `plugins` array.** `comments` is a factory, so you call it. The site's own plugin stays in the array beside it.
 
    ```ts no-typecheck
-   import { auth, plumix } from "plumix";
+   import { plumix } from "plumix";
+   import { auth } from "plumix/auth";
 
    import { comments } from "@plumix/plugin-comments";
    import {
@@ -265,7 +266,7 @@ The platform releases in lockstep. `plumix` and the five packages behind it, `@p
 
 The eleven plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
 
-Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer with the range `>=0.1.0 <1.0.0`, so any pre-1.0 platform release satisfies every plugin, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
+Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer from the first platform release its code works with up to `<1.0.0`, so any later pre-1.0 platform release satisfies it, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
 
 <Aside type="caution" title="Pre-1.0">
   A range that wide is a statement about the 0.x line, not a promise that a

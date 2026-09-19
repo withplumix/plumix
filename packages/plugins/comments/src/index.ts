@@ -1,7 +1,9 @@
-// Imported from the root `plumix` specifier so the `declare module "plumix"`
-// augmentation below has its target loaded.
 import type { Label } from "plumix/i18n";
-import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "./config.js";
 import type { CommentsConfig } from "./types.js";

@@ -1,5 +1,5 @@
-import type { PluginRegistry } from "plumix";
-import { exposesHierarchicalUrls } from "plumix";
+import type { PluginRegistry } from "plumix/plugin";
+import { exposesHierarchicalUrls } from "plumix/plugin";
 
 import type { FeedScope } from "./scope.js";
 import { publicEntryTypeNames, publicTaxonomiesByBaseSlug } from "./scope.js";

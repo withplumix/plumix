@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ThemeTokens } from "plumix/blocks";
-import { memoryStorage } from "plumix";
 import { emitThemeTokenCss } from "plumix/blocks";
 import { definePlugin } from "plumix/plugin";
+import { memoryStorage } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 

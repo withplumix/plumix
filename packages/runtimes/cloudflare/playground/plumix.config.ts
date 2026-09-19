@@ -1,4 +1,5 @@
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import { blog } from "@plumix/plugin-blog";
 import { media } from "@plumix/plugin-media";

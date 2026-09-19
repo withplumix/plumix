@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "plumix";
+import type { CommandDefinition } from "plumix/cli";
 import { CliError, spawnInherit } from "plumix/cli";
 
 import { loadWranglerConfig } from "../wrangler-config.js";

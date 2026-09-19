@@ -1,8 +1,9 @@
 import { join } from "node:path";
-import type { CommandDefinition, PlumixConfig, PlumixHandler } from "plumix";
+import type { CommandDefinition, PlumixConfig } from "plumix";
+import type { PlumixHandler } from "plumix/runtime";
 import type { Logger, Plugin } from "vite";
 import type { EvaluatedModules, ModuleRunner } from "vite/module-runner";
-import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix";
+import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix/runtime";
 
 import type { RequestListener } from "../http/bridge.js";
 import type { NodeSite } from "../site.js";

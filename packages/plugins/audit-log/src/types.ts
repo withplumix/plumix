@@ -1,4 +1,5 @@
-import type { AppContext, SchemaModule } from "plumix/plugin";
+import type { AppContext } from "plumix/plugin";
+import type { SchemaModule } from "plumix/runtime";
 
 import type { NewAuditLogRow } from "./db/schema.js";
 

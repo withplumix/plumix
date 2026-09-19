@@ -29,7 +29,10 @@ import {
 // database connection the site releases is appended to `data/closed.log`.
 const config = (plugins = "[probes]") =>
   `import { appendFileSync } from "node:fs";
-import { auth, definePlugin, defineTheme, fallback, plumix } from "plumix";
+import { auth } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
+import { defineTheme, fallback } from "plumix/theme";
+import { plumix } from "plumix";
 import { node, nodeSqlite } from "@plumix/runtime-node";
 import { greeting } from "./message.mjs";
 

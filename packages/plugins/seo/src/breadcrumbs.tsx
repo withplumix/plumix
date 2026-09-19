@@ -1,9 +1,9 @@
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import type { ReactElement } from "react";
-import { archiveSlugForEntryType, withBasePath } from "plumix";
 import { labelSourceText } from "plumix/i18n";
-import { tryGetContext } from "plumix/plugin";
+import { archiveSlugForEntryType, tryGetContext } from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 /** One step of the trail. */
 export interface BreadcrumbItem {

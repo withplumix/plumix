@@ -1,13 +1,13 @@
 import type { JsonValue } from "plumix";
+import type { MetaBoxFieldInput } from "plumix/fields";
 import type { Label } from "plumix/i18n";
 import type {
   AppContext,
-  MetaBoxFieldInput,
   PluginAfterSetupContext,
   PluginSetupContext,
 } from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
-import { loadSettingsGroups } from "plumix";
+import { loadSettingsGroups } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
 

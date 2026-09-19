@@ -16,7 +16,8 @@ import { Aside } from "@astrojs/starlight/components";
 The config file is the CLI's entry point and the worker's. `plumix dev`, `plumix build`, `plumix deploy`, `plumix migrate generate` and `plumix doctor` all load it first, and `--config <path>` points them somewhere other than `plumix.config.ts` in the project root.
 
 ```ts no-typecheck
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import {
   cloudflare,
@@ -137,7 +138,7 @@ The seven optional keys are these.
 - `loginPath` is where an access policy's `redirectToLogin()` sends an anonymous visitor, and it defaults to `/_plumix/admin/login`. Point it at a page that is not itself gated, or the visitor bounces between the gate and the login forever.
 
 ```ts
-import { auth } from "plumix";
+import { auth } from "plumix/auth";
 
 export const recipeAuth = auth({
   passkey: {
@@ -217,9 +218,8 @@ export const mailer = consoleMailer();
 The site's presentation layer. Omit it and the built-in welcome theme renders instead, so a site with no theme still serves pages.
 
 ```tsx
-import type { TemplateData } from "plumix";
-import { fallback } from "plumix";
-import { defineTemplate, defineTheme } from "plumix/theme";
+import type { TemplateData } from "plumix/theme";
+import { defineTemplate, defineTheme, fallback } from "plumix/theme";
 
 const index = defineTemplate<TemplateData>({
   render: () => <main>Recipes</main>,

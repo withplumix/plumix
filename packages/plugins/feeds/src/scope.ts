@@ -1,5 +1,5 @@
-import type { PluginRegistry, RegisteredTermTaxonomy } from "plumix";
-import { termTaxonomyBaseSlug } from "plumix";
+import type { PluginRegistry, RegisteredTermTaxonomy } from "plumix/plugin";
+import { termTaxonomyBaseSlug } from "plumix/plugin";
 
 /**
  * What a feed covers: the whole site, one entry type, one taxonomy term, one

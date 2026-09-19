@@ -1,6 +1,6 @@
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { loadTemplateDeps } from "plumix";
+import { loadTemplateDeps } from "plumix/plugin";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardArgs, CardDefinition } from "./card.js";

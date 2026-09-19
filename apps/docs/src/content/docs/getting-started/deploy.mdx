@@ -37,7 +37,7 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
 1. **Point the passkey at the deployed host.** In `plumix.config.ts`, set `rpId` to the host you are deploying to and `origin` to its `https://` address (or `http://` only if you genuinely serve plaintext, which a passkey ceremony run over the open internet should not).
 
    ```ts no-typecheck
-   import { auth } from "plumix";
+   import { auth } from "plumix/auth";
 
    export const recipeAuth = auth({
      passkey: {
@@ -118,7 +118,7 @@ Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm 
 2. **Point the passkey at the deployed host.** In `plumix.config.ts`, replace the scaffolded `cloudflareDeployOrigin` spread with literal values. Anchor `rpId` to your `workers.dev` subdomain and allow the wildcard beneath it, so one passkey covers production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the Vite plugin substitutes as `"1"` under `plumix dev` and empty under `plumix build`.
 
    ```ts no-typecheck
-   import { auth } from "plumix";
+   import { auth } from "plumix/auth";
 
    export const recipeAuth = auth({
      passkey: {

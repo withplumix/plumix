@@ -1,8 +1,5 @@
-import type {
-  AppContext,
-  PluginRegistry,
-  RequestAuthenticator,
-} from "plumix/plugin";
+import type { RequestAuthenticator } from "plumix/auth";
+import type { AppContext, PluginRegistry } from "plumix/plugin";
 import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {

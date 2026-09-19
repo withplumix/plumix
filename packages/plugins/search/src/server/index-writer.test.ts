@@ -1,8 +1,5 @@
-import type {
-  AppContext,
-  EntryTypeOptions,
-  MutablePluginRegistry,
-} from "plumix/plugin";
+import type { EntryTypeOptions } from "plumix";
+import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { defineEntryContent } from "plumix/blocks";
 import { eq } from "plumix/db";
 import { entries, terms } from "plumix/schema";

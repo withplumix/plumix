@@ -1,7 +1,5 @@
-import type { Label } from "plumix/i18n";
 import type {
   FieldBuilder,
-  JsonValue,
   MediaListMetaBoxField,
   MediaMetaBoxField,
   MetaBoxFieldSpan,
@@ -9,7 +7,9 @@ import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
   ReferenceTarget,
-} from "plumix/plugin";
+} from "plumix/fields";
+import type { Label } from "plumix/i18n";
+import type { JsonValue } from "plumix/support";
 
 import type { MediaFieldScope, MediaReference } from "./lookup.js";
 

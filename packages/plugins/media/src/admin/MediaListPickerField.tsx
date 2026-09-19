@@ -1,6 +1,6 @@
 import type { JsonValue } from "plumix";
+import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import type { MessageDescriptor } from "plumix/i18n";
-import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";

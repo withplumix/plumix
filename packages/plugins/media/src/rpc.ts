@@ -5,9 +5,9 @@ import {
   authenticated,
   base,
   requireCapability,
-  withBasePath,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
+import { withBasePath } from "plumix/support";
 import * as v from "valibot";
 
 import {

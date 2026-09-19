@@ -1,4 +1,7 @@
-import { auth, defineTheme, memoryStorage, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
+import { memoryStorage } from "plumix/runtime";
+import { defineTheme } from "plumix/theme";
 
 import { blog } from "@plumix/plugin-blog";
 import { og } from "@plumix/plugin-og";

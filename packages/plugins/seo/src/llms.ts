@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { loadSiteSettings } from "plumix";
+import { loadSiteSettings } from "plumix/plugin";
 
 import { loadSeoSettings, nonEmpty } from "./settings.js";
 import { sitemapIndexUrl } from "./sitemap.js";

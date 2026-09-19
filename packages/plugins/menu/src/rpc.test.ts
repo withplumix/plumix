@@ -1,5 +1,6 @@
 import type { JsonObject } from "plumix";
-import type { PluginRegistry, RequestAuthenticator } from "plumix/plugin";
+import type { RequestAuthenticator } from "plumix/auth";
+import type { PluginRegistry } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { and, eq } from "plumix/db";

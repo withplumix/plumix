@@ -1,5 +1,5 @@
-import type { TracedQuery } from "plumix";
-import { traceDbBatch, traceDbQuery } from "plumix";
+import type { TracedQuery } from "plumix/runtime";
+import { traceDbBatch, traceDbQuery } from "plumix/runtime";
 
 // Links a traced statement back to the real bound statement (for `batch`) and
 // to its sql/params (for the batch span's attributes).

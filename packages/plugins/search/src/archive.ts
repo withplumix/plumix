@@ -1,9 +1,10 @@
-import type { CustomArchiveData, PluginSetupContext } from "plumix/plugin";
+import type { CustomArchiveData } from "plumix";
+import type { PluginSetupContext } from "plumix/plugin";
 import {
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
-  withBasePath,
-} from "plumix";
+} from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 import type { SearchOptions, SearchResult } from "./server/query.js";
 import { runSearch } from "./server/query.js";

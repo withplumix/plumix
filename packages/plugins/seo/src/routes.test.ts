@@ -3,16 +3,17 @@ import type {
   CdnStore,
   ConnectedCdn,
   JsonValue,
-  Logger,
 } from "plumix";
+import type { Logger } from "plumix/plugin";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "plumix/test";
-import { defineTheme, entryPurgeTags, fallback, typeTag } from "plumix";
-import { entries, eq } from "plumix/db";
+import { entryPurgeTags, eq, typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { seo } from "./index.js";

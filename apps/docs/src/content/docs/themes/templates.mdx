@@ -48,7 +48,7 @@ declare module "plumix" {
 Wraps a render function into a branded template object. Every builder below takes one.
 
 ```tsx
-import type { EntryData } from "plumix";
+import type { EntryData } from "plumix/theme";
 import { defineTemplate } from "plumix/theme";
 
 export const recipe = defineTemplate<EntryData>({
@@ -70,8 +70,7 @@ The brand is a module-local symbol, so nothing outside `defineTemplate` can mint
 The universal catch-all. It matches every resolved node, so it is the last thing resolution tries and the one rule that guarantees a page rather than a 404.
 
 ```tsx
-import { fallback } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, fallback } from "plumix/theme";
 
 const anything = defineTemplate({
   render: ({ data }) => <main data-kind={data.kind}>Nothing here yet</main>,
@@ -87,9 +86,8 @@ Its template is typed against the whole `TemplateData` union, so narrow on `data
 Any single entry, of any type. This is the tier behind `/recipes/sicilian-caponata`.
 
 ```tsx
-import type { EntryData } from "plumix";
-import { entry } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { EntryData } from "plumix/theme";
+import { defineTemplate, entry } from "plumix/theme";
 
 const single = defineTemplate<EntryData>({
   render: ({ data }) => <h1>{data.entry.title}</h1>,
@@ -105,9 +103,8 @@ export const rules = [entry(single)];
 The listing for one entry type, at `/recipes` and its `/page/2` variants.
 
 ```tsx
-import type { ArchiveData } from "plumix";
-import { archive } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { ArchiveData } from "plumix/theme";
+import { archive, defineTemplate } from "plumix/theme";
 
 const listing = defineTemplate<ArchiveData>({
   render: ({ data }) => (
@@ -129,9 +126,8 @@ export const rules = [archive(listing)];
 A term archive, in any taxonomy. Both `/cuisine/italian/sicilian` and `/diet/vegetarian` reach it.
 
 ```tsx
-import type { TaxonomyData } from "plumix";
-import { taxonomy } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { TaxonomyData } from "plumix/theme";
+import { defineTemplate, taxonomy } from "plumix/theme";
 
 const terms = defineTemplate<TaxonomyData>({
   render: ({ data }) => (
@@ -154,9 +150,8 @@ export const rules = [taxonomy(terms)];
 An author archive, at `/authors/{slug}`.
 
 ```tsx
-import type { AuthorArchiveData } from "plumix";
-import { author } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { AuthorArchiveData } from "plumix/theme";
+import { author, defineTemplate } from "plumix/theme";
 
 const byAuthor = defineTemplate<AuthorArchiveData>({
   render: ({ data }) => (
@@ -177,9 +172,8 @@ export const rules = [author(byAuthor)];
 A date archive at any granularity, from `/2026` down to `/2026/07/21`.
 
 ```tsx
-import type { DateArchiveData } from "plumix";
-import { date } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { DateArchiveData } from "plumix/theme";
+import { date, defineTemplate } from "plumix/theme";
 
 const period = defineTemplate<DateArchiveData>({
   render: ({ data }) => (
@@ -197,9 +191,8 @@ export const rules = [date(period)];
 The site root. Its entries are the latest published ones across every non-hierarchical public type, so a page never appears in the feed.
 
 ```tsx
-import type { FrontPageData } from "plumix";
-import { frontPage } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { FrontPageData } from "plumix/theme";
+import { defineTemplate, frontPage } from "plumix/theme";
 
 const home = defineTemplate<FrontPageData>({
   render: ({ data }) => (
@@ -218,9 +211,8 @@ export const rules = [frontPage(home)];
 The search results page.
 
 ```tsx
-import type { SearchData } from "plumix";
-import { search } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { SearchData } from "plumix/theme";
+import { defineTemplate, search } from "plumix/theme";
 
 const results = defineTemplate<SearchData>({
   render: ({ data }) => (
@@ -241,9 +233,8 @@ export const rules = [search(results)];
 The 404 handler. Nothing matches it against a node. It fires when resolution finds no rule, and when a URL matches no route at all.
 
 ```tsx
-import type { ErrorData } from "plumix";
-import { notFound } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { ErrorData } from "plumix/theme";
+import { defineTemplate, notFound } from "plumix/theme";
 
 const missing = defineTemplate<ErrorData>({
   render: ({ data }) => (
@@ -264,9 +255,8 @@ A theme that declares no `notFound` gets a built-in 404 page. Resolution never f
 The 500 handler, fired when a render throws.
 
 ```tsx
-import type { ErrorData } from "plumix";
-import { serverError } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { ErrorData } from "plumix/theme";
+import { defineTemplate, serverError } from "plumix/theme";
 
 const failed = defineTemplate<ErrorData>({
   render: ({ data }) => (
@@ -287,9 +277,8 @@ export const rules = [serverError(failed)];
 Targets one registered entry type, and is the busiest builder on this page.
 
 ```tsx
-import type { ArchiveData, EntryData } from "plumix";
-import { forEntryType } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { ArchiveData, EntryData } from "plumix/theme";
+import { defineTemplate, forEntryType } from "plumix/theme";
 
 const single = defineTemplate<EntryData>({
   render: ({ data }) => <h1>{data.entry.title}</h1>,
@@ -326,9 +315,8 @@ A predicate rule only matches when the resolver has data in hand. The walk compa
 Targets one registered taxonomy, with the same selectors as `forEntryType` minus the archive.
 
 ```tsx
-import type { TaxonomyData } from "plumix";
-import { forTermTaxonomy } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { TaxonomyData } from "plumix/theme";
+import { defineTemplate, forTermTaxonomy } from "plumix/theme";
 
 const cuisinePage = defineTemplate<TaxonomyData>({
   render: ({ data }) => <h1>{data.term.name}</h1>,
@@ -349,9 +337,8 @@ export const rules = [
 Targets author archives. There is one author kind and no registry to autocomplete, so it takes no name.
 
 ```tsx
-import type { AuthorArchiveData } from "plumix";
-import { forAuthor } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { AuthorArchiveData } from "plumix/theme";
+import { defineTemplate, forAuthor } from "plumix/theme";
 
 const chefPage = defineTemplate<AuthorArchiveData>({
   render: ({ data }) => <h1>Recipes by {data.author.slug}</h1>,
@@ -367,9 +354,8 @@ Chain `.slug()` or `.id()` to reach one author. The bare `.template()` matches e
 Targets one date archive. The components are positional, because a month has no meaning without a year.
 
 ```tsx
-import type { DateArchiveData } from "plumix";
-import { forDate } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { DateArchiveData } from "plumix/theme";
+import { defineTemplate, forDate } from "plumix/theme";
 
 const summer = defineTemplate<DateArchiveData>({
   render: ({ data }) => <h1>Recipes from {data.year}</h1>,
@@ -390,8 +376,7 @@ Targets an archive a plugin registered with `registerArchiveType`. Core knows no
 
 ```tsx
 import type { CustomArchiveData } from "plumix";
-import { forArchiveType } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, forArchiveType } from "plumix/theme";
 
 interface SeasonalData extends CustomArchiveData {
   readonly kind: "custom";

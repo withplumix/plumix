@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 import type { ImageDelivery, TransformOpts } from "plumix";
 import type { RemotePattern } from "plumix/blocks/renderer";
 import type SharpModule from "sharp";
-import { withBasePath } from "plumix";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
+import { withBasePath } from "plumix/support";
 
 import type { VariantCache } from "./image-cache.js";
 import { ImagesError } from "./errors.js";

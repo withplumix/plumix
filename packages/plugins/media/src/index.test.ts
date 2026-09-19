@@ -1,4 +1,5 @@
-import { HookRegistry, installPlugins, memoryStorage } from "plumix/plugin";
+import { HookRegistry, installPlugins } from "plumix/plugin";
+import { memoryStorage } from "plumix/runtime";
 import {
   createDispatcherHarness,
   createTestContext,

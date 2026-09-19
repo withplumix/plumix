@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "plumix";
+import type { CommandDefinition } from "plumix/cli";
 import { spawnInherit } from "plumix/cli";
 
 export const typesCommand: CommandDefinition = {

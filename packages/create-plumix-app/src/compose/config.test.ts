@@ -45,7 +45,8 @@ describe("assembleConfig — blank Cloudflare app", () => {
   it("produces a plumix.config.ts wiring runtime, passkey auth, and the theme", () => {
     expect(assemble(blankSelection("my-app"))).toBe(
       `import { cloudflare, cloudflareDeployOrigin, d1 } from "@plumix/runtime-cloudflare";
-import { auth, plumix } from "plumix";
+import { auth } from "plumix/auth";
+import { plumix } from "plumix";
 
 import { theme } from "./theme";
 
@@ -136,7 +137,7 @@ describe("assembleConfig — with plugins", () => {
 const oauth: AuthMethodDescriptor = {
   id: "oauth",
   label: "OAuth",
-  imports: ['import { github } from "plumix";'],
+  imports: ['import { github } from "plumix/auth";'],
   authEntry:
     "oauth: { providers: { github: github((env) => ({ clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET })) } }",
   envVars: ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
@@ -159,10 +160,10 @@ describe("assembleConfig — auth methods", () => {
       authMethods: methods,
     });
 
-  it("folds auth imports into the plumix import line", () => {
-    expect(withAuth([oauth, magicLink])).toContain(
-      'import { auth, consoleMailer, github, plumix } from "plumix";',
-    );
+  it("folds auth imports into the plumix import lines", () => {
+    const config = withAuth([oauth, magicLink]);
+    expect(config).toContain('import { auth, github } from "plumix/auth";');
+    expect(config).toContain('import { consoleMailer, plumix } from "plumix";');
   });
 
   it("injects each method's entry into the auth block", () => {

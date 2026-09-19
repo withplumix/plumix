@@ -1,4 +1,4 @@
-import type { EntryTypeOptions } from "plumix/plugin";
+import type { EntryTypeOptions } from "plumix";
 import { blockTextRoster, coreBlocks, defineEntryContent } from "plumix/blocks";
 import { createPluginRegistry } from "plumix/plugin";
 import { toRegisteredEntryType } from "plumix/test";

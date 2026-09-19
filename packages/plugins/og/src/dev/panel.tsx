@@ -1,5 +1,7 @@
-import type { DebugKVRow, DebugPanel, DebugSnapshot } from "plumix";
-import { DebugKV, DebugSection, isJsonObject } from "plumix";
+import type { DebugSnapshot } from "plumix";
+import type { DebugKVRow, DebugPanel } from "plumix/plugin";
+import { DebugKV, DebugSection } from "plumix/plugin";
+import { isJsonObject } from "plumix/support";
 
 import type { OgCardSkip, OgChainOutcome, OgTrace } from "../chain-trace.js";
 import { OG_PANEL_ID } from "../chain-trace.js";

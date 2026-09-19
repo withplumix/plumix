@@ -19,14 +19,16 @@
 // the demo's `typecheck` task in CI (which resolves `plumix` to built dist).
 
 import type {
-  CustomArchiveData,
   ReferenceHydrationShapes,
-  ResolvedEntry,
-  ResolvedTerm,
   TemplateDepRegistry,
   ThemeDescriptor,
 } from "plumix";
-import { forArchiveType, forEntryType, forTermTaxonomy } from "plumix";
+import type {
+  CustomArchiveData,
+  ResolvedEntry,
+  ResolvedTerm,
+} from "plumix/theme";
+import { forArchiveType, forEntryType, forTermTaxonomy } from "plumix/theme";
 
 import type { BlockPattern } from "@plumix/blocks";
 import { block } from "@plumix/blocks";

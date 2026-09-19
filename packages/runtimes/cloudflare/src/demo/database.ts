@@ -1,6 +1,7 @@
-import type { DatabaseAdapter, PlumixEnv, SchemaModule } from "plumix";
+import type { PlumixEnv } from "plumix";
+import type { DatabaseAdapter, SchemaModule } from "plumix/runtime";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
-import { traceDbBatch, traceDbQuery } from "plumix";
+import { traceDbBatch, traceDbQuery } from "plumix/runtime";
 
 import { DEMO_SHOWCASE_NAME, demoStub, readDemoToken } from "./session.js";
 

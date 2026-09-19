@@ -1,4 +1,5 @@
-import type { MetaBoxField, MutablePluginRegistry } from "plumix/plugin";
+import type { MetaBoxField } from "plumix/fields";
+import type { MutablePluginRegistry } from "plumix/plugin";
 import { richtext, text, textarea } from "plumix/fields";
 import { createPluginRegistry } from "plumix/plugin";
 import { toRegisteredEntryType } from "plumix/test";

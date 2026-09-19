@@ -1,5 +1,5 @@
-import type { EntryData } from "plumix";
-import { defineTemplate } from "plumix";
+import type { EntryData } from "plumix/theme";
+import { defineTemplate } from "plumix/theme";
 
 // Likewise pulls the blog plugin's `relatedPosts` dep augmentation.
 import type { RelatedPosts as RelatedPostsData } from "@plumix/plugin-blog";

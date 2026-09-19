@@ -1,6 +1,6 @@
-import type { OgImage, TemplateData } from "plumix";
-import type { AppContext } from "plumix/plugin";
-import { entryRoleImage } from "plumix";
+import type { TemplateData } from "plumix";
+import type { AppContext, OgImage } from "plumix/plugin";
+import { entryRoleImage } from "plumix/plugin";
 
 declare module "plumix" {
   interface FilterRegistry {

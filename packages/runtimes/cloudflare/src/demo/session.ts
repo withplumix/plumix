@@ -1,4 +1,8 @@
-import { buildSessionCookie, isSecureRequest, readSessionCookie } from "plumix";
+import {
+  buildSessionCookie,
+  isSecureRequest,
+  readSessionCookie,
+} from "plumix/auth";
 
 import type { DemoDB } from "./demo-db.js";
 import { DemoError } from "../errors.js";

@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { memoBatch } from "plumix";
 import { and, eq, inArray } from "plumix/db";
+import { memoBatch } from "plumix/plugin";
 import { settings } from "plumix/schema";
 
 import type { ResolvedMenu } from "./types.js";

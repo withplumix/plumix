@@ -31,7 +31,8 @@ thumbnails are derived). The Cloudflare and Node runtimes both ship
 compatible implementations.
 
 ```ts
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import { media } from "@plumix/plugin-media";
 import { cloudflare, d1, images, r2 } from "@plumix/runtime-cloudflare";

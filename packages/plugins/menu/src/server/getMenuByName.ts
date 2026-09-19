@@ -1,8 +1,7 @@
 import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
-import { memoBatch } from "plumix";
 import { and, eq, inArray } from "plumix/db";
-import { isCurrentSource } from "plumix/plugin";
+import { isCurrentSource, memoBatch } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";

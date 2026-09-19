@@ -1,4 +1,4 @@
-import { auth } from "plumix";
+import { auth } from "plumix/auth";
 
 import type { TurnstileConfig } from "./turnstile.js";
 import { cloudflare } from "../adapter.js";

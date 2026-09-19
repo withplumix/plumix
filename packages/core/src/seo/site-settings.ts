@@ -20,8 +20,3 @@ export async function loadSiteSettings(ctx: AppContext): Promise<SettingsBag> {
   const groups = await loadSettingsGroups(ctx, ["site"]);
   return groups.site ?? {};
 }
-
-/** A settings value coerced to a non-empty string, or null. */
-export function nonEmpty(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
