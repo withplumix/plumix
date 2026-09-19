@@ -1,10 +1,18 @@
 import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import { defineBlock } from "@plumix/blocks";
+
 import { HookRegistry } from "../hooks/registry.js";
 import { base } from "../rpc/base.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
+import { registerCoreSettings } from "../settings-core.js";
+import { registerCoreTemplateDeps } from "../template-deps-core.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { definePlugin } from "./define.js";
 import { DuplicateRegistrationError } from "./errors.js";
+import { createPluginRegistry } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
 import "../rpc/hooks.js";
@@ -12,7 +20,17 @@ import "../rpc/hooks.js";
 import type { Lazy } from "@orpc/server";
 
 import type { NewEntry } from "../db/schema/entries.js";
+import type { Label } from "../i18n/label.js";
+import type { LookupAdapter } from "./lookup.js";
+import type { PluginRegistry } from "./manifest.js";
 import type { PluginRpcRouter, RegisteredEntryType } from "./registry.js";
+import type { PluginSetupContext } from "./setup-context.js";
+
+declare module "../template.js" {
+  interface TemplateDepRegistry {
+    "dup-thing": { slug: string; result: string };
+  }
+}
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -568,17 +586,6 @@ describe("registerRpcRouter", () => {
     expectTypeOf<{ list: () => string }>().not.toExtend<PluginRpcRouter>();
   });
 
-  test("rejects a second registration from the same plugin", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerRpcRouter({ list });
-      ctx.registerRpcRouter({ get: list });
-    });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /plugin RPC router "menus" is already registered/,
-    );
-  });
-
   test.each(["auth", "entry", "term", "user", "lookup", "search", "settings"])(
     "rejects plugin id `%s` that collides with a core RPC namespace",
     async (pluginId) => {
@@ -608,25 +615,6 @@ describe("registerMcpTool", () => {
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.mcpTools.get("media_list")?.registeredBy).toBe("media");
-  });
-
-  test("rejects two plugins registering the same tool name", async () => {
-    const hooks = new HookRegistry();
-    const a = definePlugin("a", (ctx) => ctx.registerMcpTool(tool("thing")));
-    const b = definePlugin("b", (ctx) => ctx.registerMcpTool(tool("thing")));
-    await expect(installPlugins({ hooks, plugins: [a, b] })).rejects.toThrow(
-      /MCP tool "thing" is already registered/,
-    );
-  });
-
-  test("rejects a tool name that collides with a core tool", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("rogue", (ctx) => {
-      ctx.registerMcpTool(tool("schema_describe"));
-    });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /MCP tool "schema_describe" is already registered/,
-    );
   });
 });
 
@@ -672,17 +660,6 @@ describe("registerAdminPage", () => {
         title: "Menus",
         registeredBy: "menus",
       }),
-    );
-  });
-
-  test("rejects duplicate paths within a single plugin", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage(page);
-      ctx.registerAdminPage({ ...page, title: "Dupe" });
-    });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /admin page "\/menus" is already registered/,
     );
   });
 
@@ -761,17 +738,6 @@ describe("registerFieldType", () => {
       ).rejects.toThrow(`invalid name "${type}"`);
     },
   );
-
-  test("rejects duplicate type within a plugin", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerFieldType({ type: "color", component: componentRef });
-      ctx.registerFieldType({ type: "color", component: componentRef });
-    });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /field type "color" is already registered/,
-    );
-  });
 
   test("requires a component ref (no optional fallback to dispatcher)", async () => {
     const hooks = new HookRegistry();
@@ -901,27 +867,6 @@ describe("registerRoute", () => {
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /POST \/submit is not public/,
-    );
-  });
-
-  test("rejects a duplicate (method, path) pair from the same plugin", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "authenticated",
-        handler: noop,
-      });
-      ctx.registerRoute({
-        method: "POST",
-        path: "/upload",
-        auth: "public",
-        handler: noop,
-      });
-    });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /already registered a route for POST \/upload/,
     );
   });
 
@@ -1378,6 +1323,600 @@ describe("reserved settings group names", () => {
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /reserved for server-only rows/,
+    );
+  });
+});
+
+type Variant = "first" | "second";
+
+// Which plugins a registrar refuses a second registration from: every plugin,
+// only the one that holds it ("plugin"), or only itself because the key is
+// derived from its own id ("self").
+type DuplicateScope = "global" | "plugin" | "self";
+
+interface DuplicateCase {
+  readonly kind: string;
+  readonly identifier: string;
+  readonly scope: DuplicateScope;
+  // Registers the row's key, carrying `variant` in a field `read` gets back.
+  readonly register: (
+    ctx: PluginSetupContext,
+    variant: Variant,
+    pluginId: string,
+  ) => void;
+  readonly read: (
+    registry: PluginRegistry,
+    pluginId: string,
+  ) => string | undefined | Promise<string | undefined>;
+  // Registers an identifier core already holds once the core seeders ran;
+  // `coreHolds` reads back that core still does.
+  readonly core?: {
+    readonly identifier: string;
+    readonly register: (ctx: PluginSetupContext) => void;
+    readonly coreHolds: (registry: PluginRegistry) => boolean;
+  };
+}
+
+const variantMinRole = { first: "editor", second: "admin" } as const;
+const variantAuth = { first: "authenticated", second: "public" } as const;
+const variantCron = { first: "0 3 * * *", second: "0 4 * * *" } as const;
+const noopHandler = () => new Response("ok");
+const noopLookup: LookupAdapter = { list: () => Promise.resolve([]) };
+const textField = {
+  key: "note",
+  label: "Note",
+  type: "string",
+  inputType: "text",
+} as const;
+
+const duplicateCases: readonly DuplicateCase[] = [
+  {
+    kind: "entry type",
+    identifier: "docs",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerEntryType("docs", { label: variant });
+    },
+    read: (registry) => labelText(registry.entryTypes.get("docs")?.label),
+  },
+  {
+    kind: "term taxonomy",
+    identifier: "topic",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerTermTaxonomy("topic", { label: variant });
+    },
+    read: (registry) => labelText(registry.termTaxonomies.get("topic")?.label),
+  },
+  {
+    kind: "entry meta box",
+    identifier: "extra",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerEntryMetaBox("extra", {
+        label: variant,
+        entryTypes: ["post"],
+        fields: [textField],
+      });
+    },
+    read: (registry) => labelText(registry.entryMetaBoxes.get("extra")?.label),
+  },
+  {
+    kind: "term meta box",
+    identifier: "extra",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerTermMetaBox("extra", {
+        label: variant,
+        termTaxonomies: ["category"],
+        fields: [textField],
+      });
+    },
+    read: (registry) => labelText(registry.termMetaBoxes.get("extra")?.label),
+  },
+  {
+    kind: "user meta box",
+    identifier: "extra",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerUserMetaBox("extra", { label: variant, fields: [textField] });
+    },
+    read: (registry) => labelText(registry.userMetaBoxes.get("extra")?.label),
+  },
+  {
+    kind: "capability",
+    identifier: "report:export",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerCapability("report:export", variantMinRole[variant]);
+    },
+    read: (registry) =>
+      variantOf(
+        variantMinRole,
+        registry.capabilities.get("report:export")?.minRole,
+      ),
+  },
+  {
+    kind: "settings group",
+    identifier: "extra",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerSettingsGroup("extra", { label: variant, fields: [] });
+    },
+    read: (registry) => labelText(registry.settingsGroups.get("extra")?.label),
+    core: {
+      identifier: "site",
+      register: (ctx) => {
+        ctx.registerSettingsGroup("site", { label: "Site", fields: [] });
+      },
+      coreHolds: (registry) =>
+        registry.settingsGroups.get("site")?.registeredBy === null,
+    },
+  },
+  {
+    kind: "settings page",
+    identifier: "extra",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerSettingsPage("extra", { label: variant, groups: [] });
+    },
+    read: (registry) => labelText(registry.settingsPages.get("extra")?.label),
+    core: {
+      identifier: "general",
+      register: (ctx) => {
+        ctx.registerSettingsPage("general", { label: "General", groups: [] });
+      },
+      coreHolds: (registry) =>
+        registry.settingsPages.get("general")?.registeredBy === null,
+    },
+  },
+  {
+    kind: "archive type",
+    identifier: "series",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerArchiveType("series", {
+        routes: [`/${variant}/:slug`],
+        resolve: () => null,
+      });
+    },
+    read: (registry) =>
+      registry.archiveTypes.get("series")?.routes[0]?.split("/")[1],
+  },
+  {
+    kind: "plugin RPC router",
+    identifier: "repeater",
+    scope: "self",
+    register: (ctx, variant) => {
+      ctx.registerRpcRouter({ [variant]: base.handler(() => "ok") });
+    },
+    read: (registry, pluginId) =>
+      Object.keys(registry.rpcRouters.get(pluginId) ?? {})[0],
+  },
+  {
+    kind: "MCP tool",
+    identifier: "report_list",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerMcpTool({
+        name: "report_list",
+        description: variant,
+        inputSchema: object({}),
+        run: () => null,
+      });
+    },
+    read: (registry) => registry.mcpTools.get("report_list")?.tool.description,
+    core: {
+      identifier: "schema_describe",
+      register: (ctx) => {
+        ctx.registerMcpTool({
+          name: "schema_describe",
+          description: "d",
+          inputSchema: object({}),
+          run: () => null,
+        });
+      },
+      coreHolds: (registry) => !registry.mcpTools.has("schema_describe"),
+    },
+  },
+  {
+    kind: "route",
+    identifier: "POST /upload",
+    scope: "plugin",
+    register: (ctx, variant) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: variantAuth[variant],
+        handler: noopHandler,
+      });
+    },
+    read: (registry, pluginId) =>
+      variantOf(
+        variantAuth,
+        onlyOne(registry.rawRoutes.filter((r) => r.pluginId === pluginId))
+          ?.auth,
+      ),
+  },
+  {
+    kind: "admin page",
+    identifier: "/reports",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerAdminPage({
+        path: "/reports",
+        title: variant,
+        component: "ReportsPage",
+      });
+    },
+    read: (registry) => labelText(registry.adminPages.get("/reports")?.title),
+  },
+  {
+    kind: "dashboard widget",
+    identifier: "repeater:stats",
+    scope: "self",
+    register: (ctx, variant) => {
+      ctx.registerDashboardWidget({
+        id: "repeater:stats",
+        title: variant,
+        component: "Stats",
+      });
+    },
+    read: (registry) =>
+      labelText(registry.dashboardWidgets.get("repeater:stats")?.title),
+  },
+  {
+    kind: "field type",
+    identifier: "color",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerFieldType({ type: "color", component: `${variant}Field` });
+    },
+    read: (registry) =>
+      registry.fieldTypes.get("color")?.component.replace(/Field$/, ""),
+  },
+  {
+    kind: "block",
+    identifier: "acme/hero",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerBlock(
+        defineBlock({ name: "acme/hero", title: variant, render: () => null }),
+      );
+    },
+    read: (registry) =>
+      labelText(registry.blockSpecs.get("acme/hero")?.spec.title),
+  },
+  {
+    kind: "mark",
+    identifier: "highlight",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerMark({ name: "highlight", title: variant });
+    },
+    read: (registry) => registry.markSpecs.get("highlight")?.spec.title,
+  },
+  {
+    kind: "shortcode",
+    identifier: "cite",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerShortcode({ name: "cite", render: () => variant });
+    },
+    read: (registry) =>
+      registry.shortcodeSpecs
+        .get("cite")
+        ?.spec.render({ atts: {}, context: {} as never }),
+  },
+  {
+    kind: "pattern",
+    identifier: "shared/hero",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerPattern({ name: "shared/hero", title: variant, content: [] });
+    },
+    read: (registry) =>
+      labelText(registry.patternSpecs.get("shared/hero")?.spec.title),
+  },
+  {
+    kind: "lookup adapter",
+    identifier: "report",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerLookupAdapter({
+        kind: "report",
+        adapter: noopLookup,
+        capability: variant,
+      });
+    },
+    read: (registry) =>
+      registry.lookupAdapters.get("report")?.capability ?? undefined,
+    core: {
+      identifier: "user",
+      register: (ctx) => {
+        ctx.registerLookupAdapter({ kind: "user", adapter: noopLookup });
+      },
+      coreHolds: (registry) =>
+        registry.lookupAdapters.get("user")?.registeredBy === null,
+    },
+  },
+  {
+    kind: "login link",
+    identifier: "default",
+    scope: "plugin",
+    register: (ctx, variant, pluginId) => {
+      ctx.registerLoginLink({
+        key: "default",
+        label: variant,
+        href: `/_plumix/${pluginId}/start`,
+      });
+    },
+    read: (registry, pluginId) =>
+      labelText(
+        onlyOne(registry.loginLinks.filter((l) => l.registeredBy === pluginId))
+          ?.label,
+      ),
+  },
+  {
+    kind: "scheduled task",
+    identifier: "purge",
+    scope: "plugin",
+    register: (ctx, variant) => {
+      ctx.registerScheduledTask({
+        id: "purge",
+        cron: variantCron[variant],
+        handler: () => undefined,
+      });
+    },
+    read: (registry, pluginId) =>
+      variantOf(
+        variantCron,
+        onlyOne(
+          registry.scheduledTasks.filter((t) => t.registeredBy === pluginId),
+        )?.cron,
+      ),
+  },
+  {
+    kind: "template dep",
+    identifier: "dup-thing",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerTemplateDep("dup-thing", {
+        keyedBy: "slug",
+        load: () => Promise.resolve({ probe: variant }),
+      });
+    },
+    read: async (registry) => {
+      const ctx = createTestContext({
+        db: await createTestDb(),
+        plugins: registry,
+      });
+      const loaded = await registry.templateDeps
+        .get("dup-thing")
+        ?.load(["probe"], ctx);
+      return loaded === undefined ? undefined : String(loaded.probe);
+    },
+    core: {
+      identifier: "settings",
+      register: (ctx) => {
+        ctx.registerTemplateDep("settings", {
+          keyedBy: "slug",
+          load: () => Promise.resolve({}),
+        });
+      },
+      coreHolds: (registry) =>
+        registry.templateDeps.get("settings")?.registeredBy === null,
+    },
+  },
+];
+
+function labelText(label: Label | undefined): string | undefined {
+  return typeof label === "string" ? label : label?.message;
+}
+
+function variantOf<T>(
+  byVariant: Readonly<Record<Variant, T>>,
+  value: T | undefined,
+): Variant | undefined {
+  return (Object.keys(byVariant) as Variant[]).find(
+    (variant) => byVariant[variant] === value,
+  );
+}
+
+function onlyOne<T>(items: readonly T[]): T | undefined {
+  return items.length === 1 ? items[0] : undefined;
+}
+
+function seededRegistry() {
+  const registry = createPluginRegistry();
+  registerCoreLookupAdapters(registry);
+  registerCoreTemplateDeps(registry);
+  registerCoreSettings(registry);
+  return registry;
+}
+
+describe("duplicate registration", () => {
+  describe.each(duplicateCases.filter((row) => row.scope === "global"))(
+    "$kind",
+    (row) => {
+      test("names the plugin that already registered it", async () => {
+        const hooks = new HookRegistry();
+        const registry = createPluginRegistry();
+        const first = definePlugin("first-owner", (ctx) => {
+          row.register(ctx, "first", "first-owner");
+        });
+        const second = definePlugin("second-owner", (ctx) => {
+          row.register(ctx, "second", "second-owner");
+        });
+
+        const install = installPlugins({
+          hooks,
+          registry,
+          plugins: [first, second],
+        });
+
+        await expect(install).rejects.toThrow(
+          `Plugin "second-owner" registers ${row.kind} "${row.identifier}" already registered by "first-owner".`,
+        );
+        await expect(install).rejects.toMatchObject({
+          name: "DuplicateRegistrationError",
+          kind: row.kind,
+          identifier: row.identifier,
+          pluginId: "second-owner",
+          previousOwner: "first-owner",
+        });
+        expect(await row.read(registry, "first-owner")).toBe("first");
+      });
+    },
+  );
+
+  describe.each(duplicateCases.filter((row) => row.scope === "plugin"))(
+    "$kind",
+    (row) => {
+      test("lets another plugin reuse the identifier", async () => {
+        const hooks = new HookRegistry();
+        const first = definePlugin("first-owner", (ctx) => {
+          row.register(ctx, "first", "first-owner");
+        });
+        const second = definePlugin("second-owner", (ctx) => {
+          row.register(ctx, "second", "second-owner");
+        });
+
+        const { registry } = await installPlugins({
+          hooks,
+          plugins: [first, second],
+        });
+
+        expect(await row.read(registry, "first-owner")).toBe("first");
+        expect(await row.read(registry, "second-owner")).toBe("second");
+      });
+    },
+  );
+
+  describe.each(duplicateCases)("$kind", (row) => {
+    test("tells a plugin it already registered it", async () => {
+      const hooks = new HookRegistry();
+      const registry = createPluginRegistry();
+      const plugin = definePlugin("repeater", (ctx) => {
+        row.register(ctx, "first", "repeater");
+        row.register(ctx, "second", "repeater");
+      });
+
+      const install = installPlugins({ hooks, registry, plugins: [plugin] });
+
+      await expect(install).rejects.toThrow(
+        `Plugin "repeater" registers ${row.kind} "${row.identifier}", which it already registered.`,
+      );
+      await expect(install).rejects.toMatchObject({
+        name: "DuplicateRegistrationError",
+        kind: row.kind,
+        identifier: row.identifier,
+        pluginId: "repeater",
+        previousOwner: "repeater",
+      });
+      expect(await row.read(registry, "repeater")).toBe("first");
+    });
+  });
+
+  const coreCases = duplicateCases.flatMap((row) =>
+    row.core ? [{ kind: row.kind, ...row.core }] : [],
+  );
+
+  describe.each(coreCases)("$kind", (row) => {
+    test("names core when core holds the identifier", async () => {
+      const hooks = new HookRegistry();
+      const plugin = definePlugin("rogue", (ctx) => {
+        row.register(ctx);
+      });
+
+      const registry = seededRegistry();
+
+      const install = installPlugins({ hooks, registry, plugins: [plugin] });
+
+      await expect(install).rejects.toThrow(
+        `Plugin "rogue" registers ${row.kind} "${row.identifier}" already registered by core.`,
+      );
+      await expect(install).rejects.toMatchObject({
+        name: "DuplicateRegistrationError",
+        kind: row.kind,
+        identifier: row.identifier,
+        pluginId: "rogue",
+        previousOwner: null,
+      });
+      expect(row.coreHolds(registry)).toBe(true);
+    });
+  });
+
+  test("checks each spec registerBlocks is given", async () => {
+    const hooks = new HookRegistry();
+    const registry = createPluginRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerBlocks([
+        defineBlock({ name: "acme/hero", title: "first", render: () => null }),
+        defineBlock({ name: "acme/hero", title: "second", render: () => null }),
+      ]);
+    });
+
+    await expect(
+      installPlugins({ hooks, registry, plugins: [plugin] }),
+    ).rejects.toThrow(
+      'Plugin "acme" registers block "acme/hero", which it already registered.',
+    );
+    expect(labelText(registry.blockSpecs.get("acme/hero")?.spec.title)).toBe(
+      "first",
+    );
+  });
+
+  test("treats a capability derived from the plugin's own entry type as its own", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerCapability("entry:post:edit_own", "author");
+    });
+
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      'Plugin "blog" registers capability "entry:post:edit_own", which it already registered.',
+    );
+  });
+
+  test("raises the duplicate before validation that follows the check", async () => {
+    const hooks = new HookRegistry();
+    const registry = createPluginRegistry();
+    const plugin = definePlugin("menus", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/menus",
+        title: "Menus",
+        component: "MenusPage",
+      });
+      ctx.registerAdminPage({ path: "/menus", title: "Dupe", component: "" });
+    });
+
+    await expect(
+      installPlugins({ hooks, registry, plugins: [plugin] }),
+    ).rejects.toBeInstanceOf(DuplicateRegistrationError);
+    expect(labelText(registry.adminPages.get("/menus")?.title)).toBe("Menus");
+  });
+
+  test("raises validation that precedes the check before the duplicate", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("media", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: "authenticated",
+        handler: noopHandler,
+      });
+      ctx.registerRoute({
+        method: "POST",
+        path: "/upload",
+        auth: "authenticated",
+        cacheable: true,
+        handler: noopHandler,
+      });
+    });
+
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /POST \/upload is not public/,
     );
   });
 });
