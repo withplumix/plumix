@@ -1,5 +1,4 @@
 type PluginContextErrorCode =
-  | "duplicate_route"
   | "extend_context_invalid_key"
   | "extend_context_reserved_key"
   | "extend_app_context_builtin_collision"
@@ -115,18 +114,6 @@ export class PluginContextError extends Error {
     this.maxLength = fields.maxLength;
     this.maxFields = fields.maxFields;
     this.coreNamespaces = fields.coreNamespaces;
-  }
-
-  static duplicateRoute(ctx: {
-    pluginId: string;
-    method: string;
-    path: string;
-  }): PluginContextError {
-    return new PluginContextError(
-      "duplicate_route",
-      `Plugin "${ctx.pluginId}" already registered a route for ${ctx.method} ${ctx.path}.`,
-      { pluginId: ctx.pluginId, kind: ctx.method, path: ctx.path },
-    );
   }
 
   static cacheableRouteNotPublic(ctx: {
@@ -885,18 +872,45 @@ export class DuplicateRegistrationError extends Error {
 
   readonly kind: string;
   readonly identifier: string;
+  readonly pluginId: string;
+  /** The plugin already holding the identifier; `null` when core does. */
+  readonly previousOwner: string | null;
 
-  private constructor(kind: string, identifier: string) {
-    super(`${kind} "${identifier}" is already registered`);
-    this.kind = kind;
-    this.identifier = identifier;
+  private constructor(
+    message: string,
+    ctx: {
+      kind: string;
+      identifier: string;
+      pluginId: string;
+      previousOwner: string | null;
+    },
+  ) {
+    super(message);
+    this.kind = ctx.kind;
+    this.identifier = ctx.identifier;
+    this.pluginId = ctx.pluginId;
+    this.previousOwner = ctx.previousOwner;
   }
 
   static alreadyRegistered(ctx: {
     kind: string;
     identifier: string;
+    pluginId: string;
+    previousOwner: string | null;
   }): DuplicateRegistrationError {
-    return new DuplicateRegistrationError(ctx.kind, ctx.identifier);
+    const subject = `Plugin "${ctx.pluginId}" registers ${ctx.kind} "${ctx.identifier}"`;
+    if (ctx.previousOwner === ctx.pluginId) {
+      return new DuplicateRegistrationError(
+        `${subject}, which it already registered.`,
+        ctx,
+      );
+    }
+    const owner =
+      ctx.previousOwner === null ? "core" : `"${ctx.previousOwner}"`;
+    return new DuplicateRegistrationError(
+      `${subject} already registered by ${owner}.`,
+      ctx,
+    );
   }
 }
 

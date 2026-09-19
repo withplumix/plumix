@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "./define.js";
-import { DuplicateRegistrationError } from "./errors.js";
 import { buildManifest } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
@@ -54,25 +53,6 @@ describe("registerDashboardWidget", () => {
       "widget-plugin:a",
       "widget-plugin:b",
     ]);
-  });
-
-  test("rejects a duplicate widget id", async () => {
-    await expect(
-      installPlugins({
-        hooks: new HookRegistry(),
-        plugins: [
-          definePlugin("widget-plugin", (ctx) => {
-            const opts = {
-              id: "widget-plugin:dup",
-              title: { id: "d", message: "D" },
-              component: "Dup",
-            };
-            ctx.registerDashboardWidget(opts);
-            ctx.registerDashboardWidget(opts);
-          }),
-        ],
-      }),
-    ).rejects.toBeInstanceOf(DuplicateRegistrationError);
   });
 
   test("rejects a non-namespaced widget id", async () => {

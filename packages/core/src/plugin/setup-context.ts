@@ -562,24 +562,18 @@ function createContextBase({
     },
 
     registerEntryType: (name, options) => {
-      if (registry.entryTypes.has(name))
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "entry type",
-          identifier: name,
-        });
-      const registered = toRegisteredEntryType(name, options, pluginId);
-      registry.entryTypes.set(name, registered);
+      const registered = claimKey(
+        registry.entryTypes,
+        "entry type",
+        name,
+        pluginId,
+        () => toRegisteredEntryType(name, options, pluginId),
+      );
       addDerivedCaps(deriveEntryTypeCapabilities(registered));
     },
 
     registerTermTaxonomy: (name, options) => {
-      if (registry.termTaxonomies.has(name))
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "termTaxonomy",
-          identifier: name,
-        });
-      registry.termTaxonomies.set(
-        name,
+      claimKey(registry.termTaxonomies, "term taxonomy", name, pluginId, () =>
         toRegisteredTermTaxonomy(name, options, pluginId),
       );
       addDerivedCaps(deriveTermTaxonomyCapabilities(name, options));
@@ -606,26 +600,22 @@ function createContextBase({
       minRoleOrOptions:
         UserRole | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
     ) => {
-      if (registry.capabilities.has(name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "capability",
-          identifier: name,
-        });
-      }
-      const resolved =
-        typeof minRoleOrOptions === "string"
-          ? { minRole: minRoleOrOptions, defaultGrants: undefined }
-          : {
-              minRole: minRoleOrOptions.minRole,
-              defaultGrants: minRoleOrOptions.defaultGrants,
-            };
-      registry.capabilities.set(name, {
-        name,
-        minRole: resolved.minRole,
-        defaultGrants: resolved.defaultGrants
-          ? [...new Set(resolved.defaultGrants)].sort()
-          : undefined,
-        registeredBy: pluginId,
+      claimKey(registry.capabilities, "capability", name, pluginId, () => {
+        const resolved =
+          typeof minRoleOrOptions === "string"
+            ? { minRole: minRoleOrOptions, defaultGrants: undefined }
+            : {
+                minRole: minRoleOrOptions.minRole,
+                defaultGrants: minRoleOrOptions.defaultGrants,
+              };
+        return {
+          name,
+          minRole: resolved.minRole,
+          defaultGrants: resolved.defaultGrants
+            ? [...new Set(resolved.defaultGrants)].sort()
+            : undefined,
+          registeredBy: pluginId,
+        };
       });
     },
 
@@ -634,40 +624,29 @@ function createContextBase({
       if (isPrivateSettingsGroup(name)) {
         throw PluginContextError.settingsGroupReserved({ pluginId, name });
       }
-      if (registry.settingsGroups.has(name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "settings group",
-          identifier: name,
-        });
-      }
-      const fields = compileMetaBoxFields(options.fields);
-      assertMetaBoxFields("settings group", name, fields);
-      registry.settingsGroups.set(name, {
-        ...options,
-        fields,
+      claimKey(
+        registry.settingsGroups,
+        "settings group",
         name,
-        registeredBy: pluginId,
-      });
+        pluginId,
+        () => {
+          const fields = compileMetaBoxFields(options.fields);
+          assertMetaBoxFields("settings group", name, fields);
+          return { ...options, fields, name, registeredBy: pluginId };
+        },
+      );
     },
 
     registerSettingsPage: (name, options) => {
       assertValidIdentifier("settings page", name);
-      if (registry.settingsPages.has(name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "settings page",
-          identifier: name,
-        });
-      }
-      for (const groupName of options.groups) {
-        assertValidIdentifier("settings group reference", groupName);
-      }
-      if (new Set(options.groups).size !== options.groups.length) {
-        throw PluginContextError.settingsPageDuplicateGroup({ name });
-      }
-      registry.settingsPages.set(name, {
-        ...options,
-        name,
-        registeredBy: pluginId,
+      claimKey(registry.settingsPages, "settings page", name, pluginId, () => {
+        for (const groupName of options.groups) {
+          assertValidIdentifier("settings group reference", groupName);
+        }
+        if (new Set(options.groups).size !== options.groups.length) {
+          throw PluginContextError.settingsPageDuplicateGroup({ name });
+        }
+        return { ...options, name, registeredBy: pluginId };
       });
     },
 
@@ -685,16 +664,11 @@ function createContextBase({
     },
 
     registerArchiveType: (name, options) => {
-      if (registry.archiveTypes.has(name))
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "archive type",
-          identifier: name,
-        });
-      registry.archiveTypes.set(name, {
+      claimKey(registry.archiveTypes, "archive type", name, pluginId, () => ({
         ...options,
         name,
         registeredBy: pluginId,
-      });
+      }));
     },
 
     registerRpcRouter: (router) => {
@@ -704,26 +678,31 @@ function createContextBase({
           coreNamespaces: [...CORE_RPC_NAMESPACES],
         });
       }
-      if (registry.rpcRouters.has(pluginId)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "plugin RPC router",
-          identifier: pluginId,
-        });
-      }
+      // Keyed by the plugin's own id, so only the plugin itself can hold it.
+      assertUnclaimed(
+        "plugin RPC router",
+        pluginId,
+        pluginId,
+        registry.rpcRouters.has(pluginId)
+          ? { registeredBy: pluginId }
+          : undefined,
+      );
       registry.rpcRouters.set(pluginId, router);
     },
 
     registerMcpTool: (tool) => {
-      if (
-        CORE_MCP_TOOL_NAMES.has(tool.name) ||
-        registry.mcpTools.has(tool.name)
-      ) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "MCP tool",
-          identifier: tool.name,
-        });
-      }
-      registry.mcpTools.set(tool.name, { tool, registeredBy: pluginId });
+      // Core's tools are served outside the registry, so their names are
+      // claimed here rather than by a seeded entry.
+      assertUnclaimed(
+        "MCP tool",
+        tool.name,
+        pluginId,
+        CORE_MCP_TOOL_NAMES.has(tool.name) ? { registeredBy: null } : undefined,
+      );
+      claimKey(registry.mcpTools, "MCP tool", tool.name, pluginId, () => ({
+        tool,
+        registeredBy: pluginId,
+      }));
     },
 
     registerRoute: ({ method, path, auth, cacheable, formPost, handler }) => {
@@ -744,15 +723,18 @@ function createContextBase({
           });
         }
       }
-      for (const existing of registry.rawRoutes) {
-        if (
-          existing.pluginId === pluginId &&
-          existing.method === method &&
-          existing.path === path
-        ) {
-          throw PluginContextError.duplicateRoute({ pluginId, method, path });
-        }
-      }
+      const existing = registry.rawRoutes.find(
+        (route) =>
+          route.pluginId === pluginId &&
+          route.method === method &&
+          route.path === path,
+      );
+      assertUnclaimed(
+        "route",
+        `${method} ${path}`,
+        pluginId,
+        existing && { registeredBy: existing.pluginId },
+      );
       registry.rawRoutes.push({
         pluginId,
         method,
@@ -784,66 +766,63 @@ function createContextBase({
 
     registerAdminPage: (options) => {
       assertValidAdminPagePath(pluginId, options.path);
-      if (registry.adminPages.has(options.path)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "admin page",
-          identifier: options.path,
-        });
-      }
-      assertComponentRef(
+      claimKey(
+        registry.adminPages,
+        "admin page",
+        options.path,
         pluginId,
-        `admin page "${options.path}"`,
-        options.component,
+        () => {
+          assertComponentRef(
+            pluginId,
+            `admin page "${options.path}"`,
+            options.component,
+          );
+          if (options.nav) {
+            const groupId =
+              typeof options.nav.group === "string"
+                ? options.nav.group
+                : options.nav.group.id;
+            assertValidNavGroupId(pluginId, groupId);
+          }
+          return { ...options, registeredBy: pluginId };
+        },
       );
-      if (options.nav) {
-        const groupId =
-          typeof options.nav.group === "string"
-            ? options.nav.group
-            : options.nav.group.id;
-        assertValidNavGroupId(pluginId, groupId);
-      }
-      registry.adminPages.set(options.path, {
-        ...options,
-        registeredBy: pluginId,
-      });
     },
 
     registerDashboardWidget: (options) => {
       assertNamespacedId("dashboard widget id", options.id, pluginId);
-      if (registry.dashboardWidgets.has(options.id)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "dashboard widget",
-          identifier: options.id,
-        });
-      }
-      assertComponentRef(
+      claimKey(
+        registry.dashboardWidgets,
+        "dashboard widget",
+        options.id,
         pluginId,
-        `dashboard widget "${options.id}"`,
-        options.component,
+        () => {
+          assertComponentRef(
+            pluginId,
+            `dashboard widget "${options.id}"`,
+            options.component,
+          );
+          return { ...options, registeredBy: pluginId };
+        },
       );
-      registry.dashboardWidgets.set(options.id, {
-        ...options,
-        registeredBy: pluginId,
-      });
     },
 
     registerFieldType: (options) => {
       assertValidFieldTypeName(pluginId, options.type);
-      if (registry.fieldTypes.has(options.type)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "field type",
-          identifier: options.type,
-        });
-      }
-      assertComponentRef(
+      claimKey(
+        registry.fieldTypes,
+        "field type",
+        options.type,
         pluginId,
-        `field type "${options.type}"`,
-        options.component,
+        () => {
+          assertComponentRef(
+            pluginId,
+            `field type "${options.type}"`,
+            options.component,
+          );
+          return { ...options, registeredBy: pluginId };
+        },
       );
-      registry.fieldTypes.set(options.type, {
-        ...options,
-        registeredBy: pluginId,
-      });
     },
 
     registerBlock: (spec) => {
@@ -853,13 +832,10 @@ function createContextBase({
           name: spec.name,
         });
       }
-      if (registry.blockSpecs.has(spec.name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "block",
-          identifier: spec.name,
-        });
-      }
-      registry.blockSpecs.set(spec.name, { spec, registeredBy: pluginId });
+      claimKey(registry.blockSpecs, "block", spec.name, pluginId, () => ({
+        spec,
+        registeredBy: pluginId,
+      }));
     },
 
     registerBlocks: (specs) => {
@@ -867,66 +843,60 @@ function createContextBase({
     },
 
     registerMark: (spec) => {
-      if (registry.markSpecs.has(spec.name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "mark",
-          identifier: spec.name,
-        });
-      }
-      registry.markSpecs.set(spec.name, { spec, registeredBy: pluginId });
+      claimKey(registry.markSpecs, "mark", spec.name, pluginId, () => ({
+        spec,
+        registeredBy: pluginId,
+      }));
     },
 
     registerShortcode: (spec) => {
-      if (registry.shortcodeSpecs.has(spec.name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "shortcode",
-          identifier: spec.name,
-        });
-      }
-      registry.shortcodeSpecs.set(spec.name, { spec, registeredBy: pluginId });
+      claimKey(
+        registry.shortcodeSpecs,
+        "shortcode",
+        spec.name,
+        pluginId,
+        () => ({
+          spec,
+          registeredBy: pluginId,
+        }),
+      );
     },
 
     registerPattern: (spec) => {
-      if (registry.patternSpecs.has(spec.name)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "pattern",
-          identifier: spec.name,
-        });
-      }
-      registry.patternSpecs.set(spec.name, { spec, registeredBy: pluginId });
+      claimKey(registry.patternSpecs, "pattern", spec.name, pluginId, () => ({
+        spec,
+        registeredBy: pluginId,
+      }));
     },
 
     registerLookupAdapter: (options) => {
       assertValidLookupAdapterKind(pluginId, options.kind);
-      if (registry.lookupAdapters.has(options.kind)) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "lookup adapter",
-          identifier: options.kind,
-        });
-      }
       // Spread to preserve plugin-contributed option fields (e.g. the
       // `menuPicker` field that @plumix/plugin-menu adds via declaration
       // merging).
-      registry.lookupAdapters.set(options.kind, {
-        ...options,
-        capability: options.capability ?? null,
-        registeredBy: pluginId,
-      });
+      claimKey(
+        registry.lookupAdapters,
+        "lookup adapter",
+        options.kind,
+        pluginId,
+        () => ({
+          ...options,
+          capability: options.capability ?? null,
+          registeredBy: pluginId,
+        }),
+      );
     },
 
     registerLoginLink: (options) => {
       assertValidLoginLink(pluginId, options);
-      for (const existing of registry.loginLinks) {
-        if (
-          existing.registeredBy === pluginId &&
-          existing.key === options.key
-        ) {
-          throw DuplicateRegistrationError.alreadyRegistered({
-            kind: "login link",
-            identifier: `${pluginId}:${options.key}`,
-          });
-        }
-      }
+      assertUnclaimed(
+        "login link",
+        options.key,
+        pluginId,
+        registry.loginLinks.find(
+          (link) => link.registeredBy === pluginId && link.key === options.key,
+        ),
+      );
       registry.loginLinks.push({
         ...options,
         registeredBy: pluginId,
@@ -935,14 +905,15 @@ function createContextBase({
 
     registerScheduledTask: (task) => {
       assertValidScheduledTask(pluginId, task);
-      for (const existing of registry.scheduledTasks) {
-        if (existing.registeredBy === pluginId && existing.id === task.id) {
-          throw DuplicateRegistrationError.alreadyRegistered({
-            kind: "scheduled task",
-            identifier: `${pluginId}:${task.id}`,
-          });
-        }
-      }
+      assertUnclaimed(
+        "scheduled task",
+        task.id,
+        pluginId,
+        registry.scheduledTasks.find(
+          (existing) =>
+            existing.registeredBy === pluginId && existing.id === task.id,
+        ),
+      );
       registry.scheduledTasks.push({
         ...task,
         registeredBy: pluginId,
@@ -958,27 +929,55 @@ function createContextBase({
           kind,
         });
       }
-      const existing = registry.templateDeps.get(kind);
-      if (existing) {
-        throw DuplicateRegistrationError.alreadyRegistered({
-          kind: "template dep",
-          identifier: kind,
-        });
-      }
-      const name = `${keyedBy}s`;
-      const erased: RegisteredTemplateDep["load"] = (keys, ctx) =>
-        // `keyedBy` is typed to the entry's key field, so this object is
-        // exactly the one named array the loader was typed against.
-        load({ [name]: keys } as TemplateDepKeys<typeof kind>, ctx);
-      registry.templateDeps.set(kind, {
-        kind,
-        load: erased,
-        registeredBy: pluginId,
+      claimKey(registry.templateDeps, "template dep", kind, pluginId, () => {
+        const name = `${keyedBy}s`;
+        const erased: RegisteredTemplateDep["load"] = (keys, ctx) =>
+          // `keyedBy` is typed to the entry's key field, so this object is
+          // exactly the one named array the loader was typed against.
+          load({ [name]: keys } as TemplateDepKeys<typeof kind>, ctx);
+        return { kind, load: erased, registeredBy: pluginId };
       });
     },
   };
 
   return ctx;
+}
+
+interface Owned {
+  readonly registeredBy: string | null;
+}
+
+// The one place a duplicate registration is raised, so every registry reports
+// who already holds the identifier the same way.
+function assertUnclaimed(
+  kind: string,
+  identifier: string,
+  pluginId: string,
+  existing: Owned | undefined,
+): void {
+  if (existing === undefined) return;
+  throw DuplicateRegistrationError.alreadyRegistered({
+    kind,
+    identifier,
+    pluginId,
+    previousOwner: existing.registeredBy,
+  });
+}
+
+// `build` runs between the check and the write, so a registrar's remaining
+// validation keeps its place after the duplicate check and a throw from it
+// leaves the registry untouched.
+function claimKey<V extends Owned>(
+  map: Map<string, V>,
+  kind: string,
+  key: string,
+  pluginId: string,
+  build: () => V,
+): V {
+  assertUnclaimed(kind, key, pluginId, map.get(key));
+  const value = build();
+  map.set(key, value);
+  return value;
 }
 
 function withExtensions<TContext extends PluginSetupContextBase>(
@@ -1009,7 +1008,7 @@ function withExtensions<TContext extends PluginSetupContextBase>(
 // blocks. Fluent builders in `options.fields` compile to plain
 // definitions here, so the registered shape (and everything
 // downstream) carries `MetaBoxField` only.
-function makeMetaBoxRegistrar<R extends { readonly id: string }>(
+function makeMetaBoxRegistrar<R extends Owned & { readonly id: string }>(
   map: Map<string, R>,
   kind: string,
   pluginId: string,
@@ -1018,24 +1017,21 @@ function makeMetaBoxRegistrar<R extends { readonly id: string }>(
   options: { readonly fields: readonly MetaBoxFieldInput[] },
 ) => void {
   return (id, options) => {
-    if (map.has(id))
-      throw DuplicateRegistrationError.alreadyRegistered({
-        kind,
-        identifier: id,
-      });
-    const fields = compileMetaBoxFields(options.fields);
-    assertMetaBoxFields(kind, id, fields);
-    // Safety: every member `R` declares is present on the value — `id`,
-    // `registeredBy` and `fields` are written here, and `R`'s remaining
-    // members ride in on `options`, which the caller passes whole. The
-    // compiler can't see the second half because the parameter is typed down
-    // to the one field this factory reads.
-    map.set(id, {
-      ...options,
-      fields,
-      id,
-      registeredBy: pluginId,
-    } as unknown as R);
+    claimKey(map, kind, id, pluginId, () => {
+      const fields = compileMetaBoxFields(options.fields);
+      assertMetaBoxFields(kind, id, fields);
+      // Safety: every member `R` declares is present on the value — `id`,
+      // `registeredBy` and `fields` are written here, and `R`'s remaining
+      // members ride in on `options`, which the caller passes whole. The
+      // compiler can't see the second half because the parameter is typed down
+      // to the one field this factory reads.
+      return {
+        ...options,
+        fields,
+        id,
+        registeredBy: pluginId,
+      } as unknown as R;
+    });
   };
 }
 
