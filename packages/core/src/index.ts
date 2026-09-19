@@ -37,6 +37,7 @@ export { resolveReturnUrl } from "./return-url.js";
 export type { ResolveReturnUrlOptions } from "./return-url.js";
 export { isCurrentSource } from "./route/current.js";
 export type { CurrentSource, ResolvedEntity } from "./route/current.js";
+export type { ResolvedRoute } from "./route/match.js";
 export type { RouteIntent, RouteRule } from "./route/intent.js";
 export type {
   RedirectResolution,
@@ -226,6 +227,9 @@ export {
   // the moment core paginates or renames a capture.
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
+  // So a plugin archive declares its later pages in the shape core's own
+  // listings use.
+  FRAMEWORK_PAGINATION_SUFFIX,
 } from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
 export {

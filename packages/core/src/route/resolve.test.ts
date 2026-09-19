@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../context/app.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { eq } from "../db/index.js";
@@ -1585,5 +1586,92 @@ describe("resolvePublicRoute — front page", () => {
     const body = await response.text();
     expect(body).toContain("A Post");
     expect(body).not.toContain("A Page");
+  });
+});
+
+describe("resolvePublicRoute — resolved route", () => {
+  // What a render-time consumer reads off the context: the route the request
+  // matched, as the pattern it was declared with and the params it captured.
+  function routeObserver() {
+    const seen: (AppContext["resolvedRoute"] | undefined)[] = [];
+    const plugin = definePlugin("route-observer", (ctx) => {
+      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        seen.push(appCtx.resolvedRoute);
+        return manifest;
+      });
+    });
+    return { plugin, seen };
+  }
+
+  test("a plugin archive's page carries its matched pattern and params", async () => {
+    const observer = routeObserver();
+    const events = definePlugin("events", (ctx) => {
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Series",
+        }),
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [events, observer.plugin],
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/events/summer"),
+    );
+    expect(response.status).toBe(200);
+    expect(observer.seen).toEqual([
+      { pattern: "/events/:series", params: { series: "summer" } },
+    ]);
+  });
+
+  test("every other kind of public page carries the route it matched", async () => {
+    const observer = routeObserver();
+    const h = await createDispatcherHarness({
+      plugins: [shopPlugin, observer.plugin],
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "product",
+      slug: "mug",
+      title: "Mug",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    for (const path of ["/shop", "/shop/mug", "/"]) {
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`),
+      );
+      expect(response.status).toBe(200);
+    }
+    expect(observer.seen).toEqual([
+      { pattern: "/shop", params: {} },
+      { pattern: "/shop/:slug", params: { slug: "mug" } },
+      { pattern: "/", params: {} },
+    ]);
+  });
+
+  test("a path outside the content router has none", async () => {
+    let seen: AppContext["resolvedRoute"] | undefined;
+    const probe = definePlugin("probe", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/probe",
+        auth: "public",
+        handler: (_request, appCtx) => {
+          seen = appCtx.resolvedRoute;
+          return new Response("ok");
+        },
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [probe] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/probe/probe"),
+    );
+    expect(response.status).toBe(200);
+    expect(seen).toBeNull();
   });
 });

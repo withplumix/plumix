@@ -28,14 +28,14 @@ export default plumix({
 
 Every path below is RSS 2.0, and Atom at the same path plus `/atom`. Twenty items, newest publish time first.
 
-| Scope          | Path                          |
-| -------------- | ----------------------------- |
-| Site           | `/feed`                       |
-| Entry type     | `/<type>/feed`                |
-| Taxonomy term  | `/<taxonomy>/<term>/feed`     |
-| Author         | `/authors/<slug>/feed`        |
-| Date           | `/YYYY[/MM[/DD]]/feed`        |
-| Plugin archive | whatever the archive declares |
+| Scope          | Path                      |
+| -------------- | ------------------------- |
+| Site           | `/feed`                   |
+| Entry type     | `/<type>/feed`            |
+| Taxonomy term  | `/<taxonomy>/<term>/feed` |
+| Author         | `/authors/<slug>/feed`    |
+| Date           | `/YYYY[/MM[/DD]]/feed`    |
+| Plugin archive | `<archive route>/feed`    |
 
 Plus a `<link rel="alternate">` pair in the head of every page that has a feed, gap-filled around anything the theme already declared.
 
@@ -61,22 +61,23 @@ export const featured = definePlugin("featured", {
 
 ## Syndicating a plugin archive
 
-`registerArchiveType` gains an optional `feed` from this package's type augmentation. `routes` are the paths it answers — declare the base route only and end it in `/feed`, the `/atom` variant comes with it — and `filter` returns the SQL row predicate, or `null` for a 404:
+`registerArchiveType` gains an optional `feed` from this package's type augmentation. Each archive route gets a feed at `<route>/feed`, with Atom at `/feed/atom`, and every page of the archive advertises it. `filter` returns the SQL row predicate for the route's params, or `null` for a 404 and no advertisement:
 
 ```ts
 ctx.registerArchiveType("event-series", {
-  routes: ["/events/:series"],
+  routes: ["/events/:series", `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`],
   resolve: (_ctx, params) => ({
     data: { kind: "custom", name: "event-series" },
     title: `Series: ${params.series}`,
   }),
   feed: {
-    routes: ["/events/:series/feed"],
     filter: (_ctx, _params) =>
       and(eq(entries.type, "event"), eq(entries.status, "published")) ?? null,
   },
 });
 ```
+
+A route ending in `FRAMEWORK_PAGINATION_SUFFIX` (from `plumix/plugin`) gets no feed of its own; its pages advertise the feed of the route they paginate.
 
 ## Support
 

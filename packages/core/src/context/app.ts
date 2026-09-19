@@ -22,6 +22,7 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
+import type { ResolvedRoute } from "../route/match.js";
 import type {
   AuthMethodsSummary,
   OAuthProviderSummary,
@@ -376,6 +377,16 @@ export interface AppContextBase<
    */
   resolvedEntity: ResolvedEntity | null;
   /**
+   * The content route this public request matched — its declared pattern and
+   * captured params — written by the public-route resolver before it renders,
+   * so it stays set on the 404 a matched route's resolver answers; `/` for the
+   * site root no route claimed, and `null` on every path the content router
+   * did not match. A render-time consumer reads it to address the
+   * page's own URL space from the params that produced the page, rather than
+   * re-matching the URL. Same write-once-mutable design as `resolvedEntity`.
+   */
+  resolvedRoute: ResolvedRoute | null;
+  /**
    * The template rule that won resolution (its `ruleLabel`), written by the
    * theme renderer once a rule matches; `null` before render and on paths
    * that never render a template. Same write-once-mutable design as
@@ -547,6 +558,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     bootstrapAllowed: args.bootstrapAllowed ?? false,
     requestId: crypto.randomUUID(),
     resolvedEntity: null,
+    resolvedRoute: null,
     resolvedTemplate: null,
     access: null,
     // Best-effort fallback for tests / runtimes that don't pass an

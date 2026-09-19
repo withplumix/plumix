@@ -82,15 +82,17 @@ async function ctx(args: {
   return args.memo ? { ...context, memo: args.memo } : context;
 }
 
+// The gate reads the intent and params; no case here turns on the pattern.
 const match = (intent: RouteMatch["intent"]): RouteMatch => ({
   intent,
+  pattern: "/",
   params: {},
 });
 
 const matchWith = (
   intent: RouteMatch["intent"],
   params: Record<string, string>,
-): RouteMatch => ({ intent, params });
+): RouteMatch => ({ intent, pattern: "/", params });
 
 // Narrow a gate result to a Response — a redirect/challenge case asserts it
 // short-circuited rather than allowed the render through.

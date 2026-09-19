@@ -17,14 +17,21 @@ const FRAMEWORK_ROUTE_PRIORITY = 5;
 // resolution order-independent.
 const CATCH_ALL_ROUTE_PRIORITY = 60;
 
-export const FRAMEWORK_FRONT_PAGE_PATTERN = "/page/:page(\\d+)";
+/**
+ * The tail every paginated route ends in, core's own and a plugin archive's
+ * alike, so a consumer can tell a listing's later pages from its first.
+ */
+export const FRAMEWORK_PAGINATION_SUFFIX = "/page/:page(\\d+)";
+
+function isPaginatedRoute(route: string): boolean {
+  return route.endsWith(FRAMEWORK_PAGINATION_SUFFIX);
+}
+
 export const FRAMEWORK_SEARCH_BARE_PATTERN = "/search";
 export const FRAMEWORK_SEARCH_QUERY_PATTERN = "/search/:query";
-export const FRAMEWORK_SEARCH_PAGINATED_PATTERN =
-  "/search/:query/page/:page(\\d+)";
+export const FRAMEWORK_SEARCH_PAGINATED_PATTERN = `${FRAMEWORK_SEARCH_QUERY_PATTERN}${FRAMEWORK_PAGINATION_SUFFIX}`;
 export const FRAMEWORK_AUTHOR_PATTERN = "/authors/:slug";
-export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN =
-  "/authors/:slug/page/:page(\\d+)";
+export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN = `${FRAMEWORK_AUTHOR_PATTERN}${FRAMEWORK_PAGINATION_SUFFIX}`;
 
 // Date archives: bare numeric segments, so each is constrained (`\d{4}`/`\d{2}`)
 // to only match date-shaped URLs. These sort at framework priority, so `/2026`
@@ -33,13 +40,12 @@ export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN =
 const YEAR = ":year(\\d{4})";
 const MONTH = ":month(\\d{2})";
 const DAY = ":day(\\d{2})";
-const PAGE = "/page/:page(\\d+)";
 export const FRAMEWORK_DATE_YEAR_PATTERN = `/${YEAR}`;
 export const FRAMEWORK_DATE_MONTH_PATTERN = `/${YEAR}/${MONTH}`;
 export const FRAMEWORK_DATE_DAY_PATTERN = `/${YEAR}/${MONTH}/${DAY}`;
-export const FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN = `/${YEAR}${PAGE}`;
-export const FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN = `/${YEAR}/${MONTH}${PAGE}`;
-export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${PAGE}`;
+export const FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN = `/${YEAR}${FRAMEWORK_PAGINATION_SUFFIX}`;
+export const FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN = `/${YEAR}/${MONTH}${FRAMEWORK_PAGINATION_SUFFIX}`;
+export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${FRAMEWORK_PAGINATION_SUFFIX}`;
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
@@ -57,8 +63,9 @@ export function compileRouteMap(
   const rules: CompiledRule[] = [
     {
       // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
-      pattern: new URLPattern({ pathname: FRAMEWORK_FRONT_PAGE_PATTERN }),
-      rawPattern: FRAMEWORK_FRONT_PAGE_PATTERN,
+      // The front page's later pages: the pagination suffix under the root.
+      pattern: new URLPattern({ pathname: FRAMEWORK_PAGINATION_SUFFIX }),
+      rawPattern: FRAMEWORK_PAGINATION_SUFFIX,
       intent: { kind: "front-page" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
@@ -152,7 +159,13 @@ export function compileRouteMap(
   // a rule carrying the `custom` intent that `resolvePublicRoute` looks the
   // resolver up by. Default to the rewrite-rule priority.
   for (const archive of registry.archiveTypes.values()) {
-    for (const rawPattern of archive.routes) {
+    // Later pages first, as the auto rules order them: a multi-segment capture
+    // in the listing route (`/docs/:path+`) would otherwise swallow `/page/2`.
+    const paginatedFirst = [
+      ...archive.routes.filter(isPaginatedRoute),
+      ...archive.routes.filter((route) => !isPaginatedRoute(route)),
+    ];
+    for (const rawPattern of paginatedFirst) {
       rules.push({
         pattern: new URLPattern({ pathname: rawPattern }),
         rawPattern,
@@ -187,7 +200,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
 
   if (archiveSlug !== null) {
     const basePattern = `/${archiveSlug}`;
-    const paginatedPattern = `${basePattern}/page/:page`;
+    const paginatedPattern = `${basePattern}${FRAMEWORK_PAGINATION_SUFFIX}`;
     const intent: RouteIntent = {
       kind: "archive",
       entryType: entryType.name,
@@ -255,7 +268,7 @@ function autoRulesForTermTaxonomy(
   // even when the term tree itself is hierarchical.
   const capture = exposesHierarchicalUrls(taxonomy) ? ":path+" : ":term";
   const basePattern = `/${baseSlug}/${capture}`;
-  const paginatedPattern = `${basePattern}/page/:page`;
+  const paginatedPattern = `${basePattern}${FRAMEWORK_PAGINATION_SUFFIX}`;
   const intent: RouteIntent = { kind: "taxonomy", taxonomy: taxonomy.name };
   return [
     {

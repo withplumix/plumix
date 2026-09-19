@@ -1,23 +1,59 @@
 import type { PluginRegistry } from "plumix/plugin";
-import { exposesHierarchicalUrls } from "plumix/plugin";
+import {
+  exposesHierarchicalUrls,
+  FRAMEWORK_PAGINATION_SUFFIX,
+} from "plumix/plugin";
 
 import type { FeedScope } from "./scope.js";
 import { publicEntryTypeNames, publicTaxonomiesByBaseSlug } from "./scope.js";
 
 /** `/authors/:slug` is core's framework route; its feed hangs off the same shape. */
 const AUTHOR_FEED = "/authors/:slug/feed";
-/**
- * The suffix every feed path ends in. An archive's declared feed route has to
- * carry it too: a registered public route answers ahead of the content router,
- * so a route that is not feed-shaped would serve XML at the archive's own page
- * URL and the page would be gone with no boot error.
- */
-const FEED_SUFFIX = "/feed";
+
 // Date-archive URL space is numeric-constrained the way core's own date rules
 // are, so `/about/feed` stays a page rather than being read as a year feed.
 const YEAR = ":year(\\d{4})";
 const MONTH = ":month(\\d{2})";
 const DAY = ":day(\\d{2})";
+
+/** The feed under one listing path, a route pattern or a concrete URL alike. */
+export function feedUnder(path: string): string {
+  return `${path.replace(/\/$/, "")}/feed`;
+}
+
+/** The listing a concrete RSS or Atom feed path hangs off. */
+export function listingUnder(feedPath: string): string {
+  return feedPath.replace(/\/feed(\/atom)?$/, "");
+}
+
+function isPaginated(route: string): boolean {
+  return route.endsWith(FRAMEWORK_PAGINATION_SUFFIX);
+}
+
+/**
+ * Whether a listing path is a later page of the archive. A multi-segment
+ * capture's feed (`/docs/:path+/feed`) also answers `/docs/a/page/2/feed`,
+ * whose listing is a page of another rather than a listing of its own.
+ */
+export function isLaterPage(
+  archiveRoutes: readonly string[],
+  listingPath: string,
+): boolean {
+  let paginated = paginatedPatterns.get(archiveRoutes);
+  if (!paginated) {
+    paginated = archiveRoutes
+      .filter(isPaginated)
+      .map((route) => new URLPattern({ pathname: route }));
+    paginatedPatterns.set(archiveRoutes, paginated);
+  }
+  return paginated.some((pattern) => pattern.test({ pathname: listingPath }));
+}
+
+// Compiled once per archive's route list rather than on every feed request.
+const paginatedPatterns = new WeakMap<
+  readonly string[],
+  readonly URLPattern[]
+>();
 
 /**
  * One RSS route the plugin owns. The Atom variant is `${path}/atom` — declared
@@ -34,6 +70,8 @@ export interface FeedRoute {
    * own opt-in: core can't see what it depends on beyond entries.
    */
   readonly cacheable?: boolean;
+  /** The plugin archive whose feed this is; absent on every core scope. */
+  readonly archive?: string;
 }
 
 /**
@@ -42,8 +80,8 @@ export interface FeedRoute {
  * registered public route always answers, so a claimed `/:type/feed` would
  * swallow a page slugged `feed` under some other prefix. The only patterns
  * claimed are URL space something else already reserved: the author archive,
- * the date archives, each taxonomy's archive space, and whatever a plugin
- * archive declared for itself.
+ * the date archives, each taxonomy's archive space, and the space under each
+ * route a syndicated plugin archive registered.
  *
  * Order matters between patterns: the first that matches answers, so the
  * reserved framework shapes are claimed ahead of a plugin archive's own feed
@@ -79,12 +117,14 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
   }
 
   for (const archive of plugins.archiveTypes.values()) {
-    for (const path of archive.feed?.routes ?? []) {
-      if (!path.endsWith(FEED_SUFFIX)) continue;
+    if (!archive.feed) continue;
+    for (const route of archive.routes) {
+      if (isPaginated(route)) continue;
       routes.push({
-        path,
+        path: feedUnder(route),
         scope: (params) => ({ kind: "custom", name: archive.name, params }),
         cacheable: archive.cacheable === true,
+        archive: archive.name,
       });
     }
   }
@@ -117,4 +157,51 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
     claimed.add(route.path);
     return true;
   });
+}
+
+interface CompiledFeedRoute {
+  readonly pattern: URLPattern;
+  readonly archive: string | undefined;
+}
+
+// The registry is settled once `afterSetup` has claimed the feed routes, so
+// they are compiled once per registry rather than on every render.
+const compiledFeedRoutes = new WeakMap<
+  PluginRegistry,
+  readonly CompiledFeedRoute[]
+>();
+
+/**
+ * The plugin archive whose feed answers a concrete feed path, with the params
+ * that feed's route captures from it. Null where no archive feed answers the
+ * path, and where another feed's pattern answers it too: which of two owners
+ * serves is the router's tie-break, not something a page can promise.
+ */
+export function archiveFeedAt(
+  plugins: PluginRegistry,
+  pathname: string,
+): {
+  readonly archive: string;
+  readonly params: Record<string, string>;
+} | null {
+  let compiled = compiledFeedRoutes.get(plugins);
+  if (!compiled) {
+    compiled = feedRoutes(plugins).map((route) => ({
+      pattern: new URLPattern({ pathname: route.path }),
+      archive: route.archive,
+    }));
+    compiledFeedRoutes.set(plugins, compiled);
+  }
+  const matches = compiled.filter(({ pattern }) => pattern.test({ pathname }));
+  const owners = new Set(matches.map((match) => match.archive));
+  // Two routes of one archive answering the URL leave no doubt whose feed it
+  // is; the first of them is the one that serves.
+  const first = owners.size === 1 ? matches[0] : undefined;
+  const result = first?.pattern.exec({ pathname });
+  if (first?.archive === undefined || !result) return null;
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(result.pathname.groups)) {
+    if (value !== undefined) params[key] = value;
+  }
+  return { archive: first.archive, params };
 }
