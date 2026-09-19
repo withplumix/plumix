@@ -397,6 +397,8 @@ Converting happens in three ways, all through the same rules a save uses:
 
 A value no field type accepts, such as `"maybe"` under a `toggle`, is reported and never changed, because there is no correct value to pick for you. Edit those by hand.
 
+A plugin writing meta through `plumix/db` can avoid leaving such values in the first place by passing its bag through `settleMeta`. See [plumix/db](/getting-started/project-structure/#plumixdb).
+
 ## Retired types
 
 Three older input types are reserved rather than removed. A plugin cannot claim their names, and the admin still renders a registration that uses them, so an old object-literal field keeps working. They have no builder and no narrowed type, so new code has a replacement instead.

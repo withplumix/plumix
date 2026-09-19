@@ -75,13 +75,15 @@ export {
   users,
 } from "@plumix/core/db";
 
-// Purge vocabulary, core's search conditions and visitor metadata.
+// Purge vocabulary, meta settling, core's search conditions and visitor
+// metadata.
 export {
   entryPurgeTags,
   entrySearchCondition,
   entryTag,
   enqueuePurgeTags,
   readVisitorMeta,
+  settleMeta,
   termPurgeTags,
   tokenizeSearchQuery,
   typeTag,

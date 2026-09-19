@@ -28,6 +28,7 @@ describe("@plumix/core/db surface", () => {
       "termPurgeTags",
       "enqueuePurgeTags",
       "readVisitorMeta",
+      "settleMeta",
     ]) {
       expect(db, name).toHaveProperty(name);
     }
