@@ -16,6 +16,7 @@ import {
   applyMetaPatch,
   MetaValidationError,
   sanitizeMetaInput,
+  writeSettledMeta,
 } from "../../meta/core.js";
 import { loadEntryMeta } from "./meta.js";
 
@@ -402,5 +403,133 @@ describe("applyMetaPatch + loadEntryMeta", () => {
     expect(await loadEntryMeta(h.context, post)).toEqual({
       featured: "false",
     });
+  });
+});
+
+// The row a direct write or a post-hoc type change leaves behind. Reads are
+// literal since #2426/#2441, so the declared type is only true while the row
+// holds what it declared — opening the entry is what settles it (#2440).
+describe("entry.get settles an unsettled row", () => {
+  const unsettled = { title: 42, count: "7", flag: 1 };
+  const settled = { title: "42", count: 7, flag: true };
+  // A real last-edit time, well before the test runs. `updatedAt` is stored
+  // to the second, so a fixture created and settled inside one second cannot
+  // tell a bumped timestamp from an untouched one.
+  const lastEdited = new Date("2026-01-01T00:00:00.000Z");
+  const spec = {
+    title: { type: "string" },
+    count: { type: "number" },
+    flag: { type: "boolean" },
+  } as const;
+
+  const seedUnsettled = async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithMeta(spec),
+    });
+    const row = await h.factory.published.create({
+      authorId: h.user.id,
+      type: "post",
+    });
+    // Straight to the column, as `plumix/db` lets a plugin do — the write
+    // path would have settled every one of these on the way in.
+    await h.db
+      .update(entries)
+      .set({ meta: unsettled, updatedAt: lastEdited })
+      .where(eq(entries.id, row.id));
+    return { h, row };
+  };
+
+  const storedRow = (
+    h: Awaited<ReturnType<typeof seedUnsettled>>["h"],
+    id: number,
+  ) => h.db.query.entries.findFirst({ where: eq(entries.id, id) });
+
+  test("hands back the settled value and writes it to the column", async () => {
+    const { h, row } = await seedUnsettled();
+
+    const got = await h.client.entry.get({ id: row.id });
+    expect(got.meta).toMatchObject(settled);
+    expect((await storedRow(h, row.id))?.meta).toMatchObject(settled);
+  });
+
+  // Settling is a normalization, not an edit. Moving `updatedAt` would float
+  // an old entry to the top of "recently updated" for having been opened, and
+  // hand the editor a lock token the row no longer carries.
+  test("opening the entry leaves its last-edit time alone", async () => {
+    const { h, row } = await seedUnsettled();
+
+    const got = await h.client.entry.get({ id: row.id });
+    expect(got.updatedAt).toEqual(lastEdited);
+    expect((await storedRow(h, row.id))?.updatedAt).toEqual(lastEdited);
+  });
+
+  // The editor's own save: it sends back the `updatedAt` it opened the entry
+  // with, and a settle that moved it would be read as someone else's edit.
+  test("the lock token it hands back still saves", async () => {
+    const { h, row } = await seedUnsettled();
+
+    const got = await h.client.entry.get({ id: row.id });
+    await expect(
+      h.client.entry.update({
+        id: row.id,
+        excerpt: "edited",
+        expectedLiveUpdatedAt: got.updatedAt,
+      }),
+    ).resolves.toMatchObject({ excerpt: "edited" });
+  });
+
+  test("announces the settle once, and a settled row not at all", async () => {
+    const { h, row } = await seedUnsettled();
+    const changed = h.spyAction("entry:meta_changed");
+
+    await h.client.entry.get({ id: row.id });
+    await h.client.entry.get({ id: row.id });
+    expect(changed.calls).toHaveLength(1);
+  });
+});
+
+// The settle computes its write from a snapshot, so the row can move under it.
+// Seeding the column the snapshot no longer describes is the race, reached
+// without a timing seam.
+describe("writeSettledMeta", () => {
+  const snapshot = { count: "7" };
+  const patch = { upserts: new Map([["count", 7]]), deletes: [] };
+
+  const seed = async (meta: Record<string, JsonValue>) => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithMeta({
+        count: { type: "number" },
+        title: { type: "string" },
+      }),
+    });
+    const row = await h.factory.published.create({
+      authorId: h.user.id,
+      type: "post",
+    });
+    await h.db.update(entries).set({ meta }).where(eq(entries.id, row.id));
+    const stored = async () =>
+      (await h.db.query.entries.findFirst({ where: eq(entries.id, row.id) }))
+        ?.meta;
+    return { h, row, stored };
+  };
+
+  test("a save that landed after the read wins", async () => {
+    const { h, row, stored } = await seed({ count: 8 });
+
+    await expect(
+      writeSettledMeta(h.context, entries, entries.id, row.id, snapshot, patch),
+    ).resolves.toBe(false);
+    expect(await stored()).toEqual({ count: 8 });
+  });
+
+  test("a key written beside the settled one survives it", async () => {
+    const { h, row, stored } = await seed({ count: "7", title: "new" });
+
+    await expect(
+      writeSettledMeta(h.context, entries, entries.id, row.id, snapshot, patch),
+    ).resolves.toBe(true);
+    expect(await stored()).toEqual({ count: 7, title: "new" });
   });
 });

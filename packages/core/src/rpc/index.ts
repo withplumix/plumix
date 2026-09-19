@@ -38,6 +38,16 @@ export type {
   EntryUpdateInput,
 } from "./procedures/entry/schemas.js";
 export { settingsRouter } from "./procedures/settings/index.js";
+export { metaRouter } from "./procedures/meta/index.js";
+export type {
+  MetaStore,
+  MetaSweep,
+  UnsettledKeyCount,
+} from "./procedures/meta/sweep.js";
+export {
+  sweepAllUnsettledMeta,
+  sweepUnsettledMeta,
+} from "./procedures/meta/sweep.js";
 export type { SettingsRouter } from "./procedures/settings/index.js";
 export {
   settingsGetInputSchema,

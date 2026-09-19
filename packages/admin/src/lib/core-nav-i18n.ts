@@ -42,6 +42,10 @@ export const CORE_NAV_DESCRIPTORS = {
     id: "core.adminNav.item.mailer",
     message: "Mailer",
   }),
+  itemFieldValues: defineMessage({
+    id: "core.adminNav.item.fieldValues",
+    message: "Field values",
+  }),
   itemSettings: defineMessage({
     id: "core.adminNav.item.settings",
     message: "Settings",
@@ -86,6 +90,14 @@ export const CORE_NAV_DESCRIPTORS = {
   keywordSmtp: defineMessage({
     id: "core.adminNav.keyword.smtp",
     message: "smtp",
+  }),
+  keywordImport: defineMessage({
+    id: "core.adminNav.keyword.import",
+    message: "import",
+  }),
+  keywordMeta: defineMessage({
+    id: "core.adminNav.keyword.meta",
+    message: "meta",
   }),
   keywordConfiguration: defineMessage({
     id: "core.adminNav.keyword.configuration",

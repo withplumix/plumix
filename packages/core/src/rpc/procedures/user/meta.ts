@@ -6,6 +6,7 @@ import type {
   MetaPatch,
   MetaPatchTarget,
   ResolvedMeta,
+  SettledRow,
 } from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
 import {
@@ -20,7 +21,9 @@ import {
   metaScope,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  settleStoredMeta,
   validateMetaReferencesForRpc,
+  writeSettledMeta,
 } from "../../meta/core.js";
 import { assertMetaCapabilities } from "../entry/meta.js";
 
@@ -85,6 +88,50 @@ export async function resolveUserMeta(
   );
 }
 
+/**
+ * Settle one user's stored bag and return the bag a reader should decode —
+ * the user counterpart of `settleEntryMeta`. Users have no public render
+ * surface reading their meta (`ResolvedAuthor` projects none), so the only
+ * read to hang this off is `user.get`.
+ */
+export async function settleUserMeta(
+  ctx: AppContext,
+  user: { readonly id: number },
+  stored: JsonObject | null | undefined,
+): Promise<SettledRow> {
+  const settled = settleStoredMeta(
+    metaScope(listUserMetaFields(ctx.plugins)),
+    stored,
+  );
+  return {
+    ...settled,
+    written: await writeSettledUserMeta(ctx, user, stored, settled.patch),
+  };
+}
+
+/**
+ * Write back a settle already computed from `stored`, and announce it if it
+ * landed — the step the bulk sweep shares with the read heal, so both write and
+ * announce the same way.
+ */
+export async function writeSettledUserMeta(
+  ctx: AppContext,
+  user: { readonly id: number },
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch,
+): Promise<boolean> {
+  const written = await writeSettledMeta(
+    ctx,
+    users,
+    users.id,
+    user.id,
+    stored,
+    patch,
+  );
+  if (written) await announceUserMetaChange(ctx, user, patch);
+  return written;
+}
+
 export async function loadUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
@@ -106,7 +153,15 @@ export async function writeUserMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, users, users.id, user.id, patch);
-  await ctx.hooks.doAction(
+  await announceUserMetaChange(ctx, user, patch);
+}
+
+function announceUserMetaChange(
+  ctx: AppContext,
+  user: { readonly id: number },
+  patch: MetaPatch,
+): Promise<void> {
+  return ctx.hooks.doAction(
     "user:meta_changed",
     user,
     {

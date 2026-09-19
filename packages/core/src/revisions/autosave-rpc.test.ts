@@ -253,6 +253,8 @@ describe("entry.update saveAs", () => {
   // runs the field pipeline over the keys the patch carries, and re-running an
   // input decoder over the rest would re-interpret a value nobody sent. What
   // the author saw (unset, per `coerceOnRead`) is what publishing leaves.
+  // Settling is the read heal's job and the bulk sweep's, never publish's — so
+  // this reads storage directly: `entry.get` would heal the row itself.
   test("publishing an unrelated edit leaves an untouched unsettled value as stored", async () => {
     const h = await publishedPostFixture(
       registryWithMetaField({
@@ -268,19 +270,17 @@ describe("entry.update saveAs", () => {
       .set({ meta: { sealed: 1 } })
       .where(eq(entries.id, h.entryId));
 
-    const before = await h.client.entry.get({ id: h.entryId });
-    expect(before.meta.sealed).toBe(1);
-
     await h.client.entry.update({ id: h.entryId, excerpt: "unrelated edit" });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
       expectedLiveUpdatedAt: h.liveUpdatedAt,
     });
 
-    // The toggle read unset before the publish, so it reads unset after.
     expect(promoted.meta.sealed).toBe(1);
-    const after = await h.client.entry.get({ id: h.entryId });
-    expect(after.meta.sealed).toBe(1);
+    const stored = await h.context.db.query.entries.findFirst({
+      where: eq(entries.id, h.entryId),
+    });
+    expect(stored?.meta.sealed).toBe(1);
   });
 
   test("autosave is draft-lenient: keeps an out-of-bounds value instead of rejecting", async () => {

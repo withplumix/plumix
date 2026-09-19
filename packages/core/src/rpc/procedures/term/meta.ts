@@ -6,6 +6,7 @@ import type {
   MetaPatch,
   MetaPatchTarget,
   ResolvedMeta,
+  SettledRow,
 } from "../../meta/core.js";
 import { terms } from "../../../db/schema/terms.js";
 import {
@@ -22,7 +23,9 @@ import {
   resolveMetaBags as resolveMetaBagsCore,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  settleStoredMeta,
   validateMetaReferencesForRpc,
+  writeSettledMeta,
 } from "../../meta/core.js";
 import { assertMetaCapabilities } from "../entry/meta.js";
 
@@ -119,6 +122,51 @@ export async function resolveTermsMeta(
   );
 }
 
+/**
+ * Settle one term's stored bag and return the bag a reader should decode —
+ * the term counterpart of `settleEntryMeta`, which says why the settle hangs
+ * off the single-item read and not the decode. The public renderer reads term
+ * meta through `page-data.ts` and `build-resolved-entries.ts`, neither of
+ * which comes through here.
+ */
+export async function settleTermMeta(
+  ctx: AppContext,
+  term: { readonly id: number; readonly taxonomy: string },
+  stored: JsonObject | null | undefined,
+): Promise<SettledRow> {
+  const settled = settleStoredMeta(
+    metaScope(listTermMetaFields(ctx.plugins, term.taxonomy)),
+    stored,
+  );
+  return {
+    ...settled,
+    written: await writeSettledTermMeta(ctx, term, stored, settled.patch),
+  };
+}
+
+/**
+ * Write back a settle already computed from `stored`, and announce it if it
+ * landed — the step the bulk sweep shares with the read heal, so both write and
+ * announce the same way.
+ */
+export async function writeSettledTermMeta(
+  ctx: AppContext,
+  term: { readonly id: number; readonly taxonomy: string },
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch,
+): Promise<boolean> {
+  const written = await writeSettledMeta(
+    ctx,
+    terms,
+    terms.id,
+    term.id,
+    stored,
+    patch,
+  );
+  if (written) await announceTermMetaChange(ctx, term, patch);
+  return written;
+}
+
 export async function loadTermMeta(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },
@@ -140,7 +188,15 @@ export async function writeTermMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, terms, terms.id, term.id, patch);
-  await ctx.hooks.doAction(
+  await announceTermMetaChange(ctx, term, patch);
+}
+
+function announceTermMetaChange(
+  ctx: AppContext,
+  term: { readonly id: number; readonly taxonomy: string },
+  patch: MetaPatch,
+): Promise<void> {
+  return ctx.hooks.doAction(
     "term:meta_changed",
     term,
     {

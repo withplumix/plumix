@@ -17,7 +17,7 @@ Three interfaces make up the contract.
 
 `RuntimeAdapter` is what your package exports and what a site names in its `runtime` config slot. It answers two questions: what handler does this app get, and what does the generated entry module look like.
 
-`PlumixHandler` is that handler. It is one object with a `fetch`, and optionally a `scheduled` and a `dispose`. You rarely write one from scratch — `createPlumixHandler(app)` returns the whole thing, already carrying app-context assembly, binding validation, request-scoped database wiring and the scheduled-task loop.
+`PlumixHandler` is that handler. It is one object with a `fetch`, and optionally a `scheduled`, a `run` and a `dispose`. You rarely write one from scratch — `createPlumixHandler(app)` returns the whole thing, already carrying app-context assembly, binding validation, request-scoped database wiring and the scheduled-task loop.
 
 `Invocation` is what you hand `fetch` on every call: the runtime's configuration bag, an optional `waitUntil`, and an optional trusted client address. It is the seam that keeps the platform's shape out of core — a Worker's positional `(env, ctx)`, a `Bun.serve` handler's `server`, a Lambda event all collapse into it.
 
@@ -225,6 +225,28 @@ declare const env: PlumixEnv;
 
 export async function runCron(cron: string): Promise<void> {
   await handler.scheduled?.({ scheduledTime: Date.now(), cron }, { env });
+}
+```
+
+### `PlumixHandler.run`
+
+Runs one piece of core work against the site from outside a request, and resolves with what the work returned. The work gets the context a request would: the site's database, its plugins and its bound slots. It ends the way a request does, committing the scoped write and flushing the CDN purges the work enqueued. `plumix meta settle` runs through it, which is how a command line reaches the same database, plugins and purges the site uses.
+
+It throws when the database can't be reached from where it is called: a binding that only exists inside the platform, like D1 from a Node process. Call `dispose()` after it, as after `scheduled`, so the purges it enqueued are delivered.
+
+```ts
+import type { PlumixEnv, PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+declare const env: PlumixEnv;
+
+export async function countPlugins(): Promise<number | undefined> {
+  const count = await handler.run?.(
+    (ctx) => Promise.resolve(ctx.plugins.entryTypes.size),
+    { env },
+  );
+  await handler.dispose?.();
+  return count;
 }
 ```
 

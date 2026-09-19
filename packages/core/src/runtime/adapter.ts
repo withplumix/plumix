@@ -1,3 +1,4 @@
+import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
 
@@ -95,6 +96,20 @@ export interface PlumixHandler {
     event: ScheduledEvent,
     invocation: Invocation,
   ) => void | Promise<void | ScheduledRunReport>;
+  /**
+   * Run one piece of core work against the site from outside a request — a
+   * CLI command that settles stored meta, for one. The work gets the context a
+   * request would: the site's database, its plugins, its bound slots. It ends
+   * the way a request does, committing the scoped write and flushing the CDN
+   * purges the work enqueued.
+   *
+   * Throws when the site's database can't be reached from here — a binding
+   * that only exists inside the platform, like D1 from a Node process.
+   */
+  readonly run?: <T>(
+    work: (ctx: AppContext) => Promise<T>,
+    invocation: Invocation,
+  ) => Promise<T>;
   /**
    * Drain the deferred work no `waitUntil` took. A long-lived process calls it
    * on `SIGTERM` so telemetry delivery and cache purges finish instead of

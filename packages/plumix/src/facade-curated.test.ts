@@ -118,6 +118,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "appRouter",
           "authRouter",
           "entryRouter",
+          "metaRouter",
           "settingsRouter",
           "termRouter",
           "userRouter",
@@ -149,6 +150,8 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "emailField",
           "nameField",
           "RPC_ERRORS",
+          "sweepAllUnsettledMeta",
+          "sweepUnsettledMeta",
         ],
       },
       {

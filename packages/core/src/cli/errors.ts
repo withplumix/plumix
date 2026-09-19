@@ -29,6 +29,7 @@ type CliErrorCode =
   | "cron_run_database_unavailable"
   | "cron_run_tasks_failed"
   | "cron_run_never_started"
+  | "meta_database_unreachable"
   | "cron_run_invalid_expression";
 
 export class CliError extends Error {
@@ -94,6 +95,21 @@ export class CliError extends Error {
       // No `cause`: the parser's message is already the whole explanation, and
       // the CLI prints a cause underneath, which would just repeat it.
       undefined,
+    );
+  }
+
+  // A Cloudflare site's D1 binding exists only inside the Worker, so from a
+  // Node process there is no database to settle — the admin page runs the same
+  // settle where the binding lives.
+  static metaDatabaseUnreachable(ctx: {
+    detail: string;
+    cause: unknown;
+  }): CliError {
+    return new CliError(
+      "meta_database_unreachable",
+      `Could not reach the site's database from here: ${ctx.detail}`,
+      "A database that only exists inside the platform, such as D1 on Cloudflare, can't be reached from the command line. Use the admin's Field values page, which runs the same settle inside the site.",
+      ctx.cause,
     );
   }
 

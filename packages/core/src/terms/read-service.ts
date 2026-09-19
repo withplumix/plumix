@@ -54,6 +54,18 @@ export async function getTerm(
   ctx: AppContext,
   input: TermGetInput,
 ): Promise<WithResolvedMeta<Term>> {
+  const row = await findReadableTerm(ctx, input);
+  return { ...row, meta: await resolveTermMeta(ctx, row.taxonomy, row.meta) };
+}
+
+/**
+ * The stored row behind {@link getTerm}, after the same visibility check and
+ * before its meta is resolved — for the editor's read, which settles it first.
+ */
+export async function findReadableTerm(
+  ctx: AppContext,
+  input: TermGetInput,
+): Promise<Term> {
   const row = await ctx.db.query.terms.findFirst({
     where: eq(terms.id, input.id),
   });
@@ -61,7 +73,5 @@ export async function getTerm(
   if (!ctx.auth.can(taxonomyCapability(row.taxonomy, "read"))) {
     throw TermReadError.termNotFound(input.id);
   }
-
-  const meta = await resolveTermMeta(ctx, row.taxonomy, row.meta);
-  return { ...row, meta };
+  return row;
 }

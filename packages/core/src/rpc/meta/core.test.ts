@@ -21,6 +21,7 @@ import {
   metaScope,
   MetaValidationError,
   sanitizeMetaInput,
+  settleStoredMeta,
   validateAndPromoteMetaBag,
 } from "./core.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
@@ -655,5 +656,151 @@ describe("decodeMetaBag (.default() inside containers)", () => {
     ).toEqual({
       outer: { inner: { tone: "warm" }, rows: [{ label: "untitled" }] },
     });
+  });
+});
+
+// The other half of making the two bags agree. #2426 and #2441 made every
+// reader literal, which is only honest while the row holds what its field
+// declared. Settling is what makes that true of the data rather than of the
+// decode, so `StoredMetaOf` and `MetaOf` describe the same value (#2440).
+// What a settle hands a meta writer, flattened so a test can compare it: the
+// settled bag, and only the top-level keys the patch will write.
+function settle(scope: ReturnType<typeof metaScope>, bag: JsonObject | null) {
+  const settled = settleStoredMeta(scope, bag);
+  return {
+    bag: settled.bag,
+    moved: Object.fromEntries(settled.patch.upserts),
+  };
+}
+
+describe("settleStoredMeta", () => {
+  const scope = metaScope([
+    text("codename").build(),
+    number("clearance").build(),
+    toggle("sealed").build(),
+  ]);
+
+  test("settles each scalar to what the write path would have stored", () => {
+    const settled = { codename: "42", clearance: 7, sealed: true };
+    expect(settle(scope, { codename: 42, clearance: "7", sealed: 1 })).toEqual({
+      bag: settled,
+      moved: settled,
+    });
+  });
+
+  test("moves only the keys that were unsettled", () => {
+    expect(
+      settle(scope, { codename: "42", clearance: "7", sealed: true }),
+    ).toEqual({
+      bag: { codename: "42", clearance: 7, sealed: true },
+      moved: { clearance: 7 },
+    });
+  });
+
+  test("leaves a bag the write path already settled alone", () => {
+    const bag = { codename: "42", clearance: 7, sealed: true };
+    expect(settle(scope, bag)).toEqual({ bag, moved: {} });
+  });
+});
+
+describe("settleStoredMeta (what it leaves alone)", () => {
+  test("a value no schema accepts stays put rather than being dropped", () => {
+    const scope = metaScope([number("clearance").build()]);
+    // `Number("nope")` is NaN, which the write path rejects too — there is no
+    // settled form to pick, and deleting it would lose data.
+    expect(settle(scope, { clearance: "nope" })).toEqual({
+      bag: { clearance: "nope" },
+      moved: {},
+    });
+  });
+
+  // The bulk settle reports these for a human rather than guessing a value.
+  test("names the keys it could not settle, at any depth", () => {
+    const scope = metaScope([
+      number("clearance").build(),
+      toggle("sealed").build(),
+      repeater("rows")
+        .fields([number("depth")])
+        .build(),
+    ]);
+    expect(
+      settleStoredMeta(scope, {
+        clearance: "nope",
+        sealed: 1,
+        rows: [{ depth: "deep" }],
+      }).unconvertible,
+    ).toEqual(["clearance", "rows"]);
+  });
+
+  // A container field holding the wrong shape renders badly in the editor and
+  // has no settled form, so a human has to see it.
+  test("reports a container field holding the wrong shape", () => {
+    const scope = metaScope([
+      repeater("rows")
+        .fields([number("depth")])
+        .build(),
+      group("outer")
+        .fields([number("depth")])
+        .build(),
+    ]);
+    expect(
+      settleStoredMeta(scope, { rows: [3, { depth: 1 }], outer: "flat" })
+        .unconvertible,
+    ).toEqual(["rows", "outer"]);
+  });
+
+  // A stored `null` is a value someone chose, and the pipeline reads it as "no
+  // value" — not a mismatch a human needs to resolve.
+  test("does not report a stored null as unsettled", () => {
+    const scope = metaScope([number("clearance").build()]);
+    expect(settleStoredMeta(scope, { clearance: null })).toMatchObject({
+      bag: { clearance: null },
+      unconvertible: [],
+    });
+  });
+
+  test("a key no installed plugin declares passes through", () => {
+    const scope = metaScope([text("codename").build()]);
+    expect(settle(scope, { ghost: 42 })).toEqual({
+      bag: { ghost: 42 },
+      moved: {},
+    });
+  });
+
+  test("a container with nothing unsettled inside is not rewritten", () => {
+    const scope = metaScope([
+      group("outer")
+        .fields([text("tone")])
+        .build(),
+    ]);
+    const bag = { outer: { tone: "warm" } };
+    expect(settle(scope, bag)).toEqual({ bag, moved: {} });
+  });
+
+  // The patch carries the whole top-level key, since that is the unit
+  // `applyMetaPatch` writes with `json_set`.
+  test("settles inside a group and a repeater row", () => {
+    const scope = metaScope([
+      group("outer")
+        .fields([number("depth")])
+        .build(),
+      repeater("rows")
+        .fields([toggle("live")])
+        .build(),
+    ]);
+    const settled = {
+      outer: { depth: 3 },
+      rows: [{ live: true }, { live: false }],
+    };
+    expect(
+      settle(scope, {
+        outer: { depth: "3" },
+        rows: [{ live: 1 }, { live: false }],
+      }),
+    ).toEqual({ bag: settled, moved: settled });
+  });
+
+  test("a row with no stored meta settles to an empty bag and moves nothing", () => {
+    expect(settle(metaScope([]), null)).toEqual({ bag: {}, moved: {} });
   });
 });

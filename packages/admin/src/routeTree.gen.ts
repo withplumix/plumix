@@ -19,6 +19,7 @@ import { Route as AuthenticatedProfileRouteImport } from "./routes/_authenticate
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
 import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_authenticated/allowed-domains/index";
 import { Route as AuthenticatedAuthDeviceRouteImport } from "./routes/_authenticated/auth/device";
+import { Route as AuthenticatedFieldValuesIndexRouteImport } from "./routes/_authenticated/field-values/index";
 import { Route as AuthenticatedMailerIndexRouteImport } from "./routes/_authenticated/mailer/index";
 import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
 import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
@@ -81,6 +82,12 @@ const AuthenticatedAuthDeviceRoute = AuthenticatedAuthDeviceRouteImport.update({
   path: "/auth/device",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
+const AuthenticatedFieldValuesIndexRoute =
+  AuthenticatedFieldValuesIndexRouteImport.update({
+    id: "/field-values/",
+    path: "/field-values/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
 const AuthenticatedMailerIndexRoute =
   AuthenticatedMailerIndexRouteImport.update({
     id: "/mailer/",
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
   "/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
+  "/field-values/": typeof AuthenticatedFieldValuesIndexRoute;
   "/mailer/": typeof AuthenticatedMailerIndexRoute;
   "/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/users/": typeof AuthenticatedUsersIndexRoute;
@@ -189,6 +197,7 @@ export interface FileRoutesByTo {
   "/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/users/create": typeof AuthenticatedUsersCreateRoute;
   "/allowed-domains": typeof AuthenticatedAllowedDomainsIndexRoute;
+  "/field-values": typeof AuthenticatedFieldValuesIndexRoute;
   "/mailer": typeof AuthenticatedMailerIndexRoute;
   "/settings": typeof AuthenticatedSettingsIndexRoute;
   "/users": typeof AuthenticatedUsersIndexRoute;
@@ -215,6 +224,7 @@ export interface FileRoutesById {
   "/_authenticated/settings/$page": typeof AuthenticatedSettingsPageRoute;
   "/_authenticated/users/create": typeof AuthenticatedUsersCreateRoute;
   "/_authenticated/allowed-domains/": typeof AuthenticatedAllowedDomainsIndexRoute;
+  "/_authenticated/field-values/": typeof AuthenticatedFieldValuesIndexRoute;
   "/_authenticated/mailer/": typeof AuthenticatedMailerIndexRoute;
   "/_authenticated/settings/": typeof AuthenticatedSettingsIndexRoute;
   "/_authenticated/users/": typeof AuthenticatedUsersIndexRoute;
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | "/settings/$page"
     | "/users/create"
     | "/allowed-domains/"
+    | "/field-values/"
     | "/mailer/"
     | "/settings/"
     | "/users/"
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | "/settings/$page"
     | "/users/create"
     | "/allowed-domains"
+    | "/field-values"
     | "/mailer"
     | "/settings"
     | "/users"
@@ -286,6 +298,7 @@ export interface FileRouteTypes {
     | "/_authenticated/settings/$page"
     | "/_authenticated/users/create"
     | "/_authenticated/allowed-domains/"
+    | "/_authenticated/field-values/"
     | "/_authenticated/mailer/"
     | "/_authenticated/settings/"
     | "/_authenticated/users/"
@@ -374,6 +387,13 @@ declare module "@tanstack/react-router" {
       path: "/auth/device";
       fullPath: "/auth/device";
       preLoaderRoute: typeof AuthenticatedAuthDeviceRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/field-values/": {
+      id: "/_authenticated/field-values/";
+      path: "/field-values";
+      fullPath: "/field-values/";
+      preLoaderRoute: typeof AuthenticatedFieldValuesIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/mailer/": {
@@ -492,6 +512,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute;
   AuthenticatedUsersCreateRoute: typeof AuthenticatedUsersCreateRoute;
   AuthenticatedAllowedDomainsIndexRoute: typeof AuthenticatedAllowedDomainsIndexRoute;
+  AuthenticatedFieldValuesIndexRoute: typeof AuthenticatedFieldValuesIndexRoute;
   AuthenticatedMailerIndexRoute: typeof AuthenticatedMailerIndexRoute;
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute;
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute;
@@ -510,6 +531,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
   AuthenticatedUsersCreateRoute: AuthenticatedUsersCreateRoute,
   AuthenticatedAllowedDomainsIndexRoute: AuthenticatedAllowedDomainsIndexRoute,
+  AuthenticatedFieldValuesIndexRoute: AuthenticatedFieldValuesIndexRoute,
   AuthenticatedMailerIndexRoute: AuthenticatedMailerIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
