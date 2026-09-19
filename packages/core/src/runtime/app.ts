@@ -51,6 +51,7 @@ import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { createDebugHistoryStore } from "../dev/request-history/store.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { resolveImageRoleIndex } from "../plugin/image-roles.js";
 import {
   collectContributedBlocks,
   createPluginRegistry,
@@ -328,6 +329,9 @@ export async function buildApp(
   // Before core aggregates anything, so a subscriber's own registrations still
   // land in every registry assembled below.
   await hooks.doAction("theme:ready", config.theme);
+  // Every role is registered by now, so the index built here is the complete
+  // one the request path reads, and a misdeclared role fails this boot.
+  resolveImageRoleIndex(registry);
 
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();

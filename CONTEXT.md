@@ -98,6 +98,10 @@ A meta-box field whose value is a foreign id (or list) into another entity — u
 **Repeater**:
 A meta-box field holding a list of structured rows that share one fixed subfield schema.
 
+**Image role**:
+A named purpose an entry, term or user scope assigns to one of its media reference fields, so a reader asks for "the entry's featured image" rather than for a meta key. Core ships `featured` and `ogImage`; a plugin or theme declares any other. Each role declares whether a scope may carry more than one field in it. A role field may sit inside a group, never inside a repeater: a role names the entry's image, not a row's.
+_Avoid_: role (bare — that is the user tier), featured field (a featured field is one image role, not the concept)
+
 **Setting**:
 One stored key/value pair within a settings group.
 

@@ -756,6 +756,7 @@ const ROOT_ONLY_TYPES: readonly Omit<Withholding, "publishedBy">[] = [
       "EntryTypeOptions",
       "EntryTypeRegistry",
       "FilterRegistry",
+      "ImageRoles",
       "LookupAdapterOptions",
       "PluginContextExtensions",
       "PlumixEnv",

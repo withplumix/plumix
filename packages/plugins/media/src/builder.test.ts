@@ -1,3 +1,5 @@
+import type { ImageRoles } from "plumix";
+import { FieldConfigError } from "plumix/fields";
 import {
   buildManifest,
   definePlugin,
@@ -14,6 +16,15 @@ import { media as mediaPlugin } from "./index.js";
 // surface stays consumable by external plugin authors.
 const _scope: MediaFieldScope = { accept: "image/" };
 void _scope;
+
+declare module "plumix" {
+  interface ImageRoles {
+    hero: true;
+  }
+}
+expectTypeOf<keyof ImageRoles>().toEqualTypeOf<
+  "featured" | "ogImage" | "hero"
+>();
 
 describe("media() builder", () => {
   test("derives the label, pins inputType + json type, emits a media referenceTarget", () => {
@@ -117,11 +128,79 @@ describe("media() builder", () => {
     expect(media("share").ogImage().build().role).toBe("ogImage");
   });
 
+  test(".role() tags the field and, with no accept declared, limits it to images", () => {
+    const field = media("cover").role("hero").build();
+    expect(field.role).toBe("hero");
+    expect(field.referenceTarget).toEqual({
+      kind: "media",
+      scope: { accept: "image/" },
+    });
+  });
+
+  test(".featured() and .ogImage() limit the field to images the same way", () => {
+    expect(media("hero").featured().build().referenceTarget.scope).toEqual({
+      accept: "image/",
+    });
+    expect(media("share").ogImage().build().referenceTarget.scope).toEqual({
+      accept: "image/",
+    });
+  });
+
+  test.each([{ accept: [] }, { accept: "" }])(
+    "reads an empty accept ($accept) as none, so a role still limits it to images",
+    ({ accept }) => {
+      expect(
+        media("cover").accept(accept).role("hero").build().referenceTarget
+          .scope,
+      ).toEqual({ accept: "image/" });
+    },
+  );
+
+  test("keeps a role field's own image accept", () => {
+    expect(
+      media("cover").accept(["image/png", "image/webp"]).role("hero").build()
+        .referenceTarget.scope,
+    ).toEqual({ accept: ["image/png", "image/webp"] });
+  });
+
+  test.each([
+    {
+      order: "accept before role",
+      build: () => media("brochure").accept("application/pdf").role("hero"),
+    },
+    {
+      order: "role before accept",
+      build: () => media("brochure").role("hero").accept("application/pdf"),
+    },
+    {
+      order: "a list naming a prefix, which a list matches exactly",
+      build: () => media("brochure").accept(["image/"]).role("hero"),
+    },
+    {
+      order: "a list admitting a non-image",
+      build: () =>
+        media("brochure").accept(["image/png", "video/mp4"]).featured(),
+    },
+  ])(
+    "rejects a role field whose accept admits non-images ($order)",
+    ({ build }) => {
+      expect(build).toThrow(FieldConfigError);
+      expect(build).toThrow(/image role/);
+    },
+  );
+
+  test(".role() only takes a declared role name", () => {
+    // @ts-expect-error — "typo" is not a key of ImageRoles
+    media("cover").role("typo");
+  });
+
   test("role markers reject multi-value fields at the type level", () => {
     // @ts-expect-error — featured is single-only; .multiple() drops it
     media("gallery").multiple().featured();
     // @ts-expect-error — ogImage is single-only; .multiple() drops it
     media("gallery").multiple().ogImage();
+    // @ts-expect-error — any role is single-only
+    media("gallery").multiple().role("hero");
   });
 
   test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {

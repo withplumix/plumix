@@ -14,9 +14,9 @@ const MEDIA_KIND = "media";
 // entries cannot go out as one `IN`.
 const HYDRATE_CHUNK = 100;
 
-// Image search reads a handful per URL, and a role-tagged field can be a
-// `.multiple()` gallery — so the cap is what keeps a page of 1,000 entries
-// from turning into tens of thousands of ids to resolve and list.
+// Image search reads a handful per URL, and a type can tag any number of
+// fields — so the cap is what keeps a page of 1,000 entries from turning into
+// tens of thousands of ids to resolve and list.
 const MAX_IMAGES_PER_ENTRY = 10;
 
 /**

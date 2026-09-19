@@ -859,64 +859,53 @@ describe("buildManifest", () => {
     );
   });
 
-  test("rejects two featured fields on the same entry type", async () => {
+  test("keeps image roles off the wire, nested fields included", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe-featured", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("box-a", {
-        label: "A",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "hero",
-            label: "Hero",
-            type: "json",
-            inputType: "media",
-            referenceTarget: { kind: "media", scope: {} },
-            role: "featured",
-          },
-        ],
-      });
-      ctx.registerEntryMetaBox("box-b", {
-        label: "B",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "cover",
-            label: "Cover",
-            type: "json",
-            inputType: "media",
-            referenceTarget: { kind: "media", scope: {} },
-            role: "featured",
-          },
-        ],
-      });
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(() => buildManifest(registry)).toThrow(/featured/);
-  });
-
-  test("rejects a role-tagged field that stores multiple values", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("multi-role", (ctx) => {
+    const plugin = definePlugin("roles", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts" });
       ctx.registerEntryMetaBox("box", {
         label: "Box",
         entryTypes: ["post"],
         fields: [
           {
-            key: "gallery",
-            label: "Gallery",
+            key: "art",
+            label: "Art",
             type: "json",
-            inputType: "mediaList",
-            referenceTarget: { kind: "media", scope: {}, multiple: true },
-            role: "featured",
+            inputType: "group",
+            fields: [
+              {
+                key: "hero",
+                label: "Hero",
+                type: "json",
+                inputType: "media",
+                referenceTarget: { kind: "media", scope: {} },
+                role: "featured",
+              },
+            ],
+          },
+        ],
+      });
+      ctx.registerUserMetaBox("profile", {
+        label: "Profile",
+        fields: [
+          {
+            key: "avatar",
+            label: "Avatar",
+            type: "json",
+            inputType: "media",
+            referenceTarget: { kind: "media", scope: {} },
+            role: "ogImage",
           },
         ],
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(() => buildManifest(registry)).toThrow(/single/);
+
+    const wire = JSON.stringify(buildManifest(registry));
+
+    expect(wire).toContain('"hero"');
+    expect(wire).not.toContain('"role"');
+    expect(wire).not.toContain("imageRoles");
   });
 
   test("accepts a single featured field on an entry type", async () => {

@@ -36,6 +36,7 @@ import type {
   MetaBoxField,
   MetaBoxFieldInput,
 } from "./fields/meta-box-field.js";
+import type { RegisteredImageRole } from "./image-roles.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
 
 /**
@@ -905,6 +906,7 @@ export interface PluginRegistry {
   readonly lookupAdapters: ReadonlyMap<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
+  readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -936,6 +938,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly lookupAdapters: Map<string, RegisteredLookupAdapter>;
   readonly scheduledTasks: RegisteredScheduledTask[];
   readonly templateDeps: Map<string, RegisteredTemplateDep>;
+  readonly imageRoles: Map<string, RegisteredImageRole>;
 }
 
 export function createPluginRegistry(): MutablePluginRegistry {
@@ -968,6 +971,12 @@ export function createPluginRegistry(): MutablePluginRegistry {
     lookupAdapters: new Map(),
     scheduledTasks: [],
     templateDeps: new Map(),
+    // The roles more than one independent plugin reads, so none of them can own
+    // one (ADR 0004).
+    imageRoles: new Map([
+      ["featured", { name: "featured", single: true, registeredBy: null }],
+      ["ogImage", { name: "ogImage", single: false, registeredBy: null }],
+    ]),
   };
 }
 

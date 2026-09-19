@@ -7,6 +7,7 @@
 
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
+import type { ImageRoleName } from "../image-roles.js";
 import type { MetaFieldCondition } from "./condition.js";
 import type { StringInputType, TemporalInputType } from "./roster.js";
 import { TEMPORAL_INPUT_TYPES } from "./roster.js";
@@ -128,13 +129,13 @@ export interface MetaBoxFieldBase {
    */
   readonly visibleWhen?: MetaFieldCondition;
   /**
-   * Semantic role a media field plays for its entry. `"featured"` marks
-   * the entry's representative image (its first consumer is `og:image`
-   * head wiring); `"ogImage"` is an explicit social-share override that
-   * outranks the featured field. Server-only — omitted from the wire
-   * manifest. Set via the media builder's `.featured()` / `.ogImage()`.
+   * The image role this media field fills for its entry, term or user — see
+   * {@link ImageRoleName}. Core registers `"featured"` (the representative image)
+   * and `"ogImage"` (a social-share override); `registerImageRole` adds more.
+   * Server-only — omitted from the wire manifest. Set via the media builder's
+   * `.role()`, or its `.featured()` / `.ogImage()` sugar.
    */
-  readonly role?: "featured" | "ogImage";
+  readonly role?: ImageRoleName;
 }
 
 /**

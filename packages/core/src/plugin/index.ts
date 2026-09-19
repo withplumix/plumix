@@ -4,3 +4,12 @@ export * from "./manifest.js";
 export * from "./provides-context.js";
 export * from "./register.js";
 export * from "./setup-context.js";
+export type {
+  ImageRoleField,
+  ImageRoleName,
+  ImageRoleOptions,
+  ImageRoles,
+  ImageRoleScope,
+  RegisteredImageRole,
+} from "./image-roles.js";
+export { imageRoleFields } from "./image-roles.js";

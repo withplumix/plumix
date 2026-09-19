@@ -1,3 +1,4 @@
+import type { ImageRoleName } from "plumix";
 import type {
   FieldBuilder,
   MediaListMetaBoxField,
@@ -10,6 +11,7 @@ import type {
 } from "plumix/fields";
 import type { Label } from "plumix/i18n";
 import type { JsonValue } from "plumix/support";
+import { FieldConfigError } from "plumix/fields";
 
 import type { MediaFieldScope, MediaReference } from "./lookup.js";
 
@@ -65,7 +67,7 @@ interface MediaFieldState {
   readonly required?: true;
   readonly multiple?: true;
   readonly returns?: "id";
-  readonly role?: "featured" | "ogImage";
+  readonly role?: ImageRoleName;
   readonly max?: number;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
@@ -123,10 +125,24 @@ export class MediaFieldBuilder<
     patch: Partial<MediaFieldState>,
     scope: MediaFieldScope = this.#scope,
   ): MediaFieldBuilder<K, Multiple2, Required2, Returns2> {
+    const state = { ...this.#state, ...patch };
+    // Checked on every link so the throw lands on whichever of `.accept()` and
+    // `.role()` came second, whatever the order.
+    if (
+      state.role !== undefined &&
+      hasAcceptFilter(scope.accept) &&
+      !admitsOnlyImages(scope.accept)
+    ) {
+      throw FieldConfigError.roleAcceptNotImage({
+        fieldKey: this.#key,
+        role: state.role,
+        accept: scope.accept,
+      });
+    }
     return new MediaFieldBuilder<K, Multiple2, Required2, Returns2>(
       this.#key,
       scope,
-      { ...this.#state, ...patch },
+      state,
     );
   }
 
@@ -171,24 +187,37 @@ export class MediaFieldBuilder<
   }
 
   /**
-   * Mark this as the entry's representative image — its first consumer is the
-   * `og:image` head wiring. Single-value only; core allows at most one
-   * featured field per entry type.
+   * Put this field in an image role, so readers find it by the role's name
+   * rather than its key. Core registers `featured` and `ogImage`; any other
+   * name needs `registerImageRole` and an `ImageRoles` augmentation. A role
+   * field holds one image: with no `.accept()` it takes `"image/"`, and an
+   * accept admitting anything else throws.
+   */
+  role(
+    this: MediaFieldBuilder<K, false, Required, Returns>,
+    name: ImageRoleName,
+  ): MediaFieldBuilder<K, false, Required, Returns> {
+    return this.#fork<false>({ role: name });
+  }
+
+  /**
+   * `.role("featured")` — the entry's representative image, whose first
+   * consumer is the `og:image` head wiring. A scope has at most one.
    */
   featured(
     this: MediaFieldBuilder<K, false, Required, Returns>,
   ): MediaFieldBuilder<K, false, Required, Returns> {
-    return this.#fork<false>({ role: "featured" });
+    return this.role("featured");
   }
 
   /**
-   * Mark this as an explicit social-share image, outranking `.featured()` when
-   * both are set. Single-value only.
+   * `.role("ogImage")` — an explicit social-share image, outranking
+   * `.featured()` when both are set.
    */
   ogImage(
     this: MediaFieldBuilder<K, false, Required, Returns>,
   ): MediaFieldBuilder<K, false, Required, Returns> {
-    return this.#fork<false>({ role: "ogImage" });
+    return this.role("ogImage");
   }
 
   /** Override the derived (humanized-key) label. */
@@ -302,9 +331,13 @@ export class MediaFieldBuilder<
   /** Compile the chain into the wire/manifest field definition. */
   build(): Multiple extends true ? MediaListMetaBoxField : MediaMetaBoxField {
     const { multiple, ...state } = this.#state;
+    const scope: MediaFieldScope =
+      state.role !== undefined && !hasAcceptFilter(this.#scope.accept)
+        ? { ...this.#scope, accept: "image/" }
+        : this.#scope;
     const target: ReferenceTarget = multiple
-      ? { kind: "media", scope: this.#scope, multiple: true }
-      : { kind: "media", scope: this.#scope };
+      ? { kind: "media", scope, multiple: true }
+      : { kind: "media", scope };
     const field = {
       ...state,
       key: this.#key,
@@ -317,6 +350,20 @@ export class MediaFieldBuilder<
       ? MediaListMetaBoxField
       : MediaMetaBoxField;
   }
+}
+
+// The lookup reads an empty accept as no filter at all.
+function hasAcceptFilter(
+  accept: string | readonly string[] | undefined,
+): accept is string | readonly string[] {
+  return accept !== undefined && accept.length > 0;
+}
+
+// A string accept is a prefix, a list is exact MIME types, as the lookup reads
+// them — so a listed `"image/"` matches no file at all.
+function admitsOnlyImages(accept: string | readonly string[]): boolean {
+  if (typeof accept === "string") return accept.startsWith("image/");
+  return accept.every((type) => /^image\/.+/.test(type));
 }
 
 /**

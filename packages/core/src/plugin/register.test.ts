@@ -32,6 +32,12 @@ declare module "../template.js" {
   }
 }
 
+declare module "./image-roles.js" {
+  interface ImageRoles {
+    "dup-role": true;
+  }
+}
+
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "seo:meta_tags": (tags: { readonly title: string }) => {
@@ -1638,6 +1644,27 @@ const duplicateCases: readonly DuplicateCase[] = [
       },
       coreHolds: (registry) =>
         registry.lookupAdapters.get("user")?.registeredBy === null,
+    },
+  },
+  {
+    kind: "image role",
+    identifier: "dup-role",
+    scope: "global",
+    register: (ctx, variant) => {
+      ctx.registerImageRole("dup-role", { single: variant === "first" });
+    },
+    read: (registry) => {
+      const role = registry.imageRoles.get("dup-role");
+      if (role === undefined) return undefined;
+      return role.single ? "first" : "second";
+    },
+    core: {
+      identifier: "featured",
+      register: (ctx) => {
+        ctx.registerImageRole("featured", { single: false });
+      },
+      coreHolds: (registry) =>
+        registry.imageRoles.get("featured")?.registeredBy === null,
     },
   },
   {
