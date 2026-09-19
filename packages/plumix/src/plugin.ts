@@ -260,6 +260,7 @@ export type {
   RenderedAssetArgs,
   RequestMemo,
   ResolvedEntity,
+  ResolvedImage,
   ResolvedListingPage,
   ResolvedMeta,
   ResolvedNode,

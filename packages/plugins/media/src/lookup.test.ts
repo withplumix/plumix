@@ -12,6 +12,9 @@ interface SeedOptions {
   readonly mime: string;
   readonly status?: "draft" | "published" | "trash";
   readonly authorId: number;
+  readonly alt?: string;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 async function seedMedia(
@@ -29,7 +32,9 @@ async function seedMedia(
       size: 1024,
       storageKey: `media/${opts.title}`,
       originalName: opts.title,
-      alt: null,
+      alt: opts.alt ?? null,
+      width: opts.width ?? null,
+      height: opts.height ?? null,
     },
   });
   return { id: entry.id };
@@ -242,5 +247,73 @@ describe("mediaLookupAdapter", () => {
       scope: { accept: "image/" },
     });
     expect(rows.map((r) => r.id)).toEqual([String(image.id)]);
+  });
+
+  test("image() reads url, alt and the measured pair off a hydrated image", async () => {
+    const h = await harnessWithMediaPlugin();
+    const cat = await seedMedia(h, {
+      title: "cat.png",
+      mime: "image/png",
+      authorId: h.user.id,
+      alt: "A cat",
+      width: 1200,
+      height: 630,
+    });
+    const [payload] = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(cat.id)],
+    });
+    expect(payload && mediaLookupAdapter.image(payload)).toEqual({
+      url: "media/cat.png",
+      alt: "A cat",
+      width: 1200,
+      height: 630,
+    });
+  });
+
+  test("image() is null for a non-image mime", async () => {
+    const h = await harnessWithMediaPlugin();
+    const pdf = await seedMedia(h, {
+      title: "doc.pdf",
+      mime: "application/pdf",
+      authorId: h.user.id,
+    });
+    const [payload] = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(pdf.id)],
+    });
+    expect(payload && mediaLookupAdapter.image(payload)).toBeNull();
+  });
+
+  // Hydrate never yields an empty URL (it falls back to the storage key), so
+  // the payload is built by hand from a real one.
+  test("image() is null for a payload with no URL", async () => {
+    const h = await harnessWithMediaPlugin();
+    const cat = await seedMedia(h, {
+      title: "cat.png",
+      mime: "image/png",
+      authorId: h.user.id,
+    });
+    const [payload] = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(cat.id)],
+    });
+    expect(
+      payload && mediaLookupAdapter.image({ ...payload, url: "" }),
+    ).toBeNull();
+  });
+
+  test("image() drops a lone measured axis rather than send half a size", async () => {
+    const h = await harnessWithMediaPlugin();
+    const wide = await seedMedia(h, {
+      title: "wide.png",
+      mime: "image/png",
+      authorId: h.user.id,
+      width: 1200,
+    });
+    const [payload] = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(wide.id)],
+    });
+    expect(payload && mediaLookupAdapter.image(payload)).toStrictEqual({
+      url: "media/wide.png",
+      alt: null,
+    });
   });
 });
