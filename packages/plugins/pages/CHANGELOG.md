@@ -1,5 +1,15 @@
 # @plumix/plugin-pages
 
+## 0.1.2
+
+### Patch Changes
+
+- [#2347](https://github.com/withplumix/plumix/pull/2347) [`61efc2e`](https://github.com/withplumix/plumix/commit/61efc2ee7b57b53f3342a1f5652d68ad08e85ad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes published type declarations that imported `@plumix/core` or `@plumix/blocks`, packages a consumer does not depend on, so the affected types resolved to nothing. `pages`, `fileBlock` and `imageBlock` now name their types through `plumix/plugin` and `plumix/blocks`, and the RPC routers of audit-log, comments, forms, og and seo name the default database schema as `CoreSchema` from `plumix` instead of through `@plumix/core/schema`.
+
+- [#2330](https://github.com/withplumix/plumix/pull/2330) [`6cf3863`](https://github.com/withplumix/plumix/commit/6cf386317aa061f377842dc33ba8995bb61d0b6a) Thanks [@nasyrov](https://github.com/nasyrov)! - Drops `supports: ["slug"]` and `capabilityType: "page"` from the `page` entry type registration — neither had any effect. `slug` had no reader anywhere in core or the admin, and `capabilityType` already matched the type's own name, which is the default it falls back to when unset.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @plumix/plugin-blog
 
+## 0.2.2
+
+### Patch Changes
+
+- [#2324](https://github.com/withplumix/plumix/pull/2324) [`2e6c559`](https://github.com/withplumix/plumix/commit/2e6c559d1885fad8b2f13043bf68f7e1d1b37434) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes related posts failing on Cloudflare D1 when an entry shares a term with more than 100 others: the lookup now runs as one statement with subqueries instead of binding every sibling id.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2326](https://github.com/withplumix/plumix/pull/2326) [`a47bd1a`](https://github.com/withplumix/plumix/commit/a47bd1a5ccfe841b038823c401275dcab8fb47ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Updates the `relatedPosts` and `comments` template deps, and the dep declarations an og card accepts, to the keyed template-dep registration in `plumix`. What these deps render does not change.
+
 ## 0.2.1
 
 ### Patch Changes

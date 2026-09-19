@@ -1,5 +1,17 @@
 # @plumix/plugin-search
 
+## 0.1.1
+
+### Patch Changes
+
+- [#2401](https://github.com/withplumix/plumix/pull/2401) [`70e8bf0`](https://github.com/withplumix/plumix/commit/70e8bf0c49fd50251362eb2af7777c390f36d54d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes search results to build every hit's permalink in one batched query per page instead of one query per hierarchical result.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the request context from the lifecycle action a handler receives rather than from the ambient request store. `comment:created`, `comment:approved`, `comment:spam` and `comment:trashed` now hand their handlers the `AppContext` last as well, so code that fires them itself must pass it.
+
+  Fixes the audit log recording no actor for entry, term, user and settings changes made through an authenticated RPC: the ambient context is built before the request is signed in, so the listener now attributes each row to the user the procedure ran as.
+
+- [#2393](https://github.com/withplumix/plumix/pull/2393) [`4017430`](https://github.com/withplumix/plumix/commit/401743028e66c974f51a18e2461815f5a1cb4eac) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads entry type and taxonomy visibility from the registered type, so these plugins now need the plumix release that resolves visibility at registration. On an older plumix they treat a type that never set `isPublic` as not public.
+
 ## 0.1.0
 
 ### Minor Changes

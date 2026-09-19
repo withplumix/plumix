@@ -1,5 +1,19 @@
 # @plumix/plugin-feeds
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2387](https://github.com/withplumix/plumix/pull/2387) [`c1eee70`](https://github.com/withplumix/plumix/commit/c1eee70f05d4e18a5bf946532c0e9f4e0b6bae8b) Thanks [@nasyrov](https://github.com/nasyrov)! - Caches feeds at the edge. RSS and Atom responses now send `cache-control: public, max-age=0, s-maxage=3600` and are stored under the tags of the entry types they list, so publishing, editing or trashing an entry, or saving the site settings, purges the feeds it appears in. A plugin archive's feed is cached only when the archive registered with `cacheable: true`; otherwise it is served live with no `cache-control`. A private site's feeds still answer 404 and are never stored. `createDispatcherHarness` given a `cdn` now also subscribes core's entry and term purges, so a test can observe what a mutation retires.
+
+- [#2350](https://github.com/withplumix/plumix/pull/2350) [`29f9dec`](https://github.com/withplumix/plumix/commit/29f9dece355cc29c97611435e78ab7888fbe9326) Thanks [@nasyrov](https://github.com/nasyrov)! - Registers the routes, settings and meta boxes scoped to the site's entry types and taxonomies from the plugin descriptor's `afterSetup` rather than a `theme:ready` subscriber. Requires the `plumix` release that adds `afterSetup`: on an earlier one those registrations never run, so upgrade both together.
+
+### Patch Changes
+
+- [#2393](https://github.com/withplumix/plumix/pull/2393) [`4017430`](https://github.com/withplumix/plumix/commit/401743028e66c974f51a18e2461815f5a1cb4eac) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads entry type and taxonomy visibility from the registered type, so these plugins now need the plumix release that resolves visibility at registration. On an older plumix they treat a type that never set `isPublic` as not public.
+
+- [#2381](https://github.com/withplumix/plumix/pull/2381) [`381ded5`](https://github.com/withplumix/plumix/commit/381ded59d9a0ad133f280d53883e6430e15d32d3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the sitemap and feeds running one ancestor query per nested page or term, so a sitemap page of hierarchical content now costs a fixed number of queries. Requires the `plumix` release that adds `buildEntryPermalinks` and `buildTermArchiveUrls`.
+
 ## 0.1.0
 
 ### Minor Changes
