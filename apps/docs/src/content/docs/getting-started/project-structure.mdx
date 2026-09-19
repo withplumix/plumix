@@ -432,6 +432,32 @@ export const publishedRecipes = and(
 );
 ```
 
+A direct write skips core's save path, and with it two things a save does for you. It does not purge the CDN, so enqueue the tags yourself with `entryPurgeTags` and `enqueuePurgeTags`. And it does not convert meta to the form its fields declare, so a `1` written under a `toggle` field reads back as `1`, not `true`. Pass the bag through `settleMeta` first. It takes who the bag belongs to, `{ entryType }`, `{ taxonomy }`, `{ settingsGroup }` or `"user"`, and applies the same conversion a save does. A value no field type accepts, and a key no field declares, come back as given, and so does the whole bag when nothing is registered under the name you pass. Settings are stored one row per key, so settle them as `{ [key]: value }` and write each key of the result to its own row.
+
+```ts
+import type { AppContext, JsonObject } from "plumix";
+import {
+  enqueuePurgeTags,
+  entries,
+  entryPurgeTags,
+  eq,
+  settleMeta,
+} from "plumix/db";
+
+// An importer replacing a recipe's meta with the bag it read from the source.
+export async function importRecipeMeta(
+  ctx: AppContext,
+  id: number,
+  meta: JsonObject,
+) {
+  await ctx.db
+    .update(entries)
+    .set({ meta: settleMeta(ctx, { entryType: "recipe" }, meta) })
+    .where(eq(entries.id, id));
+  enqueuePurgeTags(ctx, entryPurgeTags("recipe", id));
+}
+```
+
 ### plumix/db/libsql
 
 The libSQL database adapter, on its own subpath so its driver stays out of a bundle that never imports it. It is a single endpoint with strong consistency, which is the difference from D1's read replicas.
