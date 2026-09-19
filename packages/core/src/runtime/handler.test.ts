@@ -10,6 +10,7 @@ import type {
 import type { PlumixHandlerOptions } from "./handler.js";
 import type { DatabaseAdapter } from "./slots.js";
 import { auth } from "../auth/config.js";
+import { enqueuePurgeTags } from "../cdn/purge.js";
 import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -323,6 +324,104 @@ describe("createPlumixHandler — scheduled", () => {
       { env: {} },
     );
     expect(committed).toBe(1);
+  });
+});
+
+// Core work run against the site from outside a request — a CLI command that
+// settles stored meta, say — gets the same context a request or a scheduled
+// run would, and ends the same way.
+describe("createPlumixHandler — run", () => {
+  test("hands the work the site's context and returns what it did", async () => {
+    const notes = definePlugin("notes", (ctx) => {
+      ctx.registerEntryType("note", { label: "Notes" });
+    });
+    const handler = await handlerFor({ plugins: [notes] });
+    const result = await handler.run?.(
+      (ctx) => Promise.resolve(ctx.plugins.entryTypes.has("note")),
+      { env: {} },
+    );
+    expect(result).toBe(true);
+  });
+
+  test("commits the scoped write the work makes", async () => {
+    let committed = 0;
+    const handler = await handlerFor({
+      database: {
+        kind: "scoped",
+        connect: () => ({ db: {} }),
+        connectRequest: () => ({
+          db: {},
+          commit: (response) => {
+            committed += 1;
+            return response;
+          },
+        }),
+      },
+    });
+    await handler.run?.(() => Promise.resolve(), { env: {} });
+    expect(committed).toBe(1);
+  });
+
+  test("purges what the work enqueued, as the end of a request would", async () => {
+    const purged: string[] = [];
+    const handler = await handlerFor({
+      cdn: {
+        kind: "recording",
+        connect: () => ({
+          decorate: (response) => response,
+          purgeTags: (tags) => {
+            purged.push(...tags);
+            return Promise.resolve();
+          },
+        }),
+      },
+    });
+    await handler.run?.(
+      (ctx) => {
+        enqueuePurgeTags(ctx, ["t:post"]);
+        return Promise.resolve();
+      },
+      { env: {} },
+    );
+    await handler.dispose?.();
+    expect(purged).toEqual(["t:post"]);
+  });
+});
+
+// Rows the work wrote before it threw are written: their pages still need
+// purging, exactly as a request that fails after a write purges it.
+describe("createPlumixHandler — run, failing", () => {
+  test("still purges what the work enqueued before it threw, and rethrows", async () => {
+    const purged: string[] = [];
+    const handler = await handlerFor({
+      cdn: {
+        kind: "recording",
+        connect: () => ({
+          decorate: (response) => response,
+          purgeTags: (tags) => {
+            purged.push(...tags);
+            return Promise.resolve();
+          },
+        }),
+      },
+    });
+
+    const outcome = await handler
+      .run?.(
+        (ctx) => {
+          enqueuePurgeTags(ctx, ["e:7"]);
+          return Promise.reject(new Error("halfway"));
+        },
+        { env: {} },
+      )
+      .then(
+        () => "resolved",
+        (error: unknown) => (error instanceof Error ? error.message : "?"),
+      );
+    await handler.dispose?.();
+
+    expect(outcome).toBe("halfway");
+    expect(purged).toEqual(["e:7"]);
   });
 });
 

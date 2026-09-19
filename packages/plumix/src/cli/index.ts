@@ -16,6 +16,7 @@ import type { LoadedConfig } from "./load-config.js";
 import { cronCommand } from "./commands/cron.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { i18nCommand } from "./commands/i18n.js";
+import { metaCommand } from "./commands/meta.js";
 import { migrateCommand } from "./commands/migrate.js";
 import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
@@ -24,6 +25,7 @@ import { badge, exitWithError, report } from "./report.js";
 const BUILT_IN_COMMANDS: ReadonlyMap<string, CommandDefinition> = new Map([
   ["migrate", migrateCommand],
   ["cron", cronCommand],
+  ["meta", metaCommand],
   ["doctor", doctorCommand],
   ["i18n", i18nCommand],
 ]);

@@ -192,6 +192,28 @@ describe("REST API — entries get", () => {
     expect(body).not.toHaveProperty("data");
   });
 
+  // Settling stored meta writes, and a write — with the CDN purge behind it —
+  // must never sit behind an anonymous read. The editor's own read heals a row;
+  // the public API reads it as stored.
+  test("an anonymous read leaves an unsettled value as stored", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      meta: { featured: 1 },
+    });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
+
+    expect(res.status).toBe(200);
+    const stored = await h.db.query.entries.findFirst({
+      where: (row, { eq }) => eq(row.id, entry.id),
+    });
+    expect(stored?.meta).toEqual({ featured: 1 });
+  });
+
   test("an unpublished entry is 404 (existence stays hidden, never 403)", async () => {
     const h = await restHarness();
     const author = await h.factory.user.create({ role: "author" });
@@ -625,6 +647,40 @@ describe("REST API — term resources", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body).toEqual({ id: term.id, name: "News", slug: "news" });
+  });
+
+  test("an anonymous term read leaves an unsettled value as stored", async () => {
+    const withTermMeta = definePlugin("test-term-meta", (ctx) => {
+      ctx.registerTermMetaBox("term-box", {
+        label: "Term",
+        termTaxonomies: ["category"],
+        fields: [
+          {
+            key: "weight",
+            label: "Weight",
+            inputType: "number",
+            type: "number",
+          },
+        ],
+      });
+    });
+    const h = await restHarness({ plugins: [blog, withTermMeta] });
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+      meta: { weight: "3" },
+    });
+
+    const res = await h.dispatch(
+      apiGet(`/_plumix/api/v1/categories/${term.id}`),
+    );
+
+    expect(res.status).toBe(200);
+    const stored = await h.db.query.terms.findFirst({
+      where: (row, { eq }) => eq(row.id, term.id),
+    });
+    expect(stored?.meta).toEqual({ weight: "3" });
   });
 
   test("a term requested under the wrong taxonomy is 404", async () => {

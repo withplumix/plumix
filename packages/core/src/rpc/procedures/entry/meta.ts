@@ -6,6 +6,7 @@ import type {
   MetaPatch,
   MetaPatchTarget,
   ResolvedMeta,
+  SettledRow,
 } from "../../meta/core.js";
 import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
 import { entries } from "../../../db/schema/entries.js";
@@ -25,8 +26,10 @@ import {
   resolveMetaBags as resolveMetaBagsCore,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  settleStoredMeta,
   validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
+  writeSettledMeta,
 } from "../../meta/core.js";
 
 export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
@@ -242,6 +245,58 @@ export async function resolveEntriesMeta(
   );
 }
 
+/**
+ * Settle one entry's stored bag, write it back, and return the bag a reader
+ * should decode. An already-settled row costs a walk and no write.
+ *
+ * Called from the editor's read (`entry.get`) and the bulk sweep — never from
+ * a read an anonymous caller can reach. `getEntry` and `resolveEntriesMeta`
+ * serve the public REST API and the renderer, and a write there would put
+ * database traffic and CDN purges behind anonymous requests. The editor is the
+ * surface where an unsettled value is about to be shown to a human and
+ * overwritten by them.
+ *
+ * A settle that lands is announced like any other meta change, so whatever
+ * caches the entry hears that its stored value moved.
+ */
+export async function settleEntryMeta(
+  ctx: AppContext,
+  entry: { readonly id: number; readonly type: string },
+  stored: JsonObject | null | undefined,
+): Promise<SettledRow> {
+  const settled = settleStoredMeta(
+    metaScope(listEntryMetaFields(ctx.plugins, entry.type)),
+    stored,
+  );
+  return {
+    ...settled,
+    written: await writeSettledEntryMeta(ctx, entry, stored, settled.patch),
+  };
+}
+
+/**
+ * Write back a settle already computed from `stored`, and announce it if it
+ * landed — the step the bulk sweep shares with the read heal, so both write and
+ * announce the same way.
+ */
+export async function writeSettledEntryMeta(
+  ctx: AppContext,
+  entry: { readonly id: number; readonly type: string },
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch,
+): Promise<boolean> {
+  const written = await writeSettledMeta(
+    ctx,
+    entries,
+    entries.id,
+    entry.id,
+    stored,
+    patch,
+  );
+  if (written) await announceEntryMetaChange(ctx, entry, patch);
+  return written;
+}
+
 export async function loadEntryMeta(
   ctx: AppContext,
   entry: { readonly id: number; readonly type: string },
@@ -263,7 +318,15 @@ export async function writeEntryMeta(
 ): Promise<void> {
   if (isEmptyMetaPatch(patch)) return;
   await applyMetaPatch(ctx, entries, entries.id, entry.id, patch);
-  await ctx.hooks.doAction(
+  await announceEntryMetaChange(ctx, entry, patch);
+}
+
+function announceEntryMetaChange(
+  ctx: AppContext,
+  entry: { readonly id: number; readonly type: string },
+  patch: MetaPatch,
+): Promise<void> {
+  return ctx.hooks.doAction(
     "entry:meta_changed",
     entry,
     {

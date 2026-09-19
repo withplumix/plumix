@@ -11,6 +11,7 @@ const NAMESPACE_FLAGS: Record<keyof AppRouter, true> = {
   term: true,
   user: true,
   lookup: true,
+  meta: true,
   search: true,
   settings: true,
 };

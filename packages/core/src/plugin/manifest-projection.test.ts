@@ -173,6 +173,7 @@ describe("buildManifest", () => {
       "/users",
       "/allowed-domains",
       "/mailer",
+      "/field-values",
       "/settings",
     ]);
   });

@@ -180,3 +180,37 @@ describe("user meta: registration + round-trip via user.update", () => {
     });
   });
 });
+
+// The user half of #2440. A profile opened by its owner or an admin settles
+// like an entry does, and — users carrying `updatedAt` as entries do — without
+// reading as an edit.
+describe("user.get settles an unsettled row", () => {
+  test("hands back the settled value, writes it, and leaves updatedAt alone", async () => {
+    const plugins = createPluginRegistry();
+    registerUserFields(plugins, [
+      { key: "age", label: "Age", type: "number", inputType: "number" },
+      {
+        key: "newsletter",
+        label: "Newsletter",
+        type: "boolean",
+        inputType: "checkbox",
+      },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const lastEdited = new Date("2026-01-01T00:00:00.000Z");
+    // Straight to the column, as `plumix/db` lets a plugin do.
+    await h.db
+      .update(users)
+      .set({ meta: { age: "30", newsletter: "true" }, updatedAt: lastEdited })
+      .where(eq(users.id, h.user.id));
+
+    const got = await h.client.user.get({ id: h.user.id });
+    expect(got.meta).toEqual({ age: 30, newsletter: true });
+
+    const stored = await h.db.query.users.findFirst({
+      where: eq(users.id, h.user.id),
+    });
+    expect(stored?.meta).toEqual({ age: 30, newsletter: true });
+    expect(stored?.updatedAt).toEqual(lastEdited);
+  });
+});

@@ -296,6 +296,30 @@ describe("whereMeta against a real row", () => {
     expect(read(token.id)).toEqual({ decoded: 1, stored: 1, rule: false });
   });
 
+  // Settling writes, and a write here would sit behind anonymous page views —
+  // traffic and CDN purges driven by whoever requests the page. The heal hangs
+  // off the authenticated read instead; rendering reads the row as it is.
+  test("rendering an unsettled row leaves it as stored", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const token = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      meta: { sealed: 1 },
+    });
+
+    await run(() => buildResolvedEntries(ctx, [token]));
+
+    const stored = await harness.db.query.entries.findFirst({
+      where: (row, { eq }) => eq(row.id, token.id),
+    });
+    expect(stored?.meta).toEqual({ sealed: 1 });
+    expect(stored?.updatedAt).toEqual(token.updatedAt);
+  });
+
   // The other two scalars, which used to widen on read. What made the miss
   // unfixable from the call site: `whereMeta`'s value is typed from the
   // field's declared type, so the only value it accepted was the one the

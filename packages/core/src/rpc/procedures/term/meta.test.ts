@@ -7,6 +7,8 @@ import type {
   MutablePluginRegistry,
 } from "../../../plugin/manifest.js";
 import type { ActionSpy } from "../../../test/spies.js";
+import { eq } from "../../../db/index.js";
+import { terms } from "../../../db/schema/terms.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -250,5 +252,37 @@ describe("term meta: registration + round-trip via term.update", () => {
       set: {},
       removed: ["icon_url"],
     });
+  });
+});
+
+// The term half of #2440: a row written around the pipeline settles when the
+// term is opened, as an entry's does, so `term.meta` holds what it declared.
+describe("term.get settles an unsettled row", () => {
+  test("hands back the settled value and writes it to the column", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "rank", label: "Rank", type: "number", inputType: "number" },
+      {
+        key: "featured",
+        label: "Featured",
+        type: "boolean",
+        inputType: "checkbox",
+      },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const term = await h.factory.term.create({ taxonomy: "category" });
+    // Straight to the column, as `plumix/db` lets a plugin do.
+    await h.db
+      .update(terms)
+      .set({ meta: { rank: "3", featured: 1 } })
+      .where(eq(terms.id, term.id));
+
+    const got = await h.client.term.get({ id: term.id });
+    expect(got.meta).toEqual({ rank: 3, featured: true });
+
+    const stored = await h.db.query.terms.findFirst({
+      where: eq(terms.id, term.id),
+    });
+    expect(stored?.meta).toEqual({ rank: 3, featured: true });
   });
 });

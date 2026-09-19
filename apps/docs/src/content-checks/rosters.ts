@@ -912,6 +912,7 @@ const CLI_REFERENCE = [
   "types",
   "migrate",
   "cron",
+  "meta",
   "doctor",
   "i18n",
   "--config",
@@ -929,7 +930,7 @@ type _InvocationMembersMatchSource = Assert<
 >;
 
 /** Source: `PlumixHandler`. */
-const HANDLER_MEMBERS = ["fetch", "scheduled", "dispose"] as const;
+const HANDLER_MEMBERS = ["fetch", "scheduled", "run", "dispose"] as const;
 
 type _HandlerMembersMatchSource = Assert<
   Equals<(typeof HANDLER_MEMBERS)[number], keyof PlumixHandler>

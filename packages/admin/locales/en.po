@@ -71,6 +71,12 @@ msgstr " / min {min}"
 msgid "metaBox.repeater.countSuffixBoth"
 msgstr " / min {min} / max {max}"
 
+#. Shown in the type column for users, whose fields have no type
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.scope.none"
+msgstr "—"
+
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.noTerms"
@@ -143,6 +149,21 @@ msgid "dashboard.count.published"
 msgstr "{count, plural, one {# published} other {# published}}"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.unconvertible"
+msgstr "{count, plural, one {# value no field type accepts is left as stored.} other {# values no field type accepts are left as stored.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.settled"
+msgstr "{count, plural, one {Converted values in # row.} other {Converted values in # rows.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.settle.pending"
+msgstr "Converting…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
 msgstr "{count, plural, one {Delete # entry permanently?} other {Delete # entries permanently?}}"
@@ -166,6 +187,11 @@ msgstr "{count, plural, one {Moved # entry to trash.} other {Moved # entries to 
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.bulk.toastRestored"
 msgstr "{count, plural, one {Restored # entry.} other {Restored # entries.}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.error"
+msgstr "The values could not be converted. Nothing was lost; try again."
 
 #. count: number of selected options in the multi-select
 #. js-lingui-explicit-id
@@ -647,6 +673,11 @@ msgid "login.magicLink.sent.title"
 msgstr "Check your email"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.loading"
+msgstr "Checking stored values…"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.pending"
 msgstr "Checking…"
@@ -754,6 +785,16 @@ msgstr "Contributor"
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.contributor"
 msgstr "Contributor — draft, no publish"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.settle.idle"
+msgstr "{count, plural, one {Convert # value} other {Convert # values}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.column.settleable"
+msgstr "Convertible"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1494,6 +1535,11 @@ msgid "login.magicLink.emailRequired"
 msgstr "Enter your email above first."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.store.entry"
+msgstr "Entries"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.entries"
 msgstr "Entries"
@@ -1531,6 +1577,11 @@ msgid "editor.revisions.sheet.description"
 msgstr "Every save creates a new revision. Newest first."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.clean"
+msgstr "Every stored value is in the form its field declares."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.placeholder"
 msgstr "example.com"
@@ -1566,6 +1617,21 @@ msgid "editor.plainForm.status.error"
 msgstr "Failed to save"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.column.key"
+msgstr "Field"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.title"
+msgstr "Field values"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.item.fieldValues"
+msgstr "Field values"
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.filterByItem"
 msgstr "Filter"
@@ -1584,6 +1650,11 @@ msgstr "Filter by role"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.filterStatusAria"
 msgstr "Filter by status"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.description"
+msgstr "Finds stored field values that aren't in the form their field declares — left by an import, a direct database write, or a plugin that changed a field's type — and converts them. Opening an entry, term or user converts its own values; this does the whole site at once."
 
 #. when: pre-formatted relative-time like '2 hours ago'; author: the user's display name or email
 #. js-lingui-explicit-id
@@ -1655,6 +1726,11 @@ msgstr "If an account exists for this email, we sent a sign-in link. The link ex
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.confirm.description"
 msgstr "If this user authored any entries, the next step reassigns them. Leave \"Keep entries as-is\" if they have none."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.import"
+msgstr "import"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1889,6 +1965,11 @@ msgid "core.settings.site.mastodon"
 msgstr "Mastodon URL"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.meta"
+msgstr "meta"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.authorFilter.mine"
 msgstr "Mine"
@@ -2042,6 +2123,11 @@ msgstr "Navigate"
 #: src/components/shell/command-palette.tsx
 msgid "palette.group.navigation"
 msgstr "Navigation"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.column.unconvertible"
+msgstr "Needs you"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -2853,6 +2939,11 @@ msgid "settings.title"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.store.settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.settings"
 msgstr "Settings"
@@ -3051,6 +3142,11 @@ msgid "entries.list.column.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.column.store"
+msgstr "Stored on"
+
+#. js-lingui-explicit-id
 #: src/lib/user-role-labels.ts
 msgid "userRole.subscriber"
 msgstr "Subscriber"
@@ -3104,6 +3200,11 @@ msgstr "Template"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.taxonomy.singular"
 msgstr "Term"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.store.term"
+msgstr "Terms"
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -3287,6 +3388,11 @@ msgstr "The provider hasn't verified your email yet. Verify it there, then try a
 #: src/routes/_authenticated/terms/$name/-errors.ts
 msgid "terms.error.parentMismatch"
 msgstr "The selected parent belongs to a different taxonomy."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.reportError"
+msgstr "The stored values could not be checked. Reload the page to try again."
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3493,6 +3599,16 @@ msgid "editor.entry.create.retry"
 msgstr "Try again"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.column.scope"
+msgstr "Type"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.report.title"
+msgstr "Unconverted values"
+
+#. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts
 msgid "editor.command.ungroup"
 msgstr "Ungroup the selected block"
@@ -3593,6 +3709,11 @@ msgid "users.list.title"
 msgstr "Users"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.store.user"
+msgstr "Users"
+
+#. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
 msgid "breadcrumb.users"
 msgstr "Users"
@@ -3601,6 +3722,11 @@ msgstr "Users"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.users"
 msgstr "Users"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/field-values/index.tsx
+msgid "fieldValues.report.description"
+msgstr "Values the site can convert, and values no field type accepts. Those are left exactly as they are for you to edit by hand."
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

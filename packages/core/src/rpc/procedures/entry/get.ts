@@ -1,9 +1,12 @@
 import { assertCanEditEntry } from "../../../entries/editability.js";
-import { getEntry } from "../../../entries/read-service.js";
+import {
+  findReadableEntry,
+  resolveEntryRead,
+} from "../../../entries/read-service.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { resolveEntryMeta } from "./meta.js";
+import { resolveEntryMeta, settleEntryMeta } from "./meta.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
 
@@ -17,7 +20,12 @@ export const get = base
     );
 
     try {
-      const live = await getEntry(context, filtered);
+      // The editor's read heals the row: an unsettled value is settled and
+      // written back here, where a human is about to see and overwrite it. The
+      // public read paths — the renderer, the REST API — never write.
+      const row = await findReadableEntry(context, filtered);
+      const { bag } = await settleEntryMeta(context, row, row.meta);
+      const live = await resolveEntryRead(context, row, bag);
       if (!filtered.preview) {
         return await context.hooks.applyFilter("rpc:entry.get:output", live);
       }

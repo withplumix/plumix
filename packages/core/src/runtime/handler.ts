@@ -5,7 +5,7 @@ import type {
   Db,
   DeferFn,
 } from "../context/app.js";
-import type { Invocation, PlumixHandler, ScheduledEvent } from "./adapter.js";
+import type { Invocation, PlumixHandler } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
 import type {
@@ -20,6 +20,7 @@ import type {
 } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
+import { flushPurgeTags } from "../cdn/purge.js";
 import { createAppContext } from "../context/app.js";
 import { logErrorSafely } from "../context/log.js";
 import { requestStore } from "../context/stores.js";
@@ -111,6 +112,32 @@ export function createPlumixHandler(
     boundDb = undefined;
   };
 
+  // What a scheduled run and `run` both need: work outside a request still
+  // writes (a purge mutates state), so a deploy that routes writes to a primary
+  // does so here too, and it gets a context built exactly as a request's is.
+  const openInternalContext = (
+    invocation: Invocation,
+    request: Request,
+  ): { readonly scoped: RequestScopedDb; readonly ctx: AppContext } => {
+    validateOnce(invocation.env);
+    const scoped = connectDatabase({
+      env: invocation.env,
+      request,
+      isAuthenticated: false,
+      isWrite: true,
+    });
+    const ctx = buildAppContext({
+      app,
+      options,
+      invocation,
+      request,
+      db: scoped.db,
+      defer: invocation.waitUntil ?? track,
+      slots: bindOnce(invocation.env),
+    });
+    return { scoped, ctx };
+  };
+
   return {
     fetch: async (request, invocation) => {
       try {
@@ -162,6 +189,27 @@ export function createPlumixHandler(
       return { abandoned };
     },
 
+    run: async (work, invocation) => {
+      const { scoped, ctx } = openInternalContext(
+        invocation,
+        syntheticRequest(app, invocation.env, "/_plumix/internal/run"),
+      );
+      try {
+        return await requestStore.run(ctx, () => work(ctx));
+      } finally {
+        // In a `finally`: rows the work wrote before throwing are written, and
+        // their pages need purging all the same.
+        flushPurgeTags(ctx);
+        try {
+          scoped.commit(new Response(null));
+        } catch (error) {
+          // Logged rather than thrown, as a scheduled run does: throwing here
+          // would replace whatever the work itself threw or returned.
+          logErrorSafely(ctx.logger, "[plumix] run commit failed", error);
+        }
+      }
+    },
+
     scheduled: async (event, invocation) => {
       // Hoisted so the guard below can end before the tasks start: only setup
       // can report that the run never reached them.
@@ -171,25 +219,14 @@ export function createPlumixHandler(
         // Inside the try, not above it: a missing binding is exactly the
         // "the run never started" case the report below exists to name, and
         // outside it the throw escaped `scheduled` altogether.
-        validateOnce(invocation.env);
-        const request = syntheticScheduledRequest(app, invocation.env, event);
-        // A scheduled run always writes (purges mutate state), so deploys that
-        // route writes to a primary do so for scheduled work too.
-        scoped = connectDatabase({
-          env: invocation.env,
-          request,
-          isAuthenticated: false,
-          isWrite: true,
-        });
-        ctx = buildAppContext({
-          app,
-          options,
+        ({ scoped, ctx } = openInternalContext(
           invocation,
-          request,
-          db: scoped.db,
-          defer: invocation.waitUntil ?? track,
-          slots: bindOnce(invocation.env),
-        });
+          syntheticRequest(
+            app,
+            invocation.env,
+            `/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
+          ),
+        ));
       } catch (error) {
         // No `ctx` to log through — the build of it is what may have failed.
         console.error("[plumix] scheduled_failure", error);
@@ -239,18 +276,15 @@ async function settleWithin(
   }
 }
 
-// Scheduled tasks reading `ctx.request.url` see an internal marker, not an
-// inbound request.
-function syntheticScheduledRequest(
+// Work outside a request — a scheduled run, `run` — reading `ctx.request.url`
+// sees an internal marker, not an inbound request.
+function syntheticRequest(
   app: PlumixApp,
   env: PlumixEnv,
-  event: ScheduledEvent,
+  path: string,
 ): Request {
   const origin = resolveEnvInput(app.origin, env);
-  return new Request(
-    `${origin}/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
-    { method: "POST" },
-  );
+  return new Request(`${origin}${path}`, { method: "POST" });
 }
 
 /** The env-derived slots, bound once for the handler's life. */

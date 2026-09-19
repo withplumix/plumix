@@ -3,6 +3,7 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { AppContext } from "../context/app.js";
 import type { SQL } from "../db/index.js";
 import type { Entry, EntryStatus } from "../db/schema/entries.js";
+import type { JsonObject } from "../json.js";
 import type { WithResolvedMeta } from "../rpc/meta/core.js";
 import type {
   EntryGetInput,
@@ -142,14 +143,35 @@ export async function getEntry(
   ctx: AppContext,
   input: EntryGetInput,
 ): Promise<EntryRead> {
+  const row = await findReadableEntry(ctx, input);
+  return resolveEntryRead(ctx, row, row.meta);
+}
+
+/**
+ * The stored row behind {@link getEntry}, after the same visibility checks and
+ * before anything is resolved — for a caller that has something to do with the
+ * stored meta first, as the editor's read does when it settles it.
+ */
+export async function findReadableEntry(
+  ctx: AppContext,
+  input: EntryGetInput,
+): Promise<Entry> {
   const row = await ctx.db.query.entries.findFirst({
     where: eq(entries.id, input.id),
   });
   if (!row) throw EntryReadError.notFound(input.id);
   if (isReservedType(row.type)) throw EntryReadError.notFound(input.id);
   if (!canReadEntry(ctx, row)) throw EntryReadError.notFound(input.id);
+  return row;
+}
 
-  const meta = await resolveEntryMeta(ctx, row, row.meta);
+/** Resolve a readable row into what {@link getEntry} hands back. */
+export async function resolveEntryRead(
+  ctx: AppContext,
+  row: Entry,
+  storedMeta: JsonObject | null,
+): Promise<EntryRead> {
+  const meta = await resolveEntryMeta(ctx, row, storedMeta);
   const entryTerms = await loadEntryTerms(ctx, row.id);
   return { ...row, meta, terms: entryTerms };
 }

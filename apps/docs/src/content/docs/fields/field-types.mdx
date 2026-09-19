@@ -383,6 +383,20 @@ The recipe box's hero image is `media("heroImage").accept("image/").featured()`.
 
 An array of media ids, produced by calling `.multiple()` on a `media` chain, with `.max()` capping the array. It is to `media` what [`userList`](#userlist) is to `user`.
 
+## Changing a field's type
+
+Every value written through a field is stored in the form its type declares: a `toggle` stores a real boolean even when a form posted `"1"`, and a `number` stores `7` for a posted `"7"`. Reads return what is stored, unconverted, so a theme's `entry.meta`, a rule's `whereMeta` and a SQL predicate over the meta column all get the same answer.
+
+A value that never went through a field can be in another form. This happens when you change a field's type after rows already hold values, for example turning a `json` field into a `toggle` over rows that store `1`. It also happens with an import, or a plugin writing straight to the database through `plumix/db`. Such a value reads back as stored, so a `toggle` holding `1` reads as off until it is converted.
+
+Converting happens in three ways, all through the same rules a save uses:
+
+- **Opening an item in the admin** converts its own values. Opening an entry, term or user writes back any value that has a settled form, without touching its last-edited time. Public reads, a page render or the REST API, never write.
+- **The admin's Field values page**, under Management, lists what is unconverted across entries, terms, users and settings, per field, and converts it all in one action. It works in batches so it stays within D1's per-request query limit, and links each value it can't convert to the item holding it. It needs `settings:manage`.
+- **`plumix meta settle`** does the same from the command line on a Node deploy. See [CLI](/deployment/cli/#meta).
+
+A value no field type accepts, such as `"maybe"` under a `toggle`, is reported and never changed, because there is no correct value to pick for you. Edit those by hand.
+
 ## Retired types
 
 Three older input types are reserved rather than removed. A plugin cannot claim their names, and the admin still renders a registration that uses them, so an old object-literal field keeps working. They have no builder and no narrowed type, so new code has a replacement instead.

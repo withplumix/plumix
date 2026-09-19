@@ -17,7 +17,7 @@ import type {
 } from "../../plugin/manifest.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
-import { chunkForD1, eq } from "../../db/index.js";
+import { and, chunkForD1, eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import {
   conditionReadsAny,
@@ -26,7 +26,7 @@ import {
   structurallyEqual,
 } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
-import { extractStringId } from "./coerce.js";
+import { coerceValue, extractStringId } from "./coerce.js";
 import { MetaReferenceError } from "./errors.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
 import {
@@ -1476,6 +1476,121 @@ function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
   return value;
 }
 
+/** A stored bag with every unsettled value settled, and what moved. */
+export interface SettledMeta {
+  readonly bag: JsonObject;
+  /**
+   * The keys that moved, ready for a surface's own meta writer. Empty when the
+   * bag was already settled, which every writer already treats as a no-op.
+   */
+  readonly patch: MetaPatch;
+  /**
+   * Top-level keys holding a value — at that key or anywhere inside it — that
+   * no declared type accepts. They are left as stored: there is no settled form
+   * to pick, and a human has to decide what the value should have been.
+   */
+  readonly unconvertible: readonly string[];
+}
+
+/**
+ * Settle a stored bag into the shape its fields declare.
+ *
+ * Reads are literal (see `decodeFieldValue`), so a row holding an **unsettled
+ * value** (`CONTEXT.md`) reads as something its declared type doesn't describe.
+ * Settling is what makes the declared type true of the data rather than of the
+ * decode.
+ *
+ * It settles through the write path's own `coerceValue`, so a value lands on
+ * exactly what storing it would have produced — there is no second notion of
+ * what correct means. A value `coerceValue` rejects is left alone: no schema
+ * accepts it, so there is nothing to settle it to, and dropping it would lose
+ * data this has no mandate to delete.
+ *
+ * The recursion mirrors `decodeFieldValue`'s. A repeater row and a group are
+ * `json` at the top, so walking only the surface would leave the same class
+ * alive one level down.
+ */
+export function settleStoredMeta(
+  scope: MetaScope,
+  bag: JsonObject | null | undefined,
+): SettledMeta {
+  const settled: Record<string, JsonValue> = {};
+  const upserts = new Map<string, JsonValue>();
+  const unconvertible: string[] = [];
+  for (const [key, value] of Object.entries(bag ?? {})) {
+    // An unregistered key belongs to a plugin that is no longer installed, so
+    // its shape is unknown and it passes through, as the decode leaves it.
+    const field = scope.findField(key);
+    const next = field
+      ? settleFieldValue(field, value)
+      : { value, unconvertible: false };
+    if (next.value !== value) upserts.set(key, next.value);
+    if (next.unconvertible) unconvertible.push(key);
+    settled[key] = next.value;
+  }
+  return { bag: settled, patch: { upserts, deletes: [] }, unconvertible };
+}
+
+/** A settle of one stored row, and whether the write-back landed. */
+export interface SettledRow extends SettledMeta {
+  /**
+   * False when nothing moved, and when a save landed between the read and the
+   * write — the guard leaves that row for its next read to settle.
+   */
+  readonly written: boolean;
+}
+
+interface SettledValue {
+  readonly value: JsonValue;
+  readonly unconvertible: boolean;
+}
+
+function settleFieldValue(field: MetaBoxField, value: JsonValue): SettledValue {
+  // A container holding the wrong shape has no settled form, and the editor
+  // can't render it — a human has to see it.
+  if (
+    value !== null &&
+    ((isRepeaterField(field) && !isJsonArray(value)) ||
+      (isGroupField(field) && !isJsonObject(value)))
+  ) {
+    return { value, unconvertible: true };
+  }
+  if (isRepeaterField(field) && isJsonArray(value)) {
+    const rowScope = metaScope(field.subFields);
+    const settled = value.map((row) =>
+      isJsonObject(row) ? settleStoredMeta(rowScope, row) : undefined,
+    );
+    const unconvertible = settled.some(
+      (row) => row === undefined || row.unconvertible.length > 0,
+    );
+    if (!settled.some((row) => row && row.patch.upserts.size > 0)) {
+      return { value, unconvertible };
+    }
+    return {
+      value: value.map((row, index) => settled[index]?.bag ?? row),
+      unconvertible,
+    };
+  }
+  if (isGroupField(field) && isJsonObject(value)) {
+    const settled = settleStoredMeta(metaScope(field.fields), value);
+    return {
+      value: settled.patch.upserts.size > 0 ? settled.bag : value,
+      unconvertible: settled.unconvertible.length > 0,
+    };
+  }
+  // `json` covers the containers and the multi-reference, and accepts any JSON
+  // — asking it to settle would only re-encode what is already stored.
+  // A stored `null` is a value someone chose, read as "no value" — nothing to
+  // settle and nothing a human needs to resolve.
+  if (field.type === "json" || value === null) {
+    return { value, unconvertible: false };
+  }
+  const coerced = coerceValue(field.type, value);
+  return coerced.ok
+    ? { value: coerced.value, unconvertible: false }
+    : { value, unconvertible: true };
+}
+
 function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
   return (
     field.inputType === "date" ||
@@ -1549,6 +1664,56 @@ export async function applyMetaPatch(
     .update(table as never)
     .set({ meta: expr })
     .where(eq(idColumn, id));
+}
+
+/**
+ * Write a settle back, and only over the values it was settled from.
+ *
+ * Unlike `applyMetaPatch`, which applies what a caller asked for, this applies
+ * what a reader computed from a snapshot. A save landing between that read and
+ * this write would otherwise be overwritten with the stale value, so each moved
+ * key is guarded: the row is written only while every one still holds what was
+ * read, and otherwise left for its next read to settle. `json_extract` on both
+ * sides compares scalars by value; a container compares as its JSON text, so
+ * one whose spelling doesn't survive a parse (`1.0`) fails closed — left as
+ * stored and reported again — rather than risk overwriting a save.
+ *
+ * `updatedAt` is held where it was. A settle is a normalization, not an edit:
+ * moving it would float a row to the top of "recently updated" for having been
+ * opened, and hand an editor a lock token the row no longer carries.
+ *
+ * Returns whether the row was written, which is what decides whether anything
+ * gets announced.
+ */
+export async function writeSettledMeta(
+  ctx: AppContext,
+  table: { meta: SQLiteColumn; updatedAt?: SQLiteColumn },
+  idColumn: SQLiteColumn,
+  id: number,
+  stored: JsonObject | null | undefined,
+  patch: MetaPatch,
+): Promise<boolean> {
+  if (isEmptyMetaPatch(patch)) return false;
+  const moved = Array.from(patch.upserts);
+  const assignments = moved.map(
+    ([key, value]) => sql`${metaJsonPath(key)}, json(${JSON.stringify(value)})`,
+  );
+  const unchanged = moved.map(
+    ([key]) =>
+      sql`json_extract(${table.meta}, ${metaJsonPath(key)}) IS json_extract(${JSON.stringify(stored?.[key] ?? null)}, '$')`,
+  );
+  const written = await ctx.db
+    // As in `applyMetaPatch`: the generic constraint pins only the columns
+    // this touches, so drizzle's `AnyTable` is reached structurally.
+    .update(table as never)
+    .set({
+      meta: sql`json_set(${table.meta}, ${sql.join(assignments, sql`, `)})`,
+      // drizzle's `$onUpdate` stamps any column a `set` leaves out.
+      ...(table.updatedAt ? { updatedAt: sql`${table.updatedAt}` } : {}),
+    })
+    .where(and(eq(idColumn, id), ...unchanged))
+    .returning({ id: idColumn });
+  return written.length > 0;
 }
 
 /**
