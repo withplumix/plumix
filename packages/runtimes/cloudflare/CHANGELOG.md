@@ -1,5 +1,11 @@
 # @plumix/runtime-cloudflare
 
+## 0.12.0
+
+### Minor Changes
+
+- [#2420](https://github.com/withplumix/plumix/pull/2420) [`3fb95ec`](https://github.com/withplumix/plumix/commit/3fb95ec3132dfc0e292b960dae5c8aa6b9620edb) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a cron firing whose tasks failed being recorded as a successful Worker invocation. The generated entry now reads the scheduled run report and throws, so the Cron Trigger Past Events table and Workers analytics agree with the logs. A firing where some tasks succeeded declines Cloudflare's retry, since a replay would re-run them; one where nothing succeeded keeps it.
+
 ## 0.11.0
 
 ### Minor Changes

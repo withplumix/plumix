@@ -1,5 +1,11 @@
 # create-plumix-app
 
+## 0.6.0
+
+### Minor Changes
+
+- [#2384](https://github.com/withplumix/plumix/pull/2384) [`a119d92`](https://github.com/withplumix/plumix/commit/a119d921c774e2b0534c007554a4ec0ffd105df6) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an `--auth <ids>` flag so a non-interactive run can scaffold OAuth (`oauth`), magic link (`magic-link`) and, on Cloudflare, Cloudflare Access (`cfAccess`) alongside passkeys. Like `--plugins`, a flagged `--auth` skips the wizard's auth prompt, and `--auth=` scaffolds passkeys alone. On a terminal, a run that flags everything but `--auth` now asks the auth question; pass `-y` to skip it. An unknown id exits with the list of methods the runtime offers.
+
 ## 0.5.0
 
 ### Minor Changes

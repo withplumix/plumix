@@ -1,5 +1,31 @@
 # @plumix/plugin-audit-log
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2378](https://github.com/withplumix/plumix/pull/2378) [`2ed420d`](https://github.com/withplumix/plumix/commit/2ed420d530838e9daccf049f02076d6d3d89b965) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `ctx.audit.log()` recording nothing from an authenticated RPC procedure or route. The extension read the signed-in user off the request's ambient context, which is built before authentication; the procedure's own context, the one carrying the user, never reached it, so every row was dropped.
+
+  **Breaking:** `log()` now takes the caller's context first — `ctx.audit?.log(ctx, { event, subject })` — and that context must be an `AuthenticatedAppContext`, which an authenticated procedure or route already holds. A hook listener gets a plain `AppContext`, so it checks `ctx.user` and passes `{ ...ctx, user: ctx.user }`. The runtime debug-and-drop for a missing user is gone; the compiler rejects the call instead.
+
+- [#2385](https://github.com/withplumix/plumix/pull/2385) [`162009b`](https://github.com/withplumix/plumix/commit/162009b201c8926e71965d050a390d645878daac) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a custom audit-log storage's tables never reaching `plumix migrate generate`. The plugin forwarded the storage's drizzle module to runtime queries but always named the default `@plumix/plugin-audit-log/schema` for codegen, so a storage with its own tables got no migration, and an external sink with none still emitted `audit_log`.
+
+  **Breaking:** `AuditLogStorage.schemaModule` is replaced by `schema?: { module, specifier }`, the drizzle module and the specifier codegen imports declared together: `schemaModule: mod` becomes `schema: { module: mod, specifier: "<package>/schema" }`. A storage with no tables omits it and contributes no table. A site whose custom storage left `schemaModule` unset already has `audit_log` from earlier generates, so its next `plumix migrate generate` drops that table: to keep the rows, declare `schema: { module, specifier: "@plumix/plugin-audit-log/schema" }`, and read the generated migration before applying it.
+
+### Patch Changes
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the `auditLog.list` procedure returning `occurredAt` as a `Date` while the admin read it as an ISO string; the procedure now serializes it to an ISO string, the way the comments plugin's queue rows already do.
+
+- [#2347](https://github.com/withplumix/plumix/pull/2347) [`61efc2e`](https://github.com/withplumix/plumix/commit/61efc2ee7b57b53f3342a1f5652d68ad08e85ad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes published type declarations that imported `@plumix/core` or `@plumix/blocks`, packages a consumer does not depend on, so the affected types resolved to nothing. `pages`, `fileBlock` and `imageBlock` now name their types through `plumix/plugin` and `plumix/blocks`, and the RPC routers of audit-log, comments, forms, og and seo name the default database schema as `CoreSchema` from `plumix` instead of through `@plumix/core/schema`.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the request context from the lifecycle action a handler receives rather than from the ambient request store. `comment:created`, `comment:approved`, `comment:spam` and `comment:trashed` now hand their handlers the `AppContext` last as well, so code that fires them itself must pass it.
+
+  Fixes the audit log recording no actor for entry, term, user and settings changes made through an authenticated RPC: the ambient context is built before the request is signed in, so the listener now attributes each row to the user the procedure ran as.
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `createPluginRpcClient` by the plugin's router: `createPluginRpcClient<typeof router>("menu")` now returns a client with one function per procedure, nested the way the router is (`rpc.locations.list()`), with inputs and outputs inferred from the server's handlers. `PluginRpcClient`, `PluginRpcInputs`, `PluginRpcOutputs` and `PluginRpcRouter`, on `plumix/admin`, name the router, the client and its procedure types. The untyped `rpc.call<T>("procedure", input)` form is gone: import the router type from the plugin's server module with `import type` and pass it as the type argument. The first-party plugins call through the typed client and now require `plumix` 0.23.0 or later.
+
 ## 0.1.5
 
 ### Patch Changes

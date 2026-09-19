@@ -1,5 +1,33 @@
 # @plumix/plugin-media
 
+## 0.9.0
+
+### Minor Changes
+
+- [#2438](https://github.com/withplumix/plumix/pull/2438) [`d7ed9ee`](https://github.com/withplumix/plumix/commit/d7ed9eec770131c40d394fc64d957cd85007d386) Thanks [@nasyrov](https://github.com/nasyrov)! - Media's edit gate now asks the framework's shared entry edit rule rather than checking ownership against a hardcoded `entry:media:edit_any` string. Two effects: the gate follows the capability namespace if the media type is ever pooled onto another, and touching your own asset now requires `entry:media:edit_own` rather than ownership alone.
+
+  This covers both `media.update` and the worker-routed `PUT /_plumix/media/upload/<id>`, so a caller holding `entry:media:create` without `edit_own` can still mint an upload URL but is refused when pushing the bytes. Every stock role that can upload also holds `edit_own`, so the one caller this reaches is an API token scoped to `entry:media:create` alone — and only where uploads fall back to the worker route rather than a presigned PUT.
+
+  Deleting an asset still turns on `entry:media:delete`, with ownership alone sufficient, and finalizing an upload is still owner-only.
+
+### Patch Changes
+
+- [#2347](https://github.com/withplumix/plumix/pull/2347) [`61efc2e`](https://github.com/withplumix/plumix/commit/61efc2ee7b57b53f3342a1f5652d68ad08e85ad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes published type declarations that imported `@plumix/core` or `@plumix/blocks`, packages a consumer does not depend on, so the affected types resolved to nothing. `pages`, `fileBlock` and `imageBlock` now name their types through `plumix/plugin` and `plumix/blocks`, and the RPC routers of audit-log, comments, forms, og and seo name the default database schema as `CoreSchema` from `plumix` instead of through `@plumix/core/schema`.
+
+- [#2412](https://github.com/withplumix/plumix/pull/2412) [`276792e`](https://github.com/withplumix/plumix/commit/276792e281d78c45718d54a69145fb602e329a91) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the media, og and seo admin field types through `ctx.registerFieldType`, so they appear in the plugin manifest and register once from the synthesised admin chunk instead of an imperative call in each plugin's admin entry.
+
+- [#2389](https://github.com/withplumix/plumix/pull/2389) [`74e5682`](https://github.com/withplumix/plumix/commit/74e568281af8e0bd8387e338ca2cebbde153d23d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a failed media admin call (upload, confirm, update, delete, or media
+  label lookup) to throw the same `ORPCError` shape every other plugin's admin
+  throws, instead of a plain `Error`.
+
+- [#2374](https://github.com/withplumix/plumix/pull/2374) [`ae40bd7`](https://github.com/withplumix/plumix/commit/ae40bd73a6b738092cb4fc1a48eb1b07bbe12b96) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm i18n:extract` destroying `locales/*.po` — it now routes through `plumix i18n extract`, which refuses to run against this package's hand-authored catalog instead of silently rewriting it.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the request context from the lifecycle action a handler receives rather than from the ambient request store. `comment:created`, `comment:approved`, `comment:spam` and `comment:trashed` now hand their handlers the `AppContext` last as well, so code that fires them itself must pass it.
+
+  Fixes the audit log recording no actor for entry, term, user and settings changes made through an authenticated RPC: the ambient context is built before the request is signed in, so the listener now attributes each row to the user the procedure ran as.
+
+- [#2410](https://github.com/withplumix/plumix/pull/2410) [`f3b88c4`](https://github.com/withplumix/plumix/commit/f3b88c413ba76181ff2e8d2f63647c551e0022f6) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `createPluginRpcClient` by the plugin's router: `createPluginRpcClient<typeof router>("menu")` now returns a client with one function per procedure, nested the way the router is (`rpc.locations.list()`), with inputs and outputs inferred from the server's handlers. `PluginRpcClient`, `PluginRpcInputs`, `PluginRpcOutputs` and `PluginRpcRouter`, on `plumix/admin`, name the router, the client and its procedure types. The untyped `rpc.call<T>("procedure", input)` form is gone: import the router type from the plugin's server module with `import type` and pass it as the type argument. The first-party plugins call through the typed client and now require `plumix` 0.23.0 or later.
+
 ## 0.8.0
 
 ### Minor Changes

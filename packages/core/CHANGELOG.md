@@ -1,5 +1,108 @@
 # @plumix/core
 
+## 0.23.0
+
+### Minor Changes
+
+- [#2495](https://github.com/withplumix/plumix/pull/2495) [`bc137f8`](https://github.com/withplumix/plumix/commit/bc137f806936a1e3257b7d93111beb3fe3dc15c1) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds three ways to convert stored field values that aren't in the form their field declares. Such values are left by changing a field's type over existing rows, by an import, or by a direct write through `plumix/db`. Every reader returns them as stored, so a `toggle` holding `1` reads as off until it is converted. Each way uses the same rules a save does: a `"1"` under a `toggle` becomes `true`, a `"7"` under a `number` becomes `7`, and repeater rows and groups are converted too. A value no field type accepts is left as it is, as is a key no installed plugin declares.
+
+  - **Opening an item in the admin converts it.** Reading an entry, term or user through the admin writes back its converted values once. It leaves the last-edited time alone, so an editor's save token stays valid, and it can't overwrite a save that landed in between. Public reads never write: neither page renders nor the REST API.
+  - **A Field values admin page** under Management lists unconverted values per store, type and field across entries, terms, users and settings, and converts them in one action. It needs `settings:manage`. It works in batches, so it stays within D1's per-request query limit on Cloudflare. Values no field type accepts link to the items holding them, so they can be fixed by hand.
+  - **`plumix meta` / `plumix meta settle`** report and convert from the command line on a Node deploy, listing the ids of any values left for a human. On Cloudflare, D1 is only reachable inside the Worker, so the command points to the admin page instead.
+
+  A conversion is announced like any other meta change, so the CDN purges the pages it affects.
+
+  A repeater or group field holding the wrong shape, such as a string, is now reported as a value no field type accepts.
+
+  The handler a runtime adapter returns gains an optional `run(work, invocation)`, which runs core work against the site outside a request. It commits and purges even when the work throws. It is how `plumix meta` reaches the site's database; adapters that return core's handler get it without changes.
+
+  The core RPC namespace `meta` is new, so a plugin can no longer use `meta` as its id.
+
+- [#2445](https://github.com/withplumix/plumix/pull/2445) [`3515b77`](https://github.com/withplumix/plumix/commit/3515b77682517e3b1560143008b42e0fc18f24fd) Thanks [@nasyrov](https://github.com/nasyrov)! - Replaces the `debugBar` config slot with a `dev` block: `dev.bar` is the debug bar (pass `false` to suppress it, or `{ position, defaultOpen }`), and `dev.panels` says which debug panels the site shows, keyed by panel id — `{ database: false }` hides one. `dev.panels` is read by the bar and by the request-history viewer alike, so switching a panel off hides it on both.
+
+  Panel ids are now checked against a `DebugPanelRegistry` a plugin augments to declare its own panel, so naming a panel nothing contributes is a type error instead of a setting that quietly does nothing.
+
+  Breaking: `debugBar` is removed with no alias — `debugBar: false` becomes `dev: { bar: false }`, and `debugBar: { disable: ["database"] }` becomes `dev: { panels: { database: false } }`. The bar's `enabled` key is gone; `false` is the only spelling of off. The `debug_bar:panels` filter plugins contribute panels through is renamed `debug:panels`.
+
+- [#2446](https://github.com/withplumix/plumix/pull/2446) [`04ef072`](https://github.com/withplumix/plumix/commit/04ef0723a433772526b68fb0655151959d393034) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `dev.history` to bound the dev request-history ring — `maxEntries`, `maxTotalBytes` and `maxStringLength` — that the debug bar's switcher, the request-history viewer and the dev MCP tools all read. The ring is now built by the app from this config and handed to each reader, rather than being a module singleton no setting could reach.
+
+  Breaking: the request-history module no longer exports a `debugHistory` singleton; read the ring from `ctx.debugHistory` (or `app.debugHistory`). `DebugHistoryStore` and `DebugHistoryStoreOptions` are now exported.
+
+- [#2438](https://github.com/withplumix/plumix/pull/2438) [`d7ed9ee`](https://github.com/withplumix/plumix/commit/d7ed9eec770131c40d394fc64d957cd85007d386) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `canEditEntry` and `assertCanEditEntry` to `plumix` and `plumix/plugin`, so a plugin can ask whether a caller may edit an entry row instead of assembling an `entry:<type>:edit_any` string by hand. A hand-written string misses the namespace a pooled entry type gates under, which would deny every caller once a type pools its permissions onto another. `requireCapability` remains the gate for a capability that doesn't depend on which row is in hand.
+
+  Also folds `entry.get`'s preview denial onto `edit_any`. It reported `edit_own` where every other edit-gated procedure reports `edit_any`; a client matching on the reported capability sees the consistent value now.
+
+- [#2330](https://github.com/withplumix/plumix/pull/2330) [`6cf3863`](https://github.com/withplumix/plumix/commit/6cf386317aa061f377842dc33ba8995bb61d0b6a) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `registerEntryType`'s `menuIcon` and `registerTermTaxonomy`'s `menuIcon` as the closed set of icon names the admin actually renders, so an unrecognized icon name is now a compile error instead of a silent fallback to a generic icon. Drops the nine `EntryTypeLabels` keys no plugin or admin surface ever read (`itemUpdated`, `itemPublished`, `itemPublishedPrivately`, `itemScheduled`, `itemTrashed`, `itemRevertedToDraft`, `itemsList`, `itemsListNavigation`, `filterItemsList`) — a plugin declaring one of these was configuring a no-op. `capabilityType` and `supports` stay open: `capabilityType` is a real, intentionally shareable namespace, and `supports` is documented as conventional rather than closed.
+
+- [#2342](https://github.com/withplumix/plumix/pull/2342) [`dc4430c`](https://github.com/withplumix/plumix/commit/dc4430c704e1b5ba84432db54d89b6c9e9033fd4) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds the firing `AppContext` as the last argument of every core lifecycle action — `entry:*`, `term:*`, `user:*`, `settings:group_changed`, `credential:*`, `session:*`, `api_token:*` and `device_code:*` — and of the `rpc:settings.get:output` and `rpc:settings.upsert:output` filters, so a handler reads the context from its arguments instead of calling `tryGetContext()`. Handlers that ignore the new argument keep working; code that fires one of these hooks itself must now pass the context.
+
+- [#2441](https://github.com/withplumix/plumix/pull/2441) [`407f49c`](https://github.com/withplumix/plumix/commit/407f49cb1a551db1a48e5313952d9c7288b16492) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a `type: "string"` or `type: "number"` meta field reading differently depending on which bag a consumer holds. The decode no longer widens a stored value to the field's declared type, so it agrees with the three readers that cannot decode — a `WHERE` over the JSON column, a raw row off a lifecycle event, and `storedMeta` behind `whereMeta`. A stored `42` under a `string` field now reads `42` rather than `"42"`, which is what `whereMeta` was already comparing against while `StoredMetaOf` typed its key as `string`.
+
+  This completes the change [#2426](https://github.com/withplumix/plumix/issues/2426) made for `boolean`: all three scalars now read as stored, so a field gives one answer on every surface.
+
+  Writes are unchanged: a number sent to a `string` field is still stored as `"42"`, and text sent to a `number` field is still stored as `7`. Only a row that bypassed the pipeline can hold an off-schema value — a legacy row written before a plugin changed the field's declared type, an import, or a direct write. Publishing the entry settles it.
+
+  Upgrade note: on those rows the value now reaches a theme or plugin as its stored form while its read type still says `string` or `number`. A template calling a string method on such a field will throw where it previously received coerced text, and a container stored under a `string` field arrives as the object rather than as its JSON text.
+
+  Not every effect is loud. The entry editor seeds its form from the decoded bag, so an off-schema row now opens with a blank input where it used to show coerced text — a `number` field storing `"7"` renders empty rather than `7`, and a container under a `string` field renders empty rather than its JSON. Nothing is lost by opening the entry, since an untouched field still diffs to nothing, but typing into that input overwrites the stored value.
+
+- [#2443](https://github.com/withplumix/plumix/pull/2443) [`1a09ff9`](https://github.com/withplumix/plumix/commit/1a09ff98fbba3e6f34db7174cb5c61227fe6f95a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes publishing an entry rewriting meta fields the author never edited. An autosave now stores the keys the author touched rather than a copy of the whole live row, so promoting it re-runs the field pipeline over those keys and no others. A value left by an import, a direct write, or a row persisted before a plugin tightened a field is promoted exactly as stored — previously an unrelated edit dragged it back through the write path's input decoder, turning a stored `1` under a `type: "boolean"` field into `true` after every read surface, including the admin toggle, had shown it as unset.
+
+  The publish gate is unchanged in reach: required fields, bounds, formats and row counts are still enforced across the whole resulting bag, so a draft-lenient violation still blocks the publish whether or not the author touched that key. Clearing a field in a draft still clears it on publish, and re-sanitizing a key the author did draft still happens.
+
+  `getAutosave` still returns a whole draft row, with the edits laid over the live entry, and now takes the live row as an optional third argument to save a lookup where the caller already has it — pass the stored row, not one whose meta has been resolved. It now returns `undefined` for an autosave whose entry no longer exists, where it used to return the orphan: there is no row to lay the edits over, so what came back was a draft only in name.
+
+  Autosave rows written before this release are read as "every key touched", which is the previous behaviour, and clear as those drafts are published or discarded.
+
+- [#2341](https://github.com/withplumix/plumix/pull/2341) [`a3c8fdd`](https://github.com/withplumix/plumix/commit/a3c8fdd0caa2f8b0809134e1b200d52b7b94e887) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a `requireCapability(cap)` RPC middleware to `plumix/plugin`, composed after `authenticated` to gate a procedure on a single capability without hand-rolling `if (!ctx.auth.can(...)) throw errors.FORBIDDEN(...)`. Core's own settings, allowed-domains, api-tokens, mailer, and user procedures now use it. Because the middleware is composed before `.input()`, converted procedures now reject an unauthorized caller with `FORBIDDEN` even when their input also fails schema validation, rather than surfacing the validation error first. Removes the unused `requireCapability`/`CapabilityError` pair from `@plumix/core`'s rbac module, superseded by this middleware.
+
+- [#2430](https://github.com/withplumix/plumix/pull/2430) [`4581a11`](https://github.com/withplumix/plumix/commit/4581a114660c7147b68f184b1497cd5abd8a465a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a scheduled run reporting that nothing ran when something after its tasks failed. A `database` slot whose `commit` threw, or a logger that threw recording a failed task, discarded the report the run had produced and replaced it with `{ ran: 0, failed: [], aborted }` — telling `plumix cron run` the run never started, hiding the task failures behind that claim, and costing a Cloudflare firing the `noRetry` that stops Workers replaying tasks which already did their work. `ScheduledRunReport` is now a union rather than a shape with an optional `aborted`, so "aborted means nothing ran" is checked by the compiler for every adapter that builds one.
+
+- [#2426](https://github.com/withplumix/plumix/pull/2426) [`537578a`](https://github.com/withplumix/plumix/commit/537578a40692de9f60faacd797605c39ae655bd5) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a `type: "boolean"` meta field reading differently depending on which bag a consumer holds. The decode no longer widens a stored `1`, `"1"` or `"true"` to `true`, so it agrees with the three readers that cannot decode — a `WHERE` over the JSON column, a raw row off a lifecycle event, and `storedMeta` behind `whereMeta`. In plugin-seo this split one page's indexability across its head, the sitemap and IndexNow.
+
+  Writes are unchanged: those tokens are still accepted and still stored as a real boolean, so only a row that bypassed the pipeline can hold one — a legacy `type: "json"` row, an import, or a direct write. Such a value stays as stored until someone edits that field.
+
+  Upgrade note: on those rows the value now reaches a theme or plugin as the raw token while its read type still says `boolean`. Read a boolean meta field with `=== true` rather than truthiness, since a stored `"false"` is a non-empty string.
+
+### Patch Changes
+
+- [#2335](https://github.com/withplumix/plumix/pull/2335) [`542b9ae`](https://github.com/withplumix/plumix/commit/542b9aecaaacd52025a1895b136665b32a811fda) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the RPC lifecycle actions (`entry:*`, `term:*`, `user:*`, `settings:*`) sometimes disappearing from `ActionName` for a plugin's build. The module that declares them wasn't anchored into the published declaration graph, so a plugin whose bundler didn't otherwise pull it in saw `ctx.addAction` reject every real action name and had to write `as never` to work around it.
+
+- [#2327](https://github.com/withplumix/plumix/pull/2327) [`65d8cac`](https://github.com/withplumix/plumix/commit/65d8cacceaa3b09ceff75c6477acf5b82b9ef932) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `block:before_render` and `block:after_render` never firing. Both filters are documented and declared on `FilterRegistry`, but nothing called them — a plugin that subscribed via `addFilter("block:before_render", ...)` registered successfully and was never invoked. They now fire synchronously around every block's React element as `renderBlockTree` walks the content tree, letting a plugin decorate or replace a block's rendered output.
+
+- [#2332](https://github.com/withplumix/plumix/pull/2332) [`6514303`](https://github.com/withplumix/plumix/commit/65143032f1e3e134fdfefbbb72f87198edcbfabf) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `emptyManifest()` omitting `breakpoints`, so a manifest fixture built
+  from it (including via the public `@plumix/core/test/playwright` helpers) now
+  carries the theme's default breakpoints instead of `undefined`, matching what
+  `buildManifest()` itself always populates.
+
+- [#2396](https://github.com/withplumix/plumix/pull/2396) [`40fc77d`](https://github.com/withplumix/plumix/commit/40fc77d172ce2647fa1db142731ee04b165b9380) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `user:signed_in` reporting `firstSignIn: true` when an existing user registers their first passkey. The flag is now true only when the sign-in enrolled the user (a magic-link or OAuth signup, the bootstrap passkey, an accepted invite), so audit logs no longer record a second first sign-in.
+
+- [#2376](https://github.com/withplumix/plumix/pull/2376) [`84b45fc`](https://github.com/withplumix/plumix/commit/84b45fca41a1ed87c783ed1ec34b4f2971301d3d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin entries list hiding a contributor's or author's own drafts: `entry.list` now admits the caller's own unpublished entries when they hold `edit_own`, so the "Draft" and "Trash" filters return their own rather than an empty list. One visibility rule now answers `entry.get`, `entry.list`, the REST collection and the admin search palette.
+
+- [#2406](https://github.com/withplumix/plumix/pull/2406) [`ec33f37`](https://github.com/withplumix/plumix/commit/ec33f37a7577937d14b89a9674b21af63f94c91a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `POST /_plumix/auth/passkey/register/verify` accepting a WebAuthn challenge issued by `/_plumix/auth/invite/register/options`. An invite holder could complete enrolment through the passkey route, which minted a session and credential without consuming the invite token, running the invite checks, or firing `user:registered`. Each register-verify route now records which ceremony issued the challenge and refuses the other's with `challenge_mismatch`; the challenge is still consumed. The admin's `challenge_mismatch` message no longer assumes an invite, since the passkey route now returns it too.
+
+- [#2399](https://github.com/withplumix/plumix/pull/2399) [`aa2b144`](https://github.com/withplumix/plumix/commit/aa2b144415d4e680b0e36082a257b49bc6eda4ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes stale edge-cached pages after two content changes. Updating a user now purges cached author archives and the feeds that show an author's name. Changing a term in a taxonomy registered without `entryTypes` now purges its cached term archive and term feed, which are stored under the public entry types' tags instead of none.
+
+- [#2403](https://github.com/withplumix/plumix/pull/2403) [`2436a20`](https://github.com/withplumix/plumix/commit/2436a2058c629fb82cebe9751a6f852220d7d90a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes stale edge-cached pages after user changes: deleting a user now purges cached pages such as their author feed, and user updates now also purge cached permalinks of hierarchical types like pages.
+
+- [#2488](https://github.com/withplumix/plumix/pull/2488) [`2d5c77a`](https://github.com/withplumix/plumix/commit/2d5c77a3076d6e2070cfbb751925bcc3a70784f7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes meta reaching the live surface without a field it requires. Two paths let it through.
+
+  - **An edit that switches a required field visible without supplying it.** A live edit to a published entry, any edit to a scheduled one, and every term or user meta edit validated only the keys it sent. So changing a condition driver — `layout: "video"` making a required `video_url` visible — was accepted, and the entry went live with a bag the publish gate would have rejected. Such an edit now fails with the per-field error the publish gate gives, naming the field it left empty. Draft edits stay lenient.
+  - **Creating an entry straight to `published` or `scheduled`.** This validated only the meta it was sent, so a required field it omitted went live missing. It now runs the same whole-bag check as publishing a draft.
+
+  Re-sending a driver's current value (stored or default) is never blocked by older drift on its dependents. A field the author lacks the capability to write is never held against them, which is the rule the publish gate already applies. A required field is not satisfied by its default, since a default is shown on read but never stored.
+
+  Conditions are now judged against the meta the edit lands on, with each value as the pipeline will store it (a number input's `"10"` counts as `10`) and each declared default standing in for a key storage lacks. The edit path and the publish gate agree on this. Two consequences:
+
+  - An edit carrying just a dependent field is judged by its driver's stored or default value. When that value hides the field, the write to it is dropped, as it already was when the edit carried the driver itself.
+  - Publishing no longer demands a field whose driver's default hides it. Previously the gate treated a driver missing from storage as showing its dependents, so it could require a field the editor hid.
+
+- [#2340](https://github.com/withplumix/plumix/pull/2340) [`25587dd`](https://github.com/withplumix/plumix/commit/25587ddad5754470ec0de14aa4f46f752865df8f) Thanks [@nasyrov](https://github.com/nasyrov)! - Widens `runScheduledTasks`, `scheduledTasksFor`, `declaredSchedules` and `connectScheduledDb`, and the `app` option of the Node runtime's `startScheduledRunner`, to accept any object carrying the app fields they read (`scheduledTasks`, or `schema` plus `config.database`) rather than a whole `PlumixApp`. Code passing a full app keeps working.
+
+- [#2336](https://github.com/withplumix/plumix/pull/2336) [`ee02c6c`](https://github.com/withplumix/plumix/commit/ee02c6c33677795c0231574cebf6cc2f28966a04) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `createDispatcherHarness` wiring request contexts differently from the runtime handler: it now connects an `imageDelivery` slot that declares `connect` instead of handing requests the unconnected slot, and takes a `kv` option so a test can put a store on `ctx.kv`. Both build their contexts from one argument list, so a new context slot has to be wired into both. Several helpers that take a request context (`canonicalUrl`, `tagCdnEntry` and others) now accept just the fields they read, so a test can call them with a small object instead of a full `AppContext`.
+- Updated dependencies []:
+  - @plumix/blocks@0.23.0
+
 ## 0.22.0
 
 ### Minor Changes
