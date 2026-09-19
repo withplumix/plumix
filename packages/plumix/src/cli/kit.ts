@@ -10,3 +10,9 @@
 // `migrate` command, which imports `@plumix/core/cli` directly.
 export { CliError, isCliError } from "@plumix/core/cli";
 export { spawnCapturingStderr, spawnInherit } from "@plumix/core/cli";
+
+export type {
+  CommandContext,
+  CommandDefinition,
+  CommandRegistry,
+} from "@plumix/core";

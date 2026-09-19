@@ -106,32 +106,29 @@ The rule is about the packages the façade covers, which are `@plumix/core`, `@p
   even for a registry whose value API lives on a subpath. Block and pattern
   registries are re-exported onto the root specifier for exactly this reason.
   Augmenting through two specifiers fractures the interface, and half your
-  declarations stop being visible.
+  declarations stop being visible. The file that holds the block has to import
+  something from `plumix` itself (a type is enough), or TypeScript reports the
+  module as not found.
 </Aside>
 
 ## Writing the site
 
+Every value has one import path, picked by who writes against it: the site's config, a theme file, a plugin, a runtime adapter. The path you type is the only one that works, so an editor's auto-import cannot pick a second one. Types are the exception. The root carries every one of them, and each type also sits on the subpath of the role that uses it, so a theme or plugin file needs a single import.
+
 ### plumix
 
-The root. Config (`plumix`, `auth`), the request context, hooks, redirects, access policy, telemetry, and every type the rest of the surface refers to. It is also the specifier every `declare module` block targets.
-
-The subpaths below are not disjoint halves of the root. Most of them narrow it to what one job needs, and a few widen it. Importing `definePlugin` from `plumix` and from `plumix/plugin` gets you the same binding.
+The root, which is what `plumix.config.ts` writes: `plumix`, `defineConfig`, `consoleMailer`, `resolveEnvInput` and `PlumixConfigError`. It also carries every type, and it is the one specifier a `declare module` block targets.
 
 ```ts
-import { auth } from "plumix";
+import { consoleMailer } from "plumix";
 
-export const recipeAuth = auth({
-  passkey: {
-    rpName: "Recipes",
-    rpId: "localhost",
-    origin: "http://localhost:5173",
-  },
-});
+// The `mailer` slot of `plumix({ … })`: a magic link prints to the terminal.
+export const mailer = consoleMailer();
 ```
 
 ### plumix/plugin
 
-The entire root surface, plus valibot re-exported as `v` so a plugin can declare its own config schema without a second dependency. `definePlugin` and the registration context are what you come here for, and both are on the root specifier as well.
+What a plugin writes: `definePlugin` and its registration context, RPC procedures and hooks, entry and URL helpers, the responses a plugin route answers with, dev panels, and the pieces a plugin builds [its own rule kind](/themes/rule-kinds/) from. It also re-exports valibot as `v`, so a plugin can declare its own config schema without a second dependency.
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -150,10 +147,10 @@ export const recipes = definePlugin("recipes", {
 
 ### plumix/cli
 
-What a runtime adapter needs to contribute CLI commands: `CliError`, which the command dispatcher understands, and the `spawnInherit` / `spawnCapturingStderr` helpers a command shells out through. Narrow on purpose — the root specifier carries the whole runtime, and a command author who reaches for it pays ~500ms of module evaluation before the CLI has parsed a flag.
+What a runtime adapter needs to contribute CLI commands: `CommandDefinition`, the `CliError` the command dispatcher understands, and the `spawnInherit` / `spawnCapturingStderr` helpers a command shells out through. Narrow on purpose. Loading core's full runtime costs about 500ms of module evaluation, and a command author should not pay that before the CLI has parsed a flag.
 
 ```ts
-import type { CommandDefinition } from "plumix";
+import type { CommandDefinition } from "plumix/cli";
 import { spawnInherit } from "plumix/cli";
 
 export const deployCommand: CommandDefinition = {
@@ -166,19 +163,67 @@ export const deployCommand: CommandDefinition = {
 
 ### plumix/theme
 
-`defineTheme`, `defineTemplate` and the document-manifest types, narrowed to what a theme file needs. All of them are on the root specifier too. The template builders `fallback`, `entry` and `forEntryType` are only on the root, which is why the scaffolded theme imports the whole set from `plumix` rather than splitting the import in two.
+What a theme file writes: `defineTheme`, `defineTemplate`, the [template builders](/themes/templates/) (`fallback`, `entry`, `forEntryType` and the rest), the `is*` guards that narrow a template's data, and the data types a template receives. The render components (`<Link>`, `<Image>`, `BlockRenderer`) are on [`plumix/blocks/renderer`](/getting-started/project-structure/#plumixblocksrenderer).
 
 ```tsx
-import type { EntryData } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import type { EntryData } from "plumix/theme";
+import { defineTemplate, defineTheme, entry } from "plumix/theme";
 
-export const recipe = defineTemplate<EntryData>({
+const recipe = defineTemplate<EntryData>({
   render: ({ data }) => (
     <article>
       <h1>{data.entry.title}</h1>
     </article>
   ),
 });
+
+export const theme = defineTheme({ templates: [entry(recipe)] });
+```
+
+### plumix/auth
+
+Identity and access: the `auth()` block and its providers (`github`, `google`), the authenticators a runtime composes a request's identity from, roles and capabilities, and the [access policies](/access/overview/) that gate content.
+
+```ts
+import { auth, github } from "plumix/auth";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "localhost",
+    origin: "http://localhost:5173",
+  },
+  oauth: {
+    providers: {
+      github: github({ clientId: "client-id", clientSecret: "client-secret" }),
+    },
+  },
+});
+```
+
+### plumix/runtime
+
+What a runtime adapter composes an app from: `buildApp` and `createPlumixHandler`, scheduled tasks and their cron parser, query tracing, the in-memory `memoryKv` and `memoryStorage` a test or a local run stands in with, and the dev boot page. A site rarely imports it. The runtime adapter you install does.
+
+```ts
+import type { PlumixConfig } from "plumix";
+import { buildApp, createPlumixHandler } from "plumix/runtime";
+
+export async function handlerFor(config: PlumixConfig) {
+  return createPlumixHandler(await buildApp(config));
+}
+```
+
+### plumix/support
+
+Small helpers any file can use: `escapeHtml`, `xmlEscape`, `slugify`, `nonEmpty`, `withBasePath`, `normalizeBasePath`, `escapeLikePattern` and the `isJsonObject` / `isJsonArray` narrowings. It never loads core's server runtime, so an admin chunk or an island can import it as well as a server file.
+
+```ts
+import { escapeHtml, slugify } from "plumix/support";
+
+export function heading(title: string): string {
+  return `<h2 id="${slugify(title)}">${escapeHtml(title)}</h2>`;
+}
 ```
 
 ### plumix/vite
@@ -436,13 +481,8 @@ A direct write skips core's save path, and with it two things a save does for yo
 
 ```ts
 import type { AppContext, JsonObject } from "plumix";
-import {
-  enqueuePurgeTags,
-  entries,
-  entryPurgeTags,
-  eq,
-  settleMeta,
-} from "plumix/db";
+import { enqueuePurgeTags, entryPurgeTags, eq, settleMeta } from "plumix/db";
+import { entries } from "plumix/schema";
 
 // An importer replacing a recipe's meta with the bag it read from the source.
 export async function importRecipeMeta(
@@ -589,7 +629,7 @@ export default definePlumixE2EConfig({ testDir: "./e2e" });
 The slot conformance suites, aimed at an author implementing a runtime slot: one parameterised `describe` per port — `describeKvContract`, `describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` — each taking a factory that binds a fresh instance. A factory declares what its backend cannot do rather than the suite guessing: a store that rejects sub-minute TTLs names its floor and is never asked to beat it. These run under vitest, so the consumer installs it.
 
 ```ts
-import { memoryKv } from "plumix";
+import { memoryKv } from "plumix/runtime";
 import { describeKvContract } from "plumix/test/conformance";
 
 describeKvContract({ connect: () => memoryKv().connect() });

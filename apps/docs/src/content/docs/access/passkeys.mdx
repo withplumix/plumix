@@ -33,7 +33,7 @@ A verified credential becomes a row in `credentials` holding the public key, the
 1. **Configure the block.** For local development, the `rpId` is `localhost` and the origin carries the dev server's port:
 
    ```ts
-   import { auth } from "plumix";
+   import { auth } from "plumix/auth";
 
    export const recipeAuth = auth({
      passkey: {
@@ -83,13 +83,14 @@ Removal is self-scoped, with one guard. You cannot delete your last passkey. The
 An entry is either an exact origin or a subdomain wildcard.
 
 ```ts
-import { auth } from "plumix";
+import type { PlumixEnv } from "plumix";
+import { auth } from "plumix/auth";
 
 export const recipeAuth = auth({
   passkey: {
     rpName: "Recipes",
     rpId: "recipes.example.com",
-    origin: (env) => env.PUBLIC_ORIGIN,
+    origin: (env: PlumixEnv) => env.PUBLIC_ORIGIN,
     allowedOrigins: ["https://www.recipes.example.com"],
   },
 });

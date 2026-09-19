@@ -2,7 +2,7 @@ import type { ResolvedEntry, TemplateDepLoader } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
-import { buildResolvedEntries, readEntryType } from "plumix";
+import { buildResolvedEntries, readEntryType } from "plumix/plugin";
 import { entries, entryTerm } from "plumix/schema";
 
 // Augment the template-dep registry so a theme can declare

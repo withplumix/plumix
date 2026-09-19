@@ -3,8 +3,8 @@ import { availableParallelism } from "node:os";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AssetsBinding, ImageDelivery } from "plumix";
-import { normalizeBasePath, withBasePath } from "plumix";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
+import { normalizeBasePath, withBasePath } from "plumix/support";
 
 import type { CachedVariant } from "../image-cache.js";
 import type { ImageFormat, ImageParams, NodeImageDelivery } from "../images.js";

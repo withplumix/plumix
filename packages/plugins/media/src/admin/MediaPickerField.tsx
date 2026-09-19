@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue } from "plumix";
-import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
+import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";

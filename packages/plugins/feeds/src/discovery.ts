@@ -1,10 +1,7 @@
-import type {
-  AppContext,
-  DocumentLink,
-  DocumentManifest,
-  TemplateData,
-} from "plumix";
-import { exposesHierarchicalUrls, withBasePath } from "plumix";
+import type { DocumentLink, DocumentManifest, TemplateData } from "plumix";
+import type { AppContext } from "plumix/plugin";
+import { exposesHierarchicalUrls } from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 import { isPublicEntryType } from "./scope.js";
 

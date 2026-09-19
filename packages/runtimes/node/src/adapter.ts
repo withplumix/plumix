@@ -1,11 +1,11 @@
+import type { PlumixEnv } from "plumix";
 import type {
   AssetsBinding,
   PlumixApp,
-  PlumixEnv,
   PlumixHandler,
   RuntimeAdapter,
-} from "plumix";
-import { createPlumixHandler } from "plumix";
+} from "plumix/runtime";
+import { createPlumixHandler } from "plumix/runtime";
 
 import { generateEntry } from "./entry-codegen.js";
 import { ASSETS_DIR_ENV, DRAIN_DEADLINE_MS } from "./entry-constants.js";

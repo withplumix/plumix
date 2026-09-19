@@ -1,8 +1,9 @@
 import type { Label } from "plumix/i18n";
-// Imported from the root `plumix` specifier (not the `plumix/plugin` subpath)
-// so the `declare module "plumix"` augmentation below has its target loaded in
-// this plugin's own build.
-import { definePlugin, PLUGIN_I18N_SLOT, pluginAdminEntryPath } from "plumix";
+import {
+  definePlugin,
+  PLUGIN_I18N_SLOT,
+  pluginAdminEntryPath,
+} from "plumix/plugin";
 
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogRetentionConfig } from "./server/retention.js";

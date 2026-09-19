@@ -1,10 +1,9 @@
+import type { EntryTypeOptions, TermTaxonomyOptions } from "plumix";
 import type { Label } from "plumix/i18n";
 import type {
   EntryTypeLabels,
-  EntryTypeOptions,
   PluginDescriptor,
   TermTaxonomyLabels,
-  TermTaxonomyOptions,
 } from "plumix/plugin";
 import { withContext } from "plumix/i18n";
 import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";

@@ -1,5 +1,6 @@
-import type { ResolvedNode, TemplateData } from "plumix";
-import { resolveRule } from "plumix";
+import type { TemplateData } from "plumix";
+import type { ResolvedNode } from "plumix/plugin";
+import { resolveRule } from "plumix/plugin";
 
 import type { CardRule } from "./card.js";
 

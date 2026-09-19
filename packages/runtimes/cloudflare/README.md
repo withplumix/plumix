@@ -21,7 +21,8 @@ Your worker needs Node compatibility. In `wrangler.jsonc`:
 Each adapter is a small factory you slot into the matching field of your `plumix.config.ts`:
 
 ```ts
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import {
   cloudflare,

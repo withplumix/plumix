@@ -38,7 +38,7 @@ A plugin (or your app) registers an `insight` entry type and wants
 
 ```ts
 import type { ResolvedEntry } from "plumix";
-import { defineTheme, forEntryType } from "plumix";
+import { defineTheme, forEntryType } from "plumix/theme";
 
 declare module "plumix" {
   interface EntryTypeRegistry {
@@ -78,12 +78,12 @@ All seven live behind `declare module "plumix"`.
 imports from `plumix` — otherwise TypeScript reports
 _"module 'plumix' cannot be found"_ at the plugin's own build. Most files import
 something from `plumix` already. If a file augments `plumix` but otherwise only
-imports from the `plumix/plugin` subpath, pull the types it uses from `plumix`
+imports from subpaths (`plumix/plugin`, `plumix/db`, …), pull the types it uses from `plumix`
 instead (they're the same symbols), or add a bare `import type {} from "plumix"`:
 
 ```ts
 import type { HydratedReference } from "plumix"; // loads the augmentation target
-import { and, eq } from "plumix/plugin"; // runtime db helpers stay here
+import { and, eq } from "plumix/db"; // runtime db helpers live here
 
 declare module "plumix" {
   interface ReferenceHydrationShapes {

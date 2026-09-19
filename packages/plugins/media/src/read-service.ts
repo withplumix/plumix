@@ -2,8 +2,8 @@ import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, like, sql } from "plumix/db";
-import { escapeLikePattern, withBasePath } from "plumix/plugin";
 import { entries } from "plumix/schema";
+import { escapeLikePattern, withBasePath } from "plumix/support";
 import * as v from "valibot";
 
 import { parseMediaMeta } from "./meta.js";

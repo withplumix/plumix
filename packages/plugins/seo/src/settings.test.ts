@@ -1,7 +1,7 @@
 import type { SettingsBag } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
-import { defineTheme, fallback } from "plumix";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import { seo } from "./index.js";

@@ -60,12 +60,11 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
      ArchiveData,
      EntryData,
      EntryTypeName,
-     EntryTypeTargets,
      ResolvedEntryFor,
      TemplateData,
-     TierMatchRule,
    } from "plumix";
-   import { entryTypeTargets } from "plumix";
+   import type { EntryTypeTargets, TierMatchRule } from "plumix/plugin";
+   import { entryTypeTargets } from "plumix/plugin";
 
    export interface FeedRule extends TierMatchRule {
      readonly href: (data: TemplateData) => string;
@@ -125,9 +124,9 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
 2. **Snapshot what the theme declared, then resolve against it.** The theme is validated after plugins install, so its rules arrive on the `theme:ready` handover rather than in `setup`. One snapshot serves every request.
 
    ```ts
-   import type { ResolvedNode, TemplateData, ThemeDescriptor } from "plumix";
-   import { resolveErrorRule, resolveRule } from "plumix";
-   import { definePlugin } from "plumix/plugin";
+   import type { TemplateData, ThemeDescriptor } from "plumix";
+   import type { ResolvedNode } from "plumix/plugin";
+   import { definePlugin, resolveErrorRule, resolveRule } from "plumix/plugin";
 
    let rules: NonNullable<ThemeDescriptor["feeds"]> = [];
 
@@ -168,8 +167,8 @@ The samples below bind to a bare probe — a selector that keeps the selected ma
 Entries of one registered type, and that type's archive. It takes two bind functions because `.archive` selects a different node kind carrying a different data shape.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { entryTypeTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { entryTypeTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 
@@ -191,8 +190,8 @@ export const matchers = [
 Terms of one registered taxonomy. One bind function: a taxonomy has no archive of its own to select.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { termTaxonomyTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { termTaxonomyTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 
@@ -212,8 +211,8 @@ export const matchers = [
 Author archives. No name, because there is one author kind and no registry to autocomplete against.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { authorTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { authorTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 
@@ -233,8 +232,8 @@ The matcher carries a fixed `type` of `"author"` and narrows by slug or id like 
 One date archive, at the granularity the arguments give. It returns a callable rather than an object, so there is nothing to chain.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { dateTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { dateTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 
@@ -254,8 +253,8 @@ The three overloads rather than optional parameters are what reject `(2026, unde
 One archive a plugin registered with `registerArchiveType`. No narrowings — a custom archive is a single node, so the name is the whole matcher.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { archiveTypeTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { archiveTypeTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 
@@ -275,8 +274,9 @@ Two prefixes, not five: an author, date or custom-archive matcher carries a fixe
 Then hang the narrowing off your own builder exactly where `forEntryType` hangs `named` — beside the constructor's, not inside it:
 
 ```ts
-import type { EntryTypeName, EntryTypeTargets, TierMatchRule } from "plumix";
-import { entryTypeMatch, entryTypeTargets, metaEquals } from "plumix";
+import type { EntryTypeName } from "plumix";
+import type { EntryTypeTargets, TierMatchRule } from "plumix/plugin";
+import { entryTypeMatch, entryTypeTargets, metaEquals } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 type Selection = ReturnType<typeof bind>;
@@ -307,8 +307,8 @@ Pick a name no constructor claims. A `slug` of your own would sit after the spre
 The match every entry-type narrowing starts from: the node prefix, with anything you pass merged over it.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { entryTypeMatch } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { entryTypeMatch } from "plumix/plugin";
 
 export const matchers: TierMatchRule[] = [
   entryTypeMatch("recipe"),
@@ -323,8 +323,8 @@ The bare call mints `{ nodeKind: "content", type: "recipe" }` — identical to `
 The same, one node kind over: the prefix a taxonomy narrowing starts from.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { termTaxonomyMatch } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { termTaxonomyMatch } from "plumix/plugin";
 
 export const matchers: TierMatchRule[] = [
   termTaxonomyMatch("cuisine"),
@@ -339,7 +339,7 @@ export const matchers: TierMatchRule[] = [
 The predicate half: matches when a content entry's stored meta value equals `value`.
 
 ```ts
-import { entryTypeMatch, metaEquals } from "plumix";
+import { entryTypeMatch, metaEquals } from "plumix/plugin";
 
 export const winter = entryTypeMatch("recipe", {
   predicate: metaEquals("season", "winter"),
@@ -355,7 +355,7 @@ The key is a plain `string`, so reach for this over `.whereMeta()` only when the
 The same predicate for terms, read off `data.term.storedMeta`.
 
 ```ts
-import { metaEquals, termMetaEquals, termTaxonomyMatch } from "plumix";
+import { metaEquals, termMetaEquals, termTaxonomyMatch } from "plumix/plugin";
 
 export const regional = termTaxonomyMatch("cuisine", {
   predicate: termMetaEquals("scope", "regional"),
@@ -378,8 +378,8 @@ Both failures typecheck cleanly. Neither shows up until a request runs.
 A selector that inherits its terminal loses it:
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { entryTypeTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { entryTypeTargets } from "plumix/plugin";
 
 class Selection {
   constructor(readonly selected: TierMatchRule) {}
@@ -402,8 +402,8 @@ export const gone = recipes.advertise;
 A selector carrying an own key named for a narrowing loses that instead:
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { entryTypeTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { entryTypeTargets } from "plumix/plugin";
 
 interface Selection {
   readonly selected: TierMatchRule;
@@ -431,8 +431,8 @@ The five reserved names are `slug`, `id`, `where`, `whereMeta` and `archive`, re
 It is therefore absent from every constructor above, and reaching for it is a compile error. The field itself is within reach of `entryTypeMatch`'s second argument, and setting it there registers nothing: `collectNamedTemplates` reads the theme's `templates` and only those, so a picker entry minted by another rule kind is one no picker ever shows.
 
 ```ts
-import type { TierMatchRule } from "plumix";
-import { entryTypeTargets } from "plumix";
+import type { TierMatchRule } from "plumix/plugin";
+import { entryTypeTargets } from "plumix/plugin";
 
 const bind = (selected: TierMatchRule) => ({ selected });
 

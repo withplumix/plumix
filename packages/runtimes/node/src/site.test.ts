@@ -4,16 +4,13 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { PluginDescriptor } from "plumix";
-import {
-  auth as authConfig,
-  definePlugin,
-  defineTheme,
-  fallback,
-  plumix,
-} from "plumix";
+import type { PluginDescriptor } from "plumix/plugin";
+import { plumix } from "plumix";
+import { auth as authConfig } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema, createTestDb } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import {
   afterEach,
   assert,

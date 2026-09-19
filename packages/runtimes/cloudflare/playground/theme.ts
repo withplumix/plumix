@@ -1,7 +1,7 @@
-import type { EntryData } from "plumix";
+import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
-import { defineTemplate, defineTheme, entry, fallback } from "plumix";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
 // The smallest theme the shared runtime spec can read a published entry
 // through: one single-entry template that renders the title. Authored with

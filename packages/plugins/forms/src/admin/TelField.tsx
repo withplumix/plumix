@@ -1,4 +1,4 @@
-import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
+import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import type { ReactNode } from "react";
 import { Input } from "plumix/admin/ui";
 import { resolveLabel, useLingui } from "plumix/i18n";

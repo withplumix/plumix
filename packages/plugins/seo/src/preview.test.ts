@@ -1,8 +1,8 @@
 import type { JsonValue } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { defineTheme, fallback } from "plumix";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import type { SerpPreview } from "./serp.js";

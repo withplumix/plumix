@@ -1,8 +1,9 @@
 import type { JWTPayload } from "jose";
-import type { Db, RequestAuthenticator } from "plumix";
+import type { Db } from "plumix";
+import type { RequestAuthenticator } from "plumix/auth";
 import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { ExternalIdentityError, resolveExternalIdentity } from "plumix";
+import { ExternalIdentityError, resolveExternalIdentity } from "plumix/auth";
 
 import { CfAccessError } from "./errors.js";
 

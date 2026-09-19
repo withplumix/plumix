@@ -163,9 +163,8 @@ const config: KnipConfig = {
         // through the exports map this roster overrides.
         "src/cli/kit.ts",
         // `plumix/db` groups the direct-write / ingest toolkit (drizzle
-        // operators + schema + introspection + edge-cache purge) on its own
-        // subpath; re-exports `@plumix/core/db`, not reachable from the root
-        // barrel's `export * from "@plumix/core"`.
+        // operators + introspection + edge-cache purge) on its own subpath,
+        // re-exporting `@plumix/core/db`; nothing in this package imports it.
         "src/db/index.ts",
         // `plumix/db/libsql` re-exports the core libSQL adapter on its own
         // subpath; not reachable from `src/index.ts` (kept off the root
@@ -183,6 +182,9 @@ const config: KnipConfig = {
         "src/test/playwright.ts",
         "src/test/conformance.ts",
         "src/theme/index.ts",
+        "src/auth/index.ts",
+        "src/runtime/index.ts",
+        "src/support/index.ts",
         "src/vite/index.ts",
       ],
       // - drizzle-kit is invoked by consumers as a CLI hint, not imported.

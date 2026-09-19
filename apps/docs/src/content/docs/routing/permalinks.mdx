@@ -48,9 +48,9 @@ The same composition runs in both directions. Inbound, Plumix splits the request
 3. **Link to it from a template, and put that template in the theme.** Every entry a resolver hands your theme already carries its permalink on `url`:
 
    ```tsx
-   import type { ArchiveData } from "plumix";
-   import { archive, defineTemplate, defineTheme } from "plumix";
+   import type { ArchiveData } from "plumix/theme";
    import { Link } from "plumix/blocks/renderer";
+   import { archive, defineTemplate, defineTheme } from "plumix/theme";
 
    const recipeArchive = defineTemplate<ArchiveData>({
      render: ({ data }) => (
@@ -84,7 +84,7 @@ The term form is the one exception. Its slug field is optional, and it validates
 `slugify` turns an authored title into that shape:
 
 ```ts
-import { slugify } from "plumix";
+import { slugify } from "plumix/support";
 
 const slug = slugify("Sicilian Caponata"); // "sicilian-caponata"
 ```

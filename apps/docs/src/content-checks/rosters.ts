@@ -110,10 +110,11 @@ import type {
   TaxonomyData,
   TemplateData,
 } from "plumix";
-import type * as PlumixFacade from "plumix";
 import type { PlumixPrefetch, PlumixStrategy } from "plumix/blocks";
 import type { CANONICAL_INPUT_TYPES } from "plumix/fields";
+import type * as PlumixPlugin from "plumix/plugin";
 import type { EntryStatus, UserRole } from "plumix/schema";
+import type * as PlumixTheme from "plumix/theme";
 
 import type { Roster } from "./roster-drift";
 import type { Assert, Equals } from "./type-assert";
@@ -130,6 +131,9 @@ const FACADE_SUBPATHS = [
   "plumix/plugin",
   "plumix/cli",
   "plumix/theme",
+  "plumix/auth",
+  "plumix/runtime",
+  "plumix/support",
   "plumix/vite",
   "plumix/admin",
   "plumix/admin/react",
@@ -420,25 +424,27 @@ const HYDRATION: readonly string[] = [
 // --- Themes ----------------------------------------------------------------
 
 /**
- * Every name the façade publishes as a value. Used only as a *constraint* —
- * `satisfies FacadeExport`, `Partial<Record<FacadeExport, …>>` — so a roster
- * naming an export fails on the day the export is renamed.
+ * Every value `plumix/theme` publishes, and every value `plumix/plugin` does.
+ * Each name has one import path, so a roster pins a name to the subpath a
+ * reader imports it from. Used only as a *constraint* — `satisfies
+ * ThemeExport`, `Partial<Record<ThemeExport, …>>` — so a roster naming an
+ * export fails on the day the export is renamed or moves.
  *
  * **Deliberately not an exhaustive key set documentation has to cover.** The
- * façade publishes nearly two hundred value exports against a planned 105
+ * two subpaths publish well over a hundred values against a planned 105
  * pages, and much of the difference is plumbing no page will ever name:
- * `traceDbQuery`, `renderDevBootErrorResponse`, `createPluginRegistry`,
- * `requestStore`. Binding export to page forces one of two things — a heading
- * per export, which is the generated API appendix the IA spec rejects
- * outright, or a hand-kept allowlist of the
- * exports that need no page, which is a second unbound list drifting exactly
- * the way a roster page does.
+ * `createPluginRegistry`, `requestStore`, `installPlugins`. Binding export to
+ * page forces one of two things — a heading per export, which is the
+ * generated API appendix the IA spec rejects outright, or a hand-kept
+ * allowlist of the exports that need no page, which is a second unbound list
+ * drifting exactly the way a roster page does.
  *
- * So a new façade export fails no roster. What catches an undocumented
- * surface is a person deciding it deserves a page, and the roster that binds
- * that page to its source once it has one.
+ * So a new export fails no roster. What catches an undocumented surface is a
+ * person deciding it deserves a page, and the roster that binds that page to
+ * its source once it has one.
  */
-type FacadeExport = keyof typeof PlumixFacade;
+type ThemeExport = keyof typeof PlumixTheme;
+type PluginExport = keyof typeof PlumixPlugin;
 
 /**
  * The generic tiers, in resolution order. Source: `GenericTier`, the union a
@@ -464,15 +470,16 @@ type _GenericTiersMatchSource = Assert<
   Equals<(typeof GENERIC_TIERS)[number], GenericTier>
 >;
 
-type _GenericTiersAreFacadeExports = Assert<
-  (typeof GENERIC_TIERS)[number] extends FacadeExport ? true : false
+type _GenericTiersAreThemeExports = Assert<
+  (typeof GENERIC_TIERS)[number] extends ThemeExport ? true : false
 >;
 
 /**
  * The targeted matchers, listed against the node kinds they mint. `satisfies`
- * pins each key to a façade export, so a rename fails on the offending line;
- * the assertion pins the kinds, flattened, to `TargetMatcher["nodeKind"]`, so
- * a sixth matcher reaching a new kind fails too.
+ * pins each key to a `plumix/theme` export, so a rename fails on the
+ * offending line; the assertion pins the kinds, flattened, to
+ * `TargetMatcher["nodeKind"]`, so a sixth matcher reaching a new kind fails
+ * too.
  *
  * Two things neither catches, both needing the builders to share a return
  * shape they do not have: a sixth matcher minting an *existing* kind, and a
@@ -487,7 +494,7 @@ const TARGETED_MATCHERS = {
   forDate: ["date"],
   forArchiveType: ["custom"],
 } as const satisfies Partial<
-  Record<FacadeExport, readonly TargetMatcher["nodeKind"][]>
+  Record<ThemeExport, readonly TargetMatcher["nodeKind"][]>
 >;
 
 type _TargetedMatchersCoverEveryNodeKind = Assert<
@@ -499,7 +506,7 @@ type _TargetedMatchersCoverEveryNodeKind = Assert<
 
 /** `defineTemplate` heads the page: every rule below wraps one. */
 const TEMPLATES: readonly string[] = [
-  "defineTemplate" satisfies FacadeExport,
+  "defineTemplate" satisfies ThemeExport,
   ...GENERIC_TIERS,
   ...Object.keys(TARGETED_MATCHERS),
 ];
@@ -510,12 +517,12 @@ const TEMPLATES: readonly string[] = [
  * `TARGETED_MATCHERS` lists, since both sides exist to mint the same
  * `TargetMatcher` shapes.
  *
- * `satisfies` pins each key to a façade export, so a rename fails on its own
- * line. The assertion catches the direction nothing else does: a sixth entry
- * in `TARGETED_MATCHERS` arriving without a constructor here. Its own page
- * would not report that — `templates.mdx` already carries the matcher as a
- * `###`, so its roster stays green while this page silently stops being
- * complete.
+ * `satisfies` pins each key to a `plumix/plugin` export, so a rename fails on
+ * its own line. The assertion catches the direction nothing else does: a
+ * sixth entry in `TARGETED_MATCHERS` arriving without a constructor here.
+ * Its own page would not report that — `templates.mdx` already carries the
+ * matcher as a `###`, so its roster stays green while this page silently
+ * stops being complete.
  *
  * It shares the holes the map above admits to, for the same reason: the values
  * are compared as a union, so a swapped pairing and a sixth key duplicating an
@@ -533,7 +540,7 @@ const TARGET_CONSTRUCTORS = {
   dateTargets: "forDate",
   archiveTypeTargets: "forArchiveType",
 } as const satisfies Partial<
-  Record<FacadeExport, keyof typeof TARGETED_MATCHERS>
+  Record<PluginExport, keyof typeof TARGETED_MATCHERS>
 >;
 
 type _EveryTargetedMatcherHasAConstructor = Assert<
@@ -550,9 +557,9 @@ type _EveryTargetedMatcherHasAConstructor = Assert<
  *
  * A list rather than a map, because there is nothing in source to pair these
  * against: a predicate constructor mints no `nodeKind` of its own, so a map
- * would invent the second column. `satisfies` still pins each name to a façade
- * export — the direction that matters here, since the page exists only because
- * they are reachable at all.
+ * would invent the second column. `satisfies` still pins each name to a
+ * `plumix/plugin` export — the direction that matters here, since the page
+ * exists only because they are reachable at all.
  *
  * It admits a hole the two above do not: with no map there is nothing to
  * assert exhaustiveness against, so a fifth constructor published without a
@@ -565,7 +572,7 @@ const MATCH_CONSTRUCTORS = [
   "termTaxonomyMatch",
   "metaEquals",
   "termMetaEquals",
-] as const satisfies readonly FacadeExport[];
+] as const satisfies readonly PluginExport[];
 
 /**
  * Every shape a template can receive, named as a reader would import it.

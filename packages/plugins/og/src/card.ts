@@ -3,12 +3,9 @@ import type {
   ArchiveDataOf,
   ArchiveTypeName,
   AuthorArchiveData,
-  AuthorTargets,
   DateArchiveData,
-  DateTargets,
   EntryData,
   EntryTypeName,
-  EntryTypeTargets,
   FrontPageData,
   ResolvedEntryFor,
   ResolvedTermFor,
@@ -19,17 +16,22 @@ import type {
   TemplateDepRegistry,
   TemplateRenderArgs,
   TermTaxonomyName,
-  TermTaxonomyTargets,
-  TierMatchRule,
 } from "plumix";
 import type { ResolvedThemeTokens } from "plumix/blocks";
+import type {
+  AuthorTargets,
+  DateTargets,
+  EntryTypeTargets,
+  TermTaxonomyTargets,
+  TierMatchRule,
+} from "plumix/plugin";
 import {
   archiveTypeTargets,
   authorTargets,
   dateTargets,
   entryTypeTargets,
   termTaxonomyTargets,
-} from "plumix";
+} from "plumix/plugin";
 
 import type { CardKey } from "./card-key.js";
 import type { CardNode } from "./renderer.js";

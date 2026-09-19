@@ -1,15 +1,15 @@
-import type { EntryData } from "plumix";
+import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 import {
-  auth,
   defineTemplate,
   defineTheme,
   entry,
   fallback,
   frontPage,
-  plumix,
-} from "plumix";
+} from "plumix/theme";
 
 import { blog } from "@plumix/plugin-blog";
 import { media } from "@plumix/plugin-media";

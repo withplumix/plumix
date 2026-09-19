@@ -1,4 +1,4 @@
-import { memoryStorage } from "plumix/plugin";
+import { memoryStorage } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 

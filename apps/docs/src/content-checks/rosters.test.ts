@@ -3,12 +3,11 @@ import type { ActionName } from "plumix";
 import type { EntryStatus } from "plumix/schema";
 import {
   CORE_CAPABILITIES,
-  entryTag,
   POST_TYPE_CAPABILITY_ACTIONS,
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
-  typeTag,
-} from "plumix";
+} from "plumix/auth";
 import { coreBlocks, coreMarks, coreShortcodes } from "plumix/blocks";
+import { entryTag, typeTag } from "plumix/db";
 import { describe, expect, it } from "vitest";
 
 import type { SourceHookName } from "./rosters";

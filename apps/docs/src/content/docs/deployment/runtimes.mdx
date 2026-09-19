@@ -45,8 +45,8 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
      PlumixApp,
      PlumixHandler,
      RuntimeAdapter,
-   } from "plumix";
-   import { createPlumixHandler } from "plumix";
+   } from "plumix/runtime";
+   import { createPlumixHandler } from "plumix/runtime";
 
    declare function serveStagedFile(request: Request): Promise<Response>;
    // Step 2 writes this one.
@@ -70,7 +70,7 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
 
    export function generateEntry({ configModule }: EntrySourceOptions): string {
      return [
-       'import { buildApp } from "plumix";',
+       'import { buildApp } from "plumix/runtime";',
        'import assetManifest from "virtual:plumix/asset-manifest";',
        `import config from ${JSON.stringify(configModule)};`,
        "",
@@ -132,8 +132,8 @@ Takes the built `PlumixApp` and returns the handler the entry calls. Call `creat
 Called once by the entry, at module scope or on the first request, whichever your entry does. Anything expensive an adapter needs — a signer, a pool, a file-system asset index — belongs here rather than inside `fetch`.
 
 ```ts
-import type { PlumixApp, PlumixHandler } from "plumix";
-import { createPlumixHandler } from "plumix";
+import type { PlumixApp, PlumixHandler } from "plumix/runtime";
+import { createPlumixHandler } from "plumix/runtime";
 
 export function createHandler(app: PlumixApp): PlumixHandler {
   return createPlumixHandler(app, { disposeTimeoutMs: 10_000 });

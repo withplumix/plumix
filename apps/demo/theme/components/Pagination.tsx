@@ -1,4 +1,4 @@
-import type { Pagination as PaginationData } from "plumix";
+import type { Pagination as PaginationData } from "plumix/theme";
 import type { ReactNode } from "react";
 
 import { Link } from "@plumix/blocks/renderer";

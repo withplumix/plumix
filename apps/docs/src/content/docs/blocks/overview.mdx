@@ -54,7 +54,7 @@ export const caponata = defineEntryContent([
 1. **Render the tree.** A template receives the entry on `data.entry`, and its parsed block tree on `contentBlocks`. Hand that to `BlockRenderer`:
 
    ```tsx
-   import type { EntryData } from "plumix";
+   import type { EntryData } from "plumix/theme";
    import type { ReactNode } from "react";
    import { BlockRenderer } from "plumix/blocks/renderer";
    import { defineTemplate } from "plumix/theme";

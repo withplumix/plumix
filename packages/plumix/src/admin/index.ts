@@ -26,7 +26,6 @@ export type {
   PluginRpcClient,
   PluginRpcInputs,
   PluginRpcOutputs,
-  PluginRpcRouter,
 } from "@plumix/core";
 
 export {

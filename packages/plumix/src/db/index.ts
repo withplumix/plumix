@@ -1,6 +1,7 @@
-// The one-stop direct-write / ingest surface: drizzle query operators, schema
-// tables, table-introspection helpers, and the CDN purge vocabulary, so
-// a plugin writing to `ctx.db` never takes its own `drizzle-orm` dependency.
+// The one-stop direct-write / ingest surface: drizzle query operators,
+// table-introspection helpers, and the CDN purge vocabulary, so a plugin
+// writing to `ctx.db` never takes its own `drizzle-orm` dependency. The tables
+// it writes to are on `plumix/schema`.
 export type * from "@plumix/core/db";
 
 // Query operators and the `sql` template, from `drizzle-orm/sql`.
@@ -48,31 +49,6 @@ export {
   isUniqueConstraintError,
   isUniqueConstraintErrorOn,
   rowsAffected,
-} from "@plumix/core/db";
-
-// The tables, and the vocabularies their columns store.
-export {
-  allowedDomains,
-  apiTokens,
-  AUTH_TOKEN_TYPES,
-  authTokens,
-  CREDENTIAL_DEVICE_TYPES,
-  credentials,
-  DEVICE_CODE_STATUSES,
-  deviceCodes,
-  entries,
-  ENTRY_CHANGE_KINDS,
-  ENTRY_STATUSES,
-  entryChanges,
-  entryTerm,
-  oauthAccounts,
-  scheduledTaskClaims,
-  scheduledTaskLeases,
-  sessions,
-  settings,
-  terms,
-  USER_ROLES,
-  users,
 } from "@plumix/core/db";
 
 // Purge vocabulary, meta settling, core's search conditions and visitor

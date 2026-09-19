@@ -1,5 +1,5 @@
 import type { TemplateDepLoader } from "plumix";
-import { readEntryType } from "plumix";
+import { readEntryType } from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import { isCommentingEnabled } from "./enablement.js";

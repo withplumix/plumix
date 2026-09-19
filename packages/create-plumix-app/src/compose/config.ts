@@ -21,13 +21,17 @@ export function assembleConfig(
       runtime.secretsFile,
     );
 
-  // The core `plumix` import is merged in with everything else so an auth
-  // method's `github`/`consoleMailer` folds into the one `from "plumix"` line.
+  // The core imports are merged in with everything else so an auth method's
+  // `github` folds into the one `from "plumix/auth"` line and its
+  // `consoleMailer` into the one `from "plumix"` line.
   const authImports = authMethods.flatMap((method) => method.imports ?? []);
   const importLines = mergeImports(
-    [...imports, ...authImports, 'import { auth, plumix } from "plumix";'].map(
-      fill,
-    ),
+    [
+      ...imports,
+      ...authImports,
+      'import { auth } from "plumix/auth";',
+      'import { plumix } from "plumix";',
+    ].map(fill),
   );
 
   const slots = { ...configSlots };

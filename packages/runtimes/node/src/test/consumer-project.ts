@@ -45,7 +45,9 @@ export const rpc = (origin: string, path: string): Promise<Response> =>
   });
 
 /** A stub runtime and database: enough for `migrate generate` and a client build. */
-export const STUB_CONFIG = `import { auth, defineTheme, fallback, plumix } from "plumix";
+export const STUB_CONFIG = `import { auth } from "plumix/auth";
+import { defineTheme, fallback } from "plumix/theme";
+import { plumix } from "plumix";
 
 export default plumix({
   runtime: { name: "stub", createHandler: () => ({ fetch: () => new Response("") }), generateEntry: () => "" },

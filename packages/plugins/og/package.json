@@ -65,7 +65,7 @@
     "@plumix/plugin-seo": "workspace:>=0.1.0 <1.0.0",
     "@tanstack/react-query": "catalog:tanstack",
     "@tanstack/react-router": "catalog:tanstack",
-    "plumix": "workspace:>=0.23.0 <1.0.0",
+    "plumix": "workspace:>=0.24.0 <1.0.0",
     "react": "catalog:react"
   },
   "devDependencies": {

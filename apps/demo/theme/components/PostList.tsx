@@ -1,4 +1,4 @@
-import type { ResolvedEntry } from "plumix";
+import type { ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 
 import type { PaginationInfo } from "./Pagination";

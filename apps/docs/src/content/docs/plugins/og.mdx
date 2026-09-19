@@ -71,7 +71,8 @@ Then:
 1. **Configure a `storage:` slot, then add `seo()` and `og()` to the `plugins` array.** The bucket is where a rendered card is kept; without one every request renders the card again. `@plumix/plugin-seo` owns the page head, so without it the card renders at its route but never reaches an `og:image`.
 
    ```ts no-typecheck
-   import { auth, plumix } from "plumix";
+   import { plumix } from "plumix";
+   import { auth } from "plumix/auth";
 
    import { og } from "@plumix/plugin-og";
    import { seo } from "@plumix/plugin-seo";

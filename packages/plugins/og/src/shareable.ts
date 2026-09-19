@@ -1,6 +1,7 @@
 import type { TemplateData } from "plumix";
-import type { AppContext, EntryAccessSubject } from "plumix/plugin";
-import { entryAllowsAnonymousAccess } from "plumix";
+import type { EntryAccessSubject } from "plumix/auth";
+import type { AppContext } from "plumix/plugin";
+import { entryAllowsAnonymousAccess } from "plumix/auth";
 
 /**
  * Whether a page may carry a card at all — the one question the route and the

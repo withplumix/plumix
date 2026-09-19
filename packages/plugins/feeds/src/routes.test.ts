@@ -1,8 +1,8 @@
 import type { AnyPluginDescriptor, CdnStore, ConnectedCdn } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { typeTag } from "plumix";
-import { entries, eq } from "plumix/db";
+import { eq, typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 

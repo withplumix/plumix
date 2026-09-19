@@ -45,8 +45,9 @@ import {
 import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
+import { nonEmpty } from "../../non-empty.js";
 import { applyCanonical } from "../../seo/canonical.js";
-import { loadSiteSettings, nonEmpty } from "../../seo/site-settings.js";
+import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   loadTemplateDeps,
   mergeTemplateDepDeclarations,

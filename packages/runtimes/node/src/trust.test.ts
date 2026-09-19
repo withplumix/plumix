@@ -2,17 +2,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  auth as authConfig,
-  buildApp,
-  definePlugin,
-  defineTheme,
-  fallback,
-  plumix,
-} from "plumix";
+import { plumix } from "plumix";
+import { auth as authConfig } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
+import { buildApp } from "plumix/runtime";
 import * as schema from "plumix/schema";
 import { sessions } from "plumix/schema";
 import { applyCoreTestSchema, factoriesFor } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { NodeConfig } from "./adapter.js";

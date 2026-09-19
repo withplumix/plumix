@@ -1,5 +1,4 @@
 import type { AppContext, PluginRegistry } from "plumix/plugin";
-import { entry, fallback } from "plumix";
 import {
   createPluginRegistry,
   definePlugin,
@@ -17,7 +16,7 @@ import {
   factoriesFor,
   plumixRequest,
 } from "plumix/test";
-import { defineTemplate, defineTheme } from "plumix/theme";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MenuItemMeta, ResolvedMenu } from "./server/types.js";

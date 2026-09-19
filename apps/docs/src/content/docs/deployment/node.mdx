@@ -60,7 +60,8 @@ This is the path from a scaffolded site to a running process. It assumes a site 
 1. **Read the config the scaffolder wrote.** Three slots and a passkey origin. The origin is a literal, because a process has no build environment to derive one from.
 
    ```ts no-typecheck
-   import { auth, plumix } from "plumix";
+   import { plumix } from "plumix";
+   import { auth } from "plumix/auth";
 
    import { diskStorage, node, nodeSqlite } from "@plumix/runtime-node";
 

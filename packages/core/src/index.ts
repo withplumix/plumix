@@ -201,11 +201,8 @@ export { entryRoleImage } from "./seo/entry-image.js";
 // query for a bag already in hand. `nonEmpty` is the reader for one value: a
 // settings value is `unknown` until something narrows it, and every caller
 // wants the same "a string with something in it, or nothing" answer.
-export {
-  loadSettingsGroups,
-  loadSiteSettings,
-  nonEmpty,
-} from "./seo/site-settings.js";
+export { loadSettingsGroups, loadSiteSettings } from "./seo/site-settings.js";
+export { nonEmpty } from "./non-empty.js";
 // XML element-text escaping, for a plugin serializing a feed or a sitemap.
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.

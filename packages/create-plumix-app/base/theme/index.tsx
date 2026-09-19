@@ -1,12 +1,6 @@
-import type { EntryData, TemplateData } from "plumix";
 import * as React from "react";
-import {
-  defineTemplate,
-  defineTheme,
-  entry,
-  fallback,
-  forEntryType,
-} from "plumix";
+import type { EntryData, TemplateData } from "plumix/theme";
+import { defineTemplate, defineTheme, entry, fallback, forEntryType } from "plumix/theme";
 
 const wrap = { maxWidth: "40rem", margin: "4rem auto", padding: "0 1rem" };
 

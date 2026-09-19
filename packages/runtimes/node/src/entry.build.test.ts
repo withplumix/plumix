@@ -32,7 +32,10 @@ const PIXEL =
 // `my-native` stands in for a compiled addon the site declares external; the
 // probe routes give the shutdown cases in-flight and deferred work to observe.
 const config = (marker: string) => `import { writeFileSync } from "node:fs";
-import { auth, definePlugin, defineTheme, fallback, plumix } from "plumix";
+import { auth } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
+import { defineTheme, fallback } from "plumix/theme";
+import { plumix } from "plumix";
 import { images, node, nodeSqlite } from "@plumix/runtime-node";
 import { tag } from "my-native";
 

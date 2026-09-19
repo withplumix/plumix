@@ -164,7 +164,8 @@ The same inference gates `.appearance()`. A single-value field takes `select`, `
 A `register*` call happens at runtime and cannot augment a type, so typed reads cost one declaration per box. Write the fields as a named const, declare the contribution against it, and register the same const.
 
 ```ts
-import type { EntryMeta, ResolvedEntry } from "plumix";
+import type { ResolvedEntry } from "plumix";
+import type { EntryMeta } from "plumix/plugin";
 import { number, select } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
 

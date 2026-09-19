@@ -1,8 +1,8 @@
-import type { EntryData } from "plumix";
+import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
-import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
 import { formWire, PlumixForm } from "@plumix/plugin-forms/theme";
 

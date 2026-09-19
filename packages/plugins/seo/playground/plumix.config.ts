@@ -1,4 +1,6 @@
-import { auth, defineTheme, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
+import { defineTheme } from "plumix/theme";
 
 import { blog } from "@plumix/plugin-blog";
 import { seo } from "@plumix/plugin-seo";

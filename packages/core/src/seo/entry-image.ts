@@ -1,8 +1,8 @@
 import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { TemplateData } from "../theme.js";
+import { nonEmpty } from "../non-empty.js";
 import { listEntryMetaFields } from "../plugin/manifest.js";
-import { nonEmpty } from "./site-settings.js";
 
 /**
  * A page's resolved social image. `width`/`height` are absent when the image's

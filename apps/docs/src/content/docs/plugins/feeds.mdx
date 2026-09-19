@@ -158,8 +158,9 @@ The plugin's own package must be installed for the hook name to type-check — i
 `registerArchiveType` takes an optional `feed`, and that field is this plugin's augmentation rather than a core one — declare it and it type-checks once `@plumix/plugin-feeds` is a dependency. `routes` are the paths the feed answers, and `filter` returns the SQL row predicate for its entries, or `null` for a 404:
 
 ```ts no-typecheck
-import { and, entries, eq } from "plumix/db";
+import { and, eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
+import { entries } from "plumix/schema";
 
 import "@plumix/plugin-feeds";
 

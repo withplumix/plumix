@@ -6,8 +6,8 @@ import type {
   PluginSetupContext,
   SearchGroup,
 } from "plumix/plugin";
-import { adminEntryScope, entryGroups } from "plumix";
 import { sql } from "plumix/db";
+import { adminEntryScope, entryGroups } from "plumix/plugin";
 
 import type { SearchOptions } from "./query.js";
 import { isMissingSearchIndex } from "../db/ddl.js";

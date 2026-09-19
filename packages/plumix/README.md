@@ -39,7 +39,8 @@ Then open `http://localhost:5173/_plumix/admin`, create your first passkey, and 
 `plumix.config.ts` is where it all comes together — pick a runtime, a database, and an auth method:
 
 ```ts
-import { auth, plumix } from "plumix";
+import { plumix } from "plumix";
+import { auth } from "plumix/auth";
 
 import {
   cloudflare,

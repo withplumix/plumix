@@ -4,18 +4,17 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { PlumixConfig, PlumixEnv } from "plumix";
 import type {
   DisposeOptions,
   DisposeResult,
   Invocation,
   PlumixApp,
-  PlumixConfig,
-  PlumixEnv,
   PlumixHandler,
   ScheduledEvent,
   ScheduledRunReport,
-} from "plumix";
-import { buildApp, renderDevBootErrorResponse } from "plumix";
+} from "plumix/runtime";
+import { buildApp, renderDevBootErrorResponse } from "plumix/runtime";
 
 import type { NodeConfig } from "./adapter.js";
 import type { RequestHandler, RequestListener } from "./http/bridge.js";

@@ -1,4 +1,4 @@
-import type { EntryTypeOptions, TermTaxonomyOptions } from "plumix/plugin";
+import type { EntryTypeOptions, TermTaxonomyOptions } from "plumix";
 
 /**
  * Replace an array-valued field, or compose it against the plugin's default.

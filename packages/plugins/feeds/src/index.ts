@@ -1,5 +1,6 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin, enqueuePurgeTags, loadSiteSettings } from "plumix";
+import { enqueuePurgeTags } from "plumix/db";
+import { definePlugin, loadSiteSettings } from "plumix/plugin";
 
 import { applyFeedDiscovery } from "./discovery.js";
 import { FEED_TAG, handleFeed } from "./respond.js";

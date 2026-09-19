@@ -36,7 +36,7 @@ export const anything = defineTemplate({
 
 Dropping the `default` does not make the compiler demand the other seven. `render` returns `ReactNode`, `ReactNode` includes `undefined`, and the shared tsconfig sets no `noImplicitReturns`, so a switch that falls off its last case compiles and renders nothing. To turn a missing case into a build error, replace the `default` return with `const exhaustive: never = data;`, which stops compiling the day a tenth kind lands.
 
-For a single branch, the guards below read better. Each is a plain function exported from `plumix` that takes `TemplateData` and narrows.
+For a single branch, the guards below read better. Each is a plain function exported from `plumix/theme` that takes `TemplateData` and narrows.
 
 Three projections recur across the shapes.
 
@@ -59,9 +59,8 @@ Six of the nine shapes carry `entries` and a `Pagination` of `page`, `perPage`, 
 One entry. `kind: "entry"`, guard `isEntry`, bound directly by the `entry` tier and by `forEntryType(name).template()`.
 
 ```tsx
-import { isEntry } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isEntry } from "plumix/theme";
 
 export const single = defineTemplate({
   render: ({ data }) =>
@@ -83,8 +82,7 @@ export const single = defineTemplate({
 An entry type's listing. `kind: "archive"`, guard `isArchive`, bound by the `archive` tier and by `forEntryType(name).archive.template()`.
 
 ```tsx
-import { isArchive } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isArchive } from "plumix/theme";
 
 export const listing = defineTemplate({
   render: ({ data }) =>
@@ -111,8 +109,7 @@ export const listing = defineTemplate({
 A term archive. `kind: "taxonomy"`, guard `isTaxonomy`, bound by the `taxonomy` tier and by `forTermTaxonomy(name)`.
 
 ```tsx
-import { isTaxonomy } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isTaxonomy } from "plumix/theme";
 
 export const terms = defineTemplate({
   render: ({ data }) =>
@@ -133,8 +130,7 @@ export const terms = defineTemplate({
 An author's entries. `kind: "author"`, guard `isAuthor`, bound by the `author` tier and by `forAuthor()`.
 
 ```tsx
-import { isAuthor } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isAuthor } from "plumix/theme";
 
 export const byAuthor = defineTemplate({
   render: ({ data }) =>
@@ -157,8 +153,7 @@ export const byAuthor = defineTemplate({
 Entries published in one period. `kind: "date"`, guard `isDate`, bound by the `date` tier and by `forDate(...)`.
 
 ```tsx
-import { isDate } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isDate } from "plumix/theme";
 
 export const period = defineTemplate({
   render: ({ data }) => {
@@ -178,8 +173,7 @@ export const period = defineTemplate({
 A plugin-registered archive. `kind: "custom"`, guard `isCustom`, bound by `forArchiveType(name)`.
 
 ```tsx
-import { isCustom } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isCustom } from "plumix/theme";
 
 export const pluginArchive = defineTemplate({
   render: ({ data }) => (isCustom(data) ? <h1>{data.name}</h1> : null),
@@ -193,8 +187,7 @@ Core only ever sees the base shape: `kind`, `name`, and two optional facts an ar
 The site root. `kind: "frontPage"`, guard `isFrontPage`, bound by the `frontPage` tier.
 
 ```tsx
-import { isFrontPage } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isFrontPage } from "plumix/theme";
 
 export const home = defineTemplate({
   render: ({ data }) =>
@@ -218,8 +211,7 @@ The feed is the latest published entries across every public non-hierarchical ty
 Search results. `kind: "search"`, guard `isSearch`, bound by the `search` tier.
 
 ```tsx
-import { isSearch } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isSearch } from "plumix/theme";
 
 export const results = defineTemplate({
   render: ({ data }) =>
@@ -239,8 +231,7 @@ export const results = defineTemplate({
 A 404 or a 500. `kind: "error"`, guard `isError`, bound by the `notFound` and `serverError` tiers.
 
 ```tsx
-import { isError } from "plumix";
-import { defineTemplate } from "plumix/theme";
+import { defineTemplate, isError } from "plumix/theme";
 
 export const failed = defineTemplate({
   render: ({ data }) => {

@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { jsonResponse } from "plumix";
+import { jsonResponse } from "plumix/plugin";
 
 import type { ReindexStatus, SearchReindexRun } from "../db/schema.js";
 import { latestReindex, startReindex } from "./reindex.js";

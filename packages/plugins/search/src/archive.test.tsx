@@ -1,9 +1,8 @@
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
-import { pageFacts } from "plumix";
 import { defineEntryContent } from "plumix/blocks";
-import { fallback, forArchiveType } from "plumix/plugin";
-import { defineTheme } from "plumix/theme";
+import { pageFacts } from "plumix/plugin";
+import { defineTheme, fallback, forArchiveType } from "plumix/theme";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchHarness } from "./test/db.js";

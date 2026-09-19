@@ -1,12 +1,12 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { PlumixEnv } from "plumix";
 import type {
   AssetsBinding,
   PlumixApp,
-  PlumixEnv,
   PlumixHandler,
   RuntimeAdapter,
-} from "plumix";
-import { createPlumixHandler } from "plumix";
+} from "plumix/runtime";
+import { createPlumixHandler } from "plumix/runtime";
 
 import { registerCloudflareErrorHints } from "./dev-hints.js";
 import { generateEntry } from "./entry-codegen.js";

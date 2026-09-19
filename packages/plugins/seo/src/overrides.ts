@@ -1,6 +1,6 @@
 import type { PageFacts } from "plumix";
+import type { MetaBoxFieldInput } from "plumix/fields";
 import type { Label } from "plumix/i18n";
-import type { MetaBoxFieldInput } from "plumix/plugin";
 
 import type { SeoMetaBag } from "./meta-keys.js";
 import type { SchemaType } from "./schema.js";

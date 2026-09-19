@@ -1,7 +1,8 @@
-import type { JsonObject } from "plumix";
+import type { JsonObject } from "plumix/support";
 import { and, count, eq, inArray, sql } from "plumix/db";
-import { authenticated, base, requireCapability, slugify } from "plumix/plugin";
+import { authenticated, base, requireCapability } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
+import { slugify } from "plumix/support";
 import * as v from "valibot";
 
 import type { ResolvedRow } from "./server/resolveItemStates.js";

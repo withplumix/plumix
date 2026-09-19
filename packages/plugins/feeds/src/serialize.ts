@@ -1,4 +1,4 @@
-import { xmlEscape } from "plumix";
+import { xmlEscape } from "plumix/support";
 
 /** Which of the two serializations a request asked for. */
 export type FeedFormat = "rss2" | "atom";

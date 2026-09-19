@@ -37,6 +37,8 @@ const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   ".": "the full server surface (worker + config)",
   "./plugin": "plugin config is authored and loaded server-side",
   "./theme": "defineTheme / defineTemplate run at config / SSR time",
+  "./runtime": "a runtime adapter composes the app server-side",
+  "./auth": "authenticators and access policies run server-side",
   "./vite": "the Vite plugin runs in Node at build time",
   "./admin/test":
     "the RPC stub serves a plugin's procedures from a vitest worker, and " +

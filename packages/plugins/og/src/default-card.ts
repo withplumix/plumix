@@ -1,7 +1,8 @@
-import type { TemplateData } from "plumix";
 import type { ResolvedThemeTokens } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
-import { isEntry, labelSourceText } from "plumix";
+import type { TemplateData } from "plumix/theme";
+import { labelSourceText } from "plumix/i18n";
+import { isEntry } from "plumix/theme";
 
 import type { CardArgs, CardRule } from "./card.js";
 import type { CardNode } from "./renderer.js";

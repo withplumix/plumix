@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { AppContext } from "plumix/plugin";
 import { and, count, desc, eq, inArray, or, sql } from "drizzle-orm";
-import { escapeLikePattern } from "plumix/plugin";
+import { escapeLikePattern } from "plumix/support";
 
 import type { Comment, NewComment } from "../db/schema.js";
 import type { CommentStatus } from "../types.js";

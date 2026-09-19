@@ -1,10 +1,11 @@
-import type { AnyPluginDescriptor, EntryData, PlumixEnv } from "plumix";
+import type { AnyPluginDescriptor, PlumixEnv } from "plumix";
 import type { BlockSpec } from "plumix/blocks";
+import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
-import { archive, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
+import { archive, defineTheme, entry, fallback } from "plumix/theme";
 
 import { applyFormsSchema } from "./db.js";
 

@@ -35,10 +35,9 @@ Slugs are yours to choose. One convention is worth knowing: `@plumix/plugin-og` 
 1. **Write the theme.** Create `theme/index.tsx`:
 
    ```tsx
-   import type { EntryData } from "plumix";
-   import { entry, fallback } from "plumix";
+   import type { EntryData } from "plumix/theme";
    import { BlockRenderer } from "plumix/blocks/renderer";
-   import { defineTemplate, defineTheme } from "plumix/theme";
+   import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
    const listing = defineTemplate({
      render: () => (

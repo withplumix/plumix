@@ -1,14 +1,11 @@
+import type { AnyPluginDescriptor, I18nInput, JsonObject } from "plumix";
+import type { ThemeTokens } from "plumix/blocks";
+import type { Logger, OgImage } from "plumix/plugin";
 import type {
-  AnyPluginDescriptor,
   ConnectedCdn,
   ConnectedObjectStorage,
-  I18nInput,
   ImageDelivery,
-  JsonObject,
-  Logger,
-  OgImage,
-} from "plumix";
-import type { ThemeTokens } from "plumix/blocks";
+} from "plumix/runtime";
 import type {
   DispatcherHarness,
   HarnessFetchOptions,
@@ -19,12 +16,11 @@ import {
   authenticatedPolicy,
   challenge,
   definePolicy,
-  defineTheme,
-  fallback,
-  memoryStorage,
-} from "plumix";
+} from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
+import { memoryStorage } from "plumix/runtime";
 import { createDispatcherHarness } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 
 import { seo } from "@plumix/plugin-seo";
 

@@ -3,11 +3,10 @@ import type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
-  OgImage,
   TemplateData,
 } from "plumix";
-import type { AppContext } from "plumix/plugin";
-import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix";
+import type { AppContext, OgImage } from "plumix/plugin";
+import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix/plugin";
 
 import type { VerificationTag } from "./settings.js";
 import { breadcrumbTrail, siteRoot } from "./breadcrumbs.js";

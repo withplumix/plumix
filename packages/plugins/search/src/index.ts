@@ -1,5 +1,5 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin } from "plumix";
+import { definePlugin } from "plumix/plugin";
 
 import type { RankingAlgorithm } from "./ranking.js";
 import { registerSearchArchive } from "./archive.js";

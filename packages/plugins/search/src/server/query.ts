@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix";
 import { inArray, sql } from "plumix/db";
+import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
 
 import type { SearchSourceType } from "../db/schema.js";

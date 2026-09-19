@@ -1,6 +1,6 @@
 import type { CdnStore, ConnectedCdn } from "plumix";
-import { ACCESS_POLICY_META_KEY, entryPurgeTags, entryTag } from "plumix";
-import { eq } from "plumix/db";
+import { ACCESS_POLICY_META_KEY } from "plumix/auth";
+import { entryPurgeTags, entryTag, eq } from "plumix/db";
 import { entries } from "plumix/schema";
 import { describe, expect, test, vi } from "vitest";
 

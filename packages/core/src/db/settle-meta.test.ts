@@ -9,7 +9,8 @@ import {
   toggle,
 } from "../plugin/fields/index.js";
 import { createTracedContext } from "../test/traced-context.js";
-import { entries, eq, settleMeta } from "./public.js";
+import { eq, settleMeta } from "./public.js";
+import { entries } from "./schema/index.js";
 
 const plugin = definePlugin("test-settle-meta", (ctx) => {
   ctx.registerEntryMetaBox("entry-box", {

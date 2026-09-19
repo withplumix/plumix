@@ -237,9 +237,9 @@ Nothing in your code grants any of these. They exist because the registration ra
 Beyond the three content registrations, the plugin registers a per-request data dependency named `relatedPosts`. A template declares it and receives the result alongside its data.
 
 ```tsx no-typecheck
-import type { EntryData } from "plumix";
-import { defineTemplate, forEntryType } from "plumix";
+import type { EntryData } from "plumix/theme";
 import { Link } from "plumix/blocks/renderer";
+import { defineTemplate, forEntryType } from "plumix/theme";
 
 import type { RelatedPosts } from "@plumix/plugin-blog";
 

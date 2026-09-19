@@ -1,6 +1,10 @@
 import type { ResolvedEntry, TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { buildEntryPermalink, loadSiteSettings, pageFacts } from "plumix";
+import {
+  buildEntryPermalink,
+  loadSiteSettings,
+  pageFacts,
+} from "plumix/plugin";
 
 import type { SerpPreview } from "./serp.js";
 import { indexable } from "./indexable.js";

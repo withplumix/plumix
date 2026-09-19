@@ -1,6 +1,7 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
-import { buildEntryPermalink, withBasePath } from "plumix";
+import { buildEntryPermalink } from "plumix/plugin";
+import { withBasePath } from "plumix/support";
 
 import { readSeoOverrides } from "./overrides.js";
 import { loadSeoSettings } from "./settings.js";

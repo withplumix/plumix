@@ -1,6 +1,6 @@
 import type { EntryData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { entryRoleImage } from "plumix";
+import { entryRoleImage } from "plumix/plugin";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";

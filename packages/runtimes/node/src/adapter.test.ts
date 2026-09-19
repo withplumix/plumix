@@ -1,17 +1,14 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PluginDescriptor } from "plumix";
-import {
-  auth as authConfig,
-  buildApp,
-  definePlugin,
-  defineTheme,
-  fallback,
-  plumix,
-} from "plumix";
+import type { PluginDescriptor } from "plumix/plugin";
+import { plumix } from "plumix";
+import { auth as authConfig } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
+import { buildApp } from "plumix/runtime";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { node } from "./adapter.js";

@@ -1,4 +1,4 @@
-import { escapeHtml } from "plumix";
+import { escapeHtml } from "plumix/support";
 
 /**
  * The markers FTS5 splices around a match. Chosen to look like markup rather

@@ -1,15 +1,11 @@
 import { hostname } from "node:os";
-import type {
-  ConnectedScheduledDb,
-  Db,
-  PlumixEnv,
-  ScheduledRunReport,
-} from "plumix";
+import type { Db, PlumixEnv } from "plumix";
+import type { ConnectedScheduledDb, ScheduledRunReport } from "plumix/runtime";
 import {
   connectScheduledDb,
   createScheduledRunGuard,
   scheduledLeaseScope,
-} from "plumix";
+} from "plumix/runtime";
 
 import type {
   Scheduler,

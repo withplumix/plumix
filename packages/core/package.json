@@ -97,6 +97,10 @@
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
     },
+    "./support": {
+      "types": "./dist/support.d.ts",
+      "default": "./dist/support.js"
+    },
     "./telemetry-otel": {
       "types": "./dist/telemetry-otel.d.ts",
       "default": "./dist/telemetry-otel.js"

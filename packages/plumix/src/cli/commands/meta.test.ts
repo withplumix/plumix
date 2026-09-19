@@ -4,8 +4,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { CommandContext, PlumixApp } from "@plumix/core";
 import { createPlumixHandler, definePlugin } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
-import { entries } from "@plumix/core/db";
 import { toggle } from "@plumix/core/fields";
+import { entries } from "@plumix/core/schema";
 import { createDispatcherHarness } from "@plumix/core/test";
 
 import { report } from "../report.js";

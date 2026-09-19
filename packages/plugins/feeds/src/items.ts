@@ -1,17 +1,8 @@
 import type { AppContext } from "plumix";
 import type { SQL } from "plumix/db";
-import { buildEntryPermalinks, dateRange, findTermByPath } from "plumix";
-import {
-  and,
-  desc,
-  entries,
-  entryTerm,
-  eq,
-  gte,
-  inArray,
-  lt,
-  users,
-} from "plumix/db";
+import { and, desc, eq, gte, inArray, lt } from "plumix/db";
+import { buildEntryPermalinks, dateRange, findTermByPath } from "plumix/plugin";
+import { entries, entryTerm, users } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";

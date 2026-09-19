@@ -3,8 +3,8 @@ import type {
   PlumixApp,
   ScheduledRunGuard,
   ScheduledRunReport,
-} from "plumix";
-import { declaredSchedules, parseCron } from "plumix";
+} from "plumix/runtime";
+import { declaredSchedules, parseCron } from "plumix/runtime";
 
 const MINUTE_MS = 60_000;
 
