@@ -275,4 +275,4 @@ Five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-f
 
 ### Domain docs
 
-Multi-context: `CONTEXT-MAP.md` at the root points at per-package `CONTEXT.md` files under `packages/<pkg>/`. See `docs/agents/domain.md`.
+Single context: one root `CONTEXT.md`, split by subheading, and repo-wide decisions in `docs/adr/`. There is no `CONTEXT-MAP.md` and no per-package glossary — ADR 0001 rejected both, because the domain vocabulary means the same thing in every package. See `docs/agents/domain.md`.
