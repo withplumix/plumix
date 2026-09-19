@@ -3,7 +3,12 @@
 // here keeps the augmentation target loaded in the plugin's own build. Direct-
 // write db symbols come from their canonical seams: operators + the `SQL` type
 // from `plumix/db`, schema tables from `plumix/schema` (#1766).
-import type { HydratedReference, LookupAdapter, LookupResult } from "plumix";
+import type {
+  HydratedReference,
+  LookupAdapter,
+  LookupResult,
+  ResolvedImage,
+} from "plumix";
 import type { SQL } from "plumix/db";
 import { and, desc, eq, inArray, like, sql } from "plumix/db";
 import { entries } from "plumix/schema";
@@ -174,6 +179,14 @@ export const mediaLookupAdapter = {
         };
       }),
     );
+  },
+
+  image(payload: MediaReference): ResolvedImage | null {
+    const { url, alt, mime, width, height } = payload;
+    if (url === "" || !mime.startsWith("image/")) return null;
+    return width !== null && height !== null
+      ? { url, alt, width, height }
+      : { url, alt };
   },
 } satisfies LookupAdapter<MediaFieldScope>;
 

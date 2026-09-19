@@ -45,6 +45,19 @@ export interface HydratedReference {
   readonly id: string;
 }
 
+/**
+ * An image read off a hydrated reference by the adapter that produced it.
+ * `width`/`height` travel as a pair or not at all: one axis alone tells a
+ * layout nothing it can use.
+ */
+export type ResolvedImage = {
+  readonly url: string;
+  readonly alt: string | null;
+} & (
+  | { readonly width: number; readonly height: number }
+  | { readonly width?: never; readonly height?: never }
+);
+
 export interface LookupHydrateOptions<TScope = unknown> {
   readonly ids: readonly string[];
   readonly scope?: TScope;
@@ -159,6 +172,16 @@ export interface LookupAdapter<TScope = unknown> {
    * Optional.
    */
   embeddedCacheTags?(payload: HydratedReference): readonly string[];
+
+  /**
+   * The image a hydrated payload of this kind stands for. The adapter that
+   * produced the payload reads it, so a third-party adapter need not mimic
+   * another kind's field names. `null` when the payload is not a usable image
+   * (no URL, a non-image mime). Kinds without it yield no images. Only ever
+   * handed a payload this adapter's own `hydrate` returned, so an adapter may
+   * narrow the parameter to its hydrated shape.
+   */
+  image?(payload: HydratedReference): ResolvedImage | null;
 }
 
 // `RegisteredLookupAdapter` extends `LookupAdapterOptions` so plugin-
