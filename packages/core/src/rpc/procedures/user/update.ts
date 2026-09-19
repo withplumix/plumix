@@ -136,6 +136,7 @@ export const update = base
     const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       metaInput,
+      { stored: existing.meta, auth: context.auth },
       errors,
     );
     if (metaPatch) {

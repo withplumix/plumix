@@ -86,6 +86,30 @@ function registerRequiredSubtitle(
   });
 }
 
+// `video_url` is required only while `layout` is "video" — the smallest shape
+// in which one key's value decides whether another key is required.
+function registerVideoLayout(
+  plugins: ReturnType<typeof createPluginRegistry>,
+): void {
+  plugins.entryMetaBoxes.set("layout-box", {
+    id: "layout-box",
+    label: "Layout",
+    entryTypes: ["post"],
+    fields: [
+      { key: "layout", label: "Layout", type: "string", inputType: "text" },
+      {
+        key: "video_url",
+        label: "Video",
+        type: "string",
+        inputType: "text",
+        required: true,
+        visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+      },
+    ],
+    registeredBy: "test",
+  });
+}
+
 describe("entry.update", () => {
   test("editor can update a type pooled onto post's capabilities", async () => {
     const h = await createRpcHarness({
@@ -539,6 +563,571 @@ describe("entry.update", () => {
       code: "CONFLICT",
       data: { reason: "meta_invalid_value" },
     });
+  });
+
+  // A strict edit validates its own keys so that a co-author's older drift
+  // cannot block it. That reasoning covers drift that already exists, not drift
+  // the edit creates: switching a driver on makes its dependent required, and
+  // leaving the dependent unset is this edit's doing.
+  test("meta: a live edit that switches a required field visible without it is rejected", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "standard" },
+    });
+
+    await expect(
+      h.client.entry.update({ id: post.id, meta: { layout: "video" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+
+  test("meta: the same edit on a scheduled entry is rejected before the cron can publish it", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const scheduled = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "scheduled",
+      publishedAt: new Date(Date.now() + 3_600_000),
+      meta: { layout: "standard" },
+    });
+
+    await expect(
+      h.client.entry.update({ id: scheduled.id, meta: { layout: "video" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+
+  test("meta: switching a field visible is accepted when the edit supplies it", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "standard" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { layout: "video", video_url: "https://example.com/v" },
+    });
+
+    expect(updated.meta.video_url).toBe("https://example.com/v");
+  });
+
+  // Visibility is judged against the row as it will be, so a field the stored
+  // driver hides is not held to a rule it is not subject to. A hidden field is
+  // dropped from the write rather than validated, so its stored value stays —
+  // the same thing the publish gate does with one.
+  test("meta: an edit to a field the stored driver hides is accepted and leaves it alone", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "standard", video_url: "https://example.com/old" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { video_url: "" },
+    });
+
+    expect(updated.meta.video_url).toBe("https://example.com/old");
+  });
+
+  test("meta: clearing a field the stored driver shows is still rejected", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "video", video_url: "https://example.com/v" },
+    });
+
+    await expect(
+      h.client.entry.update({ id: post.id, meta: { video_url: "" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+
+  // The reason the patch-only rule exists: drift the edit did not cause and
+  // does not change the conditions of must not block it — including an edit
+  // that re-sends a driver at the value it already holds.
+  test("meta: an edit that does not change a driver is not blocked by its dependent's older drift", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      // Already invalid: written before `video_url` was required.
+      meta: { layout: "video" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      title: "fixed a typo",
+      meta: { layout: "video" },
+    });
+
+    expect(updated.title).toBe("fixed a typo");
+  });
+
+  // A default applies on read and is never stored, so a driver resting on its
+  // default is absent from the row. Judged without it, the field it shows
+  // would read as hidden and the write to it would be dropped unannounced.
+  test("meta: a field shown by its driver's default is written", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "layout",
+          label: "Layout",
+          type: "string",
+          inputType: "text",
+          default: "video",
+        },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: {},
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { video_url: "https://example.com/v" },
+    });
+
+    expect(updated.meta.video_url).toBe("https://example.com/v");
+  });
+
+  // A default shows on read but is never stored, and the publish gate judges
+  // storage — so a required field resting on its default is still missing.
+  // Switching it visible has to be held to the same rule the gate will apply.
+  test("meta: a required field the edit switches visible is not satisfied by its default", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        { key: "layout", label: "Layout", type: "string", inputType: "text" },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          default: "https://example.com/default",
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "standard" },
+    });
+
+    await expect(
+      h.client.entry.update({ id: post.id, meta: { layout: "video" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+
+  // A driver never stored reads as its default, so sending it at that default
+  // shows nothing that was not already shown — the admin sends full form state,
+  // which does exactly this on the first save after a field is added.
+  test("meta: sending a driver at the default it already reads as is not a change", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "layout",
+          label: "Layout",
+          type: "string",
+          inputType: "text",
+          default: "video",
+        },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    // Already invalid: written before `video_url` was required.
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: {},
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      title: "fixed a typo",
+      meta: { layout: "video" },
+    });
+
+    expect(updated.title).toBe("fixed a typo");
+  });
+
+  // The publish gate has to see a field the way the editor does. The admin
+  // hides `video_url` here — `layout` reads as its default — so a gate that
+  // treated the absent driver as "shown" would demand a field the author can
+  // neither see nor, since a write to a hidden field is dropped, supply.
+  test("meta: publishing does not demand a field its driver's default hides", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "layout",
+          label: "Layout",
+          type: "string",
+          inputType: "text",
+          default: "standard",
+        },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const draft = await h.factory.draft.create({
+      authorId: h.user.id,
+      meta: {},
+    });
+
+    const published = await h.client.entry.update({
+      id: draft.id,
+      status: "published",
+    });
+
+    expect(published.status).toBe("published");
+  });
+
+  // Conditions see what storage will hold, not what the caller typed: a number
+  // input posts "10", the row stores 10, and the publish gate reads 10.
+  test("meta: a driver sent in a form the pipeline settles is judged as settled", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("count-box", {
+      id: "count-box",
+      label: "Count",
+      entryTypes: ["post"],
+      fields: [
+        { key: "count", label: "Count", type: "number", inputType: "number" },
+        {
+          key: "reason",
+          label: "Reason",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "count", op: "eq", value: 10 }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { count: 1 },
+    });
+
+    await expect(
+      h.client.entry.update({ id: post.id, meta: { count: "10" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "reason" },
+    });
+  });
+
+  // A write to a hidden driver is dropped, so it switches nothing on: its
+  // dependents are judged by what the edit stores, not by what it sent.
+  test("meta: a hidden driver's dropped write does not hold the edit to its dependents", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("chain-box", {
+      id: "chain-box",
+      label: "Chain",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "advanced",
+          label: "Advanced",
+          type: "boolean",
+          inputType: "toggle",
+        },
+        {
+          key: "layout",
+          label: "Layout",
+          type: "string",
+          inputType: "text",
+          visibleWhen: [[{ key: "advanced", op: "eq", value: true }]],
+        },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { advanced: false, layout: "standard" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { layout: "video" },
+    });
+
+    expect(updated.meta.layout).toBe("standard");
+  });
+
+  // The same rule inside the patch: a dropped write cannot hide another key in
+  // it either, or a visible field's write would vanish without an error.
+  test("meta: a hidden driver's dropped write does not hide another key in the same edit", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("chain-box", {
+      id: "chain-box",
+      label: "Chain",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "advanced",
+          label: "Advanced",
+          type: "boolean",
+          inputType: "toggle",
+        },
+        {
+          key: "mode",
+          label: "Mode",
+          type: "string",
+          inputType: "text",
+          visibleWhen: [[{ key: "advanced", op: "eq", value: true }]],
+        },
+        {
+          key: "note",
+          label: "Note",
+          type: "string",
+          inputType: "text",
+          visibleWhen: [[{ key: "mode", op: "eq", value: "on" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { advanced: false, mode: "on" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { mode: "off", note: "hi" },
+    });
+
+    expect(updated.meta.mode).toBe("on");
+    expect(updated.meta.note).toBe("hi");
+  });
+
+  // Conditions can form a cycle — an either/or pair hides each other — and then
+  // no set of dropped writes agrees with the row it leaves. Nothing is dropped:
+  // every write is validated and stored rather than lost without an error.
+  test("meta: an either/or pair written together is stored, not dropped", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("either-box", {
+      id: "either-box",
+      label: "Either",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "email",
+          label: "Email",
+          type: "string",
+          inputType: "text",
+          visibleWhen: [[{ key: "phone", op: "empty" }]],
+        },
+        {
+          key: "phone",
+          label: "Phone",
+          type: "string",
+          inputType: "text",
+          visibleWhen: [[{ key: "email", op: "empty" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: {},
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { email: "a@example.com", phone: "555" },
+    });
+
+    expect(updated.meta.email).toBe("a@example.com");
+    expect(updated.meta.phone).toBe("555");
+  });
+
+  // A driver whose `.sanitize()` yields nothing is not written, so its stored
+  // value is what decides the fields it drives — including one this edit clears.
+  test("meta: a driver the pipeline leaves unwritten is judged by its stored value", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "layout",
+          label: "Layout",
+          type: "string",
+          inputType: "text",
+          sanitize: () => undefined as never,
+        },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "video", video_url: "https://example.com/v" },
+    });
+
+    await expect(
+      h.client.entry.update({
+        id: post.id,
+        meta: { layout: "standard", video_url: "" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+
+  // Mirrors the publish gate: a caller cannot fix a field they are not allowed
+  // to write, so switching one visible must not hand them an error about it.
+  test("meta: an edit is not held to a field its author cannot write", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("layout-box", {
+      id: "layout-box",
+      label: "Layout",
+      entryTypes: ["post"],
+      fields: [
+        { key: "layout", label: "Layout", type: "string", inputType: "text" },
+        {
+          key: "video_url",
+          label: "Video",
+          type: "string",
+          inputType: "text",
+          required: true,
+          capability: "video:manage",
+          visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const post = await h.factory.entry.create({
+      authorId: h.user.id,
+      status: "published",
+      meta: { layout: "standard" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      meta: { layout: "video" },
+    });
+
+    expect(updated.meta.layout).toBe("video");
+  });
+
+  test("meta: a draft edit that switches a required field visible stays lenient", async () => {
+    const plugins = createPluginRegistry();
+    registerVideoLayout(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const draft = await h.factory.draft.create({
+      authorId: h.user.id,
+      meta: { layout: "standard" },
+    });
+
+    const updated = await h.client.entry.update({
+      id: draft.id,
+      meta: { layout: "video" },
+    });
+
+    expect(updated.meta.layout).toBe("video");
   });
 
   test("meta: bad key → CONFLICT, and the post row is untouched (validated pre-write)", async () => {

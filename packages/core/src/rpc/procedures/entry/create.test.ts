@@ -396,6 +396,41 @@ describe("entry.create", () => {
     });
   });
 
+  // Creating straight onto the live surface is the same crossing as publishing
+  // a draft, so it answers to the same whole-bag gate: a required field the
+  // create never sent is missing, not merely unsubmitted.
+  test("meta: creating straight to published enforces a required field it omits", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("box", {
+      id: "box",
+      label: "Article",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "subtitle",
+          label: "Subtitle",
+          type: "string",
+          inputType: "text",
+          required: true,
+        },
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+
+    await expect(
+      h.client.entry.create({
+        title: "live",
+        slug: "live",
+        status: "published",
+        meta: {},
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "subtitle" },
+    });
+  });
+
   test("meta: a draft create is lenient — an unmet constraint doesn't block it", async () => {
     const { text } = await import("../../../plugin/fields/index.js");
     const plugins = createPluginRegistry();

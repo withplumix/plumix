@@ -19,6 +19,7 @@ import {
   fireEntryTransition,
 } from "./lifecycle.js";
 import {
+  assertPromotedEntryMetaValid,
   loadEntryMeta,
   resolveEntryMeta,
   sanitizeAndValidateEntryMeta,
@@ -97,9 +98,22 @@ export const create = base
       context,
       filtered.type,
       filtered.meta,
+      {},
       errors,
       requiresPublishCap ? "strict" : "draft",
     );
+    // Creating onto the live surface is the same crossing as publishing a
+    // draft, so it answers to the same whole-bag gate: the patch above judged
+    // only the keys it was sent and the fields they switch on, and a required
+    // field it omits is missing.
+    if (requiresPublishCap) {
+      await assertPromotedEntryMetaValid(
+        context,
+        filtered.type,
+        Object.fromEntries(metaPatch?.upserts ?? []),
+        errors,
+      );
+    }
 
     // Same up-front validation: a bad term reference shouldn't leave a
     // half-created entry behind.

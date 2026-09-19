@@ -92,10 +92,13 @@ export function isFieldVisible(
  * should be dropped from an incoming write. Condition-hidden fields
  * skip validation entirely, because an editor can never fix a value
  * behind an input they cannot see. Visibility is judged from the
- * incoming bag (the admin submits the full form state), and only when
- * the bag carries every referenced driver: a partial patch that omits
- * a driver is validated as if visible rather than silently dropped on
- * unknown driver state.
+ * incoming bag alone, and only when the bag carries every referenced
+ * driver: a partial patch that omits a driver is validated as if
+ * visible rather than silently dropped on unknown driver state.
+ *
+ * For callers with no stored bag to judge against — a settings group,
+ * which is saved whole. Meta writes know the row they land on and judge
+ * visibility against it instead (`MetaPatchTarget`).
  */
 export function isConditionHidden(
   field: { readonly visibleWhen?: MetaFieldCondition },
@@ -106,6 +109,19 @@ export function isConditionHidden(
     group.every((rule) => rule.key in input),
   );
   return driversPresent && !isFieldVisible(field, input);
+}
+
+/**
+ * Whether any rule of a field's `visibleWhen` names one of `keys` — so a change
+ * to one of those keys can change whether the field is shown.
+ */
+export function conditionReadsAny(
+  field: { readonly visibleWhen?: MetaFieldCondition },
+  keys: ReadonlySet<string>,
+): boolean {
+  return (field.visibleWhen ?? []).some((group) =>
+    group.some((rule) => keys.has(rule.key)),
+  );
 }
 
 function evaluateRule(rule: MetaFieldConditionRule, value: unknown): boolean {
@@ -150,7 +166,7 @@ function countOf(value: unknown): number {
 // construction (typed factories produce them from field value types),
 // so array order and own enumerable keys are the identity. Objects
 // compare key-order-insensitively.
-function structurallyEqual(a: unknown, b: unknown): boolean {
+export function structurallyEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) && Array.isArray(b)) {
     return (

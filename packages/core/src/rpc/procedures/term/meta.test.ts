@@ -70,6 +70,39 @@ async function setupTravelCategoryWithIconUrl(): Promise<{
   return { h, created, spy };
 }
 
+describe("term meta: conditional fields", () => {
+  // Terms share the meta pipeline, so an edit that switches a required field
+  // visible has to supply it here too.
+  test("an update that switches a required field visible without it is rejected", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      { key: "layout", label: "Layout", type: "string", inputType: "text" },
+      {
+        key: "video_url",
+        label: "Video",
+        type: "string",
+        inputType: "text",
+        required: true,
+        visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+      },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "Travel",
+      slug: "travel",
+      meta: { layout: "standard" },
+    });
+
+    await expect(
+      h.client.term.update({ id: created.id, meta: { layout: "video" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+});
+
 describe("term meta: registration + round-trip via term.update", () => {
   test("registered meta keys persist through term.create + term.get", async () => {
     const plugins = taxonomyRegistry();

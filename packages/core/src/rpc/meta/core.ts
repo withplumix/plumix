@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
 import type { JsonObject, JsonValue } from "../../json.js";
+import type { MetaFieldValues } from "../../plugin/fields/condition.js";
 import type {
   LookupAdapter,
   ReferenceHydrationShapes,
@@ -18,7 +19,12 @@ import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
 import { chunkForD1, eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
-import { isConditionHidden } from "../../plugin/fields/condition.js";
+import {
+  conditionReadsAny,
+  isConditionHidden,
+  isFieldVisible,
+  structurallyEqual,
+} from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
 import { extractStringId } from "./coerce.js";
 import { MetaReferenceError } from "./errors.js";
@@ -190,11 +196,19 @@ export async function sanitizeMetaInput(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaInput | undefined,
   mode: FieldPipelineMode = "strict",
+  target?: MetaPatchTarget,
 ): Promise<MetaPatch | null> {
   if (input === undefined) return null;
   const upserts = new Map<string, JsonValue>();
   const deletes: string[] = [];
   const fieldErrors: MetaFieldError[] = [];
+  const hiddenKeys =
+    target &&
+    hiddenPatchKeys(
+      target,
+      findField,
+      await settleForConditions(findField, input),
+    );
   for (const [key, rawValue] of Object.entries(input)) {
     const field = findField(key);
     if (!field) {
@@ -205,7 +219,12 @@ export async function sanitizeMetaInput(
       if (rawValue === null || rawValue === undefined) continue;
       throw MetaSanitizationError.notRegistered({ key });
     }
-    if (isConditionHidden(field, input)) continue;
+    // Without a target there is no row to judge against, so the patch's own
+    // drivers are all there is to go on.
+    const hidden = hiddenKeys
+      ? hiddenKeys.has(key)
+      : isConditionHidden(field, input);
+    if (hidden) continue;
     const result = await runFieldPipeline(field, rawValue, key, mode);
     if (result.errors.length > 0) {
       fieldErrors.push(...result.errors);
@@ -223,10 +242,183 @@ export async function sanitizeMetaInput(
     assertEncodedSize(key, result.value);
     upserts.set(key, result.value);
   }
+  if (target && mode === "strict") {
+    fieldErrors.push(
+      ...(await validateConditionDependents(target, input, {
+        upserts,
+        deletes,
+      })),
+    );
+  }
   if (fieldErrors.length > 0) {
     throw new MetaValidationError(fieldErrors);
   }
   return { upserts, deletes };
+}
+
+/**
+ * Where a patch lands and who is writing it. A condition cannot be judged from
+ * a patch alone — a driver it omits is whatever the stored meta holds, or its
+ * default when nothing is stored — and `auth` limits which of those fields the
+ * author can be held to.
+ */
+export interface MetaPatchTarget {
+  readonly stored: JsonObject;
+  readonly fields: readonly MetaBoxField[];
+  readonly auth: { can(capability: string): boolean };
+}
+
+/**
+ * A bag as conditions see it: each declared default stands in for a key the bag
+ * lacks. The decoded read and the editor's form both apply defaults, and
+ * storage never holds them, so judging a condition against storage alone would
+ * disagree with what the editor shows.
+ * Defaults stay in their stored shape, which is what condition comparands use.
+ */
+export function withDeclaredDefaults(
+  fields: readonly MetaBoxField[],
+  bag: MetaFieldValues,
+): MetaFieldValues {
+  const next: Record<string, unknown> = { ...bag };
+  for (const field of fields) {
+    if (field.default === undefined || Object.hasOwn(next, field.key)) continue;
+    next[field.key] = field.default;
+  }
+  return next;
+}
+
+// The stored meta with the patch laid over it, as conditions will see it; a null
+// or undefined value is a deletion.
+function overlayMetaPatch(
+  target: MetaPatchTarget,
+  input: MetaInput,
+): MetaFieldValues {
+  const next: Record<string, unknown> = { ...target.stored };
+  for (const [key, value] of Object.entries(input)) {
+    if (value === null || value === undefined) delete next[key];
+    else next[key] = value;
+  }
+  return withDeclaredDefaults(target.fields, next);
+}
+
+/**
+ * The patch as storage will hold it, for judging conditions. Input arrives raw
+ * (a number input posts `"10"`, a date input a `Date`), but the row and so the
+ * publish gate hold the settled value; a condition judged on the raw form would
+ * disagree with the gate. Settled leniently: a key that fails stays raw, and
+ * the real pass reports it.
+ */
+async function settleForConditions(
+  findField: (key: string) => MetaBoxField | undefined,
+  input: MetaInput,
+): Promise<MetaInput> {
+  const settled: Record<string, unknown> = {};
+  for (const [key, raw] of Object.entries(input)) {
+    const field = findField(key);
+    if (!field || raw === null || raw === undefined) {
+      settled[key] = raw;
+      continue;
+    }
+    const result = await runFieldPipeline(field, raw, key, "draft");
+    // A `.sanitize()` that yields nothing leaves the key unwritten, as the
+    // real pass does, so the row keeps its stored value.
+    if (result.isDeletion === true) settled[key] = null;
+    else if (result.errors.length > 0) settled[key] = raw;
+    else if (result.value !== undefined) settled[key] = result.value;
+  }
+  return settled;
+}
+
+/**
+ * The patched keys whose fields are hidden once the patch lands — and so are
+ * dropped. A dropped write cannot hide anything else: judged against the patch
+ * as sent, a hidden driver's discarded value could hide a field that is visible
+ * under what actually gets stored, and that field's write would vanish without
+ * an error. So the hidden set is settled to a fixpoint, with each round laying
+ * only the surviving writes over the row. A chain settles within one round per
+ * key; a set that has not settled by then never will.
+ */
+function hiddenPatchKeys(
+  target: MetaPatchTarget,
+  findField: (key: string) => MetaBoxField | undefined,
+  settled: MetaInput,
+): ReadonlySet<string> {
+  const keys = Object.keys(settled);
+  let hidden = new Set<string>();
+  for (let round = 0; round <= keys.length; round++) {
+    const surviving = Object.fromEntries(
+      Object.entries(settled).filter(([key]) => !hidden.has(key)),
+    );
+    const shown = overlayMetaPatch(target, surviving);
+    const next = new Set(
+      keys.filter((key) => {
+        const field = findField(key);
+        return field !== undefined && !isFieldVisible(field, shown);
+      }),
+    );
+    if (
+      next.size === hidden.size &&
+      [...next].every((key) => hidden.has(key))
+    ) {
+      return hidden;
+    }
+    hidden = next;
+  }
+  // Never settled: the conditions form a cycle — an either/or pair each hiding
+  // the other — so no choice of dropped writes agrees with the row it leaves.
+  // Drop nothing; every write then answers to the full pipeline instead of
+  // vanishing without an error.
+  return new Set();
+}
+
+/**
+ * A strict edit validates only its own keys, so a co-author's older drift on
+ * some other field cannot block it. That covers drift the edit finds, not drift
+ * it makes: changing a driver can switch another field visible, and a field it
+ * switches on without supplying is this edit's to fix. Only a driver whose value
+ * actually changes counts — re-sending the value it already holds makes nothing
+ * newly visible.
+ */
+async function validateConditionDependents(
+  target: MetaPatchTarget,
+  input: MetaInput,
+  outcome: MetaPatch,
+): Promise<MetaFieldError[]> {
+  // Judged by what the edit stores, not by what it sent: a write to a hidden
+  // field is dropped, so it switches nothing on. Each key is compared as it
+  // reads before and after, defaults included — a driver never stored already
+  // reads as its default, so sending that value switches nothing on either.
+  const written: Record<string, unknown> = Object.fromEntries(outcome.upserts);
+  for (const key of outcome.deletes) written[key] = null;
+  const before = overlayMetaPatch(target, {});
+  const after = overlayMetaPatch(target, written);
+  const changed = new Set(
+    Object.keys(written).filter(
+      (key) => !structurallyEqual(before[key], after[key]),
+    ),
+  );
+  if (changed.size === 0) return [];
+  const errors: MetaFieldError[] = [];
+  for (const field of target.fields) {
+    // A key the patch sent has had its own pass, whether it was written,
+    // dropped as hidden, or rejected.
+    if (Object.hasOwn(input, field.key)) continue;
+    // The rule `sanitizePromotedEntryMeta` applies at publish, for the same
+    // reason: an author cannot fix a field they are not allowed to write.
+    if (field.capability && !target.auth.can(field.capability)) continue;
+    if (!conditionReadsAny(field, changed)) continue;
+    if (!isFieldVisible(field, after)) continue;
+    // Visibility reads defaults, as a read does; the value is judged as stored,
+    // as the publish gate judges it — a default is shown, never saved.
+    const result = await runFieldPipeline(
+      field,
+      target.stored[field.key],
+      field.key,
+      "strict",
+    );
+    errors.push(...result.errors);
+  }
+  return errors;
 }
 
 /**
@@ -257,13 +449,14 @@ export function metaValidationConflict(
 }
 
 export async function sanitizeMetaForRpc(
-  findField: (key: string) => MetaBoxField | undefined,
+  target: MetaPatchTarget,
   input: MetaInput | undefined,
   errors: RpcErrorsForMeta,
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
+  const { findField } = metaScope(target.fields);
   try {
-    return await sanitizeMetaInput(findField, input, mode);
+    return await sanitizeMetaInput(findField, input, mode, target);
   } catch (error) {
     if (error instanceof MetaValidationError) {
       throw metaValidationConflict(error, errors);
@@ -300,12 +493,17 @@ export async function sanitizeMetaForRpc(
  * as stored: the pipeline decodes input, and the rest of the bag is not input
  * (ADR 0003). Pass every key the caller is promoting to get the whole bag
  * settled.
+ *
+ * `scope` is every field of the box, not just the `fields` the caller can
+ * write: a driver the publisher may not edit still decides what is visible.
  */
 export async function validateAndPromoteMetaBag(
   fields: readonly MetaBoxField[],
   bag: JsonObject,
   touched: ReadonlySet<string>,
+  scope: readonly MetaBoxField[] = fields,
 ): Promise<JsonObject> {
+  const shown = withDeclaredDefaults(scope, bag);
   const out: Record<string, JsonValue> = {};
   const owned = new Set<string>();
   const fieldErrors: MetaFieldError[] = [];
@@ -314,8 +512,9 @@ export async function validateAndPromoteMetaBag(
     // A hidden field is inactive, so it can't be required — but its stored
     // value is kept untouched (not validated, not dropped), or the value a
     // driver hides would be lost on publish and gone when the driver flips
-    // back.
-    if (isConditionHidden(field, bag)) {
+    // back. Judged against `shown`, not the raw bag: a driver storage lacks
+    // reads as its default, as it does in the editor.
+    if (!isFieldVisible(field, shown)) {
       const stored = bag[field.key];
       if (stored !== undefined) out[field.key] = stored;
       continue;

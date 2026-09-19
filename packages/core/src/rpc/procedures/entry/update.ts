@@ -17,6 +17,7 @@ import { isReservedType } from "../../../revisions/slug-codec.js";
 import {
   asDraftRow,
   decodeSnapshotEnvelope,
+  mergeAutosaveMeta,
   stripReservedMeta,
 } from "../../../revisions/snapshot-envelope.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
@@ -223,18 +224,6 @@ export const update = base
           data: { reason: "autosave_requires_published" },
         });
       }
-      // Autosave is draft-lenient: a work-in-progress save must never fail
-      // over an empty required field or an out-of-bounds value the author
-      // hasn't finished. Structural + security gates still run; the
-      // business-rule constraints are re-enforced when `entry.publish`
-      // promotes this bag in strict mode.
-      const autosaveMetaPatch = await sanitizeAndValidateEntryMeta(
-        context,
-        existing.type,
-        filtered.meta,
-        errors,
-        "draft",
-      );
       // The autosave accumulates the author's in-progress edits, so base each
       // write on the existing draft and apply only this patch on top — the
       // editor sends only what changed, so rebasing would drop keys an earlier
@@ -245,6 +234,23 @@ export const update = base
         entryId: existing.id,
         authorId: context.user.id,
       });
+      // Autosave is draft-lenient: a work-in-progress save must never fail
+      // over an empty required field or an out-of-bounds value the author
+      // hasn't finished. Structural + security gates still run; the
+      // business-rule constraints are re-enforced when `entry.publish`
+      // promotes this bag in strict mode. The patch lands on the pending
+      // draft, not on live, so that is the bag its conditions are judged
+      // against.
+      const autosaveMetaPatch = await sanitizeAndValidateEntryMeta(
+        context,
+        existing.type,
+        filtered.meta,
+        currentEdits
+          ? mergeAutosaveMeta(existing.meta, currentEdits.meta)
+          : existing.meta,
+        errors,
+        "draft",
+      );
       // The columns snapshot where the meta bag patches, so these two still
       // fall back to the live row's values when the author left them alone.
       const columnBase = currentEdits ?? existing;
@@ -368,6 +374,7 @@ export const update = base
       context,
       existing.type,
       metaInput,
+      existing.meta,
       errors,
       metaMode,
     );
@@ -387,9 +394,9 @@ export const update = base
     // resulting bag, not just this patch: a draft's meta was written
     // leniently, so a required field it left empty — or any value it never
     // re-touched — is caught here and blocks the transition. Editing an
-    // already-live entry only re-validates its own patch (above), so
-    // pre-existing schema drift on a co-author's field can't block an
-    // unrelated edit.
+    // already-live entry re-validates only its own patch and the fields that
+    // patch switches visible (above), so pre-existing schema drift on a
+    // co-author's field can't block an unrelated edit.
     const nowScheduled =
       filtered.status === "scheduled" && existing.status !== "scheduled";
     if (isPublishTransition || nowScheduled) {

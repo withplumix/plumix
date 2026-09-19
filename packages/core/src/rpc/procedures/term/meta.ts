@@ -1,7 +1,12 @@
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
+import type {
+  MetaInput,
+  MetaPatch,
+  MetaPatchTarget,
+  ResolvedMeta,
+} from "../../meta/core.js";
 import { terms } from "../../../db/schema/terms.js";
 import {
   findTermMetaField,
@@ -23,15 +28,19 @@ import { assertMetaCapabilities } from "../entry/meta.js";
 
 export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
 
-/** RPC-facing sanitizer for a term's meta input, scoped by taxonomy. */
+/**
+ * RPC-facing sanitizer for a term's meta input, scoped by taxonomy. The
+ * target's `stored` is the meta the patch lands on — `{}` for a new term.
+ */
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   taxonomy: string,
   input: MetaInput | undefined,
+  target: Omit<MetaPatchTarget, "fields">,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
-    (key) => findTermMetaField(registry, taxonomy, key),
+    { ...target, fields: listTermMetaFields(registry, taxonomy) },
     input,
     errors,
   );
