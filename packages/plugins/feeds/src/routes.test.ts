@@ -1,7 +1,7 @@
 import type { AnyPluginDescriptor, CdnStore, ConnectedCdn } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import { eq, typeTag } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
@@ -519,8 +519,7 @@ describe("non-canonical feed URLs", () => {
 
 describe("archive-type feeds", () => {
   // The archive-type `feed` field is this plugin's augmentation, not a core
-  // one — a plugin declares it and the routes come from the same enumeration
-  // every other scope does.
+  // one — a plugin declares it and the feed hangs off the archive's own routes.
   const eventsPlugin = definePlugin("events", (ctx) => {
     ctx.registerEntryType("post", {
       label: "Posts",
@@ -528,20 +527,22 @@ describe("archive-type feeds", () => {
       hasArchive: true,
     });
     ctx.registerArchiveType("event-series", {
-      routes: ["/events/:series"],
+      routes: [
+        "/events/:series",
+        `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`,
+      ],
       resolve: (_ctx, params) => ({
         data: { kind: "custom", name: "event-series" },
         title: `Series: ${params.series ?? ""}`,
       }),
       feed: {
-        routes: ["/events/:series/feed"],
         filter: (_ctx, params) =>
           params.series === "missing" ? null : eq(entries.status, "published"),
       },
     });
   });
 
-  test("serves the archive's declared feed in both formats", async () => {
+  test("serves a feed under each archive route in both formats", async () => {
     const h = await harness(eventsPlugin);
     await seedPost(h, "hello", "Hello World");
 
@@ -557,58 +558,187 @@ describe("archive-type feeds", () => {
     );
   });
 
+  // The `<link rel="alternate">` feed hrefs a rendered page advertises.
+  async function advertised(h: DispatcherHarness, path: string) {
+    const res = await h.fetch(path);
+    res.assertStatus(200);
+    const body = await res.text();
+    return [...body.matchAll(/<link[^>]*rel="alternate"[^>]*>/g)].map(
+      ([tag]) => /href="([^"]*)"/.exec(tag)?.[1],
+    );
+  }
+
+  test("an archive page advertises its feed in both formats", async () => {
+    const h = await harness(eventsPlugin);
+    expect(await advertised(h, "/events/summer")).toEqual([
+      "https://cms.example/events/summer/feed",
+      "https://cms.example/events/summer/feed/atom",
+    ]);
+  });
+
+  test("a later page advertises the feed of the route it paginates", async () => {
+    const h = await harness(eventsPlugin);
+    expect(await advertised(h, "/events/summer/page/2")).toEqual([
+      "https://cms.example/events/summer/feed",
+      "https://cms.example/events/summer/feed/atom",
+    ]);
+  });
+
+  test("the advertised feed carries the base prefix", async () => {
+    const h = await createDispatcherHarness({
+      basePath: "/custom-directory",
+      plugins: [eventsPlugin, feeds()],
+    });
+    expect(await advertised(h, "/custom-directory/events/summer")).toEqual([
+      "https://cms.example/custom-directory/events/summer/feed",
+      "https://cms.example/custom-directory/events/summer/feed/atom",
+    ]);
+  });
+
+  test("a page whose feed filter answers null advertises none, on any of its pages", async () => {
+    const h = await harness(eventsPlugin);
+    expect(await advertised(h, "/events/missing")).toEqual([]);
+    expect(await advertised(h, "/events/missing/page/2")).toEqual([]);
+  });
+
+  test("a private site advertises no archive feed", async () => {
+    const h = await harness(eventsPlugin);
+    await h.factory.setting.create({
+      group: "site",
+      key: "public",
+      value: false,
+    });
+    expect(await advertised(h, "/events/summer")).toEqual([]);
+  });
+
+  test("an alternate another plugin declared first wins over the archive feed", async () => {
+    const declaring = definePlugin("declaring", (ctx) => {
+      ctx.addFilter("render:document", (manifest) => ({
+        ...manifest,
+        link: [
+          ...(manifest.link ?? []),
+          {
+            rel: "alternate",
+            type: "application/rss+xml",
+            href: "https://cms.example/elsewhere",
+          },
+        ],
+      }));
+    });
+    const h = await harness(eventsPlugin, declaring);
+    expect(await advertised(h, "/events/summer")).toEqual([
+      "https://cms.example/elsewhere",
+      "https://cms.example/events/summer/feed/atom",
+    ]);
+  });
+
+  test("a paginated archive route has no feed of its own", async () => {
+    const h = await harness(eventsPlugin);
+    (await h.fetch("/events/summer/page/2/feed")).assertStatus(404);
+  });
+
   test("a filter returning null 404s", async () => {
     const h = await harness(eventsPlugin);
     (await h.fetch("/events/missing/feed")).assertStatus(404);
   });
 
-  test("a declared route that is not feed-shaped is ignored, not registered over the archive", async () => {
-    // A registered public route answers ahead of the content router, so
-    // claiming the archive's own path would serve XML where the page was.
-    const shadowing = definePlugin("shadowing", (ctx) => {
+  test("an archive feed path colliding with a type feed leaves the type feed serving, unadvertised by the archive", async () => {
+    // Core answered the first matching branch; two claims on one path would
+    // otherwise fail the boot with this plugin named as its own rival.
+    const colliding = definePlugin("colliding", (ctx) => {
+      ctx.registerEntryType("events", { label: "Events", isPublic: true });
+      ctx.registerArchiveType("event-calendar", {
+        routes: ["/events"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-calendar" },
+          title: "Calendar",
+        }),
+        feed: { filter: () => eq(entries.status, "published") },
+      });
+    });
+    const h = await harness(colliding);
+    (await h.fetch("/events/feed")).assertStatus(200);
+    expect(await advertised(h, "/events")).toEqual([]);
+  });
+
+  test("an archive route capturing several segments has no feed on its later pages", async () => {
+    const docs = definePlugin("docs", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("doc-section", {
+        routes: ["/docs/:path+", `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`],
+        resolve: () => ({
+          data: { kind: "custom", name: "doc-section" },
+          title: "Docs",
+        }),
+        feed: { filter: () => eq(entries.status, "published") },
+      });
+    });
+    const h = await harness(docs);
+    (await h.fetch("/docs/guides/feed")).assertStatus(200);
+    (await h.fetch("/docs/guides/page/2/feed")).assertStatus(404);
+    (await h.fetch("/docs/guides/page/2/feed/atom")).assertStatus(404);
+    expect(await advertised(h, "/docs/guides/page/2")).toEqual([
+      "https://cms.example/docs/guides/feed",
+      "https://cms.example/docs/guides/feed/atom",
+    ]);
+  });
+
+  test("an archive whose feed pattern another feed also answers advertises none", async () => {
+    // `/:section/feed` and the `news` type's `/news/feed` are different
+    // patterns naming one URL, so the head cannot promise which one answers.
+    const sections = definePlugin("sections", (ctx) => {
+      ctx.registerEntryType("news", {
+        label: "News",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerArchiveType("section", {
+        routes: ["/:section"],
+        resolve: () => ({
+          data: { kind: "custom", name: "section" },
+          title: "Section",
+        }),
+        feed: { filter: () => eq(entries.status, "published") },
+      });
+    });
+    const h = await harness(sections);
+    expect(await advertised(h, "/news")).toEqual([]);
+    expect(await advertised(h, "/about")).toEqual([
+      "https://cms.example/about/feed",
+      "https://cms.example/about/feed/atom",
+    ]);
+  });
+
+  test("an archive whose own routes both answer its feed URL still advertises it", async () => {
+    const docs = definePlugin("docs", (ctx) => {
+      ctx.registerArchiveType("doc-section", {
+        routes: ["/docs/:slug", "/docs/:path+"],
+        resolve: () => ({
+          data: { kind: "custom", name: "doc-section" },
+          title: "Docs",
+        }),
+        feed: { filter: () => eq(entries.status, "published") },
+      });
+    });
+    const h = await harness(docs);
+    expect(await advertised(h, "/docs/guides")).toEqual([
+      "https://cms.example/docs/guides/feed",
+      "https://cms.example/docs/guides/feed/atom",
+    ]);
+  });
+
+  test("a plugin archive without a feed advertises none", async () => {
+    const feedless = definePlugin("feedless", (ctx) => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
           data: { kind: "custom", name: "event-series" },
           title: "Series",
         }),
-        feed: {
-          routes: ["/events/:series"],
-          filter: () => eq(entries.status, "published"),
-        },
       });
     });
-    const h = await harness(shadowing);
-    const res = await h.fetch("/events/summer");
-    res.assertStatus(200);
-    expect(res.headers.get("content-type")).toContain("text/html");
-  });
-
-  test("an archive feed route colliding with a type feed leaves the type feed serving", async () => {
-    // Core answered the first matching branch; two claims on one path would
-    // otherwise fail the boot with this plugin named as its own rival.
-    const colliding = definePlugin("colliding", (ctx) => {
-      ctx.registerEntryType("events", { label: "Events", isPublic: true });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/series/:name"],
-        resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
-          title: "Series",
-        }),
-        feed: {
-          routes: ["/events/feed"],
-          filter: () => eq(entries.status, "published"),
-        },
-      });
-    });
-    const h = await harness(colliding);
-    (await h.fetch("/events/feed")).assertStatus(200);
-  });
-
-  test("a plugin archive advertises no feed of its own", async () => {
-    const h = await harness(eventsPlugin);
-    const body = await (await h.fetch("/events/summer")).text();
-    expect(body).not.toContain('rel="alternate"');
+    const h = await harness(feedless);
+    expect(await advertised(h, "/events/summer")).toEqual([]);
   });
 });
 
@@ -695,10 +825,7 @@ describe("a feed at the edge", () => {
           data: { kind: "custom", name: "series" },
           title: "Series",
         }),
-        feed: {
-          routes: ["/series/:name/feed"],
-          filter: () => eq(entries.status, "published"),
-        },
+        feed: { filter: () => eq(entries.status, "published") },
       });
     });
   }

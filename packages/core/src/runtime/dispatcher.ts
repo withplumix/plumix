@@ -813,7 +813,7 @@ async function resolvePublicRouteOrFallback(
   if (url.pathname === "/") {
     return resolvePublicRoute(
       ctx,
-      { intent: { kind: "front-page" }, params: {} },
+      { intent: { kind: "front-page" }, pattern: "/", params: {} },
       renderEnv,
     );
   }

@@ -1,11 +1,18 @@
-import type { DocumentLink, DocumentManifest, TemplateData } from "plumix";
-import type { AppContext } from "plumix/plugin";
-import { exposesHierarchicalUrls } from "plumix/plugin";
+import type {
+  CustomArchiveData,
+  DocumentLink,
+  DocumentManifest,
+  TemplateData,
+} from "plumix";
+import type { AppContext, ResolvedRoute } from "plumix/plugin";
+import {
+  exposesHierarchicalUrls,
+  FRAMEWORK_PAGINATION_SUFFIX,
+} from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
+import { archiveFeedAt, feedUnder } from "./routes.js";
 import { isPublicEntryType } from "./scope.js";
-
-type DiscoveryContext = Pick<AppContext, "origin" | "basePath" | "plugins">;
 
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
@@ -13,7 +20,10 @@ type DiscoveryContext = Pick<AppContext, "origin" | "basePath" | "plugins">;
  * archive's shape is arbitrary, so a field-presence check would read one
  * plugin's `year` or `author` as core's subject.
  */
-function feedBase(data: TemplateData, ctx: DiscoveryContext): string | null {
+async function feedBase(
+  data: TemplateData,
+  ctx: AppContext,
+): Promise<string | null> {
   switch (data.kind) {
     // A single entry advertises the site feed rather than its type's: a reader
     // subscribing from a post wants "everything new", which is the convention
@@ -47,13 +57,44 @@ function feedBase(data: TemplateData, ctx: DiscoveryContext): string | null {
       if (data.day !== null) parts.push(String(data.day).padStart(2, "0"));
       return withBasePath(`/${parts.join("/")}/feed`, ctx.basePath);
     }
-    // A search page is thin, an error page is not content, and a plugin
-    // archive's feed routes are the plugin's own to advertise.
+    case "custom":
+      return archiveFeedBase(data, ctx);
+    // A search page is thin and an error page is not content.
     case "search":
     case "error":
-    case "custom":
       return null;
   }
+}
+
+/**
+ * A plugin archive's feed, read off the route the page matched rather than
+ * its payload, whose shape is the plugin's own. A later page advertises the
+ * feed of the route it paginates. Nothing is advertised that the feed route
+ * would not serve: a path another feed claimed first, or params the archive's
+ * `filter` answers `null` for.
+ */
+async function archiveFeedBase(
+  data: CustomArchiveData,
+  ctx: AppContext,
+): Promise<string | null> {
+  const archive = ctx.plugins.archiveTypes.get(data.name);
+  const route = ctx.resolvedRoute;
+  if (!archive?.feed || route === null) return null;
+
+  const pathname = new URL(ctx.request.url).pathname;
+  const feedPath = feedUnder(listingPath(route, pathname));
+  const owner = archiveFeedAt(ctx.plugins, feedPath);
+  if (owner?.archive !== archive.name) return null;
+  if ((await archive.feed.filter(ctx, owner.params)) === null) return null;
+  return withBasePath(feedPath, ctx.basePath);
+}
+
+const SUFFIX_SEGMENTS = FRAMEWORK_PAGINATION_SUFFIX.split("/").length - 1;
+
+// A later page's listing is its own path with the pagination tail dropped.
+function listingPath(route: ResolvedRoute, pathname: string): string {
+  if (!route.pattern.endsWith(FRAMEWORK_PAGINATION_SUFFIX)) return pathname;
+  return pathname.split("/").slice(0, -SUFFIX_SEGMENTS).join("/");
 }
 
 /**
@@ -61,14 +102,14 @@ function feedBase(data: TemplateData, ctx: DiscoveryContext): string | null {
  * page's scope, skipping any type already present so a template / plugin value
  * wins. A private site advertises nothing (it 404s its feeds).
  */
-export function applyFeedDiscovery(
+export async function applyFeedDiscovery(
   manifest: DocumentManifest,
   data: TemplateData,
-  ctx: DiscoveryContext,
+  ctx: AppContext,
   siteIsPrivate: boolean,
-): DocumentManifest {
+): Promise<DocumentManifest> {
   if (siteIsPrivate) return manifest;
-  const base = feedBase(data, ctx);
+  const base = await feedBase(data, ctx);
   if (base === null) return manifest;
 
   const existing = manifest.link;

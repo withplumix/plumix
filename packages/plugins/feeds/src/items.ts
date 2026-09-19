@@ -6,6 +6,7 @@ import { entries, entryTerm, users } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";
+import { isLaterPage, listingUnder } from "./routes.js";
 import { isPublicEntryType, publicEntryTypeNames } from "./scope.js";
 
 // Recent-items window. Generous enough for a reader's "what's new" without
@@ -47,6 +48,8 @@ async function feedFilter(
     // row predicate (or null → 404). Missing archive/feed → 404.
     const archive = ctx.plugins.archiveTypes.get(scope.name);
     if (!archive?.feed) return null;
+    const listing = listingUnder(new URL(ctx.request.url).pathname);
+    if (isLaterPage(archive.routes, listing)) return null;
     return archive.feed.filter(ctx, scope.params);
   }
 

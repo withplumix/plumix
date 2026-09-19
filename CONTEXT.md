@@ -244,6 +244,9 @@ The membership-gating scenario a challenge implements. A scenario label, not a t
 **Route intent**:
 What a matched URL represents — `single`, `archive`, `taxonomy`, `author`, `date`, `front-page`, `search`, or `custom`.
 
+**Resolved route**:
+The content route the current public request matched — the pattern as it was declared and the params it captured — read from `ctx.resolvedRoute` by anything rendering the page that has to address the page's own URL space. `null` on every path the content router did not match.
+
 **Public route**:
 A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own route handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.
 
@@ -328,6 +331,10 @@ alongside `/robots.txt`.
 The recent-items syndication output (RSS/Atom). Not an SEO surface — a reader
 subscribes to it, a crawler does not read it — and served by
 `@plumix/plugin-feeds` rather than by core.
+
+**Archive feed**:
+The feed of a plugin archive (`registerArchiveType` with a `feed`), served at
+`<archive route>/feed` and advertised on the archive's pages.
 
 ## Search
 

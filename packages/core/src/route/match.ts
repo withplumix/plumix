@@ -1,8 +1,16 @@
 import type { RouteIntent, RouteRule } from "./intent.js";
 
-export interface RouteMatch {
-  readonly intent: RouteIntent;
+/**
+ * The content route a public request matched: the pattern as it was declared
+ * and the params it captured from the path.
+ */
+export interface ResolvedRoute {
+  readonly pattern: string;
   readonly params: Record<string, string>;
+}
+
+export interface RouteMatch extends ResolvedRoute {
+  readonly intent: RouteIntent;
 }
 
 export function matchRoute(
@@ -12,7 +20,11 @@ export function matchRoute(
   for (const rule of rules) {
     const result = rule.pattern.exec({ pathname: url.pathname });
     if (result === null) continue;
-    return { intent: rule.intent, params: extractParams(result.pathname) };
+    return {
+      intent: rule.intent,
+      pattern: rule.rawPattern,
+      params: extractParams(result.pathname),
+    };
   }
   return null;
 }

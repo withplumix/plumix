@@ -14,14 +14,15 @@ import {
   FRAMEWORK_DATE_MONTH_PATTERN,
   FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN,
   FRAMEWORK_DATE_YEAR_PATTERN,
-  FRAMEWORK_FRONT_PAGE_PATTERN,
+  FRAMEWORK_PAGINATION_SUFFIX,
   FRAMEWORK_SEARCH_BARE_PATTERN,
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
 } from "./compile.js";
+import { matchRoute } from "./match.js";
 
 const FRAMEWORK_PATTERNS = new Set<string>([
-  FRAMEWORK_FRONT_PAGE_PATTERN,
+  FRAMEWORK_PAGINATION_SUFFIX,
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
   FRAMEWORK_SEARCH_BARE_PATTERN,
@@ -49,6 +50,53 @@ function pluginRoutes(registry: ReturnType<typeof createPluginRegistry>) {
 }
 
 describe("compileRouteMap", () => {
+  test("a plugin archive's later pages match its paginated route whatever order it declared them in", async () => {
+    // A multi-segment capture would otherwise swallow `/page/2` as part of the
+    // listing's own path, and the page would claim to be a first page.
+    const registry = await buildRegistry([
+      definePlugin("docs", (ctx) => {
+        ctx.registerArchiveType("doc-section", {
+          routes: [
+            "/docs/:path+",
+            `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`,
+          ],
+          resolve: () => null,
+        });
+      }),
+    ]);
+    const match = matchRoute(
+      new URL("https://cms.example/docs/a/page/2"),
+      compileRouteMap(registry),
+    );
+    expect(match?.pattern).toBe(`/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`);
+    expect(match?.params).toEqual({ path: "a", page: "2" });
+  });
+
+  test("every paginated rule core compiles ends in the one pagination suffix", async () => {
+    const registry = await buildRegistry([
+      definePlugin("blog", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "shop" },
+        });
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+        });
+      }),
+    ]);
+    const paginated = compileRouteMap(registry)
+      .map((rule) => rule.rawPattern)
+      .filter((pattern) => pattern.includes("/page/"));
+    expect(paginated.length).toBeGreaterThan(0);
+    for (const pattern of paginated) {
+      expect(pattern.endsWith(FRAMEWORK_PAGINATION_SUFFIX)).toBe(true);
+    }
+  });
+
   test("auto-generates /{taxonomy}/:term from a registered term taxonomy", async () => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {
@@ -70,9 +118,9 @@ describe("compileRouteMap", () => {
     const map = compileRouteMap(registry);
     const patterns = map.map((r) => r.rawPattern);
     expect(patterns).toContain("/category/:term");
-    expect(patterns).toContain("/category/:term/page/:page");
+    expect(patterns).toContain("/category/:term/page/:page(\\d+)");
     const paginated = map.find(
-      (r) => r.rawPattern === "/category/:term/page/:page",
+      (r) => r.rawPattern === "/category/:term/page/:page(\\d+)",
     );
     expect(paginated?.intent).toEqual({
       kind: "taxonomy",
@@ -93,9 +141,9 @@ describe("compileRouteMap", () => {
     const map = compileRouteMap(registry);
     const patterns = map.map((r) => r.rawPattern);
     expect(patterns).toContain("/region/:path+");
-    expect(patterns).toContain("/region/:path+/page/:page");
+    expect(patterns).toContain("/region/:path+/page/:page(\\d+)");
     expect(patterns).not.toContain("/region/:term");
-    expect(patterns).not.toContain("/region/:term/page/:page");
+    expect(patterns).not.toContain("/region/:term/page/:page(\\d+)");
   });
 
   test("taxonomy with rewrite.isHierarchical:false keeps flat :term even when isHierarchical:true", async () => {
@@ -111,7 +159,7 @@ describe("compileRouteMap", () => {
     const map = compileRouteMap(registry);
     const patterns = map.map((r) => r.rawPattern);
     expect(patterns).toContain("/region/:term");
-    expect(patterns).toContain("/region/:term/page/:page");
+    expect(patterns).toContain("/region/:term/page/:page(\\d+)");
     expect(patterns).not.toContain("/region/:path+");
   });
 
@@ -126,7 +174,7 @@ describe("compileRouteMap", () => {
     ]);
     const map = pluginRoutes(registry);
     expect(map.map((r) => r.rawPattern)).toEqual([
-      "/r/:term/page/:page",
+      "/r/:term/page/:page(\\d+)",
       "/r/:term",
     ]);
     const bare = map.find((r) => r.rawPattern === "/r/:term");
@@ -140,7 +188,7 @@ describe("compileRouteMap", () => {
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
-      "/topic/:term/page/:page",
+      "/topic/:term/page/:page(\\d+)",
       "/topic/:term",
     ]);
   });
@@ -239,8 +287,10 @@ describe("compileRouteMap", () => {
     const map = compileRouteMap(registry);
     const patterns = map.map((r) => r.rawPattern);
     expect(patterns).toContain("/shop");
-    expect(patterns).toContain("/shop/page/:page");
-    const paginated = map.find((r) => r.rawPattern === "/shop/page/:page");
+    expect(patterns).toContain("/shop/page/:page(\\d+)");
+    const paginated = map.find(
+      (r) => r.rawPattern === "/shop/page/:page(\\d+)",
+    );
     expect(paginated?.intent).toEqual({
       kind: "archive",
       entryType: "product",
@@ -261,7 +311,11 @@ describe("compileRouteMap", () => {
     ]);
     const map = pluginRoutes(registry);
     const patterns = map.map((r) => r.rawPattern);
-    expect(patterns).toEqual(["/shop/page/:page", "/shop", "/shop/:slug"]);
+    expect(patterns).toEqual([
+      "/shop/page/:page(\\d+)",
+      "/shop",
+      "/shop/:slug",
+    ]);
     expect(map[0]?.intent).toEqual({ kind: "archive", entryType: "product" });
     expect(map[1]?.intent).toEqual({ kind: "archive", entryType: "product" });
     expect(map[2]?.intent).toEqual({ kind: "single", entryType: "product" });
@@ -279,7 +333,7 @@ describe("compileRouteMap", () => {
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
-      "/store/page/:page",
+      "/store/page/:page(\\d+)",
       "/store",
       "/p/:slug",
     ]);
@@ -438,7 +492,7 @@ describe("compileRouteMap", () => {
   test("framework registers /page/:page(\\d+) ahead of plugin rules", async () => {
     const registry = await buildRegistry([]);
     const map = compileRouteMap(registry);
-    expect(map[0]?.rawPattern).toBe(FRAMEWORK_FRONT_PAGE_PATTERN);
+    expect(map[0]?.rawPattern).toBe(FRAMEWORK_PAGINATION_SUFFIX);
     expect(map[0]?.intent).toEqual({ kind: "front-page" });
     expect(map[0]?.priority).toBeLessThan(10);
   });
