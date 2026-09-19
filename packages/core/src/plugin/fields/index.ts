@@ -80,3 +80,6 @@ export { entry } from "./entry.js";
 export type { EntryFieldScope } from "./entry.js";
 export { term } from "./term.js";
 export type { TermFieldScope } from "./term.js";
+// What a builder throws on a chain that can never register — a plugin's own
+// builder raises the same class, so a caller catches one type.
+export { FieldConfigError } from "./errors.js";

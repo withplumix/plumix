@@ -65,6 +65,7 @@ export {
   datetime,
   email,
   entry,
+  FieldConfigError,
   group,
   GroupFieldBuilder,
   GroupFieldSeed,

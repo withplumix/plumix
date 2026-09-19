@@ -4,7 +4,7 @@ import type {
   ConnectedCdn,
   JsonValue,
 } from "plumix";
-import type { Logger } from "plumix/plugin";
+import type { Logger, PluginSetupContext } from "plumix/plugin";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
@@ -63,47 +63,55 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   });
 });
 
-// A type whose pictures the sitemap has to find: two role-tagged media fields,
+// A type whose pictures the sitemap has to find: role-tagged media fields,
 // declared raw rather than through the media plugin's builder, and a `media`
 // lookup adapter standing in for its hydration — what the walk reads is the
 // role and the hydrated `url`, so seeding those keeps this suite off a second
-// plugin.
-const picturePlugin = definePlugin("pictures", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
+// plugin. `shareCount` extra `ogImage` fields, `share0`…, fill an entry past
+// the per-entry cap.
+const picturePluginWith = (shareCount: number) =>
+  definePlugin("pictures", (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryMetaBox("social", {
+      label: "Social",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "hero",
+          label: "Hero",
+          type: "json",
+          inputType: "media",
+          role: "featured",
+          referenceTarget: { kind: "media" },
+        },
+        {
+          key: "shareImage",
+          label: "Share image",
+          type: "json",
+          inputType: "media",
+          role: "ogImage",
+          referenceTarget: { kind: "media" },
+        },
+        ...Array.from({ length: shareCount }, (_unused, at) => ({
+          key: `share${String(at)}`,
+          label: `Share ${String(at)}`,
+          type: "json" as const,
+          inputType: "media" as const,
+          role: "ogImage" as const,
+          referenceTarget: { kind: "media" },
+        })),
+      ],
+    });
+    registerPictureAdapter(ctx);
   });
-  ctx.registerEntryMetaBox("social", {
-    label: "Social",
-    entryTypes: ["post"],
-    fields: [
-      {
-        key: "hero",
-        label: "Hero",
-        type: "json",
-        inputType: "media",
-        role: "featured",
-        referenceTarget: { kind: "media" },
-      },
-      {
-        key: "shareImage",
-        label: "Share image",
-        type: "json",
-        inputType: "media",
-        role: "ogImage",
-        referenceTarget: { kind: "media" },
-      },
-      {
-        key: "gallery",
-        label: "Gallery",
-        type: "json",
-        inputType: "mediaList",
-        role: "featured",
-        referenceTarget: { kind: "media", multiple: true },
-      },
-    ],
-  });
+
+const picturePlugin = picturePluginWith(0);
+
+function registerPictureAdapter(ctx: PluginSetupContext): void {
   ctx.registerLookupAdapter({
     kind: "media",
     capability: null,
@@ -124,7 +132,7 @@ const picturePlugin = definePlugin("pictures", (ctx) => {
         ),
     },
   });
-});
+}
 
 // A settings save fires its action mid-request, which is where the purge
 // accumulator lives; this stands in for the RPC that would normally fire it.
@@ -858,13 +866,12 @@ describe("an entry's pictures in the sitemap", () => {
     expect(body).not.toContain("image");
   });
 
-  test("lists every role-tagged field, the editor's own URL, and a list field's items", async () => {
+  test("lists every role-tagged field and the editor's own URL", async () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, {
       meta: {
         hero: "m1",
         shareImage: "m2",
-        gallery: ["m3", "m4"],
         seo_og_image: "https://cdn.example/typed.png",
       },
     });
@@ -873,8 +880,6 @@ describe("an entry's pictures in the sitemap", () => {
 
     expect(body).toContain("https://cdn.example/m1.png");
     expect(body).toContain("https://cdn.example/m2.png");
-    expect(body).toContain("https://cdn.example/m3.png");
-    expect(body).toContain("https://cdn.example/m4.png");
     expect(body).toContain("https://cdn.example/typed.png");
   });
 
@@ -891,7 +896,7 @@ describe("an entry's pictures in the sitemap", () => {
 
   test("leaves out an upload that is not an image", async () => {
     const h = await createHarness([picturePlugin]);
-    await seedPost(h, { meta: { hero: "m1", gallery: ["doc1"] } });
+    await seedPost(h, { meta: { hero: "m1", shareImage: "doc1" } });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
@@ -900,11 +905,14 @@ describe("an entry's pictures in the sitemap", () => {
   });
 
   test("lists at most ten pictures for one entry", async () => {
-    const h = await createHarness([picturePlugin]);
+    const h = await createHarness([picturePluginWith(12)]);
     await seedPost(h, {
-      meta: {
-        gallery: Array.from({ length: 12 }, (_unused, at) => `g${String(at)}`),
-      },
+      meta: Object.fromEntries(
+        Array.from({ length: 12 }, (_unused, at) => [
+          `share${String(at)}`,
+          `g${String(at)}`,
+        ]),
+      ),
     });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");

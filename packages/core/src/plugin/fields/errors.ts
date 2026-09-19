@@ -4,7 +4,8 @@ type FieldConfigErrorCode =
   | "sub_field_key_invalid"
   | "sub_field_duplicate"
   | "sub_field_condition_unknown_driver"
-  | "temporal_bound_invalid";
+  | "temporal_bound_invalid"
+  | "role_accept_not_image";
 
 /** The composite field types that own a list of sub-fields. */
 export type SubFieldContainer = "repeater" | "group";
@@ -18,6 +19,7 @@ interface FieldConfigErrorFields {
   min?: number;
   max?: number;
   pattern?: string;
+  role?: string;
 }
 
 export class FieldConfigError extends Error {
@@ -34,6 +36,7 @@ export class FieldConfigError extends Error {
   readonly min: number | undefined;
   readonly max: number | undefined;
   readonly pattern: string | undefined;
+  readonly role: string | undefined;
 
   private constructor(
     code: FieldConfigErrorCode,
@@ -50,6 +53,7 @@ export class FieldConfigError extends Error {
     this.min = fields.min;
     this.max = fields.max;
     this.pattern = fields.pattern;
+    this.role = fields.role;
   }
 
   static rangeMinGreaterThanMax(ctx: {
@@ -117,6 +121,20 @@ export class FieldConfigError extends Error {
         `references "${ctx.driverKey}", which is not a field in the same ${scope} — ` +
         `a ${scope}'s rules can only drive off its own fields, not the box's.`,
       ctx,
+    );
+  }
+
+  static roleAcceptNotImage(ctx: {
+    fieldKey: string;
+    role: string;
+    accept: string | readonly string[];
+  }): FieldConfigError {
+    return new FieldConfigError(
+      "role_accept_not_image",
+      `field "${ctx.fieldKey}": image role "${ctx.role}" holds only images, ` +
+        `but .accept(${JSON.stringify(ctx.accept)}) admits other files. Accept "image/" or ` +
+        `image types only.`,
+      { fieldKey: ctx.fieldKey, role: ctx.role },
     );
   }
 

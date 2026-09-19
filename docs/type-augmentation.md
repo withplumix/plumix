@@ -69,8 +69,9 @@ to the base `ResolvedEntry`.
 | `BlockTypeRegistry`        | block name → attrs shape               | `block()`                                |
 | `PatternCategoryRegistry`  | pattern category slugs                 | `definePattern`                          |
 | `ReferenceHydrationShapes` | reference kind → hydrated shape        | reference fields                         |
+| `ImageRoles`               | image role names                       | `.role()` / `registerImageRole`          |
 
-All seven live behind `declare module "plumix"`.
+All eight live behind `declare module "plumix"`.
 
 ## Plugin authors: keep `plumix` loaded
 

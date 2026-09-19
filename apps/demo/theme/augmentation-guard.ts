@@ -19,6 +19,7 @@
 // the demo's `typecheck` task in CI (which resolves `plumix` to built dist).
 
 import type {
+  ImageRoleName,
   ReferenceHydrationShapes,
   TemplateDepRegistry,
   ThemeDescriptor,
@@ -60,6 +61,9 @@ declare module "plumix" {
   interface ReferenceHydrationShapes {
     guard_ref: { id: string; label: string };
   }
+  interface ImageRoles {
+    guard_role: true;
+  }
   interface ThemeDescriptor {
     guard_theme_field?: readonly string[];
   }
@@ -87,3 +91,7 @@ void ("guard_dep" satisfies keyof TemplateDepRegistry);
 void ("menus" satisfies keyof TemplateDepRegistry); // @plumix/plugin-menu
 void ("guard_ref" satisfies keyof ReferenceHydrationShapes);
 void ("media" satisfies keyof ReferenceHydrationShapes); // @plumix/plugin-media
+// `ImageRoleName` is what `.role()` and `registerImageRole` take: core's own
+// roles and a theme's augmentation have to land in the one merged interface.
+void ("guard_role" satisfies ImageRoleName);
+void ("featured" satisfies ImageRoleName); // declared by core

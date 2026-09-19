@@ -1,3 +1,5 @@
+import type { ImageRoleScope } from "./image-roles.js";
+
 type PluginContextErrorCode =
   | "extend_context_invalid_key"
   | "extend_context_reserved_key"
@@ -642,14 +644,43 @@ export class PluginContextError extends Error {
   }
 }
 
+function describeRoleScope(scope: ImageRoleScope): string {
+  switch (scope.kind) {
+    case "entry":
+      return `entry type "${scope.entryType}"`;
+    case "term":
+      return `term taxonomy "${scope.taxonomy}"`;
+    case "user":
+      return "users";
+  }
+}
+
+// The structured fields a role error carries, so a caller can match the scope
+// without parsing the message.
+function roleScopeFields(scope: ImageRoleScope): {
+  scopeKind: ImageRoleScope["kind"];
+  scope?: string;
+} {
+  switch (scope.kind) {
+    case "entry":
+      return { scopeKind: "entry", scope: scope.entryType };
+    case "term":
+      return { scopeKind: "term", scope: scope.taxonomy };
+    case "user":
+      return { scopeKind: "user" };
+  }
+}
+
 type PluginDefinitionErrorCode =
   | "invalid_plugin_id_length"
   | "invalid_plugin_id_shape"
   | "define_plugin_legacy_third_arg"
   | "duplicate_plugin_id_in_config"
   | "meta_field_clash_across_boxes"
-  | "entry_has_multiple_featured_fields"
+  | "single_image_role_has_multiple_fields"
   | "role_field_must_be_single"
+  | "image_role_inside_repeater"
+  | "unknown_image_role"
   | "meta_box_references_unknown_scope"
   | "settings_page_references_unknown_group"
   | "admin_slug_derivation_failed"
@@ -665,6 +696,7 @@ interface PluginDefinitionErrorFields {
   secondBoxId?: string;
   scope?: string;
   role?: string;
+  repeaterKey?: string;
   boxKind?: string;
   boxId?: string;
   scopeKind?: string;
@@ -690,6 +722,7 @@ export class PluginDefinitionError extends Error {
   readonly secondBoxId: string | undefined;
   readonly scope: string | undefined;
   readonly role: string | undefined;
+  readonly repeaterKey: string | undefined;
   readonly boxKind: string | undefined;
   readonly boxId: string | undefined;
   readonly scopeKind: string | undefined;
@@ -715,6 +748,7 @@ export class PluginDefinitionError extends Error {
     this.secondBoxId = fields.secondBoxId;
     this.scope = fields.scope;
     this.role = fields.role;
+    this.repeaterKey = fields.repeaterKey;
     this.boxKind = fields.boxKind;
     this.boxId = fields.boxId;
     this.scopeKind = fields.scopeKind;
@@ -789,29 +823,71 @@ export class PluginDefinitionError extends Error {
     );
   }
 
-  static entryHasMultipleFeaturedFields(ctx: {
-    scope: string;
+  static singleImageRoleHasMultipleFields(ctx: {
+    scope: ImageRoleScope;
+    role: string;
     firstFieldKey: string;
     secondFieldKey: string;
   }): PluginDefinitionError {
     return new PluginDefinitionError(
-      "entry_has_multiple_featured_fields",
-      `Entry type "${ctx.scope}" marks two fields featured ` +
-        `("${ctx.firstFieldKey}" and "${ctx.secondFieldKey}"). At most one ` +
-        `field per entry type may be the featured image.`,
-      { scope: ctx.scope, fieldKey: ctx.secondFieldKey },
+      "single_image_role_has_multiple_fields",
+      `Image role "${ctx.role}" allows one field on ` +
+        `${describeRoleScope(ctx.scope)}, but found two: ` +
+        `"${ctx.firstFieldKey}" and "${ctx.secondFieldKey}".`,
+      {
+        ...roleScopeFields(ctx.scope),
+        role: ctx.role,
+        fieldKey: ctx.secondFieldKey,
+      },
     );
   }
 
   static roleFieldMustBeSingle(ctx: {
+    scope: ImageRoleScope;
     fieldKey: string;
     role: string;
   }): PluginDefinitionError {
     return new PluginDefinitionError(
       "role_field_must_be_single",
-      `Field "${ctx.fieldKey}" is marked ${ctx.role} but stores multiple ` +
-        `values. A ${ctx.role} field must be a single media reference.`,
-      { fieldKey: ctx.fieldKey, role: ctx.role },
+      `Field "${ctx.fieldKey}" on ${describeRoleScope(ctx.scope)} is in image ` +
+        `role "${ctx.role}" but stores several values. A role field holds a ` +
+        `single image.`,
+      { ...roleScopeFields(ctx.scope), fieldKey: ctx.fieldKey, role: ctx.role },
+    );
+  }
+
+  static imageRoleInsideRepeater(ctx: {
+    scope: ImageRoleScope;
+    fieldKey: string;
+    role: string;
+    repeaterKey: string;
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "image_role_inside_repeater",
+      `Field "${ctx.fieldKey}" on ${describeRoleScope(ctx.scope)} has image ` +
+        `role "${ctx.role}" inside repeater "${ctx.repeaterKey}". A role names ` +
+        `one image for the whole ${ctx.scope.kind}, not one per row: move the ` +
+        `field out of the repeater.`,
+      {
+        ...roleScopeFields(ctx.scope),
+        fieldKey: ctx.fieldKey,
+        role: ctx.role,
+        repeaterKey: ctx.repeaterKey,
+      },
+    );
+  }
+
+  static unknownImageRole(ctx: {
+    scope: ImageRoleScope;
+    fieldKey: string;
+    role: string;
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "unknown_image_role",
+      `Field "${ctx.fieldKey}" on ${describeRoleScope(ctx.scope)} has image ` +
+        `role "${ctx.role}", which no plugin registered. Register it with ` +
+        `\`ctx.registerImageRole("${ctx.role}", { single: true })\`.`,
+      { ...roleScopeFields(ctx.scope), fieldKey: ctx.fieldKey, role: ctx.role },
     );
   }
 

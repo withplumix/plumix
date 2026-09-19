@@ -35,6 +35,7 @@ import type {
   TermMetaBoxDrift,
   UserMetaBoxDrift,
 } from "./fields/contributions.js";
+import type { ImageRoleName, ImageRoleOptions } from "./image-roles.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
@@ -405,6 +406,17 @@ export interface PluginSetupContextBase {
    * etc.). Duplicate kinds throw.
    */
   registerLookupAdapter(options: LookupAdapterOptions): void;
+  /**
+   * Declare an image role — a purpose a media field fills for its entry, term
+   * or user (`hero`, `thumbnail`, `avatar`), which readers then ask for by
+   * name through `imageRoleFields`. `single` caps each scope at one field in
+   * the role. Core registers `featured` (single) and `ogImage`; a name is
+   * registered once, so a duplicate throws.
+   *
+   * Augment `ImageRoles` so the name type-checks here and in `.role()`:
+   * `declare module "plumix" { interface ImageRoles { hero: true } }`.
+   */
+  registerImageRole(name: ImageRoleName, options: ImageRoleOptions): void;
 
   /**
    * Surface a button on the standard login screen pointing at this
@@ -865,6 +877,14 @@ function createContextBase({
     registerPattern: (spec) => {
       claimKey(registry.patternSpecs, "pattern", spec.name, pluginId, () => ({
         spec,
+        registeredBy: pluginId,
+      }));
+    },
+
+    registerImageRole: (name, { single }) => {
+      claimKey(registry.imageRoles, "image role", name, pluginId, () => ({
+        name,
+        single,
         registeredBy: pluginId,
       }));
     },
