@@ -1,5 +1,7 @@
 # @plumix/admin
 
+## 0.24.0
+
 ## 0.23.0
 
 ### Patch Changes

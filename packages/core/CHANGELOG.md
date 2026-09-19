@@ -1,5 +1,12 @@
 # @plumix/core
 
+## 0.24.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @plumix/blocks@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes
