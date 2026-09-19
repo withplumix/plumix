@@ -23,6 +23,34 @@ function registerUserFields(
   });
 }
 
+describe("user meta: conditional fields", () => {
+  // Users share the meta pipeline, so an edit that switches a required field
+  // visible has to supply it here too.
+  test("an update that switches a required field visible without it is rejected", async () => {
+    const plugins = createPluginRegistry();
+    registerUserFields(plugins, [
+      { key: "layout", label: "Layout", type: "string", inputType: "text" },
+      {
+        key: "video_url",
+        label: "Video",
+        type: "string",
+        inputType: "text",
+        required: true,
+        visibleWhen: [[{ key: "layout", op: "eq", value: "video" }]],
+      },
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    await h.client.user.update({ id: h.user.id, meta: { layout: "standard" } });
+
+    await expect(
+      h.client.user.update({ id: h.user.id, meta: { layout: "video" } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
+    });
+  });
+});
+
 describe("user meta: registration + round-trip via user.update", () => {
   test("registered meta keys persist through user.update + user.get", async () => {
     const plugins = createPluginRegistry();

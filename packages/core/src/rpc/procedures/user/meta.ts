@@ -1,7 +1,12 @@
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
+import type {
+  MetaInput,
+  MetaPatch,
+  MetaPatchTarget,
+  ResolvedMeta,
+} from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
 import {
   findUserMetaField,
@@ -22,14 +27,16 @@ import { assertMetaCapabilities } from "../entry/meta.js";
 export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
 
 /** RPC-facing sanitizer for a user's meta input. User meta is a flat
- *  keyspace — no scope argument. */
+ *  keyspace — no scope argument. The target's `stored` is the meta the patch
+ *  lands on. */
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   input: MetaInput | undefined,
+  target: Omit<MetaPatchTarget, "fields">,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
-    (key) => findUserMetaField(registry, key),
+    { ...target, fields: listUserMetaFields(registry) },
     input,
     errors,
   );

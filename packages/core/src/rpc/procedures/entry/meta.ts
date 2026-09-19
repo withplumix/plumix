@@ -1,7 +1,12 @@
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
+import type {
+  MetaInput,
+  MetaPatch,
+  MetaPatchTarget,
+  ResolvedMeta,
+} from "../../meta/core.js";
 import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
@@ -26,16 +31,20 @@ import {
 
 export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
 
-/** RPC-facing sanitizer for an entry's meta input, scoped by entry type. */
+/**
+ * RPC-facing sanitizer for an entry's meta input, scoped by entry type. The
+ * target's `stored` is the meta the patch lands on — `{}` for a new entry.
+ */
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   entryType: string,
   input: MetaInput | undefined,
+  target: Omit<MetaPatchTarget, "fields">,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
-    (key) => findEntryMetaField(registry, entryType, key),
+    { ...target, fields: listEntryMetaFields(registry, entryType) },
     input,
     errors,
     mode,
@@ -119,6 +128,7 @@ export async function sanitizeAndValidateEntryMeta(
   ctx: AppContext,
   entryType: string,
   input: MetaInput | undefined,
+  stored: JsonObject,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2] &
     Parameters<typeof assertEntryMetaCapabilities>[4],
   mode: FieldPipelineMode = "strict",
@@ -127,6 +137,7 @@ export async function sanitizeAndValidateEntryMeta(
     ctx.plugins,
     entryType,
     input,
+    { stored, auth: ctx.auth },
     errors,
     mode,
   );
@@ -159,11 +170,12 @@ export async function sanitizePromotedEntryMeta(
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
   touched: ReadonlySet<string>,
 ): Promise<JsonObject> {
-  const fields = listEntryMetaFields(ctx.plugins, entryType).filter(
+  const all = listEntryMetaFields(ctx.plugins, entryType);
+  const fields = all.filter(
     (field) => !field.capability || ctx.auth.can(field.capability),
   );
   try {
-    return await validateAndPromoteMetaBag(fields, bag, touched);
+    return await validateAndPromoteMetaBag(fields, bag, touched, all);
   } catch (error) {
     if (error instanceof MetaValidationError) {
       throw metaValidationConflict(error, errors);

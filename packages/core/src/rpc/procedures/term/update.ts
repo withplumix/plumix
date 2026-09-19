@@ -67,6 +67,7 @@ export const update = base
       context.plugins,
       existing.taxonomy,
       metaInput,
+      { stored: existing.meta, auth: context.auth },
       errors,
     );
     if (metaPatch) {
