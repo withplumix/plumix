@@ -281,5 +281,7 @@ function cropToCard(ctx: AppContext, image: OgImage, size: CardSize): OgImage {
   // it declined, and no delivery at all says the same thing. The photo still
   // goes out — an uncropped picture unfurls where no picture does not — but at
   // its own size rather than described as a crop that never happened.
-  return url === undefined || url === image.url ? image : { url, ...size };
+  return url === undefined || url === image.url
+    ? image
+    : { url, ...size, alt: image.alt };
 }

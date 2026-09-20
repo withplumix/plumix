@@ -11,4 +11,11 @@ export interface OgImage {
   readonly url: string;
   readonly width?: number;
   readonly height?: number;
+  /**
+   * What the picture shows, where the image can say. Absent, null and empty
+   * all read as undescribed: a generated card, a URL typed into a box and a
+   * site-wide default leave the key off, while a role's image always carries
+   * it, so null is how a media row nobody described says the same thing.
+   */
+  readonly alt?: string | null;
 }

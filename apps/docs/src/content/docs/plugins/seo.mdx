@@ -70,7 +70,9 @@ A single entry additionally gets `article:published_time`, `article:modified_tim
 
 `og:title` is the title core resolved for the page — an entry's title with its shortcodes expanded, an archive's plural label, `Search: <query>`, or the title a `registerArchiveType` resolver returned. `og:url` is the same canonical URL core's `<link rel="canonical">` and its redirect normalizer resolve, so the page cannot contradict where core sends traffic.
 
-When a social image resolves, `og:image` is emitted with `og:image:width`, `og:image:height` and `twitter:image` beside it. The four travel as a group: a theme that declared its own `og:image` keeps the whole group, because a size appended next to it would describe some other picture.
+When a social image resolves, `og:image` is emitted with `og:image:width`, `og:image:height`, `twitter:image` and — where the image says what it shows — `og:image:alt` and `twitter:image:alt` beside it. They travel as a group: a theme that declared its own `og:image` keeps the whole group, because a size or a description appended next to it would describe some other picture.
+
+The alt text is the media row's own: an image chosen through the `featured` or `ogImage` role carries it, so filling in a picture's alt text in the media library is what puts it in the head. A generated card, a URL typed into the SEO box and the site-wide default have none, and those pages carry neither alt tag rather than an empty one.
 
 ## The social image chain
 
@@ -85,6 +87,8 @@ Five links resolve one `og:image`, in this order:
 The order is fixed here, not by subscription order, so a generated card never outranks an author's deliberate choice however the `plugins` array happens to be written.
 
 A subscriber receives the featured photo alongside the value rather than as the value, so it can improve on it — crop it to a card's shape, say — instead of only replacing it. Returning the value it was handed leaves the chain alone, so a subscriber that only handles some pages passes through on the rest.
+
+An image a subscriber returns may carry an `alt` of its own, which is then the one the head emits — a crop of the author's photo still shows what the photo showed, so passing its alt along keeps the description with the picture.
 
 ```ts no-typecheck
 ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {

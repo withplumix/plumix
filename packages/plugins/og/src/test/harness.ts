@@ -47,6 +47,7 @@ interface PhotoReference {
   readonly url: string;
   readonly width: number | null;
   readonly height: number | null;
+  readonly alt: string | null;
 }
 
 // Where `seedEntry` stores the picture it was handed, so a role field holds
@@ -76,6 +77,7 @@ function storePhoto(image: OgImage): string {
     // A media row carries null on both axes until something measures it.
     width: image.width ?? null,
     height: image.height ?? null,
+    alt: image.alt ?? null,
   });
   return id;
 }
@@ -92,10 +94,10 @@ const photoAdapter = {
   list: (_ctx, { ids }) =>
     Promise.resolve(filedPhotos(ids).map(({ id }) => ({ id, label: id }))),
   hydrate: (_ctx, { ids }) => Promise.resolve(filedPhotos(ids)),
-  image: ({ url, width, height }: PhotoReference) =>
+  image: ({ url, width, height, alt }: PhotoReference) =>
     width !== null && height !== null
-      ? { url, alt: null, width, height }
-      : { url, alt: null },
+      ? { url, alt, width, height }
+      : { url, alt },
 } satisfies LookupAdapter;
 
 // A host plugin registering the shapes a card has to tell apart: a public type,

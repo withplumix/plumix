@@ -37,7 +37,12 @@ const photoPlugin = definePlugin("photos", (ctx) => {
     adapter: {
       list: () => Promise.resolve([]),
       hydrate: (_appCtx, { ids }) => Promise.resolve(ids.map((id) => ({ id }))),
-      image: ({ id }) => ({ url: `https://cdn.example/${id}.png`, alt: null }),
+      // Only `p1` is described, so one suite covers both an image the head can
+      // name and one a media row left undescribed.
+      image: ({ id }) => ({
+        url: `https://cdn.example/${id}.png`,
+        alt: id === "p1" ? "A hero, described" : null,
+      }),
     },
   });
   ctx.registerEntryMetaBox("appearance", {
@@ -208,7 +213,7 @@ describe("head meta", () => {
     expect(head).toContain('<meta name="twitter:card" content="summary"/>');
   });
 
-  test("a featured photo nested in a group reaches og:image", async () => {
+  test("a featured photo nested in a group reaches og:image, alt and all", async () => {
     // The chain asks the entry for its `featured` role rather than walking the
     // type's fields for one, so a role field an appearance box nests in a
     // group answers where the walk this replaced saw nothing.
@@ -223,6 +228,29 @@ describe("head meta", () => {
     expect(head).toContain(
       '<meta property="og:image" content="https://cdn.example/p1.png"/>',
     );
+    // The media row said what the picture shows, so the head says it too.
+    expect(head).toContain(
+      '<meta property="og:image:alt" content="A hero, described"/>',
+    );
+    expect(head).toContain(
+      '<meta name="twitter:image:alt" content="A hero, described"/>',
+    );
+  });
+
+  test("a photo nobody described carries neither alt tag", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [photoPlugin, seo()],
+      theme,
+    });
+    await seedPost(h, { meta: { appearance: { hero: "p2" } } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta property="og:image" content="https://cdn.example/p2.png"/>',
+    );
+    expect(head).not.toContain("og:image:alt");
+    expect(head).not.toContain("twitter:image:alt");
   });
 
   test("a search-results route emits noindex", async () => {
