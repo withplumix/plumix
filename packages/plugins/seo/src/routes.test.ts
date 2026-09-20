@@ -125,19 +125,24 @@ const picturePlugin = picturePluginWith(0);
 
 // A `doc`-prefixed id stands in for a non-image upload, a `rel`-prefixed one
 // for the worker-proxied serve path a deploy with no public bucket URL hands
-// back.
+// back, and a `blank`-prefixed one for an adapter that answers with an image
+// carrying no URL.
 interface Upload {
   readonly id: string;
   readonly mime: string;
   readonly url: string;
 }
 
+function uploadUrl(id: string): string {
+  if (id.startsWith("blank")) return "";
+  if (id.startsWith("rel")) return `/_plumix/media/serve/${id}`;
+  return `https://cdn.example/${id}.png`;
+}
+
 const upload = (id: string): Upload => ({
   id,
   mime: id.startsWith("doc") ? "application/pdf" : "image/png",
-  url: id.startsWith("rel")
-    ? `/_plumix/media/serve/${id}`
-    : `https://cdn.example/${id}.png`,
+  url: uploadUrl(id),
 });
 
 /** What a spying suite substitutes for the adapter's own batched read. */
@@ -999,6 +1004,20 @@ describe("an entry's pictures in the sitemap", () => {
     // through to the next field rather than answering with nothing.
     expect(body.match(/<image:image>/g)).toHaveLength(1);
     expect(body).toContain("https://cdn.example/g0.png");
+  });
+
+  test("drops an image whose URL is empty rather than listing the site root", async () => {
+    // `URL.parse("", origin)` resolves to the origin, so an adapter handing
+    // back a blank URL would put the homepage in the picture list. The
+    // first-party media adapter refuses that payload; a third-party one need
+    // not, and the sitemap is what would publish the mistake.
+    const h = await createHarness([picturePlugin]);
+    await seedPost(h, { slug: "bare", meta: featured("blank1") });
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<url><loc>https://cms.example/post/bare</loc>");
+    expect(body).not.toContain("<image:image>");
   });
 
   test("lists one entry per picture even when two roles name the same one", async () => {

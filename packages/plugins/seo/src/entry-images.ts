@@ -6,9 +6,13 @@ import { readSeoOverrides } from "./overrides.js";
 
 // A media URL is relative whenever the bucket has no public one and the worker
 // proxies the file itself, and an editor may type a relative URL too — while a
-// sitemap `<image:loc>` has to be absolute. Anything unparseable drops out.
+// sitemap `<image:loc>` has to be absolute. Anything unparseable drops out, and
+// so does the empty string, which resolves to the site root rather than
+// failing: listing the homepage as a picture is the one wrong answer `URL`
+// hands back instead of refusing.
 function absolute(url: string | null, origin: string): string | null {
-  return url === null ? null : (URL.parse(url, origin)?.href ?? null);
+  if (url === null || url === "") return null;
+  return URL.parse(url, origin)?.href ?? null;
 }
 
 /**

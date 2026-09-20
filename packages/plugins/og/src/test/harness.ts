@@ -49,8 +49,8 @@ interface PhotoReference {
   readonly height: number | null;
 }
 
-// Where `seedEntry` files the picture it was handed, so a role field stores
-// the bare id a real reference stores and the adapter hands the row back. Ids
+// Where `seedEntry` stores the picture it was handed, so a role field holds
+// the bare id a real reference holds and the adapter hands the row back. Ids
 // are never reused, so a photo left behind by an earlier test is simply never
 // asked for again.
 const photos = new Map<string, PhotoReference>();
@@ -60,12 +60,15 @@ let nextPhoto = 0;
  * The meta a `.featured()` photo is stored as: a bare reference id, in the
  * group the role field sits in. Exported so a suite writing meta through the
  * entry RPC writes the same shape {@link seedEntry} does.
+ *
+ * Stores the photo as a side effect, so the adapter can hand it back — calling
+ * this twice for one image mints two rows pointing at the same URL.
  */
 export function featuredMeta(image: OgImage): JsonObject {
-  return { [FEATURED_GROUP_KEY]: { [FEATURED_KEY]: filePhoto(image) } };
+  return { [FEATURED_GROUP_KEY]: { [FEATURED_KEY]: storePhoto(image) } };
 }
 
-function filePhoto(image: OgImage): string {
+function storePhoto(image: OgImage): string {
   const id = `photo-${String(++nextPhoto)}`;
   photos.set(id, {
     id,
@@ -84,7 +87,7 @@ const filedPhotos = (ids: readonly string[] = []): PhotoReference[] =>
   });
 
 const photoAdapter = {
-  // A write validates a reference id by listing it, so an id `filePhoto` never
+  // A write validates a reference id by listing it, so an id `storePhoto` never
   // handed out is refused where a real missing row would be.
   list: (_ctx, { ids }) =>
     Promise.resolve(filedPhotos(ids).map(({ id }) => ({ id, label: id }))),
@@ -383,7 +386,7 @@ export async function seedEntry(
       ...(featured === undefined ? {} : featuredMeta(featured)),
       ...(shareImage === undefined
         ? {}
-        : { [OG_IMAGE_KEY]: filePhoto(shareImage) }),
+        : { [OG_IMAGE_KEY]: storePhoto(shareImage) }),
     },
     authorId,
   });
