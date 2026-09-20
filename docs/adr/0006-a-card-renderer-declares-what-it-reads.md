@@ -32,9 +32,9 @@ carries the rest:
 
 Every case falls out of it rather than needing a rule. `false` means no read,
 no asset layer required, and no fonts digested — a configured set is simply not
-addressed to that renderer, so it is a no-op and not an error. A face in an
-unparseable format is never fetched and never digested, because it is not an
-input to the bytes. And a configured set with nothing the renderer can parse
+addressed to that renderer, so it is a no-op and not an error. A face in a
+format the renderer cannot parse is never fetched and never digested, because
+it is not an input to the bytes. And a configured set with nothing it can parse
 fails the card, which is the policy the plugin already holds for a face it
 cannot read: a card with no text on it must not be served with a 200.
 
