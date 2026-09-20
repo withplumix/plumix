@@ -1,28 +1,16 @@
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   JsonMetaBoxField,
   MetaBoxFieldSpan,
-  MetaBoxFieldValidate,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
-interface JsonFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+interface JsonFieldState extends UniversalFieldState {
   readonly default?: unknown;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**

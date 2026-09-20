@@ -3,10 +3,7 @@ import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { ReferenceHydrationShapes } from "../lookup.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   EntryListMetaBoxField,
   EntryReferenceMetaBoxField,
@@ -20,6 +17,7 @@ import type {
   UserListMetaBoxField,
   UserMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
 /**
@@ -92,20 +90,11 @@ type ReferenceFieldOf<
         : UserMetaBoxField
       : never;
 
-interface ReferenceFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+interface ReferenceFieldState extends UniversalFieldState {
   readonly default?: string | readonly string[];
-  readonly required?: true;
   readonly multiple?: true;
   readonly returns?: ReferenceReadProjection;
   readonly max?: number;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**
@@ -341,6 +330,22 @@ export class ReferenceFieldBuilder<
     id: string,
   ): MetaFieldConditionRule {
     return { key: this.#key, op: "not_contains", value: id };
+  }
+
+  /** Rule factory: more than `count` entries selected — multi-value only. */
+  countGt(
+    this: ReferenceFieldBuilder<Kind, K, true, Required, Returns>,
+    count: number,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_gt", value: count };
+  }
+
+  /** Rule factory: fewer than `count` entries selected — multi-value only. */
+  countLt(
+    this: ReferenceFieldBuilder<Kind, K, true, Required, Returns>,
+    count: number,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_lt", value: count };
   }
 
   /**

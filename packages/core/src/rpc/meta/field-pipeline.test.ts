@@ -486,10 +486,88 @@ describe("repeater rows", () => {
     ]);
   });
 
+  test("an emptied repeater deletes its key rather than storing an empty list", async () => {
+    // Matches the group, whose all-blank value has always been a deletion.
+    const result = await runFieldPipeline(
+      sections,
+      [{ heading: "" }],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+    expect(result.value).toBeUndefined();
+  });
+
+  test("a min without a required still rejects an emptied repeater", async () => {
+    // `.min()` is a real constraint even though the field is optional, so
+    // the deletion short-circuit must not run ahead of the count bounds.
+    const bounded = repeater("faq")
+      .fields([text("q")])
+      .min(1)
+      .build();
+    const result = await runFieldPipeline(bounded, [{ q: "" }], "faq");
+    expect(result.errors).toEqual([
+      {
+        path: "faq",
+        message: { ...META_FIELD_MESSAGES.minRows, values: { min: 1 } },
+      },
+    ]);
+    expect(result.isDeletion).toBeUndefined();
+  });
+
+  test("a draft save of an emptied repeater deletes without running bounds", async () => {
+    const bounded = repeater("faq")
+      .fields([text("q")])
+      .min(1)
+      .build();
+    const result = await runFieldPipeline(bounded, [{ q: "" }], "faq", "draft");
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
   test("a non-array value is invalid at the repeater path", async () => {
     const result = await runFieldPipeline(sections, "nope", "sections");
     expect(result.errors).toEqual([
       { path: "sections", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("a composite .validate() sees the assembled post-strip rows", async () => {
+    const seen: unknown[] = [];
+    const unique = repeater("faq")
+      .fields([text("q")])
+      .validate((rows) => {
+        seen.push(rows);
+        return true;
+      })
+      .build();
+    const result = await runFieldPipeline(
+      unique,
+      [{ q: "a" }, { q: "" }, { q: "b" }],
+      "faq",
+    );
+    expect(result.errors).toHaveLength(0);
+    // The blank row is gone before the validator runs — a cross-row rule
+    // reasons about the rows that will be stored, not the ones typed.
+    expect(seen).toEqual([[{ q: "a" }, { q: "b" }]]);
+  });
+
+  test("a composite .validate() rejection anchors on the repeater's own path", async () => {
+    const unique = repeater("faq")
+      .fields([text("q")])
+      .validate((rows) =>
+        new Set(rows.map((r) => r.q)).size === rows.length
+          ? true
+          : "Questions must be unique",
+      )
+      .build();
+    const result = await runFieldPipeline(
+      unique,
+      [{ q: "a" }, { q: "a" }],
+      "faq",
+    );
+    expect(result.errors).toEqual([
+      { path: "faq", message: "Questions must be unique" },
     ]);
   });
 
@@ -507,6 +585,371 @@ describe("repeater rows", () => {
       "sections.0.weight",
       "sections.1.heading",
     ]);
+  });
+});
+
+describe("composite hooks on groups", () => {
+  test("a group .validate() sees the assembled members", async () => {
+    const seen: unknown[] = [];
+    const seo = group("seo")
+      .fields([text("title"), text("slug")])
+      .validate((members) => {
+        seen.push(members);
+        return true;
+      })
+      .build();
+    const result = await runFieldPipeline(
+      seo,
+      { title: "Hello", slug: "hello" },
+      "seo",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(seen).toEqual([{ title: "Hello", slug: "hello" }]);
+  });
+
+  test("a group .validate() rejection anchors on the group's own path", async () => {
+    const range_ = group("window")
+      .fields([number("from"), number("to")])
+      .validate((w) =>
+        (w.from ?? 0) <= (w.to ?? 0) ? true : "From must not exceed to",
+      )
+      .build();
+    const result = await runFieldPipeline(range_, { from: 9, to: 4 }, "window");
+    expect(result.errors).toEqual([
+      { path: "window", message: "From must not exceed to" },
+    ]);
+  });
+
+  test("a group .sanitize() reshapes the assembled members", async () => {
+    const seo = group("seo")
+      .fields([text("title"), text("slug")])
+      .sanitize((members) => ({
+        ...members,
+        slug: members.title?.toLowerCase() ?? "",
+      }))
+      .build();
+    const result = await runFieldPipeline(seo, { title: "Hello" }, "seo");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual({ title: "Hello", slug: "hello" });
+  });
+});
+
+describe("composite .sanitize() output is structurally re-checked", () => {
+  const faq = (
+    sanitize: (rows: readonly { q: string | undefined }[]) => unknown,
+  ) =>
+    repeater("faq")
+      .fields([text("q").maxLength(5)])
+      // Deliberately untyped at the seam: the re-check exists for callers
+      // whose sanitizer does not honour the declared return type.
+      .sanitize(
+        sanitize as (rows: readonly { q: string | undefined }[]) => never,
+      )
+      .build();
+
+  test("a non-array return is rejected at the repeater's own path", async () => {
+    const result = await runFieldPipeline(
+      faq(() => ({ nope: true })),
+      [{ q: "a" }],
+      "faq",
+    );
+    expect(result.errors).toEqual([
+      { path: "faq", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("a row carrying an undeclared key is rejected", async () => {
+    const result = await runFieldPipeline(
+      faq((rows) => rows.map((r) => ({ ...r, smuggled: 1 }))),
+      [{ q: "a" }],
+      "faq",
+    );
+    expect(result.errors).toEqual([
+      { path: "faq", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("cells are not re-walked — rearranging rows is the contract, authoring cells is not", async () => {
+    const result = await runFieldPipeline(
+      faq((rows) => [...rows].reverse()),
+      [{ q: "a" }, { q: "b" }],
+      "faq",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual([{ q: "b" }, { q: "a" }]);
+  });
+
+  test("a throwing sanitizer rounds to invalid at the composite path", async () => {
+    const result = await runFieldPipeline(
+      faq(() => {
+        throw new Error("boom");
+      }),
+      [{ q: "a" }],
+      "faq",
+    );
+    expect(result.errors).toEqual([
+      { path: "faq", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+});
+
+describe("a composite .sanitize() cannot smuggle a value past a cell's gates", () => {
+  test("a member copied into a url cell still clears the safe-href gate", async () => {
+    // The scalar path re-runs the security gates on its sanitizer's
+    // output; a composite that writes into a member must not be the way
+    // around them. `raw` is a plain text cell, so it accepts anything.
+    const cta = group("cta")
+      .fields([text("raw"), url("href")])
+      .sanitize((m) => ({ ...m, href: m.raw ?? "" }))
+      .build();
+    const result = await runFieldPipeline(
+      cta,
+      { raw: "javascript:alert(document.cookie)" },
+      "cta",
+    );
+    expect(result.errors).toEqual([
+      { path: "cta.href", message: META_FIELD_MESSAGES.invalidUrl },
+    ]);
+  });
+
+  test("a de-dupe that drops below .min() is rejected, not silently stored", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .min(2)
+      .sanitize((rows) => [...new Map(rows.map((r) => [r.v, r])).values()])
+      .build();
+    const result = await runFieldPipeline(
+      tags,
+      [{ v: "a" }, { v: "a" }, { v: "a" }],
+      "tags",
+    );
+    expect(result.errors).toEqual([
+      {
+        path: "tags",
+        message: { ...META_FIELD_MESSAGES.minRows, values: { min: 2 } },
+      },
+    ]);
+  });
+
+  test("a sanitizer may trim down to .max() — the bounds judge what it returned", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .max(2)
+      .sanitize((rows) => rows.slice(0, 2))
+      .build();
+    const result = await runFieldPipeline(
+      tags,
+      [{ v: "a" }, { v: "b" }, { v: "c" }],
+      "tags",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual([{ v: "a" }, { v: "b" }]);
+  });
+
+  test("a sanitizer may pad up to .min()", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .min(2)
+      .sanitize((rows) => [...rows, { v: "pad" }])
+      .build();
+    const result = await runFieldPipeline(tags, [{ v: "a" }], "tags");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual([{ v: "a" }, { v: "pad" }]);
+  });
+
+  test("a cell rejected after a reorder anchors on the repeater, not a moved index", async () => {
+    // Post-sanitize row positions no longer address anything the admin
+    // rendered, so pointing at one would highlight the wrong row and show
+    // the author a valid value.
+    const links = repeater("links")
+      .fields([text("raw"), url("href")])
+      .sanitize((rows) =>
+        [...rows].reverse().map((r) => ({ ...r, href: r.raw })),
+      )
+      .build();
+    const result = await runFieldPipeline(
+      links,
+      [{ raw: "javascript:alert(1)" }, { raw: "https://ok.example" }],
+      "links",
+    );
+    expect(result.errors).toEqual([
+      { path: "links", message: META_FIELD_MESSAGES.invalidUrl },
+    ]);
+  });
+
+  test("a blank row the sanitizer appends is stripped, not stored", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .sanitize((rows) => [...rows, {}])
+      .build();
+    const result = await runFieldPipeline(tags, [{ v: "a" }], "tags");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual([{ v: "a" }]);
+  });
+});
+
+describe("a composite .sanitize() clears the field by returning it empty", () => {
+  test("a repeater sanitizer returning no rows deletes the key", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .sanitize(() => [])
+      .build();
+    const result = await runFieldPipeline(tags, [{ v: "a" }], "tags");
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
+  test("a group sanitizer returning no members deletes the key", async () => {
+    const seo = group("seo")
+      .fields([text("title")])
+      .sanitize(() => ({}))
+      .build();
+    const result = await runFieldPipeline(seo, { title: "x" }, "seo");
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
+  test("clearing a required group is rejected, exactly as for a repeater", async () => {
+    const seo = group("seo")
+      .fields([text("title")])
+      .required()
+      .sanitize(() => ({}))
+      .build();
+    const result = await runFieldPipeline(seo, { title: "x" }, "seo");
+    expect(result.errors).toEqual([
+      { path: "seo", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+
+  test("clearing a required composite is still rejected", async () => {
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .required()
+      .sanitize(() => [])
+      .build();
+    const result = await runFieldPipeline(tags, [{ v: "a" }], "tags");
+    expect(result.errors).toEqual([
+      { path: "tags", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+});
+
+describe("composite hooks nested inside one another", () => {
+  test("a hidden inner group's rule is skipped while the outer repeater's still runs", async () => {
+    // `cellMode` drops a condition-hidden cell to draft so a business
+    // rule can't fail on an input nobody can open. The inner group is
+    // that cell; the outer repeater is not, so it still runs strict and
+    // receives the very cell whose own rule was skipped. That mixed trust
+    // is the documented consequence of the hook, pinned here.
+    const inner: unknown[] = [];
+    const outer: unknown[] = [];
+    const rows = repeater("sections")
+      .fields([
+        select("kind").options(["hero", "plain"]),
+        group("hero")
+          .fields([text("headline")])
+          .visibleWhen({ key: "kind", op: "eq", value: "hero" })
+          .validate((members) => {
+            inner.push(members);
+            return "the inner rule always fails";
+          }),
+      ])
+      .validate((assembled) => {
+        outer.push(assembled);
+        return true;
+      })
+      .build();
+    const result = await runFieldPipeline(
+      rows,
+      [{ kind: "plain", hero: { headline: "left over" } }],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(inner).toEqual([]);
+    expect(outer).toEqual([
+      [{ kind: "plain", hero: { headline: "left over" } }],
+    ]);
+  });
+
+  test("a visible inner group's rule reports at its own nested path", async () => {
+    const rows = repeater("sections")
+      .fields([
+        select("kind").options(["hero", "plain"]),
+        group("hero")
+          .fields([text("headline")])
+          .visibleWhen({ key: "kind", op: "eq", value: "hero" })
+          .validate(() => "Headline reads badly"),
+      ])
+      .build();
+    const result = await runFieldPipeline(
+      rows,
+      [{ kind: "hero", hero: { headline: "x" } }],
+      "sections",
+    );
+    expect(result.errors).toEqual([
+      { path: "sections.0.hero", message: "Headline reads badly" },
+    ]);
+  });
+});
+
+describe("when composite hooks are skipped", () => {
+  const spyRepeater = (calls: unknown[]) =>
+    repeater("faq")
+      .fields([text("q").required().maxLength(5)])
+      .validate((rows) => {
+        calls.push(rows);
+        return true;
+      });
+
+  test("not run when a cell failed — the rule would be reading garbage", async () => {
+    const calls: unknown[] = [];
+    const result = await runFieldPipeline(
+      spyRepeater(calls).build(),
+      [{ q: "way too long" }],
+      "faq",
+    );
+    expect(result.errors).toHaveLength(1);
+    expect(calls).toEqual([]);
+  });
+
+  test("not run on a draft save — a cross-row rule is a business rule", async () => {
+    const calls: unknown[] = [];
+    const result = await runFieldPipeline(
+      spyRepeater(calls).build(),
+      [{ q: "ok" }],
+      "faq",
+      "draft",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(calls).toEqual([]);
+  });
+
+  test("a repeater .sanitize() is not run on the deletion path either", async () => {
+    const calls: unknown[] = [];
+    const tags = repeater("tags")
+      .fields([text("v")])
+      .sanitize((rows) => {
+        calls.push(rows);
+        return rows;
+      })
+      .build();
+    const result = await runFieldPipeline(tags, [{ v: "" }], "tags");
+    expect(result.isDeletion).toBe(true);
+    expect(calls).toEqual([]);
+  });
+
+  test("not run when the composite resolves to a deletion", async () => {
+    const calls: unknown[] = [];
+    const seo = group("seo")
+      .fields([text("title")])
+      .validate((members) => {
+        calls.push(members);
+        return true;
+      })
+      .build();
+    const result = await runFieldPipeline(seo, { title: "" }, "seo");
+    expect(result.isDeletion).toBe(true);
+    expect(calls).toEqual([]);
   });
 });
 

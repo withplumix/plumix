@@ -1,9 +1,6 @@
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   MetaBoxFieldOption,
@@ -14,6 +11,7 @@ import type {
   SelectMetaBoxField,
   SingleSelectMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
 /**
@@ -36,21 +34,12 @@ type AppearanceFor<Multiple extends boolean> = Multiple extends true
   ? "buttons" | "checkboxes"
   : "select" | "radio" | "buttons";
 
-interface SelectFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
+interface SelectFieldState extends UniversalFieldState {
   readonly options: readonly MetaBoxFieldOption[];
   readonly multiple?: true;
   readonly max?: number;
   readonly appearance?: SelectAppearance;
-  readonly label?: Label;
-  readonly description?: Label;
   readonly default?: string | readonly string[];
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**

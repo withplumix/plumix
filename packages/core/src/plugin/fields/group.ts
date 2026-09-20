@@ -1,8 +1,6 @@
 import type { Label } from "../../i18n/label.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { JsonValue } from "../../json.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type { InferFields, InferStoredFields } from "./contributions.js";
 import type {
   FieldBuilder,
@@ -10,20 +8,16 @@ import type {
   MetaBoxField,
   MetaBoxFieldInput,
   MetaBoxFieldSpan,
+  MetaBoxFieldValidate,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 import { compileMetaBoxFields } from "./meta-box-field.js";
 import { assertSubFields } from "./sub-fields.js";
 
-interface GroupFieldState {
+interface GroupFieldState extends UniversalFieldState {
   readonly fields: readonly MetaBoxField[];
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
+  readonly default?: unknown;
 }
 
 /**
@@ -103,6 +97,22 @@ export class GroupFieldBuilder<
     return this.#fork({ description });
   }
 
+  /**
+   * Member values the admin form seeds when the key has no stored value.
+   * Typed against the declared members in their STORED spelling — an ISO
+   * string, a bare reference id — because the seed lands in the form bag
+   * with no conversion. Partial by design; a misspelled key is a compile
+   * error.
+   *
+   * Applies on read only, and a partial default leaves the rest absent,
+   * so this does not narrow the read type the way `.required()` does. It
+   * also reseeds after the group is cleared: an emptied group deletes its
+   * key, and a key with no stored value is exactly what a default answers.
+   */
+  default(value: Partial<InferStoredFields<F>>): GroupFieldBuilder<F, K, V, S> {
+    return this.#fork({ default: value });
+  }
+
   /** Mark the group required — narrows the read/stored types to the
    *  non-optional nested record. */
   required(): GroupFieldBuilder<F, K, InferFields<F>, InferStoredFields<F>> {
@@ -156,6 +166,35 @@ export class GroupFieldBuilder<
     return this.#fork({
       visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
     });
+  }
+
+  /**
+   * Reshape the whole member object before persistence — derive one
+   * member from another, or drop a member. Runs once, after every member
+   * has been settled, which is why it is typed against the stored shape:
+   * a reference member is a bare id here, not the hydrated summary a read
+   * returns. Members are not re-validated afterwards, but the
+   * blank-member check and the security gates do re-run over the output,
+   * so a sanitizer cannot write a value into a member that the member's
+   * own field would have refused. Returning no members clears the field.
+   */
+  sanitize(
+    sanitize: (members: NonNullable<S>) => Partial<InferStoredFields<F>>,
+  ): GroupFieldBuilder<F, K, V, S> {
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
+  }
+
+  /**
+   * Cross-member rule — returns `true` or the failure message (sync or
+   * async), reported against the group itself. Runs last: after every
+   * member passed and after `.sanitize()`, so a rule relating two members
+   * sees exactly what will be stored. Skipped when any member failed,
+   * when the group is empty (that is a deletion), and on a draft save.
+   */
+  validate(
+    validate: (members: NonNullable<S>) => true | Label | Promise<true | Label>,
+  ): GroupFieldBuilder<F, K, V, S> {
+    return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 
   /** Compile the chain into the wire/manifest field definition. */
