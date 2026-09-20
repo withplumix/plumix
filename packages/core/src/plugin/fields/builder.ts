@@ -1,9 +1,6 @@
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   MetaBoxFieldSpan,
@@ -11,6 +8,7 @@ import type {
   StringInputType,
   StringMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 
 export type { StringInputType } from "./meta-box-field.js";
 
@@ -26,22 +24,13 @@ export function humanizeFieldKey(key: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-export interface StringFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+export interface StringFieldState extends UniversalFieldState {
   readonly placeholder?: Label;
   readonly prepend?: Label;
   readonly append?: Label;
   readonly default?: string;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
   readonly searchable?: true;
   readonly maxLength?: number;
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**

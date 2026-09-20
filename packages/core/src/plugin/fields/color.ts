@@ -1,28 +1,17 @@
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   ColorMetaBoxField,
   FieldBuilder,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
-interface ColorFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+interface ColorFieldState extends UniversalFieldState {
   readonly default?: string;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 export const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;

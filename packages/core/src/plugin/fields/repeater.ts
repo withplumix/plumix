@@ -1,31 +1,25 @@
 import type { Label } from "../../i18n/label.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { JsonValue } from "../../json.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type { InferFields, InferStoredFields } from "./contributions.js";
 import type {
   FieldBuilder,
   MetaBoxField,
   MetaBoxFieldInput,
   MetaBoxFieldSpan,
+  MetaBoxFieldValidate,
   RepeaterDialogSize,
   RepeaterLayout,
   RepeaterMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 import { compileMetaBoxFields } from "./meta-box-field.js";
 import { assertSubFields } from "./sub-fields.js";
 
-interface RepeaterFieldState {
+interface RepeaterFieldState extends UniversalFieldState {
   readonly subFields: readonly MetaBoxField[];
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
+  readonly default?: unknown;
   readonly min?: number;
   readonly max?: number;
   readonly addLabel?: Label;
@@ -114,6 +108,25 @@ export class RepeaterFieldBuilder<
     return this.#fork({ description });
   }
 
+  /**
+   * Rows the admin form seeds when the key has no stored value. Typed
+   * against the declared row schema in its STORED spelling — an ISO
+   * string, a bare reference id — because the seed lands in the form bag
+   * with no conversion. Rows are partial by design; a misspelled
+   * sub-field key is a compile error.
+   *
+   * Applies on read only, and a seeded row is not a stored one, so this
+   * does not narrow the read type the way `.required()` does. It also
+   * reseeds after the repeater is cleared: an emptied repeater deletes
+   * its key, and a key with no stored value is exactly what a default
+   * answers.
+   */
+  default(
+    rows: readonly Partial<InferStoredFields<F>>[],
+  ): RepeaterFieldBuilder<F, K, V, S> {
+    return this.#fork({ default: rows });
+  }
+
   /** Minimum row count — enforced server-side by the constraint walker. */
   min(min: number): RepeaterFieldBuilder<F, K, V, S> {
     return this.#fork({ min });
@@ -195,6 +208,16 @@ export class RepeaterFieldBuilder<
     return { key: this.#key, op: "not_empty" };
   }
 
+  /** Rule factory: more than `count` rows. */
+  countGt(count: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_gt", value: count };
+  }
+
+  /** Rule factory: fewer than `count` rows. */
+  countLt(count: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_lt", value: count };
+  }
+
   /**
    * Show this field only when every rule passes (one AND group) —
    * rules come from sibling fields' condition factories. Replaces any
@@ -214,6 +237,40 @@ export class RepeaterFieldBuilder<
     return this.#fork({
       visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
     });
+  }
+
+  /**
+   * Reshape the whole row list before persistence — reorder, de-dupe or
+   * trim. Runs once, after every cell has been settled, which is why it is
+   * typed against the stored shape: a reference cell is a bare id here,
+   * not the hydrated summary a read returns. Cells are not re-validated
+   * afterwards, but the blank-row strip and the security gates do re-run
+   * over the output, so a sanitizer cannot write a value into a cell that
+   * the cell's own field would have refused. The row-count bounds are
+   * checked against what the callback returned, so a sanitizer may trim
+   * to `.max()` or pad to `.min()` — and a de-dupe that cuts below
+   * `.min()` is still rejected. Returning no rows clears the field.
+   */
+  sanitize(
+    sanitize: (
+      rows: NonNullable<S>,
+    ) => readonly Partial<InferStoredFields<F>>[],
+  ): RepeaterFieldBuilder<F, K, V, S> {
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
+  }
+
+  /**
+   * Cross-row rule — returns `true` or the failure message (sync or
+   * async), reported against the repeater itself. Runs last: after the
+   * blank-row strip, after every cell passed, and after `.sanitize()`, so
+   * a uniqueness or total-count rule reasons about exactly the rows that
+   * will be stored. Skipped when any cell failed, when the strip leaves no
+   * rows (that is a deletion), and on a draft save.
+   */
+  validate(
+    validate: (rows: NonNullable<S>) => true | Label | Promise<true | Label>,
+  ): RepeaterFieldBuilder<F, K, V, S> {
+    return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 
   /** Compile the chain into the wire/manifest field definition. */

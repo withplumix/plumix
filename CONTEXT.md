@@ -95,8 +95,15 @@ it resembles.
 **Reference field**:
 A meta-box field whose value is a foreign id (or list) into another entity — user, entry, term, or media — resolved at read time.
 
+**Composite field**:
+A meta-box field whose value is assembled from declared sub-fields rather than stored directly — a group or a repeater. The two share one write path: each sub-field is settled on its own, an all-blank value is treated as an authoring affordance and dropped, and the field's own checks run last, over the assembled result.
+_Avoid_: structural field — that is the wider roster family, which also holds rich text and link.
+
+**Group**:
+A composite field holding one keyed object of members, stored nested under the group's own key. Members are addressed by name, never flattened into the surrounding bag.
+
 **Repeater**:
-A meta-box field holding a list of structured rows that share one fixed subfield schema.
+A composite field holding a list of structured rows that share one fixed subfield schema.
 
 **Image role**:
 A named purpose an entry, term or user scope assigns to one of its media reference fields, so a reader asks for "the entry's featured image" rather than for a meta key. Core ships `featured` and `ogImage`; a plugin or theme declares any other. Each role declares whether a scope may carry more than one field in it. A role field may sit inside a group, never inside a repeater: a role names the entry's image, not a row's.

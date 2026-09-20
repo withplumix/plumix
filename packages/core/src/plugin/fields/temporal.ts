@@ -1,9 +1,6 @@
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   MetaBoxFieldSpan,
@@ -11,6 +8,7 @@ import type {
   TemporalInputType,
   TemporalMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 import { FieldConfigError } from "./errors.js";
 import { isValidTemporalValue } from "./meta-box-field.js";
@@ -20,20 +18,11 @@ export type { TemporalInputType } from "./meta-box-field.js";
 /** Read type after `.returns("date")` — optionality carries over from `V`. */
 type ProjectedDate<V> = undefined extends V ? Date | undefined : Date;
 
-interface TemporalFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+interface TemporalFieldState extends UniversalFieldState {
   readonly default?: string;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
   readonly min?: string;
   readonly max?: string;
   readonly returns?: "date";
-  readonly sanitize?: (value: unknown) => JsonValue;
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**

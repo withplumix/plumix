@@ -1,30 +1,19 @@
 import type { Label } from "../../i18n/label.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   MetaBoxFieldSpan,
-  MetaBoxFieldValidate,
   RichtextMetaBoxField,
 } from "./meta-box-field.js";
+import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 
-interface RichtextFieldState {
-  readonly visibleWhen?: MetaFieldCondition;
-  readonly label?: Label;
-  readonly description?: Label;
+interface RichtextFieldState extends UniversalFieldState {
   readonly default?: unknown;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
   readonly searchable?: true;
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
-  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**

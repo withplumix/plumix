@@ -8,8 +8,10 @@ import type {
 } from "../lookup.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
+import { seedFromMetaBoxes } from "../manifest-projection.js";
 import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
+import { isFieldVisible } from "./condition.js";
 import {
   color,
   date,
@@ -607,6 +609,94 @@ describe("reference builder phantom typing", () => {
   });
 });
 
+describe("composite defaults reach the admin form", () => {
+  test("the manifest carries a composite default through to the seed", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          group("seo")
+            .fields([text("title")])
+            .default({ title: "Untitled" }),
+          repeater("faq")
+            .fields([text("q")])
+            .default([{ q: "What is this?" }]),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const fields = buildManifest(registry).settingsGroups[0]?.fields ?? [];
+    expect(fields.map((f) => f.default)).toEqual([
+      { title: "Untitled" },
+      [{ q: "What is this?" }],
+    ]);
+    expect(seedFromMetaBoxes([{ fields }], null)).toEqual({
+      seo: { title: "Untitled" },
+      faq: [{ q: "What is this?" }],
+    });
+  });
+
+  test("a stored value wins over the default", () => {
+    const fields = [
+      group("seo")
+        .fields([text("title")])
+        .default({ title: "Untitled" })
+        .build(),
+    ];
+    expect(seedFromMetaBoxes([{ fields }], { seo: { title: "Real" } })).toEqual(
+      {
+        seo: { title: "Real" },
+      },
+    );
+  });
+});
+
+describe("count rules on multi-value collections", () => {
+  test("a multi-value reference gates a condition on its selection count", () => {
+    const related = entry("related", ["post"]).multiple();
+    expect(related.countGt(2)).toEqual({
+      key: "related",
+      op: "count_gt",
+      value: 2,
+    });
+    expect(related.countLt(5)).toEqual({
+      key: "related",
+      op: "count_lt",
+      value: 5,
+    });
+  });
+
+  test("a repeater gates a condition on its row count", () => {
+    const faq = repeater("faq").fields([text("q")]);
+    expect(faq.countGt(2)).toEqual({ key: "faq", op: "count_gt", value: 2 });
+    expect(faq.countLt(5)).toEqual({ key: "faq", op: "count_lt", value: 5 });
+  });
+
+  test("a single-value reference has no count to compare", () => {
+    const one = entry("one", ["post"]);
+    // @ts-expect-error — a count rule needs a collection; declare .multiple().
+    one.countGt(2);
+    // @ts-expect-error — a count rule needs a collection; declare .multiple().
+    one.countLt(2);
+    const author = user("author");
+    // @ts-expect-error — a count rule needs a collection; declare .multiple().
+    author.countGt(2);
+  });
+
+  test("the rule gates a sibling field's visibility on the live value", () => {
+    const related = entry("related", ["post"]).multiple();
+    const note = text("note").visibleWhen(related.countGt(2)).build();
+    expect(isFieldVisible(note, { related: ["a", "b", "c"] })).toBe(true);
+    expect(isFieldVisible(note, { related: ["a", "b"] })).toBe(false);
+
+    const faq = repeater("faq").fields([text("q")]);
+    const hint = text("hint").visibleWhen(faq.countLt(2)).build();
+    expect(isFieldVisible(hint, { faq: [{ q: "a" }] })).toBe(true);
+    expect(isFieldVisible(hint, { faq: [{ q: "a" }, { q: "b" }] })).toBe(false);
+  });
+});
+
 describe("richtext() builder", () => {
   test("chains the allowlist arrays into a richtext definition", () => {
     const field = richtext("body")
@@ -709,6 +799,27 @@ describe("repeater() builder", () => {
       .fields([text("label")])
       .build();
     expect(field.label).toBe("Call to actions");
+  });
+
+  test("a default is the stored shape, matching every scalar builder", () => {
+    // `.default()` lands straight in the form bag with no conversion, so
+    // it must be spelled the way storage holds it — an ISO string, not the
+    // `Date` the `.returns("date")` projection hands a reader.
+    repeater("events")
+      .fields([date("on").returns("date")])
+      .default([{ on: "2026-01-01" }]);
+    repeater("events")
+      .fields([date("on").returns("date")])
+      // @ts-expect-error — a Date is the read projection, not the stored value.
+      .default([{ on: new Date() }]);
+  });
+
+  test("carries a default row array the admin form seeds from", () => {
+    const field = repeater("faq")
+      .fields([text("q"), text("a")])
+      .default([{ q: "What is Plumix?", a: "A CMS." }])
+      .build();
+    expect(field.default).toEqual([{ q: "What is Plumix?", a: "A CMS." }]);
   });
 
   test("carries the chosen row-editor dialog size", () => {
@@ -872,6 +983,36 @@ describe("group() builder", () => {
       /declares field "title" more than once/,
     );
     expect(() => group("seo").fields([text("__proto__")])).toThrow(/forbidden/);
+  });
+
+  test("composite callbacks are typed against the stored shape, not the read shape", () => {
+    // The hooks run inside the write pipeline, on cells that have already
+    // been settled — a reference member is a bare id there, not the
+    // hydrated summary a read returns. Typing the callback against the
+    // read shape would hand the author a lie.
+    group("card")
+      .fields([text("title"), entry("related", ["post"])])
+      .validate((members) => {
+        expectTypeOf(members.related).toEqualTypeOf<string | undefined>();
+        expectTypeOf(members.title).toEqualTypeOf<string | undefined>();
+        return true;
+      });
+    repeater("cards")
+      .fields([entry("related", ["post"])])
+      .sanitize((rows) => {
+        expectTypeOf(rows[0]).toEqualTypeOf<
+          { related: string | undefined } | undefined
+        >();
+        return rows;
+      });
+  });
+
+  test("carries a default member object the admin form seeds from", () => {
+    const field = group("seo")
+      .fields([text("title"), textarea("description")])
+      .default({ title: "Untitled" })
+      .build();
+    expect(field.default).toEqual({ title: "Untitled" });
   });
 
   test("manifest round-trip projects members into the wire subFields slot", async () => {
