@@ -159,6 +159,7 @@ const AUTHOR: ResolvedAuthor = {
   slug: "sample-author",
   name: "Sample Author",
   avatarUrl: null,
+  images: {},
 };
 
 const PAGINATION: Pagination = {
@@ -187,6 +188,7 @@ function sampleEntry(target: SampleTarget): ResolvedEntry {
     sortOrder: 0,
     meta: {},
     storedMeta: {},
+    images: {},
     publishedAt: SAMPLE_DATE,
     createdAt: SAMPLE_DATE,
     updatedAt: SAMPLE_DATE,
@@ -205,6 +207,7 @@ function sampleTerm(target: SampleTarget): ResolvedTerm {
     description: SAMPLE_EXCERPT,
     meta: {},
     storedMeta: {},
+    images: {},
     parentId: null,
     version: 0,
     url: `/${target.type}/${target.slug}`,

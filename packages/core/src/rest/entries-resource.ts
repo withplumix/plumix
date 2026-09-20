@@ -80,6 +80,7 @@ export async function listEntriesEnvelope(
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   const data = rows.map((row) =>
     projectEntry(
+      context.plugins,
       row,
       authors.get(row.authorId) ?? null,
       termsByEntry.get(row.id) ?? {},
@@ -113,6 +114,7 @@ export async function getEntryItem(
   const termsByEntry = await loadEntriesTerms(context, [entry.id]);
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
   return projectEntry(
+    context.plugins,
     entry,
     authors.get(entry.authorId) ?? null,
     termsByEntry.get(entry.id) ?? {},

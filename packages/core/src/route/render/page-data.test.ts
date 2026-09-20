@@ -6,6 +6,13 @@ import { definePlugin } from "../../plugin/define.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { createTestContext } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
+import {
+  photoField,
+  photoLookupAdapter,
+  photoProfilePlugin,
+  photoUrl,
+} from "../../test/photo-lookup.js";
+import { createTracedContext } from "../../test/traced-context.js";
 import { resolveListingPage } from "./page-data.js";
 import { forTermTaxonomy } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
@@ -44,6 +51,17 @@ const blog = definePlugin("blog", (ctx) => {
     label: "Moods",
     entryTypes: ["post"],
     isPublic: false,
+  });
+});
+
+// Gives a category term a `featured` role field, so the term archive has an
+// image to project.
+const termArt = definePlugin("term-art", (ctx) => {
+  ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+  ctx.registerTermMetaBox("categoryArt", {
+    label: "Art",
+    termTaxonomies: ["category"],
+    fields: [photoField("banner", { role: "featured" })],
   });
 });
 
@@ -222,7 +240,9 @@ describe("resolveListingPage", () => {
     expect(page?.data.kind).toBe("author");
     expect(
       page?.data.kind === "author" ? Object.keys(page.data.author).sort() : [],
-    ).toEqual(["avatarUrl", "id", "name", "slug"]);
+      // `images` is the only thing a role adds: the meta bag it was read from
+      // does not travel with the author, so nothing else of the row does.
+    ).toEqual(["avatarUrl", "id", "images", "name", "slug"]);
   });
 
   test("has no author page for an id no user carries", async () => {
@@ -277,5 +297,63 @@ describe("resolveListingPage", () => {
     });
 
     expect(page?.data.pagination.page).toBe(1);
+  });
+
+  test("an author archive resolves its subject's images without a second hydration", async () => {
+    const traced = await createTracedContext({
+      plugins: [blog, photoProfilePlugin],
+    });
+    const { harness } = traced;
+    const photo = await harness.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: (await harness.factory.user.create({})).id,
+    });
+    const author = await harness.factory.user.create({
+      meta: { portrait: String(photo.id) },
+    });
+    await harness.factory.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+      authorId: author.id,
+    });
+
+    const page = await traced.run(() =>
+      resolveListingPage(traced.ctx, { kind: "author", id: author.id }),
+    );
+    if (page?.data.kind !== "author")
+      throw new Error("expected an author page");
+
+    expect(page.data.author.images.featured).toEqual({
+      url: photoUrl(photo.id),
+      alt: null,
+    });
+    // The subject's row, its portrait, the entry count and page, and the
+    // entry_term join. Listing the author's own entries replays the author
+    // from the request memo rather than hydrating the portrait again.
+    expect(traced.dbQueryCount()).toBe(5);
+  });
+
+  test("a term archive carries the term's images by role", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog, termArt] });
+    const photoId = await seedPost(h, { title: "Banner" });
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "Design",
+      slug: "design",
+      meta: { banner: String(photoId) },
+    });
+
+    const page = await resolveListingPage(contextFor(h), {
+      kind: "term",
+      id: term.id,
+    });
+    if (page?.data.kind !== "taxonomy") throw new Error("expected a term page");
+
+    expect(page.data.term.images.featured).toEqual({
+      url: photoUrl(photoId),
+      alt: null,
+    });
   });
 });

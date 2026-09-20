@@ -90,9 +90,10 @@ export async function resolveUserMeta(
 
 /**
  * Settle one user's stored bag and return the bag a reader should decode —
- * the user counterpart of `settleEntryMeta`. Users have no public render
- * surface reading their meta (`ResolvedAuthor` projects none), so the only
- * read to hang this off is `user.get`.
+ * the user counterpart of `settleEntryMeta`, which says why the settle hangs
+ * off the single-item read. The public render path reads user meta for an
+ * author's role images and does not come through here, so it reads the stored
+ * column as it finds it — see `storedId` in `images/role-images.ts`.
  */
 export async function settleUserMeta(
   ctx: AppContext,

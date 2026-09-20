@@ -29,6 +29,15 @@ export const publicTermSchema = v.object({
   slug: v.string(),
 });
 
+// One role's image. `width`/`height` are present only when the adapter knows
+// the size, matching `ResolvedImage`.
+const publicImageSchema = v.object({
+  url: v.string(),
+  alt: v.nullable(v.string()),
+  width: v.optional(v.number()),
+  height: v.optional(v.number()),
+});
+
 export const publicEntrySchema = v.object({
   id: v.number(),
   type: v.string(),
@@ -45,6 +54,10 @@ export const publicEntrySchema = v.object({
   terms: v.record(v.string(), v.array(publicTermSchema)),
   // Only meta fields whitelisted with `showInApi` reach this map (default-deny).
   meta: v.record(v.string(), v.unknown()),
+  // Image roles, one key per role whose field opted in with `showInApi` — the
+  // same default-deny gate `meta` runs under. `null` is a role whose field
+  // resolved to no image.
+  images: v.record(v.string(), v.nullable(publicImageSchema)),
 });
 
 function listEnvelopeSchema<TItem extends v.GenericSchema>(item: TItem) {

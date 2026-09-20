@@ -6,6 +6,7 @@ import type { AppContext } from "../../context/app.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { MetaFieldValues } from "../../plugin/fields/condition.js";
 import type {
+  HydratedReference,
   LookupAdapter,
   ReferenceHydrationShapes,
 } from "../../plugin/lookup.js";
@@ -787,7 +788,7 @@ const MAX_REFERENCE_GROUP_BATCH = 1000;
 // `LookupAdapter` requires JSON-serializable scope; rethrow with a
 // clear message if `JSON.stringify` rejects (BigInt, cycle, function)
 // rather than letting the downstream read crash with a generic.
-function referenceGroupKey(target: ReferenceTarget): string {
+export function referenceGroupKey(target: ReferenceTarget): string {
   try {
     return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
   } catch (cause) {
@@ -1022,7 +1023,10 @@ export async function resolveMetaReferences(
  * single refs null, multi refs drop the item (array stays dense).
  */
 type GroupResolution =
-  | { readonly kind: "hydrated"; readonly byId: ReadonlyMap<string, unknown> }
+  | {
+      readonly kind: "hydrated";
+      readonly byId: ReadonlyMap<string, HydratedReference>;
+    }
   | { readonly kind: "ids"; readonly liveIds: ReadonlySet<string> };
 
 export async function resolveMetaBags(
@@ -1162,6 +1166,29 @@ export async function resolveReferences<
     .filter((p): p is ReferenceHydrationShapes[K] => p !== undefined);
 }
 
+/**
+ * Hydrate one `(kind, scope)` group's ids, keyed for lookup — what a reader
+ * holding stored ids from many bags needs, where `resolveReferences` serves
+ * one caller-ordered list. Same batching: one in-query per chunk, cache tags
+ * accumulated. An unregistered kind, or an adapter without `hydrate`, yields
+ * an empty map, so every id in the group reads as an orphan.
+ */
+export async function hydrateReferenceGroup(
+  ctx: AppContext,
+  target: ReferenceTarget,
+  ids: ReadonlySet<string>,
+): Promise<ReadonlyMap<string, HydratedReference>> {
+  const registered = ctx.plugins.lookupAdapters.get(target.kind);
+  if (!registered?.adapter.hydrate || ids.size === 0) return new Map();
+  const resolution = await resolveGroup(
+    ctx,
+    registered.adapter,
+    target.scope,
+    ids,
+  );
+  return resolution.kind === "hydrated" ? resolution.byId : new Map();
+}
+
 // Resolve one `(kind, scope)` group's aggregated ids. Chunked at
 // `HYDRATION_QUERY_ID_LIMIT` per in-query: a response-level group can
 // legitimately aggregate more ids than one query may carry (a
@@ -1178,7 +1205,7 @@ async function resolveGroup(
 ): Promise<GroupResolution> {
   const idList = [...ids];
   if (adapter.hydrate) {
-    const byId = new Map<string, unknown>();
+    const byId = new Map<string, HydratedReference>();
     for (const chunk of chunkForD1(idList)) {
       const payloads = await adapter.hydrate(ctx, { ids: chunk, scope });
       for (const payload of payloads) {

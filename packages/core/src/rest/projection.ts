@@ -8,6 +8,7 @@ import { eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { projectImageRoles } from "../images/role-images.js";
 
 export function projectTerm(
   term: Pick<Term, "id" | "name" | "slug">,
@@ -50,6 +51,7 @@ function projectMeta(
  * shape is pinned to `publicEntrySchema`, the surface's documented contract.
  */
 export function projectEntry(
+  registry: PluginRegistry,
   entry: WithResolvedMeta<Entry>,
   author: PublicAuthor | null,
   termsByTaxonomy: Record<string, PublicTerm[]>,
@@ -69,7 +71,28 @@ export function projectEntry(
     author,
     terms: termsByTaxonomy,
     meta: projectMeta(entry.meta, visibleMetaKeys),
+    images: projectApiImages(registry, entry),
   };
+}
+
+// `RoleImages` keys every role optionally — a role is there or it isn't. The
+// response shape says the same thing with a plain map, so the roles that did
+// come back are copied across; `?? null` only satisfies the optional type.
+function projectApiImages(
+  registry: PluginRegistry,
+  entry: WithResolvedMeta<Entry>,
+): PublicEntry["images"] {
+  const images: PublicEntry["images"] = {};
+  const projected = projectImageRoles(
+    registry,
+    { kind: "entry", entryType: entry.type },
+    entry.meta,
+    { include: (field) => field.showInApi === true },
+  );
+  for (const [role, image] of Object.entries(projected)) {
+    images[role] = image ?? null;
+  }
+  return images;
 }
 
 // Batched author lookup — one `WHERE id IN (...)` for the whole page, never a

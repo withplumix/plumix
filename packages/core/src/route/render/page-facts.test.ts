@@ -21,6 +21,7 @@ const author: ResolvedAuthor = {
   slug: "ada",
   name: "Ada",
   avatarUrl: null,
+  images: {},
 };
 
 const entry = {

@@ -9,6 +9,12 @@ import { entry as entryRef } from "../../plugin/fields/entry.js";
 import { number } from "../../plugin/fields/number.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { toggle } from "../../plugin/fields/toggle.js";
+import {
+  photoField,
+  photoLookupAdapter,
+  photoProfilePlugin,
+  photoUrl,
+} from "../../test/photo-lookup.js";
 import { createTracedContext } from "../../test/traced-context.js";
 import { buildResolvedEntries } from "./build-resolved-entries.js";
 import { forEntryType } from "./template-builders.js";
@@ -513,5 +519,149 @@ describe("term meta on the render path", () => {
     // Authors, the entry_term join, and one `IN(...)` for the curator ids
     // shared across all three attachments — no per-term fan-out.
     expect(dbQueryCount()).toBe(3);
+  });
+});
+
+// The same fields with and without the role tag — the only difference between
+// a site that reads `images.featured` and the same site before this change.
+function photoPlugin(tagged: boolean) {
+  const role = tagged ? { role: "featured" as const } : {};
+  return definePlugin("test-photos", (ctx) => {
+    ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+    ctx.registerTermTaxonomy("album", {
+      label: "Albums",
+      entryTypes: ["post"],
+    });
+    ctx.registerEntryMetaBox("appearance", {
+      label: "Appearance",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "layout",
+          label: "Layout",
+          type: "json",
+          inputType: "group",
+          fields: [photoField("cover", role)],
+        },
+      ],
+    });
+    ctx.registerTermMetaBox("albumArt", {
+      label: "Album art",
+      termTaxonomies: ["album"],
+      fields: [photoField("banner", role)],
+    });
+  });
+}
+
+describe("buildResolvedEntries role images", () => {
+  async function seedListing(role: boolean) {
+    const traced = await createTracedContext({ plugins: [photoPlugin(role)] });
+    const { harness } = traced;
+    const author = await harness.factory.user.create({});
+    const photo = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      title: "Photo",
+    });
+    const album = await harness.factory.term.create({
+      taxonomy: "album",
+      meta: { banner: String(photo.id) },
+    });
+    const rows = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        harness.factory.entry.create({
+          authorId: author.id,
+          type: "post",
+          status: "published",
+          meta: { layout: { cover: String(photo.id) } },
+        }),
+      ),
+    );
+    await Promise.all(
+      rows.map((row) =>
+        harness.factory.entryTerm.create({ entryId: row.id, termId: album.id }),
+      ),
+    );
+    return { ...traced, rows, photo };
+  }
+
+  test("projects a group-nested role onto every entry and term, adding no query", async () => {
+    const tagged = await seedListing(true);
+    const resolved = await tagged.run(() =>
+      buildResolvedEntries(tagged.ctx, tagged.rows),
+    );
+
+    const url = photoUrl(tagged.photo.id);
+    for (const entry of resolved) {
+      expect(entry.images.featured).toEqual({ url, alt: null });
+      expect(entry.terms[0]?.images.featured).toEqual({ url, alt: null });
+    }
+
+    // The identical site with the role tag removed — the reference fields, and
+    // so the hydration batch, are the same. The projection reads that batch.
+    const untagged = await seedListing(false);
+    await untagged.run(() => buildResolvedEntries(untagged.ctx, untagged.rows));
+    expect(tagged.dbQueryCount()).toBe(untagged.dbQueryCount());
+  });
+
+  test("resolves every author's role images in one batch", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+    const seed = await harness.factory.user.create({});
+    const photo = await harness.factory.entry.create({
+      authorId: seed.id,
+      type: "post",
+    });
+    const authors = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        harness.factory.user.create({ meta: { portrait: String(photo.id) } }),
+      ),
+    );
+    const rows = await Promise.all(
+      authors.map((author) =>
+        harness.factory.entry.create({
+          authorId: author.id,
+          type: "post",
+          status: "published",
+        }),
+      ),
+    );
+
+    const resolved = await run(() => buildResolvedEntries(ctx, rows));
+
+    for (const entry of resolved) {
+      expect(entry.author.images.featured).toEqual({
+        url: photoUrl(photo.id),
+        alt: null,
+      });
+    }
+    // The author query, the entry_term join, and ONE hydration for the
+    // portraits of both authors — never one per author.
+    expect(dbQueryCount()).toBe(3);
+  });
+
+  test("reads null for a payload the adapter refuses", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [photoPlugin(true)],
+    });
+    const author = await harness.factory.user.create({});
+    const broken = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      title: "broken",
+    });
+    const row = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      meta: { layout: { cover: String(broken.id) } },
+    });
+
+    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+
+    expect(entry?.images.featured).toBeNull();
   });
 });
