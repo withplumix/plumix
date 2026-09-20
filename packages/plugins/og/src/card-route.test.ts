@@ -1,9 +1,10 @@
-import type { CdnStore, ConnectedCdn } from "plumix";
+import type { CdnStore, ConnectedCdn, Logger } from "plumix";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { entryPurgeTags, entryTag, eq } from "plumix/db";
 import { entries } from "plumix/schema";
 import { describe, expect, test, vi } from "vitest";
 
+import type { CardRenderer } from "./renderer.js";
 import type { SeedEntryOverrides } from "./test/harness.js";
 import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
@@ -17,6 +18,35 @@ import {
 } from "./test/harness.js";
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
+
+/** The URL a card lands on for a given font set, under a renderer reading `reads`. */
+async function cardPathFor(
+  fonts: readonly string[],
+  reads?: CardRenderer["fonts"],
+): Promise<string> {
+  const harness = await createHarness({
+    renderer: createFakeRenderer({ fonts: reads }).renderer,
+    fonts,
+  });
+  return cardPath(harness, await seedEntry(harness));
+}
+
+/** A logger that keeps what the route reported, for asserting on a failure. */
+function collectingLogger(): {
+  logged: { message: string; meta?: unknown }[];
+  logger: Logger;
+} {
+  const logged: { message: string; meta?: unknown }[] = [];
+  return {
+    logged,
+    logger: {
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: (message, meta) => logged.push({ message, meta }),
+    },
+  };
+}
 
 describe("the card route", () => {
   test("serves a card from the default template with no theme configuration", async () => {
@@ -258,20 +288,122 @@ describe("the card route", () => {
     expect(fake.inputs[0]?.fonts).toEqual([face]);
   });
 
+  test("reads no font at all for a renderer that declares it takes none", async () => {
+    const asked: string[] = [];
+    const fake = createFakeRenderer({ fonts: false });
+    const harness = await createHarness({
+      renderer: fake.renderer,
+      fonts: ["/fonts/Inter-SemiBold.ttf"],
+      assets: {
+        fetch: (request) => {
+          asked.push(new URL(request.url).pathname);
+          return Promise.resolve(new Response(new Uint8Array([0, 1, 0, 0])));
+        },
+      },
+    });
+    const id = await seedEntry(harness);
+
+    (await fetchCard(harness, id)).assertStatus(200);
+
+    expect(asked).toEqual([]);
+    expect(fake.inputs[0]?.fonts).toEqual([]);
+  });
+
+  test("renders for a fontless renderer on a runtime with no asset layer", async () => {
+    // The configured set is not addressed to this renderer, so the absence of
+    // somewhere to read it from is not this card's problem.
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ fonts: false }).renderer,
+      fonts: ["/fonts/Inter-SemiBold.ttf"],
+    });
+    const id = await seedEntry(harness);
+
+    (await fetchCard(harness, id)).assertStatus(200);
+  });
+
+  test("keeps a fontless renderer's card URL when the font set changes", async () => {
+    // Nothing the renderer reads changed, so nothing the digest names did —
+    // and no card is re-rendered, nor its predecessor orphaned in the bucket.
+    expect(await cardPathFor(["/fonts/A.ttf"], false)).toBe(
+      await cardPathFor(["/fonts/B.ttf"], false),
+    );
+  });
+
+  test("moves a font-reading renderer's card URL when the font set changes", async () => {
+    expect(await cardPathFor(["/fonts/A.ttf"])).not.toBe(
+      await cardPathFor(["/fonts/B.ttf"]),
+    );
+  });
+
+  test("hands only the formats the renderer parses, in the configured order", async () => {
+    const asked: string[] = [];
+    const fake = createFakeRenderer({ fonts: { formats: ["woff2"] } });
+    const harness = await createHarness({
+      renderer: fake.renderer,
+      fonts: ["/fonts/Inter.ttf", "/fonts/Inter.woff2", "/fonts/Fallback.otf"],
+      assets: {
+        fetch: (request) => {
+          asked.push(new URL(request.url).pathname);
+          return Promise.resolve(new Response(new Uint8Array([0, 1, 0, 0])));
+        },
+      },
+    });
+    const id = await seedEntry(harness);
+
+    (await fetchCard(harness, id)).assertStatus(200);
+
+    expect(asked).toEqual(["/fonts/Inter.woff2"]);
+  });
+
+  test("fails the card when no configured font is in a format the renderer reads", async () => {
+    const { logged, logger } = collectingLogger();
+    const harness = await createHarness({
+      // What most font packages ship, against the bundled engine's formats.
+      fonts: ["/fonts/Inter.woff2"],
+      assets: {
+        fetch: () => Promise.resolve(new Response(new Uint8Array([1]))),
+      },
+      siteDefaultImage: SITE_DEFAULT,
+      logger,
+    });
+    const id = await seedEntry(harness);
+
+    // A textless card is what this would otherwise serve, and it would serve
+    // it with a 200 — the failure the plugin already refuses for a font it
+    // cannot read, reached one step earlier and named.
+    const response = await fetchCard(harness, id);
+
+    expect(response.assertStatus(302).headers.get("location")).toBe(
+      SITE_DEFAULT,
+    );
+    expect(logged[0]?.message).toBe("og_card_render_failed");
+    // Both halves, so this cannot pass on the path alone: what the renderer
+    // does read, and which face was turned away for not being it.
+    expect(logged[0]?.meta).toMatchObject({
+      err: expect.stringContaining("ttf, otf, woff") as string,
+    });
+    expect(logged[0]?.meta).toMatchObject({
+      err: expect.stringContaining("/fonts/Inter.woff2") as string,
+    });
+  });
+
+  test("keeps a card's URL when an unreadable face is added to the set", async () => {
+    // The renderer never receives the WOFF2 face, so it is not an input to the
+    // bytes and must not move the URL that addresses them.
+    expect(await cardPathFor(["/fonts/A.ttf"])).toBe(
+      await cardPathFor(["/fonts/A.ttf", "/fonts/B.woff2"]),
+    );
+  });
+
   test("hands a failed render to the site default, and says what broke", async () => {
-    const logged: { message: string; meta?: unknown }[] = [];
+    const { logged, logger } = collectingLogger();
     const harness = await createHarness({
       fonts: ["/fonts/absent.ttf"],
       assets: {
         fetch: () => Promise.resolve(new Response(null, { status: 404 })),
       },
       siteDefaultImage: SITE_DEFAULT,
-      logger: {
-        debug: () => undefined,
-        info: () => undefined,
-        warn: () => undefined,
-        error: (message, meta) => logged.push({ message, meta }),
-      },
+      logger,
     });
     const id = await seedEntry(harness);
 

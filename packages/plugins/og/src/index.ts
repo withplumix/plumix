@@ -20,6 +20,7 @@ import "./chain-trace.js";
 import type { CardInputs } from "./card-identity.js";
 import type { CardPalette } from "./default-card.js";
 import type { CardRenderer } from "./renderer.js";
+import { planCardFonts } from "./card-fonts.js";
 import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
 import { defaultCards } from "./default-card.js";
@@ -51,13 +52,16 @@ export type { CardKey } from "./card-key.js";
 export { cardKey } from "./card-key.js";
 export type {
   CardContainerNode,
+  CardFontSupport,
   CardImage,
   CardImageNode,
   CardNode,
   CardRenderer,
   CardRenderInput,
   CardTextNode,
+  FontFormat,
 } from "./renderer.js";
+export { BUNDLED_ENGINE_FONTS } from "./renderer.js";
 export type { CardPreview, CardPreviewOutcome } from "./preview.js";
 export type { RemoteRendererOptions } from "./remote.js";
 export { remote } from "./remote.js";
@@ -80,9 +84,17 @@ export interface OgPluginOptions {
   /**
    * Font files to render with, as paths into the platform asset layer
    * (Cloudflare's `ASSETS`), in fallback order. They are read at render time,
-   * so they cost nothing in the Worker bundle. TTF, OTF and WOFF are read;
-   * WOFF2 — what most font packages ship — is not, and the failure is a card
-   * with no text on it. Left empty, the engine's own fallback face is used.
+   * so they cost nothing in the Worker bundle.
+   *
+   * Which formats are read is the renderer's business, not this option's: the
+   * bundled engine parses TTF, OTF and WOFF but not WOFF2 — what most font
+   * packages ship — while a `remote` endpoint may parse exactly the reverse.
+   * Faces in a format the connected renderer does not parse are never fetched,
+   * and a set with none it can parse fails the card rather than serving one
+   * with no text on it. A renderer that reads no fonts at all ignores this
+   * option entirely, which the debug bar points out in development.
+   *
+   * Left empty, the engine's own fallback face is used.
    */
   readonly fonts?: readonly string[];
   /**
@@ -145,9 +157,10 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const preview = options.preview ?? [];
   const palette = options.palette;
   let tokens = compileThemeTokens({}, palette);
+  const plan = planCardFonts(renderer, fonts);
   // One accessor for both readers: the head and the route have to land on the
   // same digest, and they only do that if they read the same inputs.
-  const inputs = (): CardInputs => ({ fonts, tokens });
+  const inputs = (): CardInputs => ({ fonts: plan, tokens });
   const handler = createCardRoute({ renderer, cards, inputs });
   // Advertising is decided by what the renderer declares it produces, not by a
   // flag of its own.

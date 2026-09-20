@@ -1,6 +1,7 @@
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 
+import type { CardFontPlan } from "./card-fonts.js";
 import type { CardKey } from "./card-key.js";
 import type { CardArgs, CardDefinition } from "./card.js";
 import type { ThemeTokenSet } from "./tokens.js";
@@ -24,13 +25,13 @@ export interface CardIdentity {
 }
 
 /**
- * What a card is rendered with beyond the card itself. Both are folded into
- * the digest, because both change what comes out: a swapped font face, a
- * retuned palette.
+ * What a card is rendered with beyond the card itself: the fonts its renderer
+ * reads and the theme's tokens. Both change what comes out — a swapped face, a
+ * retuned palette — so what the renderer receives of each is digested.
  */
 export interface CardInputs {
-  /** Asset-layer font paths, in fallback order. */
-  readonly fonts: readonly string[];
+  /** The configured font set split by what this renderer reads. */
+  readonly fonts: CardFontPlan;
   readonly tokens: ThemeTokenSet;
 }
 
@@ -70,7 +71,10 @@ export async function resolveCardIdentity(
       id: key.id,
       sourceHash: await cardSourceHash(card),
       tokens: inputs.tokens.stylesheets,
-      fonts: inputs.fonts,
+      // The faces the renderer receives, never the whole configured set: one
+      // it cannot parse reaches no render, so it is not an input to these
+      // bytes and must not move the URL that addresses them.
+      fonts: inputs.fonts.readable,
       width,
       height,
       extension,

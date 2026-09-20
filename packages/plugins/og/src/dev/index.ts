@@ -55,5 +55,12 @@ export function registerDevSurfaces(
     }));
     return manifest;
   });
-  ctx.addFilter("debug:panels", (panels) => [...panels, ogDebugPanel()]);
+  ctx.addFilter("debug:panels", (panels) => [
+    ...panels,
+    // Read off the one accessor rather than passed in beside it: a second
+    // copy is a second thing that could disagree, which is what this change
+    // exists to remove. The plan is fixed for the plugin's life, so holding it
+    // from registration is honest.
+    ogDebugPanel({ fonts: inputs().fonts }),
+  ]);
 }
