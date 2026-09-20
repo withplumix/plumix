@@ -117,6 +117,34 @@ describe("seoHeadMeta", () => {
     expect(byProperty(out, "og:image:height")?.content).toBe("630");
   });
 
+  test("an image that names what it shows carries the alt tags", () => {
+    const out = seoHeadMeta(
+      {},
+      {
+        ...baseInputs,
+        ogImage: { url: "https://cms.example/cat.jpg", alt: "A cat, asleep" },
+      },
+    );
+
+    expect(byProperty(out, "og:image:alt")?.content).toBe("A cat, asleep");
+    expect(byName(out, "twitter:image:alt")?.content).toBe("A cat, asleep");
+  });
+
+  // A generated card, a URL typed into the SEO box and the site-wide default
+  // all arrive without alt text, and an empty one describes nothing either.
+  test.each([
+    ["absent", undefined],
+    ["null", null],
+    ["empty", ""],
+  ])("an image whose alt is %s emits neither alt tag", (_case, alt) => {
+    const url = "https://cms.example/card.png";
+    const out = seoHeadMeta({}, { ...baseInputs, ogImage: { url, alt } });
+
+    expect(byProperty(out, "og:image")?.content).toBe(url);
+    expect(byProperty(out, "og:image:alt")).toBeUndefined();
+    expect(byName(out, "twitter:image:alt")).toBeUndefined();
+  });
+
   test("an image with no usable url emits no tag of the group", () => {
     const out = seoHeadMeta(
       {},
@@ -141,6 +169,7 @@ describe("seoHeadMeta", () => {
           url: "https://cms.example/card.png",
           width: 1200,
           height: 630,
+          alt: "A card",
         },
       },
     );
@@ -152,6 +181,8 @@ describe("seoHeadMeta", () => {
     expect(byProperty(out, "og:image:width")).toBeUndefined();
     expect(byProperty(out, "og:image:height")).toBeUndefined();
     expect(byName(out, "twitter:image")).toBeUndefined();
+    expect(byProperty(out, "og:image:alt")).toBeUndefined();
+    expect(byName(out, "twitter:image:alt")).toBeUndefined();
   });
 
   test("description omitted when null", () => {

@@ -17,7 +17,9 @@ const entryData = (images: RoleImages = {}): TemplateData =>
   }) as unknown as TemplateData;
 
 const hero = { url: "https://cdn/hero.jpg", alt: null } as const;
-const share = { url: "https://cdn/share.jpg", alt: null } as const;
+// Described, so the `ogImage` arm carries the alt a media row filled in and
+// not only the URL.
+const share = { url: "https://cdn/share.jpg", alt: "A share card" } as const;
 
 describe("resolveOgImage", () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -153,6 +155,29 @@ describe("resolveOgImage", () => {
     // Cropping the author's photo to a card's shape is the whole reason the
     // filter sees it — replacing it is not the only thing worth doing to it.
     expect(image).toEqual({ url: `${hero.url}?w=1200`, width: 1200 });
+  });
+
+  test("a filter may name what its own image shows", async () => {
+    const photo = { url: "https://cdn/cat.jpg", alt: "A cat" } as const;
+    const hooks = new HookRegistry();
+    hooks.addFilter("seo:og_image", (_image, _data, _ctx, featured) =>
+      featured
+        ? { url: `${featured.url}?w=1200`, alt: "The same cat, cropped" }
+        : null,
+    );
+
+    const image = await resolveOgImage(
+      ogContext(hooks),
+      entryData({ featured: photo }),
+      { override: null, siteDefault },
+    );
+
+    // The filter answered, so its alt describes the picture that goes out,
+    // not the uncropped photo's.
+    expect(image).toEqual({
+      url: `${photo.url}?w=1200`,
+      alt: "The same cat, cropped",
+    });
   });
 
   test("an image a filter returns outranks the featured photo", async () => {

@@ -261,6 +261,50 @@ describe("the og:image precedence chain", () => {
     expect(html).toContain('<meta property="og:image:height" content="630"/>');
   });
 
+  test("a generated card describes nothing, whatever the photo said", async () => {
+    const harness = await createHarness({
+      renderer: rasterRenderer(),
+      cards: [brandedCard],
+    });
+    const id = await seedEntry(harness, {
+      slug: "hello-world",
+      featured: { url: PHOTO, alt: "A hero, described" },
+    });
+
+    const html = await headOf(harness, "hello-world");
+
+    // The card is a picture of the page rather than of the photo, so the
+    // photo's words do not describe it and nothing else does either.
+    expect(ogImageOf(html) ?? "").toMatch(cardUrlPattern(id));
+    expect(html).not.toContain("og:image:alt");
+    expect(html).not.toContain("twitter:image:alt");
+  });
+
+  test("the cropped photo keeps what the photo showed", async () => {
+    const harness = await createHarness({
+      renderer: rasterRenderer(),
+      imageDelivery: testDelivery("https://img.example"),
+    });
+    await seedEntry(harness, {
+      slug: "hello-world",
+      featured: {
+        url: PHOTO,
+        width: 1600,
+        height: 1200,
+        alt: "A hero, described",
+      },
+    });
+
+    const html = await headOf(harness, "hello-world");
+
+    // A crop of the author's photo shows what the photo showed, so the alt
+    // text `@plumix/plugin-seo` emits describes the picture that went out.
+    expect(ogImageOf(html)).toBe(`https://img.example/1200x630,cover/${PHOTO}`);
+    expect(html).toContain(
+      '<meta property="og:image:alt" content="A hero, described"/>',
+    );
+  });
+
   test("crops to the size the theme's own card declares", async () => {
     const harness = await createHarness({
       renderer: rasterRenderer(),

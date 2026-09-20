@@ -14,6 +14,10 @@ declare module "plumix" {
      * subscriber that only handles some pages must pass the value through on
      * the rest rather than answer for them.
      *
+     * An image returned may carry an `alt` describing it, which is the text
+     * the head's alt tags then emit — a crop of the author's photo shows what
+     * the photo showed, so its description travels with it.
+     *
      * `featured` is that photo, passed alongside rather than as the value, so
      * a subscriber can improve on it — crop it to a social card's shape, say —
      * instead of only replacing it, and so that declining stays free.

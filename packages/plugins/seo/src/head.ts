@@ -138,6 +138,9 @@ export function seoHeadMeta(
     addProperty("og:image:width", image.width?.toString() ?? null);
     addProperty("og:image:height", image.height?.toString() ?? null);
     addName("twitter:image", image.url);
+    const alt = nonEmpty(image.alt);
+    addProperty("og:image:alt", alt);
+    addName("twitter:image:alt", alt);
   }
 
   // Written here rather than left to core's own gap-filler, which runs after
