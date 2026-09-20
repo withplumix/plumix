@@ -55,7 +55,6 @@ export {
   canonicalUrl,
   dateRange,
   entryGroups,
-  entryRoleImage,
   exposesHierarchicalUrls,
   findTermByPath,
   FRAMEWORK_PAGINATION_SUFFIX,

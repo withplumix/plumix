@@ -1,6 +1,5 @@
 import type { TemplateData } from "plumix";
-import type { AppContext, OgImage } from "plumix/plugin";
-import { entryRoleImage } from "plumix/plugin";
+import type { AppContext, ImageRoleName, OgImage } from "plumix/plugin";
 
 declare module "plumix" {
   interface FilterRegistry {
@@ -28,6 +27,15 @@ declare module "plumix" {
   }
 }
 
+/**
+ * One role's image for the page, off what core projected onto the entry. Null
+ * for anything that is not a single entry, and for a role the entry's own
+ * scope declares no field in.
+ */
+function roleImage(data: TemplateData, role: ImageRoleName): OgImage | null {
+  return data.kind === "entry" ? (data.entry.images[role] ?? null) : null;
+}
+
 /** The two links of the chain that come from stored answers rather than code. */
 export interface OgImageChain {
   /** The URL the editor typed into the SEO box for this entry or term. */
@@ -51,12 +59,12 @@ export async function resolveOgImage(
   data: TemplateData,
   chain: OgImageChain,
 ): Promise<OgImage | null> {
-  const explicit = entryRoleImage(ctx.plugins, data, "ogImage");
+  const explicit = roleImage(data, "ogImage");
   if (explicit) return explicit;
   // Above the filter for the same reason the role marker is: an editor who
   // named a picture has answered, and a generated card must not overrule them.
   if (chain.override) return { url: chain.override };
-  const featured = entryRoleImage(ctx.plugins, data, "featured");
+  const featured = roleImage(data, "featured");
   const filtered = await ctx.hooks.applyFilter(
     "seo:og_image",
     null,

@@ -4,7 +4,8 @@ import type {
   ConnectedCdn,
   JsonValue,
 } from "plumix";
-import type { Logger, PluginSetupContext } from "plumix/plugin";
+import type { MetaBoxField } from "plumix/fields";
+import type { ImageRoleName, Logger, PluginSetupContext } from "plumix/plugin";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
@@ -18,6 +19,14 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
+
+// The sitemap lists every role an entry carries, not a pair core happens to
+// ship — so this suite declares one of its own.
+declare module "plumix" {
+  interface ImageRoles {
+    hero: true;
+  }
+}
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -65,12 +74,16 @@ const eventsPlugin = definePlugin("events", (ctx) => {
 
 // A type whose pictures the sitemap has to find: role-tagged media fields,
 // declared raw rather than through the media plugin's builder, and a `media`
-// lookup adapter standing in for its hydration — what the walk reads is the
-// role and the hydrated `url`, so seeding those keeps this suite off a second
-// plugin. `shareCount` extra `ogImage` fields, `share0`…, fill an entry past
-// the per-entry cap.
-const picturePluginWith = (shareCount: number) =>
+// lookup adapter standing in for its hydration — what the sitemap reads is the
+// role and the image the adapter makes of the payload, so seeding those keeps
+// this suite off a second plugin. `shareCount` extra `ogImage` fields,
+// `share0`…, give one role more than one field to answer from.
+//
+// `featured` sits inside a group, which is where an appearance box tends to
+// put it, and `hero` is a role this suite registers rather than one core ships.
+const picturePluginWith = (shareCount: number, hydrate?: LookupHydrate) =>
   definePlugin("pictures", (ctx) => {
+    ctx.registerImageRole("hero", { single: true });
     ctx.registerEntryType("post", {
       label: "Posts",
       isPublic: true,
@@ -81,55 +94,76 @@ const picturePluginWith = (shareCount: number) =>
       entryTypes: ["post"],
       fields: [
         {
-          key: "hero",
-          label: "Hero",
+          key: "appearance",
+          label: "Appearance",
           type: "json",
-          inputType: "media",
-          role: "featured",
-          referenceTarget: { kind: "media" },
+          inputType: "group",
+          fields: [pictureField("hero", "featured")],
         },
-        {
-          key: "shareImage",
-          label: "Share image",
-          type: "json",
-          inputType: "media",
-          role: "ogImage",
-          referenceTarget: { kind: "media" },
-        },
-        ...Array.from({ length: shareCount }, (_unused, at) => ({
-          key: `share${String(at)}`,
-          label: `Share ${String(at)}`,
-          type: "json" as const,
-          inputType: "media" as const,
-          role: "ogImage" as const,
-          referenceTarget: { kind: "media" },
-        })),
+        pictureField("heroShot", "hero"),
+        pictureField("shareImage", "ogImage"),
+        ...Array.from({ length: shareCount }, (_unused, at) =>
+          pictureField(`share${String(at)}`, "ogImage"),
+        ),
       ],
     });
-    registerPictureAdapter(ctx);
+    registerPictureAdapter(ctx, hydrate);
   });
+
+function pictureField(key: string, role: ImageRoleName): MetaBoxField {
+  return {
+    key,
+    label: key,
+    type: "json",
+    inputType: "media",
+    role,
+    referenceTarget: { kind: "media" },
+  };
+}
 
 const picturePlugin = picturePluginWith(0);
 
-function registerPictureAdapter(ctx: PluginSetupContext): void {
+// A `doc`-prefixed id stands in for a non-image upload, a `rel`-prefixed one
+// for the worker-proxied serve path a deploy with no public bucket URL hands
+// back.
+interface Upload {
+  readonly id: string;
+  readonly mime: string;
+  readonly url: string;
+}
+
+const upload = (id: string): Upload => ({
+  id,
+  mime: id.startsWith("doc") ? "application/pdf" : "image/png",
+  url: id.startsWith("rel")
+    ? `/_plumix/media/serve/${id}`
+    : `https://cdn.example/${id}.png`,
+});
+
+/** What a spying suite substitutes for the adapter's own batched read. */
+type LookupHydrate = (
+  appCtx: unknown,
+  options: { readonly ids: readonly string[] },
+) => Promise<readonly Upload[]>;
+
+const hydrateUploads: LookupHydrate = (_appCtx, { ids }) =>
+  Promise.resolve(ids.map(upload));
+
+function registerPictureAdapter(
+  ctx: PluginSetupContext,
+  hydrate: LookupHydrate = hydrateUploads,
+): void {
   ctx.registerLookupAdapter({
     kind: "media",
     capability: null,
     adapter: {
       list: () => Promise.resolve([]),
-      hydrate: (_appCtx, { ids }) =>
-        Promise.resolve(
-          ids.map((id) => ({
-            id,
-            // A `doc`-prefixed id stands in for a non-image upload, a `rel`-
-            // prefixed one for the worker-proxied serve path a deploy with no
-            // public bucket URL hands back.
-            mime: id.startsWith("doc") ? "application/pdf" : "image/png",
-            url: id.startsWith("rel")
-              ? `/_plumix/media/serve/${id}`
-              : `https://cdn.example/${id}.png`,
-          })),
-        ),
+      hydrate,
+      // Whether a payload is a picture is the adapter's own answer — the
+      // sitemap asks for an image and gets nothing for a PDF, rather than
+      // hydrating everything and sniffing the mime itself.
+      image: ({ url, mime }: Upload) =>
+        mime.startsWith("image/") ? { url, alt: null } : null,
     },
   });
 }
@@ -634,6 +668,27 @@ describe("a sitemap at the edge", () => {
     expect(tagsFor(put, "/sitemap-post-1.xml")).toContain(SITEMAP_TAG);
   });
 
+  test("names only its own tags, not one per picture it lists", async () => {
+    // Resolving image roles hydrates through the path that folds an embedded
+    // cache tag per payload into the *page* accumulator — bounded by a page
+    // for the render, and not for a sitemap. A registered public route is
+    // stored under what its handler declared with `tagCdnEntry` instead, which
+    // never reads that accumulator, so a page of 1,000 entries still carries
+    // the two tags a publish purges the scope by. #2511 owns whether the bulk
+    // primitive should stop accumulating at all.
+    const { cdn, put } = cdnStub();
+    const h = await createHarness([picturePlugin], { cdn });
+    await seedPost(h, { meta: { appearance: { hero: "m1" } } });
+
+    await bodyOf(h, "/sitemap-post-1.xml");
+    await h.drainDeferred();
+
+    expect(tagsFor(put, "/sitemap-post-1.xml")).toEqual([
+      SITEMAP_TAG,
+      typeTag("post"),
+    ]);
+  });
+
   test("declares a shared freshness window and serves the next request from the edge", async () => {
     const { cdn, match, put } = cdnStub();
     const h = await createHarness([blogPlugin], { cdn });
@@ -845,9 +900,13 @@ describe("noindex keeps a page out of the sitemap", () => {
 });
 
 describe("an entry's pictures in the sitemap", () => {
+  // The `featured` role sits inside a group, so every seed that fills it also
+  // asserts a nested role field reaches the sitemap.
+  const featured = (id: string) => ({ appearance: { hero: id } });
+
   test("lists a role-tagged media field's image", async () => {
     const h = await createHarness([picturePlugin]);
-    await seedPost(h, { meta: { hero: "m1" } });
+    await seedPost(h, { meta: featured("m1") });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
@@ -866,11 +925,23 @@ describe("an entry's pictures in the sitemap", () => {
     expect(body).not.toContain("image");
   });
 
-  test("lists every role-tagged field and the editor's own URL", async () => {
+  test("lists a role this site registered, not just the two core ships", async () => {
+    const h = await createHarness([picturePlugin]);
+    await seedPost(h, { meta: { heroShot: "m3" } });
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain(
+      "<image:image><image:loc>https://cdn.example/m3.png</image:loc></image:image>",
+    );
+  });
+
+  test("lists every role and the editor's own URL", async () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, {
       meta: {
-        hero: "m1",
+        ...featured("m1"),
+        heroShot: "m3",
         shareImage: "m2",
         seo_og_image: "https://cdn.example/typed.png",
       },
@@ -880,12 +951,13 @@ describe("an entry's pictures in the sitemap", () => {
 
     expect(body).toContain("https://cdn.example/m1.png");
     expect(body).toContain("https://cdn.example/m2.png");
+    expect(body).toContain("https://cdn.example/m3.png");
     expect(body).toContain("https://cdn.example/typed.png");
   });
 
   test("absolutizes a picture served relative to the site", async () => {
     const h = await createHarness([picturePlugin]);
-    await seedPost(h, { meta: { hero: "rel1" } });
+    await seedPost(h, { meta: featured("rel1") });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
@@ -894,9 +966,9 @@ describe("an entry's pictures in the sitemap", () => {
     );
   });
 
-  test("leaves out an upload that is not an image", async () => {
+  test("leaves out an upload the adapter does not read as an image", async () => {
     const h = await createHarness([picturePlugin]);
-    await seedPost(h, { meta: { hero: "m1", shareImage: "doc1" } });
+    await seedPost(h, { meta: { ...featured("m1"), shareImage: "doc1" } });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
@@ -904,29 +976,54 @@ describe("an entry's pictures in the sitemap", () => {
     expect(body).not.toContain("doc1");
   });
 
-  test("lists at most ten pictures for one entry", async () => {
+  test("a role with many fields lists the first of them that resolves", async () => {
+    // One image per role is the ceiling a role sets, and it is what replaced
+    // the per-entry cap the hand-rolled walk needed: a role names the entity's
+    // picture, so a type tagging thirteen fields with it still names one.
     const h = await createHarness([picturePluginWith(12)]);
     await seedPost(h, {
-      meta: Object.fromEntries(
-        Array.from({ length: 12 }, (_unused, at) => [
-          `share${String(at)}`,
-          `g${String(at)}`,
-        ]),
-      ),
+      meta: {
+        shareImage: "doc0",
+        ...Object.fromEntries(
+          Array.from({ length: 12 }, (_unused, at): [string, string] => [
+            `share${String(at)}`,
+            `g${String(at)}`,
+          ]),
+        ),
+      },
     });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
-    expect(body.match(/<image:image>/g)).toHaveLength(10);
+    // `shareImage` is declared first but hydrates to a PDF, so the role falls
+    // through to the next field rather than answering with nothing.
+    expect(body.match(/<image:image>/g)).toHaveLength(1);
+    expect(body).toContain("https://cdn.example/g0.png");
   });
 
-  test("lists one entry per picture even when two fields name the same one", async () => {
+  test("lists one entry per picture even when two roles name the same one", async () => {
     const h = await createHarness([picturePlugin]);
-    await seedPost(h, { meta: { hero: "m1", shareImage: "m1" } });
+    await seedPost(h, { meta: { ...featured("m1"), shareImage: "m1" } });
 
     const body = await bodyOf(h, "/sitemap-post-1.xml");
 
     expect(body.match(/<image:image>/g)).toHaveLength(1);
+  });
+
+  test("a whole page of entries costs one hydration, not one per entry", async () => {
+    const hydrate = vi.fn<LookupHydrate>(hydrateUploads);
+    const h = await createHarness([picturePluginWith(0, hydrate)]);
+    for (let at = 0; at < 5; at++) {
+      await seedPost(h, {
+        slug: `post-${String(at)}`,
+        meta: featured(`m${String(at)}`),
+      });
+    }
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body.match(/<image:image>/g)).toHaveLength(5);
+    expect(hydrate).toHaveBeenCalledTimes(1);
   });
 
   test("a type with no media field costs no hydration", async () => {

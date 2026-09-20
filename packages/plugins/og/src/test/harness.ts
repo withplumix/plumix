@@ -1,6 +1,6 @@
 import type { AnyPluginDescriptor, I18nInput, JsonObject } from "plumix";
 import type { ThemeTokens } from "plumix/blocks";
-import type { Logger, OgImage } from "plumix/plugin";
+import type { Logger, LookupAdapter, OgImage } from "plumix/plugin";
 import type {
   ConnectedCdn,
   ConnectedObjectStorage,
@@ -34,17 +34,74 @@ import { createFakeRenderer } from "./fake-renderer.js";
 export { DEV_ORIGIN } from "plumix/test";
 
 /** The role-tagged fields {@link seedEntry} writes through. */
+const FEATURED_GROUP_KEY = "social";
 const FEATURED_KEY = "hero";
 const OG_IMAGE_KEY = "shareImage";
+
+/** The reference kind the harness's role fields point at. */
+const PHOTO_KIND = "photo";
+
+/** What {@link photoAdapter} hydrates an id to — the shape its `image()` reads. */
+interface PhotoReference {
+  readonly id: string;
+  readonly url: string;
+  readonly width: number | null;
+  readonly height: number | null;
+}
+
+// Where `seedEntry` files the picture it was handed, so a role field stores
+// the bare id a real reference stores and the adapter hands the row back. Ids
+// are never reused, so a photo left behind by an earlier test is simply never
+// asked for again.
+const photos = new Map<string, PhotoReference>();
+let nextPhoto = 0;
+
+/**
+ * The meta a `.featured()` photo is stored as: a bare reference id, in the
+ * group the role field sits in. Exported so a suite writing meta through the
+ * entry RPC writes the same shape {@link seedEntry} does.
+ */
+export function featuredMeta(image: OgImage): JsonObject {
+  return { [FEATURED_GROUP_KEY]: { [FEATURED_KEY]: filePhoto(image) } };
+}
+
+function filePhoto(image: OgImage): string {
+  const id = `photo-${String(++nextPhoto)}`;
+  photos.set(id, {
+    id,
+    url: image.url,
+    // A media row carries null on both axes until something measures it.
+    width: image.width ?? null,
+    height: image.height ?? null,
+  });
+  return id;
+}
+
+const filedPhotos = (ids: readonly string[] = []): PhotoReference[] =>
+  ids.flatMap((id) => {
+    const photo = photos.get(id);
+    return photo === undefined ? [] : [photo];
+  });
+
+const photoAdapter = {
+  // A write validates a reference id by listing it, so an id `filePhoto` never
+  // handed out is refused where a real missing row would be.
+  list: (_ctx, { ids }) =>
+    Promise.resolve(filedPhotos(ids).map(({ id }) => ({ id, label: id }))),
+  hydrate: (_ctx, { ids }) => Promise.resolve(filedPhotos(ids)),
+  image: ({ url, width, height }: PhotoReference) =>
+    width !== null && height !== null
+      ? { url, alt: null, width, height }
+      : { url, alt: null },
+} satisfies LookupAdapter;
 
 // A host plugin registering the shapes a card has to tell apart: a public type,
 // a private one, and three access-policied ones — gated by the type, gated by
 // the entry's own choice, and behind a *soft* gate whose page a scraper still
 // reaches. The role-tagged media fields the precedence chain reads hang off the
-// public type; they are declared raw rather than through the media plugin's
-// builder, since what the chain reads is the role and the hydrated
-// `{ url, width, height }`, and seeding that directly keeps this suite off a
-// second plugin.
+// public type; they point at {@link photoAdapter} rather than at the media
+// plugin's own kind, since what the chain reads is the role and the image an
+// adapter makes of its payload — which keeps this suite off a second plugin.
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
@@ -107,22 +164,39 @@ const testBlog = definePlugin("test_blog", {
       entryTypes: ["post"],
       isPublic: false,
     });
+    ctx.registerLookupAdapter({
+      kind: PHOTO_KIND,
+      capability: null,
+      adapter: photoAdapter,
+    });
     ctx.registerEntryMetaBox("social", {
       label: "Social",
       entryTypes: ["post"],
       fields: [
+        // Nested in a group, which is where an appearance box tends to put it
+        // — and the shape the field walk this chain used to do could not see.
         {
-          key: FEATURED_KEY,
-          label: "Hero",
+          key: FEATURED_GROUP_KEY,
+          label: "Social",
           type: "json",
-          inputType: "media",
-          role: "featured",
+          inputType: "group",
+          fields: [
+            {
+              key: FEATURED_KEY,
+              label: "Hero",
+              type: "json",
+              inputType: "media",
+              referenceTarget: { kind: PHOTO_KIND },
+              role: "featured",
+            },
+          ],
         },
         {
           key: OG_IMAGE_KEY,
           label: "Share image",
           type: "json",
           inputType: "media",
+          referenceTarget: { kind: PHOTO_KIND },
           role: "ogImage",
         },
       ],
@@ -306,10 +380,10 @@ export async function seedEntry(
     status: overrides.status ?? "published",
     meta: {
       ...overrides.meta,
-      ...(featured === undefined ? {} : { [FEATURED_KEY]: mediaRow(featured) }),
+      ...(featured === undefined ? {} : featuredMeta(featured)),
       ...(shareImage === undefined
         ? {}
-        : { [OG_IMAGE_KEY]: mediaRow(shareImage) }),
+        : { [OG_IMAGE_KEY]: filePhoto(shareImage) }),
     },
     authorId,
   });
@@ -336,15 +410,6 @@ export function seedMedia(
     ...(overrides.status === undefined ? {} : { status: overrides.status }),
     meta: { storageKey, mime: overrides.mime ?? "image/png", size: 6 },
   });
-}
-
-// A media row carries null on both axes until something measures it.
-function mediaRow(image: OgImage): JsonObject {
-  return {
-    url: image.url,
-    width: image.width ?? null,
-    height: image.height ?? null,
-  };
 }
 
 /** A term in `category`, with `entryIds` filed under it. */

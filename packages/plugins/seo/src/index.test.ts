@@ -21,6 +21,49 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
+// The same blog type, plus a `.featured()` role field nested in a group and a
+// reference kind that resolves it. Declared raw rather than through the media
+// plugin's builder: what the chain reads is the role and the image the adapter
+// makes of the payload, so seeding those keeps this suite off a second plugin.
+const photoPlugin = definePlugin("photos", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    supports: ["title", "editor", "excerpt"],
+  });
+  ctx.registerLookupAdapter({
+    kind: "photo",
+    capability: null,
+    adapter: {
+      list: () => Promise.resolve([]),
+      hydrate: (_appCtx, { ids }) => Promise.resolve(ids.map((id) => ({ id }))),
+      image: ({ id }) => ({ url: `https://cdn.example/${id}.png`, alt: null }),
+    },
+  });
+  ctx.registerEntryMetaBox("appearance", {
+    label: "Appearance",
+    entryTypes: ["post"],
+    fields: [
+      {
+        key: "appearance",
+        label: "Appearance",
+        type: "json",
+        inputType: "group",
+        fields: [
+          {
+            key: "hero",
+            label: "Hero",
+            type: "json",
+            inputType: "media",
+            role: "featured",
+            referenceTarget: { kind: "photo" },
+          },
+        ],
+      },
+    ],
+  });
+});
+
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
 function createHarness(): Promise<DispatcherHarness> {
@@ -163,6 +206,23 @@ describe("head meta", () => {
 
     expect(head).not.toContain('property="og:image"');
     expect(head).toContain('<meta name="twitter:card" content="summary"/>');
+  });
+
+  test("a featured photo nested in a group reaches og:image", async () => {
+    // The chain asks the entry for its `featured` role rather than walking the
+    // type's fields for one, so a role field an appearance box nests in a
+    // group answers where the walk this replaced saw nothing.
+    const h = await createDispatcherHarness({
+      plugins: [photoPlugin, seo()],
+      theme,
+    });
+    await seedPost(h, { meta: { appearance: { hero: "p1" } } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta property="og:image" content="https://cdn.example/p1.png"/>',
+    );
   });
 
   test("a search-results route emits noindex", async () => {
