@@ -25,7 +25,10 @@ import { entrySearchCondition } from "../search/conditions.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { findTermByPath } from "./path-chain.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import { buildResolvedEntries } from "./render/build-resolved-entries.js";
+import {
+  buildResolvedEntries,
+  resolveAuthorRow,
+} from "./render/build-resolved-entries.js";
 import {
   archiveData,
   authorData,
@@ -206,16 +209,9 @@ async function resolveAuthor(
 
   ctx.resolvedEntity = { kind: "author", id: author.id };
 
-  // Explicit projection — never spread the full user row (it carries email
-  // and auth columns) into the public template payload.
   const page = await authorData(
     ctx,
-    {
-      id: author.id,
-      slug: author.slug,
-      name: author.name,
-      avatarUrl: author.avatarUrl,
-    },
+    await resolveAuthorRow(ctx, author),
     parsePageParam(params.page),
   );
   if (page === null) return notFound("public-author-page-out-of-range");

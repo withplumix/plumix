@@ -23,6 +23,7 @@ const author: ResolvedAuthor = {
   slug: "ada",
   name: "Ada Lovelace",
   avatarUrl: null,
+  images: {},
 };
 
 const entry = {

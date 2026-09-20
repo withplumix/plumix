@@ -9,6 +9,11 @@ import type {
 } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import {
+  photoField,
+  photoLookupAdapter,
+  photoUrl,
+} from "../test/photo-lookup.js";
 
 const blog = definePlugin("test-blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -782,6 +787,124 @@ describe("REST API — meta visibility (default-deny)", () => {
       data: readonly { meta: Record<string, unknown> }[];
     };
     expect(list.data[0]?.meta.owner).toEqual(item.meta.owner);
+  });
+
+  test("a role appears only when its field opts into the API", async () => {
+    const photos = (showInApi: boolean) =>
+      definePlugin("test-photos", (ctx) => {
+        ctx.registerLookupAdapter({
+          kind: "photo",
+          adapter: photoLookupAdapter,
+        });
+        ctx.registerEntryMetaBox("appearance", {
+          label: "Appearance",
+          entryTypes: ["post"],
+          fields: [photoField("cover", { role: "featured", showInApi })],
+        });
+      });
+
+    const read = async (showInApi: boolean) => {
+      const h = await restHarness({ plugins: [blog, photos(showInApi)] });
+      const photoId = await seedWithMeta(h, {});
+      const id = await seedWithMeta(h, { cover: String(photoId) });
+      const itemRes = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+      const item = (await itemRes.json()) as {
+        images: Record<string, unknown>;
+      };
+      const listRes = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+      const list = (await listRes.json()) as {
+        data: readonly { id: number; images: Record<string, unknown> }[];
+      };
+      const listed = list.data.find((entry) => entry.id === id);
+      return { item, listed, photoId };
+    };
+
+    const hidden = await read(false);
+    expect(hidden.item.images).toEqual({});
+    expect(hidden.listed?.images).toEqual({});
+
+    // The list envelope goes through the same projection, so it carries the
+    // same roles the item does.
+    const exposed = await read(true);
+    expect(exposed.item.images).toEqual({
+      featured: { url: photoUrl(exposed.photoId), alt: null },
+    });
+    expect(exposed.listed?.images).toEqual(exposed.item.images);
+  });
+
+  test("a role inside a group answers for its own field, not the group's", async () => {
+    // `meta` is keyed by top-level field, so a group's flag is what exposes
+    // the ids under it; a role is addressed by name, so its own flag decides.
+    const nested = definePlugin("test-nested-photos", (ctx) => {
+      ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+      ctx.registerEntryMetaBox("appearance", {
+        label: "Appearance",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "layout",
+            label: "Layout",
+            type: "json",
+            inputType: "group",
+            showInApi: true,
+            fields: [photoField("cover", { role: "featured" })],
+          },
+        ],
+      });
+    });
+    const h = await restHarness({ plugins: [blog, nested] });
+    const photoId = await seedWithMeta(h, {});
+    const id = await seedWithMeta(h, { layout: { cover: String(photoId) } });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+    const body = (await res.json()) as {
+      images: Record<string, unknown>;
+      meta: Record<string, unknown>;
+    };
+
+    // The group opted its own key in, so its hydrated reference is public…
+    expect(body.meta.layout).toMatchObject({
+      cover: { id: String(photoId) },
+    });
+    // …while the role field did not, so the role stays out.
+    expect(body.images).toEqual({});
+  });
+
+  test("a role inside a group the API hides still answers for itself", async () => {
+    const nested = definePlugin("test-nested-photos", (ctx) => {
+      ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+      ctx.registerEntryMetaBox("appearance", {
+        label: "Appearance",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "layout",
+            label: "Layout",
+            type: "json",
+            inputType: "group",
+            fields: [
+              photoField("cover", { role: "featured", showInApi: true }),
+            ],
+          },
+        ],
+      });
+    });
+    const h = await restHarness({ plugins: [blog, nested] });
+    const photoId = await seedWithMeta(h, {});
+    const id = await seedWithMeta(h, { layout: { cover: String(photoId) } });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+    const body = (await res.json()) as {
+      images: Record<string, unknown>;
+      meta: Record<string, unknown>;
+    };
+
+    // The group is not a public meta key, so the stored reference stays out…
+    expect(body.meta).toEqual({});
+    // …and the role its field carries publishes the image, and only that.
+    expect(body.images).toEqual({
+      featured: { url: photoUrl(photoId), alt: null },
+    });
   });
 
   test("a PAT-authed read applies the same meta whitelist", async () => {

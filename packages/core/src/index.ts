@@ -150,6 +150,12 @@ export { canonicalUrl } from "./seo/canonical.js";
 // The social image an entry's role-tagged field resolves to, for the plugin
 // that owns the chain the roles feed.
 export type { OgImage } from "./seo/entry-image.js";
+// `images.<role>` — the shape every resolved entity carries it in, and the
+// options the REST projection narrows it with.
+export type {
+  ProjectImageRolesOptions,
+  RoleImages,
+} from "./images/role-images.js";
 // The debug bar's presentational primitives, so a plugin panel contributed
 // through `debug:panels` reads like the ones core registers instead of
 // re-spelling their class names. Dev-only in effect — nothing collects
@@ -196,6 +202,10 @@ export {
 // The role links of the `og:image` chain, for a subscriber that has to say
 // which one an image came from rather than only what the chain resolved to.
 export { entryRoleImage } from "./seo/entry-image.js";
+// The two ways to ask for an entity's role images: `projectImageRoles` off a
+// bag the caller already hydrated, `resolveImageRoles` for a bulk path holding
+// raw stored bags — one hydration per `(kind, scope)` group per chunk.
+export { projectImageRoles, resolveImageRoles } from "./images/role-images.js";
 // The `site` settings bag, and the general reader behind it. Both memoize per
 // request alongside the template dep that reads the same rows — so a plugin
 // asking for a settings group joins that read instead of opening a second

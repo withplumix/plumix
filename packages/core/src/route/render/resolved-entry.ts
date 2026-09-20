@@ -2,6 +2,7 @@ import type { EntryContent } from "@plumix/blocks";
 
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
+import type { RoleImages } from "../../images/role-images.js";
 import type { StoredMeta, WithResolvedMeta } from "../../rpc/meta/core.js";
 
 /** Public-safe author projection — query select narrows away email + auth columns. */
@@ -10,6 +11,13 @@ export interface ResolvedAuthor {
   readonly slug: string;
   readonly name: string | null;
   readonly avatarUrl: string | null;
+  /**
+   * The author's images by role, as {@link ResolvedEntry.images}. The bag they
+   * come from does not travel with them: a role names the one thing about a
+   * user a public page is meant to render, where the rest of their meta is
+   * not public-safe.
+   */
+  readonly images: RoleImages;
 }
 
 // A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
@@ -19,6 +27,8 @@ export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
   /** The meta JSON column, as {@link ResolvedEntry.storedMeta}. */
   readonly storedMeta: StoredMeta;
+  /** The term's images by role, as {@link ResolvedEntry.images}. */
+  readonly images: RoleImages;
 }
 
 // `content` stays loose so non-blocks serializers (TipTap, etc.) keep
@@ -38,6 +48,12 @@ export interface ResolvedEntry extends WithResolvedMeta<Entry> {
    */
   readonly storedMeta: StoredMeta;
   readonly contentBlocks: EntryContent | null;
+  /**
+   * The entry's image for each role its type declares a field in — what a
+   * template asks for instead of guessing a meta key. Projected out of the
+   * hydrated `meta` beside it, so reading it costs no query.
+   */
+  readonly images: RoleImages;
   readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;
   readonly url: string | null;

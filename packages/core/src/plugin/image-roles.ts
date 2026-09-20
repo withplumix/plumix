@@ -50,8 +50,12 @@ export interface ImageRoleField {
   readonly path: readonly [...string[], string];
 }
 
-type ScopeIndex = ReadonlyMap<string, readonly ImageRoleField[]>;
-type ImageRoleIndex = ReadonlyMap<string, ScopeIndex>;
+/** One scope's roles, each with the fields carrying it in declaration order. */
+export type ImageRoleScopeIndex = ReadonlyMap<
+  string,
+  readonly ImageRoleField[]
+>;
+type ImageRoleIndex = ReadonlyMap<string, ImageRoleScopeIndex>;
 
 const indexes = new WeakMap<PluginRegistry, ImageRoleIndex>();
 
@@ -75,12 +79,25 @@ export function imageRoleFields(
   scope: ImageRoleScope,
   role: ImageRoleName,
 ): readonly ImageRoleField[] {
+  return imageRolesInScope(registry, scope).get(role) ?? [];
+}
+
+const NO_ROLES: ImageRoleScopeIndex = new Map();
+
+/**
+ * Every role one scope carries a field in, with those fields — what a reader
+ * projecting all of an entity's images asks for, rather than naming each role.
+ */
+export function imageRolesInScope(
+  registry: PluginRegistry,
+  scope: ImageRoleScope,
+): ImageRoleScopeIndex {
   // Before boot resolves the index the registry may still grow, so an early
   // query answers from a fresh walk rather than memoising a partial one, and
   // leaves the checks to boot: a role another plugin has yet to register is
   // not an error until every plugin has had its turn.
   const index = indexes.get(registry) ?? buildIndex(registry, false);
-  return index.get(scopeKey(scope))?.get(role) ?? [];
+  return index.get(scopeKey(scope)) ?? NO_ROLES;
 }
 
 /**

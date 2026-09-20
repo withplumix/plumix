@@ -27,7 +27,11 @@ import { archiveSlugForEntryType } from "../compile.js";
 import { dateRange } from "../date-range.js";
 import { paginate } from "../paginate.js";
 import { buildTermArchiveUrl } from "../permalink.js";
-import { buildResolvedEntries } from "./build-resolved-entries.js";
+import {
+  buildResolvedEntries,
+  resolveAuthorRow,
+  resolveTerm,
+} from "./build-resolved-entries.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -178,7 +182,7 @@ export async function termData(
   const data = await ctx.hooks.applyFilter("resolve:term:data", {
     kind: "taxonomy",
     taxonomy: term.taxonomy,
-    term: { ...term, meta, storedMeta: term.meta, url },
+    term: resolveTerm(ctx, term, meta, url),
     ...listing,
   });
   return {
@@ -314,18 +318,7 @@ export async function resolveListingPage(
         where: eq(users.id, target.id),
       });
       if (!author) return null;
-      // Explicit projection — never spread the full user row (it carries email
-      // and auth columns) into the public template payload.
-      return authorData(
-        ctx,
-        {
-          id: author.id,
-          slug: author.slug,
-          name: author.name,
-          avatarUrl: author.avatarUrl,
-        },
-        1,
-      );
+      return authorData(ctx, await resolveAuthorRow(ctx, author), 1);
     }
     case "date":
       return dateData(ctx, target, 1);

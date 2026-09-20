@@ -110,6 +110,12 @@ export interface MetaBoxFieldBase {
    * Expose this field's value on the public REST API. Default-deny: meta is
    * hidden from REST responses unless a field opts in with `showInApi: true`,
    * so internal fields never leak by default. Has no effect on the admin RPC.
+   *
+   * The `meta` map is keyed by top-level field, so the flag reaches it only
+   * from one. A role field is addressed by its role rather than by a key, so
+   * `images.<role>` reads the flag off the field carrying the role wherever
+   * it sits — a role field inside a group opts its own image in, and does not
+   * inherit the group's answer in either direction.
    */
   readonly showInApi?: boolean;
   /**
