@@ -375,13 +375,30 @@ The package exports two different functions under the name `media`, so the speci
 
 A reference to one media item, following the same chain as [`user`](#user): storage is the bare media id, reads hydrate to a summary carrying title, MIME type, size, alt text, URL, thumbnail URL and pixel dimensions, and `.returns("id")` opts out.
 
-Three methods are its own. `.accept()` filters the picker and the write check by MIME, taking either a prefix such as `"image/"` or an array of exact types. `.featured()` marks the field as the entry's representative image, which is what the `og:image` head wiring reads. `.ogImage()` sets an explicit social-share image that outranks the featured one. Both are single-value only, and core allows at most one featured field per entry type.
+Three methods are its own. `.accept()` filters the picker and the write check by MIME, taking either a prefix such as `"image/"` or an array of exact types. `.role()` puts the field in an [image role](#image-roles), and `.featured()` / `.ogImage()` are its sugar for the two roles core ships.
 
-The recipe box's hero image is `media("heroImage").accept("image/").featured()`.
+The recipe box's hero image is `media("heroImage").featured()`.
 
 #### mediaList
 
 An array of media ids, produced by calling `.multiple()` on a `media` chain, with `.max()` capping the array. It is to `media` what [`userList`](#userlist) is to `user`.
+
+## Image roles
+
+An image role names what a picture is _for_, so a reader asks for the role rather than for the key that happens to hold it. `media("heroImage").featured()` puts that field in the `featured` role, and a template then reads `data.entry.images.featured?.url` — no meta key, no cast. Terms and users carry `images` the same way, and [Template Data](/themes/template-data/) covers the read. The public REST API stays default-deny: a role appears there only where the field carrying it opted in with `.showInApi()`, which [Field Builders](/fields/builders/) covers.
+
+Core ships two roles, and they are the two more than one independent reader wants:
+
+| Role       | What it names                                  | Who reads it                                                                 |
+| ---------- | ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| `featured` | The entity's own photo                         | your theme; the `og:image` chain when no share image is set; the sitemap     |
+| `ogImage`  | An explicit share image, outranking `featured` | `@plumix/plugin-seo` and `@plumix/plugin-og`, neither depending on the other |
+
+The set is open: `hero`, `thumbnail` and `avatar` are yours to add. [Plugins](/plugins/overview/#adding-an-image-role) covers registering a name and typing it.
+
+A role field only ever holds an image, so `.role()` implies `.accept("image/")`. A narrower accept stands — `.accept(["image/avif", "image/webp"]).featured()` is fine — but one admitting anything else throws where the field is built. A role field holds a single image, and it may sit inside a `group()` at any depth but never inside a `repeater()`: a role names the entity's image, not a row's. [Meta Boxes](/fields/meta-boxes/#what-registration-refuses) lists what registration refuses.
+
+Several fields may carry one role when the role allows it, and `images.<role>` is then the first of them, in declaration order, that resolves to an image.
 
 ## Changing a field's type
 

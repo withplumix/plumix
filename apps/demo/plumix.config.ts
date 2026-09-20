@@ -7,23 +7,26 @@ import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
 import { seo } from "@plumix/plugin-seo";
-import { images, r2 } from "@plumix/runtime-cloudflare";
+import { images } from "@plumix/runtime-cloudflare";
 import { demoPreset } from "@plumix/runtime-cloudflare/demo";
 
+import { featuredImage } from "./featured-image";
 import { blogTheme } from "./theme";
 
 const readEnv = (env: unknown, name: string): string =>
   (env as Record<string, string | undefined>)[name] ?? "";
 
 export default plumix({
-  // Presigned uploads and image transforms stay dormant until their env keys
-  // are attached (see each primitive's docs); until then media routes through
-  // the worker and public pages render live.
-  // The CDN slot is intentionally not declared: per-session sandboxes are
-  // unshareable at the edge. Each visitor has their own database keyed on a
-  // session cookie, so a cached render would serve one visitor's sandbox to
-  // all others.
-  storage: r2({ binding: "MEDIA" }),
+  // Two slots are absent on purpose. There is no `storage:` because the
+  // sandbox blocks every media write — the bucket would be shared across
+  // sessions, unlike the database — so nothing would ever be put in one.
+  // Without a storage adapter a media row's storage key is the URL it serves
+  // from, which is what makes the seeded stock photos real library rows.
+  // There is no `cdn:` because a per-session sandbox is unshareable at the
+  // edge: each visitor has their own database keyed on a session cookie, so a
+  // cached render would serve one visitor's sandbox to all others.
+  // Image transforms stay dormant until their env keys are attached (see the
+  // primitive's docs); until then public pages render live.
   imageDelivery: images(),
   mailer: consoleMailer(),
   plugins: [
@@ -39,6 +42,7 @@ export default plumix({
       },
     }),
     seo(),
+    featuredImage,
   ],
   theme: blogTheme,
   // Deploys this example as the anonymous demo sandbox: provides runtime /

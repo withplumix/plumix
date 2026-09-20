@@ -23,6 +23,36 @@ Anonymous requests see published content only; unviewable content is `404`
 (never `403`), so existence stays hidden. An `Authorization: Bearer <pat>` token
 reads as its user, gated by scope ∩ role.
 
+## Meta and images
+
+Both are default-deny, per field. An entry carries `meta`, holding only the
+fields declared with `.showInApi()`, and `images`, holding one key per image
+role a field of that entry type declares:
+
+```json
+{
+  "id": 42,
+  "slug": "sicilian-caponata",
+  "meta": { "servings": 4 },
+  "images": {
+    "featured": {
+      "url": "https://media.example.com/caponata.jpg",
+      "alt": "Caponata in a shallow bowl",
+      "width": 1600,
+      "height": 1067
+    }
+  }
+}
+```
+
+A role is addressed by name, not by key, so the gate is read off whichever
+field carries the role — including one nested in a group, which opts its own
+image in without inheriting the group's answer. A role whose field did not opt
+in is absent from `images` entirely, not `null`; `null` means the field opted
+in and resolved to no image (an orphaned reference, or one the media adapter
+refuses). `width` and `height` travel as a pair, and are absent when the
+adapter does not know the size.
+
 ## CORS
 
 CORS is **closed by default**, even when the API is enabled. Open anonymous

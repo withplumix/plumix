@@ -283,6 +283,16 @@ const POST_TITLES = [
 ];
 
 const POST_BASE_ID = 200;
+// Cover photos are media-library rows, one per post, referenced by the post's
+// `featuredImage` field (the `featured` image role — see plumix.config.ts).
+const COVER_BASE_ID = 400;
+const COVER_WIDTH = 1200;
+const COVER_HEIGHT = 800;
+// Nominal: the bytes live on picsum, so there is nothing to measure. The
+// library renders a size for every row, and a plausible one reads better than
+// "0 B".
+const COVER_SIZE = 240 * 1024;
+
 const posts = POST_TITLES.map(([title, categoryId, tagIds], i) => {
   const slug = title
     .toLowerCase()
@@ -297,10 +307,28 @@ const posts = POST_TITLES.map(([title, categoryId, tagIds], i) => {
     content: i === 0 ? showcaseContent() : postBody(i),
     categoryId,
     tagIds,
-    featured: pic(`cover-${slug}`),
+    coverId: COVER_BASE_ID + i,
     publishedAt: BASE - i * 3 * DAY,
   };
 });
+
+// The storage key is the URL, for the reason plumix.config.ts gives. The
+// dimensions are passed to `pic` rather than left to its defaults so the URL
+// and the row's stored size cannot drift apart.
+const covers = posts.map((p) => ({
+  id: p.coverId,
+  title: `Cover: ${p.title}`,
+  slug: `cover-${p.slug}`,
+  meta: {
+    storageKey: pic(`cover-${p.slug}`, COVER_WIDTH, COVER_HEIGHT),
+    mime: "image/jpeg",
+    size: COVER_SIZE,
+    originalName: `cover-${p.slug}.jpg`,
+    alt: p.title,
+    width: COVER_WIDTH,
+    height: COVER_HEIGHT,
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Pages — hierarchical (Team nests under About), feed the menus.
@@ -436,18 +464,9 @@ for (const t of tags) {
 emit("");
 
 const insertEntry = (e) => {
+  // A stored single reference is the bare id string.
   const meta =
-    e.meta ??
-    (e.featured
-      ? {
-          featuredImage: {
-            src: e.featured,
-            alt: e.title,
-            width: 1200,
-            height: 800,
-          },
-        }
-      : {});
+    e.meta ?? (e.coverId ? { featuredImage: String(e.coverId) } : {});
   emit(
     `INSERT INTO entries (id, type, parent_id, title, slug, content, excerpt, status, author_id, sort_order, meta, published_at) VALUES (${e.id}, ${q(e.type)}, ${q(e.parentId ?? null)}, ${q(e.title)}, ${q(e.slug)}, ${json(e.content)}, ${q(e.excerpt ?? null)}, 'published', ${AUTHOR_ID}, ${e.sortOrder ?? 0}, ${json(meta)}, ${e.publishedAt});`,
   );
@@ -455,6 +474,12 @@ const insertEntry = (e) => {
 
 emit("-- Pages");
 for (const p of pages) insertEntry({ ...p, type: "page", publishedAt: BASE });
+emit("");
+
+emit("-- Cover photos (media library rows the posts reference)");
+for (const c of covers) {
+  insertEntry({ ...c, type: "media", content: null, publishedAt: BASE });
+}
 emit("");
 
 emit("-- Posts");
