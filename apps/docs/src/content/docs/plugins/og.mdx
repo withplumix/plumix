@@ -12,7 +12,7 @@ import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 ## Overview
 
-The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes four options — `renderer`, `fonts`, `preview` and `palette` — each with a default.
+The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes four options — `renderer`, `fonts`, `preview` and `palette` — each with a default. `renderer` and `fonts` are read together: a renderer declares which font formats it parses, and the plugin hands it no others.
 
 A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens. The bundled template reads three of those tokens too, so a card looks like the rest of the site before you have declared a card at all.
 
@@ -265,19 +265,47 @@ The list is not defaulted, because a meta box is registered against entry types 
 
 Both dev surfaces sit behind the same development gate core uses for its own, reached through a dynamic import, so neither leaves anything in a production build.
 
-## What fails quietly
-
-Each of these fails without an error message.
-
-### WOFF2 is not read
-
-The engine reads **TTF, OTF and WOFF**. It does not read WOFF2, which is what most font packages ship by default, and the failure is a card with no text on it — a correct render of a font with no glyphs.
+## Fonts
 
 ```ts no-typecheck
 og({ fonts: ["/fonts/Inter-SemiBold.ttf"] });
 ```
 
 Paths point into the platform asset layer — your `.plumix/public` directory, served through the `ASSETS` binding — and are read at render time, so a declared font costs nothing in the Worker bundle. Declare none, as a scaffolded site does, and the engine's own face is used. A path that answers anything but `200` fails the render outright rather than quietly dropping to that face.
+
+**Which formats are read is your renderer's business, not this option's.** A renderer declares what it reads beside what it writes, and the plugin fetches only the configured faces it can parse, in the order you listed them.
+
+| Renderer                         | Reads                                            |
+| -------------------------------- | ------------------------------------------------ |
+| `takumi()`, `svgOnly()`, default | TTF, OTF and WOFF — **not** WOFF2                |
+| `remote({ url })`                | nothing: the endpoint brings its own faces       |
+| `remote({ url, fonts })`         | whatever formats you declare the endpoint parses |
+
+WOFF2 is what most font packages ship by default, and the bundled engine cannot read it. Configure a set the connected renderer can parse none of and the card fails with an error naming the format, rather than serving a correct render of a font with no glyphs.
+
+A renderer that reads no fonts ignores `fonts` entirely — nothing is fetched, nothing is sent, and a runtime with no asset layer at all still serves every card. The setting is then dead config, which the debug bar's **OG image** panel points out in development. It also drops out of the card's URL: a card's digest names only the faces its renderer actually receives, so swapping a font path moves no URL on a site rendering off-box.
+
+### Sending your faces to a remote endpoint
+
+An endpoint that would rather render in your site's own faces asks for them by declaring what it parses:
+
+```ts no-typecheck
+import { og, remote } from "@plumix/plugin-og";
+
+og({
+  fonts: ["/fonts/Inter-SemiBold.woff2"],
+  renderer: remote({
+    url: "https://cards.example/render",
+    fonts: { formats: ["woff2"] },
+  }),
+});
+```
+
+Faces then travel base64 in the request body, beside the images that already do — never as URLs, because an endpoint handed a URL has to fetch it, which is the class of problem this plugin removes rather than mitigates. The bill is the reason it is opt-in: several hundred KB per face on every render, and several MB for a CJK face.
+
+## What fails quietly
+
+Each of these fails without an error message.
 
 ### Rasterizing in the Worker needs a paid plan
 

@@ -8,6 +8,7 @@ import type {
   CardRenderInput,
 } from "./renderer.js";
 import {
+  BUNDLED_ENGINE_FONTS,
   JPEG_CONTENT_TYPE,
   PNG_CONTENT_TYPE,
   SVG_CONTENT_TYPE,
@@ -27,6 +28,7 @@ export function takumi(options: TakumiOptions = {}): CardRenderer {
   const format = options.format ?? "png";
   return {
     contentType: format === "jpeg" ? JPEG_CONTENT_TYPE : PNG_CONTENT_TYPE,
+    fonts: BUNDLED_ENGINE_FONTS,
     render: async (node, input) => {
       const engine = await renderer();
       return engine.render(toEngineNode(node), {
@@ -45,6 +47,7 @@ export function takumi(options: TakumiOptions = {}): CardRenderer {
 export function svgOnly(): CardRenderer {
   return {
     contentType: SVG_CONTENT_TYPE,
+    fonts: BUNDLED_ENGINE_FONTS,
     render: async (node, input) => {
       const engine = await renderer();
       const svg = await engine.renderSvg(

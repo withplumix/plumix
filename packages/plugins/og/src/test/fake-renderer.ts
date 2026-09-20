@@ -13,6 +13,11 @@ export interface FakeRendererOptions {
    * about what reaches a scraper — passes a raster type instead.
    */
   readonly contentType?: string;
+  /**
+   * What the renderer declares it reads. Left out it declares nothing, which
+   * is the renderer every suite written before the declaration existed has.
+   */
+  readonly fonts?: CardRenderer["fonts"];
 }
 
 /**
@@ -28,6 +33,7 @@ export function createFakeRenderer(
     inputs,
     renderer: {
       contentType: options.contentType ?? "image/svg+xml",
+      fonts: options.fonts,
       render: (node, input) => {
         inputs.push(input);
         const elements = toSvgElements(node);

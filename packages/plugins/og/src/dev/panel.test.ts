@@ -129,4 +129,45 @@ describe("the og:image debug panel", () => {
 
     expect(html).toContain("Explicit og:image role");
   });
+
+  test("says a font set is dead config when the renderer reads none", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({
+        contentType: "image/png",
+        fonts: false,
+      }).renderer,
+      fonts: ["/fonts/Inter-SemiBold.ttf"],
+    });
+    await seedEntry(harness, { slug: "fontless" });
+
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/fontless`)
+      .then((r) => r.text());
+
+    // The card renders and looks right, so nothing else on the page says the
+    // configured face was never read.
+    expect(html).toContain("Fonts ignored");
+    expect(html).toContain("/fonts/Inter-SemiBold.ttf");
+  });
+
+  test("names a face dropped for its format, beside the ones read", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({
+        contentType: "image/png",
+        fonts: { formats: ["ttf"] },
+      }).renderer,
+      fonts: ["/fonts/Inter.ttf", "/fonts/Inter.woff2"],
+    });
+    await seedEntry(harness, { slug: "partial" });
+
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/partial`)
+      .then((r) => r.text());
+
+    // A half-dropped fallback stack still renders a card, so it is exactly as
+    // invisible as a wholly ignored set — and easier to configure by accident.
+    expect(html).toContain("Fonts dropped");
+    expect(html).toContain("/fonts/Inter.woff2");
+    expect(html).not.toContain("Fonts ignored");
+  });
 });

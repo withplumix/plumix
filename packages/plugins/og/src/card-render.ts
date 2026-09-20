@@ -2,6 +2,7 @@ import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { loadTemplateDeps } from "plumix/plugin";
 
+import type { CardFontPlan } from "./card-fonts.js";
 import type { CardInputs } from "./card-identity.js";
 import type { CardArgs, CardDefinition } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
@@ -43,7 +44,8 @@ export interface RenderCardOptions {
   readonly args: CardArgs<TemplateData>;
   readonly ctx: AppContext;
   readonly renderer: CardRenderer;
-  /** The same fonts and tokens the card's digest was taken over. */
+  /** The same tokens and font plan the card's digest was taken over — that
+   *  digest naming the plan's readable half, which is what this renderer gets. */
   readonly inputs: CardInputs;
 }
 
@@ -71,18 +73,29 @@ export async function renderCardBytes(
 
 /**
  * Fonts come from the platform asset layer rather than the Worker bundle, so
- * adding cards costs no deployment size. The engine reads TTF, OTF and WOFF —
- * not WOFF2, which is what most font packages ship.
+ * adding cards costs no deployment size. Which formats can be read is the
+ * renderer's own business, declared on it — the bundled engine reads TTF, OTF
+ * and WOFF but not WOFF2, and an endpoint off-box may well read the one it
+ * cannot.
  *
  * A declared font that cannot be read fails the render rather than dropping to
  * the engine's own fallback face, which would answer 200 with a card nobody
- * meant to publish. The failure then takes the route's fallback path.
+ * meant to publish. A configured set in a format this renderer parses none of
+ * fails the same way and for the same reason, one step earlier. Both failures
+ * then take the route's fallback path.
  */
 async function loadFonts(
   ctx: AppContext,
-  paths: readonly string[],
+  plan: CardFontPlan,
 ): Promise<Uint8Array[]> {
-  if (paths.length === 0) return [];
+  const paths = plan.readable;
+  if (paths.length === 0) {
+    if (plan.unreadable.length === 0) return [];
+    throw OgPluginError.fontFormatUnsupported({
+      paths: plan.unreadable,
+      formats: plan.formats,
+    });
+  }
   const assets = ctx.assets;
   if (assets === undefined) throw OgPluginError.assetLayerMissing({ paths });
 

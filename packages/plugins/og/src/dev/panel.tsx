@@ -3,6 +3,7 @@ import type { DebugKVRow, DebugPanel } from "plumix/plugin";
 import { DebugKV, DebugSection } from "plumix/plugin";
 import { isJsonObject } from "plumix/support";
 
+import type { CardFontPlan } from "../card-fonts.js";
 import type { OgCardSkip, OgChainOutcome, OgTrace } from "../chain-trace.js";
 import { OG_PANEL_ID } from "../chain-trace.js";
 
@@ -39,23 +40,57 @@ const SKIP_REASON: Record<OgCardSkip, string> = {
     'mode: "auto" — a card steps aside for an entry that has a photo of its own',
 };
 
+export interface OgDebugPanelOptions {
+  /** The configured font set split by what the connected renderer reads. */
+  readonly fonts: CardFontPlan;
+}
+
 /**
  * The `og:image` chain for the page, and which of its four links produced the
  * image. The chain resolves inside `@plumix/plugin-seo` and leaves no trace in
  * the markup, so without this the only way to tell a missing rule from an
  * unadvertisable format is to go and read the plugin.
  */
-export function ogDebugPanel(): DebugPanel {
+export function ogDebugPanel(options: OgDebugPanelOptions): DebugPanel {
+  const { fonts } = options;
   return {
     id: OG_PANEL_ID,
     title: "OG image",
     order: 60,
     render: (snapshot) => (
       <DebugSection>
-        <DebugKV rows={chainRows(snapshot)} />
+        <DebugKV rows={[...chainRows(snapshot), ...fontRows(fonts)]} />
       </DebugSection>
     ),
   };
+}
+
+// A face the renderer never receives leaves no mark on the card it serves —
+// that card looks exactly like one rendered in the faces you chose. Both ways
+// of never receiving one get a row, and the plan makes them exclusive: a
+// renderer reading nothing has no unreadable set to report.
+function fontRows(plan: CardFontPlan): readonly DebugKVRow[] {
+  if (plan.ignored.length > 0) {
+    return [
+      {
+        label: "Fonts ignored",
+        value:
+          `${plan.ignored.join(", ")} — this renderer reads no fonts, so the ` +
+          `configured set is never read or sent`,
+      },
+    ];
+  }
+  if (plan.unreadable.length > 0) {
+    return [
+      {
+        label: "Fonts dropped",
+        value:
+          `${plan.unreadable.join(", ")} — this renderer reads ` +
+          `${plan.formats.join(", ")}`,
+      },
+    ];
+  }
+  return [];
 }
 
 function chainRows(snapshot: DebugSnapshot): readonly DebugKVRow[] {
