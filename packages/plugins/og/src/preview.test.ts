@@ -11,7 +11,7 @@ import type { HarnessOptions } from "./test/harness.js";
 import { card, cardKey } from "./index.js";
 import { CARD_PREVIEW_INPUT_TYPE } from "./preview-box.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
-import { createHarness, seedEntry } from "./test/harness.js";
+import { createHarness, featuredMeta, seedEntry } from "./test/harness.js";
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
 const PHOTO = "https://media.example/hero.jpg";
@@ -110,7 +110,7 @@ describe("the card preview in the entry editor", () => {
     const saved = await harness.fetch("/_plumix/rpc/entry/update", {
       as: editor,
       json: {
-        json: { id, meta: { hero: { url: PHOTO, width: null, height: null } } },
+        json: { id, meta: featuredMeta({ url: PHOTO }) },
         meta: [],
       },
     });

@@ -1,6 +1,5 @@
 import type { EntryData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { entryRoleImage } from "plumix/plugin";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
@@ -58,11 +57,11 @@ export async function previewCard(
   input: PreviewCardInput,
 ): Promise<CardPreview> {
   const { data, ctx, cards, renderer, inputs, extension } = input;
-  const explicit = entryRoleImage(ctx.plugins, data, "ogImage");
-  if (explicit !== null) {
+  const explicit = data.entry.images.ogImage;
+  if (explicit) {
     return { outcome: "og-image", skipped: null, src: explicit.url };
   }
-  const featured = entryRoleImage(ctx.plugins, data, "featured");
+  const featured = data.entry.images.featured ?? null;
 
   const chosen = await chooseCard({
     data,

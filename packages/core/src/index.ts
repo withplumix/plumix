@@ -149,7 +149,7 @@ export type { RenderedAssetArgs } from "./storage/rendered-asset.js";
 export { canonicalUrl } from "./seo/canonical.js";
 // The social image an entry's role-tagged field resolves to, for the plugin
 // that owns the chain the roles feed.
-export type { OgImage } from "./seo/entry-image.js";
+export type { OgImage } from "./seo/og-image.js";
 // `images.<role>` — the shape every resolved entity carries it in, and the
 // options the REST projection narrows it with.
 export type {
@@ -199,9 +199,6 @@ export {
   DevErrorFacts,
   DevErrorSubhead,
 } from "./dev/ui/panel-primitives.js";
-// The role links of the `og:image` chain, for a subscriber that has to say
-// which one an image came from rather than only what the chain resolved to.
-export { entryRoleImage } from "./seo/entry-image.js";
 // The two ways to ask for an entity's role images: `projectImageRoles` off a
 // bag the caller already hydrated, `resolveImageRoles` for a bulk path holding
 // raw stored bags — one hydration per `(kind, scope)` group per chunk.

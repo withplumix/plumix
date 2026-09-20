@@ -1,38 +1,23 @@
 import type { TemplateData } from "plumix";
-import type { MetaBoxField } from "plumix/fields";
-import type { AppContext, PluginRegistry } from "plumix/plugin";
+import type { AppContext, RoleImages } from "plumix/plugin";
 import { HookRegistry } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { resolveOgImage } from "./og-image.js";
 
-// A minimal hydrated media reference (the read shape the resolver consumes).
-const mediaRef = (url: string) => ({ id: "m1", url });
-
-const mediaField = (
-  key: string,
-  role?: "featured" | "ogImage",
-): MetaBoxField => ({
-  key,
-  label: key,
-  type: "json",
-  inputType: "media",
-  referenceTarget: { kind: "media", scope: {} },
-  ...(role ? { role } : {}),
-});
-
-// A registry carrying one entry meta box, scoped to the given entry types.
-const registryWith = (
-  entryTypes: readonly string[],
-  fields: readonly MetaBoxField[],
-): PluginRegistry =>
+// What core projects onto a resolved entry: the role images it resolved out of
+// the page's own hydration batch. The chain reads the role off this, so a
+// suite about the chain's *order* seeds the roles directly and leaves which
+// field carries which role to core's own index.
+const entryData = (images: RoleImages = {}): TemplateData =>
   ({
-    entryMetaBoxes: new Map([["box", { entryTypes, fields }]]),
-  }) as unknown as PluginRegistry;
+    kind: "entry",
+    entry: { type: "post", images },
+  }) as unknown as TemplateData;
 
-const entryData = (type: string, meta: Record<string, unknown>): TemplateData =>
-  ({ kind: "entry", entry: { type, meta } }) as unknown as TemplateData;
+const hero = { url: "https://cdn/hero.jpg", alt: null } as const;
+const share = { url: "https://cdn/share.jpg", alt: null } as const;
 
 describe("resolveOgImage", () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -42,16 +27,12 @@ describe("resolveOgImage", () => {
   });
 
   // A real context, because the chain hands it on to `seo:og_image`
-  // subscribers; the registry and hooks are what the chain itself reads.
-  const ogContext = (
-    plugins: PluginRegistry,
-    hooks: HookRegistry,
-  ): AppContext => createTestContext({ db, plugins, hooks });
+  // subscribers; the hooks are the only part of it the chain itself reads —
+  // the roles arrive on the entry, so no registry is seeded here.
+  const ogContext = (hooks: HookRegistry): AppContext =>
+    createTestContext({ db, hooks });
 
   const siteDefault = "https://cms.example/default-og.png";
-  const noFields = registryWith([], []);
-  const withFeatured = registryWith(["post"], [mediaField("hero", "featured")]);
-  const withOverride = registryWith(["post"], [mediaField("share", "ogImage")]);
 
   test("a filter's image beats the site-wide default", async () => {
     const hooks = new HookRegistry();
@@ -61,11 +42,10 @@ describe("resolveOgImage", () => {
       height: 630,
     }));
 
-    const image = await resolveOgImage(
-      ogContext(noFields, hooks),
-      entryData("post", {}),
-      { override: null, siteDefault },
-    );
+    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+      override: null,
+      siteDefault,
+    });
 
     expect(image).toEqual({
       url: "https://cms.example/card.png",
@@ -78,77 +58,84 @@ describe("resolveOgImage", () => {
     const hooks = new HookRegistry();
     hooks.addFilter("seo:og_image", (image) => image);
 
-    const image = await resolveOgImage(
-      ogContext(noFields, hooks),
-      entryData("post", {}),
-      { override: null, siteDefault },
-    );
+    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+      override: null,
+      siteDefault,
+    });
 
     expect(image).toEqual({ url: siteDefault });
   });
 
-  test("an ogImage-role override outranks the filter, which never runs", async () => {
+  test("the ogImage role outranks the filter, which never runs", async () => {
     const hooks = new HookRegistry();
     let ran = false;
     hooks.addFilter("seo:og_image", () => {
       ran = true;
       return { url: "https://cms.example/card.png" };
     });
-    const data = entryData("post", {
-      share: mediaRef("https://cdn/share.jpg"),
-    });
 
-    const image = await resolveOgImage(ogContext(withOverride, hooks), data, {
-      override: null,
-      siteDefault,
-    });
+    const image = await resolveOgImage(
+      ogContext(hooks),
+      entryData({ ogImage: share }),
+      { override: null, siteDefault },
+    );
 
-    expect(image).toEqual({ url: "https://cdn/share.jpg" });
+    expect(image).toEqual(share);
     expect(ran).toBe(false);
   });
 
-  test("a featured field registered for another type does not resolve", async () => {
-    const registry = registryWith(["page"], [mediaField("hero", "featured")]);
-    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
-
+  test("a role the entry's scope declares but does not fill falls through", async () => {
+    // `null` is how a declared role with no resolvable image reads — an
+    // orphaned reference, or one the adapter refused — and it must not be
+    // mistaken for an answer.
     const image = await resolveOgImage(
-      ogContext(registry, new HookRegistry()),
-      data,
+      ogContext(new HookRegistry()),
+      entryData({ ogImage: null, featured: null }),
       { override: null, siteDefault },
     );
 
-    // The role is read off the fields the entry's own type registered, so a
-    // post cannot pick up a page's hero.
     expect(image).toEqual({ url: siteDefault });
   });
 
-  test("the featured photo beats the site default when no filter answers", async () => {
-    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
+  test("the SEO box's own URL sits below the role and above the filter", async () => {
+    const hooks = new HookRegistry();
+    hooks.addFilter("seo:og_image", () => ({
+      url: "https://cms.example/card.png",
+    }));
 
+    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+      override: "https://cms.example/typed.png",
+      siteDefault,
+    });
+
+    expect(image).toEqual({ url: "https://cms.example/typed.png" });
+  });
+
+  test("the featured photo beats the site default when no filter answers", async () => {
     const image = await resolveOgImage(
-      ogContext(withFeatured, new HookRegistry()),
-      data,
+      ogContext(new HookRegistry()),
+      entryData({ featured: hero }),
       { override: null, siteDefault },
     );
 
-    expect(image).toEqual({ url: "https://cdn/hero.jpg" });
+    expect(image).toEqual(hero);
   });
 
   test("declining leaves the featured photo exactly where it was", async () => {
     const hooks = new HookRegistry();
     hooks.addFilter("seo:og_image", (image) => image);
-    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
-      override: null,
-      siteDefault,
-    });
+    const image = await resolveOgImage(
+      ogContext(hooks),
+      entryData({ featured: hero }),
+      { override: null, siteDefault },
+    );
 
     // The value handed in is null, so a subscriber that passes it through — or
     // returns null on a page it does not handle — costs the author nothing.
     // Anything else would make a bare `return null` guard delete featured
     // images site-wide.
-    expect(image).toEqual({ url: "https://cdn/hero.jpg" });
+    expect(image).toEqual(hero);
   });
 
   test("the featured photo is passed alongside, to improve on", async () => {
@@ -156,16 +143,16 @@ describe("resolveOgImage", () => {
     hooks.addFilter("seo:og_image", (_image, _data, _ctx, featured) =>
       featured ? { url: `${featured.url}?w=1200`, width: 1200 } : null,
     );
-    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
-      override: null,
-      siteDefault,
-    });
+    const image = await resolveOgImage(
+      ogContext(hooks),
+      entryData({ featured: hero }),
+      { override: null, siteDefault },
+    );
 
     // Cropping the author's photo to a card's shape is the whole reason the
     // filter sees it — replacing it is not the only thing worth doing to it.
-    expect(image).toEqual({ url: "https://cdn/hero.jpg?w=1200", width: 1200 });
+    expect(image).toEqual({ url: `${hero.url}?w=1200`, width: 1200 });
   });
 
   test("an image a filter returns outranks the featured photo", async () => {
@@ -173,26 +160,26 @@ describe("resolveOgImage", () => {
     hooks.addFilter("seo:og_image", () => ({
       url: "https://cms.example/card.png",
     }));
-    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
-      override: null,
-      siteDefault,
-    });
+    const image = await resolveOgImage(
+      ogContext(hooks),
+      entryData({ featured: hero }),
+      { override: null, siteDefault },
+    );
 
     expect(image).toEqual({ url: "https://cms.example/card.png" });
   });
 
   test("the filter sees the page it is resolving", async () => {
     const hooks = new HookRegistry();
-    const data = entryData("post", {});
+    const data = entryData();
     const seen: TemplateData[] = [];
     hooks.addFilter("seo:og_image", (image, page) => {
       seen.push(page);
       return image;
     });
 
-    await resolveOgImage(ogContext(noFields, hooks), data, {
+    await resolveOgImage(ogContext(hooks), data, {
       override: null,
       siteDefault,
     });
@@ -200,26 +187,25 @@ describe("resolveOgImage", () => {
     expect(seen).toEqual([data]);
   });
 
-  test("a non-entry page reaches the filter too", async () => {
+  test("a non-entry page carries no role image and reaches the filter", async () => {
     const hooks = new HookRegistry();
     hooks.addFilter("seo:og_image", () => ({
       url: "https://cms.example/archive.png",
     }));
     const archive = { kind: "archive" } as unknown as TemplateData;
 
-    const image = await resolveOgImage(
-      ogContext(withFeatured, hooks),
-      archive,
-      { override: null, siteDefault },
-    );
+    const image = await resolveOgImage(ogContext(hooks), archive, {
+      override: null,
+      siteDefault,
+    });
 
     expect(image).toEqual({ url: "https://cms.example/archive.png" });
   });
 
   test("with no role, no filter and no site default nothing resolves", async () => {
     const image = await resolveOgImage(
-      ogContext(noFields, new HookRegistry()),
-      entryData("post", {}),
+      ogContext(new HookRegistry()),
+      entryData(),
       { override: null, siteDefault: null },
     );
 
