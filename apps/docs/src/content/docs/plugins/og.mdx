@@ -120,8 +120,8 @@ Then:
 
 Four links resolve one `og:image`, in this order:
 
-1. **An explicit `.ogImage()` field** on the entry. An author who picked a share image gets it, untouched.
-2. **A `.featured()` field** on the entry — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot, and this is what fixes it. The crop is URL math, so it costs no CPU and reaches no rasterizer. With no delivery slot configured the photo is emitted as it stands rather than dropped.
+1. **The entry's `ogImage` [image role](/fields/field-types/#image-roles).** An author who picked a share image gets it, untouched.
+2. **Its `featured` role** — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot, and this is what fixes it. The crop is URL math, so it costs no CPU and reaches no rasterizer. With no delivery slot configured the photo is emitted as it stands rather than dropped.
 3. **The generated card.**
 4. **Your site-wide default**, the SEO plugin's default social image.
 
@@ -321,7 +321,7 @@ The `storage:` and `imageDelivery:` slots this plugin reads are two of the twent
 
 Cards are declared where a theme declares its templates: [Templates](/themes/templates/) covers the builders `card.*` mirrors, [Template Hierarchy](/themes/hierarchy/) the tier-and-matcher resolution both share, and [Template Data](/themes/template-data/) the `data` a card's callbacks receive. The tokens a card styles with are in [Themes](/themes/overview/).
 
-The `.featured()` and `.ogImage()` roles that outrank a card are meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Field Types](/fields/field-types/) the media types they hold. Whether an entry may carry a card at all follows [Statuses and Publishing](/content-modelling/statuses/) and the model in [Access & Identity](/access/overview/).
+The `featured` and `ogImage` roles that outrank a card are filled by meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Image Roles](/fields/field-types/#image-roles) what a role is and how to add one of your own. Whether an entry may carry a card at all follows [Statuses and Publishing](/content-modelling/statuses/) and the model in [Access & Identity](/access/overview/).
 
 ## Next steps
 

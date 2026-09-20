@@ -3,15 +3,6 @@ import type { ReactNode } from "react";
 
 import { Image } from "@plumix/blocks/renderer";
 
-// Read from `entry.meta` because there's no admin affordance to set a
-// featured image yet (a later slice adds it).
-interface FeaturedImageMeta {
-  readonly src?: string;
-  readonly alt?: string;
-  readonly width?: number;
-  readonly height?: number;
-}
-
 interface FeaturedImageProps {
   readonly entry: ResolvedEntry;
   readonly priority?: boolean;
@@ -27,22 +18,30 @@ export function FeaturedImage({
   placeholder,
   className,
 }: FeaturedImageProps): ReactNode {
-  const image = entry.meta.featuredImage as FeaturedImageMeta | undefined;
-  const content =
-    image?.src && image.width && image.height ? (
-      <Image
-        src={image.src}
-        alt={image.alt ?? ""}
-        width={image.width}
-        height={image.height}
-        priority={priority}
-      />
-    ) : placeholder ? (
+  const image = entry.images.featured;
+  // `<Image>` lays out from intrinsic dimensions, and a role image carries
+  // them as a pair or not at all — so one axis narrows both.
+  if (image?.width !== undefined) {
+    return (
+      <div className={className}>
+        <Image
+          src={image.url}
+          alt={image.alt ?? ""}
+          width={image.width}
+          height={image.height}
+          priority={priority}
+          data-testid="featured-image"
+        />
+      </div>
+    );
+  }
+  if (!placeholder) return null;
+  return (
+    <div className={className}>
       <div
         className="bg-line aspect-[3/2] w-full rounded"
         data-testid="featured-placeholder"
       />
-    ) : null;
-  if (!content) return null;
-  return <div className={className}>{content}</div>;
+    </div>
+  );
 }

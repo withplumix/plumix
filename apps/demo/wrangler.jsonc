@@ -31,12 +31,8 @@
       "migrations_dir": "drizzle",
     },
   ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "plumix-demo",
-    },
-  ],
+  // No R2 bucket: the config declares no `storage:` slot, so nothing would
+  // read the binding. See plumix.config.ts for why the sandbox has none.
   // Per-session demo sandbox database. Each visitor's cookie maps to one
   // isolated DemoDB instance with its own SQLite storage.
   "durable_objects": {

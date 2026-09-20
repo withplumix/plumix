@@ -76,10 +76,10 @@ When a social image resolves, `og:image` is emitted with `og:image:width`, `og:i
 
 Five links resolve one `og:image`, in this order:
 
-1. **The entry's explicit choice** — a media field the entry type tagged `.ogImage()`.
+1. **The entry's explicit choice** — the entry's `ogImage` [image role](/fields/field-types/#image-roles).
 2. **The social image URL** typed into the SEO box below.
 3. **Whatever a `seo:og_image` subscriber returns** — where `@plumix/plugin-og` puts a generated card.
-4. **The entry's featured photo** — a media field tagged `.featured()`.
+4. **The entry's featured photo** — its `featured` role.
 5. **The site-wide default**, set on the SEO settings screen.
 
 The order is fixed here, not by subscription order, so a generated card never outranks an author's deliberate choice however the `plugins` array happens to be written.
@@ -342,11 +342,11 @@ Both documents name `/sitemap.xsl`, an XSLT stylesheet the plugin serves. A craw
 
 ### Images
 
-An entry's pictures ride its `<url>` as [sitemap image entries](https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps), so image search finds them without crawling the page for `<img>` tags. Those pictures are the media fields the entry type tagged `.featured()` or `.ogImage()` — the same declarations link 1 and link 4 of the chain above read — plus the social image URL an editor typed into the SEO box, which leads because it is the one they chose. One photo named by two fields is listed once.
+An entry's pictures ride its `<url>` as [sitemap image entries](https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps), so image search finds them without crawling the page for `<img>` tags. Those pictures are the entry's [image roles](/fields/field-types/#image-roles), one image per role its type declares a field in — the same roles link 1 and link 4 of the chain above read — plus the social image URL an editor typed into the SEO box, which leads because it is the one they chose. One photo named by two roles is listed once.
 
-A whole page of entries resolves through one batched pass rather than a query each — chunked at 100 ids per query, as core's own read path chunks — and only for types that declare such a field. An entry with no picture serializes exactly as it did before, and a page with none declares no image namespace at all.
+A whole page of entries resolves through one batched pass rather than a query each — chunked at 100 ids per query, as core's own read path chunks — and only for types that declare a role field. An entry with no picture serializes exactly as it did before, and a page with none declares no image namespace at all.
 
-Only pictures are listed, and at most ten per URL. A role-tagged field can be a `.multiple()` gallery, so the cap is what keeps a page of 1,000 entries from becoming tens of thousands of image entries; and because one batched call carries ids from fields that each declare their own `accept`, a non-image upload is filtered on its own MIME type rather than by the field's scope. Relative URLs — the worker-proxied path a private bucket resolves to — are made absolute, since `<image:loc>` has to be.
+Only pictures are listed, and nothing here sniffs a payload to decide: the adapter that produced a reference answers whether it is an image, so a role field holding a PDF resolves to nothing. A role holds one image, so an entry lists at most one picture per role it declares. Relative URLs — the worker-proxied path a private bucket resolves to — are made absolute, since `<image:loc>` has to be.
 
 ### Adding URLs
 
@@ -464,7 +464,7 @@ The page carries exactly one `og:site_name`, and it is the theme's.
 
 [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. [OG Cards](/plugins/og/) contributes the generated card that sits at link 2 of the chain above, and needs this plugin installed to reach a page's head.
 
-The `.featured()` and `.ogImage()` roles the chain reads are meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Field Types](/fields/field-types/) the media types they hold. The head this plugin writes into is the theme's: [Themes](/themes/overview/) covers the `document` declaration whose tags win, and [Template Data](/themes/template-data/) the `data` a `seo:og_image` subscriber receives.
+The `featured` and `ogImage` roles the chain reads are filled by meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Image Roles](/fields/field-types/#image-roles) what a role is and how to add one of your own. The head this plugin writes into is the theme's: [Themes](/themes/overview/) covers the `document` declaration whose tags win, and [Template Data](/themes/template-data/) the `data` a `seo:og_image` subscriber receives.
 
 ## Next steps
 

@@ -165,3 +165,17 @@ test("the demo pill still shows on the public site for a session holder", async 
   await page.goto(`/posts/${SHOWCASE_SLUG}`);
   await expect(page.locator("#plumix-demo-toolbar")).toBeVisible();
 });
+
+// The theme reads `entry.images.featured`, so this passes only if the post's
+// own cover row resolved through the `featured` role — the showcase's cover is
+// the media row seeded as `cover-<its slug>`.
+test("a post renders the cover its featured role resolves to", async ({
+  page,
+}) => {
+  await page.goto(`/posts/${SHOWCASE_SLUG}`);
+  const single = page.getByTestId("post-single");
+  await expect(single.getByTestId("featured-image")).toHaveAttribute(
+    "src",
+    new RegExp(`cover-${SHOWCASE_SLUG}`),
+  );
+});

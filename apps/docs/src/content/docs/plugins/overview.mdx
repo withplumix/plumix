@@ -15,7 +15,7 @@ The `plugins` array in `plumix.config.ts` is how you add an entry type, a route 
 
 A published plugin and the local plugin your site keeps for its own model are the same object. Both come from `definePlugin`, both carry an id and a `setup` function, and the site calls each one's `setup` once at boot with the same registration context. [Content Modelling](/content-modelling/overview/) covers writing one. This page covers installing one you did not write.
 
-The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
+The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, image roles, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
 
 Installing one changes two things in your repository and can change two more at run time. The package lands in `package.json` and the descriptor lands in the `plugins` array. Beyond that, a plugin that owns database tables needs a migration generated and applied before its first request, and a plugin that registers an entry type mints that type's capabilities, so roles gain permissions nobody wrote by hand.
 
@@ -217,6 +217,47 @@ One step runs earlier than that and does not care about order. A descriptor's op
 `provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, hooks and RPC procedures at request time, and no plugin's `setup` can reach it.
 
 Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
+
+## Adding an image role
+
+Some of what a plugin registers is a name other code then asks for, and an [image role](/fields/field-types/#image-roles) is the clearest small example. Core ships `featured` and `ogImage`; a listing thumbnail distinct from the share image is a role you add. A theme has no setup hook, so a site declares its own as a one-file plugin like this.
+
+Two steps, and both are needed: `registerImageRole` makes the name exist at run time, and a `declare module` augmentation makes it exist to the compiler. Augment through the root `plumix` specifier — that is the one every registry merges on.
+
+```ts
+// A `declare module` block needs the module itself in scope, and a type
+// import is enough — without it TypeScript reports `plumix` as not found.
+import type { ImageRoles } from "plumix";
+import { definePlugin } from "plumix/plugin";
+
+declare module "plumix" {
+  interface ImageRoles {
+    hero: true;
+  }
+}
+
+export const heroRole = definePlugin("acme-hero-role", (ctx) => {
+  ctx.registerImageRole("hero", { single: true });
+});
+```
+
+`single: true` caps each entry type, taxonomy and the users at one field in the role. A name is registered once, so a second plugin claiming `hero` fails at boot naming both owners.
+
+A field joins the role with `.role("hero")` on a media chain — `media("cover").role("hero")` — in any meta box on any scope. Registration order does not matter: the field may be declared by a plugin listed before the one that registers the role.
+
+The payoff is the read. `images` is keyed by `ImageRoles`, so `hero` autocompletes and nothing has to know which field holds it:
+
+```tsx
+import type { EntryData } from "plumix/theme";
+import type { ReactNode } from "react";
+
+export function Hero({ data }: { data: EntryData }): ReactNode {
+  const hero = data.entry.images.hero;
+  return hero ? <img src={hero.url} alt={hero.alt ?? ""} /> : null;
+}
+```
+
+Skip the augmentation and both `.role("hero")` and `data.entry.images.hero` are compile errors, because `ImageRoles` is the only place either name comes from.
 
 ## Plugins that own tables
 
