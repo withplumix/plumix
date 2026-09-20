@@ -101,6 +101,24 @@ describe("memoBatch", () => {
     expect(batches).toBe(2);
   });
 
+  test("the batch is asked only for the ids that missed", async () => {
+    const memo = createRequestMemo();
+    const asked: (readonly number[])[] = [];
+    const loadAll = (missing: readonly number[]) => {
+      asked.push(missing);
+      return Promise.resolve(
+        new Map(missing.map((id) => [id, `row-${String(id)}`])),
+      );
+    };
+    const key = (id: number) => `test:asked:${String(id)}`;
+
+    await memoBatch(memo, [1, 2], key, loadAll);
+    const second = await memoBatch(memo, [1, 2, 3], key, loadAll);
+
+    expect(second).toEqual(["row-1", "row-2", "row-3"]);
+    expect(asked).toEqual([[1, 2], [3]]);
+  });
+
   test("ids absent from the loaded map memoize as null", async () => {
     const memo = createRequestMemo();
     let batches = 0;

@@ -18,6 +18,7 @@ import type {
 } from "../../plugin/manifest.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
+import { memoBatch } from "../../context/memo.js";
 import { and, chunkForD1, eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import {
@@ -1053,7 +1054,7 @@ export async function resolveMetaBags(
     string,
     {
       readonly registered: { readonly adapter: LookupAdapter };
-      readonly scope: unknown;
+      readonly target: ReferenceTarget;
       readonly ids: Set<string>;
     }
   >();
@@ -1085,7 +1086,7 @@ export async function resolveMetaBags(
       if (ids.length === 0) continue;
       let group = groups.get(groupKey);
       if (!group) {
-        group = { registered, scope: occ.target.scope, ids: new Set() };
+        group = { registered, target: occ.target, ids: new Set() };
         groups.set(groupKey, group);
       }
       for (const id of ids) group.ids.add(id);
@@ -1103,7 +1104,7 @@ export async function resolveMetaBags(
           await resolveGroup(
             ctx,
             group.registered.adapter,
-            group.scope,
+            group.target,
             group.ids,
           ),
         ],
@@ -1157,7 +1158,7 @@ export async function resolveReferences<
   const resolution = await resolveGroup(
     ctx,
     registered.adapter,
-    options.scope,
+    { kind, scope: options.scope },
     unique,
   );
   if (resolution.kind !== "hydrated") return [];
@@ -1180,13 +1181,20 @@ export async function hydrateReferenceGroup(
 ): Promise<ReadonlyMap<string, HydratedReference>> {
   const registered = ctx.plugins.lookupAdapters.get(target.kind);
   if (!registered?.adapter.hydrate || ids.size === 0) return new Map();
-  const resolution = await resolveGroup(
-    ctx,
-    registered.adapter,
-    target.scope,
-    ids,
-  );
+  const resolution = await resolveGroup(ctx, registered.adapter, target, ids);
   return resolution.kind === "hydrated" ? resolution.byId : new Map();
+}
+
+// What an adapter's `hydrate` may answer differently for — the entry
+// adapter clamps unpublished rows on `edit_any`, so a payload is the
+// asker's view of the row, not the row. `ctx.memo` is shared by every
+// context derived from this one (`withUser`, and the principal-stripped
+// one an access policy is resolved against), so naming the asker in the
+// key is how this loader meets the principal-invariance the memo asks of
+// every loader. Scopes are sorted because they narrow as a set.
+function principalKey(ctx: AppContext): string {
+  const scopes = ctx.tokenScopes === null ? null : [...ctx.tokenScopes].sort();
+  return JSON.stringify([ctx.user?.id ?? null, scopes]);
 }
 
 // Resolve one `(kind, scope)` group's aggregated ids. Chunked at
@@ -1196,27 +1204,60 @@ export async function hydrateReferenceGroup(
 // would kill the render — unlike the write-side `fetchLiveIds`, which
 // keeps throwing because a single patch exceeding the ceiling is a
 // caller bug. Ids are de-duped before chunking, so per-query batches
-// stay bounded and nothing is truncated.
+// stay bounded and nothing is truncated. Only the `hydrate` arm dedupes
+// across batches: #2506 memoizes payloads, and left `list` alone.
 async function resolveGroup(
   ctx: AppContext,
   adapter: LookupAdapter,
-  scope: unknown,
+  target: ReferenceTarget,
   ids: ReadonlySet<string>,
 ): Promise<GroupResolution> {
+  const { scope } = target;
   const idList = [...ids];
   if (adapter.hydrate) {
-    const byId = new Map<string, HydratedReference>();
-    for (const chunk of chunkForD1(idList)) {
-      const payloads = await adapter.hydrate(ctx, { ids: chunk, scope });
-      for (const payload of payloads) {
-        byId.set(payload.id, payload);
-        // Fold this embedded entity's cache tag into the page's tags so
-        // a change to it purges the page that hydrated it (#1508). Runs
-        // on every read surface; only the public read-through reads the
-        // accumulator back, so admin/REST reads populate it harmlessly.
-        if (adapter.embeddedCacheTags) {
-          accumulateEmbeddedTags(ctx, adapter.embeddedCacheTags(payload));
+    // Bound, not destructured: `hydrate` is declared as a method, so an
+    // adapter may reach for `this`.
+    const hydrate = adapter.hydrate.bind(adapter);
+    // One request runs several resolve batches — an entry page and its
+    // related posts, a listing's head re-resolving its first page, an
+    // entry's meta beside the attached terms'. Each dedupes only its own
+    // ids, so the memo is what keeps a later batch from re-hydrating what
+    // an earlier one already has (#2506). The key is a JSON tuple rather
+    // than joined text: a scope serializes into `groupKey`, so a
+    // concatenation would let one scope's text spill into the id.
+    const key = principalKey(ctx);
+    const groupKey = referenceGroupKey(target);
+    const payloads = await memoBatch(
+      ctx.memo,
+      idList,
+      (id) => `core:reference:${JSON.stringify([key, groupKey, id])}`,
+      async (missing) => {
+        const loaded = new Map<string, HydratedReference>();
+        for (const chunk of chunkForD1(missing)) {
+          for (const payload of await hydrate(ctx, { ids: chunk, scope })) {
+            loaded.set(payload.id, payload);
+          }
         }
+        return loaded;
+      },
+    );
+    const byId = new Map<string, HydratedReference>();
+    for (const [index, id] of idList.entries()) {
+      // `null` is the memoized miss — an orphan stays an orphan for the
+      // rest of the request instead of being re-queried by a later batch.
+      // `undefined` cannot happen (one answer per id) but the index read
+      // is checked.
+      const payload = payloads[index];
+      if (payload === null || payload === undefined) continue;
+      byId.set(id, payload);
+      // Fold this embedded entity's cache tag into the page's tags so a
+      // change to it purges the page that hydrated it (#1508). Runs on
+      // every read surface; only the public read-through reads the
+      // accumulator back, so admin/REST reads populate it harmlessly.
+      // Folded here rather than at the hydrate, so a batch answered from
+      // the memo tags the page exactly as the batch that loaded it did.
+      if (adapter.embeddedCacheTags) {
+        accumulateEmbeddedTags(ctx, adapter.embeddedCacheTags(payload));
       }
     }
     return { kind: "hydrated", byId };

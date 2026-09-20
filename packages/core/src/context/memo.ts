@@ -7,7 +7,8 @@
  * keys already loaded (cron runs share one memo across every task in the
  * invocation). Loaders must also be principal-invariant — `withUser`
  * derivations share the same memo, so anything user-dependent must embed
- * the principal in the key.
+ * the principal in the key. A loader runs synchronously on a miss, which is
+ * what lets `memoBatch` collect a whole walk's misses before loading them.
  */
 export type RequestMemo = <T>(
   key: string,
@@ -30,22 +31,30 @@ export function createRequestMemo(): RequestMemo {
 
 /**
  * Per-id memo over a batched load: each id resolves through `memo`, and
- * all misses share one lazy `loadAll` (single-flight, so the batch runs
- * at most once per call). `loadAll` may fetch every requested id — hits
- * keep their first-seen value regardless. Ids absent from the loaded map
- * memoize as `null`.
+ * the ids that miss share one `loadAll` over exactly them — so a call runs
+ * at most one batch, for what the request has not seen yet. Extra entries
+ * in the map it returns are ignored; ids absent from that map memoize as
+ * `null`.
  */
 export function memoBatch<K, T>(
   memo: RequestMemo,
   ids: readonly K[],
   keyFor: (id: K) => string,
-  loadAll: () => Promise<ReadonlyMap<K, T>>,
+  loadAll: (missing: readonly K[]) => Promise<ReadonlyMap<K, T>>,
 ): Promise<(T | null)[]> {
+  const missing: K[] = [];
   let batch: Promise<ReadonlyMap<K, T>> | undefined;
-  const load = () => (batch ??= loadAll());
+  // Deferred a microtask: `memo` runs the loader synchronously on a miss,
+  // so the whole walk below registers its misses before `loadAll` is given
+  // them.
+  const load = () =>
+    (batch ??= Promise.resolve().then(() => loadAll([...missing])));
   return Promise.all(
     ids.map((id) =>
-      memo(keyFor(id), async () => (await load()).get(id) ?? null),
+      memo(keyFor(id), async () => {
+        missing.push(id);
+        return (await load()).get(id) ?? null;
+      }),
     ),
   );
 }

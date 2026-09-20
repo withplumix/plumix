@@ -1,11 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { AppContext } from "../../context/app.js";
 import type { JsonValue } from "../../json.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../plugin/manifest.js";
+import type { DispatcherHarness } from "../../test/dispatcher.js";
+import type { PhotoReference } from "../../test/photo-lookup.js";
 import { embeddedPageTags } from "../../cdn/embedded-tags.js";
+import { withUser } from "../../context/app.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
 import {
   adminUser,
@@ -14,7 +18,9 @@ import {
   tagTerm,
   userFactory,
 } from "../../test/factories.js";
+import { photoField, photoProfilePlugin } from "../../test/photo-lookup.js";
 import { createRpcHarness } from "../../test/rpc.js";
+import { createTracedContext } from "../../test/traced-context.js";
 import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
   MetaSanitizationError,
@@ -1493,5 +1499,200 @@ describe("resolveReferences (theme-facing id-only helper)", () => {
     registerCoreLookupAdapters(registry);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     expect(await resolveReferences(h.context, "entry", [])).toEqual([]);
+  });
+});
+
+// What keeps a request that runs several resolve batches from hydrating
+// the ids they share once per batch (#2506).
+describe("reference hydration memo (request-scoped)", () => {
+  // `photoProfilePlugin` is here for its `photo` lookup adapter; the field
+  // the bags are read through is this one, declared beside them.
+  const shot = photoField("shot");
+  const findShot = (key: string) => (key === "shot" ? shot : undefined);
+
+  async function seedPhoto(harness: DispatcherHarness): Promise<string> {
+    const author = await harness.factory.user.create({});
+    const photo = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+    });
+    return String(photo.id);
+  }
+
+  test("a second batch sharing an id issues no further hydration query", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+    const id = await seedPhoto(harness);
+
+    await run(async () => {
+      const first = await resolveMetaBags(ctx, [
+        { findField: findShot, decoded: { shot: id } },
+      ]);
+      const queriesAfterFirst = dbQueryCount();
+      const second = await resolveMetaBags(ctx, [
+        { findField: findShot, decoded: { shot: id } },
+      ]);
+
+      expect(queriesAfterFirst).toBe(1);
+      expect(dbQueryCount()).toBe(1);
+      expect(second[0]?.shot).toEqual(first[0]?.shot);
+    });
+  });
+
+  test("a later batch queries only the ids it has not seen", async () => {
+    const { harness, ctx, run, dbSpans } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+    const seen = await seedPhoto(harness);
+    const fresh = await seedPhoto(harness);
+
+    await run(async () => {
+      await resolveMetaBags(ctx, [
+        { findField: findShot, decoded: { shot: seen } },
+      ]);
+      const spansAfterFirst = dbSpans().length;
+      const resolved = await resolveMetaBags(ctx, [
+        { findField: findShot, decoded: { shot: seen } },
+        { findField: findShot, decoded: { shot: fresh } },
+      ]);
+
+      const added = dbSpans().slice(spansAfterFirst);
+      expect(added).toHaveLength(1);
+      expect(added[0]?.attributes["db.params"]).toEqual([Number(fresh)]);
+      expect(resolved.map((bag) => (bag.shot as PhotoReference).id)).toEqual([
+        seen,
+        fresh,
+      ]);
+    });
+  });
+
+  test("an orphan memoizes as missing rather than being re-queried", async () => {
+    const { ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+
+    await run(async () => {
+      const bags = [{ findField: findShot, decoded: { shot: "9999" } }];
+      expect((await resolveMetaBags(ctx, bags))[0]?.shot).toBeNull();
+      expect((await resolveMetaBags(ctx, bags))[0]?.shot).toBeNull();
+
+      expect(dbQueryCount()).toBe(1);
+    });
+  });
+
+  test("a second request hydrates the same id again", async () => {
+    const first = await createTracedContext({ plugins: [photoProfilePlugin] });
+    const id = await seedPhoto(first.harness);
+    const bags = [{ findField: findShot, decoded: { shot: id } }];
+    await first.run(() => resolveMetaBags(first.ctx, bags));
+
+    const second = await createTracedContext({
+      plugins: [photoProfilePlugin],
+      db: first.harness.db,
+    });
+    const resolved = await second.run(() => resolveMetaBags(second.ctx, bags));
+
+    expect(second.dbQueryCount()).toBe(1);
+    expect((resolved[0]?.shot as PhotoReference).id).toBe(id);
+  });
+
+  // An entry reference, not the photo kind the rest of this block uses:
+  // only the entry adapter declares `embeddedCacheTags`.
+  test("a batch answered from the memo tags its page as the first one did", async () => {
+    const { registry, findField } = registryWithEntryRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const target = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+    const bags = [{ findField, decoded: { featured: String(target.id) } }];
+
+    await resolveMetaBags(h.context, bags);
+    // Tags accumulate per `ctx.request` while the memo lives on the
+    // context graph, and core rebinds the request on a spread context
+    // (`stripBasePathOrReject`), so the two scopes are not the same scope.
+    // A batch that hydrates nothing still has a page to tag.
+    const rebound: AppContext = {
+      ...h.context,
+      request: new Request(h.context.request),
+    };
+    await resolveMetaBags(rebound, bags);
+
+    const tag = `e:${String(target.id)}`;
+    expect([...embeddedPageTags(h.context)]).toEqual([tag]);
+    expect([...embeddedPageTags(rebound)]).toEqual([tag]);
+  });
+
+  test("batches racing on one id hydrate it once between them", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+    const id = await seedPhoto(harness);
+    const bags = [{ findField: findShot, decoded: { shot: id } }];
+
+    await run(async () => {
+      const [a, b] = await Promise.all([
+        resolveMetaBags(ctx, bags),
+        resolveMetaBags(ctx, bags),
+      ]);
+
+      expect(dbQueryCount()).toBe(1);
+      expect(a[0]?.shot).toEqual(b[0]?.shot);
+    });
+  });
+
+  test("the same id under two scopes hydrates once per scope", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [photoProfilePlugin],
+    });
+    const id = await seedPhoto(harness);
+    // One field key under two scopes, so the scope is the only thing that
+    // differs between the batches.
+    const inAlbum = (album: string) => {
+      // `MetaBoxField` is a union keyed on `inputType`, and a spread
+      // widens away from the arm `photoField` picked.
+      const field = {
+        ...shot,
+        referenceTarget: { kind: "photo", scope: { album } },
+      } as MetaBoxField;
+      return (key: string) => (key === "shot" ? field : undefined);
+    };
+
+    await run(async () => {
+      const bag = { shot: id };
+      await resolveMetaBags(ctx, [
+        { findField: inAlbum("everything"), decoded: bag },
+      ]);
+      await resolveMetaBags(ctx, [
+        { findField: inAlbum("covers"), decoded: bag },
+      ]);
+
+      // A scope narrows what an adapter answers with, so the second scope
+      // must not read the first's payload out of the memo.
+      expect(dbQueryCount()).toBe(2);
+    });
+  });
+
+  // `asAnonymous` hands an access policy a principal-stripped context that
+  // shares this memo, and an adapter's `hydrate` answers the asker — the
+  // entry adapter hides unpublished rows from anyone without `edit_any`.
+  // So the memo keys on the asker too: a payload one of them loaded is
+  // not an answer to the other's question.
+  test("a principal-stripped context sharing the memo hydrates for itself", async () => {
+    const { registry, findField } = registryWithEntryRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const draft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "draft" });
+    const bags = [{ findField, decoded: { featured: String(draft.id) } }];
+    // `h.context` is the unauthenticated base; the admin is a derivation
+    // of it, and both read one memo.
+    const editor = withUser(h.context, h.user, null);
+
+    const asEditor = await resolveMetaBags(editor, bags);
+    const asVisitor = await resolveMetaBags(h.context, bags);
+
+    expect((asEditor[0]?.featured as { id: string }).id).toBe(String(draft.id));
+    expect(asVisitor[0]?.featured).toBeNull();
   });
 });
