@@ -1,5 +1,8 @@
+import type { SQL } from "plumix/db";
 import type { PluginRegistry, RegisteredTermTaxonomy } from "plumix/plugin";
+import { eq, inArray, sql } from "plumix/db";
 import { termTaxonomyBaseSlug } from "plumix/plugin";
+import { entries } from "plumix/schema";
 
 /**
  * What a feed covers: the whole site, one entry type, one taxonomy term, one
@@ -59,4 +62,19 @@ export function publicEntryTypeNames(plugins: PluginRegistry): string[] {
   return [...plugins.entryTypes.values()]
     .filter((type) => type.isPublic)
     .map((type) => type.name);
+}
+
+/**
+ * What a feed never shows, whatever a scope asks for: an unpublished entry, or
+ * an entry of a type the site does not route publicly. `null` where the site
+ * routes no public type, so there is no feed to serve.
+ *
+ * Applied twice — a scope's query is seeded with it, and it is ANDed on again
+ * when that query is compiled — so a scope cannot widen a feed even by
+ * discarding the query it was handed.
+ */
+export function feedGuard(plugins: PluginRegistry): SQL | null {
+  const typeNames = publicEntryTypeNames(plugins);
+  if (typeNames.length === 0) return null;
+  return sql`(${inArray(entries.type, typeNames)} and ${eq(entries.status, "published")})`;
 }

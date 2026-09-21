@@ -61,7 +61,7 @@ export const featured = definePlugin("featured", {
 
 ## Syndicating a plugin archive
 
-`registerArchiveType` gains an optional `feed` from this package's type augmentation. Each archive route gets a feed at `<route>/feed`, with Atom at `/feed/atom`, and every page of the archive advertises it. `filter` returns the SQL row predicate for the route's params, or `null` for a 404 and no advertisement:
+`registerArchiveType` gains an optional `feed` from this package's type augmentation. Each archive route gets a feed at `<route>/feed`, with Atom at `/feed/atom`, and every page of the archive advertises it. `scope` narrows the entries the feed carries — or answers `null` for a 404 and no advertisement:
 
 ```ts
 ctx.registerArchiveType("event-series", {
@@ -71,11 +71,19 @@ ctx.registerArchiveType("event-series", {
     title: `Series: ${params.series}`,
   }),
   feed: {
-    filter: (_ctx, _params) =>
-      and(eq(entries.type, "event"), eq(entries.status, "published")) ?? null,
+    scope: (q, params) =>
+      q.ofTypes("event").inTerm("event-series", params.series ?? ""),
   },
 });
 ```
+
+The query arrives restricted to published entries of public types, and every method on it adds a condition. There is no method that removes one, so an archive can say less than it meant to without its feed showing more than it should — the visibility rule is this plugin's, not yours to remember. `ofTypes`, `inTerm`, `byAuthor`, `inDateRange` and `under` cover the shapes an archive usually models; `where(sql)` ANDs on an arbitrary predicate for the ones they do not, and cannot widen the feed either — built with the `sql` template, not `sql.raw`.
+
+`q.none()` is a feed that exists and is empty, which is not the same answer as `null`.
+
+A `scope` records what to narrow by rather than resolving it, so declaring one costs no queries. That matters because every page of the archive asks the same question to decide whether to advertise its feed.
+
+An archive declaring an `access` policy gets no feed. A feed is a public route, which core answers ahead of the access gate, so serving one would hand a policied archive's entries to any anonymous reader.
 
 A route ending in `FRAMEWORK_PAGINATION_SUFFIX` (from `plumix/plugin`) gets no feed of its own; its pages advertise the feed of the route they paginate.
 

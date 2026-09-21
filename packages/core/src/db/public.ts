@@ -31,3 +31,9 @@ export { settleMeta } from "./settle-meta.js";
 export type { MetaOwner } from "./settle-meta.js";
 export { readVisitorMeta } from "./visitor-meta.js";
 export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
+// A description of a set of entries that composes by narrowing, built from the
+// same operators as the search conditions above, so a surface can hand a plugin
+// a query already restricted to what it may show and the plugin has no way to
+// widen it (#2487).
+export { compileEntryQuery, entryQuery } from "../entries/query.js";
+export type { EntryQuery } from "../entries/query.js";

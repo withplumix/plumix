@@ -47,7 +47,7 @@ describe("applyFeedDiscovery", () => {
     data: TemplateData,
     override: { readonly basePath?: string } = {},
     siteIsPrivate = false,
-  ): Promise<DocumentManifest> =>
+  ): DocumentManifest =>
     applyFeedDiscovery(
       empty,
       data,
@@ -61,57 +61,57 @@ describe("applyFeedDiscovery", () => {
     pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
   } as unknown as TemplateData;
 
-  test("front-page data advertises the site feed (RSS + Atom)", async () => {
-    expect(alternates(await discover(frontPage))).toEqual([
+  test("front-page data advertises the site feed (RSS + Atom)", () => {
+    expect(alternates(discover(frontPage))).toEqual([
       "application/rss+xml https://cms.example/feed",
       "application/atom+xml https://cms.example/feed/atom",
     ]);
   });
 
-  test("discovery links carry the configured basePath", async () => {
+  test("discovery links carry the configured basePath", () => {
     expect(
-      alternates(await discover(frontPage, { basePath: "/custom-directory" })),
+      alternates(discover(frontPage, { basePath: "/custom-directory" })),
     ).toEqual([
       "application/rss+xml https://cms.example/custom-directory/feed",
       "application/atom+xml https://cms.example/custom-directory/feed/atom",
     ]);
   });
 
-  test("archive data advertises the type feed", async () => {
+  test("archive data advertises the type feed", () => {
     const data = {
       kind: "archive",
       contentType: "post",
       entries: [],
       pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/post/feed",
       "application/atom+xml https://cms.example/post/feed/atom",
     ]);
   });
 
-  test("an archive of a non-public type advertises nothing", async () => {
+  test("an archive of a non-public type advertises nothing", () => {
     const data = {
       kind: "archive",
       contentType: "secret",
       entries: [],
       pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
     } as unknown as TemplateData;
-    expect((await discover(data)).link).toBeUndefined();
+    expect(discover(data).link).toBeUndefined();
   });
 
-  test("single-entry data advertises the site feed (not its type feed)", async () => {
+  test("single-entry data advertises the site feed (not its type feed)", () => {
     const data = {
       kind: "entry",
       entry: { type: "post" },
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/feed",
       "application/atom+xml https://cms.example/feed/atom",
     ]);
   });
 
-  test("top-level taxonomy-term data advertises the term feed", async () => {
+  test("top-level taxonomy-term data advertises the term feed", () => {
     const data = {
       kind: "taxonomy",
       taxonomy: "category",
@@ -119,13 +119,13 @@ describe("applyFeedDiscovery", () => {
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/category/news/feed",
       "application/atom+xml https://cms.example/category/news/feed/atom",
     ]);
   });
 
-  test("a nested term advertises its nested feed where the taxonomy exposes hierarchical URLs", async () => {
+  test("a nested term advertises its nested feed where the taxonomy exposes hierarchical URLs", () => {
     const data = {
       kind: "taxonomy",
       taxonomy: "region",
@@ -133,13 +133,13 @@ describe("applyFeedDiscovery", () => {
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/region/europe/france/feed",
       "application/atom+xml https://cms.example/region/europe/france/feed/atom",
     ]);
   });
 
-  test("a nested term under a flat taxonomy advertises nothing", async () => {
+  test("a nested term under a flat taxonomy advertises nothing", () => {
     const data = {
       kind: "taxonomy",
       taxonomy: "category",
@@ -147,23 +147,23 @@ describe("applyFeedDiscovery", () => {
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect((await discover(data)).link).toBeUndefined();
+    expect(discover(data).link).toBeUndefined();
   });
 
-  test("author data advertises the author feed", async () => {
+  test("author data advertises the author feed", () => {
     const data = {
       kind: "author",
       author: { slug: "jane" },
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/authors/jane/feed",
       "application/atom+xml https://cms.example/authors/jane/feed/atom",
     ]);
   });
 
-  test("date data advertises the period's feed at its own granularity", async () => {
+  test("date data advertises the period's feed at its own granularity", () => {
     const data = {
       kind: "date",
       year: 2026,
@@ -172,33 +172,33 @@ describe("applyFeedDiscovery", () => {
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect(alternates(await discover(data))).toEqual([
+    expect(alternates(discover(data))).toEqual([
       "application/rss+xml https://cms.example/2026/07/feed",
       "application/atom+xml https://cms.example/2026/07/feed/atom",
     ]);
   });
 
-  test("a search page and an archive type nobody registered advertise nothing", async () => {
+  test("a search page and an archive type nobody registered advertise nothing", () => {
     const search = {
       kind: "search",
       query: "x",
       entries: [],
       pagination: {},
     } as unknown as TemplateData;
-    expect((await discover(search)).link).toBeUndefined();
+    expect(discover(search).link).toBeUndefined();
 
     const custom = {
       kind: "custom",
       name: "weekly-menu",
     } as unknown as TemplateData;
-    expect((await discover(custom)).link).toBeUndefined();
+    expect(discover(custom).link).toBeUndefined();
   });
 
-  test("a private site advertises nothing on a page that would otherwise have a feed", async () => {
-    expect((await discover(frontPage, {}, true)).link).toBeUndefined();
+  test("a private site advertises nothing on a page that would otherwise have a feed", () => {
+    expect(discover(frontPage, {}, true).link).toBeUndefined();
   });
 
-  test("does not duplicate an alternate the template already set", async () => {
+  test("does not duplicate an alternate the template already set", () => {
     const seeded: DocumentManifest = {
       link: [
         {
@@ -208,7 +208,7 @@ describe("applyFeedDiscovery", () => {
         },
       ],
     };
-    const out = await applyFeedDiscovery(
+    const out = applyFeedDiscovery(
       seeded,
       frontPage,
       createTestContext({ db, plugins }),

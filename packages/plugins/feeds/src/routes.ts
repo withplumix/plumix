@@ -1,9 +1,10 @@
-import type { PluginRegistry } from "plumix/plugin";
+import type { PluginRegistry, RegisteredArchiveType } from "plumix/plugin";
 import {
   exposesHierarchicalUrls,
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "plumix/plugin";
 
+import type { ArchiveTypeFeed } from "./archive.js";
 import type { FeedScope } from "./scope.js";
 import { publicEntryTypeNames, publicTaxonomiesByBaseSlug } from "./scope.js";
 
@@ -75,6 +76,20 @@ export interface FeedRoute {
 }
 
 /**
+ * Whether this archive's feed is one we can serve. An archive behind an
+ * `access` policy is not: core matches a registered public route ahead of the
+ * access gate and ahead of loading a principal, so a feed served there has no
+ * reader to check the policy against and would answer a policied archive's
+ * entries to anyone who asked. Nothing is lost by declining — the alternative
+ * on offer is the ungated feed, not a gated one (#2520).
+ */
+export function isSyndicatable(
+  archive: RegisteredArchiveType,
+): archive is RegisteredArchiveType & { readonly feed: ArchiveTypeFeed } {
+  return archive.feed !== undefined && archive.access === undefined;
+}
+
+/**
  * Every feed path the site has, enumerated from what is registered rather than
  * matched as an ambiguous pattern per request. Enumeration is the point: a
  * registered public route always answers, so a claimed `/:type/feed` would
@@ -117,7 +132,7 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
   }
 
   for (const archive of plugins.archiveTypes.values()) {
-    if (!archive.feed) continue;
+    if (!isSyndicatable(archive)) continue;
     for (const route of archive.routes) {
       if (isPaginated(route)) continue;
       routes.push({

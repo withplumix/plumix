@@ -5,14 +5,15 @@ import type {
   TemplateData,
 } from "plumix";
 import type { AppContext, ResolvedRoute } from "plumix/plugin";
+import { entryQuery } from "plumix/db";
 import {
   exposesHierarchicalUrls,
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
-import { archiveFeedAt, feedUnder } from "./routes.js";
-import { isPublicEntryType } from "./scope.js";
+import { archiveFeedAt, feedUnder, isSyndicatable } from "./routes.js";
+import { feedGuard, isPublicEntryType } from "./scope.js";
 
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
@@ -20,10 +21,7 @@ import { isPublicEntryType } from "./scope.js";
  * archive's shape is arbitrary, so a field-presence check would read one
  * plugin's `year` or `author` as core's subject.
  */
-async function feedBase(
-  data: TemplateData,
-  ctx: AppContext,
-): Promise<string | null> {
+function feedBase(data: TemplateData, ctx: AppContext): string | null {
   switch (data.kind) {
     // A single entry advertises the site feed rather than its type's: a reader
     // subscribing from a post wants "everything new", which is the convention
@@ -69,23 +67,33 @@ async function feedBase(
 /**
  * A plugin archive's feed, read off the route the page matched rather than
  * its payload, whose shape is the plugin's own. A later page advertises the
- * feed of the route it paginates. Nothing is advertised that the feed route
- * would not serve: a path another feed claimed first, or params the archive's
- * `filter` answers `null` for.
+ * feed of the route it paginates. Not advertised: a path another feed claimed
+ * first, or params the archive's `scope` answers `null` for. The scope is
+ * asked but its query is not compiled — that would cost a lookup on every
+ * archive page — so a narrowing that fails only at compile time is advertised
+ * and its feed 404s.
  */
-async function archiveFeedBase(
+function archiveFeedBase(
   data: CustomArchiveData,
   ctx: AppContext,
-): Promise<string | null> {
+): string | null {
   const archive = ctx.plugins.archiveTypes.get(data.name);
   const route = ctx.resolvedRoute;
-  if (!archive?.feed || route === null) return null;
+  if (archive === undefined || !isSyndicatable(archive) || route === null) {
+    return null;
+  }
 
   const pathname = new URL(ctx.request.url).pathname;
   const feedPath = feedUnder(listingPath(route, pathname));
   const owner = archiveFeedAt(ctx.plugins, feedPath);
   if (owner?.archive !== archive.name) return null;
-  if ((await archive.feed.filter(ctx, owner.params)) === null) return null;
+  const guard = feedGuard(ctx.plugins);
+  if (
+    guard === null ||
+    archive.feed.scope(entryQuery().where(guard), owner.params) === null
+  ) {
+    return null;
+  }
   return withBasePath(feedPath, ctx.basePath);
 }
 
@@ -102,14 +110,14 @@ function listingPath(route: ResolvedRoute, pathname: string): string {
  * page's scope, skipping any type already present so a template / plugin value
  * wins. A private site advertises nothing (it 404s its feeds).
  */
-export async function applyFeedDiscovery(
+export function applyFeedDiscovery(
   manifest: DocumentManifest,
   data: TemplateData,
   ctx: AppContext,
   siteIsPrivate: boolean,
-): Promise<DocumentManifest> {
+): DocumentManifest {
   if (siteIsPrivate) return manifest;
-  const base = await feedBase(data, ctx);
+  const base = feedBase(data, ctx);
   if (base === null) return manifest;
 
   const existing = manifest.link;
