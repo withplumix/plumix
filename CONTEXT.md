@@ -56,8 +56,14 @@ the two are meant to answer the same question the same way.
 **Entry query**:
 A description of a set of entries, built up by narrowing rather than written as
 SQL. A surface hands one out already restricted to what that surface may show —
-a feed's is born published-and-public-type-only — and whoever receives it can
-add conditions but never drop the ones already on it.
+every archive's and every feed's is born holding only public entries — and
+whoever receives it can add conditions but never drop the ones already on it.
+
+**Public entries**:
+Published entries of public types: what an anonymous reader may be shown. The
+set every archive and every feed starts from, whoever is looking — an editor
+previews in the editor, not on an archive page.
+_Avoid_: readable entries (that is the viewer's set, which varies per user)
 
 **Permalink**:
 The public canonical URL of an entry or term archive.
@@ -194,7 +200,14 @@ The fixed set of catch-all template slots a theme declares (`fallback`, `entry`,
 A targeted template rule that binds a template to a specific node (by kind, type, and slug/id/predicate), taking precedence over the generic tier.
 
 **Archive**:
-A paginated listing view of many entries of one type.
+A public page listing many entries, described by one entry query — the front
+page, an entry type, a term, an author, a date, or one a plugin registers. Its
+listing and its feed read that same query, so the two cannot disagree about
+what the archive contains.
+
+**Listing**:
+One page of an archive's entries: its entry query run by core, paged, and
+handed to the theme as resolved entries with their pagination.
 
 **Template dep**:
 A named per-request data dependency a template declares and the framework loads (e.g. `menu`, `settings`).
@@ -356,8 +369,10 @@ subscribes to it, a crawler does not read it — and served by
 `@plumix/plugin-feeds` rather than by core.
 
 **Archive feed**:
-The feed of a plugin archive (`registerArchiveType` with a `feed`), served at
-`<archive route>/feed` and advertised on the archive's pages.
+The feed of an archive, served at `<archive route>/feed` and advertised on the
+archive's pages. It is the archive's own entry query, newest first and capped —
+never a second query beside it — so only an archive described by an entry query
+can have one.
 
 ## Search
 
