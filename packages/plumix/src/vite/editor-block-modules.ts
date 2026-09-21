@@ -22,7 +22,7 @@ export function collectEditorBlockModules(
   configPath: string,
   configSource: string,
 ): readonly BlockModuleRef[] {
-  const { theme, plugins } = extractConfigModules(configSource);
+  const { theme, plugins } = extractConfigModules(configSource, configPath);
   // Plugin modules first, theme last: the canvas (`createBlockRegistry`) and the
   // admin (`registerPluginBlock`) are both last-write-wins, so a theme block
   // overrides a same-named plugin block — the `core < plugin < theme` precedence

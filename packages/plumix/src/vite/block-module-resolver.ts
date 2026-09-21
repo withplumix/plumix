@@ -1,7 +1,13 @@
 import { dirname, resolve } from "node:path";
-import ts from "typescript";
+import type { ESTree } from "vite";
 
 import { VitePluginError } from "./errors.js";
+import {
+  callSites,
+  memberKey,
+  moduleExportName,
+  parseModule,
+} from "./estree.js";
 
 /**
  * A block module the editor entry must import, and the export to take from it.
@@ -90,7 +96,7 @@ export function resolveBlockModulePaths(
   // A theme declares blocks via the `blocks` field (must resolve statically —
   // throw if it can't); a plugin registers them imperatively via
   // `ctx.registerBlock(s)` calls (best-effort — untraceable calls are skipped).
-  const field = extractBlockModules(source);
+  const field = extractBlockModules(source, moduleFsPath);
   if (!field.ok) {
     throw VitePluginError.blockModuleUnresolvable({
       module: moduleFsPath,
@@ -98,7 +104,10 @@ export function resolveBlockModulePaths(
     });
   }
   const dir = dirname(moduleFsPath);
-  const refs = [...field.modules, ...extractRegisteredBlockModules(source)];
+  const refs = [
+    ...field.modules,
+    ...extractRegisteredBlockModules(source, moduleFsPath),
+  ];
   return dedupe(
     refs.map((ref) => ({
       module: ref.module.startsWith(".")
@@ -118,107 +127,101 @@ export function resolveBlockModulePaths(
  */
 export function extractRegisteredBlockModules(
   source: string,
+  filename = "config.ts",
 ): readonly BlockModuleRef[] {
-  const sf = parse(source);
-  const { importOf, factoryLocals } = buildImportMaps(sf);
+  const program = parseModule(source, filename);
+  const { importOf, factoryLocals } = buildImportMaps(program);
+  const isFactory = factoryCall(factoryLocals);
   const refs: BlockModuleRef[] = [];
   // Only `registerBlock(s)` calls nested inside a plumix `definePlugin(...)` are
   // trusted — matching purely on the method name would fire on an unrelated
   // `someLib.registerBlock(x)` and pull the wrong module into the editor.
-  const walk = (node: ts.Node, insideFactory: boolean): void => {
-    const isFactory =
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      factoryLocals.has(node.expression.text);
+  for (const { call, enclosing } of callSites(program)) {
+    const { callee } = call;
     if (
-      insideFactory &&
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      (node.expression.name.text === "registerBlock" ||
-        node.expression.name.text === "registerBlocks")
+      enclosing.some(isFactory) &&
+      callee.type === "MemberExpression" &&
+      !callee.computed &&
+      callee.property.type === "Identifier" &&
+      (callee.property.name === "registerBlock" ||
+        callee.property.name === "registerBlocks")
     ) {
-      for (const arg of node.arguments) collectBindingRefs(arg, importOf, refs);
+      for (const arg of call.arguments) collectBindingRefs(arg, importOf, refs);
     }
-    ts.forEachChild(node, (child) => walk(child, insideFactory || isFactory));
-  };
-  walk(sf, false);
+  }
   return dedupe(refs);
 }
 
 // A `registerBlock(x)` / `registerBlocks(arr)` identifier, or the elements of a
 // `registerBlocks([a, ...b])` array literal, traced to their import bindings.
 function collectBindingRefs(
-  node: ts.Expression,
+  node: ESTree.ArrayExpressionElement,
   importOf: ReadonlyMap<string, BlockModuleRef>,
   out: BlockModuleRef[],
 ): void {
-  if (ts.isIdentifier(node)) {
-    const ref = importOf.get(node.text);
+  if (node?.type === "Identifier") {
+    const ref = importOf.get(node.name);
     if (ref) out.push(ref);
     return;
   }
-  if (ts.isArrayLiteralExpression(node)) {
+  if (node?.type === "ArrayExpression") {
     for (const element of node.elements) {
-      const ident = ts.isSpreadElement(element) ? element.expression : element;
-      if (ts.isIdentifier(ident)) {
-        const ref = importOf.get(ident.text);
+      const ident =
+        element?.type === "SpreadElement" ? element.argument : element;
+      if (ident?.type === "Identifier") {
+        const ref = importOf.get(ident.name);
         if (ref) out.push(ref);
       }
     }
   }
 }
 
-const parse = (source: string): ts.SourceFile =>
-  ts.createSourceFile(
-    "config.ts",
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+const factoryCall =
+  (factoryLocals: ReadonlySet<string>) =>
+  (call: ESTree.CallExpression): boolean =>
+    call.callee.type === "Identifier" && factoryLocals.has(call.callee.name);
 
 // Value-binding local name -> import ref (module + export), and the local names
 // a `plumix` factory export was imported under (canonical or aliased). Shared by
 // the `blocks`-field and `registerBlock`-call extractors.
-function buildImportMaps(sf: ts.SourceFile): {
+function buildImportMaps(program: ESTree.Program): {
   importOf: Map<string, BlockModuleRef>;
   factoryLocals: Set<string>;
 } {
   const importOf = new Map<string, BlockModuleRef>();
   const factoryLocals = new Set<string>();
-  for (const statement of sf.statements) {
-    if (ts.isImportDeclaration(statement)) {
+  for (const statement of program.body) {
+    if (statement.type === "ImportDeclaration") {
       collectImport(statement, importOf, factoryLocals);
     }
   }
   return { importOf, factoryLocals };
 }
 
-export function extractBlockModules(source: string): BlockModuleResult {
-  const sf = parse(source);
-  const { importOf, factoryLocals } = buildImportMaps(sf);
+export function extractBlockModules(
+  source: string,
+  filename = "config.ts",
+): BlockModuleResult {
+  const program = parseModule(source, filename);
+  const { importOf, factoryLocals } = buildImportMaps(program);
+  const isFactory = factoryCall(factoryLocals);
 
   // Outermost factory calls only — a call nested inside another factory's
   // arguments (e.g. `definePlugin(...)` inside a theme config) is not the
   // module's own config and must not clobber it.
-  const topLevelCalls: ts.CallExpression[] = [];
-  const walk = (node: ts.Node, insideFactory: boolean): void => {
-    const isFactory =
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      factoryLocals.has(node.expression.text);
-    if (isFactory && !insideFactory) topLevelCalls.push(node);
-    ts.forEachChild(node, (child) => walk(child, insideFactory || isFactory));
-  };
-  walk(sf, false);
+  const topLevelCalls = callSites(program)
+    .filter(
+      ({ call, enclosing }) => isFactory(call) && !enclosing.some(isFactory),
+    )
+    .map(({ call }) => call);
 
   // Scan every argument for the config object literal: `defineTheme({…})` puts
   // it first, `definePlugin(id, {…})` second, `definePlugin(id, setup, {…})`
   // third. The id string and setup function are skipped as non-objects.
   for (const call of topLevelCalls) {
     for (const arg of call.arguments) {
-      if (!ts.isObjectLiteralExpression(arg)) continue;
-      const blocksProp = arg.properties.find((p) => propKey(p) === "blocks");
+      if (arg.type !== "ObjectExpression") continue;
+      const blocksProp = arg.properties.find((p) => memberKey(p) === "blocks");
       if (blocksProp) return resolveBlocksProp(blocksProp, importOf);
     }
   }
@@ -226,39 +229,38 @@ export function extractBlockModules(source: string): BlockModuleResult {
 }
 
 function collectImport(
-  node: ts.ImportDeclaration,
+  node: ESTree.ImportDeclaration,
   importOf: Map<string, BlockModuleRef>,
   factoryLocals: Set<string>,
 ): void {
-  const clause = node.importClause;
-  if (
-    !clause ||
-    clause.phaseModifier === ts.SyntaxKind.TypeKeyword ||
-    !ts.isStringLiteral(node.moduleSpecifier)
-  ) {
-    return; // side-effect or `import type` — no runtime value binding
-  }
-  const spec = node.moduleSpecifier.text;
-  if (clause.name) {
-    importOf.set(clause.name.text, { module: spec, exportName: "default" });
-  }
-
-  // A namespace import (`import * as x`) binds a module object, never a
-  // `BlockSpec[]`, so it's intentionally not recorded — a `blocks` field using
-  // one is then rejected rather than emitted as a crashing import.
-  const bindings = clause.namedBindings;
-  if (bindings && ts.isNamedImports(bindings)) {
-    for (const element of bindings.elements) {
-      if (element.isTypeOnly) continue;
-      const imported = (element.propertyName ?? element.name).text;
-      // A string-literal import name (`import { "weird-name" as x }`, an ES2022
-      // arbitrary module export) can't be regenerated as `import { <name> as … }`
-      // — skip it rather than emit a broken import statement.
-      if (!JS_IDENTIFIER.test(imported)) continue;
-      importOf.set(element.name.text, { module: spec, exportName: imported });
-      if (isPlumixSpecifier(spec) && FACTORY_EXPORTS.has(imported)) {
-        factoryLocals.add(element.name.text);
-      }
+  // `import type` — no runtime value binding
+  if (node.importKind === "type") return;
+  const spec = node.source.value;
+  for (const specifier of node.specifiers) {
+    if (specifier.type === "ImportDefaultSpecifier") {
+      importOf.set(specifier.local.name, {
+        module: spec,
+        exportName: "default",
+      });
+      continue;
+    }
+    // A namespace import (`import * as x`) binds a module object, never a
+    // `BlockSpec[]`, so it's intentionally not recorded — a `blocks` field using
+    // one is then rejected rather than emitted as a crashing import.
+    if (
+      specifier.type !== "ImportSpecifier" ||
+      specifier.importKind === "type"
+    ) {
+      continue;
+    }
+    const imported = moduleExportName(specifier.imported);
+    // A string-literal import name (`import { "weird-name" as x }`, an ES2022
+    // arbitrary module export) can't be regenerated as `import { <name> as … }`
+    // — skip it rather than emit a broken import statement.
+    if (!JS_IDENTIFIER.test(imported)) continue;
+    importOf.set(specifier.local.name, { module: spec, exportName: imported });
+    if (isPlumixSpecifier(spec) && FACTORY_EXPORTS.has(imported)) {
+      factoryLocals.add(specifier.local.name);
     }
   }
 }
@@ -266,33 +268,33 @@ function collectImport(
 const JS_IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
 function resolveBlocksProp(
-  prop: ts.ObjectLiteralElementLike,
+  prop: ESTree.ObjectPropertyKind,
   importOf: ReadonlyMap<string, BlockModuleRef>,
 ): BlockModuleResult {
   // `{ blocks }` shorthand, or `{ blocks: <expr> }` / `{ "blocks": <expr> }`.
-  let value: ts.Expression | undefined;
-  if (ts.isShorthandPropertyAssignment(prop)) value = prop.name;
-  else if (ts.isPropertyAssignment(prop)) value = prop.initializer;
-  return value ? resolveValue(value, importOf) : NOT_IMPORTED;
+  return prop.type === "Property"
+    ? resolveValue(prop.value, importOf)
+    : NOT_IMPORTED;
 }
 
 function resolveValue(
-  value: ts.Expression,
+  value: ESTree.Expression,
   importOf: ReadonlyMap<string, BlockModuleRef>,
 ): BlockModuleResult {
   // `blocks` / `blocks: someImport`
-  if (ts.isIdentifier(value)) {
-    const ref = importOf.get(value.text);
+  if (value.type === "Identifier") {
+    const ref = importOf.get(value.name);
     return ref ? { ok: true, modules: [ref] } : NOT_IMPORTED;
   }
 
   // `blocks: [...a, ...b]` or `blocks: [a, b]` — each element an imported binding.
-  if (ts.isArrayLiteralExpression(value)) {
+  if (value.type === "ArrayExpression") {
     const modules: BlockModuleRef[] = [];
     for (const element of value.elements) {
-      const ident = ts.isSpreadElement(element) ? element.expression : element;
-      if (!ts.isIdentifier(ident)) return NOT_IMPORTED;
-      const ref = importOf.get(ident.text);
+      const ident =
+        element?.type === "SpreadElement" ? element.argument : element;
+      if (ident?.type !== "Identifier") return NOT_IMPORTED;
+      const ref = importOf.get(ident.name);
       if (!ref) return NOT_IMPORTED;
       modules.push(ref);
     }
@@ -301,8 +303,3 @@ function resolveValue(
 
   return NOT_IMPORTED;
 }
-
-const propKey = (p: ts.ObjectLiteralElementLike): string | undefined =>
-  p.name && (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))
-    ? p.name.text
-    : undefined;

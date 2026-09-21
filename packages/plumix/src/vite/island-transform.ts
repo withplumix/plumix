@@ -1,8 +1,8 @@
 import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { extname, join } from "node:path";
-import ts from "typescript";
 
 import { VitePluginError } from "./errors.js";
+import { moduleExportName, parseModule } from "./estree.js";
 
 // Prototype-pollution defense. The client-side runtime does
 // `mod[exportName]` to look up the component; a malicious or
@@ -27,24 +27,21 @@ interface UseClientFinding {
 
 export function findUseClientIslands(
   source: string,
+  filePath = "use-client-scan.tsx",
 ): readonly UseClientFinding[] {
   // Cheap reject before paying the parse cost.
   if (!source.includes("use client")) return [];
-  const sourceFile = ts.createSourceFile(
-    "use-client-scan.tsx",
-    source,
-    ts.ScriptTarget.Latest,
-    /* setParentNodes */ false,
-    ts.ScriptKind.TSX,
-  );
-  // RSC convention: `"use client"` must be the first non-comment
-  // statement. TypeScript exposes it as an `ExpressionStatement` whose
-  // expression is a string literal — matches both `"use client";` and
-  // `'use client';`. Anything else as the first statement disqualifies.
-  const first = sourceFile.statements[0];
-  if (!first || !ts.isExpressionStatement(first)) return [];
-  const expr = first.expression;
-  if (!ts.isStringLiteral(expr) || expr.text !== "use client") return [];
+  const program = parseModule(source, filePath);
+  // RSC convention: `"use client"` must be the first non-comment statement — a
+  // directive prologue, so `"use client";` and `'use client';` both count and
+  // a parenthesized or later string does not.
+  const first = program.body[0];
+  if (
+    first?.type !== "ExpressionStatement" ||
+    first.directive !== "use client"
+  ) {
+    return [];
+  }
 
   const seen = new Set<string>();
   const out: UseClientFinding[] = [];
@@ -54,60 +51,43 @@ export function findUseClientIslands(
     out.push({ exportName: name });
   };
 
-  for (const statement of sourceFile.statements) {
+  for (const statement of program.body) {
+    if (statement.type === "ExportDefaultDeclaration") {
+      // `export default <function | class | expr>` — an interface is erased.
+      if (statement.declaration.type !== "TSInterfaceDeclaration") {
+        push("default");
+      }
+      continue;
+    }
+    if (statement.type !== "ExportNamedDeclaration") continue;
+    if (statement.exportKind === "type") continue;
+    const { declaration } = statement;
     if (
-      ts.isFunctionDeclaration(statement) ||
-      ts.isClassDeclaration(statement)
+      declaration?.type === "FunctionDeclaration" ||
+      declaration?.type === "ClassDeclaration"
     ) {
-      if (!hasExportModifier(statement)) continue;
-      if (hasDefaultModifier(statement)) push("default");
-      else if (statement.name) push(statement.name.text);
+      if (declaration.id) push(declaration.id.name);
       continue;
     }
-    if (ts.isVariableStatement(statement)) {
-      if (!hasExportModifier(statement)) continue;
-      for (const decl of statement.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name)) push(decl.name.text);
+    if (declaration?.type === "VariableDeclaration") {
+      for (const decl of declaration.declarations) {
+        if (decl.id.type === "Identifier") push(decl.id.name);
       }
       continue;
     }
-    if (ts.isExportAssignment(statement)) {
-      // `export default <expr>`.
-      if (!statement.isExportEquals) push("default");
-      continue;
-    }
-    if (ts.isExportDeclaration(statement)) {
-      // `export { Foo, Bar as Baz } [from "..."]`.
-      // Re-exports from another module (`... from "..."`) name the
-      // current file as the chunk source, so they're skipped — the
-      // re-exporter isn't the island module.
-      if (statement.moduleSpecifier) continue;
-      if (!statement.exportClause || !ts.isNamedExports(statement.exportClause))
-        continue;
-      for (const element of statement.exportClause.elements) {
-        // `name` is the outward-facing name (after `as`); we feed the
-        // chunk's `mod[exportName]` lookup, so use the outward name.
-        push(element.name.text);
-      }
+    // `export { Foo, Bar as Baz } [from "..."]`.
+    // Re-exports from another module (`... from "..."`) name the
+    // current file as the chunk source, so they're skipped — the
+    // re-exporter isn't the island module.
+    if (declaration || statement.source) continue;
+    for (const specifier of statement.specifiers) {
+      if (specifier.exportKind === "type") continue;
+      // `exported` is the outward-facing name (after `as`); we feed the
+      // chunk's `mod[exportName]` lookup, so use the outward name.
+      push(moduleExportName(specifier.exported));
     }
   }
   return out;
-}
-
-function hasExportModifier(node: ts.HasModifiers): boolean {
-  return (
-    ts
-      .getModifiers(node)
-      ?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false
-  );
-}
-
-function hasDefaultModifier(node: ts.HasModifiers): boolean {
-  return (
-    ts
-      .getModifiers(node)
-      ?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false
-  );
 }
 
 // Vite virtual-module suffix the SSR shim uses to read the original
@@ -140,7 +120,7 @@ export function transformUseClientModule(
   filePath: string,
   options: TransformUseClientOptions,
 ): TransformUseClientResult | null {
-  const findings = findUseClientIslands(source);
+  const findings = findUseClientIslands(source, filePath);
   if (findings.length === 0) return null;
   // First-party source only. A published package is entitled to export a
   // client-only hook beside its components (`@lingui/react` and half of Radix
@@ -244,7 +224,7 @@ export function scanUserSources(
     cwd,
     fs,
     (filePath, source) => {
-      for (const finding of findUseClientIslands(source)) {
+      for (const finding of findUseClientIslands(source, filePath)) {
         islands.push({
           sourcePath: toPosix(filePath),
           exportName: finding.exportName,

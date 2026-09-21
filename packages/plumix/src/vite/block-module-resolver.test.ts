@@ -302,6 +302,17 @@ describe("resolveBlockModulePaths", () => {
     expect(paths).toEqual([ref("@scope/pkg/blocks")]);
   });
 
+  test("reads a theme module that renders JSX", () => {
+    const paths = resolveBlockModulePaths(
+      `import { defineTheme } from "plumix/theme";
+       import blocks from "./blocks.js";
+       const Layout = ({ children }: { children: unknown }) => <main>{children}</main>;
+       export default defineTheme({ blocks, layout: Layout });`,
+      "/app/theme/index.tsx",
+    );
+    expect(paths).toEqual([ref("/app/theme/blocks.js")]);
+  });
+
   test("returns no paths when the module declares no blocks", () => {
     const paths = resolveBlockModulePaths(
       `import { defineTheme } from "plumix/theme";
