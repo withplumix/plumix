@@ -2,11 +2,13 @@
 
 The Plumix **marketing site**, built on plumix (dogfood + proof).
 
-**Status: scaffold, filling in.** It wires the `pages` and `media` plugins over a
-real D1 database and an R2 `MEDIA` bucket, so content can be authored now. It has
-no theme yet, so the public site still serves plumix's built-in welcome screen —
-the landing-page theme (and the Cloudflare dev-vs-deploy env split) lands with
-the **marketing-content follow-up** to #1425.
+**Status: filling in.** It wires the `pages` and `media` plugins over a real D1
+database and an R2 `MEDIA` bucket. The theme in `theme/` renders the landing
+page from code; pages authored in the admin render through its `entry` template.
+The code on the page is imported as text from `snippets/`, which `typecheck`
+compiles on its own, so a snippet that drifts from the API fails CI. In
+`public/screenshots/`, the admin dashboard is copied from the docs app; the dev
+error page and debug bar were captured from this app's `plumix dev`.
 
 ## Develop
 

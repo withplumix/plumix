@@ -53,6 +53,10 @@ const config: KnipConfig = {
     },
     "apps/marketing": {
       entry: ["plumix.config.ts"],
+      // Same theme stylesheet wiring as apps/demo: referenced from the theme's
+      // `css: []` array, with tailwind consumed through `@import`/`@plugin`.
+      ignore: ["theme/styles.css"],
+      ignoreDependencies: ["@tailwindcss/typography", "tailwindcss"],
     },
     "apps/docs": {
       // Components are imported by `.mdx` pages, which knip does not parse for

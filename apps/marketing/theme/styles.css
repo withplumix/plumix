@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --plumix-color-paper: #f7f4ee;
+  --plumix-color-ink: #1a1714;
+  --plumix-color-muted: #6b645b;
+  --plumix-color-accent: #8a2c5e;
+  --plumix-color-line: #e4ddd2;
+  --plumix-font-family-serif:
+    "Iowan Old Style", Charter, "Palatino Linotype", Georgia, "Times New Roman",
+    serif;
+  --plumix-font-family-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --plumix-font-family-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+@theme inline {
+  --color-paper: var(--plumix-color-paper);
+  --color-ink: var(--plumix-color-ink);
+  --color-muted: var(--plumix-color-muted);
+  --color-accent: var(--plumix-color-accent);
+  --color-line: var(--plumix-color-line);
+  --font-serif: var(--plumix-font-family-serif);
+  --font-sans: var(--plumix-font-family-sans);
+  --font-mono: var(--plumix-font-family-mono);
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Syntax colours for the dark code panels. Warm, low-chroma, with the
+   accent's light tint on keywords so code reads as part of the brand. */
+.code-panel {
+  --code-bg: #1d1a17;
+  --code-fg: #e9e3d9;
+  --code-keyword: #e3a3c6;
+  --code-string: #d8c48c;
+  --code-comment: #8a8175;
+  --code-call: #f4ede2;
+}
+
+.prose {
+  --tw-prose-body: var(--color-ink);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-hr: var(--color-line);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-code: var(--color-ink);
+}
+
+.prose :is(h1, h2, h3, h4) {
+  font-family: var(--font-serif);
+}
+
+/* Motion. The page ships no JS, so every effect is CSS: `motion-enter` plays
+   once on load (stagger through `--enter-delay`), `motion-reveal` is tied to
+   the element scrolling into view. Only transform and opacity move. */
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.motion-enter {
+  animation: motion-rise 700ms var(--ease-out-strong) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+/* Browsers without scroll timelines show the content static rather than
+   hiding it behind an animation that would never run. */
+@supports (animation-timeline: view()) {
+  .motion-reveal {
+    animation: motion-rise linear both;
+    animation-timing-function: var(--ease-out-strong);
+    animation-timeline: view();
+    animation-range: entry 5% entry 60%;
+  }
+
+  .motion-reveal-late {
+    animation-range: entry 50% cover 45%;
+  }
+}
+
+/* Reduced motion keeps the fact of the entrance, not the travel: the load
+   sequence becomes a short fade and scroll-linked movement is dropped. */
+@media (prefers-reduced-motion: reduce) {
+  .motion-enter {
+    animation: motion-fade 200ms ease both;
+  }
+
+  .motion-reveal {
+    animation: none;
+  }
+}
+
+/* One focus ring for every link and control: accent, offset clear of the
+   element, keyboard-only via :focus-visible. */
+:where(a, button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+:where(a, button, summary) {
+  touch-action: manipulation;
+}
