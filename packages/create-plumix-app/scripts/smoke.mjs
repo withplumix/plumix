@@ -127,6 +127,34 @@ const EXPECT_CATALOGS = [
   "pages",
 ];
 
+/**
+ * Generated projects install TypeScript 6, but nothing in them needs its
+ * compiler API — `typecheck` is plain `tsc`, and `plumix/vite` parses with
+ * Vite's own parser — so a user may move to TypeScript 7. Swap it in, then
+ * confirm the install honoured it: a combo that quietly kept 6 would pass
+ * while proving nothing about 7.
+ */
+function useTypeScript7(appDir) {
+  const manifestPath = join(appDir, "package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.devDependencies = { ...manifest.devDependencies, typescript: "^7" };
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+function assertTypeScript7(appDir) {
+  const { version } = JSON.parse(
+    readFileSync(
+      join(appDir, "node_modules", "typescript", "package.json"),
+      "utf8",
+    ),
+  );
+  if (!version.startsWith("7.")) {
+    throw new Error(
+      `Expected TypeScript 7 in ${appDir}, found ${version}; the combo would not test 7.`,
+    );
+  }
+}
+
 function enableSecondLocale(appDir) {
   const configPath = join(appDir, "plumix.config.ts");
   const config = readFileSync(configPath, "utf8");
@@ -184,9 +212,11 @@ function smoke(combo, tarballs) {
     ]);
 
     if (combo.secondLocale) enableSecondLocale(app);
+    if (combo.typescript7) useTypeScript7(app);
     redirectToTarballs(app, tarballs);
     run("pnpm", ["install", "--ignore-workspace", "--silent"], app);
     assertNothingFromRegistry(app);
+    if (combo.typescript7) assertTypeScript7(app);
 
     run("pnpm", ["run", "typecheck"], app);
     run("pnpm", ["run", "build"], app);
@@ -247,6 +277,13 @@ try {
           "--auth",
           authIds.join(","),
         ],
+      },
+      // Every plugin, so the published declarations of the whole graph and
+      // the islands `plumix/vite` scans all meet the native compiler.
+      {
+        name: `${id}-typescript-7`,
+        args: ["-y", "--runtime", id, "-p", selected.join(",")],
+        typescript7: true,
       },
     ];
   });

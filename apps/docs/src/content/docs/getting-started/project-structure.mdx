@@ -56,6 +56,8 @@ The generated `database_id` is the placeholder `local-development-only`, which i
 
 Four scripts. `dev` and `build` wrap the CLI as `plumix dev` and `plumix build`. `typecheck` is `tsc --noEmit`, and `clean` is `git clean -xdf .plumix .wrangler dist node_modules`, so neither of those two goes through Plumix at all. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
 
+The project installs TypeScript 6. TypeScript 7 works too, since nothing in the project uses the compiler API that 7.0 dropped: `typecheck` is plain `tsc`, and Plumix parses your sources with Vite's own parser. Run `pnpm add -D typescript@7` to type-check with the native compiler. Tools that embed TypeScript themselves, such as typescript-eslint, still need TypeScript 6 until they support 7.
+
 **`tsconfig.json`**
 
 Strict, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `types` set to Node, the Workers types and React. Its `include` is three entries: `plumix.config.ts`, `theme`, and `.plumix`. That last one is why a type error in generated code reaches your editor.
