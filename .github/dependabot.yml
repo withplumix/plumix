@@ -100,6 +100,11 @@ updates:
           - "astro"
           - "@astrojs/*"
           - "starlight-*"
+      # TypeScript 7 under both names it has in the `typescript` catalog.
+      typescript:
+        patterns:
+          - "typescript"
+          - "@typescript/native"
     ignore:
       # @types/node major version must match .nvmrc — bump manually with Node upgrades
       - dependency-name: "@types/node"

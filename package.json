@@ -44,6 +44,7 @@
     "@commitlint/types": "^21.2.0",
     "@plumix/prettier-config": "workspace:*",
     "@types/node": "catalog:",
+    "@typescript/native": "catalog:typescript",
     "knip": "^6.32.2",
     "pkg-pr-new": "^0.0.75",
     "prettier": "catalog:",

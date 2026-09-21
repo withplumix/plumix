@@ -36,7 +36,12 @@ catalog:
   sharp: ^0.35.4
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
-  typescript: ^6.0.3
+  # TypeScript 7 ships no compiler API until 7.1, so the `typescript` name
+  # stays on the TS 6 API for everything that imports it: typescript-eslint
+  # and our type-aware rules, @astrojs/check, eslint-plugin-lingui, and the
+  # tests that build a Program. `tsc` itself runs 7 — see the `typescript`
+  # catalog below. Drop the alias once those tools support TypeScript 7.
+  typescript: npm:@typescript/typescript6@^6.0.2
   valibot: ^1.4.2
 
 # Named catalogs group a multi-package family (2+ packages, 2+ consumers) under one
@@ -116,6 +121,12 @@ catalogs:
     "@tiptap/extension-text": ^3.31.3
     "@tiptap/extensions": ^3.31.3
     "@tiptap/react": ^3.31.3
+  typescript:
+    # One release under two names, bumped together: `typescript` is what a
+    # scaffolded app installs, `@typescript/native` is the repo's own `tsc`
+    # (the default catalog's `typescript` is the TS 6 API — see there).
+    typescript: ^7.0.2
+    "@typescript/native": npm:typescript@^7.0.2
   vite:
     "@vitejs/plugin-react": ^6.1.1
     vite: ^8.2.2
