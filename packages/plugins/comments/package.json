@@ -71,7 +71,7 @@
   },
   "dependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "markdown-it": "^15.0.0",
+    "markdown-it": "^15.0.2",
     "valibot": "catalog:"
   },
   "peerDependencies": {
