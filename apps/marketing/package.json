@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Plumix marketing site — built on plumix (scaffold; the landing page lands with the marketing-content follow-up)",
+  "description": "Plumix marketing site — built on plumix, with its own landing-page theme",
   "license": "MIT",
   "scripts": {
     "build": "plumix migrate generate && plumix build",
@@ -11,23 +11,29 @@
     "dev": "plumix migrate generate && plumix dev",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "eslint --no-error-on-unmatched-pattern",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p snippets"
   },
   "dependencies": {
     "@plumix/plugin-media": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",
     "@plumix/plugin-seo": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
-    "plumix": "workspace:*"
+    "plumix": "workspace:*",
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/eslint-config": "workspace:*",
+    "@plumix/plugin-blog": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:tailwind",
+    "@tailwindcss/typography": "catalog:tailwind",
     "@types/node": "catalog:",
+    "@types/react": "catalog:react",
     "eslint": "catalog:",
     "prettier": "catalog:",
+    "tailwindcss": "catalog:tailwind",
     "typescript": "catalog:",
     "wrangler": "catalog:cloudflare"
   },

@@ -6,6 +6,8 @@ import { pages } from "@plumix/plugin-pages";
 import { seo } from "@plumix/plugin-seo";
 import { cloudflare, d1, r2 } from "@plumix/runtime-cloudflare";
 
+import { marketingTheme } from "./theme";
+
 export default plumix({
   runtime: cloudflare(),
   // session: "auto" routes writes to primary, nearest replica for anon reads,
@@ -26,7 +28,5 @@ export default plumix({
     },
   }),
   plugins: [pages, media(), seo()],
-  // No theme registered yet, so the public site still serves plumix's built-in
-  // welcome screen — the landing page theme lands with the marketing-content
-  // follow-up. Pages + media are wired so content can be authored now.
+  theme: marketingTheme,
 });

@@ -496,6 +496,9 @@ importers:
       plumix:
         specifier: workspace:*
         version: link:../../packages/plumix
+      react:
+        specifier: catalog:react
+        version: 19.2.8
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
@@ -503,21 +506,36 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../packages/plugins/blog
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
+      '@tailwindcss/postcss':
+        specifier: catalog:tailwind
+        version: 4.3.3
+      '@tailwindcss/typography':
+        specifier: catalog:tailwind
+        version: 0.5.20(tailwindcss@4.3.3)
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.6
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
       eslint:
         specifier: 'catalog:'
         version: 10.10.0(jiti@2.7.0)
       prettier:
         specifier: 'catalog:'
         version: 3.9.6
+      tailwindcss:
+        specifier: catalog:tailwind
+        version: 4.3.3
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
