@@ -162,7 +162,7 @@
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "catalog:cloudflare",
-    "jose": "^6.2.10",
+    "jose": "^6.2.12",
     "jsonc-parser": "catalog:",
     "smol-toml": "^1.8.0",
     "vite": "catalog:vite"
