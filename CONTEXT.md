@@ -53,6 +53,12 @@ The same bag as a read surface hands it back, each value read against its
 meta-box field and every reference id hydrated. The counterpart to stored meta;
 the two are meant to answer the same question the same way.
 
+**Entry query**:
+A description of a set of entries, built up by narrowing rather than written as
+SQL. A surface hands one out already restricted to what that surface may show —
+a feed's is born published-and-public-type-only — and whoever receives it can
+add conditions but never drop the ones already on it.
+
 **Permalink**:
 The public canonical URL of an entry or term archive.
 
@@ -300,6 +306,12 @@ A hook whose handlers form a pipeline — each receives the previous handler's r
 
 **Action**:
 A hook whose handlers fire for side effects and return nothing.
+
+**Narrowing composition**:
+The rule that makes an extension point safe to hand a query to: a contribution
+can only be ANDed onto what it received, so a plugin can restrict what a surface
+shows and has no way to widen it. What the extension forgets to say cannot
+become a leak.
 
 **Plugin manifest**:
 The wire-shipped projection of the plugin registry that the admin bundle consumes. See the disambiguation note — always qualify "manifest".

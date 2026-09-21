@@ -1,12 +1,19 @@
-import type { AnyPluginDescriptor, CdnStore, ConnectedCdn } from "plumix";
+import type {
+  AnyPluginDescriptor,
+  CdnStore,
+  ConnectedCdn,
+  JsonValue,
+} from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { eq, typeTag } from "plumix/db";
+import { authenticatedPolicy } from "plumix/auth";
+import { entryQuery, sql, typeTag } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import { feeds } from "./index.js";
+import { FEED_LIMIT } from "./items.js";
 import { FEED_TAG } from "./respond.js";
 
 // Every suite below installs the plugin over the host plugin it syndicates:
@@ -18,14 +25,23 @@ function harness(
   return createDispatcherHarness({ plugins: [...plugins, feeds()] });
 }
 
-// `plumix` exports no span type; this is the part of one a query count reads.
+// `plumix` exports no span type; this is the part of one these tests read.
 interface SpanTree {
   readonly name: string;
+  readonly attributes: Readonly<Record<string, JsonValue>>;
   readonly children: readonly SpanTree[];
 }
 
 function flattenSpans(spans: readonly SpanTree[]): SpanTree[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
+}
+
+// The SQL each database span ran, in the order it ran.
+function sqlOf(spans: readonly SpanTree[]): string[] {
+  return flattenSpans(spans).flatMap((span) => {
+    const sql = span.attributes["db.sql"];
+    return typeof sql === "string" ? [sql] : [];
+  });
 }
 
 function countDbSpans(spans: readonly SpanTree[]): number {
@@ -535,11 +551,255 @@ describe("archive-type feeds", () => {
         data: { kind: "custom", name: "event-series" },
         title: `Series: ${params.series ?? ""}`,
       }),
+      // Nothing is narrowed beyond what a feed already restricts itself to:
+      // the visibility guard is the framework's, not this archive's.
       feed: {
-        filter: (_ctx, params) =>
-          params.series === "missing" ? null : eq(entries.status, "published"),
+        scope: (q, params) => (params.series === "missing" ? null : q),
       },
     });
+  });
+
+  test("a scope that narrows nothing still yields only published, public-type entries", async () => {
+    const lax = definePlugin("lax", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("secret", { label: "Secret", isPublic: false });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        // The whole point: an archive that declares no narrowing at all cannot
+        // widen what the feed shows.
+        feed: { scope: (q) => q },
+      });
+    });
+    const h = await harness(lax);
+    const author = await h.seedUser("admin");
+    for (const [type, slug, title, status] of [
+      ["post", "live", "Live Post", "published"],
+      ["post", "wip", "Draft Post", "draft"],
+      ["post", "gone", "Trashed Post", "trash"],
+      ["secret", "hush", "Private Type", "published"],
+    ] as const) {
+      await h.factory.entry.create({
+        type,
+        slug,
+        title,
+        content: null,
+        status,
+        authorId: author.id,
+      });
+    }
+
+    const res = await h.fetch("/events/summer/feed");
+    res.assertStatus(200);
+    const body = await res.text();
+    expect(body).toContain("Live Post");
+    expect(body).not.toContain("Draft Post");
+    expect(body).not.toContain("Trashed Post");
+    expect(body).not.toContain("Private Type");
+  });
+
+  test("a non-public type cannot crowd a public entry out of the feed window", async () => {
+    // The permalink step already drops a row of a type with no public route,
+    // so leaving one out of the rendered feed proves nothing about the guard.
+    // What the guard's type half keeps is the window: without it, enough
+    // newer rows of a non-public type fill every slot and are then dropped,
+    // and the public entry the feed owed its reader never appears.
+    const crowded = definePlugin("crowded", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: { scope: (q) => q },
+      });
+    });
+    const h = await harness(crowded);
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "older-public",
+      title: "Older Public Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2020-01-01T00:00:00Z"),
+    });
+    for (let i = 0; i <= FEED_LIMIT; i++) {
+      await h.factory.entry.create({
+        type: "note",
+        slug: `note-${String(i)}`,
+        title: "Note",
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date("2024-01-01T00:00:00Z"),
+      });
+    }
+
+    const res = await h.fetch("/events/summer/feed");
+    res.assertStatus(200);
+    expect(await res.text()).toContain("Older Public Post");
+  });
+
+  test("a scope that discards the query it was handed is still guarded", async () => {
+    // The seeded query is one half of the guard; this is the other. A scope
+    // building its own query from scratch has dropped what it was given, and
+    // the feed still owes a reader nothing but published, public-type entries.
+    const rebuilds = definePlugin("rebuilds", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: { scope: () => entryQuery() },
+      });
+    });
+    const h = await harness(rebuilds);
+    await seedPost(h, "live", "Live Post");
+    await seedPost(h, "wip", "Draft Post", "draft");
+
+    const res = await h.fetch("/events/summer/feed");
+    res.assertStatus(200);
+    const body = await res.text();
+    expect(body).toContain("Live Post");
+    expect(body).not.toContain("Draft Post");
+  });
+
+  test("a scope reaching for raw SQL still cannot widen the feed", async () => {
+    // `where` is the escape hatch, and an escape hatch that can widen would put
+    // the whole guarantee back where it started. A top-level `OR` is the shape
+    // that does it, because it binds looser than the `AND`s around it.
+    const sneaky = definePlugin("sneaky", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: {
+          scope: (q) =>
+            q.where(sql`${entries.slug} = 'live' OR ${entries.slug} = 'wip'`),
+        },
+      });
+    });
+    const h = await harness(sneaky);
+    await seedPost(h, "live", "Live Post");
+    await seedPost(h, "wip", "Draft Post", "draft");
+
+    const res = await h.fetch("/events/summer/feed");
+    res.assertStatus(200);
+    const body = await res.text();
+    expect(body).toContain("Live Post");
+    expect(body).not.toContain("Draft Post");
+  });
+
+  test("an archive behind an access policy has no feed at all", async () => {
+    // A feed is a registered public route, which core answers ahead of the
+    // access gate and the principal loader, so there is no reader to check it
+    // against. Until a public route can carry a policy (#2520), a policied
+    // archive gets no feed rather than an ungated one.
+    const gated = definePlugin("gated", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        access: authenticatedPolicy,
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: { scope: (q) => q },
+      });
+    });
+    const h = await harness(gated);
+    await seedPost(h, "live", "Live Post");
+
+    (await h.fetch("/events/summer/feed")).assertStatus(404);
+    (await h.fetch("/events/summer/feed/atom")).assertStatus(404);
+    // Nor does the page name one to the reader who does get through the gate:
+    // the head would be pointing at a 404.
+    expect(
+      await advertised(h, "/events/summer", await h.seedUser("admin")),
+    ).toEqual([]);
+  });
+
+  test("deciding whether a page advertises its feed resolves nothing", async () => {
+    // A scope records intent instead of resolving it, which is what lets every
+    // page of an archive ask "would the feed answer for these params?" without
+    // paying for a lookup. The page render must never reach the `terms` table
+    // the scope's term path names; serving the feed must, which is what makes
+    // the first assertion a check and not an accident.
+    let statements: readonly string[] = [];
+    const plugin = definePlugin("term-scoped", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: {
+          scope: (q, params) => q.inTerm("category", params.series ?? ""),
+        },
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [plugin, feeds()],
+      telemetry: {
+        consumers: [
+          {
+            id: "sql",
+            onRequestEnd: (snapshot) => {
+              statements = sqlOf(snapshot.spans);
+            },
+          },
+        ],
+      },
+    });
+    await h.factory.category.create({ slug: "summer" });
+    const readsTerms = (sql: string): boolean => /\bfrom "terms"/i.test(sql);
+
+    const page = await h.fetch("/events/summer");
+    page.assertStatus(200);
+    expect(await page.text()).toContain("/events/summer/feed");
+    expect(statements.filter(readsTerms)).toEqual([]);
+
+    (await h.fetch("/events/summer/feed")).assertStatus(200);
+    expect(statements.some(readsTerms)).toBe(true);
+  });
+
+  test("a feed whose scope selects nothing is empty rather than missing", async () => {
+    const empty = definePlugin("empty", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: { scope: (q) => q.none() },
+      });
+    });
+    const h = await harness(empty);
+    await seedPost(h, "live", "Live Post");
+
+    for (const path of ["/events/summer/feed", "/events/summer/feed/atom"]) {
+      const res = await h.fetch(path);
+      res.assertStatus(200);
+      expect(await res.text()).not.toContain("Live Post");
+    }
   });
 
   test("serves a feed under each archive route in both formats", async () => {
@@ -558,9 +818,18 @@ describe("archive-type feeds", () => {
     );
   });
 
-  // The `<link rel="alternate">` feed hrefs a rendered page advertises.
-  async function advertised(h: DispatcherHarness, path: string) {
-    const res = await h.fetch(path);
+  // `plumix/test` exports no user type; this is what `seedUser` hands back.
+  type SeededUser = Awaited<ReturnType<DispatcherHarness["seedUser"]>>;
+
+  // The `<link rel="alternate">` feed hrefs a rendered page advertises. `as`
+  // is for a page behind an access policy, which an anonymous reader is
+  // redirected away from before any head is rendered.
+  async function advertised(
+    h: DispatcherHarness,
+    path: string,
+    as?: SeededUser,
+  ) {
+    const res = await h.fetch(path, as === undefined ? undefined : { as });
     res.assertStatus(200);
     const body = await res.text();
     return [...body.matchAll(/<link[^>]*rel="alternate"[^>]*>/g)].map(
@@ -637,9 +906,10 @@ describe("archive-type feeds", () => {
     (await h.fetch("/events/summer/page/2/feed")).assertStatus(404);
   });
 
-  test("a filter returning null 404s", async () => {
+  test("a scope returning null 404s", async () => {
     const h = await harness(eventsPlugin);
     (await h.fetch("/events/missing/feed")).assertStatus(404);
+    (await h.fetch("/events/missing/feed/atom")).assertStatus(404);
   });
 
   test("an archive feed path colliding with a type feed leaves the type feed serving, unadvertised by the archive", async () => {
@@ -653,7 +923,7 @@ describe("archive-type feeds", () => {
           data: { kind: "custom", name: "event-calendar" },
           title: "Calendar",
         }),
-        feed: { filter: () => eq(entries.status, "published") },
+        feed: { scope: (q) => q },
       });
     });
     const h = await harness(colliding);
@@ -670,7 +940,7 @@ describe("archive-type feeds", () => {
           data: { kind: "custom", name: "doc-section" },
           title: "Docs",
         }),
-        feed: { filter: () => eq(entries.status, "published") },
+        feed: { scope: (q) => q },
       });
     });
     const h = await harness(docs);
@@ -698,7 +968,7 @@ describe("archive-type feeds", () => {
           data: { kind: "custom", name: "section" },
           title: "Section",
         }),
-        feed: { filter: () => eq(entries.status, "published") },
+        feed: { scope: (q) => q },
       });
     });
     const h = await harness(sections);
@@ -711,13 +981,14 @@ describe("archive-type feeds", () => {
 
   test("an archive whose own routes both answer its feed URL still advertises it", async () => {
     const docs = definePlugin("docs", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerArchiveType("doc-section", {
         routes: ["/docs/:slug", "/docs/:path+"],
         resolve: () => ({
           data: { kind: "custom", name: "doc-section" },
           title: "Docs",
         }),
-        feed: { filter: () => eq(entries.status, "published") },
+        feed: { scope: (q) => q },
       });
     });
     const h = await harness(docs);
@@ -725,6 +996,27 @@ describe("archive-type feeds", () => {
       "https://cms.example/docs/guides/feed",
       "https://cms.example/docs/guides/feed/atom",
     ]);
+  });
+
+  test("an archive on a site with no public entry type has no feed", async () => {
+    // Every built-in scope already 404s a site that routes no public type;
+    // an archive's feed is not the one surface that gets to differ.
+    const nothingPublic = definePlugin("private-only", (ctx) => {
+      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+      ctx.registerArchiveType("event-series", {
+        routes: ["/events/:series"],
+        resolve: () => ({
+          data: { kind: "custom", name: "event-series" },
+          title: "Events",
+        }),
+        feed: { scope: (q) => q },
+      });
+    });
+    const h = await harness(nothingPublic);
+    (await h.fetch("/events/summer/feed")).assertStatus(404);
+    (await h.fetch("/events/summer/feed/atom")).assertStatus(404);
+    // Nor does the archive page name one: the head would point at a 404.
+    expect(await advertised(h, "/events/summer")).toEqual([]);
   });
 
   test("a plugin archive without a feed advertises none", async () => {
@@ -825,7 +1117,7 @@ describe("a feed at the edge", () => {
           data: { kind: "custom", name: "series" },
           title: "Series",
         }),
-        feed: { filter: () => eq(entries.status, "published") },
+        feed: { scope: (q) => q },
       });
     });
   }
@@ -1013,7 +1305,7 @@ describe("a feed at the edge", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  test("a plugin archive's feed is purged by a publish of any type its filter can read", async () => {
+  test("a plugin archive's feed is purged by a publish of any type its scope can read", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
       plugins: [seriesArchive(true), feeds()],

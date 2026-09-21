@@ -40,3 +40,25 @@ export class EntryReadError extends Error {
     );
   }
 }
+
+/**
+ * A query handed to `compileEntryQuery` that `entryQuery` did not build. Not a
+ * domain outcome and not mapped to a transport: it says a query was
+ * reconstructed from outside, which is the one way the narrowing guarantee
+ * could be lost without anyone writing an assertion.
+ */
+export class EntryQueryError extends Error {
+  static {
+    EntryQueryError.prototype.name = "EntryQueryError";
+  }
+
+  private constructor(message: string) {
+    super(message);
+  }
+
+  static foreignQuery(): EntryQueryError {
+    return new EntryQueryError(
+      "not a query entryQuery() built: a query holds its narrowings beside itself, so one cannot be reconstructed or edited from outside",
+    );
+  }
+}
