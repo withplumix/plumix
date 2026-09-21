@@ -22,7 +22,7 @@ catalog:
   "@axe-core/playwright": ^4.13.0
   "@libsql/client": ^0.17.4
   "@playwright/test": ^1.62.1
-  "@types/node": ^24.13.3
+  "@types/node": ^24.13.4
   cmdk: ^1.1.1
   esbuild: ^0.28.2
   eslint: ^10.9.1
