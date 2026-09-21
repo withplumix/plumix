@@ -20,7 +20,7 @@ packages:
 catalog:
   "@arethetypeswrong/cli": ^0.18.5
   "@axe-core/playwright": ^4.13.0
-  "@libsql/client": ^0.17.4
+  "@libsql/client": ^0.18.0
   "@playwright/test": ^1.62.1
   "@types/node": ^24.13.3
   cmdk: ^1.1.1
