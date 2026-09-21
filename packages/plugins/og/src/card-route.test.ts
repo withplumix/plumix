@@ -19,6 +19,10 @@ import {
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
 
+// One edit time for every seed a URL comparison makes, so the font set is the
+// only input that differs between the two cards.
+const UPDATED_AT = new Date("2026-01-01T00:00:00Z");
+
 /** The URL a card lands on for a given font set, under a renderer reading `reads`. */
 async function cardPathFor(
   fonts: readonly string[],
@@ -28,7 +32,7 @@ async function cardPathFor(
     renderer: createFakeRenderer({ fonts: reads }).renderer,
     fonts,
   });
-  return cardPath(harness, await seedEntry(harness));
+  return cardPath(harness, await seedEntry(harness, { updatedAt: UPDATED_AT }));
 }
 
 /** A logger that keeps what the route reported, for asserting on a failure. */

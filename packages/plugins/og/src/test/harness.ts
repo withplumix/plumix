@@ -360,6 +360,12 @@ export interface SeedEntryOverrides {
   readonly authorId?: number;
   /** When, for a suite asking about a date archive. */
   readonly publishedAt?: Date;
+  /**
+   * When it last changed. The default card's digest reads it, and the column
+   * defaults to the insert's second — so a suite comparing URLs across two
+   * seeds pins it, or a tick between them moves the URL on its own.
+   */
+  readonly updatedAt?: Date;
   /** Written verbatim — a per-entry access choice, a media row's own fields. */
   readonly meta?: JsonObject;
   /** The entry's `.featured()` photo — the link above a generated card. */
@@ -382,6 +388,9 @@ export async function seedEntry(
     ...(overrides.publishedAt === undefined
       ? {}
       : { publishedAt: overrides.publishedAt }),
+    ...(overrides.updatedAt === undefined
+      ? {}
+      : { updatedAt: overrides.updatedAt }),
     status: overrides.status ?? "published",
     meta: {
       ...overrides.meta,
