@@ -309,7 +309,7 @@ A hook whose handlers fire for side effects and return nothing.
 
 **Narrowing composition**:
 The rule that makes an extension point safe to hand a query to: a contribution
-can only be ANDed onto what it received, so a plugin can restrict what a surface
+can only be joined by AND to what it received, so a plugin can restrict what a surface
 shows and has no way to widen it. What the extension forgets to say cannot
 become a leak.
 

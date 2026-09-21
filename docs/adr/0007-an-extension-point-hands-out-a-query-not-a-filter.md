@@ -2,8 +2,8 @@
 
 A plugin archive's feed used to be declared as a SQL row predicate:
 `feed: { filter: (ctx, params) => SQL | null }`, which `@plumix/plugin-feeds` used
-as the whole `WHERE`. Every built-in feed scope ANDed `published` and a
-public-entry-type check into its own predicate; the plugin branch ANDed nothing.
+as the whole `WHERE`. Every built-in feed scope joined `published` and a
+public-entry-type check onto its own predicate; the plugin branch joined nothing.
 An archive whose filter forgot `eq(entries.status, "published")` syndicated
 drafts and trashed entries to anonymous readers, and each of the six filters in
 the repo was that one condition and nothing else — the extension point's only
