@@ -25,7 +25,7 @@ Turborepo drives everything from the root:
 - `pnpm build` — every package in topological order
 - `pnpm typecheck` / `pnpm lint` / `pnpm format` — turbo tasks; `lint` and `typecheck` `dependsOn: ^build` so they need built upstream deps
 - `pnpm test:unit` — low-level vitest across every package; workspace imports resolve to source and i18n catalogs are stubbed, so it needs no build or `i18n:compile`
-- `pnpm test:build` — vitest suites that spin up a real Vite build and inspect the emitted artifacts (`*.build.test.ts`; only plumix has these)
+- `pnpm test:build` — vitest suites that need the build graph and inspect what it produced (`*.build.test.ts`)
 - `pnpm test:e2e` — Playwright e2e (only the packages that opt in)
 - `pnpm test` — convenience umbrella for `test:unit` + `test:build`
 - `pnpm knip` — unused-export and dependency check

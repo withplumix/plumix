@@ -163,8 +163,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # `*.build.test.ts` suites spin up a real Vite build and inspect the
-      # emitted artifacts; the turbo task pulls the build graph.
+      # `*.build.test.ts` suites inspect what the build produced; the turbo
+      # task pulls the build graph.
       - run: pnpm test:build
 
   smoke:
