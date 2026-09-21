@@ -135,6 +135,28 @@ describe("findUseClientIslands", () => {
     expect(islands.map((i) => i.exportName)).toEqual(["A", "B", "C"]);
   });
 
+  test("leaves type-only exports out, since nothing survives at runtime to shim", () => {
+    const source = `
+      "use client";
+      interface Props { label: string }
+      export type { Props };
+      export type Size = "sm" | "lg";
+      export function A(props: Props) { return null; }
+    `;
+    const islands = findUseClientIslands(source);
+    expect(islands.map((i) => i.exportName)).toEqual(["A"]);
+  });
+
+  test("reads a `.ts` island with syntax TSX would reject", () => {
+    const source = `
+      "use client";
+      export function A() { return null; }
+      const label = <string>"x";
+    `;
+    const islands = findUseClientIslands(source, "/app/src/island.ts");
+    expect(islands.map((i) => i.exportName)).toEqual(["A"]);
+  });
+
   test("includes the default export, encoded as exportName='default'", () => {
     const source = `
       "use client";

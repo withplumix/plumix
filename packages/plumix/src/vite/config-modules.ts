@@ -1,4 +1,11 @@
-import ts from "typescript";
+import type { ESTree } from "vite";
+
+import {
+  callSites,
+  memberKey,
+  moduleExportName,
+  parseModule,
+} from "./estree.js";
 
 /**
  * The module specifiers a plumix config imports its theme and plugins from,
@@ -16,110 +23,83 @@ export interface ConfigModules {
 const isPlumixSpecifier = (spec: string): boolean =>
   spec === "plumix" || spec.startsWith("plumix/");
 
-export function extractConfigModules(source: string): ConfigModules {
-  const sf = ts.createSourceFile(
-    "plumix.config.ts",
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+export function extractConfigModules(
+  source: string,
+  filename = "plumix.config.ts",
+): ConfigModules {
+  const program = parseModule(source, filename);
 
   // Value-binding local name -> specifier, plus the local names bound to the
   // `plumix` factory export (via a `plumix` import, canonical or aliased).
   const importOf = new Map<string, string>();
   const factoryLocals = new Set<string>();
-  for (const statement of sf.statements) {
-    if (!ts.isImportDeclaration(statement)) continue;
-    const clause = statement.importClause;
-    if (
-      !clause ||
-      clause.phaseModifier === ts.SyntaxKind.TypeKeyword ||
-      !ts.isStringLiteral(statement.moduleSpecifier)
-    ) {
-      continue;
-    }
-    const spec = statement.moduleSpecifier.text;
-    if (clause.name) importOf.set(clause.name.text, spec);
-    const bindings = clause.namedBindings;
-    if (bindings && ts.isNamespaceImport(bindings)) {
-      importOf.set(bindings.name.text, spec);
-    } else if (bindings && ts.isNamedImports(bindings)) {
-      for (const element of bindings.elements) {
-        if (element.isTypeOnly) continue;
-        importOf.set(element.name.text, spec);
-        const imported = (element.propertyName ?? element.name).text;
-        if (isPlumixSpecifier(spec) && imported === "plumix") {
-          factoryLocals.add(element.name.text);
-        }
+  for (const statement of program.body) {
+    if (statement.type !== "ImportDeclaration") continue;
+    if (statement.importKind === "type") continue;
+    const spec = statement.source.value;
+    for (const specifier of statement.specifiers) {
+      if (specifier.type !== "ImportSpecifier") {
+        importOf.set(specifier.local.name, spec);
+        continue;
+      }
+      if (specifier.importKind === "type") continue;
+      importOf.set(specifier.local.name, spec);
+      if (
+        isPlumixSpecifier(spec) &&
+        moduleExportName(specifier.imported) === "plumix"
+      ) {
+        factoryLocals.add(specifier.local.name);
       }
     }
   }
 
-  let call: ts.CallExpression | undefined;
-  const walk = (node: ts.Node): void => {
-    if (call) return;
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      factoryLocals.has(node.expression.text)
-    ) {
-      call = node;
-      return;
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(sf);
-
+  const call = callSites(program).find(
+    ({ call }) =>
+      call.callee.type === "Identifier" && factoryLocals.has(call.callee.name),
+  )?.call;
   const cfg = call?.arguments[0];
-  if (!cfg || !ts.isObjectLiteralExpression(cfg)) {
+  if (cfg?.type !== "ObjectExpression") {
     return { theme: undefined, plugins: [] };
   }
   return {
-    theme: traceTheme(cfg, importOf),
-    plugins: tracePlugins(cfg, importOf),
+    theme: traceTheme(cfg.properties, importOf),
+    plugins: tracePlugins(cfg.properties, importOf),
   };
 }
 
+function propertyValue(
+  members: readonly ESTree.ObjectPropertyKind[],
+  key: string,
+): ESTree.Expression | undefined {
+  const member = members.find((m) => memberKey(m) === key);
+  return member?.type === "Property" ? member.value : undefined;
+}
+
 function traceTheme(
-  cfg: ts.ObjectLiteralExpression,
+  members: readonly ESTree.ObjectPropertyKind[],
   importOf: ReadonlyMap<string, string>,
 ): string | undefined {
-  const prop = cfg.properties.find((p) => propKey(p) === "theme");
-  let value: ts.Expression | undefined;
-  if (prop && ts.isShorthandPropertyAssignment(prop)) value = prop.name;
-  else if (prop && ts.isPropertyAssignment(prop)) value = prop.initializer;
-  return value && ts.isIdentifier(value) ? importOf.get(value.text) : undefined;
+  const value = propertyValue(members, "theme");
+  return value?.type === "Identifier" ? importOf.get(value.name) : undefined;
 }
 
 function tracePlugins(
-  cfg: ts.ObjectLiteralExpression,
+  members: readonly ESTree.ObjectPropertyKind[],
   importOf: ReadonlyMap<string, string>,
 ): readonly string[] {
-  const prop = cfg.properties.find((p) => propKey(p) === "plugins");
-  if (
-    !prop ||
-    !ts.isPropertyAssignment(prop) ||
-    !ts.isArrayLiteralExpression(prop.initializer)
-  ) {
-    return [];
-  }
+  const value = propertyValue(members, "plugins");
+  if (value?.type !== "ArrayExpression") return [];
   const specs: string[] = [];
-  for (const element of prop.initializer.elements) {
+  for (const element of value.elements) {
     // `media()` → the callee; `audit` → the binding itself.
     const ident =
-      ts.isCallExpression(element) && ts.isIdentifier(element.expression)
-        ? element.expression
-        : ts.isIdentifier(element)
+      element?.type === "CallExpression" && element.callee.type === "Identifier"
+        ? element.callee
+        : element?.type === "Identifier"
           ? element
           : undefined;
-    const spec = ident && importOf.get(ident.text);
+    const spec = ident && importOf.get(ident.name);
     if (spec) specs.push(spec);
   }
   return specs;
 }
-
-const propKey = (p: ts.ObjectLiteralElementLike): string | undefined =>
-  p.name && (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))
-    ? p.name.text
-    : undefined;
