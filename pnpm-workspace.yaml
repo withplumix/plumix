@@ -36,7 +36,7 @@ catalog:
   sharp: ^0.35.4
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
-  typescript: ^6.0.3
+  typescript: ^7.0.2
   valibot: ^1.4.2
 
 # Named catalogs group a multi-package family (2+ packages, 2+ consumers) under one
