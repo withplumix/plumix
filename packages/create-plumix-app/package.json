@@ -59,7 +59,7 @@
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
-    "typescript": "catalog:",
+    "typescript": "catalog:typescript",
     "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"

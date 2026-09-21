@@ -243,6 +243,9 @@ catalogs:
     '@typescript/native':
       specifier: npm:typescript@^7.0.2
       version: 7.0.2
+    typescript:
+      specifier: ^7.0.2
+      version: 7.0.2
   vite:
     '@vitejs/plugin-react':
       specifier: ^6.1.1
@@ -1180,8 +1183,8 @@ importers:
         specifier: 'catalog:'
         version: 0.3.24
       typescript:
-        specifier: 'catalog:'
-        version: '@typescript/typescript6@6.0.2'
+        specifier: catalog:typescript
+        version: 7.0.2
       vitest:
         specifier: catalog:vitest
         version: 4.1.11(@types/node@24.13.6)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
