@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../../context/app.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
@@ -13,19 +12,12 @@ import {
   RESERVED_TYPES,
 } from "../../../revisions/slug-codec.js";
 import { entryFactory, userFactory } from "../../../test/factories.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+import { authedCtx, createRpcHarness } from "../../../test/rpc.js";
 import { createTracedContext } from "../../../test/traced-context.js";
 import { entryLookupAdapter } from "./lookup.js";
 
 const POST = { entryTypes: ["post"] } as const;
 const PAGE = { entryTypes: ["page"] } as const;
-
-// `h.context` is the unauthenticated base context even on an authed
-// harness, and `list` now answers per viewer — so a picker-shaped test
-// has to speak as the user whose picker it is.
-function asViewer(h: AuthenticatedRpcHarness): AppContext {
-  return withUser(h.context, h.user, null);
-}
 
 // Existence checks now ride the `list({ ids })` batch path — same
 // scope rules, single query.
@@ -34,7 +26,7 @@ async function existsViaList(
   id: string,
   scope: EntryFieldScope,
 ): Promise<boolean> {
-  const rows = await entryLookupAdapter.list(asViewer(h), {
+  const rows = await entryLookupAdapter.list(authedCtx(h), {
     ids: [id],
     scope,
     limit: 1,
@@ -66,12 +58,28 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list({ ids }) honours the entryTypes scope filter", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
+    // `page` pools onto `post`'s capabilities, so the viewer may read
+    // both types and the negative result below has to come from the
+    // type filter rather than from `page` being dropped as unreadable.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.entryTypes.set(
+      "page",
+      toRegisteredEntryType(
+        "page",
+        { label: "Pages", isPublic: true, capabilityType: "post" },
+        null,
+      ),
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const post = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post" });
+    const page = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "page" });
     expect(await existsViaList(h, String(post.id), PAGE)).toBe(false);
     expect(await existsViaList(h, String(post.id), POST)).toBe(true);
+    expect(await existsViaList(h, String(page.id), PAGE)).toBe(true);
   });
 
   test("list({ ids }) excludes trashed entries by default", async () => {
@@ -117,6 +125,17 @@ describe("entryLookupAdapter", () => {
     ).rejects.toThrow(/scope.status/);
   });
 
+  test("rejects an entryTypes value that isn't an array (wire-side garbage)", async () => {
+    // Same wire-side reality as `scope.status`: a bare string is truthy
+    // and carries a `length`, so it would pass a shape check and then be
+    // read one character at a time.
+    const h = await createRpcHarness({ authAs: "admin" });
+    const garbage = { entryTypes: "post" } as unknown as EntryFieldScope;
+    await expect(
+      entryLookupAdapter.list(h.context, { scope: garbage }),
+    ).rejects.toThrow(/entryTypes is required/);
+  });
+
   test("list({ ids }) batches multiple ids in one query", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const a = await entryFactory
@@ -125,7 +144,7 @@ describe("entryLookupAdapter", () => {
     const b = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id });
-    const rows = await entryLookupAdapter.list(asViewer(h), {
+    const rows = await entryLookupAdapter.list(authedCtx(h), {
       ids: [String(a.id), String(b.id), "999999"],
       scope: POST,
       limit: 3,
@@ -153,17 +172,17 @@ describe("entryLookupAdapter", () => {
     const h = await createRpcHarness({ authAs: "admin" });
     for (const type of RESERVED_TYPES) {
       await expect(
-        entryLookupAdapter.list(withUser(h.context, h.user, null), {
-          scope: { entryTypes: [type] },
-        }),
-      ).rejects.toThrow(/reserved/);
+        entryLookupAdapter.list(h.context, { scope: { entryTypes: [type] } }),
+      ).rejects.toThrow(
+        expect.objectContaining({ code: "reserved_entry_type" }),
+      );
     }
     // Reserved alongside a real type is still rejected, not filtered down.
     await expect(
-      entryLookupAdapter.list(withUser(h.context, h.user, null), {
+      entryLookupAdapter.list(h.context, {
         scope: { entryTypes: ["post", AUTOSAVE_TYPE] },
       }),
-    ).rejects.toThrow(/reserved/);
+    ).rejects.toThrow(expect.objectContaining({ code: "reserved_entry_type" }));
   });
 
   test("rejects calls with an empty entryTypes array (same disclosure shape)", async () => {
@@ -274,6 +293,46 @@ describe("entryLookupAdapter", () => {
     expect(ids).not.toContain(String(internal.id));
   });
 
+  test("list() ORs two viewer rules together without losing the scope filter", async () => {
+    // One type resolves through the readable arm and the other through
+    // the public arm, so the disjunction carries two operands — the only
+    // arity at which `or` precedence against the surrounding `and` can
+    // go wrong. A trashed row pins that the scope conditions still bind.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.entryTypes.set(
+      "page",
+      toRegisteredEntryType("page", { label: "Pages", isPublic: true }, null),
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const contributor = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "contributor" });
+    const ownDraft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ type: "post", status: "draft", authorId: contributor.id });
+    const livePage = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ type: "page", status: "published", authorId: h.user.id });
+    const draftPage = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ type: "page", status: "draft", authorId: h.user.id });
+    const trashedOwn = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ type: "post", status: "trash", authorId: contributor.id });
+
+    const rows = await entryLookupAdapter.list(
+      withUser(h.context, contributor, null),
+      { scope: { entryTypes: ["post", "page"] }, limit: 100 },
+    );
+    const ids = rows.map((row) => row.id);
+    // `post` through the readable arm, `page` through the public one.
+    expect(new Set(ids)).toEqual(
+      new Set([String(ownDraft.id), String(livePage.id)]),
+    );
+    expect(ids).not.toContain(String(draftPage.id));
+    expect(ids).not.toContain(String(trashedOwn.id));
+  });
+
   test("list() searches by title (case-insensitive substring)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await entryFactory
@@ -283,7 +342,7 @@ describe("entryLookupAdapter", () => {
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Beta Notes" });
 
-    const matches = await entryLookupAdapter.list(asViewer(h), {
+    const matches = await entryLookupAdapter.list(authedCtx(h), {
       query: "alpha",
       scope: POST,
     });
@@ -299,9 +358,9 @@ describe("entryLookupAdapter", () => {
         .create({ authorId: h.user.id });
     }
     expect(
-      await entryLookupAdapter.list(asViewer(h), { limit: 2, scope: POST }),
+      await entryLookupAdapter.list(authedCtx(h), { limit: 2, scope: POST }),
     ).toHaveLength(2);
-    const all = await entryLookupAdapter.list(asViewer(h), {
+    const all = await entryLookupAdapter.list(authedCtx(h), {
       limit: 0,
       scope: POST,
     });
@@ -313,7 +372,7 @@ describe("entryLookupAdapter", () => {
     await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Released", status: "published" });
-    const results = await entryLookupAdapter.list(asViewer(h), {
+    const results = await entryLookupAdapter.list(authedCtx(h), {
       query: "Released",
       scope: POST,
     });
@@ -335,7 +394,7 @@ describe("entryLookupAdapter", () => {
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Specific" });
-    const [result] = await entryLookupAdapter.list(asViewer(h), {
+    const [result] = await entryLookupAdapter.list(authedCtx(h), {
       ids: [String(e.id)],
       scope: POST,
       limit: 1,
@@ -363,13 +422,10 @@ describe("entryLookupAdapter", () => {
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Referenced", type: "post" });
-    const rows = await entryLookupAdapter.hydrate(
-      withUser(h.context, h.user, null),
-      {
-        ids: [String(e.id)],
-        scope: POST,
-      },
-    );
+    const rows = await entryLookupAdapter.hydrate(authedCtx(h), {
+      ids: [String(e.id)],
+      scope: POST,
+    });
     expect(rows).toEqual([
       {
         id: String(e.id),
@@ -389,14 +445,31 @@ describe("entryLookupAdapter", () => {
     const trashed = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "trash" });
-    const rows = await entryLookupAdapter.hydrate(
-      withUser(h.context, h.user, null),
-      {
-        ids: [String(post.id), String(trashed.id), "999999", "abc"],
-        scope: POST,
-      },
-    );
+    const rows = await entryLookupAdapter.hydrate(authedCtx(h), {
+      ids: [String(post.id), String(trashed.id), "999999", "abc"],
+      scope: POST,
+    });
     expect(rows.map((row) => row.id)).toEqual([String(post.id)]);
+  });
+
+  test("hydrate() honours the entryTypes scope filter", async () => {
+    // `list` narrows per type on its own; `hydrate` has only the scope's
+    // `in` list, so this is what keeps a referenced id from resolving
+    // across into a type the field never declared.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.entryTypes.set(
+      "page",
+      toRegisteredEntryType("page", { label: "Pages", isPublic: true }, null),
+    );
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const page = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ type: "page", status: "published", authorId: h.user.id });
+    const rows = await entryLookupAdapter.hydrate(authedCtx(h), {
+      ids: [String(page.id)],
+      scope: POST,
+    });
+    expect(rows).toEqual([]);
   });
 
   test("hydrate() honours a status scope constraint", async () => {
@@ -439,10 +512,10 @@ describe("entryLookupAdapter", () => {
     // adminHarness.context is the unauthenticated base context.
     expect(anonymous).toEqual([]);
 
-    const asAdmin = await entryLookupAdapter.hydrate(
-      withUser(adminHarness.context, adminHarness.user, null),
-      { ids: [String(draft.id)], scope: POST },
-    );
+    const asAdmin = await entryLookupAdapter.hydrate(authedCtx(adminHarness), {
+      ids: [String(draft.id)],
+      scope: POST,
+    });
     expect(asAdmin.map((row) => row.id)).toEqual([String(draft.id)]);
   });
 
@@ -451,13 +524,10 @@ describe("entryLookupAdapter", () => {
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "   " });
-    const rows = await entryLookupAdapter.hydrate(
-      withUser(h.context, h.user, null),
-      {
-        ids: [String(e.id)],
-        scope: POST,
-      },
-    );
+    const rows = await entryLookupAdapter.hydrate(authedCtx(h), {
+      ids: [String(e.id)],
+      scope: POST,
+    });
     expect(rows[0]?.title).toBeNull();
   });
 
@@ -466,7 +536,7 @@ describe("entryLookupAdapter", () => {
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "   " });
-    const [result] = await entryLookupAdapter.list(asViewer(h), {
+    const [result] = await entryLookupAdapter.list(authedCtx(h), {
       ids: [String(e.id)],
       scope: POST,
       limit: 1,

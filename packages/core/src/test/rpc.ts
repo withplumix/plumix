@@ -23,7 +23,7 @@ import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
-import { createAppContext } from "../context/app.js";
+import { createAppContext, withUser } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
@@ -110,6 +110,18 @@ export interface RpcHarnessBase<TUser extends User | null> {
 
 export type RpcHarness = RpcHarnessBase<User | null>;
 export type AuthenticatedRpcHarness = RpcHarnessBase<User>;
+
+/**
+ * The context the `authenticated` middleware hands a handler. `h.context` is
+ * the base one even on an authed harness, and the read surfaces answer per
+ * viewer, so a test calling one directly has to speak as somebody.
+ */
+export function authedCtx(
+  h: AuthenticatedRpcHarness,
+  tokenScopes: readonly string[] | null = null,
+): AppContext {
+  return withUser(h.context, h.user, tokenScopes);
+}
 
 function buildContext(
   db: Db,

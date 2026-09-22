@@ -8,7 +8,6 @@ import type {
 } from "../../plugin/manifest.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { PhotoReference } from "../../test/photo-lookup.js";
-import type { AuthenticatedRpcHarness } from "../../test/rpc.js";
 import { embeddedPageTags } from "../../cdn/embedded-tags.js";
 import { withUser } from "../../context/app.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
@@ -20,7 +19,7 @@ import {
   userFactory,
 } from "../../test/factories.js";
 import { photoField, photoProfilePlugin } from "../../test/photo-lookup.js";
-import { createRpcHarness } from "../../test/rpc.js";
+import { authedCtx, createRpcHarness } from "../../test/rpc.js";
 import { createTracedContext } from "../../test/traced-context.js";
 import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
@@ -60,13 +59,6 @@ function registryWithUserRef(field: Partial<MetaBoxField> = {}) {
   };
 }
 
-// Reference validation runs behind the `authenticated` middleware, which
-// hands the handler a `withUser` context — `h.context` is the base one, and
-// entry lookup answers per viewer, so the writer has to be someone.
-function asWriter(h: AuthenticatedRpcHarness): AppContext {
-  return withUser(h.context, h.user, null);
-}
-
 describe("validateMetaReferences", () => {
   test("accepts an upsert whose reference id resolves under scope", async () => {
     const { findField } = registryWithUserRef();
@@ -82,7 +74,7 @@ describe("validateMetaReferences", () => {
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
   });
 
@@ -93,7 +85,7 @@ describe("validateMetaReferences", () => {
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -111,7 +103,7 @@ describe("validateMetaReferences", () => {
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -124,7 +116,7 @@ describe("validateMetaReferences", () => {
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -137,7 +129,7 @@ describe("validateMetaReferences", () => {
     const findField = (): MetaBoxField | undefined => undefined;
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     await expect(
-      validateMetaReferences(asWriter(h), findField, {
+      validateMetaReferences(authedCtx(h), findField, {
         upserts: new Map([["title", "Hello"]]),
         deletes: [],
       }),
@@ -365,7 +357,7 @@ describe("validateMetaReferences (multi)", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
   });
 
@@ -378,7 +370,7 @@ describe("validateMetaReferences (multi)", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -388,7 +380,7 @@ describe("validateMetaReferences (multi)", () => {
     const patch = await sanitizeMetaInput(findField, { owners: "1" });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -400,7 +392,7 @@ describe("validateMetaReferences (multi)", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -414,7 +406,7 @@ describe("validateMetaReferences (multi)", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -424,7 +416,7 @@ describe("validateMetaReferences (multi)", () => {
     const patch = await sanitizeMetaInput(findField, { owners: [] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
   });
 
@@ -483,7 +475,7 @@ describe("validateMetaReferences (multi)", () => {
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
     expect(listCalls).toBe(1);
   });
@@ -500,7 +492,7 @@ describe("validateMetaReferences (multi)", () => {
     const patch = await sanitizeMetaInput(findField, { owners: oversized });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toMatchObject({ reason: "value_too_large", key: "owners" });
   });
 });
@@ -637,7 +629,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
   });
 
@@ -655,7 +647,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -673,7 +665,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -705,7 +697,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
   });
 
@@ -719,7 +711,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -745,7 +737,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -823,7 +815,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).resolves.toBeUndefined();
     expect(userListCalls).toBe(1);
     expect(entryListCalls).toBe(1);
@@ -912,7 +904,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = await sanitizeMetaInput(findField, { hero: "42" });
     if (!patch) throw new Error("patch should not be null");
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
     expect(patch.upserts.get("hero")).toBe("42");
   });
 
@@ -923,7 +915,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
       hero: { id: "42", mime: "image/jpeg", spoofed: "ignored" },
     });
     if (!patch) throw new Error("patch should not be null");
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
     expect(patch.upserts.get("hero")).toBe("42");
   });
 
@@ -937,7 +929,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
     });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -946,7 +938,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = await sanitizeMetaInput(findField, { hero: ["42", "43"] });
     if (!patch) throw new Error("patch should not be null");
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
     expect(patch.upserts.get("hero")).toEqual(["42", "43"]);
   });
 
@@ -961,7 +953,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
       ],
     });
     if (!patch) throw new Error("patch should not be null");
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
     expect(patch.upserts.get("hero")).toEqual(["42", "43", "44"]);
   });
 
@@ -974,7 +966,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
     const patch = await sanitizeMetaInput(findField, { hero: ["42", "999"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
@@ -987,7 +979,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
     const patch = await sanitizeMetaInput(findField, { hero: ["1", "2", "3"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 });
@@ -1043,7 +1035,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     };
 
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toMatchObject({ reason: "invalid_value", key: "rows" });
   });
 
@@ -1072,7 +1064,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     });
     try {
       await expect(
-        validateMetaReferences(asWriter(h), findField, patch),
+        validateMetaReferences(authedCtx(h), findField, patch),
       ).rejects.toBeInstanceOf(MetaSanitizationError);
       const lines = errorSpy.mock.calls.map((args) =>
         args.map(String).join(" "),
@@ -1141,7 +1133,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
       deletes: [] as readonly string[],
     };
 
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
 
     expect(rows[0]?.hero).toBe("1");
     expect(rows[1]?.hero).toBe("2");
@@ -1215,7 +1207,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
       deletes: [] as readonly string[],
     };
 
-    await validateMetaReferences(asWriter(h), findField, patch);
+    await validateMetaReferences(authedCtx(h), findField, patch);
     expect(listCalls).toBe(1);
   });
 });
@@ -1327,7 +1319,7 @@ describe("references nested in groups + deep repeaters", () => {
       deletes: [] as readonly string[],
     };
     await expect(
-      validateMetaReferences(asWriter(h), findField, patch),
+      validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 

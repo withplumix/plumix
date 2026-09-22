@@ -22,9 +22,10 @@ export function registerCoreLookupAdapters(
     adapter: entryLookupAdapter,
     // Picker enumerates entry titles across the requested
     // `entryTypes`. `entry:read` is granted to subscribers, so this
-    // doesn't gate the picker tighter than the `entry.list` RPC
-    // does — but per-type read scoping is enforced inside the
-    // adapter via `inArray(entries.type, …)` from the field's scope.
+    // doesn't gate the picker tighter than the `entry.list` RPC does.
+    // The scope names the types but does not admit them: the adapter
+    // narrows each one to the rows the viewer may see, because a
+    // caller-supplied scope is not a permission.
     capability: null,
     registeredBy: null,
   });
