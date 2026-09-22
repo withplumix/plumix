@@ -4,11 +4,21 @@ import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { JsonObject } from "../json.js";
+import type {
+  ArchiveEntries,
+  RegisteredArchiveType,
+  TitledListingArchiveResolution,
+} from "../plugin/manifest.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
+import type { EntryListing } from "./render/entry-listing.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
-import type { EntryData, SearchData } from "./render/resolved-entry.js";
+import type {
+  EntryData,
+  ListingArchiveData,
+  SearchData,
+} from "./render/resolved-entry.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
@@ -29,6 +39,11 @@ import {
   buildResolvedEntries,
   resolveAuthorRow,
 } from "./render/build-resolved-entries.js";
+import {
+  listEntryPage,
+  listingCdnTags,
+  publicEntriesQuery,
+} from "./render/entry-listing.js";
 import {
   archiveData,
   authorData,
@@ -251,6 +266,9 @@ async function resolveCustom(
   // A compiled route always names a registered archive; the guard is a
   // defensive 404 rather than a throw if the two ever drift.
   if (!archive) return notFound("public-custom-archive-not-registered");
+  if (archive.entries !== undefined) {
+    return resolveListingArchive(ctx, archive, params, renderEnv);
+  }
 
   const result = await archive.resolve(ctx, params);
   if (result === null) return notFound("public-custom-archive-not-found");
@@ -270,6 +288,86 @@ async function resolveCustom(
     title: result.title,
   });
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
+}
+
+/** An archive that declared its entries, with the two listing arms kept apart. */
+type ListingArchiveType = Extract<
+  RegisteredArchiveType,
+  { entries: ArchiveEntries }
+>;
+
+/**
+ * An archive core lists: `entries` says which entries it is, and core pages,
+ * orders, titles and tags them.
+ */
+async function resolveListingArchive(
+  ctx: AppContext,
+  archive: ListingArchiveType,
+  params: Record<string, string>,
+  renderEnv: RenderEnv,
+): Promise<Response> {
+  const query = archive.entries(publicEntriesQuery(ctx.plugins), params);
+  if (query === null) return notFound("public-custom-archive-no-entries");
+
+  const page = parsePageParam(params.page);
+  const listing = await listEntryPage(ctx, query, {
+    page,
+    perPage: archive.perPage ?? DEFAULT_ARCHIVE_PER_PAGE,
+  });
+  // Three distinct 404s, and a developer reading the hint is looking at three
+  // different bugs: params the archive declined, a query naming a term or an
+  // author nothing answers to, and a page past the end.
+  if (listing === null) {
+    return notFound("public-custom-archive-query-unresolved");
+  }
+  if (listing.outOfRange) {
+    return notFound("public-custom-archive-page-out-of-range");
+  }
+
+  const resolution = await nameListingPage(ctx, archive, params, listing);
+  if (resolution === null) return notFound("public-custom-archive-not-found");
+
+  accumulateEmbeddedTags(ctx, listingCdnTags(ctx.plugins, query));
+
+  // Core's half last: the archive's name and page are facts about the request,
+  // not fields a resolver gets to restate differently.
+  const data: ListingArchiveData = {
+    ...resolution.data,
+    kind: "custom",
+    name: archive.name,
+    page,
+    entries: listing.entries,
+    pagination: listing.pagination,
+  };
+  const html = await renderThroughTheme({
+    ctx,
+    renderEnv,
+    node: { kind: "custom", name: archive.name },
+    data,
+    title: resolution.title,
+  });
+  return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
+}
+
+// The two ways a listed archive gets its title, asked separately because that
+// is what keeps "it has one" something the types settled rather than a
+// fallback invented here. There is no precedence to learn: the arm that
+// declares a `title` is the arm whose resolver cannot return one.
+async function nameListingPage(
+  ctx: AppContext,
+  archive: ListingArchiveType,
+  params: Record<string, string>,
+  listing: EntryListing,
+): Promise<TitledListingArchiveResolution | null> {
+  if (archive.title === undefined) return archive.resolve(ctx, params, listing);
+
+  const title =
+    typeof archive.title === "function" ? archive.title(params) : archive.title;
+  const resolution =
+    archive.resolve === undefined
+      ? {}
+      : await archive.resolve(ctx, params, listing);
+  return resolution === null ? null : { ...resolution, title };
 }
 
 async function resolveSingle(

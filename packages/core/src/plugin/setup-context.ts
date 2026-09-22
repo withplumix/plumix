@@ -39,7 +39,7 @@ import type { ImageRoleName, ImageRoleOptions } from "./image-roles.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
-  ArchiveTypeOptions,
+  ArchiveTypeDeclaration,
   DashboardWidgetOptions,
   EntryMetaBoxOptions,
   EntryTypeOptions,
@@ -224,14 +224,23 @@ export interface PluginSetupContextBase {
   registerRedirects(rules: readonly RedirectRule[]): void;
 
   /**
-   * Register a whole archive type — URL pattern(s) + a resolver (+ an optional
-   * feed) — so a plugin can add an archive (e.g. `/events/:series`) that
-   * dispatches and templates like a built-in one, with no core changes. The
-   * resolver returns `{ data, title }` or `null` (404). Augment
-   * `ArchiveTypeRegistry` with the same `name` so `forArchiveType(name)` types
-   * the template's `data`. Registering the same name twice throws.
+   * Register a whole archive type — URL pattern(s) plus what the archive is —
+   * so a plugin can add an archive (e.g. `/events/:series`) that dispatches
+   * and templates like a built-in one, with no core changes.
+   *
+   * Declare `entries` and core does the listing: it pages the query, orders
+   * it, derives each route's `/page/:page` form, 404s past the last page, and
+   * tags the stored page with the types the query can list. A `title` (or a
+   * `resolve` that returns one) names the page. Without `entries` the
+   * resolver produces the whole payload itself and returns `{ data, title }`
+   * or `null` (404) — the shape an archive whose results are a match rather
+   * than a set, like search, still needs.
+   *
+   * Augment `ArchiveTypeRegistry` with the same `name` so
+   * `forArchiveType(name)` types the template's `data`. Registering the same
+   * name twice throws.
    */
-  registerArchiveType(name: string, options: ArchiveTypeOptions): void;
+  registerArchiveType(name: string, options: ArchiveTypeDeclaration): void;
 
   /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
   registerRpcRouter(router: PluginRpcRouter): void;

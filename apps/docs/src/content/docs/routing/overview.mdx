@@ -149,7 +149,61 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-`registerArchiveType(name, options)` registers a whole archive, meaning its URL patterns, a resolver that returns the data or `null` for a 404, and an optional `priority`. `@plumix/plugin-seo` augments the same options with an optional `sitemap` and `@plumix/plugin-feeds` with an optional `feed`, so an installed plugin can index or syndicate the archive too. It compiles to the `custom` intent, and the theme targets it by name. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
+`registerArchiveType(name, options)` registers a whole archive: its URL patterns, what the archive contains, and an optional `priority`. It compiles to the `custom` intent, and the theme targets it by name. `@plumix/plugin-seo` augments the same options with an optional `sitemap` and `@plumix/plugin-feeds` with an optional `feed`, so an installed plugin can index or syndicate the archive too. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
+
+`entries` is what the archive contains, and declaring it is what hands the listing to core. It receives an entry query already holding nothing but public entries, narrows it, and returns it — or `null` for params that name no archive, which is a 404. It is synchronous and runs no queries; the term slug below is resolved when the page is served.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const talks = definePlugin("talks", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("talks", {
+      routes: ["/talks/:track"],
+      entries: (q, params) =>
+        q
+          .ofTypes("talk")
+          .inTerm("track", params.track ?? "")
+          .orderBy("title"),
+      perPage: 10,
+      title: (params) => `Talks: ${params.track ?? ""}`,
+    });
+  },
+});
+```
+
+Core then lists that query, pages it, and reads the order it carries. It derives `/talks/:track/page/:page` from each declared route — you do not register the paginated form — and answers 404 past the last page. The theme receives `data.entries` and `data.pagination`, the same two fields a built-in archive hands over, so its pagination and entry components work unchanged. With `cacheable: true`, core tags the stored page with the entry types the query can list, and a publish of any of them purges it.
+
+`perPage` defaults to 20. `title` takes a string or a function of the route params. `resolve` becomes optional once `entries` is declared, and is left with what only it can do — load a subject the route names, add fields of its own. It is handed the finished page as a third argument, and what it returns is merged under core's `entries` and `pagination`:
+
+```ts
+import type { AppContext } from "plumix";
+import { definePlugin } from "plumix/plugin";
+
+declare function loadRoom(
+  ctx: AppContext,
+  slug: string | undefined,
+): Promise<{ name: string } | null>;
+
+export const rooms = definePlugin("rooms", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("rooms", {
+      routes: ["/rooms/:room"],
+      entries: (q) => q.ofTypes("talk"),
+      resolve: async (appCtx, params, listing) => {
+        const room = await loadRoom(appCtx, params.room);
+        if (room === null) return null;
+        return {
+          data: { kind: "custom", name: "rooms", room: room.name },
+          title: `${room.name} (${String(listing.pagination.total)})`,
+        };
+      },
+    });
+  },
+});
+```
+
+An archive that leaves `entries` out works exactly as before: `resolve` returns the whole `{ data, title }` payload or `null`, and owns its own paging. That is the shape for an archive whose results are a match rather than a set — `@plumix/plugin-search` registers this way — and only an archive described by an entry query can have a feed.
 
 `registerPublicRoute(options)` skips the route map entirely and answers a path at the site root itself, which is how a plugin owns a machine-readable endpoint like `/robots.txt`, a sitemap or a feed. `path` is an exact pathname or a URLPattern pathname whose captured groups reach the handler as its third argument, and `cacheable: true` opts the response into the CDN on the same terms as a `/_plumix/` plugin route. Two plugins claiming one path throws at boot naming both owners; a path inside `/_plumix/` throws too, since core owns that prefix — mount those with `registerRoute`.
 

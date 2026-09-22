@@ -26,10 +26,12 @@ import type {
 } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { EntryQuery } from "../entries/query.js";
 import type { Label } from "../i18n/label.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RedirectRule } from "../route/redirects.js";
+import type { EntryListing } from "../route/render/entry-listing.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type {
@@ -547,10 +549,48 @@ export interface CustomArchiveResolution {
 }
 
 /**
- * `registerArchiveType` options — a URL pattern set + resolver that adds a
- * whole archive type without patching core. The resolver returns the render
- * payload (`{ data, title }`) or `null` (404); `data` extends
- * {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
+ * What a listed archive's resolver adds to the page core already built: the
+ * subject it had to load. `null` is a 404, as it is for an archive that
+ * resolves its own payload.
+ *
+ * `data` is merged under core's `entries` and `pagination`, so it carries the
+ * archive's own fields only — write it `satisfies Omit<MyArchiveData,
+ * "entries" | "pagination">` to have the compiler hold it to the shape the
+ * theme was promised.
+ */
+export interface ListingArchiveResolution {
+  readonly data?: CustomArchiveData;
+}
+
+/**
+ * The same, from a resolver on an archive that declared no `title`: having
+ * loaded the subject, it is the only thing that can name the page.
+ */
+export interface TitledListingArchiveResolution extends ListingArchiveResolution {
+  readonly title: string;
+}
+
+/**
+ * The entries an archive is: a query narrowed from the one core hands in,
+ * already holding nothing but public entries, or `null` for params that name
+ * no archive at all (a 404).
+ *
+ * Synchronous, and it runs no queries — it records what to narrow by, so a
+ * page render can ask what the archive contains without paying for the
+ * answer. The term slug in `inTerm` is resolved when the query is compiled.
+ */
+export type ArchiveEntries = (
+  q: EntryQuery,
+  params: Record<string, string>,
+) => EntryQuery | null;
+
+/** An archive's document title, fixed or derived from its route params. */
+export type ArchiveTitle =
+  string | ((params: Record<string, string>) => string);
+
+/**
+ * The options every archive type shares, and the seam a plugin augments:
+ * `@plumix/plugin-feeds` adds `feed`, `@plumix/plugin-seo` adds `sitemap`.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
@@ -560,15 +600,12 @@ export interface ArchiveTypeOptions {
   /**
    * Opt this archive's anonymous GET renders into the built-in CDN.
    * Off by default: core can't know a custom archive's content dependencies,
-   * so caching without a tag contribution would risk stale pages. Pair with a
-   * `tags` contribution from {@link CustomArchiveResolution.tags} so a publish
-   * of the listed types purges the archive the way built-in archives are.
+   * so caching without a tag contribution would risk stale pages. An archive
+   * that declares `entries` needs nothing further — core tags it with the
+   * types its query can list. One that resolves its own payload pairs this
+   * with {@link CustomArchiveResolution.tags}.
    */
   readonly cacheable?: boolean;
-  readonly resolve: (
-    ctx: AppContext,
-    params: Record<string, string>,
-  ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
   /**
    * Access-control policy gating this custom (route-level) archive. Absent ⇒
    * the global `anonymous` default. A policied archive renders live (it opts
@@ -577,10 +614,71 @@ export interface ArchiveTypeOptions {
   readonly access?: AccessPolicy;
 }
 
-export interface RegisteredArchiveType extends ArchiveTypeOptions {
+/** The half of a listing archive's declaration that says what it lists. */
+interface ListingArchiveBase extends ArchiveTypeOptions {
+  readonly entries: ArchiveEntries;
+  /**
+   * Entries per page. Core derives the `/page/:page` form of every declared
+   * route from it and 404s past the last page. Defaults to the same 20 the
+   * built-in archives use.
+   */
+  readonly perPage?: number;
+}
+
+/**
+ * A listed archive's resolver. It is handed the finished page rather than
+ * building one, and is left with what only it can do: load a subject the route
+ * names, and add fields of its own.
+ */
+type ListingArchiveResolve<TResolution extends ListingArchiveResolution> = (
+  ctx: AppContext,
+  params: Record<string, string>,
+  listing: EntryListing,
+) => Promise<TResolution | null> | TResolution | null;
+
+/** A listed archive titled by its options; `resolve` only adds data. */
+interface TitledListingArchiveOptions extends ListingArchiveBase {
+  readonly title: ArchiveTitle;
+  readonly resolve?: ListingArchiveResolve<ListingArchiveResolution>;
+}
+
+/** A listed archive whose resolver names the page, having loaded its subject. */
+interface ResolvedListingArchiveOptions extends ListingArchiveBase {
+  readonly title?: undefined;
+  readonly resolve: ListingArchiveResolve<TitledListingArchiveResolution>;
+}
+
+/**
+ * An archive core cannot list, because its results are a match rather than a
+ * set — search is the one in the tree. It resolves its own payload and cannot
+ * have a feed.
+ */
+interface UnlistedArchiveOptions extends ArchiveTypeOptions {
+  readonly entries?: undefined;
+  readonly resolve: (
+    ctx: AppContext,
+    params: Record<string, string>,
+  ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
+}
+
+/**
+ * `registerArchiveType` options — a URL pattern set plus either the entries
+ * the archive is, which core lists, pages, orders and tags, or a resolver
+ * that produces the whole payload itself.
+ *
+ * An archive that declares `entries` must still name its page, through
+ * `title` or through a `resolve` that returns one; the three shapes below are
+ * what stops a third possibility compiling.
+ */
+export type ArchiveTypeDeclaration =
+  | TitledListingArchiveOptions
+  | ResolvedListingArchiveOptions
+  | UnlistedArchiveOptions;
+
+export type RegisteredArchiveType = ArchiveTypeDeclaration & {
   readonly name: string;
   readonly registeredBy: string | null;
-}
+};
 
 /**
  * Reference to a React component contributed by a plugin. The string is

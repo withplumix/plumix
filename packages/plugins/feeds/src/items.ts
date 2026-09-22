@@ -1,7 +1,7 @@
 import type { AppContext } from "plumix";
 import type { EntryQuery, SQL } from "plumix/db";
 import { compileEntryQuery, desc, entryQuery, eq, sql } from "plumix/db";
-import { buildEntryPermalinks } from "plumix/plugin";
+import { archiveRoutes, buildEntryPermalinks } from "plumix/plugin";
 import { entries, users } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
@@ -59,7 +59,7 @@ function feedQuery(
       const archive = ctx.plugins.archiveTypes.get(scope.name);
       if (archive === undefined || !isSyndicatable(archive)) return null;
       const listing = listingUnder(new URL(ctx.request.url).pathname);
-      if (isLaterPage(archive.routes, listing)) return null;
+      if (isLaterPage(archiveRoutes(archive), listing)) return null;
       return archive.feed.scope(seed, scope.params);
     }
   }

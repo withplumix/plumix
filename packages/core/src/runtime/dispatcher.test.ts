@@ -2177,6 +2177,55 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     expect(match).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
   });
+
+  // An archive that declares its entries instead of resolving a payload:
+  // core knows which types the query can list, so nothing is left for the
+  // plugin to restate as a `tags` array that could disagree with it.
+  const cacheableTalks = definePlugin("talks-archive", (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerEntryType("workshop", { label: "Workshops", isPublic: true });
+    ctx.registerArchiveType("talks", {
+      routes: ["/talks"],
+      cacheable: true,
+      entries: (q) => q.ofTypes("talk"),
+      title: "Talks",
+    });
+  });
+
+  test("tags a listed archive with the types its query can list", async () => {
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({
+      plugins: [cacheableTalks],
+      theme: customTheme,
+      cdn,
+    });
+
+    await h.dispatch(new Request("https://cms.example/talks"));
+    await h.drainDeferred();
+
+    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
+    expect(tags).toContain("t:talk");
+    expect(tags).not.toContain("t:workshop");
+  });
+
+  test("stores it under a tag that publishing one of those types purges", async () => {
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({
+      plugins: [cacheableTalks],
+      theme: customTheme,
+      cdn,
+    });
+
+    await h.dispatch(new Request("https://cms.example/talks"));
+    await h.drainDeferred();
+
+    // The two halves meet on one string: the tag the page was stored under
+    // has to be one `entry:published` enqueues, or the page goes stale.
+    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
+    expect(entryPurgeTags("talk", 42).some((tag) => tags.includes(tag))).toBe(
+      true,
+    );
+  });
 });
 
 describe("dispatcher — plugin-route CDN (#1959)", () => {

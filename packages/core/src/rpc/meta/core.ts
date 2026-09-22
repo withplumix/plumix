@@ -20,6 +20,7 @@ import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { and, chunkForD1, eq } from "../../db/index.js";
+import { metaJsonPath } from "../../db/meta-path.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import {
   conditionReadsAny,
@@ -1712,14 +1713,14 @@ export async function applyMetaPatch(
 
   let expr: SQL = sql`${table.meta}`;
   if (patch.deletes.length > 0) {
-    const paths = patch.deletes.map((k) => sql`${metaJsonPath(k)}`);
+    const paths = patch.deletes.map((k) => sql`${requireMetaJsonPath(k)}`);
     expr = sql`json_remove(${expr}, ${sql.join(paths, sql`, `)})`;
   }
   if (patch.upserts.size > 0) {
     const pairs = Array.from(
       patch.upserts,
       ([key, value]) =>
-        sql`${metaJsonPath(key)}, json(${JSON.stringify(value)})`,
+        sql`${requireMetaJsonPath(key)}, json(${JSON.stringify(value)})`,
     );
     expr = sql`json_set(${expr}, ${sql.join(pairs, sql`, `)})`;
   }
@@ -1764,11 +1765,12 @@ export async function writeSettledMeta(
   if (isEmptyMetaPatch(patch)) return false;
   const moved = Array.from(patch.upserts);
   const assignments = moved.map(
-    ([key, value]) => sql`${metaJsonPath(key)}, json(${JSON.stringify(value)})`,
+    ([key, value]) =>
+      sql`${requireMetaJsonPath(key)}, json(${JSON.stringify(value)})`,
   );
   const unchanged = moved.map(
     ([key]) =>
-      sql`json_extract(${table.meta}, ${metaJsonPath(key)}) IS json_extract(${JSON.stringify(stored?.[key] ?? null)}, '$')`,
+      sql`json_extract(${table.meta}, ${requireMetaJsonPath(key)}) IS json_extract(${JSON.stringify(stored?.[key] ?? null)}, '$')`,
   );
   const written = await ctx.db
     // As in `applyMetaPatch`: the generic constraint pins only the columns
@@ -1805,6 +1807,15 @@ export async function loadMeta(
 
 // --- internals below ---------------------------------------------------
 
+// The RPC input schema already rejects `"` and `\`, but belt-and-braces
+// matters here because non-RPC callers (tests, hook listeners, future
+// surfaces) could bypass that schema and reach a write with such a key.
+function requireMetaJsonPath(key: string): string {
+  const path = metaJsonPath(key);
+  if (path === null) throw MetaReferenceError.metaKeyForbiddenChars(key);
+  return path;
+}
+
 function assertEncodedSize(key: string, value: unknown): void {
   const encoded = JSON.stringify(value) as string | undefined;
   if (encoded === undefined) return; // already caught in coerceJson
@@ -1812,18 +1823,4 @@ function assertEncodedSize(key: string, value: unknown): void {
   if (byteLength > MAX_META_VALUE_BYTES) {
     throw MetaSanitizationError.valueTooLarge({ key });
   }
-}
-
-// SQLite's JSON path `$.label` only accepts `[A-Za-z0-9_]` in unquoted
-// labels, but valid meta keys may include `-` or `:` (see the input
-// schema regex). The double-quoted label form `$."foo-bar"` handles
-// them; the RPC input schema already rejects `"` and `\`, but belt-and-
-// braces matters here because non-RPC callers (tests, hook listeners,
-// future surfaces) could bypass that schema and trigger SQL injection
-// via a crafted path.
-function metaJsonPath(key: string): string {
-  if (/["\\]/.test(key)) {
-    throw MetaReferenceError.metaKeyForbiddenChars(key);
-  }
-  return `$."${key}"`;
 }
