@@ -68,4 +68,5 @@ a feed is always entries, so feeds can, and what a surface can own it should.
   ahead of the access gate, so the alternative on offer was an ungated feed.
 - The query grows no paging methods here. An archive listing its own page from
   the same query (#2521) needs order, limit and offset, which a feed fixes for
-  itself; adding them later is additive.
+  itself; adding them later is additive. Superseded by ADR 0008, which adds
+  ordering to the query and keeps paging on the archive.
