@@ -1,5 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
+import type { EntryViewer } from "../../../entries/visibility.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type {
   EntryReferenceSummary,
@@ -7,9 +8,11 @@ import type {
   LookupResult,
 } from "../../../plugin/lookup.js";
 import { entryTag } from "../../../cdn/tags.js";
-import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
+import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
+import { readableEntryRows } from "../../../entries/visibility.js";
+import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
@@ -39,7 +42,15 @@ interface EntryLookupRow {
 // widening it to the contract's `HydratedReference`.
 export const entryLookupAdapter = {
   async list(ctx, options) {
-    const conditions = scopeConditions(options.scope);
+    const { conditions, entryTypes } = scopeConditions(options.scope);
+    // The scope arrives from the caller, so without this it is the only
+    // filter there is and any signed-in principal could name a type and
+    // read back its drafts. `undefined` means every type was dropped.
+    const visibility = or(
+      ...entryTypes.map((type) => visibleTypeRows(ctx, type)),
+    );
+    if (visibility === undefined) return [];
+    conditions.push(visibility);
     let limit: number;
     if (options.ids !== undefined) {
       // Resolve-by-id batch path: ignore `query`, return only the
@@ -76,7 +87,7 @@ export const entryLookupAdapter = {
       .map((id) => parseEntryId(id))
       .filter((id): id is number => id !== null);
     if (numericIds.length === 0) return [];
-    const conditions = scopeConditions(options.scope);
+    const { conditions, entryTypes } = scopeConditions(options.scope);
     // Viewer-visibility clamp: hydration feeds public render and
     // anonymous REST, where an unpublished referenced entry must stay
     // invisible (pre-hydration reads exposed only an opaque id). The
@@ -85,11 +96,10 @@ export const entryLookupAdapter = {
     // anyway — per referenced type, gated on `edit_any`. An explicit
     // `scope.status` is the field author's call and passes through.
     if (options.scope?.status === undefined) {
-      const types = options.scope?.entryTypes ?? [];
-      const visibleUnpublished = types.filter((type) =>
+      const visibleUnpublished = entryTypes.filter((type) =>
         ctx.auth.can(entryCapabilityByName(ctx.plugins, type, "edit_any")),
       );
-      if (visibleUnpublished.length < types.length) {
+      if (visibleUnpublished.length < entryTypes.length) {
         const published = eq(entries.status, "published");
         conditions.push(
           visibleUnpublished.length === 0
@@ -128,18 +138,44 @@ function parseEntryId(id: string): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
+/** Non-empty, and every member a string — `scope` arrives off the wire. */
+function isTypeNameList(
+  value: unknown,
+): value is readonly [string, ...string[]] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((name) => typeof name === "string")
+  );
+}
+
+interface ScopedEntryQuery {
+  readonly conditions: SQL[];
+  readonly entryTypes: readonly string[];
+}
+
+function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
   // Required at runtime, not just at the builder's TS level: a wire-side
   // caller (lookup RPC, plugin-registered legacy field) could otherwise
   // omit `entryTypes` and silently disable the type filter — which would
-  // turn the picker into a "list every entry across every type" channel
-  // bypassing per-type read scoping.
-  if (!scope?.entryTypes || scope.entryTypes.length === 0) {
+  // turn the picker into a "list every entry across every type" channel.
+  // The element check is the same wire-side reality: a bare string is
+  // truthy and carries a `length`, and would otherwise be read one
+  // character at a time.
+  if (!scope?.entryTypes || !isTypeNameList(scope.entryTypes)) {
     throw LookupScopeError.entryTypesRequired();
   }
-  const conditions: SQL[] = [
-    inArray(entries.type, scope.entryTypes as string[]),
-  ];
+  const { entryTypes } = scope;
+  // Revision and autosave rows live in `entries` beside content, so a
+  // scope naming one would read as an ordinary type filter — and an
+  // autosave holds another author's unsaved title.
+  for (const type of entryTypes) {
+    if (isReservedType(type)) throw LookupScopeError.reservedEntryType(type);
+  }
+  // `list` ANDs a per-type visibility clause over this, which implies the
+  // `in` list; `hydrate` clamps by status alone, so this is what scopes it
+  // to the requested types.
+  const conditions: SQL[] = [inArray(entries.type, [...entryTypes])];
   if (scope.status !== undefined) {
     // Same wire-side reality as `entryTypes` above: the lookup RPC
     // forwards scope untyped, so a non-member value must fail as a
@@ -151,7 +187,27 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
   } else if (!scope.includeTrashed) {
     conditions.push(ne(entries.status, "trash"));
   }
-  return conditions;
+  return { conditions, entryTypes };
+}
+
+/**
+ * The rows of one entry type `list` may hand this viewer, or `undefined` when
+ * it may hand them none — `or` drops that disjunct rather than widening past
+ * it. A viewer holding `entry:<type>:read` gets the admin answer —
+ * `readableEntryRows`, which admits the unpublished rows they may edit. A
+ * viewer without it gets the published rows of a public type: public nav
+ * resolves through this adapter with no principal at all and would otherwise
+ * go empty. An `access` policy on the type is not consulted — it resolves per
+ * entry and may do I/O, so it is no WHERE clause.
+ *
+ * Both arms parenthesize themselves, and must: drizzle leaves a lone `or`
+ * operand bare, and the result is `AND`ed onto the scope conditions.
+ */
+function visibleTypeRows(ctx: EntryViewer, type: string): SQL | undefined {
+  const readable = readableEntryRows(ctx, type);
+  if (readable !== null) return readable;
+  if (!ctx.plugins.entryTypes.get(type)?.isPublic) return undefined;
+  return sql`(${and(eq(entries.type, type), eq(entries.status, "published"))})`;
 }
 
 function clampLimit(requested: number | undefined): number {
