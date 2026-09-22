@@ -6,7 +6,7 @@ import { nonEmpty, withBasePath } from "plumix/support";
 import type { FeedScope } from "./scope.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
 import { collectFeedItems } from "./items.js";
-import { publicEntryTypeNames } from "./scope.js";
+import { syndicatableEntryTypeNames } from "./scope.js";
 import { renderAtom, renderRss2 } from "./serialize.js";
 
 const CONTENT_TYPE: Record<FeedFormat, string> = {
@@ -31,7 +31,7 @@ export const FEED_TAG = "feeds:feed";
 // included, to the public types.
 function typeTags(plugins: PluginRegistry, scope: FeedScope): string[] {
   if (scope.kind === "type") return [typeTag(scope.type)];
-  return publicEntryTypeNames(plugins).map(typeTag);
+  return syndicatableEntryTypeNames(plugins).map(typeTag);
 }
 
 export async function handleFeed(

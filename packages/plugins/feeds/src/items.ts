@@ -7,7 +7,7 @@ import { entries, users } from "plumix/schema";
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";
 import { isLaterPage, isSyndicatable, listingUnder } from "./routes.js";
-import { feedGuard, isPublicEntryType } from "./scope.js";
+import { feedGuard, isSyndicatableEntryType } from "./scope.js";
 
 // Recent-items window. Generous enough for a reader's "what's new" without
 // turning the feed into a full archive (that's the sitemap's job).
@@ -44,7 +44,7 @@ function feedQuery(
     case "site":
       return seed;
     case "type":
-      return isPublicEntryType(ctx.plugins, scope.type)
+      return isSyndicatableEntryType(ctx.plugins.entryTypes.get(scope.type))
         ? seed.ofTypes(scope.type)
         : null;
     case "author":
