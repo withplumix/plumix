@@ -1,5 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
+import type { EntryViewer } from "../../../entries/visibility.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type {
   EntryReferenceSummary,
@@ -7,9 +8,11 @@ import type {
   LookupResult,
 } from "../../../plugin/lookup.js";
 import { entryTag } from "../../../cdn/tags.js";
-import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
+import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
+import { readableEntryRows } from "../../../entries/visibility.js";
+import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
@@ -40,6 +43,19 @@ interface EntryLookupRow {
 export const entryLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
+    // `scopeConditions` filters to the requested types; this narrows
+    // that to the rows of them this viewer may see. Without it the
+    // scope arrives from the caller and is the only filter there is,
+    // so any signed-in principal could name a type and read its drafts.
+    // `or` of nothing is `undefined` — every requested type was one
+    // this viewer may not read, and no row can answer.
+    const visibility = or(
+      ...(options.scope?.entryTypes ?? []).map((type) =>
+        visibleTypeRows(ctx, type),
+      ),
+    );
+    if (visibility === undefined) return [];
+    conditions.push(visibility);
     let limit: number;
     if (options.ids !== undefined) {
       // Resolve-by-id batch path: ignore `query`, return only the
@@ -137,6 +153,12 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
   if (!scope?.entryTypes || scope.entryTypes.length === 0) {
     throw LookupScopeError.entryTypesRequired();
   }
+  // Revision and autosave rows live in `entries` beside content, so a
+  // scope naming one would read as an ordinary type filter — and an
+  // autosave holds another author's unsaved title.
+  for (const type of scope.entryTypes) {
+    if (isReservedType(type)) throw LookupScopeError.reservedEntryType(type);
+  }
   const conditions: SQL[] = [
     inArray(entries.type, scope.entryTypes as string[]),
   ];
@@ -152,6 +174,21 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
     conditions.push(ne(entries.status, "trash"));
   }
   return conditions;
+}
+
+/**
+ * The rows of one entry type `list` may hand this viewer, or `null` when it
+ * may hand them none. A viewer holding `entry:<type>:read` gets the admin
+ * answer — `readableEntryRows`, which admits the unpublished rows they may
+ * edit. A viewer without it gets the published rows of a public type, which
+ * is what the site renders to anyone; public nav resolves through this
+ * adapter with no principal at all and would otherwise go empty.
+ */
+function visibleTypeRows(ctx: EntryViewer, type: string): SQL | undefined {
+  const readable = readableEntryRows(ctx, type);
+  if (readable !== null) return readable;
+  if (ctx.plugins.entryTypes.get(type)?.isPublic !== true) return undefined;
+  return sql`(${and(eq(entries.type, type), eq(entries.status, "published"))})`;
 }
 
 function clampLimit(requested: number | undefined): number {

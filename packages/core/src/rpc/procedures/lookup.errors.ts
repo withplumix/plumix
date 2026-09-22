@@ -1,5 +1,8 @@
 type LookupScopeErrorCode =
-  "entry_types_required" | "term_taxonomies_required" | "invalid_entry_status";
+  | "entry_types_required"
+  | "term_taxonomies_required"
+  | "invalid_entry_status"
+  | "reserved_entry_type";
 
 /**
  * A lookup adapter was called without the scope filter that enforces
@@ -30,6 +33,13 @@ export class LookupScopeError extends Error {
     return new LookupScopeError(
       "invalid_entry_status",
       "entry adapter: scope.status must be a known entry status",
+    );
+  }
+
+  static reservedEntryType(type: string): LookupScopeError {
+    return new LookupScopeError(
+      "reserved_entry_type",
+      `entry adapter: scope.entryTypes names the reserved type "${type}"`,
     );
   }
 

@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
-import { adminUser, userFactory } from "../../../test/factories.js";
+import {
+  adminUser,
+  entryFactory,
+  userFactory,
+} from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
@@ -72,6 +76,39 @@ describe("lookup capability gating", () => {
       .create({ email: "leak@example.test", name: "Leak Target" });
 
     await expect(h.client.lookup.list({ kind: "user" })).rejects.toThrow();
+  });
+
+  test("subscribers can't reach unpublished entries through entry lookup", async () => {
+    // The entry adapter is `capability: null` — every signed-in
+    // principal reaches it, and `subscriber` is public-reachable
+    // wherever `auth.selfSignup` is on. The scope arrives from the
+    // caller, so what it may name is the whole of the gate.
+    const plugins = registryWithCoreAdapters();
+    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const author = await adminUser.transient({ db: h.context.db }).create();
+    const draft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: author.id, title: "Embargoed", status: "draft" });
+    const published = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: author.id, title: "Live", status: "published" });
+
+    const result = await h.client.lookup.list({
+      kind: "entry",
+      scope: { entryTypes: ["post"] },
+    });
+    const ids = result.items.map((item) => item.id);
+    expect(ids).toContain(String(published.id));
+    expect(ids).not.toContain(String(draft.id));
+
+    // The reserved types are the sharper edge: an autosave row carries
+    // another user's unsaved title.
+    await expect(
+      h.client.lookup.list({
+        kind: "entry",
+        scope: { entryTypes: ["autosave"] },
+      }),
+    ).rejects.toThrow();
   });
 
   test("editors (with `user:list`) can call user lookup", async () => {
