@@ -7,7 +7,13 @@ import { entries } from "../db/schema/entries.js";
 import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
-import { compileEntryQuery, entryQuery } from "./query.js";
+import { EntryQueryError } from "./errors.js";
+import {
+  compileEntryQuery,
+  entryQuery,
+  entryQueryOrder,
+  entryQueryTypeNames,
+} from "./query.js";
 
 let ctx: AppContext;
 let subtreeRootId: number;
@@ -261,5 +267,152 @@ describe("entryQuery", () => {
       "branch",
       "leaf",
     ]);
+  });
+});
+
+describe("entryQuery ordering", () => {
+  let orderCtx: AppContext;
+
+  // Two entries share a publish date, a sort order and a title initial, so
+  // every order below has a tie for the entry id to break.
+  beforeAll(async () => {
+    const db = await createTestDb();
+    const factory = factoriesFor(db);
+    const author = await factory.admin.create();
+    for (const [slug, publishedAt, title, sortOrder, rank] of [
+      ["alpha", "2024-01-01T00:00:00Z", "beta", 2, 2],
+      ["bravo", "2024-01-02T00:00:00Z", "Alpha", 1, 1],
+      ["charlie", "2024-01-02T00:00:00Z", "Gamma", 1, 3],
+    ] as const) {
+      await factory.entry.create({
+        slug,
+        title,
+        sortOrder,
+        authorId: author.id,
+        status: "published",
+        publishedAt: new Date(publishedAt),
+        meta: { rank },
+      });
+    }
+    orderCtx = createTestContext({ db });
+  });
+
+  /** The slugs a query selects, in the order it asks for. */
+  async function ordered(query: EntryQuery): Promise<readonly string[]> {
+    const condition = await compileEntryQuery(orderCtx, query);
+    if (condition === null) throw new Error("query did not resolve");
+    const rows = await orderCtx.db
+      .select({ slug: entries.slug })
+      .from(entries)
+      .where(condition)
+      .orderBy(...entryQueryOrder(query));
+    return rows.map((row) => row.slug);
+  }
+
+  test("a query with no order given is newest first, id breaking ties", async () => {
+    expect(await ordered(entryQuery())).toEqual(["charlie", "bravo", "alpha"]);
+  });
+
+  test("latest is the default spelled out", async () => {
+    expect(await ordered(entryQuery().latest())).toEqual(
+      await ordered(entryQuery()),
+    );
+  });
+
+  test("oldest reverses it, and the tie-break with it", async () => {
+    expect(await ordered(entryQuery().oldest())).toEqual([
+      "alpha",
+      "bravo",
+      "charlie",
+    ]);
+  });
+
+  test("orderBy reads a column, ascending by default", async () => {
+    // "beta" is lowercase: sorted as bytes it would follow every capitalized
+    // title, which is not the order a reader means by alphabetical.
+    expect(await ordered(entryQuery().orderBy("title"))).toEqual([
+      "bravo",
+      "alpha",
+      "charlie",
+    ]);
+    expect(await ordered(entryQuery().orderBy("title", "desc"))).toEqual([
+      "charlie",
+      "alpha",
+      "bravo",
+    ]);
+  });
+
+  test("the entry id breaks a tie in the order's own direction", async () => {
+    // bravo and charlie share a sort order; ascending puts the lower id first
+    // and descending the higher, so neither crosses a page boundary twice.
+    expect(await ordered(entryQuery().orderBy("sortOrder"))).toEqual([
+      "bravo",
+      "charlie",
+      "alpha",
+    ]);
+    expect(await ordered(entryQuery().orderBy("sortOrder", "desc"))).toEqual([
+      "alpha",
+      "charlie",
+      "bravo",
+    ]);
+  });
+
+  test("orderByMeta reads a value out of the meta column", async () => {
+    expect(await ordered(entryQuery().orderByMeta("rank"))).toEqual([
+      "bravo",
+      "alpha",
+      "charlie",
+    ]);
+    expect(await ordered(entryQuery().orderByMeta("rank", "desc"))).toEqual([
+      "charlie",
+      "alpha",
+      "bravo",
+    ]);
+  });
+
+  test("a later order replaces the earlier one rather than sorting under it", async () => {
+    // Sorting under would keep the title order and only break its ties by
+    // sort order, which for this seed is the same list. Replacing is not.
+    expect(
+      await ordered(entryQuery().orderBy("title").orderBy("sortOrder")),
+    ).toEqual(await ordered(entryQuery().orderBy("sortOrder")));
+  });
+
+  test("ordering never changes which entries a query selects", async () => {
+    const narrowed = entryQuery().ofTypes("post");
+    const every = ["alpha", "bravo", "charlie"];
+    expect([...(await ordered(narrowed))].sort()).toEqual(every);
+    for (const query of [
+      narrowed.latest(),
+      narrowed.oldest(),
+      narrowed.orderBy("title", "desc"),
+      narrowed.orderByMeta("rank"),
+      narrowed.orderByMeta("absent"),
+    ]) {
+      expect([...(await ordered(query))].sort()).toEqual(every);
+    }
+  });
+
+  test("the types a query can list are what its ofTypes calls agree on", () => {
+    // What the CDN tagging reads: a page listing only `post` is stored under
+    // `t:post` alone, and one that names no type is stored under every
+    // public type's tag, because a publish of any of them could change it.
+    expect(entryQueryTypeNames(entryQuery())).toBeNull();
+    expect(entryQueryTypeNames(entryQuery().ofTypes("post", "page"))).toEqual([
+      "post",
+      "page",
+    ]);
+    expect(
+      entryQueryTypeNames(entryQuery().ofTypes("post", "page").ofTypes("page")),
+    ).toEqual(["page"]);
+    expect(
+      entryQueryTypeNames(entryQuery().ofTypes("post").ofTypes("page")),
+    ).toEqual([]);
+  });
+
+  test("a meta key with no JSON path of its own is refused where it is given", () => {
+    // At the declaration, not at the render: the stack points at the archive
+    // that wrote the key rather than at the page that later failed.
+    expect(() => entryQuery().orderByMeta('a"b')).toThrow(EntryQueryError);
   });
 });

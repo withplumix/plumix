@@ -227,6 +227,7 @@ export { escapeHtml } from "./escape-html.js";
 // pages it points at the first time a rewrite option moved one.
 export { dateRange } from "./route/date-range.js";
 export {
+  archiveRoutes,
   archiveSlugForEntryType,
   exposesHierarchicalUrls,
   // What it takes to replace the search page: the patterns core compiled, so a
@@ -235,7 +236,8 @@ export {
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
   // So a plugin archive declares its later pages in the shape core's own
-  // listings use.
+  // listings use — or, where core derived them, asks `archiveRoutes` which
+  // pathnames the archive really answers at rather than reading `routes`.
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
@@ -372,6 +374,7 @@ export type {
   EntryData,
   ErrorData,
   FrontPageData,
+  ListingArchiveData,
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,
@@ -379,6 +382,8 @@ export type {
   SearchData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
+// One page of an archive's entries, as a listed archive's resolver receives it.
+export type { EntryListing } from "./route/render/entry-listing.js";
 export { defineTemplate } from "./template.js";
 export type {
   Template,

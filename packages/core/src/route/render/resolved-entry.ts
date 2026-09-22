@@ -159,6 +159,19 @@ export interface CustomArchiveData {
 }
 
 /**
+ * What a theme receives for an archive core listed — a plugin's own fields
+ * plus the `entries` and `pagination` every built-in archive already hands
+ * over, so a theme's pagination and entry components work on both unchanged.
+ * Extend it, and declare the extension in `ArchiveTypeRegistry`.
+ */
+export interface ListingArchiveData<
+  TEntry extends ResolvedEntry = ResolvedEntry,
+> extends CustomArchiveData {
+  readonly entries: readonly TEntry[];
+  readonly pagination: Pagination;
+}
+
+/**
  * Payload threaded to a theme's `404` / `500` template. Public-safe by
  * shape — there is no Error field, so internal exception messages have
  * no path to the rendered output.

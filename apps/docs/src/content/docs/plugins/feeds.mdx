@@ -186,6 +186,10 @@ The query `scope` receives is already restricted to published entries of public 
 
 `ofTypes`, `inTerm`, `byAuthor`, `inDateRange` and `under` cover how archives usually model a subject. For anything they do not reach — a meta column, a join of your own — `where(sql)` ANDs an arbitrary predicate on, and cannot widen the feed either — so long as it is built from the `sql` template rather than `sql.raw`, which never interpolates a route param safely anyway. Returning `q.none()` is a feed that exists and is empty; returning `null` is a feed that does not exist.
 
+The same query also carries an order, which an archive's page listing reads and a feed ignores — a feed stays newest first, because that is what a subscriber's reader assumes. `latest()` is what a query is read in when nothing says otherwise, `oldest()` reverses it, `orderBy(column, direction)` takes `publishedAt`, `title` or `sortOrder`, and `orderByMeta(key, direction)` sorts on a meta value. A later call replaces the order rather than sorting under it, and the entry id always breaks ties in the same direction, so no entry straddles a page boundary. Ordering never changes which entries a query selects.
+
+`title` sorts case-insensitively, since alphabetical is what a reader means by it. `orderByMeta` costs an unindexed sort over the matching rows — `meta` is a JSON column and no index reaches inside one — so it suits an archive narrowed to a modest set rather than the whole site.
+
 A scope records what to narrow by instead of resolving it, so building one runs no queries. The term path in the example above is resolved when the feed is served.
 
 An archive declaring an `access` policy gets no feed at all. A feed is a registered public route, which core answers ahead of the access gate and ahead of loading a principal, so there is no reader there to check a policy against — serving one would hand the archive's entries to anyone who asked.

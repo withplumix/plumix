@@ -1,8 +1,10 @@
 import type { AppContext, AuthenticatedAppContext } from "../context/app.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
-import { and, eq, or, sql } from "../db/index.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
+import { and, eq, inArray, isNotNull, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { publicEntryTypeNames } from "../plugin/registry.js";
 import { entryCapability, entryCapabilityNamespace } from "./capabilities.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
@@ -61,6 +63,26 @@ export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
       ? and(ofType, or(published, eq(entries.authorId, ctx.user.id)))
       : and(ofType, published);
   return sql`(${rows})`;
+}
+
+/**
+ * The public entries — published, with a publish date, of a public type — as a
+ * WHERE clause, or `null` where the site routes no public type at all and
+ * there is nothing an anonymous reader could be shown.
+ *
+ * Deliberately not `readableEntryRows`: that is the viewer's set, and it
+ * varies per user. This one is the same for everybody, which is what lets an
+ * archive page be stored in a CDN and read by a feed. Parenthesized, so it can
+ * be `AND`ed onto a caller's own predicate.
+ */
+export function publicEntryRows(plugins: PluginRegistry): SQL | null {
+  const types = publicEntryTypeNames(plugins);
+  if (types.length === 0) return null;
+  return sql`(${and(
+    inArray(entries.type, types),
+    eq(entries.status, "published"),
+    isNotNull(entries.publishedAt),
+  )})`;
 }
 
 /**

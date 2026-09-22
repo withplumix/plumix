@@ -61,9 +61,11 @@ export function pageTags(sources: PageTagSources): string[] {
       return sources.frontPageEntryTypes().map(typeTag);
     case "custom":
     case "search":
-      // A plugin archive's content dependencies are unknown to core (as search
-      // results are), so it carries no coarse type tags — the plugin manages
-      // its own purging if it edge-caches.
+      // Neither is derivable from the intent alone: search results depend on a
+      // query, and a plugin archive's content on what it registered. Both
+      // contribute their tags per request instead — a listed archive's from
+      // the types its entry query can list, an unlisted one's from whatever
+      // its resolver returns.
       return [];
   }
 }

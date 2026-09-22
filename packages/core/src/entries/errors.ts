@@ -42,10 +42,10 @@ export class EntryReadError extends Error {
 }
 
 /**
- * A query handed to `compileEntryQuery` that `entryQuery` did not build. Not a
- * domain outcome and not mapped to a transport: it says a query was
- * reconstructed from outside, which is the one way the narrowing guarantee
- * could be lost without anyone writing an assertion.
+ * A query that cannot be built or compiled as asked: one `entryQuery` did not
+ * mint, or an order naming a meta key with no JSON path. Neither is a domain
+ * outcome, and neither is mapped to a transport — each says the code that
+ * wrote the query is wrong, not that the request was.
  */
 export class EntryQueryError extends Error {
   static {
@@ -59,6 +59,12 @@ export class EntryQueryError extends Error {
   static foreignQuery(): EntryQueryError {
     return new EntryQueryError(
       "not a query entryQuery() built: a query holds its narrowings beside itself, so one cannot be reconstructed or edited from outside",
+    );
+  }
+
+  static metaKeyHasNoPath(key: string): EntryQueryError {
+    return new EntryQueryError(
+      `cannot order by meta key "${key}": a quote or a backslash has no JSON path SQLite can read, so no entry stores a value under it`,
     );
   }
 }

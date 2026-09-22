@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import type { CustomArchiveData } from "./render/resolved-entry.js";
+import type { DispatcherHarness } from "../test/dispatcher.js";
+import type {
+  CustomArchiveData,
+  ListingArchiveData,
+} from "./render/resolved-entry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
@@ -124,5 +128,208 @@ describe("custom archive types (registerArchiveType)", () => {
     await expect(
       createDispatcherHarness({ plugins: [dupePlugin] }),
     ).rejects.toThrow();
+  });
+});
+
+// An archive that declares its entries and lets core list them: no resolver,
+// no paginated route of its own, no hand-written pagination.
+interface TalkArchiveData extends ListingArchiveData {
+  readonly kind: "custom";
+  readonly name: "talks";
+}
+declare module "../template-registry.js" {
+  interface ArchiveTypeRegistry {
+    talks: { data: TalkArchiveData };
+  }
+}
+
+const talksPlugin = definePlugin("talks", (ctx) => {
+  ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+  ctx.registerArchiveType("talks", {
+    routes: ["/talks"],
+    entries: (q) => q.ofTypes("talk").orderBy("title"),
+    perPage: 2,
+    title: "Talks",
+  });
+});
+
+const talksTheme = defineTheme({
+  templates: [
+    forArchiveType("talks").template(({ data }) => (
+      <main>
+        <ul data-testid="talks">
+          {data.entries.map((entry) => (
+            <li key={entry.id}>{entry.title}</li>
+          ))}
+        </ul>
+        <p data-testid="pages">{data.pagination.pageCount}</p>
+      </main>
+    )),
+    fallback(() => null),
+  ],
+});
+
+async function talksHarness(): Promise<DispatcherHarness> {
+  const h = await createDispatcherHarness({
+    plugins: [talksPlugin],
+    theme: talksTheme,
+  });
+  const author = await h.seedUser("admin");
+  for (const title of ["Alpha", "Bravo", "Charlie"]) {
+    await h.factory.entry.create({
+      type: "talk",
+      title,
+      status: "published",
+      publishedAt: new Date("2026-01-01T00:00:00Z"),
+      authorId: author.id,
+    });
+  }
+  return h;
+}
+
+describe("an archive that declares its entries", () => {
+  test("lists its first page under its own route", async () => {
+    const h = await talksHarness();
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/talks"))
+    ).text();
+    expect(body).toContain("Alpha");
+    expect(body).toContain("Bravo");
+    expect(body).not.toContain("Charlie");
+    expect(body).toContain("<title>Talks</title>");
+    // Three entries at two a page: core counted the pages, not the plugin.
+    expect(body).toContain('data-testid="pages">2<');
+  });
+
+  test("serves its later pages at a route core derived", async () => {
+    const h = await talksHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/talks/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("Charlie");
+    expect(body).not.toContain("Alpha");
+  });
+
+  test("404s the page after the last one", async () => {
+    const h = await talksHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/talks/page/3"),
+    );
+    expect(response.status).toBe(404);
+  });
+});
+
+// A second listed archive, this one with a subject to load: `resolve` gets the
+// finished page and adds to it rather than building one.
+interface RoomArchiveData extends ListingArchiveData {
+  readonly kind: "custom";
+  readonly name: "rooms";
+  readonly room: string;
+  readonly showing: number;
+}
+declare module "../template-registry.js" {
+  interface ArchiveTypeRegistry {
+    rooms: { data: RoomArchiveData };
+  }
+}
+
+const roomsPlugin = definePlugin("rooms", (ctx) => {
+  ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+  ctx.registerArchiveType("rooms", {
+    routes: ["/rooms/:room"],
+    entries: (q, params) =>
+      params.room === "nowhere" ? null : q.ofTypes("talk"),
+    resolve: (_ctx, params, listing) => {
+      if (params.room === "closed") return null;
+      return {
+        data: {
+          kind: "custom",
+          name: "rooms",
+          room: params.room ?? "",
+          showing: listing.entries.length,
+        },
+        title: `Room ${params.room ?? ""}`,
+      };
+    },
+  });
+});
+
+const roomsTheme = defineTheme({
+  templates: [
+    forArchiveType("rooms").template(({ data }) => (
+      <main>
+        <p data-testid="room">{data.room}</p>
+        <p data-testid="showing">{data.showing}</p>
+        <p data-testid="total">{data.pagination.total}</p>
+      </main>
+    )),
+    fallback(() => null),
+  ],
+});
+
+describe("a listed archive's resolver", () => {
+  async function roomsHarness(): Promise<DispatcherHarness> {
+    const h = await createDispatcherHarness({
+      plugins: [roomsPlugin],
+      theme: roomsTheme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "talk",
+      status: "published",
+      publishedAt: new Date("2026-01-01T00:00:00Z"),
+      authorId: author.id,
+    });
+    return h;
+  }
+
+  test("receives the finished page and adds a title and data to it", async () => {
+    const h = await roomsHarness();
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/rooms/blue"))
+    ).text();
+    expect(body).toContain("<title>Room blue</title>");
+    expect(body).toContain('data-testid="showing">1<');
+    expect(body).toContain('data-testid="total">1<');
+  });
+
+  test("returning null is still a 404", async () => {
+    const h = await roomsHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/rooms/closed"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("entries returning null 404s before the page is read", async () => {
+    const h = await roomsHarness();
+    const response = await h.dispatch(
+      new Request("https://cms.example/rooms/nowhere"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("a query nothing answers to 404s the page", async () => {
+    // Distinct from `entries` declining the params: this one named a term,
+    // and the term is what does not exist. Both are a 404 to a visitor.
+    const lost = definePlugin("lost", (ctx) => {
+      ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+      ctx.registerTermTaxonomy("track", { label: "Tracks" });
+      ctx.registerArchiveType("lost-track", {
+        routes: ["/tracks/:track"],
+        entries: (q, params) => q.inTerm("track", params.track ?? ""),
+        title: "Tracks",
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [lost],
+      theme: roomsTheme,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/tracks/no-such-track"),
+    );
+    expect(response.status).toBe(404);
   });
 });

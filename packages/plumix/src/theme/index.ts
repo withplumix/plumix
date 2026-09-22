@@ -50,6 +50,7 @@ export type {
   EntryTypeName,
   ErrorData,
   FrontPageData,
+  ListingArchiveData,
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,

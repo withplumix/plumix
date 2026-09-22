@@ -953,6 +953,24 @@ describe("archive-type feeds", () => {
     ]);
   });
 
+  test("the same holds where core derived the later-page route", async () => {
+    // An archive that declares `entries` does not register its `/page/:page`
+    // form — core derives it — so reading the later pages off `routes` finds
+    // none, and every page of the archive would answer as a feed of its own.
+    const docs = definePlugin("docs", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("doc-section", {
+        routes: ["/docs/:path+"],
+        entries: (q) => q.ofTypes("post"),
+        title: "Docs",
+        feed: { scope: (q) => q },
+      });
+    });
+    const h = await harness(docs);
+    (await h.fetch("/docs/guides/feed")).assertStatus(200);
+    (await h.fetch("/docs/guides/page/2/feed")).assertStatus(404);
+  });
+
   test("an archive whose feed pattern another feed also answers advertises none", async () => {
     // `/:section/feed` and the `news` type's `/news/feed` are different
     // patterns naming one URL, so the head cannot promise which one answers.

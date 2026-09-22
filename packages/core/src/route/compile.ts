@@ -1,5 +1,6 @@
 import type {
   PluginRegistry,
+  RegisteredArchiveType,
   RegisteredEntryType,
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
@@ -25,6 +26,36 @@ export const FRAMEWORK_PAGINATION_SUFFIX = "/page/:page(\\d+)";
 
 function isPaginatedRoute(route: string): boolean {
   return route.endsWith(FRAMEWORK_PAGINATION_SUFFIX);
+}
+
+// One array per archive, so a consumer that compiles the list into patterns
+// can cache on its identity the way it does for a `routes` it was handed.
+const derivedRoutes = new WeakMap<RegisteredArchiveType, readonly string[]>();
+
+/**
+ * Every pathname an archive dispatches at, which for one that declares
+ * `entries` is more than it wrote down: core owns what a later page of a
+ * listing means, down to answering 404 past the end, so it derives the
+ * `/page/:page` form and the plugin has no version of it left to write.
+ *
+ * Anything reasoning about an archive's URL space — which of them is a later
+ * page, what a feed sits under — asks this rather than reading `routes`, or it
+ * sees only the half the plugin declared.
+ */
+export function archiveRoutes(
+  archive: RegisteredArchiveType,
+): readonly string[] {
+  if (archive.entries === undefined) return archive.routes;
+  const cached = derivedRoutes.get(archive);
+  if (cached !== undefined) return cached;
+  const derived = archive.routes
+    .filter((route) => !isPaginatedRoute(route))
+    .map((route) => `${route}${FRAMEWORK_PAGINATION_SUFFIX}`);
+  // A plugin that declared a later-page route as well as `entries` keeps one
+  // rule, not two identical patterns the compiler would reject as rivals.
+  const routes = [...new Set([...archive.routes, ...derived])];
+  derivedRoutes.set(archive, routes);
+  return routes;
 }
 
 export const FRAMEWORK_SEARCH_BARE_PATTERN = "/search";
@@ -161,9 +192,10 @@ export function compileRouteMap(
   for (const archive of registry.archiveTypes.values()) {
     // Later pages first, as the auto rules order them: a multi-segment capture
     // in the listing route (`/docs/:path+`) would otherwise swallow `/page/2`.
+    const routes = archiveRoutes(archive);
     const paginatedFirst = [
-      ...archive.routes.filter(isPaginatedRoute),
-      ...archive.routes.filter((route) => !isPaginatedRoute(route)),
+      ...routes.filter(isPaginatedRoute),
+      ...routes.filter((route) => !isPaginatedRoute(route)),
     ];
     for (const rawPattern of paginatedFirst) {
       rules.push({

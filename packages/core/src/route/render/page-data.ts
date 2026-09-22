@@ -371,12 +371,16 @@ async function listingFor(
  * short-circuits to an empty result with no DB round-trip — used by the
  * taxonomy resolver when a taxonomy is registered without any attached entry
  * types.
+ *
+ * `order` defaults to newest first, which is what every built-in listing is
+ * read in; an entry query passes the order it carries.
  */
 export async function paginatedEntries(
   ctx: AppContext,
   where: SQL | null | undefined,
   page: number,
   perPage: number,
+  order: readonly SQL[] = [desc(entries.publishedAt), desc(entries.id)],
 ): Promise<{
   readonly rows: readonly Entry[];
   readonly outOfRange: boolean;
@@ -413,7 +417,7 @@ export async function paginatedEntries(
     .select()
     .from(entries)
     .where(where)
-    .orderBy(desc(entries.publishedAt), desc(entries.id))
+    .orderBy(...order)
     .limit(slice.limit)
     .offset(slice.offset);
   return { rows, outOfRange: false, total, pageCount: slice.totalPages };
