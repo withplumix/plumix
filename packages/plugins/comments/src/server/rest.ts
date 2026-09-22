@@ -1,11 +1,10 @@
 import type { AppContext } from "plumix/plugin";
 import { and, asc, eq } from "drizzle-orm";
-import { entries } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import { comments } from "../db/schema.js";
-import { isCommentingEnabled } from "./enablement.js";
+import { resolveCommentableEntry } from "./commentable.js";
 import { gravatarUrl } from "./gravatar.js";
 import { renderCommentBody } from "./render-body.js";
 
@@ -107,15 +106,8 @@ export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
     const entryId = Number(input.id);
     if (!Number.isInteger(entryId) || entryId < 1) return envelope([], false);
 
-    const [entry] = await context.db
-      .select({ type: entries.type, status: entries.status })
-      .from(entries)
-      .where(eq(entries.id, entryId));
-    if (entry?.status !== "published") return envelope([], false);
-    const supports = context.plugins.entryTypes.get(entry.type)?.supports;
-    if (!isCommentingEnabled(entry.type, supports, config)) {
-      return envelope([], false);
-    }
+    const resolved = await resolveCommentableEntry(context, entryId, config);
+    if (!resolved.ok) return envelope([], false);
 
     // Over-fetch one to detect a next page without a separate COUNT.
     const rows = await context.db

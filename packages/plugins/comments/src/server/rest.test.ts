@@ -1,42 +1,14 @@
-import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import { comments } from "../index.js";
-import { applyCommentsSchema } from "../test/db.js";
+import type { Harness } from "../test/harness.js";
 import { commentFactory } from "../test/factories.js";
+import { gatedBlog, harnessWith, seedPost, testBlog } from "../test/harness.js";
 
-const testBlog = definePlugin("test_blog", {
-  setup: (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      rewrite: { slug: "posts" },
-    });
-  },
-});
-
-type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
-
-async function restHarness(): Promise<Harness> {
-  const harness = await createDispatcherHarness({
-    api: { enabled: true },
-    plugins: [testBlog, comments({ entryTypes: ["post"] })],
-  });
-  await applyCommentsSchema(harness.db);
-  return harness;
-}
-
-async function seedPost(harness: Harness, overrides = {}): Promise<number> {
-  const user = await harness.factory.user.create({});
-  const entry = await harness.factory.entry.create({
-    type: "post",
-    title: "Post",
-    authorId: user.id,
-    status: "published",
-    ...overrides,
-  });
-  return entry.id;
+function restHarness(blog = testBlog): Promise<Harness> {
+  return harnessWith(
+    { entryTypes: ["post"] },
+    { blog, api: { enabled: true } },
+  );
 }
 
 interface PublicComment {
@@ -59,7 +31,7 @@ function commentsUrl(entryId: number, query = ""): string {
 describe("comments REST resource", () => {
   test("returns approved comments flat, each with parentId, in the envelope", async () => {
     const h = await restHarness();
-    const entryId = await seedPost(h);
+    const { id: entryId } = await seedPost(h);
     const f = commentFactory.transient({ db: h.db });
     const root = await f.create({
       entryId,
@@ -84,9 +56,26 @@ describe("comments REST resource", () => {
     expect(body.meta).toMatchObject({ page: 1, per_page: 20 });
   });
 
+  test("returns nothing for an entry whose type gates anonymous readers", async () => {
+    // The REST resource is public and default-deny reaches only as far as
+    // the route; the entry behind it carries its own gate, and an empty
+    // envelope is the same answer a missing entry gets.
+    const h = await restHarness(gatedBlog);
+    const { id: entryId } = await seedPost(h);
+    await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId, status: "approved", bodyMd: "members only" });
+
+    const res = await h.dispatch(new Request(commentsUrl(entryId)));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Envelope;
+    expect(body.data).toEqual([]);
+  });
+
   test("strips comment PII and moderation fields", async () => {
     const h = await restHarness();
-    const entryId = await seedPost(h);
+    const { id: entryId } = await seedPost(h);
     await commentFactory.transient({ db: h.db }).create({
       entryId,
       status: "approved",
@@ -108,7 +97,7 @@ describe("comments REST resource", () => {
 
   test("returns only approved comments", async () => {
     const h = await restHarness();
-    const entryId = await seedPost(h);
+    const { id: entryId } = await seedPost(h);
     const f = commentFactory.transient({ db: h.db });
     await f.create({ entryId, status: "approved", bodyMd: "shown" });
     await f.create({ entryId, status: "pending", bodyMd: "hidden-pending" });
@@ -123,7 +112,7 @@ describe("comments REST resource", () => {
 
   test("paginates with page/per_page and links", async () => {
     const h = await restHarness();
-    const entryId = await seedPost(h);
+    const { id: entryId } = await seedPost(h);
     const f = commentFactory.transient({ db: h.db });
     for (let i = 1; i <= 3; i++) {
       await f.create({ entryId, status: "approved", bodyMd: `c${String(i)}` });
@@ -146,7 +135,7 @@ describe("comments REST resource", () => {
 
   test("comments of an unpublished entry resolve to an empty page", async () => {
     const h = await restHarness();
-    const entryId = await seedPost(h, { status: "draft" });
+    const { id: entryId } = await seedPost(h, { status: "draft" });
     await commentFactory
       .transient({ db: h.db })
       .create({ entryId, status: "approved", bodyMd: "hidden" });

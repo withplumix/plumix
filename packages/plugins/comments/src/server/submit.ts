@@ -1,10 +1,8 @@
 import type { AppContext } from "plumix/plugin";
-import { eq } from "drizzle-orm";
 import { resolveReturnUrl } from "plumix/auth";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 import { jsonResponse } from "plumix/plugin";
-import { entries } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
@@ -13,7 +11,7 @@ import type { CommentStatus } from "../types.js";
 import type { CommentModerationCandidate } from "./hooks.js";
 import { RETURN_FIELD, SUBMIT_PATH } from "../contract.js";
 import { REFUSALS } from "../refusals.js";
-import { isCommentingEnabled } from "./enablement.js";
+import { resolveCommentableEntry } from "./commentable.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
 import { readSubmission } from "./read-submission.js";
 import { rejectPage } from "./reject-page.js";
@@ -141,21 +139,9 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     // Filled honeypot → fake success, never store, never reveal the trap.
     if (isHoneypotTripped(input.website)) return accepted("pending");
 
-    const [entry] = await ctx.db
-      .select({
-        id: entries.id,
-        type: entries.type,
-        status: entries.status,
-        publishedAt: entries.publishedAt,
-      })
-      .from(entries)
-      .where(eq(entries.id, input.entryId));
-    if (entry?.status !== "published") return fail("entry_not_found");
-
-    const supports = ctx.plugins.entryTypes.get(entry.type)?.supports;
-    if (!isCommentingEnabled(entry.type, supports, config)) {
-      return fail("comments_disabled");
-    }
+    const resolved = await resolveCommentableEntry(ctx, input.entryId, config);
+    if (!resolved.ok) return fail(resolved.reason);
+    const { entry } = resolved;
     if (isClosed(entry.publishedAt, config.closeAfterDays)) {
       return fail("comments_closed");
     }

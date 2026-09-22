@@ -10,6 +10,7 @@ import type { ResolvedThread } from "./server/load-thread.js";
 import { comments } from "./index.js";
 import { applyCommentsSchema } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
+import { gatedBlog } from "./test/harness.js";
 import { PlumixCommentForm } from "./theme.js";
 
 // Minimal host plugin registering a public `post` type so the dispatcher
@@ -163,6 +164,29 @@ describe("comments read path through the dispatcher", () => {
     expect(html).toContain("<strong>great</strong>");
     expect(html).toContain('data-testid="comments-count">1<');
     expect(html).not.toContain("Pending Patty");
+  });
+
+  test("still renders the thread to a member the gate admits", async () => {
+    // This is what keeps the access check out of `isCommentingEnabled`: the
+    // SSR thread rides the entry's own page, which the dispatcher has already
+    // gated, so the member who got through sees the discussion. Folding the
+    // check up into the shared enablement helper would take it away from
+    // them, which is the opposite of what the fix is for.
+    const harness = await createDispatcherHarness({
+      plugins: [gatedBlog, comments({ entryTypes: ["post"] })],
+      theme,
+    });
+    await applyCommentsSchema(harness.db);
+    const entry = await seedPost(harness, "members-only");
+    await commentFactory
+      .transient({ db: harness.db })
+      .create({ entryId: entry.id, status: "approved", bodyMd: "for members" });
+    const member = await harness.seedUser("subscriber");
+
+    const response = await harness.fetch("/posts/members-only", { as: member });
+
+    response.assertStatus(200);
+    expect(await response.text()).toContain("for members");
   });
 
   test("renders no thread for a comment-disabled entry type", async () => {
