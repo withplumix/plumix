@@ -10,6 +10,7 @@ import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "plumix/test";
+import { challenge, definePolicy, grant } from "plumix/auth";
 import { entryPurgeTags, eq, typeTag } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
@@ -27,6 +28,48 @@ declare module "plumix" {
     hero: true;
   }
 }
+
+// A members-only gate that answers terminally. `authenticatedPolicy` would
+// redirect to sign-in, which these harnesses route no page for; where the gate
+// sends the reader is not what any of these tests are about.
+const membersOnlyPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
+});
+
+// A public type beside a gated one: every crawler-facing surface has to keep
+// the first and drop the second.
+const membersOnlyPlugin = definePlugin("members", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerEntryType("lesson", {
+    label: "Lessons",
+    isPublic: true,
+    hasArchive: true,
+    access: { default: membersOnlyPolicy },
+  });
+});
+
+// A gated archive, which carries its policy directly rather than under a
+// `default`. `plugin-feeds` already refuses one a feed.
+const gatedArchivePlugin = definePlugin("gated-archive", (ctx) => {
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  ctx.registerArchiveType("member-series", {
+    routes: ["/members/:series"],
+    access: membersOnlyPolicy,
+    resolve: () => ({
+      data: { kind: "custom", name: "member-series" },
+      title: "Members",
+    }),
+    sitemap: {
+      count: () => 1,
+      urls: () => [{ loc: "https://cms.example/members/summer" }],
+    },
+  });
+});
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -324,6 +367,47 @@ describe("the sitemap index", () => {
     const h = await createHarness();
 
     expect(await bodyOf(h, "/sitemap.xml")).not.toContain("<sitemap>");
+  });
+
+  test("omits an access-policied entry type's scope", async () => {
+    // The sitemap is what a crawler reads instead of the site, so a scope
+    // here is a published list of URLs. A gated type's pages are not the
+    // site's to hand out, and the slugs alone say what exists.
+    const h = await createHarness([membersOnlyPlugin]);
+    await seedPost(h);
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "lesson",
+      slug: "members-only-lesson",
+      title: "Lesson",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const index = await bodyOf(h, "/sitemap.xml");
+    expect(index).toContain("https://cms.example/sitemap-post-1.xml");
+    expect(index).not.toContain("sitemap-lesson-1.xml");
+    // Dropping the scope drops the route with it, so there is no sub-sitemap
+    // to fetch directly — a 404, not an empty urlset.
+    const direct = await h.dispatch(
+      new Request("https://cms.example/sitemap-lesson-1.xml"),
+    );
+    expect(direct.status).toBe(404);
+  });
+
+  test("omits an access-policied archive's scope", async () => {
+    // An archive declares its own `sitemap`, so it claims a scope without
+    // passing the entry-type loop at all.
+    const h = await createHarness([gatedArchivePlugin]);
+
+    const index = await bodyOf(h, "/sitemap.xml");
+    expect(index).not.toContain("sitemap-member-series-1.xml");
+    const direct = await h.dispatch(
+      new Request("https://cms.example/sitemap-member-series-1.xml"),
+    );
+    expect(direct.status).toBe(404);
   });
 
   test("paginates a custom archive's scope by its own count", async () => {
@@ -1288,6 +1372,32 @@ describe("IndexNow", () => {
     await setSettings(h, "seo", { indexnow_key: KEY });
     return h;
   }
+
+  test("says nothing about an entry of an access-policied type", async () => {
+    // The gate the sitemap applies, applied here: a page no crawler may
+    // reach is a page no engine is told moved — otherwise the ping hands
+    // over the URL the sitemap was careful not to publish.
+    const fetch = stubbedFetch();
+    const h = await createHarness([
+      membersOnlyPlugin,
+      lifecycleFirer("entry:published"),
+    ]);
+    await setSettings(h, "seo", { indexnow_key: KEY });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "lesson",
+      slug: "hello",
+      title: "Lesson",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await publish(h);
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
   test("is off until a key is configured", async () => {
     const fetch = stubbedFetch();

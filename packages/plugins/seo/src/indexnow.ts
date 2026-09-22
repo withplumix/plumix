@@ -4,6 +4,7 @@ import { buildEntryPermalink } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
 import { readSeoOverrides } from "./overrides.js";
+import { isCrawlableType } from "./scope.js";
 import { loadSeoSettings } from "./settings.js";
 
 // The shared endpoint: one submission reaches every participating engine, so a
@@ -39,11 +40,14 @@ async function handleIndexNowKey(ctx: AppContext): Promise<Response> {
  * Tell the search engines an entry moved, if it is one they may have. Every
  * gate the head and the sitemap apply is applied here too — a page nobody may
  * index is a page nobody is told about. The agreement table in
- * `routes.test.ts` holds these gates to theirs.
+ * `routes.test.ts` holds these gates to theirs, except the access one: its
+ * rows all expect a page that renders, which a gated one does not.
  */
 async function submit(ctx: AppContext, entry: Entry): Promise<void> {
   if (entry.status !== "published") return;
-  if (ctx.plugins.entryTypes.get(entry.type)?.isPublic === false) return;
+  const entryType = ctx.plugins.entryTypes.get(entry.type);
+  if (entryType?.isPublic === false) return;
+  if (!isCrawlableType(entryType)) return;
   if (readSeoOverrides(entry.meta).noindex) return;
 
   const settings = await loadSeoSettings(ctx);
