@@ -1187,8 +1187,9 @@ export async function hydrateReferenceGroup(
 }
 
 // What an adapter's `hydrate` may answer differently for — the entry
-// adapter clamps unpublished rows on `edit_any`, so a payload is the
-// asker's view of the row, not the row. `ctx.memo` is shared by every
+// adapter clamps unpublished rows on `edit_any`, and on `edit_own` over the
+// asker's own rows, so a payload is the asker's view of the row, not the
+// row, and varies by `user.id` and not merely by capability. `ctx.memo` is shared by every
 // context derived from this one (`withUser`, and the principal-stripped
 // one an access policy is resolved against), so naming the asker in the
 // key is how this loader meets the principal-invariance the memo asks of
