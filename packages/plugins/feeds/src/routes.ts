@@ -6,7 +6,10 @@ import {
 
 import type { ArchiveTypeFeed } from "./archive.js";
 import type { FeedScope } from "./scope.js";
-import { publicEntryTypeNames, publicTaxonomiesByBaseSlug } from "./scope.js";
+import {
+  publicTaxonomiesByBaseSlug,
+  syndicatableEntryTypeNames,
+} from "./scope.js";
 
 /** `/authors/:slug` is core's framework route; its feed hangs off the same shape. */
 const AUTHOR_FEED = "/authors/:slug/feed";
@@ -107,7 +110,7 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
     { path: "/feed", scope: () => ({ kind: "site" }) },
   ];
 
-  for (const type of publicEntryTypeNames(plugins)) {
+  for (const type of syndicatableEntryTypeNames(plugins)) {
     routes.push({
       path: `/${type}/feed`,
       scope: () => ({ kind: "type", type }),

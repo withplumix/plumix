@@ -43,7 +43,10 @@ function out(reason: IndexabilityReason): Indexability {
  * — the site and per-scope arms in `scopeIsOffered`, the entry arm as a `WHERE`
  * — and IndexNow asks the entry-facing ones inline, so what they share is this
  * module's keys and this order, not a call. The agreement table in
- * `routes.test.ts` is what holds the three to one answer. The arms below
+ * `routes.test.ts` is what holds the three to one answer. An entry type's
+ * `access` policy sits outside all of this: it has no key here, and it gates
+ * the page itself, so the head is only ever rendered behind it — only the
+ * sitemap and IndexNow have to ask (`isCrawlableType`). The arms below
  * `taxonomy_default` describe pages the sitemap never lists, so there is
  * nothing for them to disagree about.
  */

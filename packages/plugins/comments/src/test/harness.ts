@@ -1,5 +1,10 @@
+import type { AnyPluginDescriptor } from "plumix";
 import type { User } from "plumix/schema";
-import type { createDispatcherHarness } from "plumix/test";
+import type {
+  createDispatcherHarness,
+  CreateDispatcherHarnessOptions,
+} from "plumix/test";
+import { challenge, definePolicy, grant } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness as createHarness } from "plumix/test";
 
@@ -13,6 +18,31 @@ export const ORIGIN = "https://cms.example";
 
 export type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
 
+/**
+ * A members-only gate that answers terminally. `authenticatedPolicy` would
+ * redirect to sign-in, which no harness here routes a page for, and where the
+ * gate sends a reader is not what the comment surfaces are tested on.
+ */
+// The challenge is hard, not soft, and the tests depend on it: a soft
+// challenge still renders (a theme serves a teaser at the same URL), so
+// `entryAllowsAnonymousAccess` would answer yes and gate nothing.
+const membersOnlyPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
+});
+
+/** {@link testBlog} with its entry type gated to members. */
+export const gatedBlog = definePlugin("gated_blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      rewrite: { slug: "posts" },
+      access: { default: membersOnlyPolicy },
+    });
+  },
+});
+
 /** An entry type to hang comments off, with nothing else to it. */
 export const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
@@ -24,9 +54,18 @@ export const testBlog = definePlugin("test_blog", {
   },
 });
 
-export async function harnessWith(config: CommentsConfig): Promise<Harness> {
+export async function harnessWith(
+  config: CommentsConfig,
+  {
+    blog = testBlog,
+    ...options
+  }: Omit<CreateDispatcherHarnessOptions, "plugins"> & {
+    readonly blog?: AnyPluginDescriptor;
+  } = {},
+): Promise<Harness> {
   const harness = await createHarness({
-    plugins: [testBlog, comments(config)],
+    ...options,
+    plugins: [blog, comments(config)],
   });
   await applyCommentsSchema(harness.db);
   return harness;

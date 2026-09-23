@@ -5,7 +5,12 @@ import type {
   JsonValue,
 } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { authenticatedPolicy } from "plumix/auth";
+import {
+  authenticatedPolicy,
+  challenge,
+  definePolicy,
+  grant,
+} from "plumix/auth";
 import { entryQuery, sql, typeTag } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries } from "plumix/schema";
@@ -48,6 +53,15 @@ function countDbSpans(spans: readonly SpanTree[]): number {
   return flattenSpans(spans).filter((span) => span.name.startsWith("db: "))
     .length;
 }
+
+// A members-only gate that answers terminally. The challenge is hard, not
+// soft: a soft one still renders, so it would gate nothing. And
+// `authenticatedPolicy` would redirect to a sign-in page this harness does
+// not route, which is not what the test is about either.
+const membersOnlyPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
+});
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -138,6 +152,50 @@ describe("feed routes", () => {
     const body = await (await h.fetch("/feed")).text();
     expect(body).toContain("Live Post");
     expect(body).not.toContain("Draft Post");
+  });
+
+  test("an access-policied entry type stays out of every feed", async () => {
+    // The entry's own page is gated, so nothing about it may ride out on a
+    // feed either: a feed is fetched by a reader carrying no session and
+    // served from a shared cache, so there is no principal to gate it for.
+    // The policy answers terminally rather than redirecting to sign-in —
+    // this harness routes no sign-in page, and where the gate sends the
+    // reader is not what is under test.
+    const membersOnly = definePlugin("members", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerEntryType("lesson", {
+        label: "Lessons",
+        isPublic: true,
+        hasArchive: true,
+        access: { default: membersOnlyPolicy },
+      });
+    });
+    const h = await harness(membersOnly);
+    const author = await h.seedUser("admin");
+    await seedPost(h, "live", "Open Post");
+    await h.factory.entry.create({
+      type: "lesson",
+      slug: "secret",
+      title: "Members Only Lesson",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+
+    // The site feed carries every public type, so it is where a gated one
+    // leaks without any scope naming it.
+    const site = await (await h.fetch("/feed")).text();
+    expect(site).toContain("Open Post");
+    expect(site).not.toContain("Members Only Lesson");
+
+    // And the type has no feed of its own to be asked for. Whatever the gate
+    // answers at that URL once the feed route is gone, it is not a feed.
+    const typeFeed = await h.fetch("/lesson/feed");
+    expect(typeFeed.headers.get("content-type")).not.toContain("xml");
   });
 
   test("an unknown entry type 404s", async () => {

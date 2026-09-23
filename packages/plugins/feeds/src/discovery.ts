@@ -13,7 +13,7 @@ import {
 import { withBasePath } from "plumix/support";
 
 import { archiveFeedAt, feedUnder, isSyndicatable } from "./routes.js";
-import { feedGuard, isPublicEntryType } from "./scope.js";
+import { feedGuard, isSyndicatableEntryType } from "./scope.js";
 
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
@@ -30,7 +30,9 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
     case "frontPage":
       return withBasePath("/feed", ctx.basePath);
     case "archive":
-      return isPublicEntryType(ctx.plugins, data.contentType)
+      return isSyndicatableEntryType(
+        ctx.plugins.entryTypes.get(data.contentType),
+      )
         ? withBasePath(`/${data.contentType}/feed`, ctx.basePath)
         : null;
     case "taxonomy": {

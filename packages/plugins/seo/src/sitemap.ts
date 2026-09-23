@@ -8,7 +8,7 @@ import { withBasePath, xmlEscape } from "plumix/support";
 import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";
 import { SEO_META_KEYS } from "./overrides.js";
-import { publicTargets } from "./scope.js";
+import { isCrawlableType, publicTargets } from "./scope.js";
 
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
@@ -256,6 +256,7 @@ export function sitemapScopes(
   };
 
   for (const type of publicTargets(plugins.entryTypes)) {
+    if (!isCrawlableType(type)) continue;
     claim({
       name: type.name,
       kind: "entryType",
@@ -278,7 +279,10 @@ export function sitemapScopes(
   }
   for (const archive of plugins.archiveTypes.values()) {
     const sitemap = archive.sitemap;
-    if (!sitemap) continue;
+    // An archive carries its policy directly rather than under a `default`,
+    // and `plugin-feeds` already refuses a policied archive's feed on the
+    // same ground — a URL list is no more publishable than a feed.
+    if (!sitemap || !isCrawlableType(archive)) continue;
     claim({
       name: archive.name,
       kind: "archive",

@@ -1,42 +1,8 @@
-import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import type { CommentsConfig } from "../types.js";
-import { comments } from "../index.js";
-import { applyCommentsSchema } from "../test/db.js";
+import type { Harness } from "../test/harness.js";
 import { commentFactory } from "../test/factories.js";
-
-const testBlog = definePlugin("test_blog", {
-  setup: (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      rewrite: { slug: "posts" },
-    });
-  },
-});
-
-type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
-
-async function harnessWith(config: CommentsConfig): Promise<Harness> {
-  const harness = await createDispatcherHarness({
-    plugins: [testBlog, comments(config)],
-  });
-  await applyCommentsSchema(harness.db);
-  return harness;
-}
-
-async function seedPost(harness: Harness, overrides = {}) {
-  const user = await harness.factory.user.create({});
-  return harness.factory.entry.create({
-    type: "post",
-    title: "Post",
-    authorId: user.id,
-    status: "published",
-    ...overrides,
-  });
-}
+import { gatedBlog, harnessWith, seedPost } from "../test/harness.js";
 
 async function seedRoots(harness: Harness, entryId: number, n: number) {
   const f = commentFactory.transient({ db: harness.db });
@@ -81,6 +47,22 @@ describe("GET /_plumix/comments/list", () => {
     (
       await harness.fetch(`/_plumix/comments/list?entryId=${String(entry.id)}`)
     ).assertStatus(403);
+  });
+
+  test("404s for an entry whose type gates anonymous readers", async () => {
+    // This route is `auth: "public"` — the dispatcher answers it ahead of the
+    // access gate, so the entry page's own policy has to be asked here or a
+    // members-only discussion is readable by anyone who knows the entry id.
+    const harness = await harnessWith(
+      { entryTypes: ["post"] },
+      { blog: gatedBlog },
+    );
+    const entry = await seedPost(harness);
+    await seedRoots(harness, entry.id, 1);
+
+    (
+      await harness.fetch(`/_plumix/comments/list?entryId=${String(entry.id)}`)
+    ).assertStatus(404);
   });
 
   test("returns the next, older page of roots with their descendants", async () => {

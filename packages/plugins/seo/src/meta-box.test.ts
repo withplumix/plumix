@@ -1,4 +1,5 @@
 import type { DispatcherHarness } from "plumix/test";
+import { challenge, definePolicy, grant } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
@@ -10,6 +11,14 @@ import {
   SERP_PREVIEW_FIELD_KEY,
   SERP_PREVIEW_INPUT_TYPE,
 } from "./preview-box.js";
+
+// A hard challenge, not a soft one: a soft challenge still renders, so it
+// would gate nothing. `authenticatedPolicy` would redirect to a sign-in page
+// no harness here routes.
+const membersOnlyPolicy = definePolicy({
+  segments: ["members"],
+  resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
+});
 
 // One public entry type and one internal one, plus a public taxonomy and a
 // private one — the four cases scope derivation has to separate.
@@ -75,6 +84,25 @@ describe("SEO meta box scope", () => {
     const h = await createHarness();
 
     expect(termBoxScope(h)).toEqual(["category"]);
+  });
+
+  test("keeps the box on an access-policied type", async () => {
+    // This is what keeps the access check out of `publicTargets`: a gated
+    // type is held out of the sitemap and IndexNow, and nothing else. An
+    // editor still writes the title and description a member will read, and
+    // folding the check up into the shared scope helper would take the box,
+    // its SERP preview and the type's saved settings keys with it.
+    const gated = definePlugin("gated", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("lesson", {
+        label: "Lessons",
+        isPublic: true,
+        access: { default: membersOnlyPolicy },
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [gated, seo()] });
+
+    expect(entryBoxScope(h)).toEqual(["post", "lesson"]);
   });
 
   test("a per-type exclusion removes the box from that type alone", async () => {

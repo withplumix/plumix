@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
-import { harnessWith, rows, seedPost } from "../test/harness.js";
+import { gatedBlog, harnessWith, rows, seedPost } from "../test/harness.js";
 
 function submit(
   harness: Harness,
@@ -50,6 +50,22 @@ describe("POST /_plumix/comments/submit", () => {
     const res = await submit(harness, entry.id);
 
     expect(await res.json()).toEqual({ status: "pending" });
+  });
+
+  test("refuses a comment on an entry whose type gates anonymous readers", async () => {
+    // Reading the thread is one half; this is the other. The route is
+    // public, so without the entry's own gate a stranger can write into a
+    // members-only discussion as well as read it.
+    const harness = await harnessWith(
+      { entryTypes: ["post"], mode: "none" },
+      { blog: gatedBlog },
+    );
+    const entry = await seedPost(harness);
+
+    const res = await submit(harness, entry.id);
+
+    expect(await res.json()).toEqual({ error: "entry_not_found" });
+    expect(await rows(harness)).toHaveLength(0);
   });
 
   test("honeypot submissions fake success and are not stored", async () => {
