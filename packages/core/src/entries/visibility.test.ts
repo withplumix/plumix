@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AuthenticatedUser } from "../context/app.js";
+import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { PluginRegistry } from "../plugin/registry.js";
 import type { EntryViewer } from "./visibility.js";
@@ -10,7 +11,11 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
-import { canReadEntry, readableEntryRows } from "./visibility.js";
+import {
+  canReadEntry,
+  readableEntryRows,
+  referenceableEntryRows,
+} from "./visibility.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
@@ -62,6 +67,14 @@ function viewer(
 async function selected(ctx: EntryViewer): Promise<string[]> {
   const clause = readableEntryRows(ctx, "post");
   if (clause === null) return [];
+  return slugsWhere(clause);
+}
+
+async function selectedReferenceable(ctx: EntryViewer): Promise<string[]> {
+  return slugsWhere(referenceableEntryRows(ctx, "post"));
+}
+
+async function slugsWhere(clause: SQL): Promise<string[]> {
   const found = await db
     .select({ slug: entries.slug })
     .from(entries)
@@ -119,6 +132,20 @@ describe("readableEntryRows", () => {
       expect(await selected(ctx)).toEqual(sees);
     });
   }
+
+  test("matches referenceableEntryRows wherever the caller holds read", async () => {
+    // The two are one rule under two compositions — `read` is the only thing
+    // `readableEntryRows` asks on top, so a tier that holds it must not be
+    // able to tell them apart. A tier that does not is where they are meant
+    // to differ, and is skipped rather than asserted.
+    for (const [tier, { capabilities }] of Object.entries(TIERS)) {
+      const ctx = viewer(capabilities);
+      if (readableEntryRows(ctx, "post") === null) continue;
+      expect(await selectedReferenceable(ctx), tier).toEqual(
+        await selected(ctx),
+      );
+    }
+  });
 
   test("an anonymous caller holding edit_own is owed published rows only", async () => {
     const ctx = viewer(TIERS.contributor.capabilities, null);

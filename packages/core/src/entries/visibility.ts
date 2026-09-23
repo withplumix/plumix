@@ -54,15 +54,44 @@ export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
 export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
   if (!ctx.auth.can(entryCapability(namespace, "read"))) return null;
+  return referenceableEntryRows(ctx, type);
+}
+
+/**
+ * The rows of one `type` a *reference* to it may resolve to: the published
+ * ones, plus the unpublished ones this caller has earned.
+ *
+ * {@link readableEntryRows} with the `read` gate not asked, and the one place
+ * that difference is right. A reference is hydrated inline inside someone
+ * else's page — the referenced type often has no page of its own, so no
+ * reader of it holds a capability over it, and `buildEntryPermalink` already
+ * answers `null` for such a type rather than treating it as a mistake.
+ * Publication is the whole gate on that half. The unpublished half still runs
+ * through the same earning `canReadEntry` requires.
+ */
+export function referenceableEntryRows(ctx: EntryViewer, type: string): SQL {
   const ofType = eq(entries.type, type);
-  if (ctx.auth.can(entryCapability(namespace, "edit_any")))
+  const published = and(ofType, eq(entries.status, "published"));
+  const earned = earnedUnpublishedRows(ctx, type);
+  return earned === null
+    ? sql`(${published})`
+    : sql`(${or(published, earned)})`;
+}
+
+/**
+ * The rows of `type` this caller may see *unpublished*, or `null` where none
+ * are: the SQL half of {@link canReadUnpublished}, under the same `read` gate
+ * every other unpublished read runs through.
+ */
+function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
+  const namespace = entryCapabilityNamespace(ctx.plugins, type);
+  if (!ctx.auth.can(entryCapability(namespace, "read"))) return null;
+  const ofType = eq(entries.type, type);
+  if (ctx.auth.can(entryCapability(namespace, "edit_any"))) {
     return sql`(${ofType})`;
-  const published = eq(entries.status, "published");
-  const rows =
-    ctx.user !== null && ctx.auth.can(entryCapability(namespace, "edit_own"))
-      ? and(ofType, or(published, eq(entries.authorId, ctx.user.id)))
-      : and(ofType, published);
-  return sql`(${rows})`;
+  }
+  if (!canReadUnpublished(ctx, type) || ctx.user === null) return null;
+  return sql`(${and(ofType, eq(entries.authorId, ctx.user.id))})`;
 }
 
 /**

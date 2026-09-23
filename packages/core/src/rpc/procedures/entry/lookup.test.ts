@@ -519,6 +519,77 @@ describe("entryLookupAdapter", () => {
     expect(asAdmin.map((row) => row.id)).toEqual([String(draft.id)]);
   });
 
+  test("hydrate() clamps under an explicit status rather than being replaced by it", async () => {
+    // A field's `scope.status` says which rows the field wants, not which
+    // rows the reader may have. Treating it as an override let a
+    // server-declared `status: "draft"` reference hand an anonymous render
+    // every author's drafts of that type.
+    const h = await createRpcHarness({ authAs: "admin" });
+    const draft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "draft" });
+
+    const anonymous = await entryLookupAdapter.hydrate(h.context, {
+      ids: [String(draft.id)],
+      scope: { ...POST, status: "draft" },
+    });
+    expect(anonymous).toEqual([]);
+
+    // The field's intent still reaches a viewer who may see drafts.
+    const asAdmin = await entryLookupAdapter.hydrate(authedCtx(h), {
+      ids: [String(draft.id)],
+      scope: { ...POST, status: "draft" },
+    });
+    expect(asAdmin.map((row) => row.id)).toEqual([String(draft.id)]);
+  });
+
+  test("hydrate() shows a contributor their own unpublished entry", async () => {
+    // The clamp asked only for `edit_any`, so an author referencing their
+    // own draft got an empty hydration on their own preview — `edit_own`
+    // over their own rows is the same rule every other read surface uses.
+    const h = await createRpcHarness({ authAs: "admin" });
+    const contributor = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "contributor" });
+    const mine = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: contributor.id, type: "post", status: "draft" });
+    const theirs = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "draft" });
+
+    const rows = await entryLookupAdapter.hydrate(
+      withUser(h.context, contributor, null),
+      { ids: [String(mine.id), String(theirs.id)], scope: POST },
+    );
+    expect(rows.map((row) => row.id)).toEqual([String(mine.id)]);
+  });
+
+  test("hydrate() narrows an explicit status to the viewer's own rows", async () => {
+    // Where the two halves meet: `status: "draft"` over a viewer who earns
+    // drafts only by authorship resolves to "my own drafts", which is the
+    // shape a preview surface asks for.
+    const h = await createRpcHarness({ authAs: "admin" });
+    const contributor = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "contributor" });
+    const mine = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: contributor.id, type: "post", status: "draft" });
+    const theirs = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "draft" });
+
+    const rows = await entryLookupAdapter.hydrate(
+      withUser(h.context, contributor, null),
+      {
+        ids: [String(mine.id), String(theirs.id)],
+        scope: { ...POST, status: "draft" },
+      },
+    );
+    expect(rows.map((row) => row.id)).toEqual([String(mine.id)]);
+  });
+
   test("hydrate() maps an empty title to a null summary title", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const e = await entryFactory

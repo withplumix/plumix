@@ -240,7 +240,7 @@ import { entry } from "plumix/fields";
 export const pairsWith = entry("pairsWith", ["recipe"]).status("published");
 ```
 
-`.status("published")` is what keeps a draft from surfacing on a public page. Trashed entries are hidden by default, and `.includeTrashed()` brings them back for an admin-only field.
+`.status("published")` narrows a field to published entries. It is not what keeps a draft off a public page — reference resolution already refuses any unpublished entry the reader has not earned, whatever the scope asks for, so an anonymous visitor never resolves one. Reach for it when the field means "published entries" to an editor as well, in the picker. Trashed entries are hidden by default, and `.includeTrashed()` widens the scope for a field only editors use; it does not widen who may see the rows.
 
 ### entryList
 

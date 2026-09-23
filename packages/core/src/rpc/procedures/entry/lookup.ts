@@ -10,8 +10,10 @@ import type {
 import { entryTag } from "../../../cdn/tags.js";
 import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
-import { entryCapabilityByName } from "../../../entries/capabilities.js";
-import { readableEntryRows } from "../../../entries/visibility.js";
+import {
+  readableEntryRows,
+  referenceableEntryRows,
+} from "../../../entries/visibility.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
@@ -88,27 +90,20 @@ export const entryLookupAdapter = {
       .filter((id): id is number => id !== null);
     if (numericIds.length === 0) return [];
     const { conditions, entryTypes } = scopeConditions(options.scope);
-    // Viewer-visibility clamp: hydration feeds public render and
-    // anonymous REST, where an unpublished referenced entry must stay
-    // invisible (pre-hydration reads exposed only an opaque id). The
-    // picker-shaped default of `scopeConditions` (drafts admitted)
-    // only survives for viewers who could see the draft in the admin
-    // anyway — per referenced type, gated on `edit_any`. An explicit
-    // `scope.status` is the field author's call and passes through.
-    if (options.scope?.status === undefined) {
-      const visibleUnpublished = entryTypes.filter((type) =>
-        ctx.auth.can(entryCapabilityByName(ctx.plugins, type, "edit_any")),
-      );
-      if (visibleUnpublished.length < entryTypes.length) {
-        const published = eq(entries.status, "published");
-        conditions.push(
-          visibleUnpublished.length === 0
-            ? published
-            : (or(published, inArray(entries.type, visibleUnpublished)) ??
-                published),
-        );
-      }
-    }
+    // Viewer-visibility clamp: hydration feeds public render and anonymous
+    // REST, where an unpublished referenced entry must stay invisible
+    // (pre-hydration reads exposed only an opaque id). `AND`ed onto the scope
+    // rather than skipped by an explicit `scope.status`: a status says which
+    // rows the field wants, not which rows the reader may have, so it can only
+    // narrow. `referenceableEntryRows` rather than `list`'s rule: a reference
+    // to a type with no page of its own, rendered inline in someone else's, is
+    // the ordinary case here and its reader holds nothing over it.
+    // `or` goes `undefined` only if every arm did, which `scopeConditions`
+    // has already ruled out by rejecting an empty `entryTypes`.
+    const visibility = or(
+      ...entryTypes.map((type) => referenceableEntryRows(ctx, type)),
+    );
+    if (visibility !== undefined) conditions.push(visibility);
     conditions.push(inArray(entries.id, numericIds));
     const rows = await ctx.db
       .select(ENTRY_ROW_COLUMNS)
@@ -172,9 +167,9 @@ function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
   for (const type of entryTypes) {
     if (isReservedType(type)) throw LookupScopeError.reservedEntryType(type);
   }
-  // `list` ANDs a per-type visibility clause over this, which implies the
-  // `in` list; `hydrate` clamps by status alone, so this is what scopes it
-  // to the requested types.
+  // Both surfaces AND a per-type visibility clause over this, which implies
+  // the `in` list — it stays as the scope's own statement of which types were
+  // asked for, and carries the filter for any caller that adds no clause.
   const conditions: SQL[] = [inArray(entries.type, [...entryTypes])];
   if (scope.status !== undefined) {
     // Same wire-side reality as `entryTypes` above: the lookup RPC
