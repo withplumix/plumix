@@ -9,7 +9,7 @@ import { feedRoutes } from "./routes.js";
 // only if the module declaring it is in this package's declaration graph, and
 // naming them here is what stops that riding on which types the exports below
 // happen to mention.
-import "./archive.js"; // ArchiveTypeOptions.feed
+import "./archive.js"; // ListingArchiveTypeOptions.feed
 import "./items.js"; // feed:items
 
 export type { ArchiveTypeFeed } from "./archive.js";
@@ -19,14 +19,14 @@ export { renderAtom, renderRss2 } from "./serialize.js";
 export { FEED_LIMIT } from "./items.js";
 
 /**
- * `@plumix/plugin-feeds` — RSS 2.0 and Atom for the site and every public
- * archive: an entry type, a taxonomy term, an author, a date period, and any
- * archive a plugin registered with a `feed`.
+ * `@plumix/plugin-feeds` — RSS 2.0 and Atom for every archive: the front
+ * page, an entry type, a taxonomy term, an author, a date period, and any
+ * archive a plugin registered with `feed: true`. A feed is its archive's own
+ * entry query, read newest first (ADR 0008).
  *
- * Routes are claimed in `afterSetup`, once every entry type and taxonomy is
- * registered, so each one is enumerated from what the site registered rather
- * than matched as an ambiguous shape per request — a path this plugin does not
- * claim still renders as content. Each page's own feed is advertised through
+ * Routes are claimed in `afterSetup`, once every archive is registered, beside
+ * each route core lists the archive at — so a path this plugin does not claim
+ * still renders as content. Each page's own feed is advertised through
  * `render:document`, gap-filling around whatever the theme already declared.
  */
 export function feeds(): PluginDescriptor {
@@ -47,18 +47,17 @@ export function feeds(): PluginDescriptor {
     },
     afterSetup: (ctx) => {
       for (const route of feedRoutes(ctx.plugins)) {
-        const cacheable = route.cacheable ?? true;
         ctx.registerPublicRoute({
           path: route.path,
-          cacheable,
-          handler: (_request, appCtx, params) =>
-            handleFeed(appCtx, route.scope(params), "rss2", cacheable),
+          cacheable: route.cacheable,
+          handler: (_request, appCtx) =>
+            handleFeed(appCtx, "rss2", route.cacheable),
         });
         ctx.registerPublicRoute({
           path: `${route.path}/atom`,
-          cacheable,
-          handler: (_request, appCtx, params) =>
-            handleFeed(appCtx, route.scope(params), "atom", cacheable),
+          cacheable: route.cacheable,
+          handler: (_request, appCtx) =>
+            handleFeed(appCtx, "atom", route.cacheable),
         });
       }
     },

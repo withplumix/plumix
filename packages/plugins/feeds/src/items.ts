@@ -1,13 +1,13 @@
 import type { AppContext } from "plumix";
-import type { EntryQuery, SQL } from "plumix/db";
-import { compileEntryQuery, desc, entryQuery, eq, sql } from "plumix/db";
-import { archiveRoutes, buildEntryPermalinks } from "plumix/plugin";
+import type { SQL } from "plumix/db";
+import type { ArchiveAtPath } from "plumix/plugin";
+import { compileEntryQuery, desc, eq, publicEntryRows, sql } from "plumix/db";
+import { buildEntryPermalinks } from "plumix/plugin";
 import { entries, users } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";
-import { isLaterPage, isSyndicatable, listingUnder } from "./routes.js";
-import { feedGuard, isSyndicatableEntryType } from "./scope.js";
+import { syndicatableEntryTypeNames } from "./scope.js";
 
 // Recent-items window. Generous enough for a reader's "what's new" without
 // turning the feed into a full archive (that's the sitemap's job).
@@ -22,7 +22,8 @@ declare module "plumix" {
   interface FilterRegistry {
     /**
      * Adjust a feed's item list before serialization — add, drop, or re-order.
-     * Receives the {@link FeedScope} the items were collected for.
+     * Receives the {@link FeedScope} naming the archive the items were
+     * collected for.
      */
     "feed:items": (
       items: readonly FeedItem[],
@@ -31,65 +32,38 @@ declare module "plumix" {
   }
 }
 
-// The query a scope narrows, or `null` where the scope can't yield a feed
-// (unknown type or archive, a later page of a listing) so the caller 404s.
-// Synchronous: a slug a scope names is resolved when the query is compiled,
-// not here.
-function feedQuery(
-  ctx: AppContext,
-  scope: FeedScope,
-  seed: EntryQuery,
-): EntryQuery | null {
-  switch (scope.kind) {
-    case "site":
-      return seed;
-    case "type":
-      return isSyndicatableEntryType(ctx.plugins.entryTypes.get(scope.type))
-        ? seed.ofTypes(scope.type)
-        : null;
-    case "author":
-      return seed.byAuthor(scope.slug);
-    case "date":
-      return seed.inDateRange(scope.year, scope.month, scope.day);
-    case "term":
-      return seed.inTerm(scope.taxonomy, scope.path);
-    case "custom": {
-      // A plugin archive's feed is entirely plugin-defined; its scope narrows
-      // the seeded query (or answers null → 404).
-      const archive = ctx.plugins.archiveTypes.get(scope.name);
-      if (archive === undefined || !isSyndicatable(archive)) return null;
-      const listing = listingUnder(new URL(ctx.request.url).pathname);
-      if (isLaterPage(archiveRoutes(archive), listing)) return null;
-      return archive.feed.scope(seed, scope.params);
-    }
-  }
-}
-
-// The WHERE a feed scope selects by, or `null` → 404. Both halves arrive
-// parenthesized, so joining them cannot regroup either.
+// The WHERE the archive's query selects by, or `null` → 404. The public-entries
+// rule is ANDed on again whether or not the query carries it, as core's listing
+// reader does, so an archive whose `entries` built a query from scratch rather
+// than narrowing the one it was handed still cannot syndicate a draft. The
+// types no feed may carry are narrowed off here rather than there: core's rule
+// leaves an access-policied type in, and a feed has no reader to check it for.
 async function feedWhere(
   ctx: AppContext,
-  scope: FeedScope,
+  target: ArchiveAtPath,
 ): Promise<SQL | null> {
-  const guard = feedGuard(ctx.plugins);
+  const guard = publicEntryRows(ctx.plugins);
   if (guard === null) return null;
-  const query = feedQuery(ctx, scope, entryQuery().where(guard));
-  if (query === null) return null;
-  const narrowed = await compileEntryQuery(ctx, query);
+  const narrowed = await compileEntryQuery(
+    ctx,
+    target.entries.ofTypes(...syndicatableEntryTypeNames(ctx.plugins)),
+  );
   if (narrowed === null) return null;
   return sql`${guard} and ${narrowed}`;
 }
 
 /**
- * Recent published, public-type entries for a feed scope, newest first, run
- * through `feed:items`. Returns null for an unknown scope (non-public type,
- * missing term) so the route can 404.
+ * An archive's most recent entries, newest first whatever order the archive
+ * declared — that is what a subscriber's reader assumes — run through
+ * `feed:items`. Returns null where the archive's query names something no
+ * entry answers to (a missing term or author, an impossible date) so the
+ * route can 404.
  */
 export async function collectFeedItems(
   ctx: AppContext,
-  scope: FeedScope,
+  target: ArchiveAtPath,
 ): Promise<readonly FeedItem[] | null> {
-  const where = await feedWhere(ctx, scope);
+  const where = await feedWhere(ctx, target);
   if (where === null) return null;
 
   const rows = await ctx.db
@@ -106,7 +80,7 @@ export async function collectFeedItems(
     .from(entries)
     .leftJoin(users, eq(entries.authorId, users.id))
     .where(where)
-    .orderBy(desc(entries.publishedAt))
+    .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(FEED_LIMIT);
 
   const paths = await buildEntryPermalinks(ctx, rows);
@@ -127,5 +101,6 @@ export async function collectFeedItems(
       author: row.authorName ?? undefined,
     });
   }
+  const scope: FeedScope = { archive: target.archive, params: target.params };
   return ctx.hooks.applyFilter("feed:items", items, scope);
 }

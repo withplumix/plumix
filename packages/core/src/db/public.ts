@@ -36,6 +36,10 @@ export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
 // a query already restricted to what it may show and the plugin has no way to
 // widen it (#2487).
 export { compileEntryQuery, entryQuery } from "../entries/query.js";
+// What every archive's query is born holding, for a surface that reads an
+// archive's entries outside core's listing reader and has to apply the same
+// rule when it compiles one (ADR 0008).
+export { publicEntryRows } from "../entries/visibility.js";
 export type {
   EntryOrderColumn,
   EntryOrderDirection,

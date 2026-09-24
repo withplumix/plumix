@@ -11,9 +11,10 @@ import {
 } from "@plumix/runtime-cloudflare";
 
 // Plumix consumer wiring only the feeds plugin and the blog it syndicates —
-// the smallest config that has every feed scope in it: the site, the `post`
-// type, the `category` and `tag` taxonomies, an author and a date period.
-// Boot it with `pnpm dev` and read `/feed`, `/post/feed`, `/category/x/feed`,
+// the smallest config with a feed beside most kinds of archive: the front
+// page, the `category` and `tag` taxonomies, an author and a date period. The
+// blog's `post` type has no archive page, so it has no feed of its own.
+// Boot it with `pnpm dev` and read `/feed`, `/category/x/feed`,
 // `/authors/x/feed`, `/2026/07/feed` and the `/atom` variant of each.
 
 const deployOrigin = cloudflareDeployOrigin({

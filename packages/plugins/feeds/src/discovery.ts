@@ -1,102 +1,28 @@
-import type {
-  CustomArchiveData,
-  DocumentLink,
-  DocumentManifest,
-  TemplateData,
-} from "plumix";
+import type { DocumentLink, DocumentManifest, TemplateData } from "plumix";
 import type { AppContext, ResolvedRoute } from "plumix/plugin";
-import { entryQuery } from "plumix/db";
-import {
-  exposesHierarchicalUrls,
-  FRAMEWORK_PAGINATION_SUFFIX,
-} from "plumix/plugin";
+import { FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
-import { archiveFeedAt, feedUnder, isSyndicatable } from "./routes.js";
-import { feedGuard, isSyndicatableEntryType } from "./scope.js";
+import { feedAt, feedUnder } from "./routes.js";
 
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
- * when it has none. Discriminates on the payload's own `kind` — a plugin
- * archive's shape is arbitrary, so a field-presence check would read one
- * plugin's `year` or `author` as core's subject.
+ * when it has none: the feed of the archive that owns the page, as core's
+ * archive lookup answers for the page's URL. A later page advertises the feed
+ * of the route it paginates. A single entry and the search page belong to no
+ * archive, so they advertise nothing — and neither does an error page, which
+ * can sit at an archive's URL without being its page.
  */
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
-  switch (data.kind) {
-    // A single entry advertises the site feed rather than its type's: a reader
-    // subscribing from a post wants "everything new", which is the convention
-    // (WordPress et al.).
-    case "entry":
-    case "frontPage":
-      return withBasePath("/feed", ctx.basePath);
-    case "archive":
-      return isSyndicatableEntryType(
-        ctx.plugins.entryTypes.get(data.contentType),
-      )
-        ? withBasePath(`/${data.contentType}/feed`, ctx.basePath)
-        : null;
-    case "taxonomy": {
-      const taxonomy = ctx.plugins.termTaxonomies.get(data.taxonomy);
-      if (!taxonomy?.isPublic) return null;
-      // `term.url` is this archive's own URL, ancestors and base prefix
-      // included. Its feed hangs off it only where that URL is the one the
-      // term route resolves back through: the flat form for a top-level term,
-      // the nested form where the taxonomy exposes hierarchical URLs. The
-      // taxonomy loop in routes.ts claims exactly that set.
-      if (data.term.url === null) return null;
-      if (data.term.parentId !== null && !exposesHierarchicalUrls(taxonomy)) {
-        return null;
-      }
-      return `${data.term.url}/feed`;
-    }
-    case "author":
-      return withBasePath(`/authors/${data.author.slug}/feed`, ctx.basePath);
-    case "date": {
-      const parts = [String(data.year)];
-      if (data.month !== null) parts.push(String(data.month).padStart(2, "0"));
-      if (data.day !== null) parts.push(String(data.day).padStart(2, "0"));
-      return withBasePath(`/${parts.join("/")}/feed`, ctx.basePath);
-    }
-    case "custom":
-      return archiveFeedBase(data, ctx);
-    // A search page is thin and an error page is not content.
-    case "search":
-    case "error":
-      return null;
-  }
-}
-
-/**
- * A plugin archive's feed, read off the route the page matched rather than
- * its payload, whose shape is the plugin's own. A later page advertises the
- * feed of the route it paginates. Not advertised: a path another feed claimed
- * first, or params the archive's `scope` answers `null` for. The scope is
- * asked but its query is not compiled — that would cost a lookup on every
- * archive page — so a narrowing that fails only at compile time is advertised
- * and its feed 404s.
- */
-function archiveFeedBase(
-  data: CustomArchiveData,
-  ctx: AppContext,
-): string | null {
-  const archive = ctx.plugins.archiveTypes.get(data.name);
-  const route = ctx.resolvedRoute;
-  if (archive === undefined || !isSyndicatable(archive) || route === null) {
-    return null;
-  }
-
+  if (data.kind === "error") return null;
   const pathname = new URL(ctx.request.url).pathname;
-  const feedPath = feedUnder(listingPath(route, pathname));
-  const owner = archiveFeedAt(ctx.plugins, feedPath);
-  if (owner?.archive !== archive.name) return null;
-  const guard = feedGuard(ctx.plugins);
-  if (
-    guard === null ||
-    archive.feed.scope(entryQuery().where(guard), owner.params) === null
-  ) {
-    return null;
-  }
-  return withBasePath(feedPath, ctx.basePath);
+  const route = ctx.resolvedRoute;
+  const feedPath = feedUnder(
+    route === null ? pathname : listingPath(route, pathname),
+  );
+  return feedAt(ctx.plugins, feedPath) === null
+    ? null
+    : withBasePath(feedPath, ctx.basePath);
 }
 
 const SUFFIX_SEGMENTS = FRAMEWORK_PAGINATION_SUFFIX.split("/").length - 1;
