@@ -3,26 +3,28 @@ import type { AppContext, ResolvedRoute } from "plumix/plugin";
 import { FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
-import { feedAt, feedUnder } from "./routes.js";
+import { feedUnder, servesFeed } from "./routes.js";
 
 /**
  * The path of the RSS feed a page advertises, base prefix included, or null
- * when it has none: the feed of the archive that owns the page, as core's
- * archive lookup answers for the page's URL. A later page advertises the feed
+ * when it has none: the feed of the archive that owns the page, as the
+ * dispatcher resolved it. A later page advertises the feed
  * of the route it paginates. A single entry and the search page belong to no
  * archive, so they advertise nothing — and neither does an error page, which
  * can sit at an archive's URL without being its page.
  */
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
-  if (data.kind === "error") return null;
-  const pathname = new URL(ctx.request.url).pathname;
   const route = ctx.resolvedRoute;
-  const feedPath = feedUnder(
-    route === null ? pathname : listingPath(route, pathname),
-  );
-  return feedAt(ctx.plugins, feedPath) === null
-    ? null
-    : withBasePath(feedPath, ctx.basePath);
+  if (data.kind === "error" || route === null) return null;
+  // The route the dispatcher resolved already names the archive, so the page
+  // is not matched against the route table a second time.
+  const archive = route.intent;
+  if (archive.kind === "single" || archive.kind === "search") return null;
+  const pathname = new URL(ctx.request.url).pathname;
+  const feedPath = feedUnder(listingPath(route, pathname));
+  return servesFeed(ctx.plugins, archive, feedPath)
+    ? withBasePath(feedPath, ctx.basePath)
+    : null;
 }
 
 const SUFFIX_SEGMENTS = FRAMEWORK_PAGINATION_SUFFIX.split("/").length - 1;

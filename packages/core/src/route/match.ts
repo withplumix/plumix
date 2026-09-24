@@ -1,17 +1,18 @@
 import type { RouteIntent, RouteRule } from "./intent.js";
 
 /**
- * The content route a public request matched: the pattern as it was declared
- * and the params it captured from the path.
+ * The content route a public request matched: the pattern as it was declared,
+ * the params it captured from the path, and what the route is — so a reader
+ * of the request (a head filter naming the page's archive) has the router's
+ * answer rather than matching the path again.
  */
 export interface ResolvedRoute {
   readonly pattern: string;
   readonly params: Record<string, string>;
-}
-
-export interface RouteMatch extends ResolvedRoute {
   readonly intent: RouteIntent;
 }
+
+export type RouteMatch = ResolvedRoute;
 
 export function matchRoute(
   url: URL,

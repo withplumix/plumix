@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { RegisteredPublicRoute } from "../plugin/registry.js";
-import { compilePublicRoutes, matchPublicRoute } from "./public-routes.js";
+import { createPluginRegistry } from "../plugin/registry.js";
+import {
+  compilePublicRoutes,
+  matchPublicRoute,
+  publicRouteAt,
+} from "./public-routes.js";
 
 function route(path: string, pluginId = "feeds"): RegisteredPublicRoute {
   return { pluginId, path, handler: () => new Response("ok") };
@@ -68,5 +73,18 @@ describe("matchPublicRoute", () => {
       route("/:anything/feed", "seo"),
     ]);
     expect(matchPublicRoute(table, "/post/feed")?.route.pluginId).toBe("feeds");
+  });
+});
+
+describe("publicRouteAt", () => {
+  test("answers from the registry's routes as the dispatcher's table does", () => {
+    const plugins = createPluginRegistry();
+    plugins.publicRoutes.push(
+      route("/:section/feed", "feeds"),
+      route("/about/feed", "seo"),
+    );
+    expect(publicRouteAt(plugins, "/about/feed")?.route.pluginId).toBe("seo");
+    expect(publicRouteAt(plugins, "/news/feed")?.route.pluginId).toBe("feeds");
+    expect(publicRouteAt(plugins, "/news")).toBeNull();
   });
 });

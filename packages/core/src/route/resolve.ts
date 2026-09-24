@@ -85,7 +85,7 @@ export async function resolvePublicRoute(
   match: RouteMatch,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  ctx.resolvedRoute = { pattern: match.pattern, params: match.params };
+  ctx.resolvedRoute = match;
   switch (match.intent.kind) {
     case "single":
       return resolveSingle(ctx, match.intent, match.params, renderEnv);

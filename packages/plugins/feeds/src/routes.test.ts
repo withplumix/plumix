@@ -1310,6 +1310,33 @@ describe("archive-type feeds", () => {
     ]);
   });
 
+  test("a feed path another plugin's route answers is not advertised", async () => {
+    // Core's dispatcher answers a literal public route ahead of any pattern,
+    // so `/about/feed` is the other plugin's response, not the section's feed.
+    const sections = definePlugin("sections", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("section", {
+        routes: ["/:section"],
+        title: "Section",
+        entries: (q) => q,
+        feed: true,
+      });
+    });
+    const other = definePlugin("other", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/about/feed",
+        handler: () => new Response("not a feed"),
+      });
+    });
+    const h = await harness(sections, other);
+    expect(await (await h.fetch("/about/feed")).text()).toBe("not a feed");
+    expect(await advertised(h, "/about")).toEqual([]);
+    expect(await advertised(h, "/news")).toEqual([
+      "https://cms.example/news/feed",
+      "https://cms.example/news/feed/atom",
+    ]);
+  });
+
   test("an archive whose own routes both answer its feed URL still advertises it", async () => {
     const docs = definePlugin("docs", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });

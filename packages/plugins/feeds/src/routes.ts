@@ -1,5 +1,6 @@
 import type {
   ArchiveAtPath,
+  ArchiveBaseRoute,
   EntryArchive,
   PluginRegistry,
 } from "plumix/plugin";
@@ -8,6 +9,7 @@ import {
   archiveAtPath,
   archiveBaseRoutes,
   FRAMEWORK_PAGINATION_SUFFIX,
+  publicRouteAt,
 } from "plumix/plugin";
 
 import { isSyndicatableEntryType } from "./scope.js";
@@ -77,12 +79,19 @@ export interface FeedRoute {
  * no page has no feed.
  */
 export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
+  return feedRoutesOver(plugins, archiveBaseRoutes(plugins));
+}
+
+function feedRoutesOver(
+  plugins: PluginRegistry,
+  baseRoutes: readonly ArchiveBaseRoute[],
+): readonly FeedRoute[] {
   const routes: FeedRoute[] = [];
   // Two archives can share a route. The router answers the first; keeping the
   // first claim does the same, where handing both to `registerPublicRoute`
   // would fail the boot with an error naming this plugin as its own rival.
   const claimed = new Set<string>();
-  for (const { archive, pattern } of archiveBaseRoutes(plugins)) {
+  for (const { archive, pattern } of baseRoutes) {
     if (!hasFeed(plugins, archive)) continue;
     const path = feedUnder(pattern);
     if (claimed.has(path)) continue;
@@ -98,18 +107,9 @@ export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
   return routes;
 }
 
-// What core's public-route table reads as a pattern rather than a literal
-// path. It matches a literal ahead of every pattern, so which feed route
-// answers a path has to be asked the same way.
-const PATTERN_SYNTAX = /[:*?+(){}[\]]/;
-
 interface CompiledFeedRoutes {
-  /** The archive each literal feed path belongs to. */
-  readonly literals: ReadonlyMap<string, string>;
-  readonly patterns: readonly {
-    readonly pattern: URLPattern;
-    readonly archive: string;
-  }[];
+  /** The archive each feed path this plugin registered belongs to, RSS and Atom. */
+  readonly owners: ReadonlyMap<string, string>;
   // The `/page/:page` form of each archive route, which a listing path can
   // match without being a listing of its own.
   readonly laterPages: readonly {
@@ -125,20 +125,18 @@ const compiled = new WeakMap<PluginRegistry, CompiledFeedRoutes>();
 function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
   let routes = compiled.get(plugins);
   if (routes === undefined) {
-    const feeds = feedRoutes(plugins);
+    const baseRoutes = archiveBaseRoutes(plugins);
     routes = {
-      literals: new Map(
-        feeds
-          .filter((route) => !PATTERN_SYNTAX.test(route.path))
-          .map((route) => [route.path, archiveKey(route.archive)]),
+      owners: new Map(
+        feedRoutesOver(plugins, baseRoutes).flatMap((route) => {
+          const key = archiveKey(route.archive);
+          return [
+            [route.path, key],
+            [`${route.path}/atom`, key],
+          ] as const;
+        }),
       ),
-      patterns: feeds
-        .filter((route) => PATTERN_SYNTAX.test(route.path))
-        .map((route) => ({
-          pattern: new URLPattern({ pathname: route.path }),
-          archive: archiveKey(route.archive),
-        })),
-      laterPages: archiveBaseRoutes(plugins).map((route) => ({
+      laterPages: baseRoutes.map((route) => ({
         pattern: new URLPattern({
           pathname: `${route.pattern.replace(/\/$/, "")}${FRAMEWORK_PAGINATION_SUFFIX}`,
         }),
@@ -151,39 +149,53 @@ function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
 }
 
 /**
+ * Whether a concrete RSS or Atom path serves this archive's feed. Not where
+ * the archive has no feed, where the site routes no public type, where the
+ * path's listing is a later page of the archive, or where the public route
+ * core's dispatcher answers the path with is not this archive's feed — that
+ * route's handler is the one that runs, and it cannot serve one archive's
+ * entries under another's caching, or be another plugin's response.
+ *
+ * Runs no query, so a page can ask it to decide what to advertise.
+ */
+export function servesFeed(
+  plugins: PluginRegistry,
+  archive: EntryArchive,
+  feedPath: string,
+): boolean {
+  if (publicEntryRows(plugins) === null || !hasFeed(plugins, archive)) {
+    return false;
+  }
+  const key = archiveKey(archive);
+  const listing = listingOf(feedPath);
+  const { owners, laterPages } = compiledFor(plugins);
+  const isLaterPage = laterPages.some(
+    (route) =>
+      route.archive === key && route.pattern.test({ pathname: listing }),
+  );
+  if (isLaterPage) return false;
+  const answered = publicRouteAt(plugins, feedPath);
+  return answered !== null && owners.get(answered.route.path) === key;
+}
+
+// The listing a concrete RSS or Atom path hangs off.
+function listingOf(feedPath: string): string {
+  return feedPath.replace(/\/feed(\/atom)?$/, "") || "/";
+}
+
+/**
  * The archive whose feed a concrete RSS or Atom path serves, as core's archive
- * lookup answers for the listing the feed hangs off. `null` — a 404, and
- * nothing to advertise — where that listing is no archive with a feed, where
- * it is a later page of one, where the site routes no public type, and where
- * the feed route core's dispatcher would answer the path with belongs to
- * another archive than the listing does — that route's handler is the one
- * that runs, and it cannot serve a feed of different entries under its own
- * caching.
+ * lookup answers for the listing the feed hangs off, or `null` — a 404 — where
+ * that archive does not serve a feed there ({@link servesFeed}).
  *
  * Building the answer runs no query: a term or author the archive's query
- * names is looked up when the feed is served, so a page can ask this to decide
- * what to advertise without paying for it.
+ * names is looked up when the feed is served.
  */
 export function feedAt(
   plugins: PluginRegistry,
   feedPath: string,
 ): ArchiveAtPath | null {
-  if (publicEntryRows(plugins) === null) return null;
-  const rssPath = feedPath.replace(/\/feed\/atom$/, "/feed");
-  const listing = rssPath.replace(/\/feed$/, "") || "/";
-  const found = archiveAtPath(plugins, listing);
-  if (found === null || !hasFeed(plugins, found.archive)) return null;
-
-  const key = archiveKey(found.archive);
-  const { literals, patterns, laterPages } = compiledFor(plugins);
-  const isLaterPage = laterPages.some(
-    (route) =>
-      route.archive === key && route.pattern.test({ pathname: listing }),
-  );
-  if (isLaterPage) return null;
-  const owner =
-    literals.get(rssPath) ??
-    patterns.find(({ pattern }) => pattern.test({ pathname: rssPath }))
-      ?.archive;
-  return owner === key ? found : null;
+  const found = archiveAtPath(plugins, listingOf(feedPath));
+  if (found === null) return null;
+  return servesFeed(plugins, found.archive, feedPath) ? found : null;
 }

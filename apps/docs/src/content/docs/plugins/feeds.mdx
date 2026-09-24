@@ -131,7 +131,7 @@ The plugin subscribes to `render:document` and appends the page's own feed, both
 />
 ```
 
-A page advertises the feed of the archive that owns it. Core answers which archive that is, for the page's URL, from the same table the router matched — so the head points at exactly the feed that serves those entries. A later page advertises the feed of the listing it paginates: `/category/news/page/2` points a reader at `/category/news/feed`.
+A page advertises the feed of the archive that owns it — the archive the router resolved the page to — and only where the route that answers the feed URL is that archive's feed, so the head points at exactly the feed that serves those entries. A later page advertises the feed of the listing it paginates: `/category/news/page/2` points a reader at `/category/news/feed`.
 
 A single entry, the search page and an error page belong to no archive, so they advertise nothing.
 
