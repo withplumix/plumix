@@ -231,6 +231,31 @@ describe("feed routes", () => {
     (await h.fetch("/note/feed")).assertStatus(404);
   });
 
+  test("a feed 404s where every public type is access-policied, rather than serving an empty one", async () => {
+    const members = definePlugin("members", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: "posts",
+        access: { default: membersOnlyPolicy },
+      });
+    });
+    const h = await harness(members);
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "members-only",
+      title: "Members Only",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+
+    (await h.fetch("/feed")).assertStatus(404);
+    (await h.fetch("/feed/atom")).assertStatus(404);
+    (await h.fetch("/posts/feed")).assertStatus(404);
+  });
+
   test("an unknown entry type 404s", async () => {
     const h = await harness(blogPlugin);
     const res = await h.fetch("/widget/feed");
