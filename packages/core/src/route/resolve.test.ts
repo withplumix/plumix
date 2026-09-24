@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import type { DispatcherHarness } from "../test/dispatcher.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { eq } from "../db/index.js";
@@ -9,13 +10,16 @@ import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { createTracedContext } from "../test/traced-context.js";
 import { defineTheme } from "../theme.js";
+import { matchRoute } from "./match.js";
 import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
 import {
   fallback,
   forEntryType,
   NAMED_TEMPLATE_META_KEY,
 } from "./render/template-builders.js";
+import { resolvePublicRoute } from "./resolve.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -1586,6 +1590,178 @@ describe("resolvePublicRoute — front page", () => {
     const body = await response.text();
     expect(body).toContain("A Post");
     expect(body).not.toContain("A Page");
+  });
+});
+
+// Every built-in archive lists its own entry query (ADR 0008). Each seed here
+// is one the hand-written listings and the feeds used to disagree on.
+const archiveQueriesPlugin = definePlugin("archive-queries", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: true,
+  });
+  ctx.registerEntryType("page", {
+    label: "Pages",
+    isPublic: true,
+    isHierarchical: true,
+    hasArchive: "all-pages",
+  });
+  ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+  ctx.registerTermTaxonomy("topic", {
+    label: "Topics",
+    entryTypes: ["post", "secret"],
+  });
+  ctx.registerTermTaxonomy("tag", { label: "Tags" });
+});
+
+describe("resolvePublicRoute — each built-in archive lists its entry query", () => {
+  async function seedArchive() {
+    const h = await createDispatcherHarness({
+      plugins: [archiveQueriesPlugin],
+    });
+    const author = await h.factory.author.create({
+      name: "Jane",
+      slug: "jane",
+    });
+    const at = new Date("2026-04-10T12:00:00Z");
+    const seed = (type: string, slug: string, publishedAt: Date | null = at) =>
+      h.factory.entry.create({
+        type,
+        slug,
+        title: `Title ${slug}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt,
+      });
+    const post = await seed("post", "a-post");
+    const page = await seed("page", "a-page");
+    const secret = await seed("secret", "a-secret");
+    const undated = await seed("post", "undated-post", null);
+    const undatedPage = await seed("page", "undated-page", null);
+    const topic = await h.factory.term.create({ taxonomy: "topic", slug: "t" });
+    const tag = await h.factory.term.create({ taxonomy: "tag", slug: "g" });
+    for (const entry of [post, page, secret, undated, undatedPage]) {
+      await h.factory.entryTerm.create({ entryId: entry.id, termId: topic.id });
+      await h.factory.entryTerm.create({ entryId: entry.id, termId: tag.id });
+    }
+    return h;
+  }
+
+  async function listed(h: DispatcherHarness, path: string): Promise<string[]> {
+    const response = await h.dispatch(
+      new Request(`https://cms.example${path}`),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    return [
+      "a-post",
+      "a-page",
+      "a-secret",
+      "undated-post",
+      "undated-page",
+    ].filter((slug) => body.includes(`Title ${slug}`));
+  }
+
+  test.each([
+    ["the front page", "/"],
+    ["an author archive", "/authors/jane"],
+    ["a date archive", "/2026"],
+    ["a type archive", "/post"],
+  ])("%s lists non-hierarchical public entries", async (_kind, path) => {
+    const h = await seedArchive();
+    expect(await listed(h, path)).toEqual(["a-post"]);
+  });
+
+  test("a type archive for a hierarchical type still lists its entries", async () => {
+    const h = await seedArchive();
+    expect(await listed(h, "/all-pages")).toEqual(["a-page"]);
+  });
+
+  test("a term page lists its taxonomy's public types, never a non-public one", async () => {
+    const h = await seedArchive();
+    expect(await listed(h, "/topic/t")).toEqual(["a-post"]);
+  });
+
+  test("a term page of a taxonomy declaring no types lists every public type", async () => {
+    const h = await seedArchive();
+    expect(await listed(h, "/tag/g")).toEqual(["a-post", "a-page"]);
+  });
+
+  test("a child term of a taxonomy with flat URLs lists at its slug alone", async () => {
+    const flat = definePlugin("flat", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("section", {
+        label: "Sections",
+        entryTypes: ["post"],
+        isHierarchical: true,
+        rewrite: { isHierarchical: false },
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [flat] });
+    const author = await h.seedUser("admin");
+    const parent = await h.factory.term.create({
+      taxonomy: "section",
+      slug: "outer",
+    });
+    const child = await h.factory.term.create({
+      taxonomy: "section",
+      slug: "inner",
+      parentId: parent.id,
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "a-post",
+      title: "Title a-post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-10T12:00:00Z"),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: child.id });
+    expect(await listed(h, "/section/inner")).toEqual(["a-post"]);
+  });
+
+  test.each([
+    ["a term page", "/topic/t", '"terms"'],
+    ["an author page", "/authors/jane", '"users"'],
+  ])("%s looks its subject up once", async (_kind, path, table) => {
+    const traced = await createTracedContext({
+      plugins: [archiveQueriesPlugin],
+    });
+    const h = traced.harness;
+    const author = await h.factory.author.create({
+      name: "Jane",
+      slug: "jane",
+    });
+    const topic = await h.factory.term.create({ taxonomy: "topic", slug: "t" });
+    const post = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date("2026-04-10T12:00:00Z"),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: topic.id });
+    const match = matchRoute(
+      new URL(`https://cms.example${path}`),
+      h.app.routeMap,
+    );
+    if (match === null) throw new Error(`no route for ${path}`);
+
+    const response = await traced.run(() =>
+      resolvePublicRoute(traced.ctx, match, h.app.renderEnv),
+    );
+
+    expect(response.status).toBe(200);
+    const lookups = traced
+      .dbSpans()
+      .map((span) => span.attributes["db.sql"])
+      .filter((sql) => typeof sql === "string")
+      .filter(
+        (sql) => sql.includes(`from ${table}`) && sql.includes('"slug" = ?'),
+      );
+    expect(lookups).toHaveLength(1);
   });
 });
 

@@ -2,7 +2,6 @@ import { expandShortcodes } from "@plumix/blocks";
 
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { Term } from "../db/schema/terms.js";
 import type { JsonObject } from "../json.js";
 import type {
   ArchiveEntries,
@@ -25,25 +24,20 @@ import { withBasePath } from "../base-path.js";
 import { accumulateEmbeddedTags } from "../cdn/embedded-tags.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { terms } from "../db/schema/terms.js";
-import { users } from "../db/schema/users.js";
 import { canEditEntry } from "../entries/editability.js";
 import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { entrySearchCondition } from "../search/conditions.js";
+import { archiveEntries, termPathParam } from "./archive-entries.js";
 import { resolveEditMode } from "./edit-mode.js";
-import { findTermByPath } from "./path-chain.js";
+import { findAuthorBySlug, findTermAt } from "./path-chain.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import {
   buildResolvedEntries,
   resolveAuthorRow,
 } from "./render/build-resolved-entries.js";
-import {
-  listEntryPage,
-  listingCdnTags,
-  publicEntriesQuery,
-} from "./render/entry-listing.js";
+import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
 import {
   archiveData,
   authorData,
@@ -198,12 +192,14 @@ async function resolveTaxonomy(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
-  if (!term) return notFound("public-term-not-found");
+  const path = termPathParam(params);
+  if (path === null) return notFound("public-term-not-found");
+  const term = await findTermAt(ctx, intent.taxonomy, path);
+  if (term === null) return notFound("public-term-not-found");
 
   ctx.resolvedEntity = { kind: "term", id: term.id };
 
-  const page = await termData(ctx, term, parsePageParam(params.page));
+  const page = await termData(ctx, term, path, parsePageParam(params.page));
   if (page === null) return notFound("public-term-page-out-of-range");
   return renderListing(ctx, renderEnv, page, "public-taxonomy-no-template");
 }
@@ -213,14 +209,8 @@ async function resolveAuthor(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const slug = params.slug;
-  if (typeof slug !== "string" || slug === "") {
-    return notFound("public-author-not-found");
-  }
-  const author = await ctx.db.query.users.findFirst({
-    where: eq(users.slug, slug),
-  });
-  if (!author) return notFound("public-author-not-found");
+  const author = await findAuthorBySlug(ctx, params.slug ?? "");
+  if (author === null) return notFound("public-author-not-found");
 
   ctx.resolvedEntity = { kind: "author", id: author.id };
 
@@ -306,7 +296,11 @@ async function resolveListingArchive(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const query = archive.entries(publicEntriesQuery(ctx.plugins), params);
+  const query = archiveEntries(
+    ctx.plugins,
+    { kind: "custom", name: archive.name },
+    params,
+  );
   if (query === null) return notFound("public-custom-archive-no-entries");
 
   const page = parsePageParam(params.page);
@@ -513,22 +507,4 @@ function withLiveAccessChoice(
   return choice === undefined
     ? drafted
     : { ...drafted, [ACCESS_POLICY_META_KEY]: choice };
-}
-
-async function findTermForTaxonomy(
-  ctx: AppContext,
-  taxonomy: string,
-  params: Record<string, string>,
-): Promise<Term | null> {
-  const path = params.path;
-  if (typeof path === "string" && path !== "") {
-    return findTermByPath(ctx, taxonomy, path.split("/"));
-  }
-  const slug = params.term;
-  if (typeof slug !== "string" || slug === "") return null;
-  return (
-    (await ctx.db.query.terms.findFirst({
-      where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, slug)),
-    })) ?? null
-  );
 }

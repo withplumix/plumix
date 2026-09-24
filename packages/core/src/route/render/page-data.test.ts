@@ -245,6 +245,92 @@ describe("resolveListingPage", () => {
     ).toEqual(["avatarUrl", "id", "images", "name", "slug"]);
   });
 
+  // Loaded by id, so its listing's `inTerm` / `byAuthor` must not look the
+  // subject up again by the slug the query names it with.
+  test.each([
+    ["term", '"terms"'],
+    ["author", '"users"'],
+  ] as const)(
+    "the %s page, by id, loads its subject once",
+    async (kind, table) => {
+      const traced = await createTracedContext({ plugins: [blog] });
+      const author = await traced.harness.factory.author.create({ slug: "jo" });
+      const term = await traced.harness.factory.term.create({
+        taxonomy: "category",
+        slug: "design",
+      });
+      const entry = await traced.harness.factory.entry.create({
+        type: "post",
+        status: "published",
+        publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+        authorId: author.id,
+      });
+      await traced.harness.factory.entryTerm.create({
+        entryId: entry.id,
+        termId: term.id,
+      });
+
+      const page = await traced.run(() =>
+        resolveListingPage(traced.ctx, {
+          kind,
+          id: kind === "term" ? term.id : author.id,
+        }),
+      );
+
+      expect(page?.data.pagination.total).toBe(1);
+      const reads = traced
+        .dbSpans()
+        .map((span) => span.attributes["db.sql"])
+        .filter((sql) => typeof sql === "string")
+        .filter((sql) => sql.includes(`from ${table}`));
+      expect(reads).toHaveLength(1);
+    },
+  );
+
+  test("a nested term's page by id loads the term once", async () => {
+    const regions = definePlugin("regions", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        entryTypes: ["post"],
+        isHierarchical: true,
+      });
+    });
+    const traced = await createTracedContext({ plugins: [regions] });
+    const { factory } = traced.harness;
+    const author = await factory.author.create();
+    const europe = await factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+    });
+    const france = await factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      parentId: europe.id,
+    });
+    const entry = await factory.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+      authorId: author.id,
+    });
+    await factory.entryTerm.create({ entryId: entry.id, termId: france.id });
+
+    const page = await traced.run(() =>
+      resolveListingPage(traced.ctx, { kind: "term", id: france.id }),
+    );
+
+    expect(page?.data.pagination.total).toBe(1);
+    const bySlug = traced
+      .dbSpans()
+      .map((span) => span.attributes["db.sql"])
+      .filter((sql) => typeof sql === "string")
+      .filter(
+        (sql) => sql.includes('from "terms"') && sql.includes('"slug" = ?'),
+      );
+    expect(bySlug).toEqual([]);
+  });
+
   test("has no author page for an id no user carries", async () => {
     const h = await harness();
 

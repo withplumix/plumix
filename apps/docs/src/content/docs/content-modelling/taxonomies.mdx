@@ -62,7 +62,7 @@ An entry type and a taxonomy each name the other, and the two declarations do di
 
 `termTaxonomies` on the entry type is what puts the pickers on the editor. The editor intersects that list with the taxonomies the current user holds `term:<taxonomy>:assign` for, so a contributor who cannot assign diets sees only the Cuisines picker rather than one that fails on save.
 
-`entryTypes` on the taxonomy decides what a term archive contains and what a term edit purges. The archive at `/cuisine/italian/sicilian` lists entries whose type appears in that array; a taxonomy registered with no `entryTypes` yields an empty archive rather than a page of everything. The same array drives cache purging, so editing the Sicilian term purges the stored pages of every entry type the taxonomy classifies.
+`entryTypes` on the taxonomy decides what a term archive contains and what a term edit purges. The archive at `/cuisine/italian/sicilian` lists entries whose type appears in that array and is public. A taxonomy registered with no `entryTypes` lists the entries of every public type carrying the term. The same set of types drives cache purging, so editing the Sicilian term purges the stored pages of every entry type the taxonomy classifies.
 
 Leave one side out and half the behaviour goes missing quietly. Declare both.
 
