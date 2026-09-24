@@ -44,9 +44,14 @@ async function feedWhere(
 ): Promise<SQL | null> {
   const guard = publicEntryRows(ctx.plugins);
   if (guard === null) return null;
+  const syndicatable = syndicatableEntryTypeNames(ctx.plugins);
+  // An empty narrowing compiles to `false`, which is a resolved condition and
+  // would serve an empty feed. Nothing to syndicate is a 404, as it is when
+  // core has no public rows at all.
+  if (syndicatable.length === 0) return null;
   const narrowed = await compileEntryQuery(
     ctx,
-    target.entries.ofTypes(...syndicatableEntryTypeNames(ctx.plugins)),
+    target.entries.ofTypes(...syndicatable),
   );
   if (narrowed === null) return null;
   return sql`${guard} and ${narrowed}`;
