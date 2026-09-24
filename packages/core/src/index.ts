@@ -241,6 +241,15 @@ export {
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
+// Which archive owns a URL and what its entry query is, and the routes every
+// such archive is listed at — so a package that shows an archive another way
+// (a feed) reads the same set of entries the page does (ADR 0008).
+export { archiveAtPath, archiveBaseRoutes } from "./route/archive-entries.js";
+export type {
+  ArchiveAtPath,
+  ArchiveBaseRoute,
+  EntryArchive,
+} from "./route/archive-entries.js";
 export {
   buildEntryPermalink,
   buildEntryPermalinks,

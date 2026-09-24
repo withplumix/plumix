@@ -71,9 +71,8 @@ export interface EntryPageRequest {
  * a query built from scratch rather than narrowed from the one it was handed
  * still cannot list a draft.
  *
- * The built-in archives still assemble their own predicate and page through
- * `paginatedEntries` directly; ADR 0008 moves them onto an entry query and
- * through here (#2550), leaving this the one listing reader.
+ * The one listing reader: core's built-in archives and every plugin archive
+ * with `entries` page through here (ADR 0008).
  */
 export async function listEntryPage(
   ctx: AppContext,

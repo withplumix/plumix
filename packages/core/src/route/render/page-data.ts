@@ -4,34 +4,36 @@ import { count } from "drizzle-orm";
 import type { AppContext } from "../../context/app.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
+import type { EntryQuery } from "../../entries/query.js";
+import type { EntryListing } from "./entry-listing.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
   DateArchiveData,
   FrontPageData,
-  Pagination,
   ResolvedAuthor,
-  ResolvedEntry,
   TaxonomyData,
 } from "./resolved-entry.js";
 import type { ResolvedNode } from "./rule-resolver.js";
-import { and, desc, eq, gte, inArray, isNotNull, lt } from "../../db/index.js";
+import { desc, eq } from "../../db/index.js";
 import { entries } from "../../db/schema/entries.js";
-import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { labelSourceText } from "../../i18n/label.js";
-import { listedEntryTypeNames } from "../../plugin/registry.js";
 import { resolveTermMeta } from "../../rpc/procedures/term/meta.js";
-import { archiveSlugForEntryType } from "../compile.js";
-import { dateRange } from "../date-range.js";
-import { paginate } from "../paginate.js";
-import { buildTermArchiveUrl } from "../permalink.js";
 import {
-  buildResolvedEntries,
-  resolveAuthorRow,
-  resolveTerm,
-} from "./build-resolved-entries.js";
+  authorEntries,
+  dateEntries,
+  entryTypeEntries,
+  frontPageEntries,
+  termEntries,
+} from "../archive-entries.js";
+import { archiveSlugForEntryType } from "../compile.js";
+import { paginate } from "../paginate.js";
+import { rememberAuthor, rememberTermSegments } from "../path-chain.js";
+import { buildTermArchiveUrl } from "../permalink.js";
+import { resolveAuthorRow, resolveTerm } from "./build-resolved-entries.js";
+import { listEntryPage } from "./entry-listing.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -73,33 +75,16 @@ export interface ResolvedListingPage {
   readonly title: string;
 }
 
-/**
- * What every listing page lists: published entries of the types the page is
- * about, plus whatever else that page narrows on. Null where the site has no
- * such type at all, which `paginatedEntries` answers with no round-trip.
- */
-function listingWhere(
-  types: readonly string[],
-  ...narrowed: readonly SQL[]
-): SQL | null | undefined {
-  if (types.length === 0) return null;
-  return and(
-    eq(entries.status, "published"),
-    isNotNull(entries.publishedAt),
-    inArray(entries.type, types),
-    ...narrowed,
-  );
-}
-
 export async function frontPageData(
   ctx: AppContext,
   page: number,
 ): Promise<ResolvedListingPage | null> {
-  // The latest-posts front feed excludes hierarchical types (pages) — they
-  // are standalone content, not blog entries. (A configurable front-page /
-  // posts-page model is the larger follow-up.)
-  const where = listingWhere(listedEntryTypeNames(ctx.plugins));
-  const listing = await listingFor(ctx, where, page, DEFAULT_ARCHIVE_PER_PAGE);
+  const listing = await listingFor(
+    ctx,
+    frontPageEntries(ctx.plugins),
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
+  );
   if (listing === null) return null;
 
   const data = await ctx.hooks.applyFilter("resolve:front-page:data", {
@@ -123,7 +108,7 @@ export async function archiveData(
   const registered = ctx.plugins.entryTypes.get(entryType);
   const listing = await listingFor(
     ctx,
-    listingWhere([entryType]),
+    entryTypeEntries(ctx.plugins, entryType),
     page,
     registered?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -146,27 +131,20 @@ export async function archiveData(
   };
 }
 
+/**
+ * `path` is the term's segments as its URL spells them, the ones its page was
+ * resolved from, so compiling the listing's `inTerm` replays that lookup.
+ */
 export async function termData(
   ctx: AppContext,
   term: Term,
+  path: readonly string[],
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-  // No attached entry types short-circuits — a taxonomy registered without any
-  // yields an empty archive.
-  const where = listingWhere(
-    taxonomy?.entryTypes ?? [],
-    inArray(
-      entries.id,
-      ctx.db
-        .select({ id: entryTerm.entryId })
-        .from(entryTerm)
-        .where(eq(entryTerm.termId, term.id)),
-    ),
-  );
   const listing = await listingFor(
     ctx,
-    where,
+    termEntries(ctx.plugins, term.taxonomy, path),
     page,
     taxonomy?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -204,13 +182,12 @@ export async function authorData(
   author: ResolvedAuthor,
   page: number,
 ): Promise<ResolvedListingPage | null> {
-  // Author archives list the same type set as the front page — a person's
-  // posts, not their standalone pages.
-  const where = listingWhere(
-    listedEntryTypeNames(ctx.plugins),
-    eq(entries.authorId, author.id),
+  const listing = await listingFor(
+    ctx,
+    authorEntries(ctx.plugins, author.slug),
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
   );
-  const listing = await listingFor(ctx, where, page, DEFAULT_ARCHIVE_PER_PAGE);
   if (listing === null) return null;
 
   const data = await ctx.hooks.applyFilter("resolve:author:data", {
@@ -238,16 +215,12 @@ export async function dateData(
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const { year, month, day } = target;
-  const range = dateRange(year, month, day);
-  if (range === null) return null;
-
-  // The same type set as the front page, in a published-at window.
-  const where = listingWhere(
-    listedEntryTypeNames(ctx.plugins),
-    gte(entries.publishedAt, range.start),
-    lt(entries.publishedAt, range.end),
+  const listing = await listingFor(
+    ctx,
+    dateEntries(ctx.plugins, year, month, day),
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
   );
-  const listing = await listingFor(ctx, where, page, DEFAULT_ARCHIVE_PER_PAGE);
   if (listing === null) return null;
 
   const data = await ctx.hooks.applyFilter("resolve:date:data", {
@@ -311,13 +284,15 @@ export async function resolveListingPage(
       if (!term) return null;
       const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
       if (!taxonomy?.isPublic) return null;
-      return termData(ctx, term, 1);
+      const path = await rememberTermSegments(ctx, term);
+      return termData(ctx, term, path, 1);
     }
     case "author": {
       const author = await ctx.db.query.users.findFirst({
         where: eq(users.id, target.id),
       });
       if (!author) return null;
+      await rememberAuthor(ctx, author);
       return authorData(ctx, await resolveAuthorRow(ctx, author), 1);
     }
     case "date":
@@ -339,41 +314,28 @@ function dateTitle(
   return `${String(year)}-${pad2(month)}-${pad2(day)}`;
 }
 
-interface ResolvedListing {
-  readonly entries: readonly ResolvedEntry[];
-  readonly pagination: Pagination;
-}
-
-// The `entries` + `pagination` half every listing payload shares. Null is the
-// out-of-range page each caller answers with its own 404 reason.
+// The `entries` + `pagination` half every listing payload shares. Null is a
+// page no archive answers — past the last page, or a date that does not exist
+// — which each caller answers with its own 404 reason.
 async function listingFor(
   ctx: AppContext,
-  where: SQL | null | undefined,
+  query: EntryQuery,
   page: number,
   perPage: number,
-): Promise<ResolvedListing | null> {
-  const result = await paginatedEntries(ctx, where, page, perPage);
-  if (result.outOfRange) return null;
-  return {
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage,
-      total: result.total,
-      pageCount: result.pageCount,
-    },
-  };
+): Promise<EntryListing | null> {
+  const listed = await listEntryPage(ctx, query, { page, perPage });
+  if (listed === null || listed.outOfRange) return null;
+  return { entries: listed.entries, pagination: listed.pagination };
 }
 
 /**
- * Shared paginated-entries query used by every listing resolver. Returns
- * `{ outOfRange: true }` so the caller can pick the 404 reason. `where === null`
- * short-circuits to an empty result with no DB round-trip — used by the
- * taxonomy resolver when a taxonomy is registered without any attached entry
- * types.
+ * The paginated-entries query under the listing reader and the search page.
+ * Returns `{ outOfRange: true }` so the caller can pick the 404 reason.
+ * `where === null` short-circuits to an empty result with no DB round-trip —
+ * a site routing no public type at all, or a search with nothing to match.
  *
- * `order` defaults to newest first, which is what every built-in listing is
- * read in; an entry query passes the order it carries.
+ * `order` defaults to newest first, which is what search is read in; an entry
+ * query passes the order it carries.
  */
 export async function paginatedEntries(
   ctx: AppContext,

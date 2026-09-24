@@ -4,9 +4,8 @@ import { and, asc, desc, eq, gte, inArray, lt, sql } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
-import { users } from "../db/schema/users.js";
 import { dateRange } from "../route/date-range.js";
-import { findTermByPath } from "../route/path-chain.js";
+import { findAuthorBySlug, findTermAt } from "../route/path-chain.js";
 import { EntryQueryError } from "./errors.js";
 
 /**
@@ -88,8 +87,10 @@ export interface EntryQuery {
   ofTypes: (...names: readonly string[]) => EntryQuery;
   /**
    * Entries attached to the term at this slug path in this taxonomy — one
-   * segment for a top-level term, `parent/child` for a nested one. A path no
-   * term answers to leaves the query unresolvable.
+   * segment for a top-level term, `parent/child` for a nested one, and the
+   * slug alone for any term of a taxonomy whose URLs are flat. It is the path
+   * the term's page sits at, so a term page and a query naming it agree. A
+   * path no term answers to leaves the query unresolvable.
    */
   inTerm: (taxonomy: string, path: string | readonly string[]) => EntryQuery;
   /**
@@ -244,11 +245,7 @@ async function conditionsFor(
     case "types":
       return [inArray(entries.type, [...narrowing.names])];
     case "term": {
-      const term = await findTermByPath(
-        ctx,
-        narrowing.taxonomy,
-        narrowing.path,
-      );
+      const term = await findTermAt(ctx, narrowing.taxonomy, narrowing.path);
       if (term === null) return null;
       const attached = ctx.db
         .select({ id: entryTerm.entryId })
@@ -257,12 +254,8 @@ async function conditionsFor(
       return [inArray(entries.id, attached)];
     }
     case "author": {
-      const [author] = await ctx.db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.slug, narrowing.slug))
-        .limit(1);
-      if (author === undefined) return null;
+      const author = await findAuthorBySlug(ctx, narrowing.slug);
+      if (author === null) return null;
       return [eq(entries.authorId, author.id)];
     }
     case "dateRange": {

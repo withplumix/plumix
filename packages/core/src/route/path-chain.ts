@@ -18,9 +18,12 @@
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
+import type { User } from "../db/schema/users.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
+import { users } from "../db/schema/users.js";
+import { exposesHierarchicalUrls } from "./compile.js";
 import { loadAncestorSlugs, loadTermAncestorSlugs } from "./permalink.js";
 import { previewTokenGrantsEntry } from "./preview.js";
 
@@ -80,6 +83,92 @@ export async function findTermByPath(
       : await loadTermAncestorSlugs(ctx, leaf.parentId);
 
   return chainsMatch(actual, expected) ? leaf : null;
+}
+
+/**
+ * The term a URL's term segments name, read the way the router compiled the
+ * taxonomy: where its URLs are flat, the one segment is the term's slug whether
+ * or not the term is nested; otherwise the segments are its whole slug path.
+ *
+ * Memoized per request, because a term page asks twice — once to resolve its
+ * subject, once when its listing's `inTerm` compiles — and both must be the
+ * one lookup. A miss is remembered like a hit, so a term created later in the
+ * same request (a cron invocation shares one memo) stays unfound to it.
+ */
+export function findTermAt(
+  ctx: AppContext,
+  taxonomy: string,
+  segments: readonly string[],
+): Promise<Term | null> {
+  return ctx.memo(termAtKey(taxonomy, segments), async () => {
+    const registered = ctx.plugins.termTaxonomies.get(taxonomy);
+    const flat =
+      registered !== undefined && !exposesHierarchicalUrls(registered);
+    const [slug] = segments;
+    if (!flat || segments.length !== 1 || slug === undefined || slug === "") {
+      return findTermByPath(ctx, taxonomy, segments);
+    }
+    return (
+      (await ctx.db.query.terms.findFirst({
+        where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, slug)),
+      })) ?? null
+    );
+  });
+}
+
+/**
+ * Remember a term loaded another way under the segments {@link findTermAt}
+ * resolves it from, and return them — for a caller about to narrow a query by
+ * it.
+ */
+export async function rememberTermSegments(
+  ctx: AppContext,
+  term: Term,
+): Promise<readonly string[]> {
+  const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
+  const nested = taxonomy !== undefined && exposesHierarchicalUrls(taxonomy);
+  const segments =
+    nested && term.parentId !== null
+      ? [...(await loadTermAncestorSlugs(ctx, term.parentId)), term.slug]
+      : [term.slug];
+  await ctx.memo(termAtKey(term.taxonomy, segments), () =>
+    Promise.resolve(term),
+  );
+  return segments;
+}
+
+function termAtKey(taxonomy: string, segments: readonly string[]): string {
+  return `core:term-at:${JSON.stringify([taxonomy, ...segments])}`;
+}
+
+/**
+ * The user an author URL's slug names. Memoized per request for the reason
+ * {@link findTermAt} is: the author page and its listing's `byAuthor` ask the
+ * same question.
+ */
+export function findAuthorBySlug(
+  ctx: AppContext,
+  slug: string,
+): Promise<User | null> {
+  if (slug === "") return Promise.resolve(null);
+  return ctx.memo(
+    authorKey(slug),
+    async () =>
+      (await ctx.db.query.users.findFirst({ where: eq(users.slug, slug) })) ??
+      null,
+  );
+}
+
+/** Remember a user loaded another way as the author at their slug. */
+export async function rememberAuthor(
+  ctx: AppContext,
+  user: User,
+): Promise<void> {
+  await ctx.memo(authorKey(user.slug), () => Promise.resolve(user));
+}
+
+function authorKey(slug: string): string {
+  return `core:author-at:${slug}`;
 }
 
 function chainsMatch(
