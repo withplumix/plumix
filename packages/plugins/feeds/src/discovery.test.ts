@@ -1,222 +1,115 @@
-import type { DocumentManifest, TemplateData } from "plumix";
-import type { MutablePluginRegistry } from "plumix/plugin";
-import {
-  createPluginRegistry,
-  definePlugin,
-  HookRegistry,
-  installPlugins,
-} from "plumix/plugin";
-import { createTestContext, createTestDb } from "plumix/test";
-import { beforeAll, describe, expect, test } from "vitest";
+import type { DispatcherHarness } from "plumix/test";
+import { definePlugin } from "plumix/plugin";
+import { createDispatcherHarness } from "plumix/test";
+import { describe, expect, test } from "vitest";
 
-import { applyFeedDiscovery } from "./discovery.js";
+import { feeds } from "./index.js";
 
-describe("applyFeedDiscovery", () => {
-  let db: Awaited<ReturnType<typeof createTestDb>>;
-  let plugins: MutablePluginRegistry;
+// Discovery reads the archive that owns the page from core's archive lookup,
+// so each page here is rendered for real rather than handed in as a payload.
+const host = definePlugin("feeds-discovery-host", (ctx) => {
+  ctx.registerEntryType("post", {
+    label: "Posts",
+    isPublic: true,
+    hasArchive: "news",
+  });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    entryTypes: ["post"],
+  });
+  ctx.registerTermTaxonomy("region", {
+    label: "Regions",
+    entryTypes: ["post"],
+    isHierarchical: true,
+  });
+});
 
-  beforeAll(async () => {
-    db = await createTestDb();
-    plugins = createPluginRegistry();
-    await installPlugins({
-      hooks: new HookRegistry(),
-      plugins: [
-        definePlugin("feeds-discovery-host", (host) => {
-          host.registerEntryType("post", { label: "Posts", isPublic: true });
-          host.registerTermTaxonomy("category", {
-            label: "Categories",
-            isPublic: true,
-          });
-          host.registerTermTaxonomy("region", {
-            label: "Regions",
-            isPublic: true,
-            isHierarchical: true,
-          });
-        }),
-      ],
-      registry: plugins,
+async function seeded(
+  options: { readonly basePath?: string } = {},
+): Promise<DispatcherHarness> {
+  const h = await createDispatcherHarness({
+    ...options,
+    plugins: [host, feeds()],
+  });
+  const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+  await h.factory.entry.create({
+    type: "post",
+    slug: "hello",
+    title: "Hello",
+    content: null,
+    status: "published",
+    authorId: jane.id,
+    publishedAt: new Date("2026-07-21T12:00:00Z"),
+  });
+  await h.factory.category.create({ slug: "news", name: "News" });
+  const europe = await h.factory.term.create({
+    taxonomy: "region",
+    slug: "europe",
+    name: "Europe",
+  });
+  await h.factory.term.create({
+    taxonomy: "region",
+    slug: "france",
+    name: "France",
+    parentId: europe.id,
+  });
+  return h;
+}
+
+// The `<link rel="alternate">` hrefs a rendered page advertises.
+async function advertised(
+  h: DispatcherHarness,
+  path: string,
+  status = 200,
+): Promise<readonly (string | undefined)[]> {
+  const res = await h.fetch(path);
+  res.assertStatus(status);
+  const body = await res.text();
+  return [...body.matchAll(/<link[^>]*rel="alternate"[^>]*>/g)].map(
+    ([tag]) => /href="([^"]*)"/.exec(tag)?.[1],
+  );
+}
+
+describe("feed discovery", () => {
+  test.each([
+    ["the front page", "/", "/feed"],
+    ["a type archive, at its hasArchive slug", "/news", "/news/feed"],
+    ["a term", "/category/news", "/category/news/feed"],
+    ["a nested term", "/region/europe/france", "/region/europe/france/feed"],
+    ["an author", "/authors/jane", "/authors/jane/feed"],
+    ["a date period", "/2026/07", "/2026/07/feed"],
+  ])("%s advertises its own feed", async (_page, path, feed) => {
+    const h = await seeded();
+    expect(await advertised(h, path)).toEqual([
+      `https://cms.example${feed}`,
+      `https://cms.example${feed}/atom`,
+    ]);
+  });
+
+  test("the advertised feed carries the base prefix", async () => {
+    const h = await seeded({ basePath: "/custom-directory" });
+    expect(await advertised(h, "/custom-directory/news")).toEqual([
+      "https://cms.example/custom-directory/news/feed",
+      "https://cms.example/custom-directory/news/feed/atom",
+    ]);
+  });
+
+  test.each([
+    ["a single entry", "/post/hello", 200],
+    ["the search page", "/search/hello", 200],
+    ["a missing term at an archive's URL", "/category/ghost", 404],
+  ])("%s advertises nothing", async (_page, path, status) => {
+    const h = await seeded();
+    expect(await advertised(h, path, status)).toEqual([]);
+  });
+
+  test("a private site advertises nothing on a page that would otherwise have a feed", async () => {
+    const h = await seeded();
+    await h.factory.setting.create({
+      group: "site",
+      key: "public",
+      value: false,
     });
-  });
-
-  const empty: DocumentManifest = {};
-  const alternates = (m: DocumentManifest): readonly string[] =>
-    (m.link ?? [])
-      .filter((l) => l.rel === "alternate")
-      .map((l) => `${String(l.type)} ${String(l.href)}`);
-  const discover = (
-    data: TemplateData,
-    override: { readonly basePath?: string } = {},
-    siteIsPrivate = false,
-  ): DocumentManifest =>
-    applyFeedDiscovery(
-      empty,
-      data,
-      createTestContext({ db, plugins, ...override }),
-      siteIsPrivate,
-    );
-
-  const frontPage = {
-    kind: "frontPage",
-    entries: [],
-    pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
-  } as unknown as TemplateData;
-
-  test("front-page data advertises the site feed (RSS + Atom)", () => {
-    expect(alternates(discover(frontPage))).toEqual([
-      "application/rss+xml https://cms.example/feed",
-      "application/atom+xml https://cms.example/feed/atom",
-    ]);
-  });
-
-  test("discovery links carry the configured basePath", () => {
-    expect(
-      alternates(discover(frontPage, { basePath: "/custom-directory" })),
-    ).toEqual([
-      "application/rss+xml https://cms.example/custom-directory/feed",
-      "application/atom+xml https://cms.example/custom-directory/feed/atom",
-    ]);
-  });
-
-  test("archive data advertises the type feed", () => {
-    const data = {
-      kind: "archive",
-      contentType: "post",
-      entries: [],
-      pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/post/feed",
-      "application/atom+xml https://cms.example/post/feed/atom",
-    ]);
-  });
-
-  test("an archive of a non-public type advertises nothing", () => {
-    const data = {
-      kind: "archive",
-      contentType: "secret",
-      entries: [],
-      pagination: { page: 1, perPage: 10, total: 0, pageCount: 0 },
-    } as unknown as TemplateData;
-    expect(discover(data).link).toBeUndefined();
-  });
-
-  test("single-entry data advertises the site feed (not its type feed)", () => {
-    const data = {
-      kind: "entry",
-      entry: { type: "post" },
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/feed",
-      "application/atom+xml https://cms.example/feed/atom",
-    ]);
-  });
-
-  test("top-level taxonomy-term data advertises the term feed", () => {
-    const data = {
-      kind: "taxonomy",
-      taxonomy: "category",
-      term: { slug: "news", parentId: null, url: "/category/news" },
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/category/news/feed",
-      "application/atom+xml https://cms.example/category/news/feed/atom",
-    ]);
-  });
-
-  test("a nested term advertises its nested feed where the taxonomy exposes hierarchical URLs", () => {
-    const data = {
-      kind: "taxonomy",
-      taxonomy: "region",
-      term: { slug: "france", parentId: 1, url: "/region/europe/france" },
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/region/europe/france/feed",
-      "application/atom+xml https://cms.example/region/europe/france/feed/atom",
-    ]);
-  });
-
-  test("a nested term under a flat taxonomy advertises nothing", () => {
-    const data = {
-      kind: "taxonomy",
-      taxonomy: "category",
-      term: { slug: "local", parentId: 1, url: "/category/local" },
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(discover(data).link).toBeUndefined();
-  });
-
-  test("author data advertises the author feed", () => {
-    const data = {
-      kind: "author",
-      author: { slug: "jane" },
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/authors/jane/feed",
-      "application/atom+xml https://cms.example/authors/jane/feed/atom",
-    ]);
-  });
-
-  test("date data advertises the period's feed at its own granularity", () => {
-    const data = {
-      kind: "date",
-      year: 2026,
-      month: 7,
-      day: null,
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(alternates(discover(data))).toEqual([
-      "application/rss+xml https://cms.example/2026/07/feed",
-      "application/atom+xml https://cms.example/2026/07/feed/atom",
-    ]);
-  });
-
-  test("a search page and an archive type nobody registered advertise nothing", () => {
-    const search = {
-      kind: "search",
-      query: "x",
-      entries: [],
-      pagination: {},
-    } as unknown as TemplateData;
-    expect(discover(search).link).toBeUndefined();
-
-    const custom = {
-      kind: "custom",
-      name: "weekly-menu",
-    } as unknown as TemplateData;
-    expect(discover(custom).link).toBeUndefined();
-  });
-
-  test("a private site advertises nothing on a page that would otherwise have a feed", () => {
-    expect(discover(frontPage, {}, true).link).toBeUndefined();
-  });
-
-  test("does not duplicate an alternate the template already set", () => {
-    const seeded: DocumentManifest = {
-      link: [
-        {
-          rel: "alternate",
-          type: "application/rss+xml",
-          href: "https://cms.example/custom",
-        },
-      ],
-    };
-    const out = applyFeedDiscovery(
-      seeded,
-      frontPage,
-      createTestContext({ db, plugins }),
-      false,
-    );
-    expect(alternates(out)).toEqual([
-      "application/rss+xml https://cms.example/custom",
-      "application/atom+xml https://cms.example/feed/atom",
-    ]);
+    expect(await advertised(h, "/news")).toEqual([]);
   });
 });

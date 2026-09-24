@@ -245,6 +245,11 @@ export { findTermByPath } from "./route/path-chain.js";
 // such archive is listed at — so a package that shows an archive another way
 // (a feed) reads the same set of entries the page does (ADR 0008).
 export { archiveAtPath, archiveBaseRoutes } from "./route/archive-entries.js";
+// Which public route the dispatcher answers a path with, for a plugin that
+// advertises a URL one of its routes serves and has to know no other route
+// answers it first.
+export { publicRouteAt } from "./route/public-routes.js";
+export type { PublicRouteMatch } from "./route/public-routes.js";
 export type {
   ArchiveAtPath,
   ArchiveBaseRoute,

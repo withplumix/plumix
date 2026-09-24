@@ -26,24 +26,26 @@ export default plumix({
 
 ## What you get
 
-Every path below is RSS 2.0, and Atom at the same path plus `/atom`. Twenty items, newest publish time first.
+A feed beside every archive, carrying the entries that archive's page lists. Every path below is RSS 2.0, and Atom at the same path plus `/atom`. Twenty items, newest publish time first whatever order the page lists them in.
 
-| Scope          | Path                      |
+| Archive        | Path                      |
 | -------------- | ------------------------- |
-| Site           | `/feed`                   |
-| Entry type     | `/<type>/feed`            |
+| Front page     | `/feed`                   |
+| Entry type     | `/<archive slug>/feed`    |
 | Taxonomy term  | `/<taxonomy>/<term>/feed` |
 | Author         | `/authors/<slug>/feed`    |
 | Date           | `/YYYY[/MM[/DD]]/feed`    |
 | Plugin archive | `<archive route>/feed`    |
 
-Plus a `<link rel="alternate">` pair in the head of every page that has a feed, gap-filled around anything the theme already declared.
+A type's feed sits beside its archive page, at its `hasArchive` slug; a type with no archive page has no feed. The front page, author and date feeds leave hierarchical types out, as their pages do.
+
+Plus a `<link rel="alternate">` pair in the head of every archive page, pointing at that archive's feed and gap-filled around anything the theme already declared. A single entry and the search page advertise none.
 
 The plugin takes no options, adds no database tables and ships no admin screens.
 
 ## Adjusting the items
 
-`feed:items` runs over the collected list before serialization, with the scope it was collected for:
+`feed:items` runs over the collected list before serialization, with the archive it was collected for (`scope.archive`, as core's archive lookup names it, and the `scope.params` its route captured):
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -53,7 +55,7 @@ import "@plumix/plugin-feeds";
 export const featured = definePlugin("featured", {
   setup: (ctx) => {
     ctx.addFilter("feed:items", (items, scope) =>
-      scope.kind === "site" ? items.slice(0, 5) : items,
+      scope.archive.kind === "front-page" ? items.slice(0, 5) : items,
     );
   },
 });
@@ -61,31 +63,23 @@ export const featured = definePlugin("featured", {
 
 ## Syndicating a plugin archive
 
-`registerArchiveType` gains an optional `feed` from this package's type augmentation. Each archive route gets a feed at `<route>/feed`, with Atom at `/feed/atom`, and every page of the archive advertises it. `scope` narrows the entries the feed carries — or answers `null` for a 404 and no advertisement:
+`registerArchiveType` gains an optional `feed` from this package's type augmentation, accepted only beside `entries`. The feed is the archive's own entry query, so there is nothing else to declare:
 
 ```ts
 ctx.registerArchiveType("event-series", {
-  routes: ["/events/:series", `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`],
-  resolve: (_ctx, params) => ({
-    data: { kind: "custom", name: "event-series" },
-    title: `Series: ${params.series}`,
-  }),
-  feed: {
-    scope: (q, params) =>
-      q.ofTypes("event").inTerm("event-series", params.series ?? ""),
-  },
+  routes: ["/events/:series"],
+  entries: (q, params) =>
+    q.ofTypes("event").inTerm("event-series", params.series ?? ""),
+  title: (params) => `Series: ${params.series ?? ""}`,
+  feed: true,
 });
 ```
 
-The query arrives restricted to published entries of public types, and every method on it adds a condition. There is no method that removes one, so an archive can say less than it meant to without its feed showing more than it should — the visibility rule is this plugin's, not yours to remember. `ofTypes`, `inTerm`, `byAuthor`, `inDateRange` and `under` cover the shapes an archive usually models; `where(sql)` ANDs on an arbitrary predicate for the ones they do not, and cannot widen the feed either — built with the `sql` template, not `sql.raw`.
+Each archive route gets a feed at `<route>/feed`, with Atom at `/feed/atom`, and every page of the archive advertises it — a later page advertising the feed of the route it paginates. Params `entries` answers `null` for 404 the page and the feed together.
 
-`q.none()` is a feed that exists and is empty, which is not the same answer as `null`.
-
-A `scope` records what to narrow by rather than resolving it, so declaring one costs no queries. That matters because every page of the archive asks the same question to decide whether to advertise its feed.
+`feed` is `true`, or an object reserved for feed-only options (none yet).
 
 An archive declaring an `access` policy gets no feed. A feed is a public route, which core answers ahead of the access gate, so serving one would hand a policied archive's entries to any anonymous reader.
-
-A route ending in `FRAMEWORK_PAGINATION_SUFFIX` (from `plumix/plugin`) gets no feed of its own; its pages advertise the feed of the route they paginate.
 
 ## Support
 

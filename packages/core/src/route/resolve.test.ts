@@ -1767,7 +1767,8 @@ describe("resolvePublicRoute — each built-in archive lists its entry query", (
 
 describe("resolvePublicRoute — resolved route", () => {
   // What a render-time consumer reads off the context: the route the request
-  // matched, as the pattern it was declared with and the params it captured.
+  // matched, as the pattern it was declared with, the params it captured and
+  // what the route is.
   function routeObserver() {
     const seen: (AppContext["resolvedRoute"] | undefined)[] = [];
     const plugin = definePlugin("route-observer", (ctx) => {
@@ -1779,7 +1780,7 @@ describe("resolvePublicRoute — resolved route", () => {
     return { plugin, seen };
   }
 
-  test("a plugin archive's page carries its matched pattern and params", async () => {
+  test("a plugin archive's page carries its matched pattern, params and intent", async () => {
     const observer = routeObserver();
     const events = definePlugin("events", (ctx) => {
       ctx.registerArchiveType("event-series", {
@@ -1798,7 +1799,11 @@ describe("resolvePublicRoute — resolved route", () => {
     );
     expect(response.status).toBe(200);
     expect(observer.seen).toEqual([
-      { pattern: "/events/:series", params: { series: "summer" } },
+      {
+        pattern: "/events/:series",
+        params: { series: "summer" },
+        intent: { kind: "custom", name: "event-series" },
+      },
     ]);
   });
 
@@ -1824,9 +1829,17 @@ describe("resolvePublicRoute — resolved route", () => {
       expect(response.status).toBe(200);
     }
     expect(observer.seen).toEqual([
-      { pattern: "/shop", params: {} },
-      { pattern: "/shop/:slug", params: { slug: "mug" } },
-      { pattern: "/", params: {} },
+      {
+        pattern: "/shop",
+        params: {},
+        intent: { kind: "archive", entryType: "product" },
+      },
+      {
+        pattern: "/shop/:slug",
+        params: { slug: "mug" },
+        intent: { kind: "single", entryType: "product" },
+      },
+      { pattern: "/", params: {}, intent: { kind: "front-page" } },
     ]);
   });
 

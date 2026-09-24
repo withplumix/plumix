@@ -1,6 +1,6 @@
 ---
 title: Feeds
-description: The feeds plugin serves RSS 2.0 and Atom for the site and every public archive, and advertises each page's feed in its head.
+description: The feeds plugin serves RSS 2.0 and Atom for the site and every archive, each feed carrying the same entries as its archive's page, and advertises each page's feed in its head.
 tier: P1
 sidebar:
   order: 90
@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-feeds` is syndication: the XML a reader subscribes to and an aggregator polls. Installing it and configuring nothing serves RSS and Atom for the whole site, for each entry type, for each taxonomy term, for each author and for each date period, and puts a `<link rel="alternate">` in the head of every page that has one.
+`@plumix/plugin-feeds` is syndication: the XML a reader subscribes to and an aggregator polls. Installing it and configuring nothing serves RSS and Atom for the front page, for each entry type's archive, for each taxonomy term, for each author and for each date period, and puts a `<link rel="alternate">` in the head of every page that has one. A feed is its archive: it carries the entries the archive's page lists, from the same query.
 
 ## Overview
 
@@ -18,26 +18,28 @@ Feeds are not a search-engine concern, which is why they are their own package r
 
 Nothing serves `/feed` until you install it. That is the boundary Plumix draws between core and a plugin: core owns what would be _wrong_ without a plugin installed, and a plugin owns what would merely be _absent_. A site with no feeds is a site with no feeds — it is not a broken one.
 
-Every path below is claimed in the plugin's `afterSetup`, once every entry type and taxonomy is registered, so the plugin enumerates them and registers concrete routes. Nothing is guessed at from the shape of a request, which is what leaves a page slugged `feed` under some other prefix still rendering as content.
+Every path below is claimed in the plugin's `afterSetup`, once every archive is registered: core lists each route an archive's page is served at, and the plugin claims `<route>/feed` beside each one. Nothing is guessed at from the shape of a request, which is what leaves a page slugged `feed` under some other prefix still rendering as content.
 
 ### The URLs it serves
 
 Each row is RSS 2.0 at the path shown and Atom at that path plus `/atom`.
 
-| Scope          | Path                      | Contents                                    |
-| -------------- | ------------------------- | ------------------------------------------- |
-| Site           | `/feed`                   | Published entries of every public type      |
-| Entry type     | `/<type>/feed`            | Published entries of that type              |
-| Taxonomy term  | `/<taxonomy>/<term>/feed` | Published entries attached to that term     |
-| Author         | `/authors/<slug>/feed`    | That author's published entries             |
-| Date           | `/YYYY[/MM[/DD]]/feed`    | Published entries in the period             |
-| Plugin archive | `<archive route>/feed`    | Whatever the archive's own scope narrows to |
+| Archive        | Path                      | Contents                                                      |
+| -------------- | ------------------------- | ------------------------------------------------------------- |
+| Front page     | `/feed`                   | Published entries of every non-hierarchical public type       |
+| Entry type     | `/<archive slug>/feed`    | Published entries of that type                                |
+| Taxonomy term  | `/<taxonomy>/<term>/feed` | Published entries of the taxonomy's public types on that term |
+| Author         | `/authors/<slug>/feed`    | That author's published entries of non-hierarchical types     |
+| Date           | `/YYYY[/MM[/DD]]/feed`    | Published entries of non-hierarchical types in the period     |
+| Plugin archive | `<archive route>/feed`    | The archive's own `entries`                                   |
 
-`<type>` is the registered entry-type name, not its `rewrite.slug` — a type registered as `post` and mounted at `/articles` still syndicates at `/post/feed`, which is what the archive page advertises.
+Each row is the archive page's own listing: the feed and the page read one entry query, so they cannot disagree about what the archive contains. A standalone page — an entry of a hierarchical type — is in its type's feed and its terms' feeds, and in none of the front page, author or date feeds, because it is on none of those pages.
 
-Twenty items, newest publish time first. A scope that resolves to nothing addressable — an unregistered entry type, a term slug nothing matches, an impossible date such as `2026/02/30` — is a 404 rather than an empty feed.
+`<archive slug>` is where the type's archive page is: its `hasArchive` slug, or its `rewrite.slug` when `hasArchive` is `true`. A type registered as `post` with `hasArchive: "articles"` syndicates at `/articles/feed`, and `/post/feed` is nothing. A type with no archive page — `hasArchive: false`, which is how `@plumix/plugin-blog` registers `post`, its posts listed on the front page instead — has no feed of its own; its entries are in `/feed`.
 
-A term feed sits directly under the term's own archive. A hierarchical taxonomy addresses a nested term at its full path (`/region/europe/france/feed`); a flat one addresses one segment, and a term parented inside a flat taxonomy therefore has an archive but no feed — the archive page advertises none, so the two agree.
+Twenty items, newest publish time first, whatever order the archive's page lists them in — that is what a subscriber's reader assumes. An archive that resolves to nothing — a term slug nothing matches, an author nobody is, an impossible date such as `2026/02/30` — is a 404 rather than an empty feed, as its page is.
+
+A term feed sits directly under the term's own archive, wherever that is: a hierarchical taxonomy addresses a nested term at its full path (`/region/europe/france/feed`), a flat one at its slug alone.
 
 <Aside type="note" title="A private site has no feeds">
   With `public` off in site settings every feed is a 404 and no page advertises
@@ -106,11 +108,11 @@ Then:
    pnpm dev
    ```
 
-3. **Read one.** `/feed` is the whole site, `/post/feed` is the blog, and `/feed/atom` is the same items as Atom.
+3. **Read one.** `/feed` is the front page's posts, `/category/<term>/feed` is one category's, and `/feed/atom` is the same items as Atom.
 
 </Steps>
 
-Array order does not decide what gets a feed. The plugin reads the registry once, in `afterSetup`, which runs after every plugin's `setup` — so it sees `blog`'s entry types wherever `blog()` sits. The one thing it cannot see is a type another plugin registers from its own `afterSetup` when that plugin is listed later, which is a reason to register in `setup`.
+Array order does not decide what gets a feed. The plugin reads the registry once, in `afterSetup`, which runs after every plugin's `setup` — so it sees `blog`'s archives wherever `blog()` sits. The one thing it cannot see is an archive another plugin registers from its own `afterSetup` when that plugin is listed later, which is a reason to register in `setup`.
 
 ## Discovery links
 
@@ -129,9 +131,9 @@ The plugin subscribes to `render:document` and appends the page's own feed, both
 />
 ```
 
-Which feed a page advertises follows what the page is. An archive advertises its type's feed, a term archive its term's, an author archive that author's, a date archive that period's, and a plugin archive the feed under the route it matched. A single entry advertises the **site** feed rather than its type's: someone subscribing from an article wants everything new, which is the convention every comparable CMS follows.
+A page advertises the feed of the archive that owns it — the archive the router resolved the page to — and only where the route that answers the feed URL is that archive's feed, so the head points at exactly the feed that serves those entries. A later page advertises the feed of the listing it paginates: `/category/news/page/2` points a reader at `/category/news/feed`.
 
-Two page kinds advertise nothing: a search page is thin, and an error page is not content.
+A single entry, the search page and an error page belong to no archive, so they advertise nothing.
 
 It gap-fills. A theme or another plugin that already set an `alternate` of a given type keeps it, and only the missing format is added.
 
@@ -145,60 +147,49 @@ import { definePlugin } from "plumix/plugin";
 export const featured = definePlugin("featured", {
   setup: (ctx) => {
     ctx.addFilter("feed:items", (items, scope) =>
-      scope.kind === "site" ? items.slice(0, 5) : items,
+      scope.archive.kind === "front-page" ? items.slice(0, 5) : items,
     );
   },
 });
 ```
 
+`scope.archive` names the archive as core's lookup does — `front-page`, `archive` (with its `entryType`), `taxonomy` (with its `taxonomy`), `author`, `date`, or `custom` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
+
 The plugin's own package must be installed for the hook name to type-check — it declares `feed:items` on `FilterRegistry` through the single `plumix` augmentation specifier, the same way every plugin declares a hook.
 
 ## Syndicating a plugin archive
 
-`registerArchiveType` takes an optional `feed`, and that field is this plugin's augmentation rather than a core one — declare it and it type-checks once `@plumix/plugin-feeds` is a dependency. `scope` narrows the entries the feed carries, or answers `null` for a 404, from the params the archive's route captured:
+`registerArchiveType` takes an optional `feed`, and that field is this plugin's augmentation rather than a core one — declare it and it type-checks once `@plumix/plugin-feeds` is a dependency. It is only accepted beside `entries`: the feed is the archive's own entry query, so an archive with no `entries` has nothing a feed could read, and the types refuse it.
 
 ```ts no-typecheck
-import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
+import { definePlugin } from "plumix/plugin";
 
 import "@plumix/plugin-feeds";
 
 export const events = definePlugin("events", {
   setup: (ctx) => {
     ctx.registerArchiveType("event-series", {
-      routes: [
-        "/events/:series",
-        `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`,
-      ],
-      resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "event-series" },
-        title: `Series: ${params.series}`,
-      }),
-      feed: {
-        scope: (q, params) =>
-          q.ofTypes("event").inTerm("event-series", params.series ?? ""),
-      },
+      routes: ["/events/:series"],
+      entries: (q, params) =>
+        q.ofTypes("event").inTerm("event-series", params.series ?? ""),
+      title: (params) => `Series: ${params.series ?? ""}`,
+      feed: true,
     });
   },
 });
 ```
 
-The query `scope` receives is already restricted to published entries of public types, and every method on it adds a condition. Nothing on it removes one, so the visibility rule is the plugin's rather than yours to remember: an archive that forgets to narrow gets a feed of fewer entries than it meant, never a feed of drafts.
+`feed` is `true`, or an object reserved for feed-only options, of which there are none yet. There is nothing else to declare: the entries are the archive's, and a feed that needs a different set is a different archive.
 
-`ofTypes`, `inTerm`, `byAuthor`, `inDateRange` and `under` cover how archives usually model a subject. For anything they do not reach — a meta column, a join of your own — `where(sql)` ANDs an arbitrary predicate on, and cannot widen the feed either — so long as it is built from the `sql` template rather than `sql.raw`, which never interpolates a route param safely anyway. Returning `q.none()` is a feed that exists and is empty; returning `null` is a feed that does not exist.
+The feed carries what the page lists, newest first and capped at twenty, whatever order `entries` gives the page. The query `entries` receives already holds only public entries, and the feed applies that rule again when it compiles the query, so an archive that builds a query from scratch still cannot syndicate a draft.
 
-The same query also carries an order, which an archive's page listing reads and a feed ignores — a feed stays newest first, because that is what a subscriber's reader assumes. `latest()` is what a query is read in when nothing says otherwise, `oldest()` reverses it, `orderBy(column, direction)` takes `publishedAt`, `title` or `sortOrder`, and `orderByMeta(key, direction)` sorts on a meta value. A later call replaces the order rather than sorting under it, and the entry id always breaks ties in the same direction, so no entry straddles a page boundary. Ordering never changes which entries a query selects.
+The feed paths follow from the archive's routes, so there is nothing to keep in step. Each route gains a feed at `<route>/feed` and Atom at `<route>/feed/atom`: `/events/summer` syndicates at `/events/summer/feed`. The `/page/:page` form core derives for each route is a later page of a listing rather than a listing of its own, so it gets no feed, and its pages advertise the feed of the route they paginate.
 
-`title` sorts case-insensitively, since alphabetical is what a reader means by it. `orderByMeta` costs an unindexed sort over the matching rows — `meta` is a JSON column and no index reaches inside one — so it suits an archive narrowed to a modest set rather than the whole site.
-
-A scope records what to narrow by instead of resolving it, so building one runs no queries. The term path in the example above is resolved when the feed is served.
+Params `entries` answers `null` for are a 404 on the page and the feed together, and the page advertises nothing. Because `entries` records intent rather than resolving it, a page asking whether it has a feed costs no query.
 
 An archive declaring an `access` policy gets no feed at all. A feed is a registered public route, which core answers ahead of the access gate and ahead of loading a principal, so there is no reader there to check a policy against — serving one would hand the archive's entries to anyone who asked.
 
-The feed paths follow from the archive's routes, so there is nothing to declare and nothing to keep in step. Each route gains a feed at `<route>/feed` and Atom at `<route>/feed/atom`: `/events/summer` syndicates at `/events/summer/feed`. A route ending in `FRAMEWORK_PAGINATION_SUFFIX` is a later page of a listing rather than a listing of its own, so it gets no feed — declare later pages with that suffix, the shape core's own archives use, so the plugin can tell them apart. Core matches an archive's suffixed routes ahead of its others, so a multi-segment capture such as `/docs/:path+` does not swallow `/page/2`.
-
-Every page of the archive advertises its feed, gap-filled like any other page's. A later page advertises the feed of the route it paginates, so `/events/summer/page/2` points a reader at `/events/summer/feed`. The head asks `scope` the same question the feed route does, so a page whose `scope` answers `null` advertises nothing and its feed is a 404. That puts `scope` on every render of the archive's pages as well as on its feed. Because a scope only records intent, asking costs no query — and for the same reason the head cannot see a narrowing that fails only once it is resolved, such as a term slug nothing answers to. That page advertises a feed that 404s. Answer `null` for params the archive cannot place, as its own `resolve` should, and the page and its feed 404 together. Answer `null` rather than throw, too: a throw fails the page, not just the feed.
-
-Two feeds cannot share a path. Where an archive route's feed path is one another feed already claims — an archive at `/events` beside an entry type named `events` — the first claim keeps serving. The head asks the question per URL: wherever another feed's route also answers the page's feed URL — `/:section` on `/news` beside a type named `news` — the archive advertises nothing rather than pointing its readers at a feed of different entries.
+Two archives can match one URL. A feed is served only where the feed route that answers it belongs to the archive whose page is there: a `/:section` archive outranking a type archive at `/news` owns the page at `/news`, but the type's literal `/news/feed` route answers that feed URL, so it is a 404 and the page advertises nothing rather than a feed of different entries.
 
 ## Related
 

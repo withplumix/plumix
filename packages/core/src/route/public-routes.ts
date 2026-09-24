@@ -1,3 +1,4 @@
+import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RegisteredPublicRoute } from "../plugin/registry.js";
 import { AppBootError } from "../runtime/errors.js";
 import { extractParams } from "./match.js";
@@ -118,4 +119,27 @@ export function matchPublicRoute(
     return { route, params: extractParams(result.pathname) };
   }
   return null;
+}
+
+// Compiled once per registry: the routes are settled once every `afterSetup`
+// has run, which is before anything asks.
+const registryTables = new WeakMap<PluginRegistry, PublicRouteTable>();
+
+/**
+ * The public route the dispatcher answers this pathname with, or null — asked
+ * of the same table and by the same rules, so a plugin that needs to know
+ * whether one of its routes serves a path (a page deciding which feed to
+ * advertise) gets the dispatcher's answer rather than a copy of its rules.
+ * The pathname is read as the router reads it, with no base path.
+ */
+export function publicRouteAt(
+  plugins: PluginRegistry,
+  pathname: string,
+): PublicRouteMatch | null {
+  let table = registryTables.get(plugins);
+  if (table === undefined) {
+    table = compilePublicRoutes(plugins.publicRoutes);
+    registryTables.set(plugins, table);
+  }
+  return matchPublicRoute(table, pathname);
 }

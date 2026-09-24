@@ -590,7 +590,8 @@ export type ArchiveTitle =
 
 /**
  * The options every archive type shares, and the seam a plugin augments:
- * `@plumix/plugin-feeds` adds `feed`, `@plumix/plugin-seo` adds `sitemap`.
+ * `@plumix/plugin-seo` adds `sitemap`. An option only an archive with
+ * `entries` can take goes on {@link ListingArchiveTypeOptions} instead.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
@@ -614,8 +615,15 @@ export interface ArchiveTypeOptions {
   readonly access?: AccessPolicy;
 }
 
-/** The half of a listing archive's declaration that says what it lists. */
-interface ListingArchiveBase extends ArchiveTypeOptions {
+/**
+ * The half of a listing archive's declaration that says what it lists, and
+ * the seam for an option that reads the archive's entries:
+ * `@plumix/plugin-feeds` adds `feed` here. An augmentation that adds one also
+ * refuses it on {@link UnlistedArchiveTypeOptions}, as `field?: undefined` —
+ * that is what makes the option fail to compile on an archive with no
+ * `entries` rather than be quietly ignored.
+ */
+export interface ListingArchiveTypeOptions extends ArchiveTypeOptions {
   readonly entries: ArchiveEntries;
   /**
    * Entries per page. Core derives the `/page/:page` form of every declared
@@ -637,13 +645,13 @@ type ListingArchiveResolve<TResolution extends ListingArchiveResolution> = (
 ) => Promise<TResolution | null> | TResolution | null;
 
 /** A listed archive titled by its options; `resolve` only adds data. */
-interface TitledListingArchiveOptions extends ListingArchiveBase {
+interface TitledListingArchiveOptions extends ListingArchiveTypeOptions {
   readonly title: ArchiveTitle;
   readonly resolve?: ListingArchiveResolve<ListingArchiveResolution>;
 }
 
 /** A listed archive whose resolver names the page, having loaded its subject. */
-interface ResolvedListingArchiveOptions extends ListingArchiveBase {
+interface ResolvedListingArchiveOptions extends ListingArchiveTypeOptions {
   readonly title?: undefined;
   readonly resolve: ListingArchiveResolve<TitledListingArchiveResolution>;
 }
@@ -653,7 +661,7 @@ interface ResolvedListingArchiveOptions extends ListingArchiveBase {
  * set — search is the one in the tree. It resolves its own payload and cannot
  * have a feed.
  */
-interface UnlistedArchiveOptions extends ArchiveTypeOptions {
+export interface UnlistedArchiveTypeOptions extends ArchiveTypeOptions {
   readonly entries?: undefined;
   readonly resolve: (
     ctx: AppContext,
@@ -673,7 +681,7 @@ interface UnlistedArchiveOptions extends ArchiveTypeOptions {
 export type ArchiveTypeDeclaration =
   | TitledListingArchiveOptions
   | ResolvedListingArchiveOptions
-  | UnlistedArchiveOptions;
+  | UnlistedArchiveTypeOptions;
 
 export type RegisteredArchiveType = ArchiveTypeDeclaration & {
   readonly name: string;

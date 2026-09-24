@@ -1,11 +1,11 @@
-import type { AppContext, PluginRegistry } from "plumix/plugin";
+import type { AppContext, ArchiveAtPath, PluginRegistry } from "plumix/plugin";
 import { typeTag } from "plumix/db";
 import { loadSiteSettings, tagCdnEntry } from "plumix/plugin";
 import { nonEmpty, withBasePath } from "plumix/support";
 
-import type { FeedScope } from "./scope.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
 import { collectFeedItems } from "./items.js";
+import { feedAt } from "./routes.js";
 import { syndicatableEntryTypeNames } from "./scope.js";
 import { renderAtom, renderRss2 } from "./serialize.js";
 
@@ -26,36 +26,45 @@ const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
  */
 export const FEED_TAG = "feeds:feed";
 
-// The `t:<type>` tags of the types a scope's query can read, which is what an
-// entry mutation purges. The feed guard holds every scope, a plugin archive's
-// included, to the public types.
-function typeTags(plugins: PluginRegistry, scope: FeedScope): string[] {
-  if (scope.kind === "type") return [typeTag(scope.type)];
+// The `t:<type>` tags of the types an archive's feed can read, which is what an
+// entry mutation purges: its own type's for a type archive, and every type a
+// feed may carry for the rest.
+function typeTags(
+  plugins: PluginRegistry,
+  target: ArchiveAtPath | null,
+): string[] {
+  if (target?.archive.kind === "archive") {
+    return [typeTag(target.archive.entryType)];
+  }
   return syndicatableEntryTypeNames(plugins).map(typeTag);
 }
 
 export async function handleFeed(
   ctx: AppContext,
-  scope: FeedScope,
   format: FeedFormat,
   cacheable: boolean,
 ): Promise<Response> {
-  tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, scope)]);
+  // The dispatcher already stripped the base prefix, which is how core's
+  // archive lookup reads a path too.
+  const pathname = new URL(ctx.request.url).pathname;
+  const target = feedAt(ctx.plugins, pathname);
+  tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, target)]);
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty
   // 200 instead — there's no "valid but empty because private" feed idiom, so
   // 404 is the honest answer here.)
   if (site.public === false) return new Response(null, { status: 404 });
 
-  const items = await collectFeedItems(ctx, scope);
+  if (target === null) return new Response(null, { status: 404 });
+  const items = await collectFeedItems(ctx, target);
   if (items === null) return new Response(null, { status: 404 });
 
   const channel: FeedChannel = {
     title: nonEmpty(site.title) ?? ctx.origin,
     link: `${ctx.origin}${withBasePath("/", ctx.basePath)}`,
-    // The feed's self URL is this request's path. The dispatcher already
-    // stripped the base prefix, so re-add it for the externally-visible URL.
-    feedUrl: `${ctx.origin}${withBasePath(new URL(ctx.request.url).pathname, ctx.basePath)}`,
+    // The feed's self URL is this request's path, base prefix re-added for
+    // the externally-visible URL.
+    feedUrl: `${ctx.origin}${withBasePath(pathname, ctx.basePath)}`,
     description: nonEmpty(site.tagline) ?? "",
     updated: items[0]?.updated ?? new Date().toISOString(),
   };
