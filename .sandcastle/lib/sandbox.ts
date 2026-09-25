@@ -76,6 +76,15 @@ export const createPlumixSandbox = (
     hooks: setupHooks,
   });
 
+export const createReadOnlySandbox = (
+  branch: string,
+): Promise<sandcastle.Sandbox> =>
+  sandcastle.createSandbox({
+    cwd: REPO_ROOT,
+    branch,
+    sandbox: plumixContainer(),
+  });
+
 export const plumixRunOptions = {
   cwd: REPO_ROOT,
   sandbox: plumixContainer(),

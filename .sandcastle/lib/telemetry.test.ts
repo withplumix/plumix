@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
-import { notionalCostOf, usageFromSessionTranscripts } from "./telemetry.js";
+import {
+  Journal,
+  notionalCostOf,
+  usageFromSessionTranscripts,
+} from "./telemetry.js";
 
 const assistantLine = (outputTokens: number, cacheRead = 0) =>
   JSON.stringify({
@@ -104,5 +108,16 @@ describe("notionalCostOf", () => {
     };
 
     expect(notionalCostOf(anything, "some-future-model")).toBeUndefined();
+  });
+});
+
+describe("Journal.runId", () => {
+  test("lanes opening a journal in the same millisecond do not share a directory", () => {
+    const opened = Array.from(
+      { length: 8 },
+      () => new Journal(mkdtempSync(join(tmpdir(), "journal-"))),
+    );
+
+    expect(new Set(opened.map(({ runId }) => runId)).size).toBe(opened.length);
   });
 });

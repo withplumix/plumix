@@ -47,6 +47,9 @@
 - name: needs-info
   color: "fef2c0"
   description: Waiting on reporter for more information
+- name: needs-decision
+  color: "d4c5f9"
+  description: Triage asked a question only the maintainer can answer
 - name: ready-for-agent
   color: "0e8a16"
   description: Fully specified, ready for an AFK agent
