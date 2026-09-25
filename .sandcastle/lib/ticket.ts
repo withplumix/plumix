@@ -154,6 +154,7 @@ const reviewAll = async (
   journal: Journal,
   ticket: Ticket,
   round: number,
+  pullRequestBody: string,
 ): Promise<readonly Finding[]> => {
   const collected: Finding[] = [];
 
@@ -161,7 +162,11 @@ const reviewAll = async (
     const phase = `review:${reviewer.name}#${round}`;
     const { stdout } = await runAgentPhase(phase, REVIEWER, {
       promptFile: join(PROMPT_DIR, reviewer.promptFile),
-      promptArgs: { TICKET: String(ticket.number), BASE: MERGE_BASE },
+      promptArgs: {
+        TICKET: String(ticket.number),
+        BASE: MERGE_BASE,
+        PR_BODY: pullRequestBody,
+      },
       maxIterations: 1,
       idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
     });
@@ -209,6 +214,7 @@ const surveyMainForAlreadyRedGates = async (
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
+  lanes: number,
 ): Promise<ShipOutcome> => {
   const branch = `feat/${ticket.title
     .toLowerCase()
@@ -222,7 +228,7 @@ export const shipTicket = async (
 
   assignToSelf(ticket.number);
   resetBranchToMain(branch);
-  const sandbox = await createPlumixSandbox(branch);
+  const sandbox = await createPlumixSandbox(branch, lanes);
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {
@@ -315,7 +321,13 @@ export const shipTicket = async (
       }
 
       say(`--- review (pass ${pass}) ---`);
-      const findings = await reviewAll(runAgentPhase, journal, ticket, pass);
+      const findings = await reviewAll(
+        runAgentPhase,
+        journal,
+        ticket,
+        pass,
+        pullRequestCopy.body,
+      );
       const blocking = findings.filter(
         ({ severity }) => severity === BLOCKING_SEVERITY,
       );

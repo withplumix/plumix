@@ -26,12 +26,17 @@ const CACHE_MOUNTS = [
   },
 ];
 
-const ENV_THAT_KEEPS_VITEST_INSIDE_THE_CONTAINER_MEMORY_LIMIT = {
+const WORKERS_ONE_CONTAINER_CAN_AFFORD = 2;
+
+export const workersEachLaneCanAfford = (lanes: number): number =>
+  Math.max(1, Math.floor(WORKERS_ONE_CONTAINER_CAN_AFFORD / Math.max(1, lanes)));
+
+const envThatKeepsEveryLaneInsideTheHostMemoryLimit = (lanes: number) => ({
   TURBO_CACHE_DIR: "/home/agent/.turbo-cache",
-  TURBO_CONCURRENCY: "2",
-  VITEST_MAX_WORKERS: "2",
+  TURBO_CONCURRENCY: String(workersEachLaneCanAfford(lanes)),
+  VITEST_MAX_WORKERS: String(workersEachLaneCanAfford(lanes)),
   PLAYWRIGHT_BROWSERS_PATH: "/home/agent/.cache/ms-playwright",
-};
+});
 
 const SETUP_STEPS = [
   "pnpm install --frozen-lockfile",
@@ -43,12 +48,12 @@ const asOneCommandBecauseHooksAtTheSameHookPointRunConcurrently = (
   steps: readonly string[],
 ) => steps.join(" && ");
 
-const plumixContainer = () => {
+const plumixContainer = (lanes: number) => {
   for (const { hostPath } of CACHE_MOUNTS)
     mkdirSync(hostPath, { recursive: true });
   return docker({
     mounts: CACHE_MOUNTS,
-    env: ENV_THAT_KEEPS_VITEST_INSIDE_THE_CONTAINER_MEMORY_LIMIT,
+    env: envThatKeepsEveryLaneInsideTheHostMemoryLimit(lanes),
   });
 };
 
@@ -68,11 +73,12 @@ const setupHooks = {
 
 export const createPlumixSandbox = (
   branch: string,
+  lanes: number,
 ): Promise<sandcastle.Sandbox> =>
   sandcastle.createSandbox({
     cwd: REPO_ROOT,
     branch,
-    sandbox: plumixContainer(),
+    sandbox: plumixContainer(lanes),
     hooks: setupHooks,
   });
 
@@ -82,11 +88,11 @@ export const createReadOnlySandbox = (
   sandcastle.createSandbox({
     cwd: REPO_ROOT,
     branch,
-    sandbox: plumixContainer(),
+    sandbox: plumixContainer(1),
   });
 
 export const plumixRunOptions = {
   cwd: REPO_ROOT,
-  sandbox: plumixContainer(),
+  sandbox: plumixContainer(1),
   hooks: setupHooks,
 };

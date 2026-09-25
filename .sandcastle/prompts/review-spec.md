@@ -13,6 +13,11 @@ The diff:
 git diff {{BASE}}...HEAD
 ```
 
+The PR description the harness will publish for this branch. No PR exists yet, so
+a criterion about what the PR records is met here or nowhere:
+
+{{PR_BODY}}
+
 Load `mattpocock-skills:code-review` and run its Spec axis against `{{BASE}}`.
 Findings only — do not edit any file, do not commit.
 

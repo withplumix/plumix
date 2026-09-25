@@ -70,8 +70,9 @@ const takeNextTicket = (): Ticket | undefined => {
   return candidate;
 };
 
+const laneCount = Math.max(1, onlyTicket ? 1 : lanes);
 const results = await drainAcrossLanes<Ticket, ShipResult>({
-  lanes: Math.max(1, onlyTicket ? 1 : lanes),
+  lanes: laneCount,
   nextItem: takeNextTicket,
   stopDispatchingWhen: () =>
     endOfBudget - Date.now() < MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS,
@@ -79,7 +80,7 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
     const journal = new Journal(import.meta.dirname);
     let outcome: ShipOutcome;
     try {
-      outcome = await shipTicket(ticket, journal);
+      outcome = await shipTicket(ticket, journal, laneCount);
     } catch (error) {
       outcome = {
         status: "blocked",
