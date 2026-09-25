@@ -69,7 +69,7 @@ export const GATES: readonly Gate[] = [
     command: "pnpm test:e2e",
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
     requires:
-      "pnpm --filter @plumix/admin exec node -e \"require('playwright').chromium.launch().then((b) => b.close())\"",
+      "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
   },
 ];
 
