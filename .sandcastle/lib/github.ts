@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 import {
+  DECISION_LABEL,
   READY_LABEL,
   REPO_ROOT,
   REPO_SLUG,
@@ -419,7 +420,7 @@ export const promoteToReadyForAgent = (
     "-R",
     REPO_SLUG,
     "--remove-label",
-    TRIAGE_LABEL,
+    `${TRIAGE_LABEL},${DECISION_LABEL}`,
     "--add-label",
     READY_LABEL,
   ]);
@@ -441,6 +442,15 @@ export const askOnIssue = (
       `${TRIAGE_NOTES_HEADING}\n\nTriage got as far as it can unattended. What is still open:\n\n${list}`,
     ),
   ]);
+  gh([
+    "issue",
+    "edit",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--add-label",
+    DECISION_LABEL,
+  ]);
 };
 
 export const closeAlreadyResolved = (
@@ -454,7 +464,7 @@ export const closeAlreadyResolved = (
     "-R",
     REPO_SLUG,
     "--remove-label",
-    TRIAGE_LABEL,
+    `${TRIAGE_LABEL},${DECISION_LABEL}`,
     "--add-label",
     WONTFIX_LABEL,
   ]);

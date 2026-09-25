@@ -5,4 +5,5 @@ export const REPO_SLUG = "withplumix/plumix";
 export const MERGE_BASE = "origin/main";
 export const READY_LABEL = "ready-for-agent";
 export const TRIAGE_LABEL = "needs-triage";
+export const DECISION_LABEL = "needs-decision";
 export const WONTFIX_LABEL = "wontfix";
