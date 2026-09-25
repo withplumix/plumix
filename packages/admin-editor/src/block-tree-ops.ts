@@ -23,9 +23,8 @@ export function findBlock(
 
 /**
  * The id of the block whose slot directly holds `id`, or null when `id` is a
- * top-level block or absent. Unlike the layers outline, this descends every
- * slot (not just the first) so select-parent resolves correctly inside
- * multi-slot blocks.
+ * top-level block or absent. Descends every slot, so select-parent resolves
+ * inside multi-slot blocks.
  */
 export function findParentId(
   nodes: readonly BlockNode[],
@@ -52,16 +51,17 @@ export interface FlatNode {
   readonly depth: number;
   /** The slot-owning block's id, or null at the top level. */
   readonly parentId: string | null;
+  /** Which of the parent's slots holds this block, or null at the top level. */
+  readonly slotKey: string | null;
   /** Whether this block can hold children (has a slot) — gates nesting onto it. */
   readonly hasSlot: boolean;
 }
 
 /**
  * Flatten the nested tree to a depth-first outline (a node immediately
- * followed by its children), the shape the Layers list renders. Descends only
- * the block's first slot — the same one `moveBlock` writes — so the outline and
- * drag targets address the same children. Multi-slot blocks (e.g. columns)
- * surface only their first slot in the tree for now; see [[#1108 follow-up]].
+ * followed by its children), the shape the Layers list renders. A multi-slot
+ * block lists each slot's children in turn, in declaration order; `slotKey`
+ * tells them apart so a drag lands back in the slot it was dropped among.
  */
 export function flattenTree(tree: readonly BlockNode[]): readonly FlatNode[] {
   const out: FlatNode[] = [];
@@ -69,22 +69,26 @@ export function flattenTree(tree: readonly BlockNode[]): readonly FlatNode[] {
     nodes: readonly BlockNode[],
     depth: number,
     parentId: string | null,
+    inSlot: string | null,
   ): void => {
     for (const node of nodes) {
-      const key = slotKey(node);
+      const keys = slotKeys(node);
       out.push({
         id: node.id,
         name: node.name,
         label: node.label,
         depth,
         parentId,
-        hasSlot: key !== null,
+        slotKey: inSlot,
+        hasSlot: keys.length > 0,
       });
-      const children = key !== null ? node.attrs?.[key] : undefined;
-      if (isBlockNodeArray(children)) walk(children, depth + 1, node.id);
+      for (const key of keys) {
+        const children = node.attrs?.[key];
+        if (isBlockNodeArray(children)) walk(children, depth + 1, node.id, key);
+      }
     }
   };
-  walk(tree, 0, null);
+  walk(tree, 0, null, null);
   return out;
 }
 
@@ -129,28 +133,40 @@ export function projectMove(
   const minDepth = next ? next.depth : 0;
   const depth = Math.max(minDepth, Math.min(projected, maxDepth));
 
-  const parentId = projectedParentId(moved, overIndex, depth, prev);
+  const slot = projectedSlot(moved, overIndex, depth, prev);
   const index = moved
     .slice(0, overIndex)
-    .filter((i) => i.id !== activeId && i.parentId === parentId).length;
-  return { parentId, index };
+    .filter(
+      (i) =>
+        i.id !== activeId &&
+        i.parentId === slot.parentId &&
+        (slot.slotKey === undefined || i.slotKey === slot.slotKey),
+    ).length;
+  return { ...slot, index };
 }
 
-function projectedParentId(
+// Nesting under the row above targets its first slot; adopting a row's parent
+// also adopts the slot that row sits in.
+function projectedSlot(
   moved: readonly FlatNode[],
   overIndex: number,
   depth: number,
   prev: FlatNode | undefined,
-): string | null {
-  if (depth === 0 || !prev) return null;
-  if (depth === prev.depth) return prev.parentId;
-  if (depth > prev.depth) return prev.id;
+): Omit<MoveTarget, "index"> {
+  if (depth === 0 || !prev) return { parentId: null };
+  if (depth > prev.depth) return { parentId: prev.id };
   // Shallower than the row above: adopt the nearest earlier row at this depth.
-  const ancestor = moved
-    .slice(0, overIndex)
-    .reverse()
-    .find((i) => i.depth === depth);
-  return ancestor?.parentId ?? null;
+  const sibling =
+    depth === prev.depth
+      ? prev
+      : moved
+          .slice(0, overIndex)
+          .reverse()
+          .find((i) => i.depth === depth);
+  if (sibling?.parentId == null) return { parentId: null };
+  return sibling.slotKey === null
+    ? { parentId: sibling.parentId }
+    : { parentId: sibling.parentId, slotKey: sibling.slotKey };
 }
 
 export interface MoveTarget {
@@ -264,10 +280,10 @@ export function duplicateBlock(
   if (!source) return { tree, newId: null };
   const [clone] = rewriteBlockNodeIds([source]);
   if (!clone) return { tree, newId: null };
-  const parentId = findParentId(tree, id);
-  const index = siblingsOf(tree, parentId).findIndex((n) => n.id === id) + 1;
+  const slot = siblingsOf(tree, id);
+  const index = slot.siblings.findIndex((n) => n.id === id) + 1;
   return {
-    tree: insertNode(tree, clone, { parentId, index }),
+    tree: insertNode(tree, clone, { ...slot.at, index }),
     newId: clone.id,
   };
 }
@@ -287,15 +303,15 @@ function soleSlotChildren(node: BlockNode): readonly BlockNode[] | null {
 /** Whether {@link ungroupBlock} can unwrap this block — a single-slot container
  *  with children. The toolbar gates the Ungroup button on this. */
 /** Whether `groupBlocks` would do anything: the selection's roots must all
- *  share one parent, since a group can't span containers. */
+ *  share one slot of one parent, since a group can't span containers. */
 export function canGroupSelection(
   tree: readonly BlockNode[],
   selectedIds: ReadonlySet<string>,
 ): boolean {
   const roots = selectionRoots(tree, selectedIds);
   if (roots.length === 0) return false;
-  const parent = findParentId(tree, roots[0] ?? "");
-  return roots.every((id) => findParentId(tree, id) === parent);
+  const slot = siblingsOf(tree, roots[0] ?? "");
+  return roots.every((id) => slot.siblings.some((n) => n.id === id));
 }
 
 export function canUngroupBlock(
@@ -323,19 +339,19 @@ export function ungroupBlock(
   if (!node) return null;
   const children = soleSlotChildren(node);
   if (!children) return null;
-  const parentId = findParentId(tree, id);
-  const at = siblingsOf(tree, parentId).findIndex((n) => n.id === id);
+  const slot = siblingsOf(tree, id);
+  const at = slot.siblings.findIndex((n) => n.id === id);
   let next = removeBlocks(tree, new Set([id]));
   children.forEach((child, i) => {
-    next = insertNode(next, child, { parentId, index: at + i });
+    next = insertNode(next, child, { ...slot.at, index: at + i });
   });
   return { tree: next, childIds: children.map((c) => c.id) };
 }
 
 /**
  * Wrap the selected blocks in a new `core/group` at the position of the first.
- * Only groups a selection whose roots are siblings (share a parent) — returns
- * `null` otherwise (or when nothing is selected), since a group can't span
+ * Only groups a selection whose roots are siblings (share one slot of one
+ * parent) — returns `null` otherwise (or when nothing is selected), since a group can't span
  * containers. Children keep their ids; the group takes `groupId`.
  */
 export function groupBlocks(
@@ -345,12 +361,11 @@ export function groupBlocks(
 ): { readonly tree: readonly BlockNode[]; readonly groupId: string } | null {
   const roots = new Set(selectionRoots(tree, ids));
   if (roots.size === 0) return null;
-  const parentId = findParentId(tree, [...roots][0] ?? "");
-  const siblings = siblingsOf(tree, parentId);
-  // All roots must be siblings under the same parent.
-  if ([...roots].some((id) => findParentId(tree, id) !== parentId)) return null;
+  const slot = siblingsOf(tree, [...roots][0] ?? "");
+  const siblings = slot.siblings;
   const content = siblings.filter((n) => roots.has(n.id));
-  if (content.length === 0) return null;
+  // All roots must be siblings in the same slot of the same parent.
+  if (content.length !== roots.size) return null;
   const group: BlockNode = {
     id: groupId,
     name: "core/group",
@@ -361,7 +376,7 @@ export function groupBlocks(
   const insertIndex = siblings.findIndex((n) => roots.has(n.id));
   const pruned = removeBlocks(tree, roots);
   return {
-    tree: insertNode(pruned, group, { parentId, index: insertIndex }),
+    tree: insertNode(pruned, group, { ...slot.at, index: insertIndex }),
     groupId,
   };
 }
@@ -406,14 +421,14 @@ export function pasteBlocks(
 ): { readonly tree: readonly BlockNode[]; readonly newIds: readonly string[] } {
   const clones = rewriteBlockNodeIds(nodes);
   if (clones.length === 0) return { tree, newIds: [] };
-  const parentId = afterId ? findParentId(tree, afterId) : null;
-  const siblings = siblingsOf(tree, parentId);
+  const slot = afterId ? siblingsOf(tree, afterId) : topLevelSlot(tree);
+  const siblings = slot.siblings;
   const after = afterId ? siblings.findIndex((n) => n.id === afterId) : -1;
   const start = after >= 0 ? after + 1 : siblings.length;
   let next = tree;
   const newIds: string[] = [];
   clones.forEach((clone, i) => {
-    next = insertNode(next, clone, { parentId, index: start + i });
+    next = insertNode(next, clone, { ...slot.at, index: start + i });
     newIds.push(clone.id);
   });
   return { tree: next, newIds };
@@ -447,13 +462,12 @@ export function moveBlockBy(
   id: string,
   delta: number,
 ): readonly BlockNode[] {
-  const parentId = findParentId(tree, id);
-  const siblings = siblingsOf(tree, parentId);
+  const { siblings, at } = siblingsOf(tree, id);
   const from = siblings.findIndex((n) => n.id === id);
   if (from === -1) return tree;
   const to = from + delta;
   if (to < 0 || to >= siblings.length) return tree;
-  return moveBlock(tree, id, { parentId, index: to });
+  return moveBlock(tree, id, { ...at, index: to });
 }
 
 const TABLE = "core/table";
@@ -601,23 +615,41 @@ function setTableRows(
   });
 }
 
-// The blocks sharing `id`'s level: the top level when parentId is null, else
-// the parent's first slot (the one the tree ops address).
-function siblingsOf(
-  tree: readonly BlockNode[],
-  parentId: string | null,
-): readonly BlockNode[] {
-  if (parentId === null) return tree;
-  const parent = findBlock(tree, parentId);
-  if (!parent) return [];
-  const key = slotKey(parent);
-  const slot = key !== null ? parent.attrs?.[key] : undefined;
-  return isBlockNodeArray(slot) ? slot : [];
+interface SiblingSlot {
+  /** The blocks sharing the node's slot, the node included. */
+  readonly siblings: readonly BlockNode[];
+  /** The slot as a move target, missing only its index. */
+  readonly at: Omit<MoveTarget, "index">;
+}
+
+function topLevelSlot(tree: readonly BlockNode[]): SiblingSlot {
+  return { siblings: tree, at: { parentId: null } };
+}
+
+// The slot that directly holds `id` — whichever of its parent's slots that is,
+// so an op relative to a node stays in that node's slot. An absent id resolves
+// to the top level, where a sibling-relative op finds nothing to act on.
+function siblingsOf(tree: readonly BlockNode[], id: string): SiblingSlot {
+  const find = (
+    nodes: readonly BlockNode[],
+    at: Omit<MoveTarget, "index">,
+  ): SiblingSlot | null => {
+    if (nodes.some((n) => n.id === id)) return { siblings: nodes, at };
+    for (const node of nodes) {
+      for (const key of slotKeys(node)) {
+        const slot = node.attrs?.[key];
+        if (!isBlockNodeArray(slot)) continue;
+        const hit = find(slot, { parentId: node.id, slotKey: key });
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  return find(tree, { parentId: null }) ?? topLevelSlot(tree);
 }
 
 // The first attr key holding a child-block array, or null if the block has no
-// slot. The layers tree addresses only this first slot — multi-slot blocks
-// aren't fully reachable from the outline yet (tracked as a #1108 follow-up).
+// slot — where a move lands when its target names no slot.
 function slotKey(node: BlockNode): string | null {
   for (const [key, value] of Object.entries(node.attrs ?? {})) {
     if (isBlockNodeArray(value)) return key;
