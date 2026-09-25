@@ -20,6 +20,7 @@
     "src",
     "playground",
     "e2e",
+    "test",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",

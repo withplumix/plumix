@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";
 
 import { baseConfig } from "@plumix/vitest-config/base";
@@ -22,6 +23,15 @@ export default mergeConfig(
       // neither the bare default nor a per-test override on the slowest test
       // is safe: a bad-luck runner would have ~22 candidates to fail.
       testTimeout: 15_000,
+    },
+    resolve: {
+      alias: {
+        // Vitest doesn't run the Lingui Babel macro, so the real entrypoint
+        // throws at load. The stub hands back the descriptor as Babel would.
+        "@lingui/core/macro": fileURLToPath(
+          new URL("./test/lingui-macro-stub.ts", import.meta.url),
+        ),
+      },
     },
   }),
 );
