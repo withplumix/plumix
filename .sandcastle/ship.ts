@@ -2,12 +2,14 @@ import {
   closeCompletedParent,
   parentsWithEveryChildClosed,
   parkTicket,
+  releaseClaim,
   syncRepoToMain,
   firstUnblockedUnassignedTicket,
   ticketByNumber,
 } from "./lib/github.js";
 import type { Ticket } from "./lib/github.js";
 import { drainAcrossLanes } from "./lib/lanes.js";
+import { looksLikeAnOutage } from "./lib/outage.js";
 import { say } from "./lib/log.js";
 import { Journal } from "./lib/telemetry.js";
 import type { ShipOutcome } from "./lib/ticket.js";
@@ -54,6 +56,7 @@ interface ShipResult {
 const { onlyTicket, lanes, budgetMs } = readOptions(process.argv.slice(2));
 const endOfBudget = Date.now() + budgetMs;
 const claimed = new Set<number>();
+let outage: string | undefined;
 
 say(
   `Ship run — budget ${asDuration(budgetMs)}, ${lanes} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
@@ -75,6 +78,7 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
   lanes: laneCount,
   nextItem: takeNextTicket,
   stopDispatchingWhen: () =>
+    outage !== undefined ||
     endOfBudget - Date.now() < MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS,
   inLane: async (ticket) => {
     const journal = new Journal(import.meta.dirname);
@@ -82,10 +86,15 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
     try {
       outcome = await shipTicket(ticket, journal);
     } catch (error) {
-      outcome = {
-        status: "blocked",
-        reason: error instanceof Error ? error.message : String(error),
-      };
+      const reason = error instanceof Error ? error.message : String(error);
+      if (looksLikeAnOutage(reason)) {
+        journal.finish("failed", reason);
+        releaseClaim(ticket.number);
+        outage ??= reason;
+        say(`  #${ticket.number} → left for the next run: ${reason}`);
+        return { ticket, outcome: { status: "blocked", reason } };
+      }
+      outcome = { status: "blocked", reason };
     }
 
     if (outcome.status === "shipped") {
@@ -108,6 +117,10 @@ const shipped = results.filter(({ outcome }) => outcome.status === "shipped");
 const parked = results.filter(({ outcome }) => outcome.status !== "shipped");
 
 say(`\n${"=".repeat(60)}`);
+if (outage) {
+  say(`Stopped early — nothing the tickets did:\n  ${outage}`);
+  say(`Every ticket still in flight kept its label, so the next run takes them.`);
+}
 say(
   `Shipped ${shipped.length}, parked ${parked.length}, ${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
 );

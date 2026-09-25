@@ -14,6 +14,7 @@ import {
 } from "./lib/github.js";
 import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
+import { looksLikeAnOutage } from "./lib/outage.js";
 import { createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
@@ -132,6 +133,7 @@ say(
 );
 
 const readyBeforeTheRun = readyForAgentCount();
+let outage: string | undefined;
 const branchTokenThatOutlivesAnInterruptedRun = new Date()
   .toISOString()
   .replace(/[:.]/g, "-")
@@ -151,6 +153,7 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
   nextItem: drainingFrom(queue),
   lanes: laneCount,
   stopDispatchingWhen: (settled) =>
+    outage !== undefined ||
     Date.now() > endOfBudget ||
     (!onlyIssue && readyBeforeTheRun + promotedSoFar(settled) >= queueDepth),
   inLane: async (issue, lane) => {
@@ -170,10 +173,9 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
         models,
       );
     } catch (error) {
-      outcome = {
-        status: "skipped",
-        reason: error instanceof Error ? error.message : String(error),
-      };
+      const reason = error instanceof Error ? error.message : String(error);
+      if (looksLikeAnOutage(reason)) outage ??= reason;
+      outcome = { status: "skipped", reason };
     }
 
     journal.finish(outcome.status);
@@ -210,6 +212,9 @@ const numbersWithStatus = (status: TriageOutcome["status"]) =>
     .map(({ issue }) => issue.number);
 
 say(`\n${"=".repeat(60)}`);
+if (outage) {
+  say(`Stopped early — nothing the issues did:\n  ${outage}`);
+}
 say(
   `Promoted ${promoted.length}, closed ${numbersWithStatus("closed").length}, ` +
     `questioned ${numbersWithStatus("questioned").length}, ` +

@@ -181,6 +181,18 @@ const releaseTicketsWaitingOn = (ticketNumber: number): void => {
   }
 };
 
+export const releaseClaim = (ticketNumber: number): void => {
+  gh([
+    "issue",
+    "edit",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--remove-assignee",
+    "@me",
+  ]);
+};
+
 export const parkTicket = (
   ticketNumber: number,
   reason: string,
