@@ -64,7 +64,7 @@ describe("archiveAtPath", () => {
     ["/2026/04", { kind: "date" }, { year: "2026", month: "04" }],
     ["/talks/news", { kind: "custom", name: "talks" }, { track: "news" }],
   ])("%s is its archive", (path, archive, params) => {
-    const found = archiveAtPath(h.app.plugins, path);
+    const found = archiveAtPath(h.app, path);
     expect(found?.archive).toEqual(archive);
     expect(found?.params).toEqual(params);
   });
@@ -76,7 +76,7 @@ describe("archiveAtPath", () => {
     ["params a plugin archive declines", "/talks/none"],
     ["an unknown path", "/no/such/thing"],
   ])("%s is no archive", (_what, path) => {
-    expect(archiveAtPath(h.app.plugins, path)).toBeNull();
+    expect(archiveAtPath(h.app, path)).toBeNull();
   });
 
   test.each(["/", "/all-pages", "/topic/t", "/talks/t", "/2026"])(
@@ -113,7 +113,7 @@ describe("archiveAtPath", () => {
         }
       }
 
-      const found = archiveAtPath(h.app.plugins, path);
+      const found = archiveAtPath(h.app, path);
       if (found === null) throw new Error(`no archive at ${path}`);
       const listing = await listEntryPage(ctx, found.entries, {
         page: 1,
@@ -162,15 +162,14 @@ describe("archiveBaseRoutes", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
     });
-    const plugins = (await createDispatcherHarness({ plugins: [rooted] })).app
-      .plugins;
+    const { app } = await createDispatcherHarness({ plugins: [rooted] });
 
     expect(
-      archiveBaseRoutes(plugins).filter((route) => route.pattern === "/"),
+      archiveBaseRoutes(app.plugins).filter((route) => route.pattern === "/"),
     ).toEqual([
       { archive: { kind: "archive", entryType: "post" }, pattern: "/" },
     ]);
-    expect(archiveAtPath(plugins, "/")?.archive).toEqual({
+    expect(archiveAtPath(app, "/")?.archive).toEqual({
       kind: "archive",
       entryType: "post",
     });

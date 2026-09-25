@@ -205,6 +205,29 @@ export const rooms = definePlugin("rooms", {
 
 An archive that leaves `entries` out works exactly as before: `resolve` returns the whole `{ data, title }` payload or `null`, and owns its own paging. That is the shape for an archive whose results are a match rather than a set — `@plumix/plugin-search` registers this way — and only an archive described by an entry query can have a feed.
 
+### Narrowing an archive
+
+`archive:entries` hands any archive's entry query to a plugin to narrow — core's front page, type, term, author and date archives as well as a plugin archive with `entries`. It is Plumix's `pre_get_posts` for archives. The handler receives the query, the archive it describes, and what the archive's URL captured, and returns a query. It runs wherever the archive's query is read, so the archive's page, its pagination and its feed all change together.
+
+```ts
+import { sql } from "plumix/db";
+import { definePlugin } from "plumix/plugin";
+import { entries, entryTerm, terms } from "plumix/schema";
+
+// Entries not filed under the `asides` category.
+const notAnAside = sql`${entries.id} not in (select ${entryTerm.entryId} from ${entryTerm} inner join ${terms} on ${terms.id} = ${entryTerm.termId} where ${terms.taxonomy} = 'category' and ${terms.slug} = 'asides')`;
+
+export const quietFrontPage = definePlugin("quiet-front-page", {
+  setup: (ctx) => {
+    ctx.addFilter("archive:entries", (query, archive) =>
+      archive.kind === "front-page" ? query.where(notAnAside) : query,
+    );
+  },
+});
+```
+
+`archive` names the archive as the router does — `front-page`, `archive` (with its `entryType`), `taxonomy` (with its `taxonomy`), `author`, `date`, or `custom` (with the plugin archive's `name`). No term or author is loaded for it; read the slug off the params. A query only narrows, and core applies the public-entries rule again when it compiles one, so a handler can hide entries but never reveal one — even returning a fresh `entryQuery()` lists no draft. A handler can change the order too, and a feed still reads newest first. Like `entries`, the handler is synchronous and runs no queries. The search page is not an entry-query archive and does not pass through it.
+
 `registerPublicRoute(options)` skips the route map entirely and answers a path at the site root itself, which is how a plugin owns a machine-readable endpoint like `/robots.txt`, a sitemap or a feed. `path` is an exact pathname or a URLPattern pathname whose captured groups reach the handler as its third argument, and `cacheable: true` opts the response into the CDN on the same terms as a `/_plumix/` plugin route. Two plugins claiming one path throws at boot naming both owners; a path inside `/_plumix/` throws too, since core owns that prefix — mount those with `registerRoute`.
 
 ```ts

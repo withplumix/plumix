@@ -5,7 +5,7 @@ import type { AppContext } from "../context/app.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
-import { eq } from "../db/index.js";
+import { eq, ne } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
@@ -843,6 +843,40 @@ describe("resolvePublicRoute — archive", () => {
       new Request("https://cms.example/shop/page/99"),
     );
     expect(response.status).toBe(404);
+  });
+
+  test("pagination counts only what an archive:entries handler leaves", async () => {
+    const hideOne = definePlugin("hide-one", (ctx) => {
+      ctx.addFilter("archive:entries", (query) =>
+        query.where(ne(entries.slug, "p-21")),
+      );
+    });
+    const h = await createDispatcherHarness({
+      plugins: [shopPlugin, hideOne],
+    });
+    const author = await h.seedUser("admin");
+    // One more than a page holds, so hiding one leaves no second page.
+    for (let i = 1; i <= 21; i++) {
+      await h.factory.entry.create({
+        type: "product",
+        slug: `p-${String(i).padStart(2, "0")}`,
+        title: `Product ${String(i).padStart(2, "0")}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`2026-04-${String(i).padStart(2, "0")}`),
+      });
+    }
+
+    const first = await h.dispatch(new Request("https://cms.example/shop"));
+    expect(first.status).toBe(200);
+    const body = await first.text();
+    expect(body).toContain("Product 01");
+    expect(body).not.toContain("Product 21");
+    const second = await h.dispatch(
+      new Request("https://cms.example/shop/page/2"),
+    );
+    expect(second.status).toBe(404);
   });
 
   test("non-numeric :page param returns 404", async () => {

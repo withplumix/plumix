@@ -111,7 +111,7 @@ async function resolveFrontPage(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const page = await frontPageData(ctx, parsePageParam(params.page));
+  const page = await frontPageData(ctx, params, parsePageParam(params.page));
   if (page === null) return notFound("public-front-page-page-out-of-range");
   return renderListing(ctx, renderEnv, page, "public-front-page-no-template");
 }
@@ -199,7 +199,7 @@ async function resolveTaxonomy(
 
   ctx.resolvedEntity = { kind: "term", id: term.id };
 
-  const page = await termData(ctx, term, path, parsePageParam(params.page));
+  const page = await termData(ctx, term, params, parsePageParam(params.page));
   if (page === null) return notFound("public-term-page-out-of-range");
   return renderListing(ctx, renderEnv, page, "public-taxonomy-no-template");
 }
@@ -217,6 +217,7 @@ async function resolveAuthor(
   const page = await authorData(
     ctx,
     await resolveAuthorRow(ctx, author),
+    params,
     parsePageParam(params.page),
   );
   if (page === null) return notFound("public-author-page-out-of-range");
@@ -235,6 +236,7 @@ async function resolveDate(
       month: params.month === undefined ? null : Number(params.month),
       day: params.day === undefined ? null : Number(params.day),
     },
+    params,
     parsePageParam(params.page),
   );
   // One answer for an unparseable date and for a page past the end of a real
@@ -297,7 +299,7 @@ async function resolveListingArchive(
   renderEnv: RenderEnv,
 ): Promise<Response> {
   const query = archiveEntries(
-    ctx.plugins,
+    ctx,
     { kind: "custom", name: archive.name },
     params,
   );
@@ -436,6 +438,7 @@ async function resolveArchive(
   const page = await archiveData(
     ctx,
     intent.entryType,
+    params,
     parsePageParam(params.page),
   );
   if (page === null) return notFound("public-archive-page-out-of-range");

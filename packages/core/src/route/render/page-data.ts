@@ -21,13 +21,7 @@ import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { labelSourceText } from "../../i18n/label.js";
 import { resolveTermMeta } from "../../rpc/procedures/term/meta.js";
-import {
-  authorEntries,
-  dateEntries,
-  entryTypeEntries,
-  frontPageEntries,
-  termEntries,
-} from "../archive-entries.js";
+import { archiveEntries } from "../archive-entries.js";
 import { archiveSlugForEntryType } from "../compile.js";
 import { paginate } from "../paginate.js";
 import { rememberAuthor, rememberTermSegments } from "../path-chain.js";
@@ -77,11 +71,12 @@ export interface ResolvedListingPage {
 
 export async function frontPageData(
   ctx: AppContext,
+  params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const listing = await listingFor(
     ctx,
-    frontPageEntries(ctx.plugins),
+    archiveEntries(ctx, { kind: "front-page" }, params),
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -103,12 +98,13 @@ export async function frontPageData(
 export async function archiveData(
   ctx: AppContext,
   entryType: string,
+  params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const registered = ctx.plugins.entryTypes.get(entryType);
   const listing = await listingFor(
     ctx,
-    entryTypeEntries(ctx.plugins, entryType),
+    archiveEntries(ctx, { kind: "archive", entryType }, params),
     page,
     registered?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -132,19 +128,20 @@ export async function archiveData(
 }
 
 /**
- * `path` is the term's segments as its URL spells them, the ones its page was
- * resolved from, so compiling the listing's `inTerm` replays that lookup.
+ * `params` carries the term's segments as its URL spells them, the ones its
+ * page was resolved from, so compiling the listing's `inTerm` replays that
+ * lookup.
  */
 export async function termData(
   ctx: AppContext,
   term: Term,
-  path: readonly string[],
+  params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
   const listing = await listingFor(
     ctx,
-    termEntries(ctx.plugins, term.taxonomy, path),
+    archiveEntries(ctx, { kind: "taxonomy", taxonomy: term.taxonomy }, params),
     page,
     taxonomy?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -180,11 +177,12 @@ export async function termData(
 export async function authorData(
   ctx: AppContext,
   author: ResolvedAuthor,
+  params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const listing = await listingFor(
     ctx,
-    authorEntries(ctx.plugins, author.slug),
+    archiveEntries(ctx, { kind: "author" }, params),
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -212,12 +210,13 @@ export interface DateTarget {
 export async function dateData(
   ctx: AppContext,
   target: DateTarget,
+  params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
   const { year, month, day } = target;
   const listing = await listingFor(
     ctx,
-    dateEntries(ctx.plugins, year, month, day),
+    archiveEntries(ctx, { kind: "date" }, params),
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -268,14 +267,14 @@ export async function resolveListingPage(
 ): Promise<ResolvedListingPage | null> {
   switch (target.kind) {
     case "front-page":
-      return frontPageData(ctx, 1);
+      return frontPageData(ctx, {}, 1);
     case "archive": {
       const registered = ctx.plugins.entryTypes.get(target.entryType);
       // Asked of the router's own helper rather than restated, so a type whose
       // archive is not routed is answered as the missing page it is.
       if (!registered?.isPublic) return null;
       if (archiveSlugForEntryType(registered) === null) return null;
-      return archiveData(ctx, target.entryType, 1);
+      return archiveData(ctx, target.entryType, {}, 1);
     }
     case "term": {
       const term = await ctx.db.query.terms.findFirst({
@@ -285,7 +284,7 @@ export async function resolveListingPage(
       const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
       if (!taxonomy?.isPublic) return null;
       const path = await rememberTermSegments(ctx, term);
-      return termData(ctx, term, path, 1);
+      return termData(ctx, term, { path: path.join("/") }, 1);
     }
     case "author": {
       const author = await ctx.db.query.users.findFirst({
@@ -293,15 +292,29 @@ export async function resolveListingPage(
       });
       if (!author) return null;
       await rememberAuthor(ctx, author);
-      return authorData(ctx, await resolveAuthorRow(ctx, author), 1);
+      return authorData(
+        ctx,
+        await resolveAuthorRow(ctx, author),
+        { slug: author.slug },
+        1,
+      );
     }
     case "date":
-      return dateData(ctx, target, 1);
+      return dateData(ctx, target, dateParams(target), 1);
   }
 }
 
 function pad2(value: number): string {
   return String(value).padStart(2, "0");
+}
+
+// The params a date archive's URL captures for this period.
+function dateParams({ year, month, day }: DateTarget): Record<string, string> {
+  return {
+    year: String(year),
+    ...(month === null ? {} : { month: pad2(month) }),
+    ...(day === null ? {} : { day: pad2(day) }),
+  };
 }
 
 function dateTitle(
@@ -315,14 +328,16 @@ function dateTitle(
 }
 
 // The `entries` + `pagination` half every listing payload shares. Null is a
-// page no archive answers — past the last page, or a date that does not exist
-// — which each caller answers with its own 404 reason.
+// page no archive answers — past the last page, a date that does not exist,
+// or params that place no archive — which each caller answers with its own
+// 404 reason.
 async function listingFor(
   ctx: AppContext,
-  query: EntryQuery,
+  query: EntryQuery | null,
   page: number,
   perPage: number,
 ): Promise<EntryListing | null> {
+  if (query === null) return null;
   const listed = await listEntryPage(ctx, query, { page, perPage });
   if (listed === null || listed.outOfRange) return null;
   return { entries: listed.entries, pagination: listed.pagination };

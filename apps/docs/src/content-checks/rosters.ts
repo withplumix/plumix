@@ -748,6 +748,7 @@ const FILTER_HOOKS = [
   "error_page:hints",
   "error_page:panels",
   "render:document",
+  "archive:entries",
   "resolve:single:data",
   "resolve:archive:data",
   "resolve:term:data",

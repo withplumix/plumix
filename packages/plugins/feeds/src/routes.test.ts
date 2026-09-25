@@ -14,7 +14,7 @@ import {
 } from "plumix/auth";
 import { entryQuery, sql, typeTag } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
-import { entries } from "plumix/schema";
+import { entries, entryTerm, terms } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
@@ -392,8 +392,10 @@ describe("a feed is its archive's entry query", () => {
     "undated-post",
   ];
 
-  async function seedSite(): Promise<DispatcherHarness> {
-    const h = await harness(site);
+  async function seedSite(
+    ...narrowing: readonly AnyPluginDescriptor[]
+  ): Promise<DispatcherHarness> {
+    const h = await harness(site, ...narrowing);
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     const john = await h.factory.author.create({ name: "John", slug: "john" });
     const seed = (
@@ -508,6 +510,71 @@ describe("a feed is its archive's entry query", () => {
       expect(await syndicatedOn(h, feed)).not.toContain("a-page");
     },
   );
+
+  // Entries not attached to the `tag` term `g`: a narrowing the query has no
+  // method for, so it reaches for `where`.
+  const outsideTagG = sql`${entries.id} not in (select ${entryTerm.entryId} from ${entryTerm} inner join ${terms} on ${terms.id} = ${entryTerm.termId} where ${terms.taxonomy} = 'tag' and ${terms.slug} = 'g')`;
+
+  test("a handler excluding a term from the front page narrows its page and its feed", async () => {
+    const narrowing = definePlugin("narrowing", (ctx) => {
+      ctx.addFilter("archive:entries", (query, archive) =>
+        archive.kind === "front-page" ? query.where(outsideTagG) : query,
+      );
+    });
+    const h = await seedSite(narrowing);
+    expect(await syndicatedOn(h, "/feed")).toEqual(["other-post"]);
+    expect(await listedOn(h, "/")).toEqual(["other-post"]);
+    expect(await syndicatedOn(h, "/post/feed")).toEqual([
+      "new-post",
+      "old-post",
+      "other-post",
+    ]);
+  });
+
+  test("a handler narrowing a plugin archive changes its page and its feed together", async () => {
+    const narrowing = definePlugin("narrowing", (ctx) => {
+      ctx.addFilter("archive:entries", (query, archive, params) =>
+        archive.kind === "custom" && archive.name === "series"
+          ? query.ofTypes(params.name === "g" ? "page" : "post")
+          : query,
+      );
+    });
+    const h = await seedSite(narrowing);
+    expect(await syndicatedOn(h, "/series/g/feed")).toEqual(["a-page"]);
+    expect(await listedOn(h, "/series/g")).toEqual(["a-page"]);
+  });
+
+  test("a handler returning a fresh query still lists no draft, trashed or non-public entry", async () => {
+    const widening = definePlugin("widening", (ctx) => {
+      ctx.addFilter("archive:entries", () => entryQuery());
+    });
+    const h = await seedSite(widening);
+    const author = await h.seedUser("admin");
+    for (const status of ["draft", "trash"] as const) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `a-${status}`,
+        title: `Title a-${status}`,
+        content: null,
+        status,
+        authorId: author.id,
+        publishedAt: new Date("2026-04-15T12:00:00Z"),
+      });
+    }
+    for (const [page, feed] of [
+      ["/", "/feed"],
+      ["/series/g", "/series/g/feed"],
+    ] as const) {
+      const listed = await (await h.fetch(page)).text();
+      const syndicated = await (await h.fetch(feed)).text();
+      for (const slug of ["a-draft", "a-trash", "a-secret", "undated-post"]) {
+        expect(listed).not.toContain(`Title ${slug}`);
+        expect(syndicated).not.toContain(`Title ${slug}`);
+      }
+      expect(listed).toContain("Title new-post");
+      expect(syndicated).toContain("Title new-post");
+    }
+  });
 
   test("an archive ordering its page by title still feeds newest first", async () => {
     const alphabetical = definePlugin("alphabetical", (ctx) => {

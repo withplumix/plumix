@@ -253,6 +253,7 @@ export type { PublicRouteMatch } from "./route/public-routes.js";
 export type {
   ArchiveAtPath,
   ArchiveBaseRoute,
+  ArchiveReader,
   EntryArchive,
 } from "./route/archive-entries.js";
 export {

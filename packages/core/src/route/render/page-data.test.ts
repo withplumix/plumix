@@ -106,6 +106,28 @@ describe("resolveListingPage", () => {
     expect(page?.data.pagination.total).toBe(1);
   });
 
+  test("hands archive:entries the params the page's URL would capture", async () => {
+    const seen: Record<string, string>[] = [];
+    const recording = definePlugin("recording", (ctx) => {
+      ctx.addFilter("archive:entries", (query, archive, params) => {
+        seen.push(params);
+        return archive.kind === "date" ? query.none() : query;
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [blog, recording] });
+    await seedPost(h);
+
+    const page = await resolveListingPage(contextFor(h), {
+      kind: "date",
+      year: 2026,
+      month: 3,
+      day: null,
+    });
+
+    expect(page?.data.pagination.total).toBe(0);
+    expect(seen).toEqual([{ year: "2026", month: "03" }]);
+  });
+
   test("resolves a content-type archive and names it with its label", async () => {
     const h = await harness();
     await seedPost(h);

@@ -1,6 +1,7 @@
 import type {
   ArchiveAtPath,
   ArchiveBaseRoute,
+  ArchiveReader,
   EntryArchive,
   PluginRegistry,
 } from "plumix/plugin";
@@ -192,10 +193,10 @@ function listingOf(feedPath: string): string {
  * names is looked up when the feed is served.
  */
 export function feedAt(
-  plugins: PluginRegistry,
+  reader: ArchiveReader,
   feedPath: string,
 ): ArchiveAtPath | null {
-  const found = archiveAtPath(plugins, listingOf(feedPath));
+  const found = archiveAtPath(reader, listingOf(feedPath));
   if (found === null) return null;
-  return servesFeed(plugins, found.archive, feedPath) ? found : null;
+  return servesFeed(reader.plugins, found.archive, feedPath) ? found : null;
 }
