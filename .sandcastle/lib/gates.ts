@@ -71,7 +71,7 @@ export const CHANGESET_GATE: Gate = {
   appliesWhen: touches(PUBLISHED_PACKAGE_PATHS),
 };
 
-type Executor = Pick<sandcastle.Sandbox, "exec">;
+export type Executor = Pick<sandcastle.Sandbox, "exec">;
 
 const changedPathsIn = async (
   sandbox: Executor,

@@ -15,6 +15,9 @@ const RATES_PER_MILLION_TOKENS: Record<string, ModelRatesPerMillionTokens> = {
   "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
 };
 
+export type RunOutcome =
+  "shipped" | "failed" | "promoted" | "closed" | "questioned" | "skipped";
+
 export interface Usage {
   readonly inputTokens: number;
   readonly outputTokens: number;
@@ -216,8 +219,10 @@ ${NOTIONAL_COST_DISCLAIMER}
 `;
 };
 
+let journalsOpenedInThisProcess = 0;
+
 export class Journal {
-  readonly runId = new Date().toISOString().replace(/[:.]/g, "-");
+  readonly runId = `${new Date().toISOString().replace(/[:.]/g, "-")}-${(journalsOpenedInThisProcess += 1)}`;
   readonly dir: string;
   readonly linesAlreadyBilled = new Map<string, number>();
 
@@ -233,11 +238,15 @@ export class Journal {
     mkdirSync(this.#logDir, { recursive: true });
   }
 
+  get #saidBy(): string {
+    return this.#ticket ? `#${this.#ticket.number} ` : "";
+  }
+
   logPath(phase: string): string {
     return join(this.#logDir, `${phase.replace(/[^a-z0-9]+/gi, "-")}.log`);
   }
 
-  setTicket(ticket: { number: number; title: string }, branch: string): void {
+  setTicket(ticket: { number: number; title: string }, branch?: string): void {
     this.#ticket = ticket;
     this.#branch = branch;
     this.#persist("running");
@@ -253,20 +262,20 @@ export class Journal {
         : ` $${phase.notionalCostUsd.toFixed(3)}`;
     const note = phaseNote(phase);
     console.log(
-      `    ⤷ ${phase.phase} ${phase.outcome} ${asSeconds(phase.durationMs)}${cost}${note ? ` ${note}` : ""}`,
+      `    ⤷ ${this.#saidBy}${phase.phase} ${phase.outcome} ${asSeconds(phase.durationMs)}${cost}${note ? ` ${note}` : ""}`,
     );
   }
 
-  finish(outcome: "shipped" | "failed", error?: string): void {
+  finish(outcome: RunOutcome, error?: string): void {
     const journal = this.#persist(outcome, error);
     const { usage, ...t } = journal.totals;
     console.log(
-      `\n${outcome} in ${asSeconds(t.durationMs)} — ${t.agentCalls} agent calls, ` +
+      `\n${this.#saidBy}${outcome} in ${asSeconds(t.durationMs)} — ${t.agentCalls} agent calls, ` +
         `${t.gateRuns} ${pluralGates(t.gateRuns)} (${t.gateFailures} failed), ` +
         `${asThousands(usage.inputTokens + usage.cacheReadInputTokens)} in / ` +
         `${asThousands(usage.outputTokens)} out, ~$${t.notionalCostUsd.toFixed(2)}`,
     );
-    console.log(`journal: ${join(this.dir, "run.json")}`);
+    console.log(`    ${this.#saidBy}journal: ${join(this.dir, "run.json")}`);
   }
 
   #totals(): RunTotals {

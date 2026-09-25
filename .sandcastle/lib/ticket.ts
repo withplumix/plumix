@@ -1,9 +1,17 @@
 import { join } from "node:path";
-import * as sandcastle from "@ai-hero/sandcastle";
 import { z } from "zod";
 
+import type { RunAgentPhase } from "./agent.js";
 import type { GateFailure } from "./gates.js";
 import type { Ticket } from "./github.js";
+import type { Journal } from "./telemetry.js";
+import {
+  agentPhaseRunner,
+  parsedJsonOrNull,
+  PROMPT_DIR,
+  startClock,
+  taggedBlock,
+} from "./agent.js";
 import {
   CHANGESET_GATE,
   gateBehindCheck,
@@ -29,13 +37,6 @@ import {
   createPlumixSandbox,
   HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
-import {
-  Journal,
-  notionalCostOf,
-  usageFromSessionTranscripts,
-} from "./telemetry.js";
-
-const PROMPT_DIR = join(import.meta.dirname, "..", "prompts");
 
 const IMPLEMENTER_MODEL = "claude-opus-5-5";
 const REVIEWER_MODEL = "claude-sonnet-5";
@@ -92,31 +93,6 @@ export type ShipOutcome =
       readonly pullRequestUrl?: string;
     };
 
-interface Clock {
-  readonly startedAt: string;
-  elapsedMs(): number;
-}
-
-const startClock = (): Clock => {
-  const startedAtMs = Date.now();
-  return {
-    startedAt: new Date(startedAtMs).toISOString(),
-    elapsedMs: () => Date.now() - startedAtMs,
-  };
-};
-
-const parsedJsonOrNull = (text: string): unknown => {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
-
-const taggedBlock = (stdout: string, tag: string): string | null =>
-  stdout.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim() ??
-  null;
-
 export const readFindingsTag = (stdout: string): Review => {
   const block = taggedBlock(stdout, "findings");
   if (!block) return NO_PARSEABLE_REVIEW;
@@ -169,64 +145,6 @@ const asFixBrief = (findings: readonly Finding[]): string =>
 
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
-
-type RunAgentPhase = (
-  phase: string,
-  model: string,
-  options: Omit<sandcastle.SandboxRunOptions, "agent" | "logging" | "name">,
-) => Promise<sandcastle.SandboxRunResult>;
-
-const agentPhaseRunner =
-  (sandbox: sandcastle.Sandbox, journal: Journal): RunAgentPhase =>
-  async (phase, model, options) => {
-    const clock = startClock();
-    const logFile = journal.logPath(phase);
-
-    try {
-      const result = await sandbox.run({
-        ...options,
-        name: phase,
-        agent: sandcastle.claudeCode(model),
-        logging: { type: "file", path: logFile },
-      });
-      const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
-        sessionFilePath ? [sessionFilePath] : [],
-      );
-      const usage = usageFromSessionTranscripts(
-        sessionFiles,
-        journal.linesAlreadyBilled,
-      );
-
-      journal.record({
-        phase,
-        kind: "agent",
-        model,
-        startedAt: clock.startedAt,
-        durationMs: clock.elapsedMs(),
-        outcome: "ok",
-        iterations: result.iterations.length,
-        completionSignal: result.completionSignal,
-        commits: result.commits.length,
-        usage,
-        notionalCostUsd: notionalCostOf(usage, model),
-        logFile,
-        sessionFiles,
-      });
-      return result;
-    } catch (error) {
-      journal.record({
-        phase,
-        kind: "agent",
-        model,
-        startedAt: clock.startedAt,
-        durationMs: clock.elapsedMs(),
-        outcome: "error",
-        detail: error instanceof Error ? error.message : String(error),
-        logFile,
-      });
-      throw error;
-    }
-  };
 
 const reviewAll = async (
   runAgentPhase: RunAgentPhase,

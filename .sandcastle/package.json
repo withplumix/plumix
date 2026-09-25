@@ -5,6 +5,7 @@
   "description": "Unattended ship pipeline. Self-contained on purpose: not a pnpm workspace member, so it carries its own node_modules and never touches the root lockfile.",
   "scripts": {
     "ship": "tsx ship.ts",
+    "triage": "tsx triage.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
