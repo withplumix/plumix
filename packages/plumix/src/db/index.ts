@@ -61,6 +61,7 @@ export {
   entrySearchCondition,
   entryTag,
   enqueuePurgeTags,
+  loadAuthoredEntry,
   publicEntryRows,
   readVisitorMeta,
   settleMeta,

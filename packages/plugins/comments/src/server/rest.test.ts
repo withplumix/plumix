@@ -2,7 +2,14 @@ import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
 import { commentFactory } from "../test/factories.js";
-import { gatedBlog, harnessWith, seedPost, testBlog } from "../test/harness.js";
+import {
+  gatedBlog,
+  harnessWith,
+  REVISION_TYPES_ENABLED,
+  seedPost,
+  seedRevision,
+  testBlog,
+} from "../test/harness.js";
 
 function restHarness(blog = testBlog): Promise<Harness> {
   return harnessWith(
@@ -67,6 +74,23 @@ describe("comments REST resource", () => {
       .create({ entryId, status: "approved", bodyMd: "members only" });
 
     const res = await h.dispatch(new Request(commentsUrl(entryId)));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Envelope;
+    expect(body.data).toEqual([]);
+  });
+
+  test("returns nothing for a published revision row's id", async () => {
+    const h = await harnessWith(
+      { entryTypes: REVISION_TYPES_ENABLED },
+      { api: { enabled: true } },
+    );
+    const revision = await seedRevision(h, await seedPost(h));
+    await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId: revision.id, status: "approved", bodyMd: "snap" });
+
+    const res = await h.dispatch(new Request(commentsUrl(revision.id)));
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Envelope;

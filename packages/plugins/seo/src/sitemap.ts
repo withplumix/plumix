@@ -1,6 +1,6 @@
 import type { PluginRegistry } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { and, eq, sql, typeTag } from "plumix/db";
+import { and, eq, publicEntryRows, sql, typeTag } from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
 import { withBasePath, xmlEscape } from "plumix/support";
@@ -152,12 +152,11 @@ function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }
 
-function publishedEntriesOf(type: string) {
-  return and(
-    eq(entries.type, type),
-    eq(entries.status, "published"),
-    entryIsIndexable,
-  );
+// `null` where the site has no public type, so there is nothing to list.
+function publishedEntriesOf(ctx: AppContext, type: string) {
+  const listed = publicEntryRows(ctx.plugins);
+  if (listed === null) return null;
+  return and(listed, eq(entries.type, type), entryIsIndexable);
 }
 
 function listedTermsOf(taxonomy: string) {
@@ -165,10 +164,12 @@ function listedTermsOf(taxonomy: string) {
 }
 
 async function entryCount(ctx: AppContext, type: string): Promise<number> {
+  const where = publishedEntriesOf(ctx, type);
+  if (where === null) return 0;
   const [row] = await ctx.db
     .select({ n: sql<number>`count(*)` })
     .from(entries)
-    .where(publishedEntriesOf(type));
+    .where(where);
   return row?.n ?? 0;
 }
 
@@ -177,6 +178,8 @@ async function entryUrls(
   type: string,
   page: number,
 ): Promise<SitemapUrl[]> {
+  const where = publishedEntriesOf(ctx, type);
+  if (where === null) return [];
   const rows = await ctx.db
     .select({
       slug: entries.slug,
@@ -186,7 +189,7 @@ async function entryUrls(
       meta: entries.meta,
     })
     .from(entries)
-    .where(publishedEntriesOf(type))
+    .where(where)
     .orderBy(entries.id)
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));

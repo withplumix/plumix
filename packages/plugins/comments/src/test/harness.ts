@@ -82,6 +82,29 @@ export async function seedPost(harness: Harness, overrides = {}) {
   });
 }
 
+/**
+ * A published revision row of `live` — status copied from the live entry, as
+ * the editor's snapshot writes it.
+ */
+export async function seedRevision(
+  harness: Harness,
+  live: { readonly id: number; readonly authorId: number },
+) {
+  return harness.factory.entry.create({
+    type: "revision",
+    title: "Post",
+    slug: `revision:${String(live.id)}:abcdefghijklmnopqrstu`,
+    authorId: live.authorId,
+    status: "published",
+  });
+}
+
+/**
+ * Commenting on for the revision type as well, so a revision row can only be
+ * refused by the entry load, never by the type's enablement.
+ */
+export const REVISION_TYPES_ENABLED = ["post", "revision"];
+
 export async function rows(harness: Harness) {
   return harness.db.select().from(commentsTable);
 }

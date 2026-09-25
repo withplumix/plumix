@@ -1,10 +1,8 @@
 import * as v from "valibot";
 
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import { deleteAutosave } from "../../../revisions/repository.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../validation.js";
@@ -20,10 +18,8 @@ export const discardDraft = base
   .use(authenticated)
   .input(discardDraftInput)
   .handler(async ({ input, context, errors }) => {
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.id),
-    });
-    if (!live || isReservedType(live.type)) {
+    const live = await loadAuthoredEntry(context.db, input.id);
+    if (!live) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
     assertCanEditEntry(context, live, errors);

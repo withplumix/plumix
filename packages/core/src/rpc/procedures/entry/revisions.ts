@@ -6,6 +6,7 @@ import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import {
   entryCapability,
   entryCapabilityByName,
@@ -18,10 +19,7 @@ import {
   setRevisionMessage as repoSetRevisionMessage,
   upsertAutosave as repoUpsertAutosave,
 } from "../../../revisions/repository.js";
-import {
-  decodeRevisionSlug,
-  isReservedType,
-} from "../../../revisions/slug-codec.js";
+import { decodeRevisionSlug } from "../../../revisions/slug-codec.js";
 import {
   asDraftRow,
   decodeRevisionMessage,
@@ -71,16 +69,11 @@ export const list = base
   .handler(async ({ input, context, errors }) => {
     // Look the live entry up first so an unknown id returns NOT_FOUND
     // rather than leaking "you're missing this capability".
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.entryId),
-    });
+    const live = await loadAuthoredEntry(context.db, input.entryId);
     if (!live) {
       throw errors.NOT_FOUND({
         data: { kind: "entry", id: input.entryId },
       });
-    }
-    if (isReservedType(live.type)) {
-      throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
     const capability = entryCapabilityByName(
       context.plugins,
@@ -136,10 +129,8 @@ export const get = base
     // entry's type from the slug to gate on its `read_revisions` cap.
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, decoded.entryId),
-    });
-    if (!live || isReservedType(live.type)) throw notFound();
+    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    if (!live) throw notFound();
 
     const capability = entryCapabilityByName(
       context.plugins,
@@ -177,10 +168,8 @@ export const restore = base
 
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, decoded.entryId),
-    });
-    if (!live || isReservedType(live.type)) throw notFound();
+    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);
     const readCapability = entryCapability(namespace, "read_revisions");
@@ -359,10 +348,8 @@ export const setMessage = base
 
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, decoded.entryId),
-    });
-    if (!live || isReservedType(live.type)) throw notFound();
+    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);
     const readCapability = entryCapability(namespace, "read_revisions");

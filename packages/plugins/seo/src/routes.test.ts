@@ -278,6 +278,7 @@ async function seedPost(
     readonly slug?: string;
     readonly status?: "published" | "draft";
     readonly meta?: Record<string, JsonValue>;
+    readonly publishedAt?: Date | null;
   } = {},
 ): Promise<void> {
   const author = await h.seedUser("admin");
@@ -289,7 +290,8 @@ async function seedPost(
     status: overrides.status ?? "published",
     ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
     authorId: author.id,
-    publishedAt: new Date(),
+    publishedAt:
+      overrides.publishedAt === undefined ? new Date() : overrides.publishedAt,
   });
 }
 
@@ -465,6 +467,17 @@ describe("a sub-sitemap", () => {
     expect(body).toContain("<loc>https://cms.example/post/live</loc>");
     expect(body).toContain("<lastmod>");
     expect(body).not.toContain("/post/draft");
+  });
+
+  test("leaves out a published entry with no publish date", async () => {
+    const h = await createHarness();
+    await seedPost(h, { slug: "live" });
+    await seedPost(h, { slug: "undated", publishedAt: null });
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/post/live</loc>");
+    expect(body).not.toContain("/post/undated");
   });
 
   test("a page past the end is an empty url-set", async () => {

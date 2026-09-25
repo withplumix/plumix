@@ -6,6 +6,7 @@ import type { ResolvedMeta } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
@@ -13,7 +14,6 @@ import {
   getAutosaveEdits,
   upsertAutosave,
 } from "../../../revisions/repository.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import {
   asDraftRow,
   decodeSnapshotEnvelope,
@@ -162,14 +162,8 @@ export const update = base
       errors,
     );
 
-    const existing = await context.db.query.entries.findFirst({
-      where: eq(entries.id, filtered.id),
-    });
-    // Reserved-type rows (revisions, autosaves) are written by the
-    // framework's snapshot / draft paths, not `entry.update`. Surface
-    // the same 404 a public row would emit so reserved-row existence
-    // isn't observable.
-    if (!existing || isReservedType(existing.type)) {
+    const existing = await loadAuthoredEntry(context.db, filtered.id);
+    if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 

@@ -1,17 +1,17 @@
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject, JsonValue } from "../../../json.js";
 import type { SettledMeta } from "../../meta/core.js";
-import { and, asc, eq, gt, notInArray, or, sql } from "../../../db/index.js";
+import { and, asc, eq, gt, or, sql } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
+import { authoredEntryRows } from "../../../entries/authored.js";
 import {
   listEntryMetaFields,
   listTermMetaFields,
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
-import { RESERVED_TYPES } from "../../../revisions/slug-codec.js";
 import {
   metaScope,
   metaScopeCache,
@@ -171,12 +171,7 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
         walk.ctx.db
           .select({ id: entries.id, type: entries.type, meta: entries.meta })
           .from(entries)
-          .where(
-            and(
-              gt(entries.id, after),
-              notInArray(entries.type, [...RESERVED_TYPES]),
-            ),
-          )
+          .where(and(gt(entries.id, after), authoredEntryRows()))
           .orderBy(asc(entries.id))
           .limit(PAGE),
       (row) => ({

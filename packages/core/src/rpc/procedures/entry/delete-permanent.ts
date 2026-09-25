@@ -1,6 +1,6 @@
-import { and, eq, like, or } from "../../../db/index.js";
+import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { AUTOSAVE_TYPE, REVISION_TYPE } from "../../../revisions/slug-codec.js";
+import { deleteEntriesHistory } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -29,24 +29,9 @@ export const deletePermanent = base
       throw errors.CONFLICT({ data: { reason: "not_trashed" } });
     }
 
-    // Revisions and autosaves are separate entry rows linked to the live
-    // entry only through their encoded slugs, so they need explicit
-    // cleanup — entry_term rows cascade via FK, children re-root via
-    // `ON DELETE SET NULL`.
-    await context.db
-      .delete(entries)
-      .where(
-        or(
-          and(
-            eq(entries.type, REVISION_TYPE),
-            like(entries.slug, `revision:${String(existing.id)}:%`),
-          ),
-          and(
-            eq(entries.type, AUTOSAVE_TYPE),
-            like(entries.slug, `autosave:${String(existing.id)}:%`),
-          ),
-        ),
-      );
+    // entry_term rows cascade via FK, children re-root via
+    // `ON DELETE SET NULL`; the entry's history has no FK to follow.
+    await deleteEntriesHistory(context.db, [existing.id]);
     await context.db.delete(entries).where(eq(entries.id, existing.id));
 
     await fireEntryDeleted(context, existing);

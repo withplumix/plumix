@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
-import { gatedBlog, harnessWith, rows, seedPost } from "../test/harness.js";
+import {
+  gatedBlog,
+  harnessWith,
+  REVISION_TYPES_ENABLED,
+  rows,
+  seedPost,
+  seedRevision,
+} from "../test/harness.js";
 
 function submit(
   harness: Harness,
@@ -63,6 +70,19 @@ describe("POST /_plumix/comments/submit", () => {
     const entry = await seedPost(harness);
 
     const res = await submit(harness, entry.id);
+
+    expect(await res.json()).toEqual({ error: "entry_not_found" });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("refuses a comment on a published revision row's id", async () => {
+    const harness = await harnessWith({
+      entryTypes: REVISION_TYPES_ENABLED,
+      mode: "none",
+    });
+    const revision = await seedRevision(harness, await seedPost(harness));
+
+    const res = await submit(harness, revision.id);
 
     expect(await res.json()).toEqual({ error: "entry_not_found" });
     expect(await rows(harness)).toHaveLength(0);

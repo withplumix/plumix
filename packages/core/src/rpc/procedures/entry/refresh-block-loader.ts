@@ -6,11 +6,9 @@ import {
 } from "@plumix/blocks";
 
 import type { JsonObject } from "../../../json.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { canReadEntry } from "../../../entries/visibility.js";
 import { getAutosave } from "../../../revisions/repository.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRefreshBlockLoaderInputSchema } from "./schemas.js";
@@ -25,10 +23,8 @@ export const refreshBlockLoader = base
   .use(authenticated)
   .input(entryRefreshBlockLoaderInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.id),
-    });
-    if (!live || isReservedType(live.type) || !canReadEntry(context, live)) {
+    const live = await loadAuthoredEntry(context.db, input.id);
+    if (!live || !canReadEntry(context, live)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
 
