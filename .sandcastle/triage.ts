@@ -11,7 +11,7 @@ import {
   resetBranchToMain,
   syncRepoToMain,
 } from "./lib/github.js";
-import { drainAcrossLanes } from "./lib/lanes.js";
+import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
 import { createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
@@ -137,7 +137,7 @@ const promotedSoFar = (settled: readonly TriageResult[]): number =>
   settled.filter(({ outcome }) => outcome.status === "promoted").length;
 
 const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
-  items: queue,
+  nextItem: drainingFrom(queue),
   lanes: laneCount,
   stopDispatchingWhen: (settled) =>
     Date.now() > endOfBudget ||

@@ -16,7 +16,12 @@ const RATES_PER_MILLION_TOKENS: Record<string, ModelRatesPerMillionTokens> = {
 };
 
 export type RunOutcome =
-  "shipped" | "failed" | "promoted" | "closed" | "questioned" | "skipped";
+  | "shipped"
+  | "failed"
+  | "promoted"
+  | "closed"
+  | "questioned"
+  | "skipped";
 
 export interface Usage {
   readonly inputTokens: number;

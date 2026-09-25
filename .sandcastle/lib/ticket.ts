@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import type { RunAgentPhase } from "./agent.js";
-import type { GateFailure } from "./gates.js";
+import type { Executor, GateFailure } from "./gates.js";
 import type { Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
@@ -182,6 +182,27 @@ const reviewAll = async (
   return collected;
 };
 
+const surveyMainForAlreadyRedGates = async (
+  sandbox: Executor,
+  journal: Journal,
+): Promise<readonly string[]> => {
+  const { failures } = await runGates(sandbox, GATES, {
+    stopAtFirstFailure: false,
+    onResult: (result) =>
+      journal.record({
+        phase: `baseline:${result.name}`,
+        kind: "gate",
+        startedAt: result.startedAt,
+        durationMs: result.durationMs,
+        outcome: result.outcome,
+        detail: result.skippedBecause,
+        command: result.command,
+        exitCode: result.exitCode,
+      }),
+  });
+  return failures.map(({ name }) => name);
+};
+
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
@@ -203,21 +224,10 @@ export const shipTicket = async (
 
   try {
     say("\n--- baseline gates on main ---");
-    const baseline = await runGates(sandbox, GATES, {
-      stopAtFirstFailure: false,
-      onResult: (result) =>
-        journal.record({
-          phase: `baseline:${result.name}`,
-          kind: "gate",
-          startedAt: result.startedAt,
-          durationMs: result.durationMs,
-          outcome: result.outcome,
-          detail: result.skippedBecause,
-          command: result.command,
-          exitCode: result.exitCode,
-        }),
-    });
-    const gatesAlreadyRedOnMain = baseline.failures.map(({ name }) => name);
+    const gatesAlreadyRedOnMain = await surveyMainForAlreadyRedGates(
+      sandbox,
+      journal,
+    );
     if (gatesAlreadyRedOnMain.length > 0) {
       say(
         `  already red on main, will not be this ticket's problem: ${gatesAlreadyRedOnMain.join(", ")}`,

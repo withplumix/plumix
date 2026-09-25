@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { drainAcrossLanes } from "./lanes.js";
+import { drainAcrossLanes, drainingFrom } from "./lanes.js";
 
 const settleAfter = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -12,9 +12,9 @@ describe("drainAcrossLanes", () => {
     const seen: number[] = [];
 
     await drainAcrossLanes({
-      items: [1, 2, 3, 4, 5, 6, 7],
+      nextItem: drainingFrom([1, 2, 3, 4, 5, 6, 7]),
       lanes: 3,
-      inLane: async (item) => {
+      inLane: async (item: number) => {
         seen.push(item);
         return item;
       },
@@ -29,9 +29,9 @@ describe("drainAcrossLanes", () => {
     let busiest = 0;
 
     await drainAcrossLanes({
-      items: [10, 10, 10, 10, 10, 10],
+      nextItem: drainingFrom([10, 10, 10, 10, 10, 10]),
       lanes: 2,
-      inLane: async (item) => {
+      inLane: async (item: number) => {
         inFlight += 1;
         busiest = Math.max(busiest, inFlight);
         await settleAfter(item);
@@ -48,14 +48,14 @@ describe("drainAcrossLanes", () => {
     const finished: string[] = [];
 
     await drainAcrossLanes({
-      items: [
+      nextItem: drainingFrom([
         { name: "slow", ms: 60 },
         { name: "quick-a", ms: 1 },
         { name: "quick-b", ms: 1 },
         { name: "quick-c", ms: 1 },
-      ],
+      ]),
       lanes: 2,
-      inLane: async ({ name, ms }) => {
+      inLane: async ({ name, ms }: { name: string; ms: number }) => {
         await settleAfter(ms);
         finished.push(name);
         return name;
@@ -70,9 +70,9 @@ describe("drainAcrossLanes", () => {
     const seen: number[] = [];
 
     const settled = await drainAcrossLanes({
-      items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      nextItem: drainingFrom([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
       lanes: 1,
-      inLane: async (item) => {
+      inLane: async (item: number) => {
         seen.push(item);
         return item;
       },
@@ -85,9 +85,9 @@ describe("drainAcrossLanes", () => {
 
   test("work already in flight when the stop trips is still collected", async () => {
     const settled = await drainAcrossLanes({
-      items: [1, 2, 3, 4],
+      nextItem: drainingFrom([1, 2, 3, 4]),
       lanes: 4,
-      inLane: async (item) => {
+      inLane: async (item: number) => {
         await settleAfter(5);
         return item;
       },
@@ -97,25 +97,25 @@ describe("drainAcrossLanes", () => {
     expect(settled).toHaveLength(4);
   });
 
-  test("more lanes than items starts no lane with nothing to do", async () => {
-    let lanesUsed = 0;
+  test("a lane with nothing left to take stops instead of spinning", async () => {
+    let handed = 0;
 
     await drainAcrossLanes({
-      items: [1, 2],
+      nextItem: drainingFrom([1, 2]),
       lanes: 8,
-      inLane: async (item, lane) => {
-        lanesUsed = Math.max(lanesUsed, lane + 1);
+      inLane: async (item: number) => {
+        handed += 1;
         return item;
       },
       stopDispatchingWhen: neverEnough,
     });
 
-    expect(lanesUsed).toBeLessThanOrEqual(2);
+    expect(handed).toBe(2);
   });
 
-  test("an empty queue settles without starting a lane", async () => {
+  test("an empty queue settles without handing out any work", async () => {
     const settled = await drainAcrossLanes({
-      items: [],
+      nextItem: drainingFrom([]),
       lanes: 4,
       inLane: async () => {
         throw new Error("no lane should have started");
@@ -124,5 +124,25 @@ describe("drainAcrossLanes", () => {
     });
 
     expect(settled).toEqual([]);
+  });
+});
+
+describe("a pull source that grows while lanes are draining", () => {
+  test("work added after the run starts is still taken", async () => {
+    const waiting = [1, 2];
+    const seen: number[] = [];
+
+    await drainAcrossLanes({
+      lanes: 1,
+      nextItem: () => waiting.shift(),
+      inLane: async (item: number) => {
+        seen.push(item);
+        if (item === 2) waiting.push(3);
+        return item;
+      },
+      stopDispatchingWhen: neverEnough,
+    });
+
+    expect(seen).toEqual([1, 2, 3]);
   });
 });
