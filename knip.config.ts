@@ -475,6 +475,17 @@ const config: KnipConfig = {
       ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
       playwright: false,
     },
+    // Not a pnpm workspace member — it carries its own node_modules so the
+    // unattended ship loop's deps never reach the root lockfile — but knip
+    // walks the repo, not the workspace list, so it is declared here.
+    // Installed with npm against its own lockfile, so the root pnpm install that
+    // precedes knip never creates .sandcastle/node_modules and its binaries cannot
+    // resolve here. Its own `npm test` and `npm run typecheck` exercise them.
+    ".sandcastle": {
+      entry: ["lib/*.test.ts"],
+      ignoreBinaries: ["tsx", "vitest", "tsc"],
+      ignoreDependencies: ["tsx"],
+    },
   },
 };
 

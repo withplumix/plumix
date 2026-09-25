@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+logs/
+worktrees/
+node_modules/
+runs/
