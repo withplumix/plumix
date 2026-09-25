@@ -214,7 +214,6 @@ const surveyMainForAlreadyRedGates = async (
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
-  lanes: number,
 ): Promise<ShipOutcome> => {
   const branch = `feat/${ticket.title
     .toLowerCase()
@@ -228,7 +227,7 @@ export const shipTicket = async (
 
   assignToSelf(ticket.number);
   resetBranchToMain(branch);
-  const sandbox = await createPlumixSandbox(branch, lanes);
+  const sandbox = await createPlumixSandbox(branch);
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {

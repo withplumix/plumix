@@ -80,7 +80,7 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
     const journal = new Journal(import.meta.dirname);
     let outcome: ShipOutcome;
     try {
-      outcome = await shipTicket(ticket, journal, laneCount);
+      outcome = await shipTicket(ticket, journal);
     } catch (error) {
       outcome = {
         status: "blocked",

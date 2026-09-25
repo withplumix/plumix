@@ -26,17 +26,18 @@ const CACHE_MOUNTS = [
   },
 ];
 
-const WORKERS_ONE_CONTAINER_CAN_AFFORD = 2;
+const TASKS_A_LANE_RUNS_AT_ONCE = 2;
+const WORKERS_EACH_OF_THOSE_TASKS_GETS = 2;
 
-export const workersEachLaneCanAfford = (lanes: number): number =>
-  Math.max(1, Math.floor(WORKERS_ONE_CONTAINER_CAN_AFFORD / Math.max(1, lanes)));
+export const workersALaneOversubscribes = (lanes: number): number =>
+  lanes * TASKS_A_LANE_RUNS_AT_ONCE * WORKERS_EACH_OF_THOSE_TASKS_GETS;
 
-const envThatKeepsEveryLaneInsideTheHostMemoryLimit = (lanes: number) => ({
+const ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES = {
   TURBO_CACHE_DIR: "/home/agent/.turbo-cache",
-  TURBO_CONCURRENCY: String(workersEachLaneCanAfford(lanes)),
-  VITEST_MAX_WORKERS: String(workersEachLaneCanAfford(lanes)),
+  TURBO_CONCURRENCY: String(TASKS_A_LANE_RUNS_AT_ONCE),
+  VITEST_MAX_WORKERS: String(WORKERS_EACH_OF_THOSE_TASKS_GETS),
   PLAYWRIGHT_BROWSERS_PATH: "/home/agent/.cache/ms-playwright",
-});
+};
 
 const SETUP_STEPS = [
   "pnpm install --frozen-lockfile",
@@ -48,12 +49,12 @@ const asOneCommandBecauseHooksAtTheSameHookPointRunConcurrently = (
   steps: readonly string[],
 ) => steps.join(" && ");
 
-const plumixContainer = (lanes: number) => {
+const plumixContainer = () => {
   for (const { hostPath } of CACHE_MOUNTS)
     mkdirSync(hostPath, { recursive: true });
   return docker({
     mounts: CACHE_MOUNTS,
-    env: envThatKeepsEveryLaneInsideTheHostMemoryLimit(lanes),
+    env: ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES,
   });
 };
 
@@ -73,12 +74,11 @@ const setupHooks = {
 
 export const createPlumixSandbox = (
   branch: string,
-  lanes: number,
 ): Promise<sandcastle.Sandbox> =>
   sandcastle.createSandbox({
     cwd: REPO_ROOT,
     branch,
-    sandbox: plumixContainer(lanes),
+    sandbox: plumixContainer(),
     hooks: setupHooks,
   });
 
@@ -88,11 +88,11 @@ export const createReadOnlySandbox = (
   sandcastle.createSandbox({
     cwd: REPO_ROOT,
     branch,
-    sandbox: plumixContainer(1),
+    sandbox: plumixContainer(),
   });
 
 export const plumixRunOptions = {
   cwd: REPO_ROOT,
-  sandbox: plumixContainer(1),
+  sandbox: plumixContainer(),
   hooks: setupHooks,
 };

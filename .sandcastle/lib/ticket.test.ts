@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { workersEachLaneCanAfford } from "./sandbox.js";
+import { workersALaneOversubscribes } from "./sandbox.js";
 import {
   readDeclinedTag,
   readFindingsTag,
@@ -163,16 +163,14 @@ describe("readDeclinedTag", () => {
   });
 });
 
-describe("workersEachLaneCanAfford", () => {
-  test("one lane keeps the whole container budget", () => {
-    expect(workersEachLaneCanAfford(1)).toBe(2);
+describe("workersALaneOversubscribes", () => {
+  test("two lanes stay inside a ten-core host", () => {
+    expect(workersALaneOversubscribes(2)).toBeLessThanOrEqual(10);
   });
 
-  test("two lanes halve it, because they share one host", () => {
-    expect(workersEachLaneCanAfford(2)).toBe(1);
-  });
-
-  test("more lanes than the budget still leaves each one a worker", () => {
-    expect(workersEachLaneCanAfford(8)).toBe(1);
+  test("the count grows with lanes, because every lane runs its own turbo", () => {
+    expect(workersALaneOversubscribes(4)).toBe(
+      workersALaneOversubscribes(2) * 2,
+    );
   });
 });
