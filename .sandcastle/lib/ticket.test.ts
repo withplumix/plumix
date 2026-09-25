@@ -101,6 +101,32 @@ describe("gate applicability", () => {
     ).toBe(true);
   });
 
+  test("a test-only change to a published package needs no changeset", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.([
+        "packages/admin-editor/src/block-i18n.test.ts",
+        "packages/admin-editor/test/lingui-macro-stub.ts",
+        "packages/admin-editor/vitest.config.ts",
+        "packages/admin-editor/tsconfig.json",
+      ]),
+    ).toBe(false);
+  });
+
+  test("a source change beside a test still needs one", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.([
+        "packages/admin-editor/src/block-i18n.test.ts",
+        "packages/admin-editor/src/block-i18n.ts",
+      ]),
+    ).toBe(true);
+  });
+
+  test("the build config is not test-only, because it decides what ships", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.(["packages/core/tsconfig.build.json"]),
+    ).toBe(true);
+  });
+
   test("the changeset gate does not apply to a tooling-only change", () => {
     expect(
       CHANGESET_GATE.appliesWhen?.(["tooling/eslint/src/rules/foo.ts"]),
