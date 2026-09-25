@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { readFindingsTag, readPullRequestTag } from "./ticket.js";
+import {
+  readDeclinedTag,
+  readFindingsTag,
+  readPullRequestTag,
+} from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 
@@ -111,5 +115,23 @@ describe("gate applicability", () => {
     expect(unconditional).toContain("typecheck");
     expect(unconditional).toContain("test");
     expect(unconditional).toContain("knip");
+  });
+});
+
+describe("readDeclinedTag", () => {
+  test("reads the reason a fixer gave for changing nothing", () => {
+    expect(
+      readDeclinedTag(
+        "chatter\n<declined>\nThe host is missing Playwright's system libraries.\n</declined>\nmore",
+      ),
+    ).toBe("The host is missing Playwright's system libraries.");
+  });
+
+  test("a fixer that simply committed declines nothing", () => {
+    expect(readDeclinedTag("done, committed as abc123")).toBeNull();
+  });
+
+  test("an empty block counts as no reason given", () => {
+    expect(readDeclinedTag("<declined>\n\n</declined>")).toBeNull();
   });
 });

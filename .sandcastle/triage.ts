@@ -1,4 +1,5 @@
 import type { TriageCandidate } from "./lib/github.js";
+import type { Thinker } from "./lib/agent.js";
 import type { IssueShape, TriageModels, TriageOutcome } from "./lib/triage.js";
 import { agentPhaseRunner } from "./lib/agent.js";
 import {
@@ -56,10 +57,20 @@ const readOptions = (argv: readonly string[]): TriageOptions => {
     budgetMs: Number(flag(argv, "hours") ?? DEFAULT_BUDGET_HOURS) * 3_600_000,
     dryRun: argv.includes("--dry-run"),
     models: {
-      assess: flag(argv, "assess-model") ?? DEFAULT_TRIAGE_MODELS.assess,
-      coldReader:
-        flag(argv, "cold-reader-model") ?? DEFAULT_TRIAGE_MODELS.coldReader,
+      assess: thinker(DEFAULT_TRIAGE_MODELS.assess, flag(argv, "assess")),
+      coldReader: thinker(
+        DEFAULT_TRIAGE_MODELS.coldReader,
+        flag(argv, "cold-reader"),
+      ),
     },
+  };
+};
+
+const thinker = (fallback: Thinker, spec: string | undefined): Thinker => {
+  const [model, effort] = (spec ?? "").split("@");
+  return {
+    model: model || fallback.model,
+    effort: (effort as Thinker["effort"]) || fallback.effort,
   };
 };
 

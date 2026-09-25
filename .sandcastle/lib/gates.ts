@@ -59,7 +59,8 @@ export const GATES: readonly Gate[] = [
     name: "e2e",
     command: "pnpm test:e2e",
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
-    requires: "pnpm --filter @plumix/admin exec playwright --version",
+    requires:
+      "pnpm --filter @plumix/admin exec node -e \"require('playwright').chromium.launch().then((b) => b.close())\"",
   },
 ];
 

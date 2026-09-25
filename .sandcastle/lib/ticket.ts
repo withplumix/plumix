@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import type { RunAgentPhase } from "./agent.js";
+import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Executor, GateFailure } from "./gates.js";
 import type { Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
@@ -38,8 +38,8 @@ import {
   HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
 
-const IMPLEMENTER_MODEL = "claude-opus-5-5";
-const REVIEWER_MODEL = "claude-sonnet-5";
+const IMPLEMENTER: Thinker = { model: "claude-opus-5-5", effort: "medium" };
+const REVIEWER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
@@ -103,6 +103,9 @@ export const readFindingsTag = (stdout: string): Review => {
   return { findings: parsed.data.findings, emittedParseableFindings: true };
 };
 
+export const readDeclinedTag = (stdout: string): string | null =>
+  taggedBlock(stdout, "declined") || null;
+
 export interface PullRequestCopy {
   readonly title: string;
   readonly body: string;
@@ -156,7 +159,7 @@ const reviewAll = async (
 
   for (const reviewer of REVIEWERS) {
     const phase = `review:${reviewer.name}#${round}`;
-    const { stdout } = await runAgentPhase(phase, REVIEWER_MODEL, {
+    const { stdout } = await runAgentPhase(phase, REVIEWER, {
       promptFile: join(PROMPT_DIR, reviewer.promptFile),
       promptArgs: { TICKET: String(ticket.number), BASE: MERGE_BASE },
       maxIterations: 1,
@@ -167,7 +170,7 @@ const reviewAll = async (
     journal.record({
       phase: `${phase}:findings`,
       kind: "review",
-      model: REVIEWER_MODEL,
+      model: REVIEWER.model,
       startedAt: new Date().toISOString(),
       durationMs: 0,
       outcome: review.emittedParseableFindings ? "ok" : "fail",
@@ -238,7 +241,7 @@ export const shipTicket = async (
     );
 
     say("\n--- implement ---");
-    const implemented = await runAgentPhase("implement", IMPLEMENTER_MODEL, {
+    const implemented = await runAgentPhase("implement", IMPLEMENTER, {
       promptFile: join(PROMPT_DIR, "implement.md"),
       promptArgs: { TICKET: String(ticket.number) },
       maxIterations: 40,
@@ -257,8 +260,8 @@ export const shipTicket = async (
     let pass = 0;
     let advisory: readonly Finding[] = [];
 
-    const applyFixes = async (brief: string): Promise<void> => {
-      const fixed = await runAgentPhase(`fix#${pass}`, IMPLEMENTER_MODEL, {
+    const applyFixes = async (brief: string): Promise<string | null> => {
+      const fixed = await runAgentPhase(`fix#${pass}`, IMPLEMENTER, {
         promptFile: join(PROMPT_DIR, "fix.md"),
         promptArgs: { FINDINGS: brief },
         maxIterations: ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION,
@@ -266,6 +269,11 @@ export const shipTicket = async (
         resumeSession: sessionToResume,
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
+      if (fixed.commits.length > 0) return null;
+      return (
+        readDeclinedTag(fixed.stdout) ??
+        "the fixer changed nothing and gave no reason"
+      );
     };
 
     while (true) {
@@ -296,7 +304,13 @@ export const shipTicket = async (
           };
         }
         say(`--- fix gate failure (${gateFixes}/${MAX_GATE_FIX_ROUNDS}) ---`);
-        await applyFixes(asGateFailureBrief(failure));
+        const declined = await applyFixes(asGateFailureBrief(failure));
+        if (declined) {
+          return {
+            status: "blocked",
+            reason: `\`${failure.command}\` still fails and the fixer changed nothing:\n\n${declined}`,
+          };
+        }
         continue;
       }
 
@@ -320,7 +334,13 @@ export const shipTicket = async (
       say(
         `--- fix ${blocking.length} ${BLOCKING_SEVERITY} finding(s) (${reviewFixes}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
-      await applyFixes(asFixBrief(blocking));
+      const declined = await applyFixes(asFixBrief(blocking));
+      if (declined) {
+        return {
+          status: "blocked",
+          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined}`,
+        };
+      }
     }
 
     say("\n--- land ---");
@@ -391,9 +411,16 @@ export const shipTicket = async (
         `--- fix ${merge.failingChecks.length} failing CI check(s) (${landFixes}/${MAX_LAND_FIX_ROUNDS}) ---`,
       );
       pass += 1;
-      await applyFixes(
+      const declinedAtLanding = await applyFixes(
         await reproduceFailingChecks(sandbox, merge.failingChecks),
       );
+      if (declinedAtLanding) {
+        return {
+          status: "blocked",
+          reason: `CI is red and the fixer changed nothing:\n\n${declinedAtLanding}`,
+          pullRequestUrl: pullRequest.url,
+        };
+      }
       rePushBranch(branch, sandbox.worktreePath);
     }
 

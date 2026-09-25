@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import type { RunAgentPhase } from "./agent.js";
+import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Executor } from "./gates.js";
 import type { IssueComment, TriageCandidate } from "./github.js";
 import type { Journal } from "./telemetry.js";
@@ -10,8 +10,8 @@ import { TRIAGE_DISCLAIMER, TRIAGE_NOTES_HEADING } from "./github.js";
 import { say } from "./log.js";
 import { readFindingsTag } from "./ticket.js";
 
-const ASSESS_MODEL = "claude-opus-5-5";
-const COLD_READER_MODEL = "claude-sonnet-5";
+const ASSESS: Thinker = { model: "claude-opus-5-5", effort: "medium" };
+const COLD_READER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
 const BLOCKING_SEVERITY = "high";
 const HALF_AN_HOUR_IN_SECONDS = 1_800;
 const ITERATIONS_ALLOWED_FOR_A_READ_ONLY_PHASE = 3;
@@ -177,13 +177,13 @@ const askedInstead = (
 });
 
 export interface TriageModels {
-  readonly assess: string;
-  readonly coldReader: string;
+  readonly assess: Thinker;
+  readonly coldReader: Thinker;
 }
 
 export const DEFAULT_TRIAGE_MODELS: TriageModels = {
-  assess: ASSESS_MODEL,
-  coldReader: COLD_READER_MODEL,
+  assess: ASSESS,
+  coldReader: COLD_READER,
 };
 
 export const triageIssue = async (
@@ -243,7 +243,7 @@ export const triageIssue = async (
   journal.record({
     phase: "cold-read:findings",
     kind: "review",
-    model: models.coldReader,
+    model: models.coldReader.model,
     startedAt: new Date().toISOString(),
     durationMs: 0,
     outcome: review.emittedParseableFindings ? "ok" : "fail",
