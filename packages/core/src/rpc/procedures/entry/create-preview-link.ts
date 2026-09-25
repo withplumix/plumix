@@ -1,8 +1,6 @@
 import { createPreviewToken } from "../../../auth/preview-token.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { canReadEntry } from "../../../entries/visibility.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -18,10 +16,8 @@ export const createPreviewLink = base
   .use(authenticated)
   .input(entryCreatePreviewLinkInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const entry = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.id),
-    });
-    if (!entry || isReservedType(entry.type) || !canReadEntry(context, entry)) {
+    const entry = await loadAuthoredEntry(context.db, input.id);
+    if (!entry || !canReadEntry(context, entry)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
 

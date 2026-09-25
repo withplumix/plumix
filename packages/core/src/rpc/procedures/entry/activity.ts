@@ -1,12 +1,10 @@
 import { inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { listActiveAutosaves } from "../../../revisions/repository.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { idParam } from "../../validation.js";
@@ -28,16 +26,11 @@ export const list = base
   .use(authenticated)
   .input(listInput)
   .handler(async ({ input, context, errors }) => {
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.entryId),
-    });
+    const live = await loadAuthoredEntry(context.db, input.entryId);
     if (!live) {
       throw errors.NOT_FOUND({
         data: { kind: "entry", id: input.entryId },
       });
-    }
-    if (isReservedType(live.type)) {
-      throw errors.BAD_REQUEST({ data: { reason: "reserved_type" } });
     }
     // Same gate as `entry.revisions.list` — co-author awareness
     // depends on reading other users' pending edits, which is the

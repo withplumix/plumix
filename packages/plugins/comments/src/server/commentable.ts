@@ -1,7 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { eq } from "drizzle-orm";
 import { entryAllowsAnonymousAccess } from "plumix/auth";
-import { entries } from "plumix/schema";
+import { loadAuthoredEntry } from "plumix/db";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentRefusalCode } from "../refusals.js";
@@ -45,18 +44,7 @@ export async function resolveCommentableEntry(
   entryId: number,
   config: ResolvedCommentsConfig,
 ): Promise<CommentableResult> {
-  // `meta` rides along because the per-entry policy choice is stored in it;
-  // which policy applies cannot be known before the row is in hand.
-  const [entry] = await ctx.db
-    .select({
-      id: entries.id,
-      type: entries.type,
-      status: entries.status,
-      publishedAt: entries.publishedAt,
-      meta: entries.meta,
-    })
-    .from(entries)
-    .where(eq(entries.id, entryId));
+  const entry = await loadAuthoredEntry(ctx.db, entryId);
   if (entry?.status !== "published") {
     return { ok: false, reason: "entry_not_found" };
   }

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, like, lt, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
 
 import type { Db } from "../context/app.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
@@ -390,4 +390,30 @@ export async function pruneOldRevisions(
     ),
   );
   return excess.length;
+}
+
+// Revisions and autosaves are linked to their entry only through their encoded
+// slugs, not an FK, so deleting entries leaves them behind unless this runs
+// first. One statement for every id.
+export async function deleteEntriesHistory(
+  db: Db,
+  entryIds: readonly number[],
+): Promise<void> {
+  if (entryIds.length === 0) return;
+  await db
+    .delete(entries)
+    .where(
+      or(
+        ...entryIds.flatMap((entryId) => [
+          and(
+            eq(entries.type, REVISION_TYPE),
+            like(entries.slug, entryRevisionPrefix(entryId)),
+          ),
+          and(
+            eq(entries.type, AUTOSAVE_TYPE),
+            like(entries.slug, entryAutosavePrefix(entryId)),
+          ),
+        ]),
+      ),
+    );
 }

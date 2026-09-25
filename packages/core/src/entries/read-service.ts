@@ -14,7 +14,6 @@ import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
-import { isReservedType } from "../revisions/slug-codec.js";
 import {
   resolveEntriesMeta,
   resolveEntryMeta,
@@ -22,6 +21,7 @@ import {
 import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
 import { entrySearchCondition } from "../search/conditions.js";
+import { isAuthoredEntryType, loadAuthoredEntry } from "./authored.js";
 import { entryCapabilityByName } from "./capabilities.js";
 import { EntryReadError } from "./errors.js";
 import {
@@ -69,7 +69,7 @@ export async function listEntries(
   input: EntryListInput,
 ): Promise<readonly WithResolvedMeta<Entry>[]> {
   const type = input.type ?? "post";
-  if (isReservedType(type)) throw EntryReadError.reservedType(type);
+  if (!isAuthoredEntryType(type)) throw EntryReadError.reservedType(type);
   const readable = readableEntryRows(ctx, type);
   if (readable === null) {
     throw EntryReadError.forbidden(
@@ -156,11 +156,8 @@ export async function findReadableEntry(
   ctx: AppContext,
   input: EntryGetInput,
 ): Promise<Entry> {
-  const row = await ctx.db.query.entries.findFirst({
-    where: eq(entries.id, input.id),
-  });
+  const row = await loadAuthoredEntry(ctx.db, input.id);
   if (!row) throw EntryReadError.notFound(input.id);
-  if (isReservedType(row.type)) throw EntryReadError.notFound(input.id);
   if (!canReadEntry(ctx, row)) throw EntryReadError.notFound(input.id);
   return row;
 }

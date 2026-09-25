@@ -1,7 +1,7 @@
 import type { AppContext } from "plumix/plugin";
 import { inArray, sql } from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
-import { entries, terms } from "plumix/schema";
+import { terms } from "plumix/schema";
 
 import type { SearchSourceType } from "../db/schema.js";
 import type { RankingAlgorithm, RankingWeights } from "../ranking.js";
@@ -11,6 +11,7 @@ import { DEFAULT_RANKING_ALGORITHM, rankingWeights } from "../ranking.js";
 import { searchableEntryTypes, searchableTaxonomies } from "./document.js";
 import { degradedRows } from "./query-degraded.js";
 import { DEFAULT_COMMON_TERM_THRESHOLD, planForQuery } from "./query-plan.js";
+import { searchableEntryRows } from "./query-scope.js";
 import {
   highlightSnippet,
   SNIPPET_MARKERS,
@@ -222,6 +223,7 @@ async function rankedRows(
   //
   // The tiebreak is the document's own id: `source_id` stopped being unique
   // the moment two kinds shared the table.
+  const entryRows = searchableEntryRows(ctx, types) ?? sql`FALSE`;
   return await ctx.db.all<MatchedRow>(sql`
     SELECT documents.source_type AS kind,
            documents.source_id AS id,
@@ -239,10 +241,7 @@ async function rankedRows(
         ON documents.source_type = 'term' AND terms.id = documents.source_id
      WHERE search_index MATCH ${match}
        AND (
-         (documents.source_type = 'entry'
-          AND entries.status = 'published'
-          AND entries.published_at IS NOT NULL
-          AND ${inArray(entries.type, types)})
+         (documents.source_type = 'entry' AND ${entryRows})
          OR (documents.source_type = 'term'
           AND ${inArray(terms.taxonomy, taxonomies)})
        )
@@ -276,6 +275,8 @@ async function recentRows(
   ctx: AppContext,
   { match, types, limit, offset }: ReadArgs,
 ): Promise<MatchedRow[]> {
+  const entryRows = searchableEntryRows(ctx, types);
+  if (entryRows === null) return [];
   const page = await ctx.db.all<
     Omit<MatchedRow, "snippet" | "score"> & {
       readonly documentId: number;
@@ -291,9 +292,7 @@ async function recentRows(
       FROM entries
       JOIN search_documents AS documents
         ON documents.source_type = 'entry' AND documents.source_id = entries.id
-     WHERE entries.status = 'published'
-       AND entries.published_at IS NOT NULL
-       AND ${inArray(entries.type, types)}
+     WHERE ${entryRows}
        AND EXISTS (
          SELECT 1 FROM search_index
           WHERE search_index MATCH ${match} AND rowid = documents.id

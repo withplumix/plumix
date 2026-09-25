@@ -3,14 +3,12 @@ import {
   and,
   desc,
   entrySearchCondition,
-  eq,
-  inArray,
-  isNotNull,
   tokenizeSearchQuery,
 } from "plumix/db";
 import { entries } from "plumix/schema";
 
 import type { MatchedRow } from "./query-row.js";
+import { searchableEntryRows } from "./query-scope.js";
 
 interface DegradedArgs {
   /** What the visitor typed — the words, not a match expression. */
@@ -50,6 +48,8 @@ export async function degradedRows(
 ): Promise<MatchedRow[]> {
   const terms = tokenizeSearchQuery(query);
   if (terms.length === 0) return [];
+  const entryRows = searchableEntryRows(ctx, types);
+  if (entryRows === null) return [];
 
   const rows = await ctx.db
     .select({
@@ -61,14 +61,7 @@ export async function degradedRows(
       excerpt: entries.excerpt,
     })
     .from(entries)
-    .where(
-      and(
-        eq(entries.status, "published"),
-        isNotNull(entries.publishedAt),
-        inArray(entries.type, types),
-        ...terms.map(entrySearchCondition),
-      ),
-    )
+    .where(and(entryRows, ...terms.map(entrySearchCondition)))
     .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(limit)
     .offset(offset);

@@ -1,9 +1,8 @@
 import type { AppContext } from "plumix/plugin";
-import { createTestContext } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
-import { createSearchTestDb, indexWords } from "../test/db.js";
+import { createSearchContext, indexWords } from "../test/db.js";
 import { planForQuery } from "./query-plan.js";
 import { toMatchExpression } from "./query-text.js";
 
@@ -23,8 +22,7 @@ const plan = (query: string, threshold: number, needed = 3) =>
   });
 
 beforeEach(async () => {
-  db = await createSearchTestDb();
-  ctx = createTestContext({ db });
+  ({ db, ctx } = await createSearchContext());
 });
 
 describe("planForQuery", () => {

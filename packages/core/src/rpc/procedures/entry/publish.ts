@@ -3,12 +3,12 @@ import * as v from "valibot";
 import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import {
   deleteAutosave,
   getAutosaveEdits,
 } from "../../../revisions/repository.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import {
   autosaveTouchedKeys,
   mergeAutosaveMeta,
@@ -51,10 +51,8 @@ export const publish = base
   .use(authenticated)
   .input(publishInput)
   .handler(async ({ input, context, errors }) => {
-    const live = await context.db.query.entries.findFirst({
-      where: eq(entries.id, input.id),
-    });
-    if (!live || isReservedType(live.type)) {
+    const live = await loadAuthoredEntry(context.db, input.id);
+    if (!live) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
     const publishCapability = entryCapabilityByName(

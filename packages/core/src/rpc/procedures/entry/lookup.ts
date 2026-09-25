@@ -10,11 +10,11 @@ import type {
 import { entryTag } from "../../../cdn/tags.js";
 import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
+import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {
   readableEntryRows,
   referenceableEntryRows,
 } from "../../../entries/visibility.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { buildEntryPermalinks } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
@@ -165,7 +165,8 @@ function scopeConditions(scope: EntryFieldScope | undefined): ScopedEntryQuery {
   // scope naming one would read as an ordinary type filter — and an
   // autosave holds another author's unsaved title.
   for (const type of entryTypes) {
-    if (isReservedType(type)) throw LookupScopeError.reservedEntryType(type);
+    if (!isAuthoredEntryType(type))
+      throw LookupScopeError.reservedEntryType(type);
   }
   // Both surfaces AND a per-type visibility clause over this, which implies
   // the `in` list — it stays as the scope's own statement of which types were

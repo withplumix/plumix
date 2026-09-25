@@ -7,8 +7,12 @@ import type {
   EntryStatus,
   NewEntry,
 } from "../../../db/schema/entries.js";
-import { eq, inArray } from "../../../db/index.js";
+import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import {
+  loadAuthoredEntries,
+  loadAuthoredEntry,
+} from "../../../entries/authored.js";
 import {
   entryCapability,
   entryCapabilityNamespace,
@@ -213,9 +217,7 @@ export async function loadDeletableEntry(
   id: number,
   guards: DeletableGuards,
 ): Promise<Entry> {
-  const existing = await ctx.db.query.entries.findFirst({
-    where: eq(entries.id, id),
-  });
+  const existing = await loadAuthoredEntry(ctx.db, id);
   if (!existing) guards.notFound(id);
   assertDeletable(ctx, existing, guards);
   return existing;
@@ -235,9 +237,7 @@ export async function loadDeletableEntries(
   // Dedupe so a repeated id can't double-fire lifecycle hooks or inflate
   // the result count — bulk ops act on each entry once.
   const uniqueIds = [...new Set(ids)];
-  const rows = await ctx.db.query.entries.findMany({
-    where: inArray(entries.id, uniqueIds),
-  });
+  const rows = await loadAuthoredEntries(ctx.db, uniqueIds);
   const byId = new Map(rows.map((row) => [row.id, row]));
   const ordered: Entry[] = [];
   for (const id of uniqueIds) {

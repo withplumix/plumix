@@ -1,6 +1,7 @@
 import type { AppContext } from "plumix/plugin";
-import { inArray, sql } from "plumix/db";
-import { entries } from "plumix/schema";
+import { sql } from "plumix/db";
+
+import { searchableEntryRows } from "./query-scope.js";
 
 /**
  * How a page of results is ordered.
@@ -79,6 +80,10 @@ export async function planForQuery(
   `);
   if ((counted?.matches ?? 0) <= threshold) return "ranked";
 
+  // No entry to walk, so recency has nothing to be cheap at.
+  const entryRows = searchableEntryRows(ctx, types);
+  if (entryRows === null) return "ranked";
+
   const [reachable] = await ctx.db.all<{ found: number }>(sql`
     SELECT count(*) AS found FROM (
       SELECT 1 FROM (
@@ -87,9 +92,7 @@ export async function planForQuery(
           JOIN search_documents AS documents
             ON documents.source_type = 'entry'
            AND documents.source_id = entries.id
-         WHERE entries.status = 'published'
-           AND entries.published_at IS NOT NULL
-           AND ${inArray(entries.type, types)}
+         WHERE ${entryRows}
          ORDER BY entries.published_at DESC, entries.id DESC
          LIMIT ${HEAD_WALK_CAP}
       ) AS head

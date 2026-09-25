@@ -2,7 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
 import { commentFactory } from "../test/factories.js";
-import { gatedBlog, harnessWith, seedPost } from "../test/harness.js";
+import {
+  gatedBlog,
+  harnessWith,
+  REVISION_TYPES_ENABLED,
+  seedPost,
+  seedRevision,
+} from "../test/harness.js";
 
 async function seedRoots(harness: Harness, entryId: number, n: number) {
   const f = commentFactory.transient({ db: harness.db });
@@ -39,6 +45,18 @@ describe("GET /_plumix/comments/list", () => {
     (
       await harness.fetch(`/_plumix/comments/list?entryId=${String(draft.id)}`)
     ).assertStatus(404);
+  });
+
+  test("404s for a published revision row's id", async () => {
+    const harness = await harnessWith({ entryTypes: REVISION_TYPES_ENABLED });
+    const revision = await seedRevision(harness, await seedPost(harness));
+    await seedRoots(harness, revision.id, 1);
+
+    const res = await harness.fetch(
+      `/_plumix/comments/list?entryId=${String(revision.id)}`,
+    );
+    res.assertStatus(404);
+    expect(await res.json()).toEqual({ error: "entry_not_found" });
   });
 
   test("403s when the entry type has comments disabled", async () => {

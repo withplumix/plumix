@@ -40,6 +40,9 @@ export { compileEntryQuery, entryQuery } from "../entries/query.js";
 // archive's entries outside core's listing reader and has to apply the same
 // rule when it compiles one (ADR 0008).
 export { publicEntryRows } from "../entries/visibility.js";
+// Load an entry by id the way core does: a revision or autosave row answers as
+// missing, so a plugin taking an id from a visitor cannot reach editor history.
+export { loadAuthoredEntry } from "../entries/authored.js";
 export type {
   EntryOrderColumn,
   EntryOrderDirection,

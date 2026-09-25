@@ -90,3 +90,61 @@ describe("lifecycle — WordPress-style hook fan-out", () => {
     expect(onGeneric).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("the trash lifecycle refuses a revision row as not-found", () => {
+  // An admin holds every registered capability, and the revision row is
+  // theirs and already in the bin — so nothing but its type can refuse it.
+  async function seedRevision() {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const live = await h.factory.trashed.create({
+      authorId: h.user.id,
+      slug: "live",
+    });
+    const revision = await h.factory.trashed.create({
+      authorId: h.user.id,
+      type: "revision",
+      slug: `revision:${String(live.id)}:abcdefghijklmnopqrstu`,
+    });
+    return { h, live, revision };
+  }
+
+  const notFound = (id: number) => ({
+    code: "NOT_FOUND",
+    data: { kind: "entry", id },
+  });
+
+  test("trash", async () => {
+    const { h, revision } = await seedRevision();
+    await expect(
+      h.client.entry.trash({ id: revision.id }),
+    ).rejects.toMatchObject(notFound(revision.id));
+  });
+
+  test("restore", async () => {
+    const { h, revision } = await seedRevision();
+    await expect(
+      h.client.entry.restore({ id: revision.id }),
+    ).rejects.toMatchObject(notFound(revision.id));
+  });
+
+  test("delete-permanent", async () => {
+    const { h, revision } = await seedRevision();
+    await expect(
+      h.client.entry.deletePermanent({ id: revision.id }),
+    ).rejects.toMatchObject(notFound(revision.id));
+  });
+
+  test("each bulk procedure, even beside a live entry", async () => {
+    const { h, live, revision } = await seedRevision();
+    const ids = [live.id, revision.id];
+    await expect(h.client.entry.trashMany({ ids })).rejects.toMatchObject(
+      notFound(revision.id),
+    );
+    await expect(h.client.entry.restoreMany({ ids })).rejects.toMatchObject(
+      notFound(revision.id),
+    );
+    await expect(
+      h.client.entry.deletePermanentMany({ ids }),
+    ).rejects.toMatchObject(notFound(revision.id));
+  });
+});

@@ -1,9 +1,8 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
-import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { canReadEntry } from "../../../entries/visibility.js";
-import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { resolveEntryMeta } from "./meta.js";
@@ -23,15 +22,13 @@ export const duplicate = base
       input,
     );
 
-    const source = await context.db.query.entries.findFirst({
-      where: eq(entries.id, filtered.id),
-    });
+    const source = await loadAuthoredEntry(context.db, filtered.id);
     // Reserved internal rows (revision/autosave) aren't first-class
     // entries — 404 them so duplicate can't smuggle a reserved-type row
     // into the table or leak a snapshot's content. `canReadEntry` would
     // also reject these (no read cap on reserved types), but the explicit
     // guard mirrors `entry.create` / `entry.get`.
-    if (!source || isReservedType(source.type)) {
+    if (!source) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
     }
 

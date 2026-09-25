@@ -1,6 +1,6 @@
-import { and, eq, inArray, like, or } from "../../../db/index.js";
+import { inArray } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { AUTOSAVE_TYPE, REVISION_TYPE } from "../../../revisions/slug-codec.js";
+import { deleteEntriesHistory } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -84,19 +84,7 @@ export const deletePermanentMany = base
     }
 
     const ids = rows.map((row) => row.id);
-    // Revision / autosave rows are linked by slug encoding, not FK, so
-    // clear them in one batched statement before the entries themselves.
-    const slugClauses = ids.flatMap((id) => [
-      and(
-        eq(entries.type, REVISION_TYPE),
-        like(entries.slug, `revision:${String(id)}:%`),
-      ),
-      and(
-        eq(entries.type, AUTOSAVE_TYPE),
-        like(entries.slug, `autosave:${String(id)}:%`),
-      ),
-    ]);
-    await context.db.delete(entries).where(or(...slugClauses));
+    await deleteEntriesHistory(context.db, ids);
     await context.db.delete(entries).where(inArray(entries.id, ids));
 
     for (const row of rows) {
