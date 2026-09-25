@@ -1,4 +1,5 @@
 import type { SaveQueue } from "@/editor/save-queue.js";
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
@@ -10,6 +11,7 @@ import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js
 import { createSaveQueue } from "@/editor/save-queue.js";
 import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
+import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -66,6 +68,9 @@ export function PlainFormRouteInner({
   // String branch carries plugin-author `err.message` verbatim; the
   // descriptor branch surfaces the localized fallback.
   const [serverError, setServerError] = useState<Label | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<
+    readonly MetaFieldServerError[] | null
+  >(null);
 
   const updateMutation = useMutation({
     mutationFn: async (values: {
@@ -109,12 +114,14 @@ export function PlainFormRouteInner({
     },
     onSuccess: async () => {
       setServerError(null);
+      setServerFieldErrors(null);
       await queryClient.invalidateQueries({
         queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
       });
     },
     onError: (err) => {
       setServerError(err instanceof Error ? err.message : M.saveFailed);
+      setServerFieldErrors(extractMetaFieldErrors(err) ?? null);
     },
   });
 
@@ -168,6 +175,7 @@ export function PlainFormRouteInner({
       headline={headline}
       isSubmitting={updateMutation.isPending}
       serverError={renderedError}
+      serverFieldErrors={serverFieldErrors}
       autosaveMs={500}
       revisionsTrigger={revisionsTrigger}
       previewLinkAction={
