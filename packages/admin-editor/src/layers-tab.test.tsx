@@ -21,6 +21,15 @@ afterEach(cleanup);
 const registry = createBlockRegistry([
   { name: "core/heading", render: () => null, title: "Heading" },
   { name: "core/group", render: () => null, title: "Group" },
+  {
+    name: "test/split",
+    render: () => null,
+    title: "Split",
+    inputs: [
+      { name: "left", type: "slot" },
+      { name: "right", type: "slot" },
+    ],
+  },
 ]);
 
 const TREE: readonly BlockNode[] = [
@@ -74,6 +83,22 @@ describe("LayersTab", () => {
     // The nested child is rendered and indented one level.
     const child = getByTestId("layer-c").parentElement;
     expect(child?.style.paddingInlineStart).toBe("16px");
+  });
+
+  test("lists the children of every slot of a two-slot block", () => {
+    const { getByTestId } = renderLayers([
+      {
+        id: "split",
+        name: "test/split",
+        attrs: {
+          left: [{ id: "l", name: "core/heading" }],
+          right: [{ id: "r", name: "core/heading" }],
+        },
+      },
+    ]);
+    expect(getByTestId("layer-l")).toBeDefined();
+    const second = getByTestId("layer-r").parentElement;
+    expect(second?.style.paddingInlineStart).toBe("16px");
   });
 
   test("uses the registry title as the layer label", () => {

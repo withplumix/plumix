@@ -5,6 +5,7 @@ import type { BlockNode } from "@plumix/blocks";
 import {
   appendTableColumn,
   appendTableRow,
+  canGroupSelection,
   canUngroupBlock,
   collectBlocks,
   duplicateBlock,
@@ -16,6 +17,7 @@ import {
   insertBlockAt,
   moveBlock,
   moveBlockBy,
+  pasteBlocks,
   projectMove,
   removeBlocks,
   removeTableColumn,
@@ -69,35 +71,66 @@ describe("flattenTree", () => {
         name: "core/heading",
         depth: 0,
         parentId: null,
+        slotKey: null,
         hasSlot: false,
       },
-      { id: "g", name: "core/group", depth: 0, parentId: null, hasSlot: true },
-      { id: "c1", name: "core/text", depth: 1, parentId: "g", hasSlot: false },
-      { id: "c2", name: "core/group", depth: 1, parentId: "g", hasSlot: true },
+      {
+        id: "g",
+        name: "core/group",
+        depth: 0,
+        parentId: null,
+        slotKey: null,
+        hasSlot: true,
+      },
+      {
+        id: "c1",
+        name: "core/text",
+        depth: 1,
+        parentId: "g",
+        slotKey: "content",
+        hasSlot: false,
+      },
+      {
+        id: "c2",
+        name: "core/group",
+        depth: 1,
+        parentId: "g",
+        slotKey: "content",
+        hasSlot: true,
+      },
       {
         id: "deep",
         name: "core/spacer",
         depth: 2,
         parentId: "c2",
+        slotKey: "content",
         hasSlot: false,
       },
     ]);
   });
 
-  test("descends only the first slot (multi-slot blocks show one slot)", () => {
+  test("descends every slot in declaration order, tagging each child's slot", () => {
     const tree: readonly BlockNode[] = [
-      {
-        id: "cols",
-        name: "core/columns",
-        attrs: {
-          left: [{ id: "l", name: "x" }],
-          right: [{ id: "r", name: "x" }],
-        },
-      },
+      columns(
+        [
+          { id: "l1", name: "x" },
+          { id: "l2", name: "x" },
+        ],
+        [
+          { id: "r1", name: "x" },
+          { id: "r2", name: "x" },
+        ],
+      ),
     ];
-    // Only the first slot's child surfaces, keeping the outline consistent
-    // with what moveBlock can address.
-    expect(flattenTree(tree).map((n) => n.id)).toEqual(["cols", "l"]);
+    expect(
+      flattenTree(tree).map((n) => [n.id, n.parentId, n.slotKey, n.depth]),
+    ).toEqual([
+      ["cols", null, null, 0],
+      ["l1", "cols", "left", 1],
+      ["l2", "cols", "left", 1],
+      ["r1", "cols", "right", 1],
+      ["r2", "cols", "right", 1],
+    ]);
   });
 
   test("returns an empty list for an empty tree", () => {
@@ -177,6 +210,7 @@ describe("projectMove", () => {
     // Drag b down past g/c with one indent step → nests into g.
     expect(projectMove(FLAT, "b", "c", INDENT, INDENT)).toEqual({
       parentId: "g",
+      slotKey: "content",
       index: 1,
     });
   });
@@ -203,6 +237,32 @@ describe("projectMove", () => {
 
   test("returns null when the active block is unknown", () => {
     expect(projectMove(FLAT, "zzz", "b", 0, INDENT)).toBeNull();
+  });
+
+  test("drops between second-slot rows into that slot, indexed within it", () => {
+    const tree: readonly BlockNode[] = [
+      columns(
+        [
+          { id: "l1", name: "x" },
+          { id: "l2", name: "x" },
+        ],
+        [
+          { id: "r1", name: "x" },
+          { id: "r2", name: "x" },
+        ],
+      ),
+    ];
+    // Drag l1 down onto r1's row: it lands between r1 and r2.
+    const target = projectMove(flattenTree(tree), "l1", "r1", 0, INDENT);
+    expect(target).toEqual({ parentId: "cols", slotKey: "right", index: 1 });
+    const moved = moveBlock(tree, "l1", target ?? { parentId: null, index: 0 });
+    const cols = findBlock(moved, "cols");
+    expect((cols?.attrs?.left as BlockNode[]).map((n) => n.id)).toEqual(["l2"]);
+    expect((cols?.attrs?.right as BlockNode[]).map((n) => n.id)).toEqual([
+      "r1",
+      "l1",
+      "r2",
+    ]);
   });
 });
 
@@ -794,5 +854,87 @@ describe("enclosingTableId", () => {
   test("returns null outside any table, or for a missing id", () => {
     expect(enclosingTableId(TREE, "a")).toBeNull();
     expect(enclosingTableId(tableTree(), "missing")).toBeNull();
+  });
+});
+
+describe("a block with two slots", () => {
+  const TWO_SLOT: readonly BlockNode[] = [
+    columns(
+      [
+        { id: "l1", name: "x" },
+        { id: "l2", name: "x" },
+      ],
+      [
+        { id: "r1", name: "x" },
+        { id: "r2", name: "x" },
+      ],
+    ),
+  ];
+  const slot = (
+    tree: readonly BlockNode[],
+    key: "left" | "right",
+  ): readonly BlockNode[] =>
+    findBlock(tree, "cols")?.attrs?.[key] as readonly BlockNode[];
+  const slotIds = (tree: readonly BlockNode[], key: "left" | "right") =>
+    slot(tree, key).map((n) => n.id);
+
+  test("duplicate lands right after the node in its own slot", () => {
+    const { tree, newId } = duplicateBlock(TWO_SLOT, "r1");
+    expect(slotIds(tree, "right")).toEqual(["r1", newId, "r2"]);
+    expect(slotIds(tree, "left")).toEqual(["l1", "l2"]);
+  });
+
+  test("paste after a second-slot node lands right after it in that slot", () => {
+    const { tree, newIds } = pasteBlocks(
+      TWO_SLOT,
+      [{ id: "p", name: "x" }],
+      "r1",
+    );
+    expect(slotIds(tree, "right")).toEqual(["r1", ...newIds, "r2"]);
+    expect(slotIds(tree, "left")).toEqual(["l1", "l2"]);
+  });
+
+  test("move up and down reorders within the second slot", () => {
+    const down = moveBlockBy(TWO_SLOT, "r1", 1);
+    expect(slotIds(down, "right")).toEqual(["r2", "r1"]);
+    expect(slotIds(down, "left")).toEqual(["l1", "l2"]);
+    const back = moveBlockBy(down, "r1", -1);
+    expect(slotIds(back, "right")).toEqual(["r1", "r2"]);
+  });
+
+  test("group wraps second-slot siblings in place inside that slot", () => {
+    const result = groupBlocks(TWO_SLOT, new Set(["r1", "r2"]), "grp");
+    expect(result).not.toBeNull();
+    const tree = result?.tree ?? [];
+    expect(slotIds(tree, "right")).toEqual(["grp"]);
+    expect(slotIds(tree, "left")).toEqual(["l1", "l2"]);
+    const grouped = findBlock(tree, "grp")?.attrs?.content as BlockNode[];
+    expect(grouped.map((n) => n.id)).toEqual(["r1", "r2"]);
+  });
+
+  test("refuses to group one node from each slot", () => {
+    const selection = new Set(["l1", "r1"]);
+    expect(groupBlocks(TWO_SLOT, selection, "grp")).toBeNull();
+    expect(canGroupSelection(TWO_SLOT, selection)).toBe(false);
+  });
+
+  test("ungroup splices a second-slot container's children into that slot", () => {
+    const tree: readonly BlockNode[] = [
+      columns(
+        [{ id: "l1", name: "x" }],
+        [
+          { id: "r1", name: "x" },
+          group("inner", [
+            { id: "i1", name: "x" },
+            { id: "i2", name: "x" },
+          ]),
+          { id: "r2", name: "x" },
+        ],
+      ),
+    ];
+    const result = ungroupBlock(tree, "inner");
+    const next = result?.tree ?? [];
+    expect(slotIds(next, "right")).toEqual(["r1", "i1", "i2", "r2"]);
+    expect(slotIds(next, "left")).toEqual(["l1"]);
   });
 });
