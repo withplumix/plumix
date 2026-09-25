@@ -1,3 +1,4 @@
+import type { AppContext } from "../context/app.js";
 import type { EntryQuery } from "../entries/query.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RouteIntent, RouteRule } from "./intent.js";
@@ -20,17 +21,38 @@ export type EntryArchive = Exclude<
   { readonly kind: "single" | "search" }
 >;
 
+declare module "../hooks/types.js" {
+  interface FilterRegistry {
+    /**
+     * Narrow an archive's entries. Handed the archive's query, which archive
+     * it is, and what its URL captured, and runs wherever the query is read —
+     * so the archive's page and its feed change together. A query only
+     * narrows, and the public-entries rule is applied again when it compiles,
+     * so a handler can hide an entry but never reveal one. Synchronous: the
+     * query records intent, and asking for it must not cost a round-trip.
+     */
+    "archive:entries": (
+      query: EntryQuery,
+      archive: EntryArchive,
+      params: Record<string, string>,
+    ) => EntryQuery;
+  }
+}
+
+/** What reading an archive's query needs: its definition, and its narrowings. */
+export type ArchiveReader = Pick<AppContext, "plugins" | "hooks">;
+
 /**
  * The front page: public entries of every non-hierarchical type. The author
  * and date archives narrow it, because all three are a stream of posts — a
  * standalone page leaves them, and their feeds with them.
  */
-export function frontPageEntries(plugins: PluginRegistry): EntryQuery {
+function frontPageEntries(plugins: PluginRegistry): EntryQuery {
   return publicEntriesQuery(plugins).ofTypes(...listedEntryTypeNames(plugins));
 }
 
 /** An entry type's archive: its public entries, hierarchical or not. */
-export function entryTypeEntries(
+function entryTypeEntries(
   plugins: PluginRegistry,
   entryType: string,
 ): EntryQuery {
@@ -42,7 +64,7 @@ export function entryTypeEntries(
  * types the page is tagged under, and the public-entries rule it narrows
  * leaves out any of them that is not public.
  */
-export function termEntries(
+function termEntries(
   plugins: PluginRegistry,
   taxonomy: string,
   path: readonly string[],
@@ -53,15 +75,12 @@ export function termEntries(
 }
 
 /** An author's archive: their public entries of non-hierarchical types. */
-export function authorEntries(
-  plugins: PluginRegistry,
-  slug: string,
-): EntryQuery {
+function authorEntries(plugins: PluginRegistry, slug: string): EntryQuery {
   return frontPageEntries(plugins).byAuthor(slug);
 }
 
 /** A date archive: public entries of non-hierarchical types in the period. */
-export function dateEntries(
+function dateEntries(
   plugins: PluginRegistry,
   year: number,
   month: number | null,
@@ -71,12 +90,23 @@ export function dateEntries(
 }
 
 /**
- * The entry query of the archive at these route params, or `null` where the
- * params place no archive: a term or author capture that is missing, or a
- * plugin archive that has no `entries` or declined the params. The archive's
- * page and {@link archiveAtPath} both ask this, so they cannot disagree.
+ * The entry query of the archive at these route params, run through the
+ * `archive:entries` filter, or `null` where the params place no archive: a
+ * term or author capture that is missing, or a plugin archive that has no
+ * `entries` or declined the params. The archive's page and
+ * {@link archiveAtPath} both ask this, so they cannot disagree.
  */
 export function archiveEntries(
+  { plugins, hooks }: ArchiveReader,
+  archive: EntryArchive,
+  params: Record<string, string>,
+): EntryQuery | null {
+  const query = definedEntries(plugins, archive, params);
+  if (query === null) return null;
+  return hooks.applyFilterSync("archive:entries", query, archive, params);
+}
+
+function definedEntries(
   plugins: PluginRegistry,
   archive: EntryArchive,
   params: Record<string, string>,
@@ -182,28 +212,29 @@ const FRONT_PAGE_ROOT = "/";
  * archive's page answers 404.
  */
 export function archiveAtPath(
-  plugins: PluginRegistry,
+  reader: ArchiveReader,
   pathname: string,
 ): ArchiveAtPath | null {
+  const { plugins } = reader;
   const match = matchRoute(
     new URL(pathname, "https://plumix.invalid"),
     routeMapOf(plugins),
   );
   if (match === null) {
     return pathname === FRONT_PAGE_ROOT
-      ? archiveWithQuery(plugins, { kind: "front-page" }, {})
+      ? archiveWithQuery(reader, { kind: "front-page" }, {})
       : null;
   }
   if (!isEntryArchive(plugins, match.intent)) return null;
-  return archiveWithQuery(plugins, match.intent, match.params);
+  return archiveWithQuery(reader, match.intent, match.params);
 }
 
 function archiveWithQuery(
-  plugins: PluginRegistry,
+  reader: ArchiveReader,
   archive: EntryArchive,
   params: Record<string, string>,
 ): ArchiveAtPath | null {
-  const entries = archiveEntries(plugins, archive, params);
+  const entries = archiveEntries(reader, archive, params);
   return entries === null ? null : { archive, params, entries };
 }
 

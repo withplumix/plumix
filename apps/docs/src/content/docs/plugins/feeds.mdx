@@ -155,6 +155,8 @@ export const featured = definePlugin("featured", {
 
 `scope.archive` names the archive as core's lookup does — `front-page`, `archive` (with its `entryType`), `taxonomy` (with its `taxonomy`), `author`, `date`, or `custom` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
 
+`feed:items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`archive:entries`](/routing/overview/#narrowing-an-archive) filter instead.
+
 The plugin's own package must be installed for the hook name to type-check — it declares `feed:items` on `FilterRegistry` through the single `plumix` augmentation specifier, the same way every plugin declares a hook.
 
 ## Syndicating a plugin archive

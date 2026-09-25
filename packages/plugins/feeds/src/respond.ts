@@ -47,7 +47,7 @@ export async function handleFeed(
   // The dispatcher already stripped the base prefix, which is how core's
   // archive lookup reads a path too.
   const pathname = new URL(ctx.request.url).pathname;
-  const target = feedAt(ctx.plugins, pathname);
+  const target = feedAt(ctx, pathname);
   tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, target)]);
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty

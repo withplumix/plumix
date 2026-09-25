@@ -135,6 +135,7 @@ export type {
   ArchiveAtPath,
   ArchiveBaseRoute,
   ArchiveEntries,
+  ArchiveReader,
   ArchiveTitle,
   ArchiveTypeDeclaration,
   AuthenticatedAppContext,
