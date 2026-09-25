@@ -19,7 +19,11 @@ commit — the harness does all of that from the block you emit below.
    so nothing needs building).
 2. **Read `CONTEXT.md`, `AGENTS.md` and any ADR in the area** before judging what
    the fix should look like.
-3. **Decide the standing:**
+3. **Honour a decision already made.** Where an earlier round posted `## Triage
+   Notes` and the maintainer has replied since, that reply is the answer. Treat
+   it as settled, never re-ask it, and build the brief on it even where you would
+   have chosen otherwise. Ask again only what the reply genuinely leaves open.
+4. **Decide the standing:**
    - `already-resolved` — the behaviour the issue asks for is how the code reads
      now. Cite the paths that show it in `touches`.
    - `needs-decision` — settling it needs a judgement only the maintainer can
@@ -28,8 +32,9 @@ commit — the harness does all of that from the block you emit below.
      entry, each one answerable in a sentence.
    - `live` — the claim holds and the way forward is not in doubt. Write the brief.
 
-Prefer `needs-decision` over guessing. A brief that assumes a direction the
-maintainer has not chosen costs a full implementation cycle to undo.
+Prefer `needs-decision` over guessing, unless the maintainer has already
+answered. A brief that assumes a direction the maintainer has not chosen costs a
+full implementation cycle to undo.
 
 # The brief
 
