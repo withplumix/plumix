@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
 
@@ -9,8 +10,9 @@ interface RpcCall {
 }
 
 /**
- * Produces the procedure's result. Throwing responds with a 500, which the
- * client surfaces to the caller as a rejected query.
+ * Produces the procedure's result. Throwing an `ORPCError` answers with that
+ * error, so the caller receives its code and `data` as a real server rejection
+ * would carry them; throwing anything else responds with a 500.
  */
 type RpcResponder = (input: unknown) => unknown;
 
@@ -72,7 +74,8 @@ export function stubRpc(
       if (!responder) return envelope({ message: "not routed" }, 404);
       try {
         return envelope(await responder(input), 200);
-      } catch {
+      } catch (err) {
+        if (err instanceof ORPCError) return envelope(err.toJSON(), err.status);
         // The thrown value isn't echoed back: what a responder threw is
         // already visible in the test that threw it, and the tests using this
         // path assert on the failure, not on its message.

@@ -1,7 +1,12 @@
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
+import {
+  META_FORM_BASE_PATH,
+  useApplyMetaFieldErrors,
+} from "@/lib/meta-field-errors.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
@@ -53,6 +58,9 @@ interface PlainFormLayoutProps {
   readonly headline: string;
   readonly isSubmitting: boolean;
   readonly serverError: string | null;
+  // Path-addressed meta rejections from the last failed save, pinned onto
+  // their inputs; `null` once a save succeeds.
+  readonly serverFieldErrors?: readonly MetaFieldServerError[] | null;
   readonly onSubmit: (values: PostEditorValues) => void;
   // Optional Revisions trigger slot — route layer wires the
   // `<RevisionsSheet />` with RPC fetchers + onRestore and passes it
@@ -89,6 +97,7 @@ export function PlainFormLayout({
   headline,
   isSubmitting,
   serverError,
+  serverFieldErrors,
   onSubmit,
   revisionsTrigger,
   previewLinkAction,
@@ -99,6 +108,7 @@ export function PlainFormLayout({
     resolver: valibotResolver(postEditorSchema),
     defaultValues: initialValues,
   });
+  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
   // useWatch keeps the Publish button's disabled state from forcing the
   // whole tree (every Card + MetaBoxField) to re-render on every keystroke.
   const status = useWatch({ control: form.control, name: "status" });
