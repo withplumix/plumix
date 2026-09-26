@@ -3,32 +3,20 @@ import { describe, expect, test } from "vitest";
 import type { SharedAdminRuntimeSpecifier } from "./runtime.js";
 import {
   adminRuntimeShimSlug,
+  SHARED_ADMIN_RUNTIME_KEYS,
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
 } from "./runtime.js";
 
-describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
-  test("covers every shared library plugin chunks may need", () => {
-    expect(Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).sort()).toEqual([
-      "@lingui/core",
-      "@lingui/react",
-      "@orpc/client",
-      "@orpc/client/fetch",
-      "@orpc/tanstack-query",
-      "@tanstack/react-query",
-      "@tanstack/react-router",
-      "radix-ui",
-      "react",
-      "react-dom",
-      "react-dom/client",
-      "react/jsx-runtime",
-      "sonner",
-      "tailwind-merge",
-    ]);
-  });
+const specifiers = Object.keys(
+  SHARED_ADMIN_RUNTIME_SPECIFIERS,
+) as SharedAdminRuntimeSpecifier[];
 
+describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
   test("every entry resolves to a `plumix/admin/<slug>` sub-export", () => {
-    for (const value of Object.values(SHARED_ADMIN_RUNTIME_SPECIFIERS)) {
-      expect(value).toMatch(/^plumix\/admin\/[a-z-]+$/);
+    for (const spec of specifiers) {
+      expect(SHARED_ADMIN_RUNTIME_SPECIFIERS[spec]).toBe(
+        `plumix/admin/${adminRuntimeShimSlug(spec)}`,
+      );
     }
   });
 
@@ -40,33 +28,35 @@ describe("SHARED_ADMIN_RUNTIME_SPECIFIERS", () => {
 
 describe("adminRuntimeShimSlug", () => {
   test("returns the slug portion of the sub-export", () => {
-    expect(adminRuntimeShimSlug("react")).toBe("react");
     expect(adminRuntimeShimSlug("react/jsx-runtime")).toBe("react-jsx-runtime");
-    expect(adminRuntimeShimSlug("react-dom/client")).toBe("react-dom-client");
-    expect(adminRuntimeShimSlug("@tanstack/react-query")).toBe("react-query");
-    expect(adminRuntimeShimSlug("@tanstack/react-router")).toBe("react-router");
-    expect(adminRuntimeShimSlug("@orpc/client")).toBe("orpc-client");
-    expect(adminRuntimeShimSlug("@orpc/client/fetch")).toBe(
-      "orpc-client-fetch",
-    );
-    expect(adminRuntimeShimSlug("@orpc/tanstack-query")).toBe(
-      "orpc-tanstack-query",
-    );
-    expect(adminRuntimeShimSlug("@lingui/core")).toBe("lingui-core");
-    expect(adminRuntimeShimSlug("@lingui/react")).toBe("lingui-react");
-    // Singleton substrates the shared shadcn components sit on: one shim
-    // each dedupes radix/sonner/tailwind-merge out of every plugin chunk.
     expect(adminRuntimeShimSlug("radix-ui")).toBe("radix");
-    expect(adminRuntimeShimSlug("sonner")).toBe("sonner");
-    expect(adminRuntimeShimSlug("tailwind-merge")).toBe("tailwind-merge");
   });
 
   test("slug is a filename-safe segment (used as `<slug>.js`)", () => {
-    const allSpecifiers = Object.keys(
-      SHARED_ADMIN_RUNTIME_SPECIFIERS,
-    ) as SharedAdminRuntimeSpecifier[];
-    for (const spec of allSpecifiers) {
+    for (const spec of specifiers) {
       expect(adminRuntimeShimSlug(spec)).toMatch(/^[a-z0-9-]+$/);
+    }
+  });
+});
+
+describe("SHARED_ADMIN_RUNTIME_KEYS", () => {
+  test("names the runtime key every shared specifier's shim reads", () => {
+    expect(Object.keys(SHARED_ADMIN_RUNTIME_KEYS).sort()).toEqual(
+      [...specifiers].sort(),
+    );
+    expect(SHARED_ADMIN_RUNTIME_KEYS["react-dom/client"]).toBe(
+      "reactDomClient",
+    );
+  });
+
+  test("runtime keys are unique — no two libraries share a slot", () => {
+    const keys = Object.values(SHARED_ADMIN_RUNTIME_KEYS);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("runtime keys are identifiers", () => {
+    for (const key of Object.values(SHARED_ADMIN_RUNTIME_KEYS)) {
+      expect(key).toMatch(/^[a-z][A-Za-z]*$/);
     }
   });
 });

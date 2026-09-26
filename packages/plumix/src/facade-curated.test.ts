@@ -82,6 +82,13 @@ type Curated =
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
+      "the runtime-key half of the shim roster, which admin's runtime " +
+      "object and `PlumixAdminRuntime` are typed against. A plugin " +
+      "chunk reads those keys through `getRuntime`, not this map.",
+    names: ["SHARED_ADMIN_RUNTIME_KEYS"],
+  },
+  {
+    reason:
       "core's own RPC surface — the admin client's routers, their input " +
       "schemas and the entry lifecycle they drive. A plugin builds its " +
       "router from `base`.",
@@ -304,7 +311,19 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
     ],
   },
-  "./admin": { module: admin, mirrors: coreAdmin, withheld: [] },
+  "./admin": {
+    module: admin,
+    mirrors: coreAdmin,
+    withheld: [
+      {
+        reason:
+          "the runtime-key half of the shim roster, which admin's runtime " +
+          "object and `PlumixAdminRuntime` are typed against. A plugin " +
+          "chunk reads those keys through `getRuntime`, not this map.",
+        names: ["SHARED_ADMIN_RUNTIME_KEYS"],
+      },
+    ],
+  },
   "./blocks": {
     module: blocks,
     mirrors: blocksPackage,

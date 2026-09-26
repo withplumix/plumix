@@ -18,24 +18,32 @@ import type * as ReactJsxRuntimeNs from "react/jsx-runtime";
 import type * as SonnerNs from "sonner";
 import type * as TailwindMergeNs from "tailwind-merge";
 
+import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+
 import { AdminRuntimeError } from "../errors.js";
 
-export interface PlumixAdminRuntime {
-  readonly react: typeof ReactNs;
-  readonly reactJsxRuntime: typeof ReactJsxRuntimeNs;
-  readonly reactDom: typeof ReactDomNs;
-  readonly reactDomClient: typeof ReactDomClientNs;
-  readonly reactQuery: typeof ReactQueryNs;
-  readonly reactRouter: typeof ReactRouterNs;
-  readonly orpcClient: typeof OrpcClientNs;
-  readonly orpcClientFetch: typeof OrpcClientFetchNs;
-  readonly orpcTanstackQuery: typeof OrpcTanstackQueryNs;
-  readonly linguiCore: typeof LinguiCoreNs;
-  readonly linguiReact: typeof LinguiReactNs;
-  readonly radix: typeof RadixNs;
-  readonly sonner: typeof SonnerNs;
-  readonly tailwindMerge: typeof TailwindMergeNs;
+interface SharedAdminNamespaces {
+  react: typeof ReactNs;
+  reactJsxRuntime: typeof ReactJsxRuntimeNs;
+  reactDom: typeof ReactDomNs;
+  reactDomClient: typeof ReactDomClientNs;
+  reactQuery: typeof ReactQueryNs;
+  reactRouter: typeof ReactRouterNs;
+  orpcClient: typeof OrpcClientNs;
+  orpcClientFetch: typeof OrpcClientFetchNs;
+  orpcTanstackQuery: typeof OrpcTanstackQueryNs;
+  linguiCore: typeof LinguiCoreNs;
+  linguiReact: typeof LinguiReactNs;
+  radix: typeof RadixNs;
+  sonner: typeof SonnerNs;
+  tailwindMerge: typeof TailwindMergeNs;
 }
+
+// Keyed by core's shim roster, which admin's runtime object is checked
+// against too: a roster key with no namespace here fails to index.
+export type PlumixAdminRuntime = {
+  readonly [K in SharedAdminRuntimeKey]: SharedAdminNamespaces[K];
+};
 
 export interface PlumixGlobal {
   readonly runtime?: PlumixAdminRuntime;

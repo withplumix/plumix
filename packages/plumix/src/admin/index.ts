@@ -32,4 +32,7 @@ export {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
   adminRuntimeShimSlug,
 } from "@plumix/core/admin";
-export type { SharedAdminRuntimeSpecifier } from "@plumix/core/admin";
+export type {
+  SharedAdminRuntimeKey,
+  SharedAdminRuntimeSpecifier,
+} from "@plumix/core/admin";
