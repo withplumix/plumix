@@ -1,51 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import * as adminEditor from "@plumix/admin-editor";
-import * as blocksPackage from "@plumix/blocks";
-import * as blocksIslandRendererPackage from "@plumix/blocks/island-renderer";
-import * as blocksRendererPackage from "@plumix/blocks/renderer";
-import * as blocksTestPackage from "@plumix/blocks/test";
-import * as core from "@plumix/core";
-import * as coreAdmin from "@plumix/core/admin";
-import * as coreCdnCloudflare from "@plumix/core/cdn/cloudflare";
-import * as coreCli from "@plumix/core/cli";
-import * as coreDb from "@plumix/core/db";
-import * as coreDbLibsql from "@plumix/core/db/libsql";
-import * as coreDevClient from "@plumix/core/dev-client";
-import * as coreFields from "@plumix/core/fields";
-import * as coreI18n from "@plumix/core/i18n";
-import * as coreSchema from "@plumix/core/schema";
-import * as coreStorageS3 from "@plumix/core/storage/s3";
-import * as coreSupport from "@plumix/core/support";
-import * as coreTest from "@plumix/core/test";
-import * as coreTestConformance from "@plumix/core/test/conformance";
-import * as coreTestPlaywright from "@plumix/core/test/playwright";
-
-import { CURATED_REEXPORT, subpathsMatching } from "../test/facade-entries.js";
-import * as admin from "./admin/index.js";
-import * as auth from "./auth/index.js";
-import * as blocks from "./blocks/index.js";
-import * as blocksIslandRenderer from "./blocks/island-renderer.js";
-import * as blocksRenderer from "./blocks/renderer.js";
-import * as blocksTest from "./blocks/test.js";
-import * as cdnCloudflare from "./cdn/cloudflare.js";
-import * as cli from "./cli/kit.js";
-import * as devClient from "./core/dev-client.js";
-import * as db from "./db/index.js";
-import * as dbLibsql from "./db/libsql.js";
-import * as editorRuntime from "./editor-runtime.js";
-import * as fields from "./fields/index.js";
-import * as i18n from "./i18n/index.js";
-import * as root from "./index.js";
-import * as plugin from "./plugin.js";
-import * as runtime from "./runtime/index.js";
-import * as schema from "./schema/index.js";
-import * as storageS3 from "./storage/s3.js";
-import * as support from "./support/index.js";
-import * as testConformance from "./test/conformance.js";
-import * as testSubpath from "./test/index.js";
-import * as testPlaywright from "./test/playwright.js";
-import * as theme from "./theme/index.js";
+import type { Namespace, Unloadable } from "../test/facade-entries.js";
+import { facadeSpecifier, loadModules } from "../test/facade-entries.js";
 
 // A curated subpath names what it publishes, so the internal package behind it
 // can grow without the façade noticing: a new export is simply not re-exported,
@@ -58,22 +14,22 @@ interface Withholding {
   readonly reason: string;
   readonly names: readonly string[];
   /** The subpath that publishes these instead, checked rather than claimed. */
-  readonly publishedBy?: object;
+  readonly publishedBy?: string;
 }
 
+// A row records decisions only. Its source is named by specifier and the entry
+// by subpath; the guard loads both from the exports maps.
 type Curated =
   | {
-      readonly module: object;
-      readonly mirrors: object;
+      readonly mirrors: string;
       readonly withheld: readonly Withholding[];
     }
   | {
-      readonly module: object;
       /**
        * A role's cut of core's barrel: every value it publishes is one the
        * barrel exports, plus names only this subpath adds.
        */
-      readonly draws: object;
+      readonly draws: string;
       readonly adds?: readonly string[];
     };
 
@@ -277,15 +233,14 @@ const CORE_WITHHELD: readonly Withholding[] = [
 ];
 
 const CURATED: Readonly<Record<string, Curated>> = {
-  ".": { module: root, draws: core },
-  "./plugin": { module: plugin, draws: core, adds: ["v"] },
-  "./theme": { module: theme, draws: core },
-  "./runtime": { module: runtime, draws: core },
-  "./auth": { module: auth, draws: core },
-  "./support": { module: support, mirrors: coreSupport, withheld: [] },
+  ".": { draws: "@plumix/core" },
+  "./plugin": { draws: "@plumix/core", adds: ["v"] },
+  "./theme": { draws: "@plumix/core" },
+  "./runtime": { draws: "@plumix/core" },
+  "./auth": { draws: "@plumix/core" },
+  "./support": { mirrors: "@plumix/core/support", withheld: [] },
   "./cli": {
-    module: cli,
-    mirrors: coreCli,
+    mirrors: "@plumix/core/cli",
     withheld: [
       {
         reason: "the schedule helpers, published on `plumix/runtime`",
@@ -295,7 +250,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "declaredSchedules",
           "scheduledTasksFor",
         ],
-        publishedBy: runtime,
+        publishedBy: "./runtime",
       },
       {
         reason:
@@ -312,8 +267,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./admin": {
-    module: admin,
-    mirrors: coreAdmin,
+    mirrors: "@plumix/core/admin",
     withheld: [
       {
         reason:
@@ -325,13 +279,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks": {
-    module: blocks,
-    mirrors: blocksPackage,
+    mirrors: "@plumix/blocks",
     withheld: [
       {
         reason: "the JSON narrowings, published on `plumix/support`",
         names: ["isJsonArray", "isJsonObject"],
-        publishedBy: support,
+        publishedBy: "./support",
       },
       {
         reason:
@@ -408,8 +361,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks/renderer": {
-    module: blocksRenderer,
-    mirrors: blocksRendererPackage,
+    mirrors: "@plumix/blocks/renderer",
     withheld: [
       {
         reason:
@@ -426,8 +378,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks/test": {
-    module: blocksTest,
-    mirrors: blocksTestPackage,
+    mirrors: "@plumix/blocks/test",
     withheld: [
       {
         reason:
@@ -438,16 +389,14 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks/island-renderer": {
-    module: blocksIslandRenderer,
-    mirrors: blocksIslandRendererPackage,
+    mirrors: "@plumix/blocks/island-renderer",
     withheld: [],
   },
   // Whole by value, not by `export *`: `Db` is typed over every key of core's
   // schema module, so a client built from this subpath needs each one.
-  "./schema": { module: schema, mirrors: coreSchema, withheld: [] },
+  "./schema": { mirrors: "@plumix/core/schema", withheld: [] },
   "./db": {
-    module: db,
-    mirrors: coreDb,
+    mirrors: "@plumix/core/db",
     withheld: [
       {
         reason:
@@ -495,17 +444,15 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
     ],
   },
-  "./db/libsql": { module: dbLibsql, mirrors: coreDbLibsql, withheld: [] },
+  "./db/libsql": { mirrors: "@plumix/core/db/libsql", withheld: [] },
   "./cdn/cloudflare": {
-    module: cdnCloudflare,
-    mirrors: coreCdnCloudflare,
+    mirrors: "@plumix/core/cdn/cloudflare",
     withheld: [],
   },
-  "./storage/s3": { module: storageS3, mirrors: coreStorageS3, withheld: [] },
-  "./fields": { module: fields, mirrors: coreFields, withheld: [] },
+  "./storage/s3": { mirrors: "@plumix/core/storage/s3", withheld: [] },
+  "./fields": { mirrors: "@plumix/core/fields", withheld: [] },
   "./test": {
-    module: testSubpath,
-    mirrors: coreTest,
+    mirrors: "@plumix/core/test",
     withheld: [
       {
         reason:
@@ -516,13 +463,11 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./test/conformance": {
-    module: testConformance,
-    mirrors: coreTestConformance,
+    mirrors: "@plumix/core/test/conformance",
     withheld: [],
   },
   "./test/playwright": {
-    module: testPlaywright,
-    mirrors: coreTestPlaywright,
+    mirrors: "@plumix/core/test/playwright",
     withheld: [
       {
         reason:
@@ -534,8 +479,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./core/dev-client": {
-    module: devClient,
-    mirrors: coreDevClient,
+    mirrors: "@plumix/core/dev-client",
     withheld: [
       {
         reason:
@@ -551,8 +495,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./i18n": {
-    module: i18n,
-    mirrors: coreI18n,
+    mirrors: "@plumix/core/i18n",
     withheld: [
       {
         reason:
@@ -570,8 +513,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./editor-runtime": {
-    module: editorRuntime,
-    mirrors: adminEditor,
+    mirrors: "@plumix/admin-editor",
     withheld: [
       {
         reason:
@@ -598,53 +540,213 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
 };
 
-describe.each(Object.entries(CURATED))("the %s façade subpath", (_, entry) => {
-  const published = Object.keys(entry.module);
+// A subpath that republishes an internal package whole, on purpose. Anything
+// that package exports is published `plumix` API the moment it lands, so each
+// one says why nobody needs to decide name by name.
+const PASSTHROUGH: Readonly<Record<string, string>> = {
+  "./admin/ui":
+    "the vendored shadcn set, published as the admin shell renders it; the " +
+    "entry documents that it carries no stability promise beyond pre-1.0",
+};
 
-  if ("draws" in entry) {
-    test("publishes nothing core's barrel does not export", () => {
-      const adds = entry.adds ?? [];
-      const source = new Map(Object.entries(entry.draws));
-      const module = new Map(Object.entries(entry.module));
+// Named, so a subpath is never skipped without a reason.
+const UNLOADABLE: Unloadable = {
+  "@plumix/blocks/island-runtime":
+    "registers the `<plumix-island>` custom element as it evaluates, and " +
+    "the unit tier runs in Node with no `HTMLElement` to extend",
+  "plumix/blocks/island-runtime":
+    "imports `@plumix/blocks/island-runtime` for its side effect and " +
+    "publishes nothing",
+};
+
+const { facade, sources } = await loadModules(UNLOADABLE);
+
+function loaded(
+  modules: ReadonlyMap<string, Namespace>,
+  key: string,
+): Namespace {
+  const module = modules.get(key);
+  if (module === undefined)
+    throw new Error(`${key} is in no exports map, or is UNLOADABLE`);
+  return module;
+}
+
+// Only a function or an object has an identity to trace back to a source;
+// a primitive would match any constant that happens to share its value.
+function hasIdentity(value: unknown): value is object {
+  return (
+    typeof value === "function" || (typeof value === "object" && value !== null)
+  );
+}
+
+// Every internal module that exports a value, keyed by the value itself. A
+// namespace counts as its own module's, so republishing one whole is caught.
+const owners = new Map<object, string[]>();
+for (const [specifier, module] of sources) {
+  for (const value of [module, ...Object.values(module)]) {
+    if (!hasIdentity(value)) continue;
+    const found = owners.get(value) ?? [];
+    if (!found.includes(specifier)) found.push(specifier);
+    owners.set(value, found);
+  }
+}
+
+interface Republished {
+  readonly name: string;
+  readonly value: object;
+  readonly owners: string;
+}
+
+function republished(module: Namespace): Republished[] {
+  return Object.entries(module).flatMap(([name, value]: [string, unknown]) => {
+    if (!hasIdentity(value)) return [];
+    const found = owners.get(value);
+    return found === undefined
+      ? []
+      : [{ name, value, owners: found.join(" and ") }];
+  });
+}
+
+// What a row cannot see: an entry is only checked once someone writes it a
+// row, so one that republishes internal values without a row — through an
+// import-then-export, a namespace or a local module's `export *` — would
+// publish them unreviewed. Traced by identity, so `plumix/vite` building on
+// core's values passes until it hands one on.
+test("every subpath that republishes an internal value has a row", () => {
+  expect(
+    [...facade].flatMap(([subpath, module]) =>
+      subpath in CURATED || subpath in PASSTHROUGH
+        ? []
+        : republished(module).map(
+            ({ name, owners: from }) =>
+              `${facadeSpecifier(subpath)} publishes "${name}", which is ` +
+              `${from}'s — publish it from the subpath that owns it, or ` +
+              `give ${subpath} a CURATED row`,
+          ),
+    ),
+  ).toEqual([]);
+});
+
+test("every row names a façade subpath", () => {
+  expect(
+    [...Object.keys(CURATED), ...Object.keys(PASSTHROUGH)]
+      .filter((subpath) => !facade.has(subpath))
+      .map(
+        (subpath) =>
+          `${subpath} has a row but is not in plumix's exports map — ` +
+          `drop the row`,
+      ),
+  ).toEqual([]);
+});
+
+describe.each(Object.entries(CURATED))(
+  "the %s façade subpath",
+  (subpath, entry) => {
+    const specifier = facadeSpecifier(subpath);
+    const module = loaded(facade, subpath);
+    const published = Object.keys(module);
+
+    if ("draws" in entry) {
+      const barrel = loaded(sources, entry.draws);
+      test(`publishes nothing ${entry.draws}'s barrel does not export`, () => {
+        const adds = entry.adds ?? [];
+        expect([
+          ...published
+            .filter(
+              (name) => !adds.includes(name) && barrel[name] !== module[name],
+            )
+            .map(
+              (name) =>
+                `${specifier} publishes "${name}", which ${entry.draws}'s ` +
+                `barrel does not export — publish it from the subpath that ` +
+                `owns it, or list it in ${subpath}'s adds`,
+            ),
+          ...adds
+            .filter((name) => !published.includes(name))
+            .map(
+              (name) =>
+                `${subpath} adds "${name}", which ${specifier} does not ` +
+                `publish — drop it from adds`,
+            ),
+        ]).toEqual([]);
+      });
+      return;
+    }
+
+    const source = loaded(sources, entry.mirrors);
+    const withheld = entry.withheld.flatMap((group) => group.names);
+
+    test("publishes or withholds every value its source exports", () => {
       expect(
-        published.filter(
-          (name) =>
-            !adds.includes(name) && source.get(name) !== module.get(name),
+        Object.keys(source)
+          .filter(
+            (name) => !published.includes(name) && !withheld.includes(name),
+          )
+          .map(
+            (name) =>
+              `${specifier} neither publishes nor withholds "${name}", ` +
+              `which ${entry.mirrors} exports — publish it, or withhold it ` +
+              `with a reason in ${subpath}'s row`,
+          ),
+      ).toEqual([]);
+    });
+
+    test("publishes no internal value from outside its source", () => {
+      const own = new Set(Object.values(source));
+      expect(
+        republished(module)
+          .filter(({ value }) => !own.has(value))
+          .map(
+            ({ name, owners: from }) =>
+              `${specifier} publishes "${name}", which is ${from}'s, not ` +
+              `${entry.mirrors}'s — publish it from the subpath that owns ` +
+              `it`,
+          ),
+      ).toEqual([]);
+    });
+
+    test("publishes nothing it withholds", () => {
+      expect(
+        withheld
+          .filter((name) => published.includes(name))
+          .map(
+            (name) =>
+              `${specifier} publishes "${name}", which its row withholds — ` +
+              `stop publishing it, or drop the withholding`,
+          ),
+      ).toEqual([]);
+    });
+
+    test("withholds nothing its source no longer exports", () => {
+      expect(
+        withheld
+          .filter((name) => !(name in source))
+          .map(
+            (name) =>
+              `${subpath} withholds "${name}", which ${entry.mirrors} no ` +
+              `longer exports — drop it from the row`,
+          ),
+      ).toEqual([]);
+    });
+
+    test("withholds a name for another subpath only where that subpath publishes it", () => {
+      expect(
+        entry.withheld.flatMap(({ names, publishedBy }) =>
+          publishedBy === undefined
+            ? []
+            : names
+                .filter((name) => !(name in loaded(facade, publishedBy)))
+                .map(
+                  (name) =>
+                    `${subpath} withholds "${name}" for ` +
+                    `${facadeSpecifier(publishedBy)}, which does not ` +
+                    `publish it — publish it there, or drop publishedBy`,
+                ),
         ),
       ).toEqual([]);
-      expect(adds.filter((name) => !published.includes(name))).toEqual([]);
     });
-    return;
-  }
-
-  const withheld = entry.withheld.flatMap((group) => group.names);
-
-  test("publishes or withholds every value its source exports", () => {
-    expect(
-      Object.keys(entry.mirrors).filter(
-        (name) => !published.includes(name) && !withheld.includes(name),
-      ),
-    ).toEqual([]);
-  });
-
-  test("publishes nothing it withholds", () => {
-    expect(withheld.filter((name) => published.includes(name))).toEqual([]);
-  });
-
-  test("withholds nothing its source no longer exports", () => {
-    expect(withheld.filter((name) => !(name in entry.mirrors))).toEqual([]);
-  });
-
-  test("withholds a name for another subpath only where that subpath publishes it", () => {
-    expect(
-      entry.withheld.flatMap(({ names, publishedBy }) =>
-        publishedBy === undefined
-          ? []
-          : names.filter((name) => !(name in publishedBy)),
-      ),
-    ).toEqual([]);
-  });
-});
+  },
+);
 
 // One import path per value: a name reachable from two subpaths leaves an
 // editor's auto-import to pick between them, and neither is wrong enough for a
@@ -652,12 +754,10 @@ describe.each(Object.entries(CURATED))("the %s façade subpath", (_, entry) => {
 // `plumix/theme`'s `date` tier builder are two values that share a spelling,
 // while one function under two subpaths' names is still one value. A primitive has no
 // identity to compare, so two constants only collide when their names do.
-const publications = Object.entries(CURATED).flatMap(([subpath, entry]) =>
-  Object.entries(entry.module).map(([name, value]: [string, unknown]) => ({
-    subpath,
-    name,
-    value,
-  })),
+const publications = Object.keys(CURATED).flatMap((subpath) =>
+  Object.entries(loaded(facade, subpath)).map(
+    ([name, value]: [string, unknown]) => ({ subpath, name, value }),
+  ),
 );
 
 test("no value is published by two subpaths", () => {
@@ -669,62 +769,61 @@ test("no value is published by two subpaths", () => {
           (b) =>
             b.value === a.value &&
             (b.name === a.name ||
-              (b.subpath !== a.subpath &&
-                (typeof a.value === "function" ||
-                  (typeof a.value === "object" && a.value !== null)))),
+              (b.subpath !== a.subpath && hasIdentity(a.value))),
         )
-        .map((b) => `${a.name}: ${a.subpath} and ${b.subpath}`),
+        .map(
+          (b) =>
+            `"${a.name}" is published by ${facadeSpecifier(a.subpath)} and ` +
+            `${facadeSpecifier(b.subpath)} — publish it from one and ` +
+            `withhold it on the other`,
+        ),
     ),
   ).toEqual([]);
 });
 
 describe("core's barrel", () => {
   const withheld = CORE_WITHHELD.flatMap((group) => group.names);
-  const exported: [string, unknown][] = Object.entries(core);
+  const core = loaded(sources, "@plumix/core");
 
   test("every value it exports is published or withheld", () => {
     expect(
-      exported
+      Object.entries(core)
         .filter(
-          ([name, value]) =>
+          ([name, value]: [string, unknown]) =>
             !withheld.includes(name) &&
             !publications.some((p) => p.name === name && p.value === value),
         )
-        .map(([name]) => name),
+        .map(
+          ([name]) =>
+            `@plumix/core exports "${name}", which no subpath publishes — ` +
+            `publish it from the subpath whose role it serves, or add it to ` +
+            `CORE_WITHHELD with a reason`,
+        ),
     ).toEqual([]);
   });
 
   test("nothing it withholds is published", () => {
     expect(
-      withheld.filter((name) => publications.some((p) => p.name === name)),
+      publications
+        .filter((p) => withheld.includes(p.name))
+        .map(
+          (p) =>
+            `${facadeSpecifier(p.subpath)} publishes "${p.name}", which ` +
+            `CORE_WITHHELD withholds — stop publishing it, or drop the ` +
+            `withholding`,
+        ),
     ).toEqual([]);
   });
 
   test("it withholds nothing it no longer exports", () => {
-    expect(withheld.filter((name) => !(name in core))).toEqual([]);
+    expect(
+      withheld
+        .filter((name) => !(name in core))
+        .map(
+          (name) =>
+            `CORE_WITHHELD withholds "${name}", which @plumix/core no ` +
+            `longer exports — drop it`,
+        ),
+    ).toEqual([]);
   });
-});
-
-// A subpath that republishes an internal package whole, on purpose. Anything
-// that package exports is published `plumix` API the moment it lands, so each
-// one says why nobody needs to decide name by name.
-const PASSTHROUGH: Readonly<Record<string, string>> = {
-  "./admin/ui":
-    "the vendored shadcn set, published as the admin shell renders it; the " +
-    "entry documents that it carries no stability promise beyond pre-1.0",
-};
-
-// Every curated subpath needs a row above.
-test("every curated subpath has a drift guard", () => {
-  expect(Object.keys(CURATED).sort()).toEqual(
-    subpathsMatching(CURATED_REEXPORT),
-  );
-});
-
-// Types stay wholesale (`export type *`); a value `export *` is invisible to
-// every row above, so it has to be a passthrough someone wrote down.
-test("no subpath republishes an internal package wholesale unless it is a passthrough", () => {
-  expect(
-    subpathsMatching(/export\s+\*\s+(?:as\s+[\w$]+\s+)?from\s+["']@plumix\//),
-  ).toEqual(Object.keys(PASSTHROUGH).sort());
 });
