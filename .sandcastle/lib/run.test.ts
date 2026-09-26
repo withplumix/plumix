@@ -177,6 +177,26 @@ describe("runShipLoop", () => {
     expect(attempts).toBe(3);
   });
 
+  test("the session limit leaves every ticket exactly as it was", async () => {
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      ship: async () => {
+        throw new Error(
+          "claude-code exited with code 1: You've hit your session limit · reset 3pm",
+        );
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(released.length).toBeGreaterThan(0);
+    expect(report.outage).toContain("session limit");
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 
