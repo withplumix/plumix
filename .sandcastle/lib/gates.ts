@@ -124,26 +124,6 @@ export const gateBehindCheck = (checkName: string): Gate | undefined => {
   return [...GATES, CHANGESET_GATE].find(({ name }) => name === gateName);
 };
 
-export const reproduceFailingChecks = async (
-  sandbox: Executor,
-  checkNames: readonly string[],
-): Promise<string> => {
-  const reproduced = await Promise.all(
-    checkNames.map(async (checkName) => {
-      const gate = gateBehindCheck(checkName);
-      if (!gate) {
-        return `- CI check \`${checkName}\` failed. The harness has no local gate for it, so there is no output to show. Read the workflow in \`.github/workflows/\` to see what it runs.`;
-      }
-      if (gate.requires && !(await isAvailable(sandbox, gate.requires))) {
-        return `- CI check \`${checkName}\` failed. Locally \`${gate.command}\` cannot run, because \`${gate.requires}\` is unavailable in this sandbox, so there is no output to show.`;
-      }
-      const { stdout, stderr } = await sandbox.exec(gate.command);
-      return `- CI check \`${checkName}\` failed. Locally, \`${gate.command}\` says:\n\n\`\`\`\n${`${stdout}\n${stderr}`.trim().slice(-4000)}\n\`\`\``;
-    }),
-  );
-  return reproduced.join("\n\n");
-};
-
 export interface GateRunOutcome {
   readonly results: readonly GateResult[];
   readonly failures: readonly GateFailure[];

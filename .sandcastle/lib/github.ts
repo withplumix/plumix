@@ -181,6 +181,32 @@ const releaseTicketsWaitingOn = (ticketNumber: number): void => {
   }
 };
 
+export const fileFollowUp = (
+  ticketNumber: number,
+  pullRequestUrl: string,
+  finding: {
+    readonly severity: string;
+    readonly file: string;
+    readonly line?: number;
+    readonly summary: string;
+    readonly why: string;
+  },
+): void => {
+  const where = `\`${finding.file}${finding.line ? `:${finding.line}` : ""}\``;
+  gh([
+    "issue",
+    "create",
+    "-R",
+    REPO_SLUG,
+    "--label",
+    TRIAGE_LABEL,
+    "--title",
+    finding.summary.slice(0, 120),
+    "--body",
+    `${TRIAGE_DISCLAIMER}\n\n*A reviewer raised this while shipping #${ticketNumber} (${pullRequestUrl}). Out of scope there, so it is filed rather than left in a merged pull request.*\n\n## Problem\n\n${where} — ${finding.summary}\n\n${finding.why}\n\nRefs #${ticketNumber}`,
+  ]);
+};
+
 export const releaseClaim = (ticketNumber: number): void => {
   gh([
     "issue",
@@ -353,10 +379,6 @@ export const waitForMerge = async (
     reason: `still queued after ${Math.round(giveUpAfterMs / 60_000)} minutes`,
     failingChecks: [],
   };
-};
-
-export const rePushBranch = (branch: string, worktreePath: string): void => {
-  git(["push", "--force-with-lease", "origin", `HEAD:${branch}`], worktreePath);
 };
 
 export const syncRepoToMain = (): void => {

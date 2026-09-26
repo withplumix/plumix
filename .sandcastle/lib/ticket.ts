@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Executor, GateFailure } from "./gates.js";
-import type { Ticket } from "./github.js";
+import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
   agentPhaseRunner,
@@ -12,23 +12,13 @@ import {
   startClock,
   taggedBlock,
 } from "./agent.js";
-import {
-  CHANGESET_GATE,
-  gateBehindCheck,
-  GATES,
-  reproduceFailingChecks,
-  runGates,
-} from "./gates.js";
+import { CHANGESET_GATE, GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
-  isTicketClosed,
   openPullRequest,
   pushBranch,
   queueForMerge,
-  rePushBranch,
   resetBranchToMain,
-  syncRepoToMain,
-  waitForMerge,
 } from "./github.js";
 import { say } from "./log.js";
 import { MERGE_BASE } from "./repo.js";
@@ -43,11 +33,8 @@ const REVIEWER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
-const MAX_LAND_FIX_ROUNDS = 2;
 const BLOCKING_SEVERITY = "high";
 const ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION = 1;
-const MERGE_POLL_INTERVAL_MS = 120_000;
-const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 
 const REVIEWERS = [
   { name: "correctness", promptFile: "review-correctness.md" },
@@ -75,6 +62,8 @@ const findingSchema = z.object({
 
 type Finding = z.infer<typeof findingSchema>["findings"][number];
 
+export type { Finding };
+
 export interface Review {
   readonly findings: readonly Finding[];
   readonly emittedParseableFindings: boolean;
@@ -86,7 +75,11 @@ const NO_PARSEABLE_REVIEW: Review = {
 };
 
 export type ShipOutcome =
-  | { readonly status: "shipped"; readonly pullRequestUrl: string }
+  | {
+      readonly status: "queued";
+      readonly pullRequest: QueuedPullRequest;
+      readonly advisory: readonly Finding[];
+    }
   | {
       readonly status: "blocked";
       readonly reason: string;
@@ -371,77 +364,9 @@ export const shipTicket = async (
       pullRequestCopy.body + advisoryNote,
     );
 
-    let landFixes = 0;
-    while (true) {
-      const landClock = startClock();
-      queueForMerge(pullRequest.number);
-      say(`  queued ${pullRequest.url}`);
-
-      const merge = await waitForMerge(pullRequest.number, {
-        pollEveryMs: MERGE_POLL_INTERVAL_MS,
-        giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
-        onPoll: (status) => say(`  ${status}`),
-      });
-
-      journal.record({
-        phase: landFixes === 0 ? "land" : `land#${landFixes}`,
-        kind: "gate",
-        startedAt: landClock.startedAt,
-        durationMs: landClock.elapsedMs(),
-        outcome: merge.status === "merged" ? "ok" : "fail",
-        detail: merge.status === "merged" ? pullRequest.url : merge.reason,
-      });
-
-      if (merge.status === "merged") break;
-
-      const checksNoLocalGateMirrors = merge.failingChecks.filter(
-        (name) => !gateBehindCheck(name),
-      );
-      if (checksNoLocalGateMirrors.length > 0) {
-        journal.record({
-          phase: "ci-gap",
-          kind: "gate",
-          startedAt: new Date().toISOString(),
-          durationMs: 0,
-          outcome: "fail",
-          detail: `CI checks with no local gate: ${checksNoLocalGateMirrors.join(", ")}`,
-        });
-        say(`  no local gate mirrors: ${checksNoLocalGateMirrors.join(", ")}`);
-      }
-
-      landFixes += 1;
-      if (merge.failingChecks.length === 0 || landFixes > MAX_LAND_FIX_ROUNDS) {
-        return {
-          status: "blocked",
-          reason: merge.reason,
-          pullRequestUrl: pullRequest.url,
-        };
-      }
-
-      say(
-        `--- fix ${merge.failingChecks.length} failing CI check(s) (${landFixes}/${MAX_LAND_FIX_ROUNDS}) ---`,
-      );
-      pass += 1;
-      const declinedAtLanding = await applyFixes(
-        await reproduceFailingChecks(sandbox, merge.failingChecks),
-      );
-      if (declinedAtLanding) {
-        return {
-          status: "blocked",
-          reason: `CI is red and the fixer changed nothing:\n\n${declinedAtLanding}`,
-          pullRequestUrl: pullRequest.url,
-        };
-      }
-      rePushBranch(branch, sandbox.worktreePath);
-    }
-
-    syncRepoToMain();
-    if (!isTicketClosed(ticket.number)) {
-      say(
-        `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
-      );
-    }
-    return { status: "shipped", pullRequestUrl: pullRequest.url };
+    queueForMerge(pullRequest.number);
+    say(`  queued ${pullRequest.url}`);
+    return { status: "queued", pullRequest, advisory };
   } finally {
     const { preservedWorktreePath } = await sandbox.close();
     if (preservedWorktreePath)

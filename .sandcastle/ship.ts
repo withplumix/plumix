@@ -1,13 +1,17 @@
-import type { Ticket } from "./lib/github.js";
-import type { ShipOutcome } from "./lib/ticket.js";
+import type { QueuedPullRequest, Ticket } from "./lib/github.js";
+import type { Finding, ShipOutcome } from "./lib/ticket.js";
+import { gateBehindCheck } from "./lib/gates.js";
 import {
   closeCompletedParent,
+  fileFollowUp,
   firstUnblockedUnassignedTicket,
+  isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
   releaseClaim,
   syncRepoToMain,
   ticketByNumber,
+  waitForMerge,
 } from "./lib/github.js";
 import { drainAcrossLanes } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
@@ -17,6 +21,8 @@ import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
 const DEFAULT_LANES = 2;
+const MERGE_POLL_INTERVAL_MS = 120_000;
+const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
 
 interface ShipOptions {
@@ -97,7 +103,7 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
       outcome = { status: "blocked", reason };
     }
 
-    if (outcome.status === "shipped") {
+    if (outcome.status === "queued") {
       journal.finish("shipped");
     } else {
       journal.finish("failed", outcome.reason);
@@ -107,14 +113,75 @@ const results = await drainAcrossLanes<Ticket, ShipResult>({
   },
 });
 
+interface Landing {
+  readonly ticket: Ticket;
+  readonly pullRequest: QueuedPullRequest;
+  readonly merged: boolean;
+  readonly reason?: string;
+}
+
+const confirmLanding = async (
+  ticket: Ticket,
+  pullRequest: QueuedPullRequest,
+  advisory: readonly Finding[],
+): Promise<Landing> => {
+  const merge = await waitForMerge(pullRequest.number, {
+    pollEveryMs: MERGE_POLL_INTERVAL_MS,
+    giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
+    onPoll: (status) => say(`  #${ticket.number} ${status}`),
+  });
+
+  if (merge.status !== "merged") {
+    const noLocalGateMirrors = merge.failingChecks.filter(
+      (name) => !gateBehindCheck(name),
+    );
+    if (noLocalGateMirrors.length > 0) {
+      say(
+        `  #${ticket.number} CI checks with no local gate: ${noLocalGateMirrors.join(", ")}`,
+      );
+    }
+    parkTicket(ticket.number, merge.reason, pullRequest.url);
+    return { ticket, pullRequest, merged: false, reason: merge.reason };
+  }
+
+  if (!isTicketClosed(ticket.number)) {
+    say(
+      `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
+    );
+  }
+  for (const finding of advisory) {
+    fileFollowUp(ticket.number, pullRequest.url, finding);
+    say(
+      `  #${ticket.number} filed a follow-up: ${finding.summary.slice(0, 64)}`,
+    );
+  }
+  return { ticket, pullRequest, merged: true };
+};
+
+const queued = results.flatMap(({ ticket, outcome }) =>
+  outcome.status === "queued"
+    ? [{ ticket, pullRequest: outcome.pullRequest, advisory: outcome.advisory }]
+    : [],
+);
+
+say(`\n--- confirming ${queued.length} queued pull request(s) ---`);
+const landings = await Promise.all(
+  queued.map(({ ticket, pullRequest, advisory }) =>
+    confirmLanding(ticket, pullRequest, advisory),
+  ),
+);
+
 syncRepoToMain();
 for (const parent of parentsWithEveryChildClosed()) {
   closeCompletedParent(parent.number);
   say(`  closed parent #${parent.number} — every sub-issue done`);
 }
 
-const shipped = results.filter(({ outcome }) => outcome.status === "shipped");
-const parked = results.filter(({ outcome }) => outcome.status !== "shipped");
+const merged = landings.filter(({ merged: m }) => m);
+const parkedAtLanding = landings.filter(({ merged: m }) => !m);
+const parkedInLane = results.filter(
+  ({ outcome }) => outcome.status === "blocked",
+);
 
 say(`\n${"=".repeat(60)}`);
 if (outage) {
@@ -124,11 +191,13 @@ if (outage) {
   );
 }
 say(
-  `Shipped ${shipped.length}, parked ${parked.length}, ${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
+  `Merged ${merged.length}, parked ${parkedInLane.length + parkedAtLanding.length}, ` +
+    `${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
 );
-for (const { ticket, outcome } of shipped)
-  if (outcome.status === "shipped")
-    say(`  ✓ #${ticket.number} ${outcome.pullRequestUrl}`);
-for (const { ticket, outcome } of parked)
+for (const { ticket, pullRequest } of merged)
+  say(`  \u2713 #${ticket.number} ${pullRequest.url}`);
+for (const { ticket, outcome } of parkedInLane)
   if (outcome.status === "blocked")
-    say(`  ⚑ #${ticket.number} — ${outcome.reason}`);
+    say(`  \u2691 #${ticket.number} — ${outcome.reason}`);
+for (const { ticket, pullRequest, reason } of parkedAtLanding)
+  say(`  \u2691 #${ticket.number} ${pullRequest.url} — ${reason}`);
