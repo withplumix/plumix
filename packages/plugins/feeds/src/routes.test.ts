@@ -1215,6 +1215,25 @@ describe("archive-type feeds", () => {
     );
   });
 
+  test("serving a feed matches the public route table once, the dispatcher's own match", async () => {
+    // The route the dispatcher ran is this archive's feed, so the handler has
+    // nothing to ask the route table that the dispatch did not already answer.
+    const h = await harness(eventsPlugin);
+    await seedPost(h, "hello", "Hello World");
+    const exec = vi.spyOn(URLPattern.prototype, "exec");
+    try {
+      (await h.fetch("/events/summer/feed")).assertStatus(200);
+      const feedRouteMatches = exec.mock.contexts.filter(
+        (pattern) =>
+          pattern instanceof URLPattern &&
+          pattern.pathname === "/events/:series/feed",
+      );
+      expect(feedRouteMatches).toHaveLength(1);
+    } finally {
+      exec.mockRestore();
+    }
+  });
+
   // `plumix/test` exports no user type; this is what `seedUser` hands back.
   type SeededUser = Awaited<ReturnType<DispatcherHarness["seedUser"]>>;
 

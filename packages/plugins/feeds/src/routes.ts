@@ -109,7 +109,11 @@ function feedRoutesOver(
 }
 
 interface CompiledFeedRoutes {
-  /** The archive each feed path this plugin registered belongs to, RSS and Atom. */
+  /**
+   * The archive each feed path this plugin registered belongs to, RSS and
+   * Atom. Built from the feed routes, so it names only archives that have a
+   * feed: matching an owner here is also the `hasFeed` check.
+   */
   readonly owners: ReadonlyMap<string, string>;
   // The `/page/:page` form of each archive route, which a listing path can
   // match without being a listing of its own.
@@ -149,6 +153,21 @@ function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
   return routes;
 }
 
+// Whether a feed can hang off this listing of the archive keyed `key`: not
+// where the site routes no public type, nor where the listing is a later page
+// of that archive.
+function servesListing(
+  plugins: PluginRegistry,
+  key: string,
+  listing: string,
+): boolean {
+  if (publicEntryRows(plugins) === null) return false;
+  return !compiledFor(plugins).laterPages.some(
+    (route) =>
+      route.archive === key && route.pattern.test({ pathname: listing }),
+  );
+}
+
 /**
  * Whether a concrete RSS or Atom path serves this archive's feed. Not where
  * the archive has no feed, where the site routes no public type, where the
@@ -164,19 +183,13 @@ export function servesFeed(
   archive: EntryArchive,
   feedPath: string,
 ): boolean {
-  if (publicEntryRows(plugins) === null || !hasFeed(plugins, archive)) {
-    return false;
-  }
   const key = archiveKey(archive);
-  const listing = listingOf(feedPath);
-  const { owners, laterPages } = compiledFor(plugins);
-  const isLaterPage = laterPages.some(
-    (route) =>
-      route.archive === key && route.pattern.test({ pathname: listing }),
-  );
-  if (isLaterPage) return false;
+  if (!servesListing(plugins, key, listingOf(feedPath))) return false;
   const answered = publicRouteAt(plugins, feedPath);
-  return answered !== null && owners.get(answered.route.path) === key;
+  return (
+    answered !== null &&
+    compiledFor(plugins).owners.get(answered.route.path) === key
+  );
 }
 
 // The listing a concrete RSS or Atom path hangs off.
@@ -185,18 +198,24 @@ function listingOf(feedPath: string): string {
 }
 
 /**
- * The archive whose feed a concrete RSS or Atom path serves, as core's archive
- * lookup answers for the listing the feed hangs off, or `null` — a 404 — where
- * that archive does not serve a feed there ({@link servesFeed}).
+ * The archive a request to one of `route`'s feed paths serves, as core's
+ * archive lookup answers for the listing the feed hangs off, or `null` — a 404
+ * — where that is not the route's own archive, or where the archive serves no
+ * feed there ({@link servesFeed}). The dispatcher ran this route for the path,
+ * so its archive is the one the path's feed belongs to.
  *
  * Building the answer runs no query: a term or author the archive's query
  * names is looked up when the feed is served.
  */
 export function feedAt(
   reader: ArchiveReader,
+  route: FeedRoute,
   feedPath: string,
 ): ArchiveAtPath | null {
-  const found = archiveAtPath(reader, listingOf(feedPath));
+  const listing = listingOf(feedPath);
+  const found = archiveAtPath(reader, listing);
   if (found === null) return null;
-  return servesFeed(reader.plugins, found.archive, feedPath) ? found : null;
+  const key = archiveKey(found.archive);
+  if (key !== archiveKey(route.archive)) return null;
+  return servesListing(reader.plugins, key, listing) ? found : null;
 }

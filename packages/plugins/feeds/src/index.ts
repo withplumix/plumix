@@ -50,14 +50,12 @@ export function feeds(): PluginDescriptor {
         ctx.registerPublicRoute({
           path: route.path,
           cacheable: route.cacheable,
-          handler: (_request, appCtx) =>
-            handleFeed(appCtx, "rss2", route.cacheable),
+          handler: (_request, appCtx) => handleFeed(appCtx, "rss2", route),
         });
         ctx.registerPublicRoute({
           path: `${route.path}/atom`,
           cacheable: route.cacheable,
-          handler: (_request, appCtx) =>
-            handleFeed(appCtx, "atom", route.cacheable),
+          handler: (_request, appCtx) => handleFeed(appCtx, "atom", route),
         });
       }
     },
