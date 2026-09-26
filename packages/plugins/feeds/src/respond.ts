@@ -3,6 +3,7 @@ import { typeTag } from "plumix/db";
 import { loadSiteSettings, tagCdnEntry } from "plumix/plugin";
 import { nonEmpty, withBasePath } from "plumix/support";
 
+import type { FeedRoute } from "./routes.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
 import { collectFeedItems } from "./items.js";
 import { feedAt } from "./routes.js";
@@ -42,12 +43,12 @@ function typeTags(
 export async function handleFeed(
   ctx: AppContext,
   format: FeedFormat,
-  cacheable: boolean,
+  route: FeedRoute,
 ): Promise<Response> {
   // The dispatcher already stripped the base prefix, which is how core's
   // archive lookup reads a path too.
   const pathname = new URL(ctx.request.url).pathname;
-  const target = feedAt(ctx, pathname);
+  const target = feedAt(ctx, route, pathname);
   tagCdnEntry(ctx, [FEED_TAG, ...typeTags(ctx.plugins, target)]);
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty
@@ -73,6 +74,6 @@ export async function handleFeed(
   const headers = new Headers({ "content-type": CONTENT_TYPE[format] });
   // A feed kept out of the CDN is out of reach of every purge, so it declares
   // no shared freshness for a cache in front of the origin to act on.
-  if (cacheable) headers.set("cache-control", FEED_CACHE_CONTROL);
+  if (route.cacheable) headers.set("cache-control", FEED_CACHE_CONTROL);
   return new Response(body, { headers });
 }
