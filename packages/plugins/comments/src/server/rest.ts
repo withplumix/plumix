@@ -1,10 +1,11 @@
 import type { AppContext } from "plumix/plugin";
-import { and, asc, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
-import { comments } from "../db/schema.js";
+import type { DisplayedCommentRow } from "./displayed-thread.js";
 import { resolveCommentableEntry } from "./commentable.js";
+import { displayedThread } from "./displayed-thread.js";
 import { gravatarUrl } from "./gravatar.js";
 import { renderCommentBody } from "./render-body.js";
 
@@ -65,8 +66,8 @@ function pageUrl(url: URL, page: number): string {
 
 /**
  * `GET /_plumix/api/v1/{type}/{id}/comments` — a flat, offset-paginated list of
- * approved comments for an entry, each carrying `parentId` so clients build the
- * thread. Comments of an entry that isn't a published, comment-enabled one
+ * the entry's displayed thread (the comments the site shows, bounded by
+ * `maxDepth`), each carrying `parentId` so clients build the thread. Comments of an entry that isn't a published, comment-enabled one
  * resolve to an empty page (existence stays hidden, no 403/404 to probe).
  */
 export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
@@ -110,35 +111,26 @@ export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
     if (!resolved.ok) return envelope([], false);
 
     // Over-fetch one to detect a next page without a separate COUNT.
-    const rows = await context.db
-      .select({
-        id: comments.id,
-        parentId: comments.parentId,
-        authorUserId: comments.authorUserId,
-        authorName: comments.authorName,
-        authorEmail: comments.authorEmail,
-        bodyMd: comments.bodyMd,
-        createdAt: comments.createdAt,
-      })
-      .from(comments)
-      .where(
-        and(eq(comments.entryId, entryId), eq(comments.status, "approved")),
-      )
-      .orderBy(asc(comments.createdAt), asc(comments.id))
-      .limit(perPage + 1)
-      .offset((page - 1) * perPage);
+    const rows = await context.db.all<DisplayedCommentRow>(sql`
+      ${displayedThread({ entryId, maxDepth: config.maxDepth })}
+      SELECT id, parent_id, author_user_id, author_name, author_email,
+             body_md, created_at
+      FROM displayed
+      ORDER BY created_at ASC, id ASC
+      LIMIT ${perPage + 1} OFFSET ${(page - 1) * perPage}
+    `);
 
     const hasNext = rows.length > perPage;
     const pageRows = hasNext ? rows.slice(0, perPage) : rows;
     const data = await Promise.all(
       pageRows.map(async (row) => ({
         id: row.id,
-        parentId: row.parentId,
-        authorName: row.authorName,
-        isRegistered: row.authorUserId !== null,
-        avatarUrl: await gravatarUrl(row.authorEmail),
-        bodyHtml: renderCommentBody(row.bodyMd),
-        createdAt: row.createdAt,
+        parentId: row.parent_id,
+        authorName: row.author_name,
+        isRegistered: row.author_user_id !== null,
+        avatarUrl: await gravatarUrl(row.author_email),
+        bodyHtml: renderCommentBody(row.body_md),
+        createdAt: new Date(row.created_at * 1000),
       })),
     );
 

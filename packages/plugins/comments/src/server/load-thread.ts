@@ -1,7 +1,9 @@
 import type { AppContext } from "plumix/plugin";
 import { sql } from "drizzle-orm";
 
+import type { DisplayedCommentRow } from "./displayed-thread.js";
 import type { ThreadNode } from "./thread.js";
+import { displayedThread } from "./displayed-thread.js";
 import { gravatarUrl } from "./gravatar.js";
 import { renderCommentBody } from "./render-body.js";
 import { assembleThread } from "./thread.js";
@@ -80,42 +82,21 @@ declare module "plumix" {
 
 type CommentValue = Omit<ResolvedComment, "replies">;
 
-interface CommentRow {
-  readonly id: number;
-  readonly parent_id: number | null;
-  readonly author_user_id: number | null;
-  readonly author_name: string;
-  readonly author_email: string;
-  readonly body_md: string;
-  // Unix seconds: the raw CTE bypasses drizzle's timestamp codec, so this
-  // is the stored integer — hence the `* 1000` when building the Date.
-  readonly created_at: number;
-}
-
 function toResolved(node: ThreadNode<CommentValue>): ResolvedComment {
   return { ...node.value, replies: node.replies.map(toResolved) };
 }
 
-/** Count every approved comment in the displayed tree — depth-bounded and
- * orphan-excluded the same way `loadThread` renders it — so the count is
- * stable across pages and matches what's actually shown. */
+/** Count every comment in the displayed thread — the same set `loadThread`
+ * renders across its pages and the REST collection serves — so the count
+ * is stable across pages and matches what's actually shown. */
 async function countThread(
   ctx: AppContext,
   entryId: number,
   maxDepth: number,
 ): Promise<number> {
   const [row] = await ctx.db.all<{ c: number }>(sql`
-    WITH RECURSIVE thread AS (
-      SELECT id, created_at, 0 AS depth
-      FROM comments
-      WHERE entry_id = ${entryId} AND status = 'approved' AND parent_id IS NULL
-      UNION ALL
-      SELECT c.id, c.created_at, t.depth + 1
-      FROM comments c
-      JOIN thread t ON c.parent_id = t.id
-      WHERE c.status = 'approved' AND t.depth + 1 <= ${maxDepth}
-    )
-    SELECT count(*) AS c FROM thread
+    ${displayedThread({ entryId, maxDepth })}
+    SELECT count(*) AS c FROM displayed
   `);
   return row?.c ?? 0;
 }
@@ -165,25 +146,11 @@ export async function loadThread(
   }
 
   const rootIds = pageRoots.map((r) => r.id);
-  const rows = await ctx.db.all<CommentRow>(sql`
-    WITH RECURSIVE thread AS (
-      SELECT id, parent_id, author_user_id, author_name, author_email,
-             body_md, created_at, 0 AS depth
-      FROM comments
-      WHERE id IN (${sql.join(
-        rootIds.map((id) => sql`${id}`),
-        sql`, `,
-      )})
-      UNION ALL
-      SELECT c.id, c.parent_id, c.author_user_id, c.author_name,
-             c.author_email, c.body_md, c.created_at, t.depth + 1
-      FROM comments c
-      JOIN thread t ON c.parent_id = t.id
-      WHERE c.status = 'approved' AND t.depth + 1 <= ${maxDepth}
-    )
+  const rows = await ctx.db.all<DisplayedCommentRow>(sql`
+    ${displayedThread({ entryId, maxDepth, rootIds })}
     SELECT id, parent_id, author_user_id, author_name, author_email,
            body_md, created_at
-    FROM thread
+    FROM displayed
     ORDER BY created_at ASC, id ASC
   `);
 

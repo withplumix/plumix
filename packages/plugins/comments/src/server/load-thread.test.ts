@@ -159,6 +159,35 @@ describe("loadThread — nesting", () => {
     expect(thread.count).toBe(0);
   });
 
+  test("excludes an approved grandchild under a hidden parent", async () => {
+    const db = await createCommentsTestDb();
+    const entry = await seedPublishedPost(db);
+    const seed = commentFactory.transient({ db });
+    const root = await seed.create({ entryId: entry.id, status: "approved" });
+    const spam = await seed.create({
+      entryId: entry.id,
+      status: "spam",
+      parentId: root.id,
+    });
+    const reply = await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: spam.id,
+    });
+    await seed.create({
+      entryId: entry.id,
+      status: "approved",
+      parentId: reply.id,
+    });
+
+    const thread = await loadThread(ctxFor(db), entry.id, {
+      maxDepth: 3,
+      rootsPerPage: 100,
+    });
+    expect(thread.count).toBe(1);
+    expect(thread.comments[0]?.replies).toEqual([]);
+  });
+
   test("the maxDepth bound stops the recursion", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedPublishedPost(db);
