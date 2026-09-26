@@ -171,7 +171,7 @@ describe("TreeChangeEmitter", () => {
       const api = useEditorStoreApi();
       useEffect(() => {
         select = () =>
-          api.getState().setTree([{ id: "h1", name: "core/heading" }]);
+          api.getState().insertBlock({ id: "h1", name: "core/heading" }, 0);
       }, [api]);
       return null;
     }

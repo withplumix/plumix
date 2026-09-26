@@ -1,3 +1,4 @@
+import type { StoreApi } from "zustand/vanilla";
 import { createStore } from "zustand/vanilla";
 
 import type {
@@ -23,6 +24,7 @@ import {
   appendTableRow,
   duplicateBlock,
   findParentId,
+  flattenTree,
   groupBlocks,
   insertBlockAt,
   moveBlockBy,
@@ -34,7 +36,14 @@ import {
   selectionRoots,
   ungroupBlock,
 } from "./block-tree-ops.js";
-import { initHistory, recordHistory, redo, undo } from "./history.js";
+import {
+  canRedo,
+  canUndo,
+  initHistory,
+  recordHistory,
+  redo,
+  undo,
+} from "./history.js";
 
 /** The responsive bucket a style edit targets (per active device). */
 export type StyleBucket = "large" | "medium" | "small";
@@ -92,8 +101,10 @@ export interface EditorState {
   readonly dragSpec: InsertableBlockEntry | null;
   /** The existing block being dragged to a new position on the canvas, if any. */
   readonly movingId: string | null;
-  /** Snapshot history of the tree, driving undo/redo. */
-  readonly history: TreeHistory;
+  /** Whether there is an edit to undo. */
+  readonly canUndo: boolean;
+  /** Whether there is an undone edit to redo. */
+  readonly canRedo: boolean;
   /** Active tab in the right inspector rail. */
   readonly rightPanel: RightPanel;
   /** Whether the read-only JSON source dialog is open (header's source-code
@@ -114,7 +125,6 @@ export interface EditorState {
 }
 
 export interface EditorActions {
-  setTree: (tree: readonly BlockNode[]) => void;
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
   /** Insert several blocks at a top-level index as one step (a pattern's
@@ -362,29 +372,68 @@ function renameNodeHtmlAttr(
 
 export type EditorStore = EditorState & EditorActions;
 
-export type EditorStoreApi = ReturnType<typeof createEditorStore>;
+export type EditorStoreApi = StoreApi<EditorStore>;
+
+// The undo stack's storage format stays inside the store: consumers read
+// canUndo/canRedo, so the snapshot shape can change without a public break.
+interface InternalState extends EditorState {
+  readonly history: TreeHistory;
+}
+
+type InternalStore = InternalState & EditorActions;
+
+function historyState(
+  history: TreeHistory,
+): Pick<InternalState, "history" | "canUndo" | "canRedo"> {
+  return { history, canUndo: canUndo(history), canRedo: canRedo(history) };
+}
 
 // The store's single definition of "how a tree edit is committed": an unchanged
 // tree reference is a no-op; otherwise the new tree is recorded in history
 // (coalesced under `coalesceKey` when given, so a keystroke burst folds into one
 // undo step). Internal to the store — not part of its interface.
 function commitTree(
-  state: EditorState,
+  state: InternalState,
   tree: readonly BlockNode[],
   coalesceKey: string | null = null,
-): Partial<EditorState> {
+): Partial<InternalState> {
   if (tree === state.tree) return {};
-  return { tree, history: recordHistory(state.history, tree, coalesceKey) };
+  return {
+    tree,
+    ...historyState(recordHistory(state.history, tree, coalesceKey)),
+  };
+}
+
+// Step through history. History snapshots only the tree, so a restored tree
+// can lack blocks the selection still names; drop those ids, and keep the
+// selection's identity when nothing was dropped.
+function restoreTree(
+  state: InternalState,
+  history: TreeHistory,
+): Partial<InternalState> {
+  if (history === state.history) return {};
+  const tree = history.present;
+  const present = new Set(flattenTree(tree).map((n) => n.id));
+  const kept = [...state.selectedIds].filter((id) => present.has(id));
+  const selection =
+    kept.length === state.selectedIds.size
+      ? {}
+      : { selectedIds: new Set(kept) };
+  const activeId =
+    state.activeId !== null && !present.has(state.activeId)
+      ? { activeId: null }
+      : {};
+  return { tree, ...historyState(history), ...selection, ...activeId };
 }
 
 // Commit a tree edit that also moves the selection (insert/remove/duplicate/…).
 // The selection only shifts when the commit is non-empty, so an unchanged tree
 // leaves the selection untouched — same no-op rule as commitTree.
 function commitTreeWithSelection(
-  state: EditorState,
+  state: InternalState,
   tree: readonly BlockNode[],
   selection: Pick<EditorState, "selectedIds" | "activeId">,
-): Partial<EditorState> {
+): Partial<InternalState> {
   const committed = commitTree(state, tree);
   return "tree" in committed ? { ...committed, ...selection } : committed;
 }
@@ -393,8 +442,8 @@ export function createEditorStore(
   initial?: Partial<
     Pick<EditorState, "tree" | "device" | "breakpoints" | "starterOpen">
   >,
-) {
-  return createStore<EditorStore>((set) => ({
+): EditorStoreApi {
+  return createStore<InternalStore>((set) => ({
     tree: initial?.tree ?? [],
     selectedIds: new Set<string>(),
     activeId: null,
@@ -404,7 +453,7 @@ export function createEditorStore(
     breakpoints: initial?.breakpoints ?? DEFAULT_BREAKPOINTS,
     dragSpec: null,
     movingId: null,
-    history: initHistory(initial?.tree ?? []),
+    ...historyState(initHistory(initial?.tree ?? [])),
     rightPanel: "block",
     jsonOpen: false,
     starterOpen: initial?.starterOpen ?? false,
@@ -412,9 +461,6 @@ export function createEditorStore(
     paletteOpen: false,
     frameRequest: 0,
 
-    // Raw seed/programmatic setter — intentionally does not record history
-    // (user edits go through insert/move/updateBlockAttrs).
-    setTree: (tree) => set({ tree }),
     insertBlock: (node, index) =>
       set((state) => {
         const at = Math.max(0, Math.min(index, state.tree.length));
@@ -675,15 +721,7 @@ export function createEditorStore(
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),
     endMove: () => set({ movingId: null }),
-    undo: () =>
-      set((state) => {
-        const history = undo(state.history);
-        return { history, tree: history.present };
-      }),
-    redo: () =>
-      set((state) => {
-        const history = redo(state.history);
-        return { history, tree: history.present };
-      }),
+    undo: () => set((state) => restoreTree(state, undo(state.history))),
+    redo: () => set((state) => restoreTree(state, redo(state.history))),
   }));
 }

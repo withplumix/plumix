@@ -108,15 +108,6 @@ describe("editor store", () => {
     ).toEqual({ tablet: 800, mobile: 400 });
   });
 
-  test("setTree replaces the canonical tree", () => {
-    const store = createEditorStore();
-    const tree: readonly BlockNode[] = [{ id: "x", name: "core/heading" }];
-
-    store.getState().setTree(tree);
-
-    expect(store.getState().tree).toBe(tree);
-  });
-
   test("updateBlockAttrs merges a patch into the targeted block's attrs", () => {
     const store = createEditorStore({
       tree: [
@@ -294,6 +285,78 @@ describe("undo / redo", () => {
     store.getState().redo();
     // Redo was cleared by the post-undo edit; the tree stays at [b].
     expect(store.getState().tree.map((n) => n.id)).toEqual(["b"]);
+  });
+
+  test("canUndo / canRedo track whether a step exists on each side", () => {
+    const store = createEditorStore({ tree: [] });
+    const flags = () => [store.getState().canUndo, store.getState().canRedo];
+    expect(flags()).toEqual([false, false]);
+    // @ts-expect-error the undo stack's storage format is not published
+    void store.getState().history;
+
+    store.getState().insertBlock({ id: "a", name: "core/x" }, 0);
+    expect(flags()).toEqual([true, false]);
+
+    store.getState().undo();
+    expect(flags()).toEqual([false, true]);
+
+    store.getState().redo();
+    expect(flags()).toEqual([true, false]);
+  });
+
+  test("undo drops a selection that names the block it removed; redo keeps it in the tree", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const treeIds = () => new Set(store.getState().tree.map((n) => n.id));
+
+    store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
+    store.getState().undo();
+
+    expect(
+      [...store.getState().selectedIds].filter((id) => !treeIds().has(id)),
+    ).toEqual([]);
+    expect(store.getState().activeId).toBeNull();
+
+    store.getState().redo();
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "b"]);
+    expect(
+      [...store.getState().selectedIds].filter((id) => !treeIds().has(id)),
+    ).toEqual([]);
+  });
+
+  test("undo drops only the nested id it removed and keeps a surviving selection", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "cols",
+          name: "core/columns",
+          attrs: { left: [{ id: "l", name: "core/x" }], right: [] },
+        },
+      ],
+    });
+    store
+      .getState()
+      .insertBlockInto(
+        { id: "n", name: "core/heading" },
+        { parentId: "cols", slotKey: "right", index: 0 },
+      );
+    store.getState().select("l", { additive: true });
+
+    store.getState().undo();
+
+    expect([...store.getState().selectedIds]).toEqual(["l"]);
+    expect(store.getState().activeId).toBe("l");
+  });
+
+  test("an undo that removes nothing selected leaves the selection alone", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
+    store.getState().select("a");
+    const selectedIds = store.getState().selectedIds;
+
+    store.getState().undo();
+
+    expect(store.getState().selectedIds).toBe(selectedIds);
+    expect(store.getState().activeId).toBe("a");
   });
 });
 

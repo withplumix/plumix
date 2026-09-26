@@ -188,11 +188,10 @@ describe("connectCanvas", () => {
     fromCanvas({ type: "canvas:ready" });
     posted.length = 0;
 
-    const next: readonly BlockNode[] = [{ id: "b", name: "core/quote" }];
-    store.getState().setTree(next);
+    store.getState().insertBlock({ id: "b", name: "core/quote" }, 0);
 
     const treeMsg = hostMessages(posted).find((m) => m.type === "host:tree");
-    expect(treeMsg?.tree).toEqual(next);
+    expect(treeMsg?.tree).toEqual([{ id: "b", name: "core/quote" }]);
     conn.dispose();
   });
 
