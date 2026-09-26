@@ -1,5 +1,13 @@
 # @plumix/plugin-search
 
+## 0.1.2
+
+### Patch Changes
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2575](https://github.com/withplumix/plumix/pull/2575) [`b85b4bc`](https://github.com/withplumix/plumix/commit/b85b4bcc226cc928d380f69c055fe6b3473b061a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the scheduled search run never re-indexing a term renamed or re-described straight in the database: such a term is now found by its new name and description after the next run, instead of matching its old text until it is edited or the index is rebuilt.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @plumix/plugin-pages
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2580](https://github.com/withplumix/plumix/pull/2580) [`b10f3ce`](https://github.com/withplumix/plumix/commit/b10f3cea512bd8f5385d49a87e991578b010c917) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes `pages` from a descriptor to a factory that accepts `{ page }`: an override for the `page` entry type (`pages({ page: { rewrite: { slug: "p" } } })`), or `false` to skip it. **Breaking:** replace `pages` with `pages()` in your `plugins` array.
+
 ## 0.1.2
 
 ### Patch Changes

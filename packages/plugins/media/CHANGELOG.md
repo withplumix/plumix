@@ -1,5 +1,27 @@
 # @plumix/plugin-media
 
+## 0.10.0
+
+### Minor Changes
+
+- [#2508](https://github.com/withplumix/plumix/pull/2508) [`a780883`](https://github.com/withplumix/plumix/commit/a78088338e8b3bf2d129d2a80804795a22b29cd0) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerImageRole(name, { single })`, so a plugin or theme declares its own image roles (`hero`, `thumbnail`, `avatar`) next to core's `featured` and `ogImage`. Type a new name by augmenting `ImageRoles` through `declare module "plumix"`. Registering a name twice fails and names both owners.
+
+  Adds `imageRoleFields(registry, scope, role)` to `plumix/plugin`. It returns the fields in one role for an entry type, a term taxonomy or the users, in declaration order, each with the key path to its value, including a field nested in groups. Core resolves the index once at boot.
+
+  Adds `.role(name)` to the media field builder. `.featured()` and `.ogImage()` are now shorthand for it. A role field with no `.accept()` now stores `accept: "image/"`, which also applies to existing `.featured()` / `.ogImage()` fields. An accept that admits anything other than images throws a `FieldConfigError`, which `plumix/fields` now exports.
+
+  Boot now fails, naming the field and its scope, for a role nobody registered, a role field inside a repeater at any depth, a multi-value role field, and a second field in a single role on one entry type, term taxonomy or users. Term and user meta boxes and fields nested in groups used to go unchecked. `buildApp` runs these checks as well as the manifest build. The error code `entry_has_multiple_featured_fields` is now `single_image_role_has_multiple_fields` (breaking).
+
+- [#2509](https://github.com/withplumix/plumix/pull/2509) [`235d8d5`](https://github.com/withplumix/plumix/commit/235d8d534c7ffb09c96c54c6a6c874e55a78ca97) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an optional `image(payload)` method to the lookup adapter contract. It returns a `ResolvedImage` (`url`, `alt`, and `width`/`height` as a pair or not at all), or `null` when the payload is not a usable image. `ResolvedImage` is exported from `plumix/plugin` and the root `plumix` types. The media adapter implements it: an image row resolves to its URL, alt text and measured size; a non-image row or one with no URL resolves to `null`.
+
+### Patch Changes
+
+- [#2572](https://github.com/withplumix/plumix/pull/2572) [`153c1e8`](https://github.com/withplumix/plumix/commit/153c1e84c32e62fdedec0b1b070a3cf5edfd16e7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media lookup browse path (`lookup.list({ kind: "media", query })`) disagreeing with `media.list`. It now runs the same query, so for the same search it returns the same assets in the same order (most recently updated first). It also matches alt text as well as the title, and treats a `%` or `_` in the query as a literal character, not a wildcard.
+
+  `media(...).accept()` now throws a `FieldConfigError` (`accept_out_of_bounds`) at build time for a value `media.list` would reject: a type longer than 64 characters, or a list of more than 32 types. Previously such a field registered without error and every list call from its picker failed validation.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.9.0
 
 ### Minor Changes

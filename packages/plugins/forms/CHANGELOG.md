@@ -1,5 +1,13 @@
 # @plumix/plugin-forms
 
+## 0.2.2
+
+### Patch Changes
+
+- [#2584](https://github.com/withplumix/plumix/pull/2584) [`19be05b`](https://github.com/withplumix/plumix/commit/19be05b4d12591a4bea6ba0df523325e65b3a523) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the form block posting one submission twice when it is submitted twice in the same tick, such as Enter pressed twice. The block now blocks a second submit while one is pending, the same way `usePlumixForm` does.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.2.1
 
 ### Patch Changes

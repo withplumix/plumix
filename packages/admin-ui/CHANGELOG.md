@@ -1,5 +1,9 @@
 # @plumix/admin-ui
 
+## 0.24.0
+
+No changes in this release.
+
 ## 0.23.0
 
 ## 0.22.0

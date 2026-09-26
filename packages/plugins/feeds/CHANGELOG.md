@@ -1,5 +1,43 @@
 # @plumix/plugin-feeds
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2555](https://github.com/withplumix/plumix/pull/2555) [`6efbb39`](https://github.com/withplumix/plumix/commit/6efbb39e466eaf00eb80c3084d7578d7a6960e26) Thanks [@nasyrov](https://github.com/nasyrov)! - Applies an entry type's access policy to the surfaces that publish entry data away from the entry's own page. A type registered with `access` is gated on its own page, but three plugins republished it elsewhere to visitors the gate would have turned away.
+
+  `@plumix/plugin-comments`: the public thread route, the REST resource and the submit handler now resolve the entry's policy before answering. Previously an anonymous visitor could read every approved comment on a members-only entry — and post to it — knowing only the entry id. All three routes are `auth: "public"`, which core answers ahead of the access gate, so they now share one `resolveCommentableEntry` that asks. A gated entry answers as a missing one, so the refusal does not report which ids exist.
+
+  **Commenting on a gated entry now closes for everyone, including the members the gate admits.** A public route carries no principal to resolve a policy against, so the question these three ask is whether an _anonymous_ reader may see the entry — and on a gated entry the answer is no whoever is asking. A member still sees the rendered thread on the entry's own page, which is gated and therefore safe, but the form and the "load older comments" control there will refuse. If your site runs members-only content with comments, this removes a feature you had. Serving those surfaces to the member the gate admits needs a public route that can carry a policy, which core does not have yet.
+
+  `@plumix/plugin-feeds`: a policied entry type is no longer syndicated. Its entries stay out of the site, author, date and term feeds, and the type registers no feed of its own to be asked for. A site whose only public entry type is gated now serves no feed at all, since a feed with no syndicatable type has nothing to carry.
+
+  `@plumix/plugin-seo`: a policied entry type gets no sitemap scope — and so no sub-sitemap route — and IndexNow is not told when one of its entries is published. The same now holds for a plugin archive declaring both `access` and `sitemap`. The type keeps its SEO meta box, its SERP preview and its settings keys in the editor: search copy is still worth writing for a page a member reaches, and removing the keys would orphan values a site had already saved.
+
+  A feed, a sitemap and an IndexNow ping are read by a client carrying no session and served from a shared cache, so there is no principal to resolve a policy against: those three exclude the whole type, as `@plumix/plugin-search` already does for its index. A type declaring `access` is therefore out even where an individual entry's policy would have admitted anyone.
+
+- [#2500](https://github.com/withplumix/plumix/pull/2500) [`8a48f1a`](https://github.com/withplumix/plumix/commit/8a48f1a07346bb06cd148fdedc87287f9142dcf8) Thanks [@nasyrov](https://github.com/nasyrov)! - Advertises a plugin archive's feed. Every page of a `registerArchiveType` archive with a `feed` now carries the `<link rel="alternate">` RSS and Atom pair, and a later page points at the feed of the route it paginates. Nothing is advertised where the archive's `filter` answers `null`, or where another feed already claimed the path.
+
+  Removes `feed.routes` (breaking). The feed paths now follow from the archive's own routes: each route serves RSS at `<route>/feed` and Atom at `<route>/feed/atom`, and a route ending in `FRAMEWORK_PAGINATION_SUFFIX` gets none. Drop `routes` from the `feed` object; an archive that declared `/events/:series/feed` for the route `/events/:series` keeps the same URL.
+
+- [#2559](https://github.com/withplumix/plumix/pull/2559) [`5250cbd`](https://github.com/withplumix/plumix/commit/5250cbdbcbfa63378b65cb926fecae94e64f9886) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes every feed its archive's own entry query, so a feed carries exactly what its archive's page lists, newest first and capped at twenty whatever order the page uses. Breaking changes:
+
+  - **`feed.scope` is removed.** A plugin archive declares its entries once, in `entries`, and opts into a feed with `feed: true`: replace `feed: { scope: (q, params) => … }` with `entries: (q, params) => …` and `feed: true`. `feed` is refused on an archive without `entries`. The object form `feed: {}` is reserved for future feed-only options.
+  - **Pages leave the site, author and date feeds.** An entry of a hierarchical type is no longer in `/feed`, `/authors/<slug>/feed` or `/YYYY[/MM[/DD]]/feed`, matching those pages.
+  - **A type's feed moves to its archive page.** It is served at the type's `hasArchive` slug (`/news/feed` for `hasArchive: "news"`), and `/<type name>/feed` is gone. A type with no archive page — `hasArchive: false`, which includes `@plumix/plugin-blog`'s `post` — has no feed of its own; its entries are in `/feed`.
+  - **Discovery follows the page's archive.** A page advertises the feed of the archive that owns it, and a single entry no longer advertises the site feed.
+  - **`feed:items` receives a reshaped scope.** `scope.archive` names the archive as core's archive lookup does (`front-page`, `archive`, `taxonomy`, `author`, `date` or `custom`) and `scope.params` holds what its route captured; `scope.kind === "site"` becomes `scope.archive.kind === "front-page"`.
+
+- [#2535](https://github.com/withplumix/plumix/pull/2535) [`e10a867`](https://github.com/withplumix/plumix/commit/e10a8677a84709e06da52c26ec846ebaa904f999) Thanks [@nasyrov](https://github.com/nasyrov)! - Replaces an archive feed's `filter` with `scope`, which narrows an entry query instead of returning raw SQL. The query arrives restricted to published entries of public types and cannot be widened, so an archive whose feed omitted a status check no longer publishes drafts or trashed entries. An archive declaring an `access` policy now gets no feed, because a feed is a public route core answers ahead of the access gate. Update `feed: { filter: (ctx, params) => sql }` to `feed: { scope: (q, params) => q… }`.
+
+### Patch Changes
+
+- [#2561](https://github.com/withplumix/plumix/pull/2561) [`c0e1bb4`](https://github.com/withplumix/plumix/commit/c0e1bb4dbe78aab8799f3aabbed05b3cb3e550c3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a feed serving an empty document instead of 404ing on a site where every public entry type declares an `access` policy.
+
+- [#2563](https://github.com/withplumix/plumix/pull/2563) [`d7e1834`](https://github.com/withplumix/plumix/commit/d7e1834efd8621868013b9089cf1e33d2b552d39) Thanks [@nasyrov](https://github.com/nasyrov)! - Serves each feed from its archive's query after core's `archive:entries` filter, so a plugin narrowing an archive narrows its feed too.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.2.0
 
 ### Minor Changes
