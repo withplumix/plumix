@@ -12,8 +12,14 @@ import type {
 import type { Label } from "plumix/i18n";
 import type { JsonValue } from "plumix/support";
 import { FieldConfigError } from "plumix/fields";
+import * as v from "valibot";
 
 import type { MediaFieldScope, MediaReference } from "./lookup.js";
+import {
+  MAX_ACCEPT_ITEMS,
+  MAX_ACCEPT_LENGTH,
+  mediaAcceptSchema,
+} from "./accept.js";
 
 // "heroImage" → "Hero image". Derived default for fields authored
 // without `.label()`. Kept local — the plugin can't reach core's
@@ -154,6 +160,14 @@ export class MediaFieldBuilder<
   accept(
     accept: string | readonly string[],
   ): MediaFieldBuilder<K, Multiple, Required, Returns> {
+    if (!v.is(mediaAcceptSchema, accept)) {
+      throw FieldConfigError.acceptOutOfBounds({
+        fieldKey: this.#key,
+        accept,
+        maxLength: MAX_ACCEPT_LENGTH,
+        maxItems: MAX_ACCEPT_ITEMS,
+      });
+    }
     return this.#fork({}, { accept });
   }
 

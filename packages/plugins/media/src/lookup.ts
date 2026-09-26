@@ -10,16 +10,20 @@ import type {
   ResolvedImage,
 } from "plumix";
 import type { SQL } from "plumix/db";
-import { and, desc, eq, inArray, like, sql } from "plumix/db";
+import type { Entry } from "plumix/schema";
+import { and, desc, eq, inArray } from "plumix/db";
 import { entries } from "plumix/schema";
 
 import { parseMediaMeta } from "./meta.js";
-import { resolveMediaUrl, thumbnailFor } from "./read-service.js";
-
-const MEDIA_ENTRY_TYPE = "media";
-
-const DEFAULT_LIST_LIMIT = 24;
-const MAX_LIST_LIMIT = 100;
+import {
+  buildAcceptCondition,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MEDIA_ENTRY_TYPE,
+  queryMediaRows,
+  resolveMediaUrl,
+  thumbnailFor,
+} from "./read-service.js";
 
 const MEDIA_ROW_COLUMNS = {
   id: entries.id,
@@ -77,12 +81,10 @@ declare module "plumix" {
  *    `entries_type_status_published_idx` partition. SQLite picks the
  *    PK as the most selective; the type+status filter is post-applied
  *    to a small rowset.
- *  - `list({ query })`: leverages `entries_type_status_published_idx`
- *    for the `(type, status)` prefix; ordered by `desc(publishedAt)`
- *    matches the index's third column (no extra sort).
- *  - MIME `accept` filter: post-filter in JS against the meta JSON.
- *    The narrowed rowset (type+status or PK) keeps this tractable
- *    without a generated column.
+ *  - `list({ query })`: the read service's media list query, so the
+ *    browse path returns what `media.list` returns for the same search.
+ *  - MIME `accept` filter: pushed into SQL against the meta JSON, so a
+ *    browse LIMIT counts only matching rows.
  *
  * Drafts and trashed media are invisible to the picker — only
  * `status = "published"` rows surface. A draft media entry exists
@@ -94,34 +96,34 @@ declare module "plumix" {
 // visible instead of widening to the contract's `HydratedReference`.
 export const mediaLookupAdapter = {
   async list(ctx, options) {
-    const conditions: SQL[] = [
-      eq(entries.type, MEDIA_ENTRY_TYPE),
-      eq(entries.status, "published"),
-    ];
-    const acceptCondition = buildAcceptCondition(options.scope?.accept);
-    if (acceptCondition) conditions.push(acceptCondition);
-
-    let limit: number;
+    const accept = options.scope?.accept;
+    let rows: readonly Pick<Entry, "id" | "title" | "meta">[];
     if (options.ids !== undefined) {
       const numericIds = options.ids
         .map((id) => parseMediaId(id))
         .filter((id): id is number => id !== null);
       if (numericIds.length === 0) return [];
-      conditions.push(inArray(entries.id, numericIds));
-      limit = numericIds.length;
+      const conditions: SQL[] = [
+        eq(entries.type, MEDIA_ENTRY_TYPE),
+        eq(entries.status, "published"),
+        inArray(entries.id, numericIds),
+      ];
+      const acceptCondition = buildAcceptCondition(accept);
+      if (acceptCondition) conditions.push(acceptCondition);
+      rows = await ctx.db
+        .select(MEDIA_ROW_COLUMNS)
+        .from(entries)
+        .where(and(...conditions))
+        .orderBy(desc(entries.publishedAt), desc(entries.id))
+        .limit(numericIds.length);
     } else {
-      const trimmedQuery = options.query?.trim();
-      if (trimmedQuery) {
-        conditions.push(like(entries.title, `%${trimmedQuery}%`));
-      }
-      limit = clampLimit(options.limit);
+      rows = await queryMediaRows(ctx, {
+        accept,
+        search: options.query?.trim(),
+        limit: clampLimit(options.limit),
+        offset: 0,
+      });
     }
-    const rows = await ctx.db
-      .select(MEDIA_ROW_COLUMNS)
-      .from(entries)
-      .where(and(...conditions))
-      .orderBy(desc(entries.publishedAt), desc(entries.id))
-      .limit(limit);
 
     const results: LookupResult[] = [];
     for (const row of rows) {
@@ -197,33 +199,9 @@ function parseMediaId(id: string): number | null {
 }
 
 function clampLimit(requested: number | undefined): number {
-  if (requested === undefined) return DEFAULT_LIST_LIMIT;
-  if (!Number.isFinite(requested) || requested <= 0) return DEFAULT_LIST_LIMIT;
-  return Math.min(Math.floor(requested), MAX_LIST_LIMIT);
-}
-
-// Translate the `accept` scope into a SQL predicate against the
-// extracted JSON `mime` field. Pushing the filter into SQL means the
-// browse path's LIMIT clause counts only rows that pass the accept
-// filter — post-filtering in JS would silently under-fill the picker
-// grid for fields whose accept rejects a chunk of the recent uploads.
-//
-// `meta.mime` isn't indexed (no generated column), but the type+status
-// filter has already narrowed the rowset before this predicate is
-// applied, so the cost is bounded. Real MIME strings don't contain
-// `%`/`_`, and plugin-supplied prefixes are trusted (set at field-
-// build time, not user input), so no LIKE escaping needed.
-function buildAcceptCondition(
-  accept: string | readonly string[] | undefined,
-): SQL | undefined {
-  if (accept === undefined) return undefined;
-  const mimeExpr = sql<string>`json_extract(${entries.meta}, '$.mime')`;
-  if (typeof accept === "string") {
-    if (accept === "") return undefined;
-    return like(mimeExpr, `${accept}%`);
-  }
-  if (accept.length === 0) return undefined;
-  return inArray(mimeExpr, accept as string[]);
+  if (requested === undefined) return DEFAULT_PAGE_SIZE;
+  if (!Number.isFinite(requested) || requested <= 0) return DEFAULT_PAGE_SIZE;
+  return Math.min(Math.floor(requested), MAX_PAGE_SIZE);
 }
 
 function toLookupResult(id: number, title: string, mime: string): LookupResult {

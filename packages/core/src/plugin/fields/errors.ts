@@ -5,7 +5,8 @@ type FieldConfigErrorCode =
   | "sub_field_duplicate"
   | "sub_field_condition_unknown_driver"
   | "temporal_bound_invalid"
-  | "role_accept_not_image";
+  | "role_accept_not_image"
+  | "accept_out_of_bounds";
 
 /** The composite field types that own a list of sub-fields. */
 export type SubFieldContainer = "repeater" | "group";
@@ -135,6 +136,21 @@ export class FieldConfigError extends Error {
         `but .accept(${JSON.stringify(ctx.accept)}) admits other files. Accept "image/" or ` +
         `image types only.`,
       { fieldKey: ctx.fieldKey, role: ctx.role },
+    );
+  }
+
+  static acceptOutOfBounds(ctx: {
+    fieldKey: string;
+    accept: string | readonly string[];
+    maxLength: number;
+    maxItems: number;
+  }): FieldConfigError {
+    return new FieldConfigError(
+      "accept_out_of_bounds",
+      `field "${ctx.fieldKey}": .accept(${JSON.stringify(ctx.accept)}) is outside what ` +
+        `the media list takes — a type of at most ${String(ctx.maxLength)} characters, ` +
+        `or a list of at most ${String(ctx.maxItems)} types.`,
+      { fieldKey: ctx.fieldKey },
     );
   }
 
