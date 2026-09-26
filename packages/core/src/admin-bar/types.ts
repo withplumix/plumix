@@ -37,15 +37,14 @@ export interface BarRenderContext {
   readonly user: AuthenticatedUser;
   readonly queriedEntry: ResolvedEntity | null;
   /**
-   * Pre-resolved details for `queriedEntry.kind === "entry"` — the
-   * entry's registered type and `authorId`. Populated by the renderer
-   * before the bar collects nodes so sync filter handlers (e.g. the
-   * core edit-this contributor) can check capabilities without async
-   * DB lookups.
+   * Pre-resolved details for `queriedEntry.kind === "entry"`, populated by
+   * the renderer before the bar collects nodes. `canEdit` is `canEditEntry`'s
+   * answer for this caller and this row: any contributor offering an edit
+   * action reads it, so no contributor rebuilds the rule from capabilities.
    */
   readonly queriedEntryDetails?: {
     readonly type: string;
-    readonly authorId: number;
+    readonly canEdit: boolean;
   };
   readonly request: Request;
   readonly siteName: string;

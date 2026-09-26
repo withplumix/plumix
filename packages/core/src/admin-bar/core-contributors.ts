@@ -1,7 +1,6 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { AdminBarNode, BarRenderContext } from "./types.js";
-import { entryCapabilityByName } from "../entries/capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { deriveAdminSlug } from "../plugin/manifest.js";
 import { barMessages } from "./i18n.js";
@@ -64,10 +63,7 @@ function editThisContributor(
 ): readonly AdminBarNode[] {
   if (ctx.queriedEntry?.kind !== "entry") return nodes;
   const details = ctx.queriedEntryDetails;
-  if (!details) return nodes;
-  const ownerScope = details.authorId === ctx.user.id ? "edit_own" : "edit_any";
-  const capability = entryCapabilityByName(ctx, details.type, ownerScope);
-  if (!ctx.auth.can(capability)) return nodes;
+  if (!details?.canEdit) return nodes;
   // Admin routes key on the derived `adminSlug` (`posts`), not the type name
   // (`post`); echoing the name lands on a 404 list route once you leave the
   // edit screen. `ctx.entryTypes` is keyed by name, so resolve from there.
