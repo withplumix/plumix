@@ -200,10 +200,10 @@ describe("the term sweep", () => {
   });
 
   test("re-projects at most a run's worth of drifted terms, then converges", async () => {
-    const created = await factoriesFor(db).term.createList(
-      TERMS_PER_RUN + 1,
-      { taxonomy: "category", name: "Hydroponics" },
-    );
+    const created = await factoriesFor(db).term.createList(TERMS_PER_RUN + 1, {
+      taxonomy: "category",
+      name: "Hydroponics",
+    });
     await indexTerms(
       ctx,
       created.map((term) => term.id),
