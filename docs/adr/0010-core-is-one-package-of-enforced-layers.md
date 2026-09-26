@@ -10,8 +10,9 @@ We mapped core's import graph before deciding. There is no kernel to extract.
 imports or not. Taking out the composition root and the façades does not break
 it. Most of the tangle is contracts filed in the wrong place:
 
-- `AppContext` sits in `context/app.ts` next to its wiring. That one file
-  accounts for 119 upward edges.
+- `AppContext` sits in `context/app.ts` next to the wiring that builds it.
+  That one file accounts for 119 upward edges. The type moves to a sibling
+  file in `context/`, and only the wiring stays at the top.
 - The response helpers, the secret-slot contract and the binding types live
   under `runtime/`.
 - The meta pipeline that `entries/`, `terms/` and `route/` all need lives under
@@ -29,19 +30,19 @@ could see.
 
 ## The layers
 
-| Layer          | Holds                                                                                                                                                                                   |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `foundation`   | `blocks/`, `i18n/`, and the pure utilities (`json`, `base-path`, `slugify`, `escape-html`, `css-tag`, `non-empty`, `return-url`, `document-merge`, `telemetry-otel`)                    |
-| `contracts`    | `plugin/`, `hooks/`, `config`, `theme`, `template*`, `settings-core`, `support`, `db/schema/`, and every `<subsystem>/contract/`                                                        |
-| `capabilities` | `db/`, `meta/`, `access/`, `auth/`, `entries/`, `terms/`, `users/`, `revisions/`, `search/`, `seo/`, `images/`, `storage/`, `cdn/`, `route/`                                            |
-| `surfaces`     | `rpc/`, `rest/`, `mcp/`, `admin-bar/`, `admin/`, `dev/`, `dev-client/`, `cli/`, `welcome/`                                                                                              |
-| `top`          | The composition root and the assembled façades, classified by role rather than folder: `index.ts`, `runtime/app.ts`, `plugin/setup-context.ts`, `db/public.ts`, `hooks/public-hooks.ts` |
+| Layer          | Holds                                                                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foundation`   | `blocks/`, `i18n/`, and the pure utilities (`json`, `base-path`, `slugify`, `escape-html`, `css-tag`, `non-empty`, `return-url`, `document-merge`, `telemetry-otel`)                               |
+| `contracts`    | `plugin/`, `hooks/`, `context/`, `config*`, `theme*`, `template*`, `settings-core`, `support`, `db/schema/`, and every `<subsystem>/contract/`                                                     |
+| `capabilities` | `db/`, `meta/`, `access/`, `auth/`, `entries/`, `terms/`, `users/`, `revisions/`, `search/`, `seo/`, `images/`, `storage/`, `cdn/`, `route/`                                                       |
+| `surfaces`     | `rpc/`, `rest/`, `mcp/`, `admin-bar/`, `admin/`, `dev/`, `dev-client/`, `cli/`, `welcome/`, `welcome-theme`                                                                                        |
+| `top`          | The composition root and the assembled façades: `runtime/`, plus five single files named by role: `index.ts`, `context/app.ts`, `plugin/setup-context.ts`, `db/public.ts`, `hooks/public-hooks.ts` |
 
 - **One folder, one layer.** When a subsystem spans two layers, its lower half
-  moves into a colocated `contract/` subfolder: `context/contract/`,
-  `runtime/contract/`, `route/contract/`, `access/contract/`. The deepest
-  matching folder decides a file's layer, so the folder a file sits in says
-  what it may import. `top` is the only set named by file.
+  moves into a colocated `contract/` subfolder: `runtime/contract/`,
+  `route/contract/`, `access/contract/`. The deepest matching folder decides a
+  file's layer, so the folder a file sits in says what it may import. Only
+  `top` also names single files.
 - **Being an `exports` target is a packaging fact, not a layer.**
   `plugin/manifest.ts` or `i18n/index.ts` stays in its home layer, even though
   a consumer can import it.
