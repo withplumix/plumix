@@ -40,7 +40,10 @@ export interface ShipReport {
   }[];
   readonly parked: readonly { ticket: Ticket; reason: string }[];
   readonly outage?: string;
+  readonly stoppedBecause?: string;
 }
+
+const FAILURES_IN_A_ROW_THAT_MEAN_THE_RUN_AND_NOT_THE_TICKETS = 3;
 
 const asReason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -51,11 +54,24 @@ export const runShipLoop = async (
 ): Promise<ShipReport> => {
   const parked: { ticket: Ticket; reason: string }[] = [];
   let outage: string | undefined;
+  let failuresInARow = 0;
+  let stoppedBecause: string | undefined;
+
+  const noteFailure = (reason: string): void => {
+    failuresInARow += 1;
+    if (
+      failuresInARow < FAILURES_IN_A_ROW_THAT_MEAN_THE_RUN_AND_NOT_THE_TICKETS
+    )
+      return;
+    stoppedBecause = `${failuresInARow} tickets failed in a row, the last saying: ${reason}`;
+    ports.say(`\n${stoppedBecause}\nLeaving the rest of the queue untouched.`);
+  };
 
   const settled = await drainAcrossLanes<Ticket, Queued | undefined>({
     lanes,
     nextItem: ports.nextTicket,
-    stopDispatchingWhen: () => outage !== undefined || !withinBudget(),
+    stopDispatchingWhen: () =>
+      outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {
       let outcome: ShipOutcome;
       try {
@@ -67,6 +83,7 @@ export const runShipLoop = async (
         ports.say(
           `  #${ticket.number} left as it was — the harness threw: ${reason}`,
         );
+        noteFailure(reason);
         return undefined;
       }
 
@@ -74,8 +91,11 @@ export const runShipLoop = async (
         ports.park(ticket, outcome.reason, outcome.pullRequestUrl);
         parked.push({ ticket, reason: outcome.reason });
         ports.say(`  #${ticket.number} parked: ${outcome.reason}`);
+        noteFailure(outcome.reason);
         return undefined;
       }
+
+      failuresInARow = 0;
 
       ports.say(`  #${ticket.number} queued ${outcome.pullRequest.url}`);
       return {
@@ -122,5 +142,5 @@ export const runShipLoop = async (
     merged.push({ ticket, pullRequest });
   });
 
-  return { merged, parked, outage };
+  return { merged, parked, outage, stoppedBecause };
 };

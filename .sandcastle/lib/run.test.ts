@@ -197,6 +197,68 @@ describe("runShipLoop", () => {
     expect(report.outage).toContain("session limit");
   });
 
+  test("three failures in a row stop the run, leaving the rest of the queue alone", async () => {
+    const waiting = [1, 2, 3, 4, 5, 6, 7, 8].map(ticket);
+    const attempted: number[] = [];
+    const { ports: p, parked } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async (t) => {
+        attempted.push(t.number);
+        return { status: "blocked", reason: "gate red" };
+      },
+    });
+
+    await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(attempted).toEqual([1, 2, 3]);
+    expect(parked).toHaveLength(3);
+    expect(waiting.map(({ number }) => number)).toEqual([4, 5, 6, 7, 8]);
+  });
+
+  test("three throws in a row stop the run without parking anything", async () => {
+    const waiting = [1, 2, 3, 4, 5, 6].map(ticket);
+    const attempted: number[] = [];
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async (t) => {
+        attempted.push(t.number);
+        throw new Error("docker: Cannot connect to the Docker daemon");
+      },
+    });
+
+    await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(attempted).toEqual([1, 2, 3]);
+    expect(parked).toEqual([]);
+    expect(released).toEqual([1, 2, 3]);
+  });
+
+  test("a ticket that lands resets the count, so unlucky tickets do not stop a healthy run", async () => {
+    const waiting = [1, 2, 3, 4, 5].map(ticket);
+    const attempted: number[] = [];
+    const { ports: p } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async (t) => {
+        attempted.push(t.number);
+        if (t.number % 2 === 1)
+          return { status: "blocked", reason: "gate red" };
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+          advisory: [],
+        };
+      },
+    });
+
+    await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(attempted).toEqual([1, 2, 3, 4, 5]);
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 

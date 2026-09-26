@@ -113,6 +113,7 @@ for (const parent of parentsWithEveryChildClosed()) {
 }
 
 say(`\n${"=".repeat(60)}`);
+if (report.stoppedBecause) say(`Stopped early — ${report.stoppedBecause}`);
 if (report.outage) {
   say(`Stopped early — nothing the tickets did:\n  ${report.outage}`);
   say(

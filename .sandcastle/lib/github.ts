@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import {
   DECISION_LABEL,
+  HUMAN_LABEL,
   READY_LABEL,
   REPO_ROOT,
   REPO_SLUG,
@@ -235,7 +236,7 @@ export const parkTicket = (
     "-R",
     REPO_SLUG,
     "--body",
-    `The unattended ship loop could not land this.\n\n\`\`\`\n${reason}\n\`\`\`${openPullRequestNote}\n\nUnassigned and relabelled for a human to look at.`,
+    `The unattended ship loop could not land this.\n\n\`\`\`\n${reason}\n\`\`\`${openPullRequestNote}\n\nThe brief still stands, so this is not back to triage — it is waiting on a person.`,
   ]);
   gh([
     "issue",
@@ -246,7 +247,7 @@ export const parkTicket = (
     "--remove-label",
     READY_LABEL,
     "--add-label",
-    "needs-triage",
+    HUMAN_LABEL,
     "--remove-assignee",
     "@me",
   ]);
