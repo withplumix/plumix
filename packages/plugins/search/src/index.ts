@@ -48,7 +48,8 @@ export interface SearchConfig {
  * it.
  *
  * A term has no such feed: it is indexed through the lifecycle actions, and a
- * term the projection has never held is swept up by the scheduled run.
+ * term the projection is missing or holds stale text for is swept up by the
+ * scheduled run.
  *
  * An entry saved through the application is indexed after the response, so a
  * visitor never waits for it; anything the fast path misses is caught when

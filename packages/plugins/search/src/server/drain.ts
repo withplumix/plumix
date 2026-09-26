@@ -57,16 +57,18 @@ export async function drainEntryChanges(ctx: AppContext): Promise<number> {
 // Bounded the way the drain is, and for the same reason: a site installing the
 // plugin with thousands of terms already in place should converge over a few
 // invocations rather than do it all inside one.
-const TERMS_PER_RUN = 100;
+export const TERMS_PER_RUN = 100;
 
 /**
- * Index terms the projection has never held, and answer with how many.
+ * Index terms the projection does not hold, or holds with text the term no
+ * longer has, and answer with how many.
  *
  * Terms have no change feed — core's records entries — so the lifecycle
  * actions are the only thing that indexes one, and they only ever fire for a
  * term somebody touches. Without this, installing the plugin on a site that
  * already has categories would leave every one of them unfindable until it
- * was next edited.
+ * was next edited, and a term renamed by a migration or a direct write would
+ * go on matching its old name.
  *
  * Only searchable taxonomies are considered, so a term that is never going to
  * be projected is not selected again on every run. What remains converges to
@@ -77,23 +79,28 @@ export async function backfillTerms(ctx: AppContext): Promise<number> {
   const taxonomies = searchableTaxonomies(ctx.plugins);
   if (taxonomies.length === 0) return 0;
 
-  const missing = await ctx.db.all<{ id: number }>(sql`
+  // The comparison mirrors what `indexTerms` writes, so a term it has just
+  // re-projected matches again and drops out of the next run.
+  const outdated = await ctx.db.all<{ id: number }>(sql`
     SELECT terms.id AS id
       FROM terms
+      LEFT JOIN search_documents AS documents
+        ON documents.source_type = 'term'
+       AND documents.source_id = terms.id
      WHERE ${inArray(terms.taxonomy, taxonomies)}
-       AND NOT EXISTS (
-         SELECT 1 FROM search_documents
-          WHERE search_documents.source_type = 'term'
-            AND search_documents.source_id = terms.id
+       AND (
+         documents.id IS NULL
+         OR documents.title IS NOT terms.name
+         OR documents.body IS NOT COALESCE(terms.description, '')
        )
      LIMIT ${TERMS_PER_RUN}
   `);
-  if (missing.length === 0) return 0;
+  if (outdated.length === 0) return 0;
   await indexTerms(
     ctx,
-    missing.map((row) => row.id),
+    outdated.map((row) => row.id),
   );
-  return missing.length;
+  return outdated.length;
 }
 
 /**
@@ -163,7 +170,7 @@ export async function runSearchMaintenance(ctx: AppContext): Promise<void> {
   if (backfilled > 0) {
     say(
       ctx,
-      `indexed ${count(backfilled, "term")} the projection had never held`,
+      `indexed ${count(backfilled, "term")} the projection was missing or out of date on`,
     );
   }
 }

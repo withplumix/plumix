@@ -93,7 +93,7 @@ ctx.registerTermTaxonomy("internal", {
 
 A taxonomy that is not public is excluded already, so a navigation-menu taxonomy stays out of results without a second declaration. The admin command palette is unaffected — an editor searches what they can read, not what a visitor can.
 
-Two things are worth knowing. A term is indexed when it is created, renamed or deleted through the application, and a term the projection has never held is picked up by the scheduled run — core's change feed records entries only, so that sweep is what reaches the categories a site already had. A term written straight to the database after that waits for the same sweep rather than appearing at once. And the recency plan below is entries-only, because a term has no publication date to be ordered by, so a word common enough to reach that plan is answered with articles.
+Two things are worth knowing. A term is indexed when it is created, renamed or deleted through the application, and the scheduled run picks up the rest — core's change feed records entries only, so that sweep is what reaches the categories a site already had. It also catches a term written straight to the database: one created there, or one whose name or description was changed there, is re-indexed on the next run rather than at once. Each run handles a bounded number of terms, so a large batch of direct writes converges over several runs. And the recency plan below is entries-only, because a term has no publication date to be ordered by, so a word common enough to reach that plan is answered with articles.
 
 ## The admin command palette
 

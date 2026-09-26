@@ -1,7 +1,7 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { eq, sql } from "plumix/db";
 import { text } from "plumix/fields";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -11,8 +11,13 @@ import {
   indexedSourceIds,
   watchRewrites,
 } from "../test/db.js";
-import { repairStaleEntries } from "./drain.js";
-import { currentExtractorVersion } from "./index-writer.js";
+import {
+  backfillTerms,
+  repairStaleEntries,
+  runSearchMaintenance,
+  TERMS_PER_RUN,
+} from "./drain.js";
+import { currentExtractorVersion, indexTerms } from "./index-writer.js";
 import { advanceReindex, startReindex } from "./reindex.js";
 
 let db: SearchTestDb;
@@ -153,5 +158,68 @@ describe("repairStaleEntries", () => {
     ).toBe(0);
     expect(await indexedSourceIds(db, "hydroponics")).toEqual([still.id]);
     expect(await indexedSourceIds(db, "rewritten")).toEqual([moved.id]);
+  });
+});
+
+describe("the term sweep", () => {
+  /** A category the index already holds, the way a lifecycle action left it. */
+  async function indexedTerm(name: string, description?: string) {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name,
+      description,
+    });
+    await indexTerms(ctx, [term.id]);
+    return term;
+  }
+
+  test("a term renamed straight in the database is found by its new name", async () => {
+    const term = await indexedTerm("Hydroponics");
+
+    await db
+      .update(terms)
+      .set({ name: "Aquaponics" })
+      .where(eq(terms.id, term.id));
+    await runSearchMaintenance(ctx);
+
+    expect(await indexedSourceIds(db, "aquaponics")).toEqual([term.id]);
+    expect(await indexedSourceIds(db, "hydroponics")).toEqual([]);
+  });
+
+  test("a description changed straight in the database is found by its new words", async () => {
+    const term = await indexedTerm("Growing", "Soil and compost");
+
+    await db
+      .update(terms)
+      .set({ description: "Nutrient film technique" })
+      .where(eq(terms.id, term.id));
+    await runSearchMaintenance(ctx);
+
+    expect(await indexedSourceIds(db, "nutrient")).toEqual([term.id]);
+    expect(await indexedSourceIds(db, "compost")).toEqual([]);
+  });
+
+  test("re-projects at most a run's worth of drifted terms, then converges", async () => {
+    const created = await factoriesFor(db).term.createList(TERMS_PER_RUN + 1, {
+      taxonomy: "category",
+      name: "Hydroponics",
+    });
+    await indexTerms(
+      ctx,
+      created.map((term) => term.id),
+    );
+    await db.run(sql`UPDATE terms SET name = 'Aquaponics'`);
+
+    expect(await backfillTerms(ctx)).toBe(TERMS_PER_RUN);
+    expect(await backfillTerms(ctx)).toBe(1);
+    expect(await backfillTerms(ctx)).toBe(0);
+    expect(await indexedSourceIds(db, "hydroponics")).toEqual([]);
+  });
+
+  test("re-projects nothing when the index already agrees with every term", async () => {
+    await indexedTerm("Hydroponics", "Soil-free growing");
+    await indexedTerm("Aquaponics");
+
+    expect(await backfillTerms(ctx)).toBe(0);
   });
 });
