@@ -2,11 +2,9 @@ import type { ReactNode } from "react";
 
 import type { AppContext } from "../../context/app.js";
 import { collectDebugPanels } from "../debug-panels/collect.js";
-import { disabledPanelIds } from "../debug-panels/config.js";
 import { DebugPanelTabs } from "../debug-panels/panels-view.js";
 import { renderDebugPanels } from "../debug-panels/render-panels.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
-import { normalizeDebugBar } from "./config.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
 import {
   buildSwitcherEntries,
@@ -31,14 +29,11 @@ export function PlumixDebugBar({
 }: {
   readonly ctx: AppContext;
 }): ReactNode {
-  const config = normalizeDebugBar(ctx.dev?.bar);
-  if (!config.enabled) return null;
+  const dev = ctx.dev;
+  if (!dev?.bar.enabled) return null;
+  const config = dev.bar;
 
-  const panels = collectDebugPanels(
-    ctx.hooks,
-    ctx,
-    disabledPanelIds(ctx.dev?.panels),
-  );
+  const panels = collectDebugPanels(ctx.hooks, ctx, dev.panels.disabled);
   if (panels.length === 0) return null;
 
   const snapshot = projectDebugSnapshot(
@@ -56,7 +51,7 @@ export function PlumixDebugBar({
       method: snapshot.context.method,
       path: snapshot.context.path,
     },
-    ctx.debugHistory?.get() ?? [],
+    dev.history.get(),
   );
 
   return (

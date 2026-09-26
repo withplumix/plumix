@@ -5,10 +5,7 @@ import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
 
 /** The MCP entry point, as `PlumixApp.loadMcpHandler` resolves it. */
-export type McpHandler = (
-  ctx: AppContext,
-  devCsrfLocalhost: boolean,
-) => Promise<Response>;
+export type McpHandler = (ctx: AppContext) => Promise<Response>;
 
 /**
  * Serve the first-party MCP endpoint. Mounted ahead of the `/_plumix/` CSRF
@@ -23,13 +20,10 @@ export type McpHandler = (
  * public/cold-start paths never evaluate them — only the lightweight tool
  * registry stays in the main graph.
  */
-export async function handleMcpRequest(
-  ctx: AppContext,
-  devCsrfLocalhost: boolean,
-): Promise<Response> {
+export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
 
-  const trust = resolveMcpDevTrust(ctx, devCsrfLocalhost);
+  const trust = resolveMcpDevTrust(ctx);
   if (trust === "rejected") return forbidden("mcp_cross_origin");
 
   let toolCtx: AppContext;

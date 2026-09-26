@@ -19,9 +19,10 @@ export type McpDevTrust = "trusted" | "rejected" | "token";
 /**
  * Decide whether the frictionless dev-trust path applies to an MCP request.
  *
- * `devCsrfLocalhost` is the dev-server signal (statically false in production
- * builds), so the whole relaxation — and its Origin guard — never runs in prod;
- * the endpoint stays default-off and token-authed there.
+ * `ctx.dev` being present is the dev-server signal, and the `PLUMIX_DEV` check
+ * beside it is statically false in production builds, so the whole relaxation
+ * — and its Origin guard — never runs in prod; the endpoint stays default-off
+ * and token-authed there.
  *
  * Two guardrails keep the token-less path safe:
  * - An Origin allowlist (loopback origins plus the configured dev origin). A
@@ -35,11 +36,8 @@ export type McpDevTrust = "trusted" | "rejected" | "token";
  *   an honest Host and an Origin the allowlist rejects, and the MCP transport's
  *   content-type forces a CORS preflight Plumix never satisfies.
  */
-export function resolveMcpDevTrust(
-  ctx: AppContext,
-  devCsrfLocalhost: boolean,
-): McpDevTrust {
-  if (!devCsrfLocalhost) return "token";
+export function resolveMcpDevTrust(ctx: AppContext): McpDevTrust {
+  if (!process.env.PLUMIX_DEV || ctx.dev === undefined) return "token";
 
   const origin = ctx.request.headers.get("origin");
   if (origin !== null && !isAllowedDevOrigin(origin, ctx.origin)) {

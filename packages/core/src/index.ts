@@ -177,9 +177,14 @@ export type {
   DebugPanelRegistry,
   DebugPanelsInput,
 } from "./dev/debug-panels/config.js";
-export type { DebugBarInput } from "./dev/debug-bar/config.js";
-// Named by `AppContext.debugHistory`, `PlumixApp.debugHistory` and
-// `DevInput.history`, so a consumer annotating any of them can spell the type.
+export type {
+  DebugBarInput,
+  NormalizedDebugBar,
+} from "./dev/debug-bar/config.js";
+// `config.dev` resolved: what `PlumixApp.dev` and `AppContext.dev` hold.
+export type { DevRuntime } from "./runtime/dev.js";
+// Named by `DevRuntime.history` and `DevInput.history`, so a consumer
+// annotating either can spell the type.
 export type {
   DebugHistoryStore,
   DebugHistoryStoreOptions,

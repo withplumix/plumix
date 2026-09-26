@@ -25,9 +25,9 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // when nothing is contributed, so this line is inert for most sites.
     'export * from "virtual:plumix/worker-exports";',
     "",
-    // buildApp derives the dev-CSRF opt-in from `process.env.PLUMIX_DEV` (the
+    // buildApp derives its dev object from `process.env.PLUMIX_DEV` (the
     // single dev signal the plumix Vite plugin statically replaces), so the
-    // worker no longer passes it — see RuntimeContext.devCsrfLocalhost.
+    // worker passes no dev flag.
     "const appPromise = buildApp(config, {",
     "  assetManifest,",
     "});",

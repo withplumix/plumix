@@ -1,6 +1,5 @@
 import type { TelemetryConsumer } from "../../context/telemetry.js";
-import type { DebugBarInput } from "./config.js";
-import { normalizeDebugBar } from "./config.js";
+import type { NormalizedDebugBar } from "./config.js";
 
 /**
  * The debug bar as a telemetry consumer — it registers so the collector is
@@ -12,7 +11,7 @@ import { normalizeDebugBar } from "./config.js";
  * production builds.
  */
 export function debugBarTelemetryConsumer(
-  bar: DebugBarInput | undefined,
+  bar: NormalizedDebugBar,
 ): TelemetryConsumer | null {
-  return normalizeDebugBar(bar).enabled ? { id: "debug-bar" } : null;
+  return bar.enabled ? { id: "debug-bar" } : null;
 }

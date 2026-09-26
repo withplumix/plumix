@@ -297,7 +297,7 @@ export const basePath: PlumixConfigInput["basePath"] = "/recipes";
 
 The Model Context Protocol endpoint at `/_plumix/mcp`, where an MCP client reaches the site's tools. Default-off in production, and the gate is early. With no `mcp` block a production dispatcher answers 404 before it imports the handler graph at all.
 
-`plumix dev` bypasses that gate. The dispatcher also serves the endpoint whenever `devCsrfLocalhost` is set, which the app resolves from `PLUMIX_DEV=1`, so a connected coding agent reaches your tools locally with no config flag. The flag is statically false in a production build, so the bypass cannot follow you to the deploy.
+`plumix dev` bypasses that gate. The dev server auto-enables the endpoint, so a connected coding agent reaches your tools locally with no config flag. The check behind it is statically false in a production build, so the bypass cannot follow you to the deploy.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";
@@ -320,7 +320,7 @@ export const api: PlumixConfigInput["api"] = {
 
 ### dev
 
-Development-only configuration. Everything under it defaults on in development and is compiled out of a production build.
+Development-only configuration. Everything under it defaults on in development and is compiled out of a production build. The app resolves this block into `ctx.dev`, which is `undefined` in a production build.
 
 `bar` is the debug bar itself — pass `false` to suppress it, or an object to move it or open it by default. `panels` says which debug panels the site shows, keyed by panel id; an absent key shows the panel. The core panels are `app`, `request`, `database`, `template` and `timeline`, and a plugin that contributes one declares its id so you can name it here too. `history` bounds the ring of recent requests the bar's switcher, the request-history viewer and the dev MCP tools all read.
 

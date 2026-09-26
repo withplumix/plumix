@@ -230,9 +230,17 @@ function enforceOrigin(app: PlumixApp, ctx: AppContext): Response | null {
   // the demo sandbox, whose origin varies per deploy and can't be pinned in
   // config.
   if (isSameOrigin(ctx.request)) return null;
-  // devCsrfLocalhost is statically false in production builds; see its
-  // declaration on RuntimeContext for why dev needs the relaxation.
-  if (app.devCsrfLocalhost && hasLocalhostOrigin(ctx.request)) return null;
+  // `plumix dev` serves through vite on a port the config cannot predict
+  // (5173 by default, auto-incremented when taken), so the dev server accepts
+  // any localhost origin. The env check is statically false in production
+  // builds, so the relaxation fails closed there.
+  if (
+    process.env.PLUMIX_DEV &&
+    app.dev !== undefined &&
+    hasLocalhostOrigin(ctx.request)
+  ) {
+    return null;
+  }
   return forbidden("csrf_origin_mismatch");
 }
 
@@ -299,13 +307,14 @@ async function tryColdInterfaces(
 
 async function dispatchMcp(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // Default-off in production; auto-enabled in dev so a connected coding
-  // agent reaches it with no config flag. `devCsrfLocalhost` is statically
-  // false in production builds, so the auto-enable never applies there.
-  if (!interfaceEnabled(app.config.mcp) && !app.devCsrfLocalhost) {
+  // agent reaches it with no config flag. The env check is statically false
+  // in production builds, so the auto-enable never applies there.
+  const devServer = Boolean(process.env.PLUMIX_DEV) && app.dev !== undefined;
+  if (!interfaceEnabled(app.config.mcp) && !devServer) {
     return notFound("mcp-disabled");
   }
   const handleMcpRequest = await app.loadMcpHandler();
-  return handleMcpRequest(ctx, app.devCsrfLocalhost);
+  return handleMcpRequest(ctx);
 }
 
 async function dispatchRest(
@@ -351,18 +360,18 @@ async function tryPlumixRoutes(
 
   // Dev-only: the captured request-history read routes (dead-code-eliminated
   // in a build; see DEBUG_REQUESTS_PREFIX for the tree-shaking rationale).
-  // Bound so the ring narrows for the handler, which has no answer without
-  // one — its presence is the same dev gate that builds it.
-  const debugHistory = ctx.debugHistory;
+  // Bound so the dev object narrows for the handler, which has no answer
+  // without its ring — its presence is the same dev gate that builds it.
+  const dev = ctx.dev;
   if (
     process.env.PLUMIX_DEV &&
-    debugHistory !== undefined &&
+    dev !== undefined &&
     isTrustedDevRequest(ctx.request) &&
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
     const { handleDebugRequests } = await import("../dev/history-routes.js");
-    return handleDebugRequests(ctx, debugHistory);
+    return handleDebugRequests(ctx, dev);
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
@@ -843,7 +852,7 @@ const anonymousAuthenticator: RequestAuthenticator = {
 // That coupling runs both ways, so anyone editing `enforcePlumixCsrf` has to
 // come back here: dropping its POST narrowing would widen what arrives
 // anonymous, and adding a second way past the header check — the shape
-// `devCsrfLocalhost` already takes for Origin — would let a request through
+// the dev server's localhost relaxation already takes for Origin — would let a request through
 // with its session still on it.
 function withoutAmbientSession(
   route: RegisteredRawRoute,

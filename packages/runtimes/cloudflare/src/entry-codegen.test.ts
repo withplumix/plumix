@@ -19,12 +19,11 @@ describe("cloudflare generateEntry", () => {
     );
   });
 
-  test("leaves the dev-CSRF opt-in to buildApp (entry passes no dev flag)", () => {
+  test("leaves the dev gate to buildApp (entry passes no dev flag)", () => {
     const source = entry("../plumix.config");
     expect(source).toContain("buildApp(config, {");
-    // buildApp derives the opt-in from process.env.PLUMIX_DEV; the entry must
-    // not pass it, and must not reference the old vite dev flag at all.
-    expect(source).not.toContain("devCsrfLocalhost");
+    // buildApp derives the gate from process.env.PLUMIX_DEV; the entry must
+    // not reference the old vite dev flag at all.
     expect(source).not.toContain("import.meta.env");
   });
 
