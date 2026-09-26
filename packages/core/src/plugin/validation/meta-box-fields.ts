@@ -2,11 +2,11 @@ import type { MetaBoxField } from "../manifest.js";
 import { PluginContextError } from "../errors.js";
 import { findUnknownConditionDriver } from "../fields/condition.js";
 import { FORBIDDEN_FIELD_KEYS } from "../fields/sub-fields.js";
-
-// Must match the RPC input-schema regex for meta keys — any key that
-// doesn't match is dead code (the write path rejects it), so catch it
-// at registration instead of letting the admin discover it later.
-export const META_FIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
+import {
+  isValidMetaFieldKey,
+  META_FIELD_KEY_MAX_LENGTH,
+  META_FIELD_KEY_RE,
+} from "./meta-field-key.js";
 
 // Reserved namespace for core-owned meta keys (e.g. revision snapshot
 // envelopes at `__plumix_snapshot`). Rejected at registration so a
@@ -45,12 +45,13 @@ export function assertMetaBoxFields(
         fieldKey: field.key,
       });
     }
-    if (!META_FIELD_KEY_RE.test(field.key)) {
+    if (!isValidMetaFieldKey(field.key)) {
       throw PluginContextError.metaBoxFieldInvalidKey({
         kind,
         id,
         fieldKey: field.key,
         pattern: META_FIELD_KEY_RE.source,
+        maxLength: META_FIELD_KEY_MAX_LENGTH,
       });
     }
     if (field.key.startsWith(META_RESERVED_KEY_PREFIX)) {

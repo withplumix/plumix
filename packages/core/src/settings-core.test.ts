@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "./plugin/manifest.js";
-import { META_FIELD_KEY_RE } from "./plugin/validation/meta-box-fields.js";
+import { META_FIELD_KEY_RE } from "./plugin/validation/meta-field-key.js";
 import { registerCoreSettings } from "./settings-core.js";
 
 describe("registerCoreSettings", () => {

@@ -416,6 +416,27 @@ describe("installPlugins", () => {
     );
   });
 
+  test("registerEntryMetaBox rejects a field key longer than the RPC write path accepts", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("long", (ctx) => {
+      ctx.registerEntryMetaBox("seo", {
+        label: "SEO",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "k".repeat(201),
+            label: "Long",
+            type: "string",
+            inputType: "text",
+          },
+        ],
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [plugin] }),
+    ).rejects.toMatchObject({ code: "meta_box_field_invalid_key" });
+  });
+
   test("registerEntryMetaBox rejects the reserved __plumix_ key prefix", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("rsv", (ctx) => {
@@ -1330,6 +1351,28 @@ describe("reserved settings group names", () => {
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /reserved for server-only rows/,
     );
+  });
+});
+
+describe("settings group field keys", () => {
+  test("registerSettingsGroup rejects a field key longer than the RPC write path accepts", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("long", (ctx) => {
+      ctx.registerSettingsGroup("long", {
+        label: "Long",
+        fields: [
+          {
+            key: "k".repeat(201),
+            label: "Long",
+            type: "string",
+            inputType: "text",
+          },
+        ],
+      });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [plugin] }),
+    ).rejects.toMatchObject({ code: "meta_box_field_invalid_key" });
   });
 });
 

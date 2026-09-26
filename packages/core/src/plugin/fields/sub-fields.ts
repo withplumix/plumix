@@ -1,14 +1,17 @@
 import type { SubFieldContainer } from "./errors.js";
 import type { MetaBoxField } from "./meta-box-field.js";
+import {
+  isValidMetaFieldKey,
+  META_FIELD_KEY_MAX_LENGTH,
+  META_FIELD_KEY_RE,
+} from "../validation/meta-field-key.js";
 import { findUnknownConditionDriver } from "./condition.js";
 import { FieldConfigError } from "./errors.js";
 
-// Mirrors `META_FIELD_KEY_RE` in plugin/validation/meta-box-fields.ts.
-// The top-level registrar validates field keys against this regex but
-// doesn't recurse into composite children, so repeater / group enforce
+// The top-level registrar validates field keys against the meta key rule
+// but doesn't recurse into composite children, so repeater / group enforce
 // it locally — guards row/member-object shape and protects against
 // duplicate-key clobber.
-const SUBFIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
 
 // `__proto__` / `constructor` / `prototype` match the key regex but
 // writing them into a fresh object literal mutates the prototype chain.
@@ -40,12 +43,13 @@ export function assertSubFields(
         subFieldKey: sf.key,
       });
     }
-    if (!SUBFIELD_KEY_RE.test(sf.key)) {
+    if (!isValidMetaFieldKey(sf.key)) {
       throw FieldConfigError.subFieldKeyInvalid({
         container,
         containerKey,
         subFieldKey: sf.key,
-        pattern: SUBFIELD_KEY_RE.source,
+        pattern: META_FIELD_KEY_RE.source,
+        maxLength: META_FIELD_KEY_MAX_LENGTH,
       });
     }
     if (seen.has(sf.key)) {
