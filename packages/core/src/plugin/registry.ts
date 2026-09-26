@@ -823,6 +823,13 @@ export interface PublicRouteOptions {
    * documents what taking it claims.
    */
   readonly cacheable?: boolean;
+  /**
+   * Access-control policy gating this route. Absent ⇒ the route answers every
+   * visitor alike, ahead of the principal loader. A policied route renders
+   * live per reader: it never reads from or writes to the CDN, `cacheable`
+   * notwithstanding.
+   */
+  readonly access?: AccessPolicy;
   /** `params` carries the pattern's captured groups; `{}` for a literal path. */
   readonly handler: (
     request: Request,

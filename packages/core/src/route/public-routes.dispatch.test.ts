@@ -1,6 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { AccessPolicy } from "../access/policy.js";
+import type { AppContext } from "../context/app.js";
 import type { CdnStore, ConnectedCdn } from "../runtime/slots.js";
+import {
+  authenticatedPolicy,
+  challenge,
+  definePolicy,
+  grant,
+  rolePolicy,
+} from "../access/policy.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { entryPurgeTags } from "../cdn/tags.js";
 import { definePlugin } from "../plugin/define.js";
@@ -137,18 +146,18 @@ describe("public route dispatch", () => {
   });
 });
 
-describe("public route dispatch — CDN", () => {
-  function cdnStub(hit?: Response) {
-    const match = vi.fn<CdnStore["match"]>(() => Promise.resolve(hit));
-    const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
-    const cdn: ConnectedCdn = {
-      decorate: (response) => response,
-      store: { match, put },
-      purgeTags: vi.fn(() => Promise.resolve()),
-    };
-    return { cdn, match, put };
-  }
+function cdnStub(hit?: Response) {
+  const match = vi.fn<CdnStore["match"]>(() => Promise.resolve(hit));
+  const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
+  const cdn: ConnectedCdn = {
+    decorate: (response) => response,
+    store: { match, put },
+    purgeTags: vi.fn(() => Promise.resolve()),
+  };
+  return { cdn, match, put };
+}
 
+describe("public route dispatch — CDN", () => {
   // What the sitemap will be: one document for every visitor, tagged with the
   // content it listed so a publish retires that scope and nothing else.
   const sitemap = definePlugin("seo", (ctx) => {
@@ -203,5 +212,153 @@ describe("public route dispatch — CDN", () => {
     expect(await response.text()).toBe("owned");
     expect(match).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
+  });
+});
+
+describe("public route dispatch — access policy", () => {
+  // A route that echoes who core let through, so a test reads the handler's
+  // view of the request off the response rather than off a spy.
+  function policied(
+    access: AccessPolicy,
+    options: { readonly cacheable?: boolean } = {},
+  ) {
+    const handler = vi.fn((_request: Request, ctx: AppContext) =>
+      Response.json({
+        userId: ctx.user?.id ?? null,
+        segment: ctx.access?.segment ?? null,
+      }),
+    );
+    const plugin = definePlugin("feeds", (ctx) => {
+      ctx.registerPublicRoute({ path: "/feed", access, handler, ...options });
+    });
+    return { plugin, handler };
+  }
+
+  test("an anonymous reader who fails a redirect gate is sent to sign-in", async () => {
+    const { plugin, handler } = policied(authenticatedPolicy);
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await harness.fetch("/feed");
+
+    response.assertStatus(302);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?redirectTo=%2Ffeed",
+    );
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("a reader who fails a hard challenge gets the challenge response", async () => {
+    const { plugin, handler } = policied(rolePolicy("editor"));
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const reader = await harness.seedUser("subscriber");
+
+    const response = await harness.fetch("/feed", { as: reader });
+
+    response.assertStatus(403);
+    expect(response.headers.get("x-plumix-challenge")).toBe("forbidden");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test("a reader who passes the gate reaches the handler as themselves", async () => {
+    const { plugin } = policied(rolePolicy("editor"));
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const editor = await harness.seedUser("editor");
+
+    const response = await harness.fetch("/feed", { as: editor });
+
+    response.assertStatus(200);
+    expect(await response.json()).toEqual({
+      userId: editor.id,
+      segment: "role:editor",
+    });
+  });
+
+  test("a policied route stays out of the CDN even when it opted in", async () => {
+    const { cdn, match, put } = cdnStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    const { plugin, handler } = policied(rolePolicy("editor"), {
+      cacheable: true,
+    });
+    const harness = await createDispatcherHarness({ plugins: [plugin], cdn });
+    const editor = await harness.seedUser("editor");
+
+    (await harness.fetch("/feed", { as: editor })).assertStatus(200);
+    (await harness.fetch("/feed", { as: editor })).assertStatus(200);
+    await harness.drainDeferred();
+
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  test("a reader-specific response forbids downstream caches from storing it", async () => {
+    const { plugin } = policied(rolePolicy("editor"));
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const editor = await harness.seedUser("editor");
+
+    const response = await harness.fetch("/feed", { as: editor });
+
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")?.toLowerCase()).toContain("cookie");
+  });
+
+  test("an anonymous-segment response keeps the handler's cache headers", async () => {
+    const { plugin } = policied(
+      definePolicy({ resolve: () => grant("anonymous") }),
+    );
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await harness.fetch("/feed");
+
+    response.assertStatus(200);
+    expect(response.headers.get("cache-control")).toBeNull();
+  });
+
+  test("a soft challenge runs the handler and signals the challenge", async () => {
+    const { plugin } = policied(
+      definePolicy({ resolve: () => challenge("subscribe", { soft: true }) }),
+    );
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await harness.fetch("/feed");
+
+    response.assertStatus(200);
+    expect(response.headers.get("x-plumix-challenge")).toBe("subscribe");
+  });
+
+  test("a soft challenge on a 404 carries no challenge signal", async () => {
+    const plugin = definePlugin("feeds", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/feed",
+        access: definePolicy({
+          resolve: () => challenge("subscribe", { soft: true }),
+        }),
+        handler: () => new Response("gone", { status: 404 }),
+      });
+    });
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await harness.fetch("/feed");
+
+    response.assertStatus(404);
+    expect(response.headers.get("x-plumix-challenge")).toBeNull();
+  });
+
+  test("a route with no policy still sees no user, however the request signed in", async () => {
+    const plugin = definePlugin("feeds", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/feed",
+        handler: (_request, appCtx) =>
+          Response.json({ userId: appCtx.user?.id ?? null }),
+      });
+    });
+    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const admin = await harness.seedUser("admin");
+
+    const response = await harness.fetch("/feed", { as: admin });
+
+    expect(await response.json()).toEqual({ userId: null });
   });
 });
