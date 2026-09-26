@@ -1,4 +1,4 @@
-import type { Segment } from "../access/policy.js";
+import type { AccessPolicy, Segment } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
@@ -458,8 +458,12 @@ function tryPublicRoutes(
   switch (outcome.kind) {
     case "response":
       return Promise.resolve(outcome.response);
-    case "public-route":
-      return servePublicRoute(outcome.route, ctx);
+    case "public-route": {
+      const policy = outcome.route.route.access;
+      return policy === undefined
+        ? servePublicRoute(outcome.route, ctx)
+        : servePoliciedPublicRoute(app, ctx, url, outcome.route, policy);
+    }
     case "content":
       return dispatchPublicRoute(app, ctx, url, outcome);
   }
@@ -599,6 +603,30 @@ async function renderPublicRoute(
       }
     }
   });
+  markAudience(response, ctx, segment);
+  if (response.status === 404 && acceptsHtml(ctx.request)) {
+    const html = await renderErrorThroughTheme({
+      ctx,
+      renderEnv,
+      kind: "not-found",
+      data: {
+        kind: "error",
+        request: ctx.request,
+        hint: response.headers.get("x-plumix-hint") ?? undefined,
+      },
+    });
+    const headers = new Headers(response.headers);
+    headers.set("content-type", "text/html; charset=utf-8");
+    return new Response(html, { status: 404, headers });
+  }
+  return response;
+}
+
+function markAudience(
+  response: Response,
+  ctx: AppContext,
+  segment: Segment,
+): void {
   // A soft gate rendered a teaser: surface the challenge kind so a client-side
   // unlock (or an analytics hook) has the same signal the hard gate sends,
   // without the theme having to re-derive it from the DOM. Stored with the
@@ -618,22 +646,6 @@ async function renderPublicRoute(
     response.headers.set("cache-control", "private, no-store");
     response.headers.append("vary", "cookie");
   }
-  if (response.status === 404 && acceptsHtml(ctx.request)) {
-    const html = await renderErrorThroughTheme({
-      ctx,
-      renderEnv,
-      kind: "not-found",
-      data: {
-        kind: "error",
-        request: ctx.request,
-        hint: response.headers.get("x-plumix-hint") ?? undefined,
-      },
-    });
-    const headers = new Headers(response.headers);
-    headers.set("content-type", "text/html; charset=utf-8");
-    return new Response(html, { status: 404, headers });
-  }
-  return response;
 }
 
 // Turn a thrown public-render error into the best response the environment can
@@ -785,6 +797,31 @@ function servePublicRoute(
     render: run,
     tags: () => cdnTagsFor(ctx),
   });
+}
+
+// A registered public route that declared a policy, gated on the same terms as
+// a policied page: the principal loads, the policy resolves, and a gate that
+// sends no content answers in the handler's place. It renders per reader, so it
+// stays out of the CDN whatever `cacheable` says.
+async function servePoliciedPublicRoute(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+  match: PublicRouteMatch,
+  policy: AccessPolicy,
+): Promise<Response> {
+  ctx = await loadUserForPublicRequest(ctx);
+  const access = await resolveAccess(ctx, policy);
+  const gated = gateToResponse(access.gate, {
+    ctx,
+    url,
+    loginPath: resolveLoginPath(app.config.auth),
+  });
+  if (gated !== null) return gated;
+  ctx.access = access;
+  const response = await match.route.handler(ctx.request, ctx, match.params);
+  markAudience(response, ctx, access.segment);
+  return response;
 }
 
 // What makes `registerRoute`'s no-privilege-from-session rule structural: a

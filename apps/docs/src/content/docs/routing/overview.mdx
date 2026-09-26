@@ -249,7 +249,11 @@ export const feeds = definePlugin("feeds", {
 
 Register from the descriptor's `afterSetup` rather than from `setup`. It runs once every plugin's `setup` has, so every entry type and taxonomy is registered, and a plugin enumerates them and claims concrete paths instead of matching an ambiguous pattern per request — the reason there is no fall-through to worry about. `ctx.plugins` is what it reads them from: the same read-only registry `AppContext.plugins` carries at request time. Only the `afterSetup` context has it, because during `setup` it would be missing whatever later plugins register.
 
-The route answers `GET` and `HEAD`; a write method gets a 405 from the step above it. The handler runs ahead of the access gate and the principal loader, so `ctx.user` is null however the request was authenticated — a handler that lists content is listing it for an anonymous reader and has to leave out what an anonymous reader may not see. The request URL has had any `basePath` stripped, so build outbound URLs from `ctx.origin` and `ctx.basePath` rather than from `request.url`.
+The route answers `GET` and `HEAD`; a write method gets a 405 from the step above it. Without an `access` policy, the handler runs ahead of the access gate and the principal loader, so `ctx.user` is null however the request was authenticated — a handler that lists content is listing it for an anonymous reader and has to leave out what an anonymous reader may not see.
+
+Pass `access` — the same [access policy](/access/overview/) `registerArchiveType` takes — to gate the route instead. Plumix loads the principal and resolves the policy before the handler runs. A reader the gate refuses gets the gate's own response, a redirect to sign-in or a challenge, and the handler never runs. A reader it admits reaches the handler with `ctx.user` loaded and `ctx.access` set. A policied route answers per reader, so it never enters the CDN, even with `cacheable: true`, and a response for any segment other than `anonymous` is sent `private, no-store`.
+
+The request URL has had any `basePath` stripped, so build outbound URLs from `ctx.origin` and `ctx.basePath` rather than from `request.url`.
 
 <Aside type="caution" title="Asset extensions are unroutable">
   A rewrite pattern ending in `.js`, `.png`, `.woff2` or another asset extension

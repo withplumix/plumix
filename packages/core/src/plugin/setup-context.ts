@@ -339,13 +339,21 @@ export interface PluginSetupContextBase {
    * answers GET and HEAD only — a write method 405s at the public method gate
    * above it.
    *
-   * The handler runs ahead of the access gate and the principal loader, so
-   * `ctx.user` is null however the request was authenticated: this is a machine
-   * endpoint that answers every visitor the same way. A handler that enumerates
-   * content is therefore enumerating it for an anonymous reader and has to
-   * exclude what an anonymous reader may not see. `ctx.request` has had any
-   * `basePath` stripped, so build outbound URLs from `ctx.origin` +
-   * `ctx.basePath`, never from `request.url`.
+   * Without `access`, the handler runs ahead of the access gate and the
+   * principal loader, so `ctx.user` is null however the request was
+   * authenticated: this is a machine endpoint that answers every visitor the
+   * same way. A handler that enumerates content is therefore enumerating it for
+   * an anonymous reader and has to exclude what an anonymous reader may not see.
+   *
+   * With `access`, the route is gated the way a policied archive page is: the
+   * principal loads and the policy resolves before the handler runs. A reader
+   * the gate refuses gets its redirect or challenge response and the handler
+   * never runs; one it admits reaches the handler with `ctx.user` loaded and
+   * `ctx.access` set. The response renders per reader, so it bypasses the CDN
+   * even with `cacheable`.
+   *
+   * `ctx.request` has had any `basePath` stripped, so build outbound URLs from
+   * `ctx.origin` + `ctx.basePath`, never from `request.url`.
    */
   registerPublicRoute(options: PublicRouteOptions): void;
 
