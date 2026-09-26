@@ -8,7 +8,7 @@ import type {
 } from "../lookup.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
-import { seedFromMetaBoxes } from "../manifest-projection.js";
+import { seedFromMetaBoxes } from "../manifest-types.js";
 import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
 import { isFieldVisible } from "./condition.js";

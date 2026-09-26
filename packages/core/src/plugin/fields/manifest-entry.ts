@@ -1,7 +1,7 @@
 // Wire projection for a single meta-box field — the `MetaBoxFieldManifestEntry`
 // shape the admin renders from, and the `MetaBoxField` -> entry projectors that
-// produce it. Split out of `../manifest-projection.ts` so a plugin that renders
-// its own fields can reach the projection without pulling the whole build-time
+// produce it. Split out of `../build-manifest.ts` so a plugin that renders its
+// own fields can reach the projection without pulling the whole build-time
 // manifest projection (and its block / registry graph) behind it. Re-exported
 // from the public `@plumix/core/manifest` and `@plumix/core/fields` barrels.
 

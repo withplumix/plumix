@@ -4,9 +4,9 @@ import type { ImageRoleScope } from "./image-roles.js";
 import type { MetaBoxField } from "./manifest.js";
 import type { PluginSetupContext } from "./setup-context.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { buildManifest } from "./build-manifest.js";
 import { definePlugin } from "./define.js";
 import { imageRoleFields } from "./image-roles.js";
-import { buildManifest } from "./manifest-projection.js";
 import { installPlugins } from "./register.js";
 
 declare module "./image-roles.js" {

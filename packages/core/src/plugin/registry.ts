@@ -2,7 +2,7 @@
 // every `Registered*` shape, the registration `*Options` inputs they extend,
 // the visibility resolvers, the `PluginRegistry` map bag + `createPluginRegistry`,
 // and the meta-field lookup helpers. This is what the runtime importers
-// traverse; the build-time `manifest-projection.ts` reads a snapshot of it.
+// traverse; the build-time `build-manifest.ts` reads a snapshot of it.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
 import type {
@@ -113,7 +113,7 @@ export interface EntryTypeLabels {
  * Closed set of icon names `EntryTypeOptions.menuIcon` accepts. The admin
  * maps each to a lucide component at render time (`core-icon.tsx`); the
  * runtime projection falls back to `"content"` for a value outside this
- * set — see `resolveEntryMenuIcon` in `manifest-projection.ts`, which
+ * set — see `resolveEntryMenuIcon` in `build-manifest.ts`, which
  * derives its own allowlist from this same array so the two can't drift.
  */
 export const ENTRY_MENU_ICONS = [
