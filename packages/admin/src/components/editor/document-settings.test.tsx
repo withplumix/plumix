@@ -103,3 +103,37 @@ describe("DocumentSettingsPanel visibility picker", () => {
     expect(queryByTestId("entry-visibility-select")).toBeNull();
   });
 });
+
+describe("DocumentSettingsPanel meta boxes", () => {
+  test("renders a field's adornments around its input", () => {
+    const { getByTestId } = renderPanel({
+      ...BASE,
+      metaBoxes: {
+        boxes: [
+          {
+            id: "specs",
+            label: "Specs",
+            entryTypes: ["product"],
+            fields: [
+              {
+                key: "weight",
+                label: "Weight",
+                type: "number",
+                inputType: "number",
+                append: "kg",
+              },
+            ],
+          },
+        ],
+        initialMeta: {},
+        onMetaChange: vi.fn(),
+      },
+    });
+    const input = getByTestId("meta-box-field-weight-input");
+    const append = getByTestId("meta-box-field-weight-input-append");
+    expect(append).toHaveTextContent("kg");
+    expect(
+      input.compareDocumentPosition(append) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});

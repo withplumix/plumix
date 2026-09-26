@@ -50,14 +50,19 @@ function Harness({
   fieldDef,
   initial,
   onChangeSpy,
+  error,
 }: {
   fieldDef: MetaBoxFieldManifestEntry;
   initial: unknown;
   onChangeSpy?: (next: unknown) => void;
+  error?: string;
 }): ReactNode {
   const form = useForm<Record<string, unknown>>({
     defaultValues: { [fieldDef.key]: initial },
   });
+  useEffect(() => {
+    if (error !== undefined) form.setError(fieldDef.key, { message: error });
+  }, [error, form, fieldDef.key]);
   // Reference fields call `useQuery`; provide a fresh QueryClient
   // per-test so the surrounding tests stay independent. No fetcher
   // is wired here — the smoke tests only assert dispatch + initial
@@ -1536,5 +1541,166 @@ describe("MetaBoxField — group dispatch", () => {
     );
     // The member value lands under the group's nested key — no flattening.
     expect(onChange).toHaveBeenLastCalledWith({ title: "Hi", description: "" });
+  });
+});
+
+describe("MetaBoxField — adornments", () => {
+  // `a` precedes `b` in document order.
+  function expectBefore(a: HTMLElement, b: HTMLElement): void {
+    expect(
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }
+
+  test("text: prepend renders before the input and append after it", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "text",
+          prepend: "https://",
+          append: ".example.com",
+        })}
+        initial=""
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    const prepend = screen.getByTestId("meta-box-field-k-input-prepend");
+    const append = screen.getByTestId("meta-box-field-k-input-append");
+    expect(prepend).toHaveTextContent("https://");
+    expect(append).toHaveTextContent(".example.com");
+    expectBefore(prepend, input);
+    expectBefore(input, append);
+  });
+
+  test.each(["email", "url", "password", "number"])(
+    "%s: prepend renders before the input and append after it",
+    (inputType) => {
+      renderWithI18n(
+        <Harness
+          fieldDef={field({ inputType, prepend: "$", append: "kg" })}
+          initial={null}
+        />,
+      );
+      const input = screen.getByTestId("meta-box-field-k-input");
+      const prepend = screen.getByTestId("meta-box-field-k-input-prepend");
+      const append = screen.getByTestId("meta-box-field-k-input-append");
+      expect(input.tagName).toBe("INPUT");
+      expect(input).toHaveAttribute("type", inputType);
+      expect(prepend).toHaveTextContent("$");
+      expect(append).toHaveTextContent("kg");
+      expectBefore(prepend, input);
+      expectBefore(input, append);
+    },
+  );
+
+  test("textarea: prepend is a strip above the text and append one below", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "textarea",
+          prepend: "Intro",
+          append: "Outro",
+        })}
+        initial=""
+      />,
+    );
+    const textarea = screen.getByTestId("meta-box-field-k-input");
+    const prepend = screen.getByTestId("meta-box-field-k-input-prepend");
+    const append = screen.getByTestId("meta-box-field-k-input-append");
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect(prepend).toHaveAttribute("data-align", "block-start");
+    expect(append).toHaveAttribute("data-align", "block-end");
+    expectBefore(prepend, textarea);
+    expectBefore(textarea, append);
+  });
+
+  test("an adorned input keeps its label, description and error wiring", async () => {
+    const { container } = renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "text",
+          prepend: "https://",
+          description: "Help text",
+        })}
+        initial=""
+        error="Nope"
+      />,
+    );
+    const input = screen.getByTestId("meta-box-field-k-input");
+    const label = container.querySelector("label");
+    expect(input.id).not.toBe("");
+    expect(label).toHaveAttribute("for", input.id);
+    const desc = screen.getByTestId("meta-box-field-k-description");
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+      desc.id,
+    );
+    await screen.findByTestId("meta-box-field-k-error");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    const wrapper = screen.getByTestId(
+      "meta-box-field-k-input-prepend",
+    ).parentElement;
+    expect(wrapper).not.toHaveAttribute("aria-invalid");
+  });
+
+  test("text: the stored value is what was typed, without the adornments", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({ inputType: "text", prepend: "$", append: "kg" })}
+        initial=""
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.type(screen.getByTestId("meta-box-field-k-input"), "5");
+    expect(onChange).toHaveBeenLastCalledWith("5");
+  });
+
+  test("number: the stored value is the typed number, without the adornments", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "number",
+          type: "number",
+          prepend: "$",
+          append: "kg",
+        })}
+        initial={null}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.type(screen.getByTestId("meta-box-field-k-input"), "5");
+    expect(onChange).toHaveBeenLastCalledWith(5);
+  });
+
+  test("a stored value renders unchanged in an adorned input", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({ inputType: "text", prepend: "$", append: "kg" })}
+        initial="5"
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toHaveValue("5");
+  });
+
+  test("a field with neither key renders no input group", () => {
+    const { container } = renderWithI18n(
+      <Harness fieldDef={field({ inputType: "text" })} initial="" />,
+    );
+    expect(
+      container.querySelector("[data-slot=input-group]"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("a type that takes no adornments ignores keys it carries at runtime", () => {
+    const { container } = renderWithI18n(
+      <Harness
+        fieldDef={field({ inputType: "color", prepend: "$", append: "kg" })}
+        initial="#000000"
+      />,
+    );
+    expect(
+      container.querySelector("[data-slot=input-group]"),
+    ).not.toBeInTheDocument();
   });
 });

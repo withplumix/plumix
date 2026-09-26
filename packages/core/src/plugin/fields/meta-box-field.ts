@@ -81,10 +81,6 @@ export interface MetaBoxFieldBase {
    * declarative constraints.
    */
   readonly validate?: MetaBoxFieldValidate;
-  /** Static adornment rendered before the input (e.g. a URL scheme). */
-  readonly prepend?: Label;
-  /** Static adornment rendered after the input (e.g. a unit suffix). */
-  readonly append?: Label;
   /** Default surfaced in the admin form when the key has no saved value. */
   readonly default?: unknown;
   /** Optional help text rendered under the label on every input type. */
@@ -145,6 +141,18 @@ export interface MetaBoxFieldBase {
 }
 
 /**
+ * Static text beside an input, which is how a unit suffix or a currency
+ * symbol gets there without becoming part of the stored value. Carried
+ * only by the variants whose admin control renders it.
+ */
+interface MetaBoxFieldAdornments {
+  /** Rendered before the input (e.g. a URL scheme). */
+  readonly prepend?: Label;
+  /** Rendered after the input (e.g. a unit suffix). */
+  readonly append?: Label;
+}
+
+/**
  * Shared shape of the five string scalar variants produced by the
  * fluent builders exported from `plumix/fields` — they differ only in
  * their `inputType` literal. Downstream consumers rely on the narrowed
@@ -156,9 +164,8 @@ export interface MetaBoxFieldBase {
  * a field lands in the union as a {@link LegacyMetaBoxField}, which is
  * what keeps the name out of the built-in roster.
  */
-export interface StringMetaBoxField<
-  I extends string = StringInputType,
-> extends MetaBoxFieldBase {
+export interface StringMetaBoxField<I extends string = StringInputType>
+  extends MetaBoxFieldBase, MetaBoxFieldAdornments {
   readonly inputType: I;
   readonly type: "string";
   readonly placeholder?: Label;
@@ -185,7 +192,8 @@ export type UrlMetaBoxField = StringMetaBoxField<"url">;
 export type PasswordMetaBoxField = StringMetaBoxField<"password">;
 
 /** Numeric input with optional `min` / `max` / `step` bounds. */
-export interface NumberMetaBoxField extends MetaBoxFieldBase {
+export interface NumberMetaBoxField
+  extends MetaBoxFieldBase, MetaBoxFieldAdornments {
   readonly inputType: "number";
   readonly type: "number";
   readonly placeholder?: Label;
@@ -673,7 +681,8 @@ export type LinkValue = Readonly<{
  * `json` primitive as a `LinkValue`; the injected sanitizer rejects
  * malformed shapes and URLs on write.
  */
-export interface LinkMetaBoxField extends MetaBoxFieldBase {
+export interface LinkMetaBoxField
+  extends MetaBoxFieldBase, MetaBoxFieldAdornments {
   readonly inputType: "link";
   readonly type: "json";
   readonly placeholder?: Label;

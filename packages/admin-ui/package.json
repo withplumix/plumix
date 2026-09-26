@@ -97,6 +97,10 @@
       "types": "./dist/input.d.ts",
       "default": "./dist/input.js"
     },
+    "./input-group": {
+      "types": "./dist/input-group.d.ts",
+      "default": "./dist/input-group.js"
+    },
     "./kbd": {
       "types": "./dist/kbd.d.ts",
       "default": "./dist/kbd.js"

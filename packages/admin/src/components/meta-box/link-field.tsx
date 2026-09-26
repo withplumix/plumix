@@ -18,8 +18,10 @@ import {
   CommandList,
 } from "@plumix/admin-ui/command";
 import { Input } from "@plumix/admin-ui/input";
+import { InputGroupInput } from "@plumix/admin-ui/input-group";
 import { Switch } from "@plumix/admin-ui/switch";
 
+import { AdornedControl } from "./adorned-control.js";
 import { renderLookupListBody } from "./lookup/list-body.js";
 import { useLookupSearch } from "./lookup/use-lookup-search.js";
 
@@ -132,26 +134,39 @@ export function LinkField({
   // Only entries with a public URL can back a link value.
   const items = search.items.filter((item) => item.href !== undefined);
 
+  // Adornments frame the URL only: the link text is display copy, and a
+  // scheme or path affix belongs to the address.
+  const adorned = field.prepend !== undefined || field.append !== undefined;
+  const UrlInput = adorned ? InputGroupInput : Input;
+  const urlTestId = `${testId}-url`;
+  const urlInput = (
+    <UrlInput
+      name={rhf.name}
+      type="text"
+      inputMode="url"
+      value={draft.url}
+      placeholder={field.placeholder ? labelFn(field.placeholder) : undefined}
+      required={field.required}
+      disabled={disabled}
+      onBlur={rhf.onBlur}
+      onChange={(e) => {
+        update({ ...draft, url: e.target.value });
+      }}
+      aria-label={labelFn(M.url)}
+      data-testid={urlTestId}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
       <div className="flex items-center gap-2">
-        <Input
-          name={rhf.name}
-          type="text"
-          inputMode="url"
-          value={draft.url}
-          placeholder={
-            field.placeholder ? labelFn(field.placeholder) : undefined
-          }
-          required={field.required}
-          disabled={disabled}
-          onBlur={rhf.onBlur}
-          onChange={(e) => {
-            update({ ...draft, url: e.target.value });
-          }}
-          aria-label={labelFn(M.url)}
-          data-testid={`${testId}-url`}
-        />
+        {adorned ? (
+          <AdornedControl field={field} testId={urlTestId}>
+            {urlInput}
+          </AdornedControl>
+        ) : (
+          urlInput
+        )}
         {entryTypes.length > 0 ? (
           <Button
             type="button"
