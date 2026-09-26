@@ -4,10 +4,13 @@
 export * as v from "valibot";
 
 // Definition, RPC, hooks, the registries a plugin reads, and the harness its
-// own tests assemble an app from. Prefer `canEditEntry` / `assertCanEditEntry`
-// to a hand-built `entry:<type>:edit_any`, which misses the namespace a pooled
-// type gates under; `requireCapability` still covers row-independent checks.
+// own tests assemble an app from. `applyOverride` is how a content-type plugin
+// lets a site reshape the types it registers. Prefer `canEditEntry` /
+// `assertCanEditEntry` to a hand-built `entry:<type>:edit_any`, which misses
+// the namespace a pooled type gates under; `requireCapability` still covers
+// row-independent checks.
 export {
+  applyOverride,
   assertCanEditEntry,
   authenticated,
   base,
@@ -221,6 +224,7 @@ export type {
   MutablePluginRegistry,
   NamedTemplateChoice,
   OgImage,
+  Overridable,
   PageFacts,
   PatternManifestEntry,
   PluginAfterSetup,

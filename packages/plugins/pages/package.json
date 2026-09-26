@@ -81,7 +81,7 @@
       "label": "Pages",
       "description": "Hierarchical static pages",
       "category": "content",
-      "registration": "pages",
+      "registration": "pages()",
       "imports": [
         "import { pages } from \"@plumix/plugin-pages\";"
       ]

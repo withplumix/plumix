@@ -53,7 +53,7 @@ export function Hero(): ReactNode {
             </span>
             Each plugin you list adds its screens:{" "}
             <code className="text-ink font-mono text-sm">blog()</code> brings
-            Posts, <code className="text-ink font-mono text-sm">pages</code>{" "}
+            Posts, <code className="text-ink font-mono text-sm">pages()</code>{" "}
             brings Pages. Change the list and the admin changes with it.
           </p>
           <figure

@@ -136,7 +136,7 @@ export default plumix({
     },
   }),
   plugins: [
-    pages,
+    pages(),
     forms({ forms: [contact, survey, gated, subscribe, guarded] }),
   ],
   theme,

@@ -27,6 +27,6 @@ export default plumix({
         : { rpId: "localhost", origin: "http://localhost:5173" }),
     },
   }),
-  plugins: [pages, media(), seo()],
+  plugins: [pages(), media(), seo()],
   theme: marketingTheme,
 });

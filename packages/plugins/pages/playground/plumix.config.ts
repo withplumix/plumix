@@ -35,6 +35,6 @@ export default plumix({
       ...deployOrigin,
     },
   }),
-  plugins: [pages],
+  plugins: [pages()],
   theme: defineTheme({ templates: () => null }),
 });
