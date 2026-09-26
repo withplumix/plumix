@@ -33,6 +33,39 @@ reachable by everyone and configurable by no one; the app now builds it from
 rest of the cluster already had (#2442). A setting the config tree can express
 but the code cannot receive is the tell that ownership is in the wrong place.
 
+## Why the runtime dev object is the config dev block, resolved
+
+The ring went to the app in #2442, but it went as `debugHistory`, a new top-level
+slot on the app and on the request context, beside `origin` and `basePath`.
+`ctx.dev` next to it still held the raw `DevInput`, so the bar and the history
+read routes normalized `dev.bar` and `dev.panels` again on every request. The
+config followed the rule above; the runtime shape didn't (#2450).
+
+All dev-only runtime state lives under `app.dev` / `ctx.dev`. Its keys mirror
+`config.dev` and its values are their resolved form: `bar` is normalized,
+`panels` is the resolved set of hidden panel ids, and `history` is the ring
+built from `config.dev.history`. The app builds one `DevRuntime` inside the
+`PLUMIX_DEV` branch and every request's `ctx.dev` is that instance. Raw input
+is read from `app.config.dev` only, so a key in the runtime tree never has to
+say whether it is the setting or the thing the setting built.
+
+`dev` is `undefined` outside the gate, so its presence is the runtime dev
+signal, and nothing needs a separate boolean. `devCsrfLocalhost` is the example:
+it was the dev signal under a CSRF name. The localhost Origin relaxation read
+it, and so did the MCP auto-enable and MCP dev trust, which were asking "is this
+the dev server?" and not anything about CSRF. All three now key on
+`process.env.PLUMIX_DEV` and `dev` being present. The env check stays because
+it is what makes each relaxation statically false in a production build.
+
+The rule for what comes next: new dev-only state the user can configure gets a
+`dev.<key>` config slot plus the matching resolved `DevRuntime` member. State
+the user cannot configure is a `DevRuntime` member only. Neither becomes a
+top-level slot on the app or the context.
+
+`DevRuntime` is composed in the runtime layer beside `buildApp`, not under
+`dev/`, for the reason `DevInput` is composed in `config.ts`: no module in the
+dev tree has to name all of its layers.
+
 ## Why the extension point is open and the configuration surface is closed
 
 `DebugPanel.id` stays `string`: anyone may contribute a panel through the
@@ -67,3 +100,11 @@ block a silent-typo risk.
 - A plugin that contributes a panel and wants it nameable must augment
   `DebugPanelRegistry` and anchor that augmentation into its published
   declaration graph, the same way a hook augmentation is anchored (#1698).
+- `app.debugHistory` and `ctx.debugHistory` are `app.dev.history` and
+  `ctx.dev.history`, with no alias. `ctx.dev` holds the resolved `DevRuntime`,
+  not the raw `DevInput`; read `app.config.dev` for that.
+- `app.devCsrfLocalhost` and the `RuntimeContext` override behind it are gone.
+  A test turns the dev server on by stubbing `PLUMIX_DEV` before the app is
+  built, the same way the dev server does.
+- Dev-only runtime state has one home. A top-level dev slot on the app or the
+  context is a review finding, not a design choice.

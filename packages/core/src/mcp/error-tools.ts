@@ -84,7 +84,7 @@ export const errorListTool: McpTool<typeof errorListInput> = {
 /** Project the 5xx responses in the request-history ring into server entries.
  *  The ring is already newest-first. */
 function serverErrors(ctx: AppContext): ServerErrorEntry[] {
-  return (ctx.debugHistory?.get() ?? [])
+  return (ctx.dev?.history.get() ?? [])
     .filter((entry) => entry.status >= 500)
     .map((entry) => {
       const error = fatalError(entry.snapshot.spans);

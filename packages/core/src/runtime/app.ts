@@ -22,7 +22,6 @@ import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
-import type { DebugHistoryStore } from "../dev/request-history/store.js";
 import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
@@ -38,6 +37,7 @@ import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { RenderEnv } from "../route/render/render-env.js";
 import type { DocumentManifest } from "../theme.js";
+import type { DevRuntime } from "./dev.js";
 import type { EnvInput } from "./env-input.js";
 import type { SchemaModule } from "./slots.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
@@ -48,7 +48,6 @@ import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
-import { createDebugHistoryStore } from "../dev/request-history/store.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveImageRoleIndex } from "../plugin/image-roles.js";
@@ -69,6 +68,7 @@ import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
 import { parseCron } from "./cron.js";
+import { createDevRuntime } from "./dev.js";
 import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
@@ -154,16 +154,14 @@ export interface PlumixApp {
    */
   readonly basePath: string;
   /**
-   * The dev request-history ring, bounded by `config.dev.history`. Four
-   * readers share this one instance — the debug bar, the history read routes
-   * and the two dev MCP tools — which is why the app holds it rather than the
-   * capture module: a module binding is reachable by everyone and configurable
-   * by no one (#2442). `undefined` outside the dev gate, so a production build
-   * has no ring at all.
+   * `config.dev`, resolved once — every per-request `ctx.dev` is this
+   * instance, so the bar, the history read routes and the two dev MCP tools
+   * share one request-history ring the app configured rather than a module
+   * binding reachable by everyone and configurable by no one (#2442).
+   * `undefined` outside the dev gate, so a production build has no dev object
+   * at all, and its presence is the dev-server signal (ADR 0003).
    */
-  readonly debugHistory?: DebugHistoryStore;
-  /** See RuntimeContext.devCsrfLocalhost — false in production builds. */
-  readonly devCsrfLocalhost: boolean;
+  readonly dev?: DevRuntime;
   readonly passkey: PasskeyRuntimeConfig;
   readonly sessionPolicy: SessionPolicy;
   /**
@@ -269,17 +267,6 @@ export interface PlumixApp {
 // inline object literal that structurally satisfies the type.
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
-  /**
-   * Dev-server opt-in: treat any localhost origin as same-origin for CSRF.
-   * `plumix dev` serves through vite on a port the user's config cannot
-   * reliably predict (5173 by default, auto-incremented when taken).
-   *
-   * Defaults to `process.env.PLUMIX_DEV === "1"` — the single dev signal,
-   * which the plumix Vite plugin statically replaces (`""` in production
-   * builds, so this fails closed). The generated worker no longer passes it;
-   * an explicit value here is an override for tests.
-   */
-  readonly devCsrfLocalhost?: boolean;
 }
 
 export async function buildApp(
@@ -296,14 +283,12 @@ export async function buildApp(
     registerCoreDebugPanels(hooks);
     registerCoreErrorHints(hooks);
   }
-  // Same gate, same reason: the ring, its writer and the sanitizer behind it
-  // never enter a production bundle. Read here once, at build time — the
-  // writer's registration and the read routes' mount read the gate per
-  // request, and both no-op without a ring, so `PLUMIX_DEV` has to be set
-  // before `buildApp` for capture to happen at all.
-  const debugHistory = process.env.PLUMIX_DEV
-    ? createDebugHistoryStore(config.dev?.history)
-    : undefined;
+  // Same gate, same reason: the dev object, the ring it holds, its writer and
+  // the sanitizer behind it never enter a production bundle. Read here once,
+  // at build time — the writer's registration and the read routes' mount read
+  // the gate per request, and both no-op without a dev object, so `PLUMIX_DEV`
+  // has to be set before `buildApp` for capture to happen at all.
+  const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
   registerCoreSearchHandlers(hooks);
   // Only subscribe the CDN purge invalidator when a cdn is configured;
   // without one every entry mutation would accumulate tags no flush consumes.
@@ -501,9 +486,7 @@ export async function buildApp(
     loadMcpHandler,
     origin: passkey.origin,
     basePath: config.basePath,
-    debugHistory,
-    devCsrfLocalhost:
-      runtime.devCsrfLocalhost ?? process.env.PLUMIX_DEV === "1",
+    dev,
     passkey,
     sessionPolicy,
     authenticator,

@@ -2,13 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import type { AppContext } from "../context/app.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
-import type {
-  DebugHistoryEntry,
-  DebugHistoryStore,
-} from "./request-history/store.js";
+import type { DebugHistoryEntry } from "./request-history/store.js";
 import { jsonResponse, methodNotAllowed, notFound } from "../runtime/http.js";
 import { collectDebugPanels } from "./debug-panels/collect.js";
-import { disabledPanelIds } from "./debug-panels/config.js";
 import { DebugPanelTabs } from "./debug-panels/panels-view.js";
 import { renderDebugPanels } from "./debug-panels/render-panels.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
@@ -49,12 +45,13 @@ function toListItem(entry: DebugHistoryEntry): DebugRequestListItem {
  *   swap in.
  *
  * The dispatcher mounts this only under the `PLUMIX_DEV` gate, so the route —
- * and this whole module — is absent from production builds. The ring is passed
- * in: the dispatcher hands over the app's, a test hands over its own.
+ * and this whole module — is absent from production builds. The dev object is
+ * passed in already narrowed: the dispatcher hands over the app's, a test
+ * hands over its own.
  */
 export function handleDebugRequests(
   ctx: AppContext,
-  store: DebugHistoryStore,
+  dev: NonNullable<AppContext["dev"]>,
 ): Response {
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
@@ -65,16 +62,16 @@ export function handleDebugRequests(
   const url = new URL(ctx.request.url);
   const rest = url.pathname.slice(DEBUG_REQUESTS_PATH.length);
   if (rest === "" || rest === "/") {
-    return jsonResponse(store.get().map(toListItem));
+    return jsonResponse(dev.history.get().map(toListItem));
   }
 
   // `rest` starts with `/` here — the empty/`"/"` collection case returned above.
   const id = decodeURIComponent(rest.slice(1));
-  const entry = store.find(id);
+  const entry = dev.history.find(id);
   if (entry === undefined) return notFound("debug-request-not-found");
 
   if (url.searchParams.get("format") === "html") {
-    return new Response(renderPanelsHtml(ctx, entry.snapshot), {
+    return new Response(renderPanelsHtml(ctx, dev, entry.snapshot), {
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
@@ -83,13 +80,14 @@ export function handleDebugRequests(
 
 // Render the stored snapshot through the same panels the inline bar collects
 // for this request. Panels render purely from the snapshot (never live ctx),
-// so a past request replays faithfully; `ctx` supplies only the panel set.
-function renderPanelsHtml(ctx: AppContext, snapshot: DebugSnapshot): string {
-  const panels = collectDebugPanels(
-    ctx.hooks,
-    ctx,
-    disabledPanelIds(ctx.dev?.panels),
-  );
+// so a past request replays faithfully; `ctx` and `dev` supply only the panel
+// set.
+function renderPanelsHtml(
+  ctx: AppContext,
+  dev: NonNullable<AppContext["dev"]>,
+  snapshot: DebugSnapshot,
+): string {
+  const panels = collectDebugPanels(ctx.hooks, ctx, dev.panels.disabled);
   const rendered = renderDebugPanels(panels, snapshot);
   return renderToStaticMarkup(<DebugPanelTabs rendered={rendered} />);
 }

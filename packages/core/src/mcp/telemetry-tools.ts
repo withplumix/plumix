@@ -15,7 +15,7 @@ export const telemetryRequestsListTool: McpTool<typeof requestsListInput> = {
     "List the requests the dev server recently handled, newest-first — each with request id, method, path, status, and duration (ms). Pick one and read its trace with telemetry_request_get.",
   inputSchema: requestsListInput,
   run(ctx) {
-    return (ctx.debugHistory?.get() ?? []).map((entry) => ({
+    return (ctx.dev?.history.get() ?? []).map((entry) => ({
       id: entry.id,
       method: entry.snapshot.context.method,
       path: entry.snapshot.context.path,
@@ -49,7 +49,7 @@ export const telemetryRequestGetTool: McpTool<typeof requestGetInput> = {
     "Read one recent request's trace by id: the context projection and the span tree (name, timing, status, captured error, attributes, nested children). Records are opt-in via `include` so a large snapshot doesn't flood context.",
   inputSchema: requestGetInput,
   run(ctx, input) {
-    const entry = ctx.debugHistory?.find(input.id);
+    const entry = ctx.dev?.history.find(input.id);
     if (entry === undefined) {
       throw McpToolError.notFound(`no captured request with id "${input.id}"`);
     }

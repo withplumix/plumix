@@ -74,7 +74,6 @@ const stubDatabase = {
 export interface CreateDispatcherHarnessOptions {
   /** A supplied db arrives with its schema already applied; the default gets core's. */
   readonly db?: Db;
-  readonly devCsrfLocalhost?: boolean;
   /**
    * Runtime environment bindings (KV, R2, Durable Objects, etc.). Exposed
    * on `h.env` so tests can assert on or interact with bindings directly —
@@ -339,7 +338,6 @@ export async function createDispatcherHarness(
   });
   const built = await buildApp(config, {
     assetManifest: options.assetManifest,
-    devCsrfLocalhost: options.devCsrfLocalhost,
   });
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);

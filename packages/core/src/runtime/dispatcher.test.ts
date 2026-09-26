@@ -479,6 +479,8 @@ function htmlAssets(body: string): { fetch: () => Promise<Response> } {
 }
 
 describe("dispatcher — CSRF", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
   test("POST /_plumix/rpc/post.list without the X-Plumix-Request header is forbidden", async () => {
     const h = await createDispatcherHarness();
     const response = await h.dispatch(
@@ -553,10 +555,11 @@ describe("dispatcher — CSRF", () => {
   // whole oRPC router graph (~0.3s idle, 5s+ on a contended CI runner) —
   // every later RPC dispatch in the process is ~20ms.
   test(
-    "dev localhost CSRF: any loopback origin is allowed when the app opts in",
+    "dev localhost CSRF: any loopback origin is allowed on the dev server",
     { timeout: 15_000 },
     async () => {
-      const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+      vi.stubEnv("PLUMIX_DEV", "1");
+      const h = await createDispatcherHarness();
       for (const origin of [
         "http://localhost:5174",
         "http://127.0.0.1:8787",
@@ -576,7 +579,8 @@ describe("dispatcher — CSRF", () => {
   );
 
   test("dev localhost CSRF: the relaxation cannot bypass the header gate", async () => {
-    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/rpc/entry/list", {
         method: "POST",
@@ -593,7 +597,8 @@ describe("dispatcher — CSRF", () => {
   });
 
   test("dev localhost CSRF: non-localhost origins still mismatch", async () => {
-    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
@@ -609,10 +614,8 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
-  test("with the dev opt-in explicitly off, a localhost origin still mismatches", async () => {
-    // Pin the override so this doesn't ride on ambient PLUMIX_DEV (the
-    // env-derived default is covered by the prod-fails-closed test below).
-    const h = await createDispatcherHarness({ devCsrfLocalhost: false });
+  test("without the dev gate, a localhost origin still mismatches", async () => {
+    const h = await createDispatcherHarness();
     const response = await h.dispatch(
       plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
@@ -623,51 +626,10 @@ describe("dispatcher — CSRF", () => {
         body: JSON.stringify({ json: {} }),
       }),
     );
+    expect(h.app.dev).toBeUndefined();
     expect(response.status).toBe(403);
-  });
-
-  test("dev-CSRF derives from PLUMIX_DEV: a loopback origin is allowed when set", async () => {
-    const original = process.env.PLUMIX_DEV;
-    process.env.PLUMIX_DEV = "1";
-    try {
-      const h = await createDispatcherHarness();
-      const response = await h.dispatch(
-        plumixRequest("/_plumix/rpc/entry/list", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            origin: "http://localhost:5174",
-          },
-          body: JSON.stringify({ json: {} }),
-        }),
-      );
-      expect(response.status).not.toBe(403);
-    } finally {
-      if (original === undefined) delete process.env.PLUMIX_DEV;
-      else process.env.PLUMIX_DEV = original;
-    }
-  });
-
-  test("prod fails closed: a loopback origin is rejected when PLUMIX_DEV is unset", async () => {
-    const original = process.env.PLUMIX_DEV;
-    delete process.env.PLUMIX_DEV;
-    try {
-      const h = await createDispatcherHarness();
-      const response = await h.dispatch(
-        plumixRequest("/_plumix/rpc/entry/list", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            origin: "http://localhost:5174",
-          },
-          body: JSON.stringify({ json: {} }),
-        }),
-      );
-      expect(response.status).toBe(403);
-    } finally {
-      if (original === undefined) delete process.env.PLUMIX_DEV;
-      else process.env.PLUMIX_DEV = original;
-    }
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
   test("POST with a matching Origin header passes through to the RPC layer", async () => {
@@ -3004,11 +2966,40 @@ describe("dispatcher — telemetry consumers", () => {
       // The response is JSON, not HTML — exactly the request an inline bar can
       // never show, so history is the only place it becomes inspectable.
       expect(response.headers.get("content-type")).not.toContain("text/html");
-      const entry = h.app.debugHistory?.find(requestId ?? "");
+      const entry = h.app.dev?.history.find(requestId ?? "");
       expect(entry).toBeDefined();
       expect(entry?.snapshot.context.path).toBe("/_plumix/rpc/entry/list");
       expect(entry?.snapshot.context.method).toBe("POST");
       expect(entry?.status).toBe(response.status);
+    });
+
+    test("every request's `ctx.dev` is the app's one dev object, and its ring is what the read route serves", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const seen: AppContext["dev"][] = [];
+      let requestId: string | undefined;
+      const h = await createDispatcherHarness({
+        telemetry: {
+          consumers: [
+            {
+              id: "dev-probe",
+              sample: (ctx) => (seen.push(ctx.dev), true),
+              onRequestEnd: (s) => void (requestId ??= s.request.requestId),
+            },
+          ],
+        },
+      });
+
+      await h.dispatch(new Request(`${DEV_ORIGIN}/first`));
+      await h.drainDeferred();
+      const response = await h.dispatch(
+        plumixRequest(`${DEV_ORIGIN}/_plumix/debug/requests`),
+      );
+
+      expect(h.app.dev).toBeDefined();
+      expect(seen).toHaveLength(2);
+      for (const dev of seen) expect(dev).toBe(h.app.dev);
+      const listed = (await response.json()) as readonly { id: string }[];
+      expect(listed.map((e) => e.id)).toContain(requestId);
     });
 
     test("`dev.history.maxEntries` bounds what the ring keeps", async () => {
@@ -3024,8 +3015,8 @@ describe("dispatcher — telemetry consumers", () => {
 
       // Oldest-out: the ring is the app's, built from its own config, so the
       // bound is observable rather than a module default nothing can reach.
-      const paths = h.app.debugHistory
-        ?.get()
+      const paths = h.app.dev?.history
+        .get()
         .map((e) => e.snapshot.context.path);
       expect(paths).toEqual(["/c", "/b"]);
     });
@@ -3039,7 +3030,7 @@ describe("dispatcher — telemetry consumers", () => {
       await h.dispatch(new Request("https://cms.example/abcdefgh"));
       await h.drainDeferred();
 
-      const [entry] = h.app.debugHistory?.get() ?? [];
+      const [entry] = h.app.dev?.history.get() ?? [];
       expect(entry?.snapshot.context.path).toBe("/abc… [5 chars truncated]");
     });
 
@@ -3063,7 +3054,7 @@ describe("dispatcher — telemetry consumers", () => {
       // The probe fired (so the request finished), yet no history writer was
       // registered without the dev gate.
       expect(requestId).toBeDefined();
-      expect(h.app.debugHistory?.find(requestId ?? "")).toBeUndefined();
+      expect(h.app.dev?.history.find(requestId ?? "")).toBeUndefined();
     });
   });
 });

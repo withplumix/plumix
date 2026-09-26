@@ -269,10 +269,13 @@ describe("MCP endpoint — transport guards", () => {
 
 // Dev-trust: over loopback a dev server auto-enables the endpoint and trusts the
 // local developer with no PAT, guarded by an Origin allowlist and a loopback
-// bind. Production (devCsrfLocalhost off) keeps the token requirement unchanged.
+// bind. Production (no dev gate) keeps the token requirement unchanged.
 describe("MCP endpoint — dev trust", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
   test("a loopback request with no token reaches the tool registry", async () => {
-    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -291,7 +294,8 @@ describe("MCP endpoint — dev trust", () => {
   });
 
   test("a loopback Origin is allowed on the frictionless path", async () => {
-    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -307,7 +311,8 @@ describe("MCP endpoint — dev trust", () => {
   });
 
   test("a cross-origin request is rejected even in dev", async () => {
-    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -323,7 +328,8 @@ describe("MCP endpoint — dev trust", () => {
   });
 
   test("a non-loopback bind falls back to token auth (no token → 401)", async () => {
-    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -337,10 +343,8 @@ describe("MCP endpoint — dev trust", () => {
 
   test("dev auto-enables the endpoint with no config flag", async () => {
     // No `mcp: { enabled: true }` — the dev signal alone mounts the endpoint.
-    const h = await createDispatcherHarness({
-      plugins: [blog],
-      devCsrfLocalhost: true,
-    });
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness({ plugins: [blog] });
 
     const res = await h.dispatch(
       mcpRequest(

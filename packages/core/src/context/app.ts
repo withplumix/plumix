@@ -13,10 +13,8 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { CapabilityResolver, KnownCapability } from "../auth/rbac.js";
-import type { DevInput } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
-import type { DebugHistoryStore } from "../dev/request-history/store.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
@@ -28,6 +26,7 @@ import type {
   OAuthProviderSummary,
 } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { DevRuntime } from "../runtime/dev.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type {
   AssetsBinding,
@@ -332,17 +331,12 @@ export interface AppContextBase<
    */
   readonly basePath: string;
   /**
-   * Raw development-only config, carried through from `config.dev` (like
-   * {@link mcp}) as inert data. Interpreted only by dev-gated modules, which
-   * are tree-shaken from prod builds.
+   * The app's resolved dev config — the bar, the panel set and the
+   * request-history ring — or undefined outside the dev gate. Handed down
+   * rather than imported so every reader shares the instance the app built
+   * (#2442). The raw input is `config.dev`.
    */
-  readonly dev?: DevInput;
-  /**
-   * The app's dev request-history ring, or undefined outside the dev gate.
-   * Handed down rather than imported so every reader shares the instance the
-   * app configured (#2442).
-   */
-  readonly debugHistory?: DebugHistoryStore;
+  readonly dev?: DevRuntime;
   /**
    * Operator-set site name from `auth.magicLink.siteName`, used as
    * the human-friendly label in mailer subjects ("Confirm your email
@@ -434,8 +428,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: EnvInput<string>;
   readonly basePath?: string;
-  readonly dev?: DevInput;
-  readonly debugHistory?: DebugHistoryStore;
+  readonly dev?: DevRuntime;
   /** App-config telemetry slot — registered consumers vote per request. */
   readonly telemetry?: TelemetryConfig;
   readonly siteName?: string;
@@ -572,7 +565,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         : new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
     dev: args.dev,
-    debugHistory: args.debugHistory,
     // Provisional no-op — swapped for the real collector below iff a consumer
     // votes to sample this request. Consumers see the assembled context when
     // voting, so `telemetry` must exist (inactive) before the vote runs.
@@ -612,7 +604,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
     args.dev,
-    args.debugHistory,
     args.telemetry,
   );
   if (sampled.length > 0) {
@@ -640,15 +631,14 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
  */
 function sampleTelemetryConsumers(
   ctx: AppContext,
-  dev: DevInput | undefined,
-  history: DebugHistoryStore | undefined,
+  dev: DevRuntime | undefined,
   config: TelemetryConfig | undefined,
 ): readonly TelemetryConsumer[] {
   const consumers: TelemetryConsumer[] = [];
-  if (process.env.PLUMIX_DEV) {
-    const bar = debugBarTelemetryConsumer(dev?.bar);
+  if (process.env.PLUMIX_DEV && dev !== undefined) {
+    const bar = debugBarTelemetryConsumer(dev.bar);
     if (bar) consumers.push(bar);
-    if (history) consumers.push(debugHistoryConsumer(history));
+    consumers.push(debugHistoryConsumer(dev.history));
   }
   consumers.push(...(config?.consumers ?? []));
   return consumers.filter((c) => c.sample?.(ctx) ?? true);

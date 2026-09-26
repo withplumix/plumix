@@ -1,17 +1,16 @@
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { DevInput } from "../config.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
 import type { DebugHistoryEntry } from "./request-history/store.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { createDevRuntime } from "../runtime/dev.js";
 import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";
 import { registerCoreDebugPanels } from "./debug-panels/core-panels.js";
 import { handleDebugRequests } from "./history-routes.js";
 import { DEBUG_REQUESTS_PATH } from "./request-history/path.js";
-import { createDebugHistoryStore } from "./request-history/store.js";
 
 function snapshotWith(overrides: Partial<DebugSnapshot["context"]> = {}) {
   return {
@@ -50,7 +49,7 @@ beforeAll(async () => {
   db = await createTestDb();
 });
 
-function ctxFor(path: string, dev: DevInput = { bar: true }): AppContext {
+function ctxFor(path: string, dev: NonNullable<AppContext["dev"]>): AppContext {
   const hooks = new HookRegistry();
   registerCoreDebugPanels(hooks);
   return createTestContext({
@@ -63,9 +62,9 @@ function ctxFor(path: string, dev: DevInput = { bar: true }): AppContext {
 
 describe("handleDebugRequests", () => {
   test("lists captured requests newest-first as bounded metadata", async () => {
-    const store = createDebugHistoryStore();
-    store.save(entry({ id: "old", startedAt: 1, status: 404 }));
-    store.save(
+    const dev = createDevRuntime({ bar: true });
+    dev.history.save(entry({ id: "old", startedAt: 1, status: 404 }));
+    dev.history.save(
       entry({
         id: "new",
         startedAt: 2,
@@ -75,7 +74,7 @@ describe("handleDebugRequests", () => {
       }),
     );
 
-    const res = handleDebugRequests(ctxFor(DEBUG_REQUESTS_PATH), store);
+    const res = handleDebugRequests(ctxFor(DEBUG_REQUESTS_PATH, dev), dev);
     const body = (await res.json()) as unknown[];
 
     expect(res.status).toBe(200);
@@ -101,12 +100,12 @@ describe("handleDebugRequests", () => {
   });
 
   test("returns the DebugSnapshot JSON for a captured request", async () => {
-    const store = createDebugHistoryStore();
-    store.save(entry({ id: "req-1" }));
+    const dev = createDevRuntime({ bar: true });
+    dev.history.save(entry({ id: "req-1" }));
 
     const res = handleDebugRequests(
-      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1`),
-      store,
+      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1`, dev),
+      dev,
     );
     const body = (await res.json()) as DebugSnapshot;
 
@@ -117,12 +116,12 @@ describe("handleDebugRequests", () => {
   });
 
   test("renders panel HTML for the ?format=html variant", async () => {
-    const store = createDebugHistoryStore();
-    store.save(entry({ id: "req-1" }));
+    const dev = createDevRuntime({ bar: true });
+    dev.history.save(entry({ id: "req-1" }));
 
     const res = handleDebugRequests(
-      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1?format=html`),
-      store,
+      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1?format=html`, dev),
+      dev,
     );
     const html = await res.text();
 
@@ -135,15 +134,12 @@ describe("handleDebugRequests", () => {
   // The property #2425 exists for: `dev.panels` is panel-layer config, so the
   // surface with no bar in it honours it identically to the one with a bar.
   test("omits a panel `dev.panels` switches off, with no bar in sight", async () => {
-    const store = createDebugHistoryStore();
-    store.save(entry({ id: "req-1" }));
+    const dev = createDevRuntime({ bar: false, panels: { request: false } });
+    dev.history.save(entry({ id: "req-1" }));
 
     const res = handleDebugRequests(
-      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1?format=html`, {
-        bar: false,
-        panels: { request: false },
-      }),
-      store,
+      ctxFor(`${DEBUG_REQUESTS_PATH}/req-1?format=html`, dev),
+      dev,
     );
     const html = await res.text();
 
@@ -153,25 +149,26 @@ describe("handleDebugRequests", () => {
   });
 
   test("404s an unknown request id", () => {
+    const dev = createDevRuntime({ bar: true });
     const res = handleDebugRequests(
-      ctxFor(`${DEBUG_REQUESTS_PATH}/nope`),
-      createDebugHistoryStore(),
+      ctxFor(`${DEBUG_REQUESTS_PATH}/nope`, dev),
+      dev,
     );
 
     expect(res.status).toBe(404);
   });
 
   test("405s a non-GET method", () => {
-    const store = createDebugHistoryStore();
+    const dev = createDevRuntime({ bar: true });
     const res = handleDebugRequests(
       createTestContext({
         db,
         request: new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`, {
           method: "POST",
         }),
-        dev: { bar: true },
+        dev,
       }),
-      store,
+      dev,
     );
 
     expect(res.status).toBe(405);

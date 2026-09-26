@@ -4,11 +4,11 @@ import { beforeAll, describe, expect, test } from "vitest";
 import type { DevInput } from "../../config.js";
 import type { AppContext, Db } from "../../context/app.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { createDevRuntime } from "../../runtime/dev.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
 import { registerCoreDebugPanels } from "../debug-panels/core-panels.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
-import { createDebugHistoryStore } from "../request-history/store.js";
 import { PlumixDebugBar } from "./component.js";
 
 let db: Db;
@@ -26,7 +26,7 @@ function ctxWith(
     db,
     hooks,
     request: new Request(url),
-    dev,
+    dev: dev && createDevRuntime(dev),
   });
 }
 
@@ -49,7 +49,7 @@ describe("PlumixDebugBar", () => {
       db,
       hooks,
       request: new Request("https://cms.example/x"),
-      dev: { bar: true },
+      dev: createDevRuntime({ bar: true }),
     });
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
@@ -88,9 +88,9 @@ describe("PlumixDebugBar", () => {
   });
 
   test("lists the app's captured requests in the switcher", () => {
-    const debugHistory = createDebugHistoryStore();
+    const dev = createDevRuntime({ bar: true });
     const past = ctxWith({ bar: true }, "https://cms.example/earlier");
-    debugHistory.save({
+    dev.history.save({
       id: "past-1",
       startedAt: 1,
       status: 200,
@@ -103,8 +103,7 @@ describe("PlumixDebugBar", () => {
       db,
       hooks,
       request: new Request("https://cms.example/now"),
-      dev: { bar: true },
-      debugHistory,
+      dev,
     });
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
