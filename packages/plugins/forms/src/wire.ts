@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
 import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
@@ -17,13 +18,10 @@ const FieldError = v.object({ field: v.string(), message: v.string() });
 
 // Typed as the response the server declares, so the two halves of one
 // wire contract cannot drift apart without a compile error.
-export const SubmitResponse: v.GenericSchema<FormSubmitResponse> = v.variant(
-  "ok",
-  [
-    v.object({ ok: v.literal(true), message: v.string() }),
-    v.object({ ok: v.literal(false), errors: v.array(FieldError) }),
-  ],
-);
+const SubmitResponse: v.GenericSchema<FormSubmitResponse> = v.variant("ok", [
+  v.object({ ok: v.literal(true), message: v.string() }),
+  v.object({ ok: v.literal(false), errors: v.array(FieldError) }),
+]);
 
 /**
  * A form definition as it left the server, with the holes JSON punched in
@@ -55,6 +53,37 @@ export function withoutNulls<T>(value: T): T {
 export const unreachable: readonly FormFieldError[] = [
   { field: "", message: labelSourceText(UNREACHABLE) },
 ];
+
+/**
+ * Post one submission and decode the reply. Both browser surfaces submit
+ * through here, so the request and what counts as an answer cannot drift
+ * between them. Never rejects: a request that failed, a reply that is not
+ * JSON and one that is not a submit response are all `"unreachable"`.
+ */
+export async function postSubmission(
+  action: string,
+  body: URLSearchParams,
+): Promise<FormSubmitResponse | "unreachable"> {
+  try {
+    const response = await fetch(action, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        // The header a plain form cannot set. Sending it puts this
+        // submission through the ordinary CSRF gate rather than the
+        // `formPost` exemption the no-JavaScript path takes.
+        [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+      },
+      // A `URLSearchParams` body is sent urlencoded, exactly as the
+      // plain form posts it, and sets its own content type.
+      body,
+    });
+    const payload = v.safeParse(SubmitResponse, await response.json());
+    return payload.success ? payload.output : "unreachable";
+  } catch {
+    return "unreachable";
+  }
+}
 
 /**
  * The timing token, fetched once the form is live. Both browser surfaces

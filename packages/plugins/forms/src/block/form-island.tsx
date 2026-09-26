@@ -3,9 +3,7 @@
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
 import { useIsLive } from "plumix/blocks/renderer";
-import * as v from "valibot";
 
 import type { FormWire } from "../define-form.js";
 import type { FormStep } from "../steps.js";
@@ -16,7 +14,7 @@ import { readSubmittedValues, visibleFields } from "../answers.js";
 import { visibleSteps } from "../steps.js";
 import { validateAnswers } from "../validate.js";
 import {
-  SubmitResponse,
+  postSubmission,
   unreachable,
   useTimingToken,
   withoutNulls,
@@ -67,6 +65,10 @@ export function FormIsland({
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
   const token = useTimingToken(tokenPath);
   const [busy, setBusy] = useState(false);
+  // A ref rather than `busy`: Enter pressed twice in one tick reaches
+  // `forward` both times before the disabled button has re-rendered, and
+  // the cost of letting the second through is two rows for one enquiry.
+  const inFlight = useRef(false);
   // Which rows each repeater is showing. Empty until the visitor adds or
   // removes one, so the first render is the markup the server sent.
   const [rows, setRows] = useState<FormRowState>({});
@@ -179,32 +181,21 @@ export function FormIsland({
     posted: string,
     posture: readonly FormStep[],
   ): Promise<void> {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
-      const response = await fetch(action, {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          // The header a plain form cannot set. Sending it puts this
-          // submission through the ordinary CSRF gate rather than the
-          // `formPost` exemption the no-JavaScript path takes.
-          [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-        },
-        // A `URLSearchParams` body is sent urlencoded, exactly as the
-        // plain form posts it, and sets its own content type.
-        body: new URLSearchParams(posted),
-      });
-      const payload = v.safeParse(SubmitResponse, await response.json());
-      if (!payload.success) {
+      const reply = await postSubmission(action, new URLSearchParams(posted));
+      if (reply === "unreachable") {
         setErrors(unreachable);
         return;
       }
-      if (payload.output.ok) {
+      if (reply.ok) {
         clearProgress(key);
-        setConfirmation(payload.output.message);
+        setConfirmation(reply.message);
         return;
       }
-      const failed = payload.output.errors;
+      const failed = reply.errors;
       setErrors(failed);
       // The server answered, so the challenge it was sent is spent
       // whether or not it was what the answer objected to.
@@ -222,9 +213,8 @@ export function FormIsland({
         ),
       );
       keep({ step: at >= 0 ? at : step, body: posted });
-    } catch {
-      setErrors(unreachable);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
