@@ -1,7 +1,7 @@
 import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
 import type { Finding, ShipOutcome } from "./ticket.js";
 import { drainAcrossLanes } from "./lanes.js";
-import { looksLikeAnOutage } from "./outage.js";
+import { looksLikeAnOutage, looksLikeTheHarnessFailing } from "./outage.js";
 
 export interface ShipPorts {
   readonly nextTicket: () => Ticket | undefined;
@@ -66,6 +66,13 @@ export const runShipLoop = async (
           ports.releaseClaim(ticket);
           outage ??= reason;
           ports.say(`  #${ticket.number} left for the next run: ${reason}`);
+          return undefined;
+        }
+        if (looksLikeTheHarnessFailing(reason)) {
+          ports.releaseClaim(ticket);
+          ports.say(
+            `  #${ticket.number} left alone, the harness failed: ${reason}`,
+          );
           return undefined;
         }
         outcome = { status: "blocked", reason };

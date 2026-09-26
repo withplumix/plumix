@@ -24,6 +24,7 @@ import { say } from "./log.js";
 import { MERGE_BASE } from "./repo.js";
 import {
   AN_HOUR_IN_SECONDS,
+  closePlumixSandbox,
   createPlumixSandbox,
   HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
@@ -365,10 +366,9 @@ export const shipTicket = async (
     );
 
     queueForMerge(pullRequest.number);
-    say(`  queued ${pullRequest.url}`);
     return { status: "queued", pullRequest, advisory };
   } finally {
-    const { preservedWorktreePath } = await sandbox.close();
+    const { preservedWorktreePath } = await closePlumixSandbox(sandbox);
     if (preservedWorktreePath)
       say(`Worktree preserved at ${preservedWorktreePath}`);
   }

@@ -15,7 +15,7 @@ import {
 import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
 import { looksLikeAnOutage } from "./lib/outage.js";
-import { createReadOnlySandbox } from "./lib/sandbox.js";
+import { closePlumixSandbox, createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
   awaitingAnAnswer,
@@ -194,7 +194,7 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
   },
 });
 
-await Promise.all(sandboxes.map((sandbox) => sandbox.close()));
+await Promise.all(sandboxes.map((sandbox) => closePlumixSandbox(sandbox)));
 
 const promoted = results.flatMap(({ issue, outcome }) =>
   outcome.status === "promoted"

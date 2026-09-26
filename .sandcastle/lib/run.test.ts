@@ -147,6 +147,36 @@ describe("runShipLoop", () => {
     expect(report.outage).toContain("usage limit");
   });
 
+  test("a harness failure releases the ticket and keeps the run going", async () => {
+    let attempts = 0;
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      ship: async (t) => {
+        attempts += 1;
+        if (t.number === 1)
+          throw new Error(
+            "Command failed (exit 128): git config --global --add safe.directory\nfatal: not a git repository: /x/.git/worktrees/feat-y",
+          );
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+          advisory: [],
+        };
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(released).toEqual([1]);
+    expect(report.outage).toBeUndefined();
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([2, 3]);
+    expect(attempts).toBe(3);
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 
