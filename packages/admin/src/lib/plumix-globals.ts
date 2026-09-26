@@ -13,6 +13,8 @@ import * as ReactDomClientNs from "react-dom/client";
 import * as SonnerNs from "sonner";
 import * as TailwindMergeNs from "tailwind-merge";
 
+import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+
 import { adminBasePath } from "./admin-base.js";
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
 import { registerPaletteCommand } from "./palette-commands.js";
@@ -26,8 +28,9 @@ import {
   registerPluginPage,
 } from "./plugin-registry.js";
 
-// Property names line up with `PlumixAdminRuntime` in
-// `plumix/admin/runtime` — keep in sync.
+// Keyed by core's shim roster, the same keys `plumix/admin/*` shims read
+// through `PlumixAdminRuntime`: a missing or stray key fails to compile here
+// rather than reaching a plugin chunk as `undefined`.
 const runtime = {
   react: ReactNs,
   reactJsxRuntime: ReactJsxRuntimeNs,
@@ -47,7 +50,7 @@ const runtime = {
   radix: RadixNs,
   sonner: SonnerNs,
   tailwindMerge: TailwindMergeNs,
-} as const;
+} as const satisfies Record<SharedAdminRuntimeKey, unknown>;
 
 interface PlumixI18nGlobal {
   /** Load a third-party plugin's compiled catalog for the active

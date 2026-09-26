@@ -1,5 +1,19 @@
 import type { KnipConfig } from "knip";
 
+import type { SharedAdminRuntimeSpecifier } from "./packages/core/src/admin/runtime.ts";
+import {
+  adminRuntimeShimSlug,
+  SHARED_ADMIN_RUNTIME_SPECIFIERS,
+} from "./packages/core/src/admin/runtime.ts";
+
+// Each `plumix/admin/<slug>` shim is a leaf entry consumed by plugin chunks
+// at the consumer's build time via the alias seam — knip can't see the
+// runtime resolution, so the entries come from core's roster.
+const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
+  (spec) =>
+    `src/admin/${adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier)}.ts`,
+);
+
 const config: KnipConfig = {
   // `exports` check disabled at the project level — admin's vendored
   // shadcn/ui primitives (sidebar, dropdown-menu, sheet, table, etc.)
@@ -121,21 +135,7 @@ const config: KnipConfig = {
         "src/index.ts",
         "src/plugin.ts",
         "src/admin/index.ts",
-        // Each `plumix/admin/<lib>` shim is a leaf entry consumed by
-        // plugin chunks at the consumer's build time via the alias
-        // seam — knip can't see the runtime resolution.
-        "src/admin/react.ts",
-        "src/admin/react-jsx-runtime.ts",
-        "src/admin/react-dom.ts",
-        "src/admin/react-dom-client.ts",
-        "src/admin/react-query.ts",
-        "src/admin/react-router.ts",
-        "src/admin/orpc-client.ts",
-        "src/admin/orpc-client-fetch.ts",
-        "src/admin/orpc-tanstack-query.ts",
-        "src/admin/radix.ts",
-        "src/admin/sonner.ts",
-        "src/admin/tailwind-merge.ts",
+        ...adminShimEntries,
         // `plumix/admin/ui` re-exports @plumix/admin-ui's shadcn primitives;
         // the plugin-bundle Vite step bundles them into the plugin chunk at
         // the consumer's build time — not a static import knip can follow.

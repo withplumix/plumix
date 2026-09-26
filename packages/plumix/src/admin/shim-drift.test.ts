@@ -1,18 +1,14 @@
-import * as ReactNs from "react";
-import * as ReactJsxRuntimeNs from "react/jsx-runtime";
-import * as LinguiCoreNs from "@lingui/core";
-import * as LinguiReactNs from "@lingui/react";
-import * as OrpcClientNs from "@orpc/client";
-import * as OrpcClientFetchNs from "@orpc/client/fetch";
-import * as OrpcTanstackQueryNs from "@orpc/tanstack-query";
-import * as ReactQueryNs from "@tanstack/react-query";
-import * as ReactRouterNs from "@tanstack/react-router";
-import * as RadixNs from "radix-ui";
-import * as ReactDomNs from "react-dom";
-import * as ReactDomClientNs from "react-dom/client";
-import * as SonnerNs from "sonner";
-import * as TailwindMergeNs from "tailwind-merge";
+import { existsSync } from "node:fs";
 import { beforeAll, describe, expect, test } from "vitest";
+
+import type { SharedAdminRuntimeSpecifier } from "@plumix/core/admin";
+import {
+  adminRuntimeShimSlug,
+  SHARED_ADMIN_RUNTIME_KEYS,
+  SHARED_ADMIN_RUNTIME_SPECIFIERS,
+} from "@plumix/core/admin";
+
+import manifest from "../../package.json" with { type: "json" };
 
 // Drift detection. Each admin shim hand-re-exports a curated slice of an
 // upstream package off `globalThis.plumix.runtime` (admin ships precompiled;
@@ -27,51 +23,33 @@ import { beforeAll, describe, expect, test } from "vitest";
 // upstream release cadence (see #1177). New upstream APIs are exposed pull-
 // based: add the binding to the shim when a plugin actually needs it.
 
-beforeAll(() => {
-  (globalThis as { plumix?: unknown }).plumix = {
-    runtime: {
-      react: ReactNs,
-      reactJsxRuntime: ReactJsxRuntimeNs,
-      reactDom: ReactDomNs,
-      reactDomClient: ReactDomClientNs,
-      reactQuery: ReactQueryNs,
-      reactRouter: ReactRouterNs,
-      orpcClient: OrpcClientNs,
-      orpcClientFetch: OrpcClientFetchNs,
-      orpcTanstackQuery: OrpcTanstackQueryNs,
-      linguiCore: LinguiCoreNs,
-      linguiReact: LinguiReactNs,
-      radix: RadixNs,
-      sonner: SonnerNs,
-      tailwindMerge: TailwindMergeNs,
-    },
+const SHIMS = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map((spec) => {
+  const name = spec as SharedAdminRuntimeSpecifier;
+  const slug = adminRuntimeShimSlug(name);
+  const module = new URL(`./${slug}.ts`, import.meta.url);
+  return {
+    name,
+    slug,
+    module,
+    load: (): Promise<Readonly<Record<string, unknown>>> =>
+      import(/* @vite-ignore */ module.href),
   };
 });
 
-interface ShimSpec {
-  readonly name: string;
-  readonly load: () => Promise<Readonly<Record<string, unknown>>>;
-}
-
-const SHIMS: readonly ShimSpec[] = [
-  { name: "react", load: () => import("./react.js") },
-  { name: "react/jsx-runtime", load: () => import("./react-jsx-runtime.js") },
-  { name: "react-dom", load: () => import("./react-dom.js") },
-  { name: "react-dom/client", load: () => import("./react-dom-client.js") },
-  { name: "@tanstack/react-query", load: () => import("./react-query.js") },
-  { name: "@tanstack/react-router", load: () => import("./react-router.js") },
-  { name: "@orpc/client", load: () => import("./orpc-client.js") },
-  { name: "@orpc/client/fetch", load: () => import("./orpc-client-fetch.js") },
-  {
-    name: "@orpc/tanstack-query",
-    load: () => import("./orpc-tanstack-query.js"),
-  },
-  { name: "@lingui/core", load: () => import("./lingui-core.js") },
-  { name: "@lingui/react", load: () => import("./lingui-react.js") },
-  { name: "radix-ui", load: () => import("./radix.js") },
-  { name: "sonner", load: () => import("./sonner.js") },
-  { name: "tailwind-merge", load: () => import("./tailwind-merge.js") },
-];
+// Stands in for admin's `window.plumix.runtime`: each upstream namespace
+// under the key core's roster assigns it, which admin's object is checked
+// against at compile time.
+beforeAll(async () => {
+  const runtime = Object.fromEntries(
+    await Promise.all(
+      SHIMS.map(async ({ name }): Promise<[string, unknown]> => {
+        const ns: unknown = await import(/* @vite-ignore */ name);
+        return [SHARED_ADMIN_RUNTIME_KEYS[name], ns];
+      }),
+    ),
+  );
+  (globalThis as { plumix?: unknown }).plumix = { runtime };
+});
 
 // `default` / `module.exports` / `__esModule` are namespace artefacts whose
 // value can legitimately be `undefined` — never treat them as a broken binding.
@@ -80,6 +58,22 @@ const ALWAYS_SKIPPED_KEYS = new Set([
   "module.exports",
   "__esModule",
 ]);
+
+// The plugin-bundle Vite step aliases each shared specifier to
+// `plumix/admin/<slug>`, so a slug missing its module or its export entry
+// would otherwise surface only when a consumer builds a plugin.
+describe("shim roster", () => {
+  test.each(SHIMS)("$name has a shim module", ({ module }) => {
+    expect(existsSync(module)).toBe(true);
+  });
+
+  test.each(SHIMS)("$name has a package export", ({ slug }) => {
+    expect(manifest.exports).toHaveProperty([`./admin/${slug}`], {
+      types: `./dist/admin/${slug}.d.ts`,
+      default: `./dist/admin/${slug}.js`,
+    });
+  });
+});
 
 describe("shim drift vs upstream packages", () => {
   test.each(SHIMS)(
