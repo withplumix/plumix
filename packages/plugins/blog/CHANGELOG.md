@@ -1,5 +1,13 @@
 # @plumix/plugin-blog
 
+## 0.2.3
+
+### Patch Changes
+
+- [#2580](https://github.com/withplumix/plumix/pull/2580) [`b10f3ce`](https://github.com/withplumix/plumix/commit/b10f3cea512bd8f5385d49a87e991578b010c917) Thanks [@nasyrov](https://github.com/nasyrov)! - Uses the shared `applyOverride` from `plumix/plugin` for `blog()` overrides instead of its own copy; the merge behaves exactly as before.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.2.2
 
 ### Patch Changes

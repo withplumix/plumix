@@ -1,5 +1,13 @@
 # @plumix/runtime-cloudflare
 
+## 0.12.1
+
+### Patch Changes
+
+- [#2538](https://github.com/withplumix/plumix/pull/2538) [`c0cc0e6`](https://github.com/withplumix/plumix/commit/c0cc0e672368692bf3974a00a808ed953a858e9f) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@libsql/client` to `^0.18.0` (keeps in-memory databases intact across transactions), `lucide-react` to `^1.46.0`, `jose` to `^6.2.12` and `markdown-it` to `^15.0.2`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.12.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @plumix/core
 
+## 0.24.0
+
+### Minor Changes
+
+- [#2518](https://github.com/withplumix/plumix/pull/2518) [`025f292`](https://github.com/withplumix/plumix/commit/025f29298cbb2ebca0aeb8a0c9cfa61318e70c32) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `.default()`, `.sanitize()` and `.validate()` to the `group()` and `repeater()` field builders, and `.countGt()` / `.countLt()` to multi-value reference fields and repeaters. A composite's own callbacks run after its sub-fields are settled, over the value that will be stored, so a cross-row uniqueness rule or a cross-member check no longer needs a hand-written field object. Declares the builder capability matrix in one place, bound to the builder types by a typecheck guard, so a chain that is missing a capability its row claims fails `pnpm typecheck`.
+
+  Behaviour change: a repeater emptied to zero rows now deletes its meta key instead of storing an empty array, matching how an all-blank group has always behaved. Its `.min()` / `.max()` / `.required()` bounds still run first, so an emptied repeater that violates them is still rejected. The admin renders a deleted key and a stored empty array identically, unless the repeater declares a `.default()` — a stored empty array used to suppress the default, whereas an absent key falls through to it, so clearing such a field now reseeds its default rows on the next load. Direct RPC and REST callers reading the bag back will see the key absent.
+
+### Patch Changes
+
+- [#2581](https://github.com/withplumix/plumix/pull/2581) [`0b5a09b`](https://github.com/withplumix/plumix/commit/0b5a09b386fb2a6854d5156bd723008387ea8238) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes meta field keys longer than 200 characters registering fine and then failing every write. Registering a meta box, settings group, repeater sub-field or group member with such a key now throws at registration (`meta_box_field_invalid_key` / `sub_field_key_invalid`), and both errors state the 200-character cap next to the allowed pattern.
+
+- [#2514](https://github.com/withplumix/plumix/pull/2514) [`a623163`](https://github.com/withplumix/plumix/commit/a623163eb1d6082c146cbdb5272471b44f45d422) Thanks [@nasyrov](https://github.com/nasyrov)! - Hydrates each meta reference at most once per request: resolve batches now share a request-scoped memo keyed by the viewer plus the reference's kind, scope and id, so a page that resolves the same entry, term or media in several batches queries it once. `memoBatch` hands its loader only the ids that missed the memo.
+- Updated dependencies []:
+  - @plumix/blocks@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes

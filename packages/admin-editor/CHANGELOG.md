@@ -1,5 +1,19 @@
 # @plumix/admin-editor
 
+## 0.24.0
+
+### Minor Changes
+
+- [#2571](https://github.com/withplumix/plumix/pull/2571) [`1542299`](https://github.com/withplumix/plumix/commit/15422993335ecec9f4095e3d12e0906304d1e97b) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `history` and `setTree` from the editor store's published state and adds `canUndo` / `canRedo` fields in their place; undo and redo now drop selected ids whose blocks the restored tree no longer contains.
+
+### Patch Changes
+
+- [#2568](https://github.com/withplumix/plumix/pull/2568) [`a1b8e74`](https://github.com/withplumix/plumix/commit/a1b8e747a6b5ccfaeef8228331144d828b121caa) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes editing a block with more than one slot. Duplicate, paste, move up/down, group and ungroup on a block in any slot after the first now stay in that slot, and the Layers panel lists every slot's children. Previously they landed in the first slot or did nothing, and the Layers panel hid every slot after the first.
+- Updated dependencies [[`025f292`](https://github.com/withplumix/plumix/commit/025f29298cbb2ebca0aeb8a0c9cfa61318e70c32), [`0b5a09b`](https://github.com/withplumix/plumix/commit/0b5a09b386fb2a6854d5156bd723008387ea8238), [`a623163`](https://github.com/withplumix/plumix/commit/a623163eb1d6082c146cbdb5272471b44f45d422)]:
+  - @plumix/core@0.24.0
+  - @plumix/admin-ui@0.24.0
+  - @plumix/blocks@0.24.0
+
 ## 0.23.0
 
 ### Patch Changes
