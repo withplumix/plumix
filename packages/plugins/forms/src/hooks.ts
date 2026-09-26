@@ -8,9 +8,7 @@
 // thing that hydrates.
 import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
 import { documentBasePath } from "plumix/blocks/renderer";
-import * as v from "valibot";
 
 import type { FormAnswersOf, FormDefinition, FormWire } from "./define-form.js";
 import type { FormFieldError } from "./types.js";
@@ -22,7 +20,7 @@ import {
   TOKEN_PATH,
 } from "./contract.js";
 import {
-  SubmitResponse,
+  postSubmission,
   unreachable,
   useTimingToken,
   withoutNulls,
@@ -132,32 +130,20 @@ export function usePlumixForm<F extends FormDefinition = FormDefinition>(
       if (token !== null) body.set(TOKEN_FIELD, token);
       setSubmitting(true);
       try {
-        const response = await fetch(`${documentBasePath()}${SUBMIT_PATH}`, {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-            // The header a plain form cannot set. Sending it puts this
-            // submission through the ordinary CSRF gate rather than the
-            // `formPost` exemption the no-JavaScript path takes.
-            [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
-          },
-          // A `URLSearchParams` body is sent urlencoded, exactly as the
-          // plain form posts it, and sets its own content type.
+        const reply = await postSubmission(
+          `${documentBasePath()}${SUBMIT_PATH}`,
           body,
-        });
-        const payload = v.safeParse(SubmitResponse, await response.json());
-        if (!payload.success) {
+        );
+        if (reply === "unreachable") {
           setErrors(unreachable);
           return;
         }
-        if (payload.output.ok) {
+        if (reply.ok) {
           setErrors([]);
-          setConfirmation(payload.output.message);
+          setConfirmation(reply.message);
           return;
         }
-        setErrors(payload.output.errors);
-      } catch {
-        setErrors(unreachable);
+        setErrors(reply.errors);
       } finally {
         inFlight.current = false;
         setSubmitting(false);
