@@ -1,3 +1,4 @@
+import type { CapabilityErrors } from "../rpc/errors.js";
 import type { EntryRow, EntryViewer } from "./visibility.js";
 import {
   entryCapability,
@@ -28,13 +29,7 @@ export function canEditEntry(ctx: EntryViewer, entry: EntryEditRow): boolean {
   return ctx.auth.can(entryCapability(namespace, "edit_own"));
 }
 
-/**
- * Taken as a parameter rather than built here so each caller's procedure keeps
- * its own error shapes.
- */
-export interface EntryEditErrors {
-  readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
-}
+export type EntryEditErrors = CapabilityErrors;
 
 /**
  * `canEditEntry` as a procedure's gate.

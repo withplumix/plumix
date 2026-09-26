@@ -16,6 +16,7 @@ import type {
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
+import type { ConflictErrors } from "../errors.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
 import { memoBatch } from "../../context/memo.js";
@@ -135,22 +136,6 @@ export class MetaSanitizationError extends Error {
   static valueTooLarge(ctx: { key: string }): MetaSanitizationError {
     return new MetaSanitizationError(ctx.key, "value_too_large");
   }
-}
-
-/**
- * Minimum shape of the oRPC `errors` object needed to surface a
- * `MetaSanitizationError` as a CONFLICT. Declared structurally so this
- * helper doesn't have to import oRPC types — the handler passes its
- * `errors` in and TS matches on shape.
- */
-export interface RpcErrorsForMeta {
-  CONFLICT: (args: {
-    data: {
-      reason: string;
-      key?: string;
-      errors?: MetaFieldError[];
-    };
-  }) => Error;
 }
 
 /**
@@ -440,7 +425,7 @@ async function validateConditionDependents(
  */
 export function metaValidationConflict(
   error: MetaValidationError,
-  errors: RpcErrorsForMeta,
+  errors: ConflictErrors,
 ): Error {
   return errors.CONFLICT({
     data: {
@@ -454,7 +439,7 @@ export function metaValidationConflict(
 export async function sanitizeMetaForRpc(
   target: MetaPatchTarget,
   input: MetaInput | undefined,
-  errors: RpcErrorsForMeta,
+  errors: ConflictErrors,
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   const { findField } = metaScope(target.fields);
@@ -883,7 +868,7 @@ export async function validateMetaReferencesForRpc(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
   patch: MetaPatch,
-  errors: RpcErrorsForMeta,
+  errors: ConflictErrors,
 ): Promise<void> {
   try {
     await validateMetaReferences(ctx, findField, patch);

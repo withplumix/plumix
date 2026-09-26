@@ -1,3 +1,4 @@
+import type { ORPCErrorConstructorMap } from "@orpc/server";
 import * as v from "valibot";
 
 export const RPC_ERRORS = {
@@ -82,3 +83,39 @@ export const RPC_ERRORS = {
     }),
   },
 } as const;
+
+export type RpcErrors = ORPCErrorConstructorMap<typeof RPC_ERRORS>;
+
+// The subsets shared helpers take from a handler's `errors`. Picked rather
+// than restated, so a payload change here fails to compile at every helper
+// that throws the old one.
+
+/** A capability gate's denial — the edit gate and per-field meta gates. */
+export type CapabilityErrors = Pick<RpcErrors, "FORBIDDEN">;
+
+/** Load a row by id, then gate it on a capability. */
+export type GatedLookupErrors = Pick<RpcErrors, "NOT_FOUND" | "FORBIDDEN">;
+
+/** Mapping an entries-read domain error onto the wire. */
+export type EntryReadErrors = Pick<
+  RpcErrors,
+  "NOT_FOUND" | "FORBIDDEN" | "BAD_REQUEST"
+>;
+
+/** An entry's `terms` patch: unknown taxonomy, unassignable, mismatched. */
+export type TermsPatchErrors = Pick<
+  RpcErrors,
+  "NOT_FOUND" | "FORBIDDEN" | "CONFLICT"
+>;
+
+/** A device-flow user code that is missing or already settled. */
+export type DeviceCodeLookupErrors = Pick<RpcErrors, "NOT_FOUND" | "CONFLICT">;
+
+/** An input the procedure rejects outright. */
+export type BadRequestErrors = Pick<RpcErrors, "BAD_REQUEST">;
+
+/** A write that conflicts with a stored constraint — meta, settings, size caps. */
+export type ConflictErrors = Pick<RpcErrors, "CONFLICT">;
+
+/** Entry content the block registries reject. */
+export type BlockContentErrors = Pick<RpcErrors, "INVALID_BLOCK_CONTENT">;

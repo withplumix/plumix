@@ -7,6 +7,7 @@ import type {
   EntryStatus,
   NewEntry,
 } from "../../../db/schema/entries.js";
+import type { GatedLookupErrors } from "../../errors.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
@@ -182,10 +183,9 @@ interface DeletableGuards {
 // The trash-lifecycle procedures (single + bulk) all translate a missing
 // row into NOT_FOUND and a failed cap into FORBIDDEN. `errors` is the
 // per-handler oRPC builder, so this is a thin shared adapter.
-export function entryDeletableGuards(errors: {
-  NOT_FOUND: (opts: { data: { kind: string; id: number } }) => Error;
-  FORBIDDEN: (opts: { data: { capability: string } }) => Error;
-}): DeletableGuards {
+export function entryDeletableGuards(
+  errors: GatedLookupErrors,
+): DeletableGuards {
   return {
     notFound: (id) => {
       throw errors.NOT_FOUND({ data: { kind: "entry", id } });

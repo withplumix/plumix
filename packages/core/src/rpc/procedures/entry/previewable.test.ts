@@ -1,20 +1,13 @@
+import { createORPCErrorConstructorMap } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
-import type { PreviewableEntryErrors } from "./previewable.js";
 import { withUser } from "../../../context/app.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { RPC_ERRORS } from "../../errors.js";
 import { previewableEntry } from "./previewable.js";
 
-// Stub the oRPC typed-error constructors the way `read-errors.test.ts` does:
-// each records the code it stands for plus the data it carried.
-function stubErrors(): PreviewableEntryErrors {
-  const make =
-    (mappedCode: string) =>
-    (opts: { data: Record<string, unknown> }): Error =>
-      Object.assign(new Error(mappedCode), { mappedCode, data: opts.data });
-  return { NOT_FOUND: make("NOT_FOUND"), FORBIDDEN: make("FORBIDDEN") };
-}
+const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 
 /** The gate as a plugin's `.use(authenticated)` handler reaches it. */
 async function harnessAs(role: "editor" | "contributor" | "subscriber") {
@@ -30,7 +23,7 @@ describe("previewableEntry", () => {
     const row = await previewableEntry(
       ctx,
       { entryId: entry.id, entryTypes: ["post"] },
-      stubErrors(),
+      errors,
     );
 
     expect(row).toMatchObject({ id: entry.id, type: "post" });
@@ -44,10 +37,10 @@ describe("previewableEntry", () => {
       previewableEntry(
         ctx,
         { entryId: entry.id, entryTypes: ["page"] },
-        stubErrors(),
+        errors,
       ),
     ).rejects.toMatchObject({
-      mappedCode: "NOT_FOUND",
+      code: "NOT_FOUND",
       data: { kind: "entry", id: entry.id },
     });
   });
@@ -56,12 +49,8 @@ describe("previewableEntry", () => {
     const { ctx } = await harnessAs("editor");
 
     await expect(
-      previewableEntry(
-        ctx,
-        { entryId: 999_999, entryTypes: ["post"] },
-        stubErrors(),
-      ),
-    ).rejects.toMatchObject({ mappedCode: "NOT_FOUND" });
+      previewableEntry(ctx, { entryId: 999_999, entryTypes: ["post"] }, errors),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("refuses a caller who may not edit the entry", async () => {
@@ -73,10 +62,10 @@ describe("previewableEntry", () => {
       previewableEntry(
         ctx,
         { entryId: entry.id, entryTypes: ["post"] },
-        stubErrors(),
+        errors,
       ),
     ).rejects.toMatchObject({
-      mappedCode: "FORBIDDEN",
+      code: "FORBIDDEN",
       data: { capability: "entry:post:edit_any" },
     });
   });
@@ -91,15 +80,15 @@ describe("previewableEntry", () => {
       previewableEntry(
         ctx,
         { entryId: theirs.id, entryTypes: ["post"] },
-        stubErrors(),
+        errors,
       ),
-    ).rejects.toMatchObject({ mappedCode: "FORBIDDEN" });
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
     expect(
       await previewableEntry(
         ctx,
         { entryId: mine.id, entryTypes: ["post"] },
-        stubErrors(),
+        errors,
       ),
     ).toMatchObject({ id: mine.id });
   });
@@ -126,7 +115,7 @@ describe("previewableEntry", () => {
     const row = await previewableEntry(
       ctx,
       { entryId: entry.id, entryTypes: ["post"] },
-      stubErrors(),
+      errors,
     );
 
     expect(row).toMatchObject({
@@ -161,7 +150,7 @@ describe("previewableEntry", () => {
     const row = await previewableEntry(
       ctx,
       { entryId: entry.id, entryTypes: ["post"] },
-      stubErrors(),
+      errors,
     );
 
     expect(row.excerpt).toBe("Live excerpt");

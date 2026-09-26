@@ -1,4 +1,5 @@
 import type { AppContext } from "../../../context/app.js";
+import type { TermsPatchErrors } from "../../errors.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
@@ -12,12 +13,6 @@ interface TermPatchThrowers {
   termTaxonomyMismatch(): never;
 }
 
-interface TermsPatchErrorMap {
-  NOT_FOUND(opts: { data: { kind: string; id: string | number } }): Error;
-  FORBIDDEN(opts: { data: { capability: string } }): Error;
-  CONFLICT(opts: { data: { reason: string } }): Error;
-}
-
 /**
  * Build the standard guard-callback bundle entry create / update both
  * pass to `assertTermsPatchValid`: NOT_FOUND for unknown taxonomies,
@@ -26,7 +21,7 @@ interface TermsPatchErrorMap {
  * procedures so a future error-payload tweak only changes here.
  */
 export function buildTermsPatchGuards(
-  errors: TermsPatchErrorMap,
+  errors: TermsPatchErrors,
 ): TermPatchThrowers {
   return {
     taxonomyNotFound: (taxonomy) => {

@@ -1,6 +1,7 @@
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
+import type { CapabilityErrors } from "../../errors.js";
 import type {
   MetaInput,
   MetaPatch,
@@ -63,9 +64,7 @@ export function assertUserMetaCapabilities(
   registry: PluginRegistry,
   patch: MetaPatch,
   auth: { can(capability: string): boolean },
-  errors: {
-    FORBIDDEN: (args: { data: { capability: string } }) => Error;
-  },
+  errors: CapabilityErrors,
 ): void {
   assertMetaCapabilities(
     patch,

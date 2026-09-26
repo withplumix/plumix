@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import type { AppContext } from "../../../context/app.js";
 import type { RegisteredLookupAdapter } from "../../../plugin/lookup.js";
+import type { GatedLookupErrors } from "../../errors.js";
 
 // `kind` matches the discriminator a reference field carries on its
 // `referenceTarget.kind`. Valid kinds are checked against the
@@ -45,15 +46,10 @@ export const lookupListInputSchema = v.object({
   ids: v.optional(lookupListIdsSchema),
 });
 
-interface LookupErrors {
-  NOT_FOUND: (args: { data: { kind: string; id: string } }) => Error;
-  FORBIDDEN: (args: { data: { capability: string } }) => Error;
-}
-
 export function requireAdapter(
   context: AppContext,
   kind: string,
-  errors: LookupErrors,
+  errors: GatedLookupErrors,
 ): RegisteredLookupAdapter {
   const registered = context.plugins.lookupAdapters.get(kind);
   if (!registered) {
