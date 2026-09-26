@@ -22,8 +22,10 @@ Load `mattpocock-skills:code-review` and run its Spec axis against `{{BASE}}`.
 Findings only — do not edit any file, do not commit.
 
 Every acceptance criterion is a question: is it met, and where in the diff? A
-criterion that is silently unmet is a high finding. So is scope the ticket did
-not ask for.
+criterion that is silently unmet is **high**, always. So is scope the ticket did
+not ask for. Only `high` stops this branch, so a criterion you report as medium
+is a criterion you have decided to ship unmet — if the diff does not do what the
+ticket asked, say high and let it be argued with.
 
 # Output
 

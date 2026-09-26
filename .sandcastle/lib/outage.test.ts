@@ -1,8 +1,16 @@
 import { describe, expect, test } from "vitest";
 
-import { looksLikeAnOutage } from "./outage.js";
+import { looksLikeTheRunBeingOver } from "./outage.js";
 
-describe("looksLikeAnOutage", () => {
+describe("looksLikeTheRunBeingOver", () => {
+  test("recognises the sentence claude code actually prints", () => {
+    expect(
+      looksLikeTheRunBeingOver(
+        "claude-code exited with code 1: You've hit your session limit · reset 3pm",
+      ),
+    ).toBe(true);
+  });
+
   test.each([
     "Claude AI usage limit reached",
     "rate_limit_error: too many requests",
@@ -10,20 +18,16 @@ describe("looksLikeAnOutage", () => {
     "Your credit balance is too low to access the Anthropic API",
     "quota exceeded for this organisation",
     "401 Unauthorized",
-    "authentication_error: invalid x-api-key",
     "OAuth token has expired",
-    "API Error: 529 overloaded_error",
   ])("stops the run on %s", (reason) => {
-    expect(looksLikeAnOutage(reason)).toBe(true);
+    expect(looksLikeTheRunBeingOver(reason)).toBe(true);
   });
 
   test.each([
-    "the implementer produced no commits",
-    "still failing `pnpm test:e2e` after 4 fix rounds",
-    "2 high-severity finding(s) still open after 3 review rounds",
-    "pull request was closed without merging",
-    "the fixer changed nothing: the host is missing libnss3",
-  ])("parks the ticket on %s", (reason) => {
-    expect(looksLikeAnOutage(reason)).toBe(false);
+    "Command failed (exit 128): git config --global --add safe.directory\nfatal: not a git repository",
+    "docker: Cannot connect to the Docker daemon",
+    "Error response from daemon: conflict: unable to delete container",
+  ])("lets the run carry on after %s", (reason) => {
+    expect(looksLikeTheRunBeingOver(reason)).toBe(false);
   });
 });

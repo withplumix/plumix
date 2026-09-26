@@ -72,24 +72,43 @@ const setupHooks = {
   },
 };
 
+let registryOperations: Promise<unknown> = Promise.resolve();
+
+const whileNoOtherLaneTouchesTheWorktreeRegistry = <T>(
+  operation: () => Promise<T>,
+): Promise<T> => {
+  const queued = registryOperations.then(operation, operation);
+  registryOperations = queued.catch(() => undefined);
+  return queued;
+};
+
 export const createPlumixSandbox = (
   branch: string,
 ): Promise<sandcastle.Sandbox> =>
-  sandcastle.createSandbox({
-    cwd: REPO_ROOT,
-    branch,
-    sandbox: plumixContainer(),
-    hooks: setupHooks,
-  });
+  whileNoOtherLaneTouchesTheWorktreeRegistry(() =>
+    sandcastle.createSandbox({
+      cwd: REPO_ROOT,
+      branch,
+      sandbox: plumixContainer(),
+      hooks: setupHooks,
+    }),
+  );
+
+export const closePlumixSandbox = (
+  sandbox: sandcastle.Sandbox,
+): Promise<sandcastle.CloseResult> =>
+  whileNoOtherLaneTouchesTheWorktreeRegistry(() => sandbox.close());
 
 export const createReadOnlySandbox = (
   branch: string,
 ): Promise<sandcastle.Sandbox> =>
-  sandcastle.createSandbox({
-    cwd: REPO_ROOT,
-    branch,
-    sandbox: plumixContainer(),
-  });
+  whileNoOtherLaneTouchesTheWorktreeRegistry(() =>
+    sandcastle.createSandbox({
+      cwd: REPO_ROOT,
+      branch,
+      sandbox: plumixContainer(),
+    }),
+  );
 
 export const plumixRunOptions = {
   cwd: REPO_ROOT,
