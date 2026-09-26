@@ -20,7 +20,6 @@ import {
 import { Input } from "@plumix/admin-ui/input";
 
 import type { PublishActions } from "./editor-toolbar.js";
-import { canRedo, canUndo } from "./history.js";
 import { useEditorStore } from "./provider.js";
 
 export interface EditorHeaderProps {
@@ -55,8 +54,8 @@ export function EditorHeader({
   revisionsTrigger,
 }: EditorHeaderProps): ReactElement {
   const { i18n } = useLingui();
-  const undoAvailable = useEditorStore((s) => canUndo(s.history));
-  const redoAvailable = useEditorStore((s) => canRedo(s.history));
+  const undoAvailable = useEditorStore((s) => s.canUndo);
+  const redoAvailable = useEditorStore((s) => s.canRedo);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const setJsonOpen = useEditorStore((s) => s.setJsonOpen);
