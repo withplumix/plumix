@@ -19,6 +19,6 @@ export default plumix({
       origin: "https://example.com",
     },
   }),
-  plugins: [blog(), pages, media()],
+  plugins: [blog(), pages(), media()],
   theme,
 });

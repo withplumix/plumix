@@ -161,19 +161,9 @@ Then:
 
 ## Two shapes of export
 
-A plugin package exports either a descriptor or a function that returns one, and which of the two decides whether you write `pages` or `pages()`.
+A plugin package exports either a descriptor or a function that returns one, and which of the two decides whether you write `recipes` or `recipes()`. A plugin you write with `definePlugin` is a descriptor, so it goes in the array as it is.
 
-`@plumix/plugin-pages` takes no options, so it exports the descriptor itself.
-
-```ts no-typecheck
-import type { PlumixConfigInput } from "plumix";
-
-import { pages } from "@plumix/plugin-pages";
-
-export const plugins: PlumixConfigInput["plugins"] = [pages];
-```
-
-The other seven export a factory instead, so you call it. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
+Every first-party plugin exports a factory instead, so you call it. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
 
 ```ts no-typecheck
 import type { PlumixConfigInput } from "plumix";
@@ -185,9 +175,11 @@ import { feeds } from "@plumix/plugin-feeds";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { og } from "@plumix/plugin-og";
+import { pages } from "@plumix/plugin-pages";
 
 export const plugins: PlumixConfigInput["plugins"] = [
   blog(),
+  pages(),
   media(),
   menu({ locations: { primary: { label: "Primary navigation" } } }),
   comments({ entryTypes: ["recipe"], mode: "all", maxDepth: 2 }),
@@ -197,7 +189,7 @@ export const plugins: PlumixConfigInput["plugins"] = [
 ];
 ```
 
-`feeds()` takes no options at all, and every option the others take has a default, so the empty parentheses on `blog()`, `media()`, `auditLog()`, `og()` and `feeds()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
+`feeds()` takes no options at all, and every option the others take has a default, so the empty parentheses on `blog()`, `pages()`, `media()`, `auditLog()`, `og()` and `feeds()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
 
 <Aside type="caution" title="One descriptor per id">
   Each descriptor carries an id, and two descriptors with the same id throw at

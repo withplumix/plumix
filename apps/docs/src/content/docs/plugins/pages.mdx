@@ -12,7 +12,7 @@ import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 ## Overview
 
-The plugin exports one descriptor named `pages`. It takes no options, registers no taxonomies, and adds no database tables, so installing it is a package install and one array entry.
+The plugin exports a factory named `pages`, so you call it. `pages()` on its own is a complete registration; its one option, `page`, reshapes or drops the entry type, and [Reshaping what it registers](#reshaping-what-it-registers) covers it. It registers no taxonomies and adds no database tables, so installing it is a package install and one array entry.
 
 A page holds content that is reached by name rather than found in a feed. About, Contact, Terms, a nested handbook. Two things separate it from a post. It has a parent, and no listing route ever includes it.
 
@@ -63,7 +63,7 @@ Then:
 
 <Steps>
 
-1. **Add `pages` to the `plugins` array.** No call, no options.
+1. **Add `pages()` to the `plugins` array.** No arguments needed; see [Reshaping what it registers](#reshaping-what-it-registers) to change what it registers.
 
    ```ts no-typecheck
    import type { PlumixConfigInput } from "plumix";
@@ -72,7 +72,7 @@ Then:
 
    import { recipes } from "./plugins/recipes";
 
-   export const plugins: PlumixConfigInput["plugins"] = [recipes, pages];
+   export const plugins: PlumixConfigInput["plugins"] = [recipes, pages()];
    ```
 
 2. **Restart the dev server.**
@@ -116,6 +116,32 @@ export const example = definePlugin("example", {
 `supports` opts into the five values that change behaviour: `title`, `editor`, `excerpt`, `revisions` and `autosave`. [Entry Types](/content-modelling/entry-types/) explains why the list is conventional rather than closed.
 
 `keywords` gives the admin command palette two synonyms to match alongside the sidebar label, so typing "static" finds Pages.
+
+## Reshaping what it registers
+
+`pages()` takes one override, `page`. It is a partial of the options the plugin passes to `registerEntryType`, so anything that accepts can be overridden, and anything you leave out keeps the plugin's default.
+
+A site that serves its pages under `/p` rather than at the root:
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { pages } from "@plumix/plugin-pages";
+
+export const plugins: PlumixConfigInput["plugins"] = [
+  pages({ page: { rewrite: { slug: "p" } } }),
+];
+```
+
+The merge follows the same three rules as [the blog plugin's](/plugins/blog/#reshaping-what-it-registers).
+
+- **Object-valued options merge key by key.** Overriding `labels.singular` leaves the other labels alone, rather than replacing the table.
+- **Arrays and plain values replace.** `supports: ["title", "editor"]` is the whole list, not an addition to it.
+- **An array can compose instead** by passing a function: `supports: (prev) => prev.filter((s) => s !== "autosave")` drops one entry and keeps the rest.
+
+Passing `false` in place of the override skips the registration entirely. `pages({ page: false })` registers nothing.
+
+The registered name, `page`, is not overridable. It is the value stored in the `type` column on every page and the key a theme's `forEntryType("page")` matches on, so renaming it would orphan existing rows and silently stop templates matching. Change `labels` to change what the admin displays.
 
 ## URLs at the root
 

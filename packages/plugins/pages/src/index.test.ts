@@ -1,10 +1,14 @@
 import { HookRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
+import type { PagesOptions } from "./index.js";
 import { pages } from "./index.js";
 
-async function install() {
-  return installPlugins({ hooks: new HookRegistry(), plugins: [pages] });
+async function install(options?: PagesOptions) {
+  return installPlugins({
+    hooks: new HookRegistry(),
+    plugins: [pages(options)],
+  });
 }
 
 describe("@plumix/plugin-pages", () => {
@@ -32,6 +36,23 @@ describe("@plumix/plugin-pages", () => {
 
   test("registers no taxonomies", async () => {
     const { registry } = await install();
+    expect(registry.termTaxonomies.size).toBe(0);
+  });
+
+  test("an override reshapes the page type and keeps the other defaults", async () => {
+    const { registry } = await install({ page: { rewrite: { slug: "p" } } });
+    const page = registry.entryTypes.get("page");
+    expect(page?.rewrite).toEqual({ slug: "p" });
+    expect(page?.isHierarchical).toBe(true);
+    expect(page?.labels?.singular).toEqual({
+      id: "plugin.pages.page.singular",
+      message: "Page",
+    });
+  });
+
+  test("`page: false` registers nothing", async () => {
+    const { registry } = await install({ page: false });
+    expect(registry.entryTypes.has("page")).toBe(false);
     expect(registry.termTaxonomies.size).toBe(0);
   });
 });

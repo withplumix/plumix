@@ -77,7 +77,7 @@ import { blog } from "@plumix/plugin-blog";
 import { pages } from "@plumix/plugin-pages";
 
 // inside plumix({ ... })
-plugins: [blog, pages],
+plugins: [blog(), pages()],
 ```
 
 ## Runtimes

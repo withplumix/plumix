@@ -33,7 +33,7 @@ export default plumix({
     blog(),
     comments({ entryTypes: ["post"] }),
     feeds(),
-    pages,
+    pages(),
     media(),
     menu({
       locations: {

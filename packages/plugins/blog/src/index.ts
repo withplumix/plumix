@@ -6,10 +6,9 @@ import type {
   TermTaxonomyLabels,
 } from "plumix/plugin";
 import { withContext } from "plumix/i18n";
-import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
+import { applyOverride, definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 import type { BlogOptions } from "./options.js";
-import { applyOverride } from "./options.js";
 import { createRelatedPostsLoader } from "./related.js";
 
 export type {

@@ -1,5 +1,10 @@
-import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
-import { definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
+import type { EntryTypeOptions } from "plumix";
+import type {
+  EntryTypeLabels,
+  Overridable,
+  PluginDescriptor,
+} from "plumix/plugin";
+import { applyOverride, definePlugin, PLUGIN_I18N_SLOT } from "plumix/plugin";
 
 // Plain descriptor literals — plugin source runs server-side without
 // the Babel macro pipeline. Per-entity table mirrors `blog`'s shape;
@@ -48,24 +53,34 @@ const PAGE_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
-export const pages: PluginDescriptor = definePlugin("pages", {
-  i18n: PLUGIN_I18N_SLOT,
-  setup: (ctx) => {
-    ctx.registerEntryType("page", {
-      label: PAGE_LABELS.plural,
-      labels: PAGE_LABELS,
-      description: "Hierarchical static pages",
-      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
-      versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-      isHierarchical: true,
-      isPublic: true,
-      hasArchive: false,
-      rewrite: { slug: "" },
-      menuIcon: "layout",
-      keywords: [
-        { id: "plugin.pages.keyword.static", message: "static" },
-        { id: "plugin.pages.keyword.page", message: "page" },
-      ],
-    });
-  },
-});
+const PAGE_DEFAULTS: EntryTypeOptions = {
+  label: PAGE_LABELS.plural,
+  labels: PAGE_LABELS,
+  description: "Hierarchical static pages",
+  supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+  versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+  isHierarchical: true,
+  isPublic: true,
+  hasArchive: false,
+  rewrite: { slug: "" },
+  menuIcon: "layout",
+  keywords: [
+    { id: "plugin.pages.keyword.static", message: "static" },
+    { id: "plugin.pages.keyword.page", message: "page" },
+  ],
+};
+
+export interface PagesOptions {
+  /** `false` skips the registration entirely. */
+  readonly page?: Overridable<EntryTypeOptions> | false;
+}
+
+export function pages(options: PagesOptions = {}): PluginDescriptor {
+  return definePlugin("pages", {
+    i18n: PLUGIN_I18N_SLOT,
+    setup: (ctx) => {
+      if (options.page === false) return;
+      ctx.registerEntryType("page", applyOverride(PAGE_DEFAULTS, options.page));
+    },
+  });
+}
