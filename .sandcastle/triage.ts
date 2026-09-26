@@ -1,5 +1,5 @@
-import type { TriageCandidate } from "./lib/github.js";
 import type { Thinker } from "./lib/agent.js";
+import type { TriageCandidate } from "./lib/github.js";
 import type { IssueShape, TriageModels, TriageOutcome } from "./lib/triage.js";
 import { agentPhaseRunner } from "./lib/agent.js";
 import {

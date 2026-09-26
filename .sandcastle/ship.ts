@@ -1,18 +1,18 @@
+import type { Ticket } from "./lib/github.js";
+import type { ShipOutcome } from "./lib/ticket.js";
 import {
   closeCompletedParent,
+  firstUnblockedUnassignedTicket,
   parentsWithEveryChildClosed,
   parkTicket,
   releaseClaim,
   syncRepoToMain,
-  firstUnblockedUnassignedTicket,
   ticketByNumber,
 } from "./lib/github.js";
-import type { Ticket } from "./lib/github.js";
 import { drainAcrossLanes } from "./lib/lanes.js";
-import { looksLikeAnOutage } from "./lib/outage.js";
 import { say } from "./lib/log.js";
+import { looksLikeAnOutage } from "./lib/outage.js";
 import { Journal } from "./lib/telemetry.js";
-import type { ShipOutcome } from "./lib/ticket.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
@@ -119,7 +119,9 @@ const parked = results.filter(({ outcome }) => outcome.status !== "shipped");
 say(`\n${"=".repeat(60)}`);
 if (outage) {
   say(`Stopped early — nothing the tickets did:\n  ${outage}`);
-  say(`Every ticket still in flight kept its label, so the next run takes them.`);
+  say(
+    `Every ticket still in flight kept its label, so the next run takes them.`,
+  );
 }
 say(
   `Shipped ${shipped.length}, parked ${parked.length}, ${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
@@ -128,4 +130,5 @@ for (const { ticket, outcome } of shipped)
   if (outcome.status === "shipped")
     say(`  ✓ #${ticket.number} ${outcome.pullRequestUrl}`);
 for (const { ticket, outcome } of parked)
-  if (outcome.status === "blocked") say(`  ⚑ #${ticket.number} — ${outcome.reason}`);
+  if (outcome.status === "blocked")
+    say(`  ⚑ #${ticket.number} — ${outcome.reason}`);
