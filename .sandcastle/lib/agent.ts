@@ -31,15 +31,22 @@ export const taggedBlock = (stdout: string, tag: string): string | null =>
   stdout.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim() ??
   null;
 
+type Effort = NonNullable<sandcastle.ClaudeCodeOptions["effort"]>;
+
+export interface Thinker {
+  readonly model: string;
+  readonly effort: Effort;
+}
+
 export type RunAgentPhase = (
   phase: string,
-  model: string,
+  thinker: Thinker,
   options: Omit<sandcastle.SandboxRunOptions, "agent" | "logging" | "name">,
 ) => Promise<sandcastle.SandboxRunResult>;
 
 export const agentPhaseRunner =
   (sandbox: sandcastle.Sandbox, journal: Journal): RunAgentPhase =>
-  async (phase, model, options) => {
+  async (phase, { model, effort }, options) => {
     const clock = startClock();
     const logFile = journal.logPath(phase);
 
@@ -47,7 +54,7 @@ export const agentPhaseRunner =
       const result = await sandbox.run({
         ...options,
         name: phase,
-        agent: sandcastle.claudeCode(model),
+        agent: sandcastle.claudeCode(model, { effort }),
         logging: { type: "file", path: logFile },
       });
       const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
@@ -62,6 +69,7 @@ export const agentPhaseRunner =
         phase,
         kind: "agent",
         model,
+        effort,
         startedAt: clock.startedAt,
         durationMs: clock.elapsedMs(),
         outcome: "ok",
@@ -79,6 +87,7 @@ export const agentPhaseRunner =
         phase,
         kind: "agent",
         model,
+        effort,
         startedAt: clock.startedAt,
         durationMs: clock.elapsedMs(),
         outcome: "error",

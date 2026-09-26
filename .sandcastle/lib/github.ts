@@ -115,14 +115,22 @@ export const closeCompletedParent = (ticketNumber: number): void => {
   ]);
 };
 
-export const unblockedUnassignedTickets = (): readonly Ticket[] =>
-  listReadyTickets()
-    .filter(({ assignees }) => assignees.length === 0)
-    .sort((a, b) => a.number - b.number)
+export const firstUnblockedUnassignedTicket = (
+  alreadyTaken: ReadonlySet<number>,
+): Ticket | undefined => {
+  const waiting = listReadyTickets()
     .filter(
-      ({ number }) => countOpenBlockers(number) === 0 && !isParentIssue(number),
+      ({ assignees, number }) =>
+        assignees.length === 0 && !alreadyTaken.has(number),
     )
-    .map(({ number, title }) => ({ number, title }));
+    .sort((a, b) => a.number - b.number);
+
+  for (const { number, title } of waiting) {
+    if (countOpenBlockers(number) === 0 && !isParentIssue(number))
+      return { number, title };
+  }
+  return undefined;
+};
 
 export const ticketByNumber = (wanted: number): Ticket | undefined => {
   const { number, title, state } = ghJson<{
@@ -171,6 +179,18 @@ const releaseTicketsWaitingOn = (ticketNumber: number): void => {
       `repos/${REPO_SLUG}/issues/${waiting}/dependencies/blocked_by/${parkedId}`,
     ]);
   }
+};
+
+export const releaseClaim = (ticketNumber: number): void => {
+  gh([
+    "issue",
+    "edit",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--remove-assignee",
+    "@me",
+  ]);
 };
 
 export const parkTicket = (

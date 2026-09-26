@@ -1,3 +1,4 @@
+import type { Thinker } from "./lib/agent.js";
 import type { TriageCandidate } from "./lib/github.js";
 import type { IssueShape, TriageModels, TriageOutcome } from "./lib/triage.js";
 import { agentPhaseRunner } from "./lib/agent.js";
@@ -11,8 +12,9 @@ import {
   resetBranchToMain,
   syncRepoToMain,
 } from "./lib/github.js";
-import { drainAcrossLanes } from "./lib/lanes.js";
+import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
+import { looksLikeAnOutage } from "./lib/outage.js";
 import { createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
@@ -56,10 +58,20 @@ const readOptions = (argv: readonly string[]): TriageOptions => {
     budgetMs: Number(flag(argv, "hours") ?? DEFAULT_BUDGET_HOURS) * 3_600_000,
     dryRun: argv.includes("--dry-run"),
     models: {
-      assess: flag(argv, "assess-model") ?? DEFAULT_TRIAGE_MODELS.assess,
-      coldReader:
-        flag(argv, "cold-reader-model") ?? DEFAULT_TRIAGE_MODELS.coldReader,
+      assess: thinker(DEFAULT_TRIAGE_MODELS.assess, flag(argv, "assess")),
+      coldReader: thinker(
+        DEFAULT_TRIAGE_MODELS.coldReader,
+        flag(argv, "cold-reader"),
+      ),
     },
+  };
+};
+
+const thinker = (fallback: Thinker, spec: string | undefined): Thinker => {
+  const [model, effort] = (spec ?? "").split("@");
+  return {
+    model: model || fallback.model,
+    effort: (effort as Thinker["effort"]) || fallback.effort,
   };
 };
 
@@ -121,6 +133,7 @@ say(
 );
 
 const readyBeforeTheRun = readyForAgentCount();
+let outage: string | undefined;
 const branchTokenThatOutlivesAnInterruptedRun = new Date()
   .toISOString()
   .replace(/[:.]/g, "-")
@@ -137,9 +150,10 @@ const promotedSoFar = (settled: readonly TriageResult[]): number =>
   settled.filter(({ outcome }) => outcome.status === "promoted").length;
 
 const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
-  items: queue,
+  nextItem: drainingFrom(queue),
   lanes: laneCount,
   stopDispatchingWhen: (settled) =>
+    outage !== undefined ||
     Date.now() > endOfBudget ||
     (!onlyIssue && readyBeforeTheRun + promotedSoFar(settled) >= queueDepth),
   inLane: async (issue, lane) => {
@@ -159,10 +173,9 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
         models,
       );
     } catch (error) {
-      outcome = {
-        status: "skipped",
-        reason: error instanceof Error ? error.message : String(error),
-      };
+      const reason = error instanceof Error ? error.message : String(error);
+      if (looksLikeAnOutage(reason)) outage ??= reason;
+      outcome = { status: "skipped", reason };
     }
 
     journal.finish(outcome.status);
@@ -199,6 +212,9 @@ const numbersWithStatus = (status: TriageOutcome["status"]) =>
     .map(({ issue }) => issue.number);
 
 say(`\n${"=".repeat(60)}`);
+if (outage) {
+  say(`Stopped early — nothing the issues did:\n  ${outage}`);
+}
 say(
   `Promoted ${promoted.length}, closed ${numbersWithStatus("closed").length}, ` +
     `questioned ${numbersWithStatus("questioned").length}, ` +

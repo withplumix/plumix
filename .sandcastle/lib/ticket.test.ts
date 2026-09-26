@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { readFindingsTag, readPullRequestTag } from "./ticket.js";
+import { workersALaneOversubscribes } from "./sandbox.js";
+import {
+  readDeclinedTag,
+  readFindingsTag,
+  readPullRequestTag,
+} from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 
@@ -97,6 +102,32 @@ describe("gate applicability", () => {
     ).toBe(true);
   });
 
+  test("a test-only change to a published package needs no changeset", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.([
+        "packages/admin-editor/src/block-i18n.test.ts",
+        "packages/admin-editor/test/lingui-macro-stub.ts",
+        "packages/admin-editor/vitest.config.ts",
+        "packages/admin-editor/tsconfig.json",
+      ]),
+    ).toBe(false);
+  });
+
+  test("a source change beside a test still needs one", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.([
+        "packages/admin-editor/src/block-i18n.test.ts",
+        "packages/admin-editor/src/block-i18n.ts",
+      ]),
+    ).toBe(true);
+  });
+
+  test("the build config is not test-only, because it decides what ships", () => {
+    expect(
+      CHANGESET_GATE.appliesWhen?.(["packages/core/tsconfig.build.json"]),
+    ).toBe(true);
+  });
+
   test("the changeset gate does not apply to a tooling-only change", () => {
     expect(
       CHANGESET_GATE.appliesWhen?.(["tooling/eslint/src/rules/foo.ts"]),
@@ -111,5 +142,35 @@ describe("gate applicability", () => {
     expect(unconditional).toContain("typecheck");
     expect(unconditional).toContain("test");
     expect(unconditional).toContain("knip");
+  });
+});
+
+describe("readDeclinedTag", () => {
+  test("reads the reason a fixer gave for changing nothing", () => {
+    expect(
+      readDeclinedTag(
+        "chatter\n<declined>\nThe host is missing Playwright's system libraries.\n</declined>\nmore",
+      ),
+    ).toBe("The host is missing Playwright's system libraries.");
+  });
+
+  test("a fixer that simply committed declines nothing", () => {
+    expect(readDeclinedTag("done, committed as abc123")).toBeNull();
+  });
+
+  test("an empty block counts as no reason given", () => {
+    expect(readDeclinedTag("<declined>\n\n</declined>")).toBeNull();
+  });
+});
+
+describe("workersALaneOversubscribes", () => {
+  test("two lanes stay inside a ten-core host", () => {
+    expect(workersALaneOversubscribes(2)).toBeLessThanOrEqual(10);
+  });
+
+  test("the count grows with lanes, because every lane runs its own turbo", () => {
+    expect(workersALaneOversubscribes(4)).toBe(
+      workersALaneOversubscribes(2) * 2,
+    );
   });
 });

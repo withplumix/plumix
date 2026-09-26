@@ -38,7 +38,16 @@ const RENDER_AND_ADMIN_PATHS = [
   "apps/",
 ];
 
-const PUBLISHED_PACKAGE_PATHS = ["packages/"];
+const NEVER_REACHES_DIST =
+  /(\.(test|spec)\.[cm]?[jt]sx?$)|(\/(test|e2e|__tests__)\/)|(\/vitest\.config\.[cm]?[jt]s$)|(\/tsconfig\.json$)/;
+
+const changesSomethingConsumersInstall = (
+  changedPaths: readonly string[],
+): boolean =>
+  changedPaths.some(
+    (path) =>
+      path.startsWith("packages/") && !NEVER_REACHES_DIST.test(`/${path}`),
+  );
 
 export const GATES: readonly Gate[] = [
   { name: "check-no-major", command: "pnpm check-no-major" },
@@ -59,7 +68,8 @@ export const GATES: readonly Gate[] = [
     name: "e2e",
     command: "pnpm test:e2e",
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
-    requires: "pnpm --filter @plumix/admin exec playwright --version",
+    requires:
+      "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
   },
 ];
 
@@ -68,7 +78,7 @@ export const CHANGESET_GATE: Gate = {
   command:
     'test -n "$(git diff --name-only origin/main...HEAD -- .changeset/ | grep -v README)" ' +
     '|| { echo "A published package changed but no changeset was added. See AGENTS.md > Releases."; exit 1; }',
-  appliesWhen: touches(PUBLISHED_PACKAGE_PATHS),
+  appliesWhen: changesSomethingConsumersInstall,
 };
 
 export type Executor = Pick<sandcastle.Sandbox, "exec">;

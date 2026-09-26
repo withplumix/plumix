@@ -26,10 +26,16 @@ const CACHE_MOUNTS = [
   },
 ];
 
-const ENV_THAT_KEEPS_VITEST_INSIDE_THE_CONTAINER_MEMORY_LIMIT = {
+const TASKS_A_LANE_RUNS_AT_ONCE = 2;
+const WORKERS_EACH_OF_THOSE_TASKS_GETS = 2;
+
+export const workersALaneOversubscribes = (lanes: number): number =>
+  lanes * TASKS_A_LANE_RUNS_AT_ONCE * WORKERS_EACH_OF_THOSE_TASKS_GETS;
+
+const ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES = {
   TURBO_CACHE_DIR: "/home/agent/.turbo-cache",
-  TURBO_CONCURRENCY: "2",
-  VITEST_MAX_WORKERS: "2",
+  TURBO_CONCURRENCY: String(TASKS_A_LANE_RUNS_AT_ONCE),
+  VITEST_MAX_WORKERS: String(WORKERS_EACH_OF_THOSE_TASKS_GETS),
   PLAYWRIGHT_BROWSERS_PATH: "/home/agent/.cache/ms-playwright",
 };
 
@@ -48,7 +54,7 @@ const plumixContainer = () => {
     mkdirSync(hostPath, { recursive: true });
   return docker({
     mounts: CACHE_MOUNTS,
-    env: ENV_THAT_KEEPS_VITEST_INSIDE_THE_CONTAINER_MEMORY_LIMIT,
+    env: ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES,
   });
 };
 

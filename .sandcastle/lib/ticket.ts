@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import type { RunAgentPhase } from "./agent.js";
-import type { GateFailure } from "./gates.js";
+import type { RunAgentPhase, Thinker } from "./agent.js";
+import type { Executor, GateFailure } from "./gates.js";
 import type { Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
@@ -38,8 +38,8 @@ import {
   HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
 
-const IMPLEMENTER_MODEL = "claude-opus-5-5";
-const REVIEWER_MODEL = "claude-sonnet-5";
+const IMPLEMENTER: Thinker = { model: "claude-opus-5-5", effort: "medium" };
+const REVIEWER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
@@ -103,6 +103,9 @@ export const readFindingsTag = (stdout: string): Review => {
   return { findings: parsed.data.findings, emittedParseableFindings: true };
 };
 
+export const readDeclinedTag = (stdout: string): string | null =>
+  taggedBlock(stdout, "declined") || null;
+
 export interface PullRequestCopy {
   readonly title: string;
   readonly body: string;
@@ -151,14 +154,19 @@ const reviewAll = async (
   journal: Journal,
   ticket: Ticket,
   round: number,
+  pullRequestBody: string,
 ): Promise<readonly Finding[]> => {
   const collected: Finding[] = [];
 
   for (const reviewer of REVIEWERS) {
     const phase = `review:${reviewer.name}#${round}`;
-    const { stdout } = await runAgentPhase(phase, REVIEWER_MODEL, {
+    const { stdout } = await runAgentPhase(phase, REVIEWER, {
       promptFile: join(PROMPT_DIR, reviewer.promptFile),
-      promptArgs: { TICKET: String(ticket.number), BASE: MERGE_BASE },
+      promptArgs: {
+        TICKET: String(ticket.number),
+        BASE: MERGE_BASE,
+        PR_BODY: pullRequestBody,
+      },
       maxIterations: 1,
       idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
     });
@@ -167,7 +175,7 @@ const reviewAll = async (
     journal.record({
       phase: `${phase}:findings`,
       kind: "review",
-      model: REVIEWER_MODEL,
+      model: REVIEWER.model,
       startedAt: new Date().toISOString(),
       durationMs: 0,
       outcome: review.emittedParseableFindings ? "ok" : "fail",
@@ -180,6 +188,27 @@ const reviewAll = async (
   }
 
   return collected;
+};
+
+const surveyMainForAlreadyRedGates = async (
+  sandbox: Executor,
+  journal: Journal,
+): Promise<readonly string[]> => {
+  const { failures } = await runGates(sandbox, GATES, {
+    stopAtFirstFailure: false,
+    onResult: (result) =>
+      journal.record({
+        phase: `baseline:${result.name}`,
+        kind: "gate",
+        startedAt: result.startedAt,
+        durationMs: result.durationMs,
+        outcome: result.outcome,
+        detail: result.skippedBecause,
+        command: result.command,
+        exitCode: result.exitCode,
+      }),
+  });
+  return failures.map(({ name }) => name);
 };
 
 export const shipTicket = async (
@@ -203,21 +232,10 @@ export const shipTicket = async (
 
   try {
     say("\n--- baseline gates on main ---");
-    const baseline = await runGates(sandbox, GATES, {
-      stopAtFirstFailure: false,
-      onResult: (result) =>
-        journal.record({
-          phase: `baseline:${result.name}`,
-          kind: "gate",
-          startedAt: result.startedAt,
-          durationMs: result.durationMs,
-          outcome: result.outcome,
-          detail: result.skippedBecause,
-          command: result.command,
-          exitCode: result.exitCode,
-        }),
-    });
-    const gatesAlreadyRedOnMain = baseline.failures.map(({ name }) => name);
+    const gatesAlreadyRedOnMain = await surveyMainForAlreadyRedGates(
+      sandbox,
+      journal,
+    );
     if (gatesAlreadyRedOnMain.length > 0) {
       say(
         `  already red on main, will not be this ticket's problem: ${gatesAlreadyRedOnMain.join(", ")}`,
@@ -228,7 +246,7 @@ export const shipTicket = async (
     );
 
     say("\n--- implement ---");
-    const implemented = await runAgentPhase("implement", IMPLEMENTER_MODEL, {
+    const implemented = await runAgentPhase("implement", IMPLEMENTER, {
       promptFile: join(PROMPT_DIR, "implement.md"),
       promptArgs: { TICKET: String(ticket.number) },
       maxIterations: 40,
@@ -247,8 +265,8 @@ export const shipTicket = async (
     let pass = 0;
     let advisory: readonly Finding[] = [];
 
-    const applyFixes = async (brief: string): Promise<void> => {
-      const fixed = await runAgentPhase(`fix#${pass}`, IMPLEMENTER_MODEL, {
+    const applyFixes = async (brief: string): Promise<string | null> => {
+      const fixed = await runAgentPhase(`fix#${pass}`, IMPLEMENTER, {
         promptFile: join(PROMPT_DIR, "fix.md"),
         promptArgs: { FINDINGS: brief },
         maxIterations: ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION,
@@ -256,6 +274,11 @@ export const shipTicket = async (
         resumeSession: sessionToResume,
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
+      if (fixed.commits.length > 0) return null;
+      return (
+        readDeclinedTag(fixed.stdout) ??
+        "the fixer changed nothing and gave no reason"
+      );
     };
 
     while (true) {
@@ -286,12 +309,24 @@ export const shipTicket = async (
           };
         }
         say(`--- fix gate failure (${gateFixes}/${MAX_GATE_FIX_ROUNDS}) ---`);
-        await applyFixes(asGateFailureBrief(failure));
+        const declined = await applyFixes(asGateFailureBrief(failure));
+        if (declined) {
+          return {
+            status: "blocked",
+            reason: `\`${failure.command}\` still fails and the fixer changed nothing:\n\n${declined}`,
+          };
+        }
         continue;
       }
 
       say(`--- review (pass ${pass}) ---`);
-      const findings = await reviewAll(runAgentPhase, journal, ticket, pass);
+      const findings = await reviewAll(
+        runAgentPhase,
+        journal,
+        ticket,
+        pass,
+        pullRequestCopy.body,
+      );
       const blocking = findings.filter(
         ({ severity }) => severity === BLOCKING_SEVERITY,
       );
@@ -310,7 +345,13 @@ export const shipTicket = async (
       say(
         `--- fix ${blocking.length} ${BLOCKING_SEVERITY} finding(s) (${reviewFixes}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
-      await applyFixes(asFixBrief(blocking));
+      const declined = await applyFixes(asFixBrief(blocking));
+      if (declined) {
+        return {
+          status: "blocked",
+          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined}`,
+        };
+      }
     }
 
     say("\n--- land ---");
@@ -381,9 +422,16 @@ export const shipTicket = async (
         `--- fix ${merge.failingChecks.length} failing CI check(s) (${landFixes}/${MAX_LAND_FIX_ROUNDS}) ---`,
       );
       pass += 1;
-      await applyFixes(
+      const declinedAtLanding = await applyFixes(
         await reproduceFailingChecks(sandbox, merge.failingChecks),
       );
+      if (declinedAtLanding) {
+        return {
+          status: "blocked",
+          reason: `CI is red and the fixer changed nothing:\n\n${declinedAtLanding}`,
+          pullRequestUrl: pullRequest.url,
+        };
+      }
       rePushBranch(branch, sandbox.worktreePath);
     }
 

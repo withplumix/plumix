@@ -37,6 +37,7 @@ export interface PhaseRecord {
   readonly phase: string;
   readonly kind: "agent" | "gate" | "review";
   readonly model?: string;
+  readonly effort?: string;
   readonly startedAt: string;
   readonly durationMs: number;
   readonly outcome: "ok" | "fail" | "error" | "skipped";
