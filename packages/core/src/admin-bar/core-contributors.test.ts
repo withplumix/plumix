@@ -7,7 +7,6 @@ import { collectAdminBarNodes } from "./collect.js";
 import { registerCoreAdminBarContributors } from "./core-contributors.js";
 
 const allow = (): boolean => true;
-const deny = (): boolean => false;
 
 function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
   return {
@@ -263,17 +262,17 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
   });
 
-  test("appears for a non-author when auth allows edit_any", () => {
+  test("appears when the renderer says the caller can edit, without asking auth", () => {
     const seen: string[] = [];
     const nodes = collectAdminBarNodes(
       withCore(),
       ctx({
         queriedEntry: { kind: "entry", id: 42 },
-        queriedEntryDetails: { type: "post", authorId: 999 },
+        queriedEntryDetails: { type: "post", canEdit: true },
         auth: {
           can: (cap: string) => {
             seen.push(cap);
-            return cap === "entry:post:edit_any";
+            return false;
           },
         },
       }),
@@ -287,70 +286,26 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
       group: "primary",
       position: 20,
     });
-    expect(seen).toContain("entry:post:edit_any");
+    expect(seen.filter((cap) => cap.startsWith("entry:"))).toEqual([]);
   });
 
-  test("gates a type pooled onto post by entry:post:*, never entry:news:*", () => {
+  test("does not appear when the renderer says the caller cannot edit", () => {
     const seen: string[] = [];
     const nodes = collectAdminBarNodes(
       withCore(),
       ctx({
         queriedEntry: { kind: "entry", id: 42 },
-        queriedEntryDetails: { type: "news", authorId: 999 },
-        entryTypes: new Map([
-          [
-            "news",
-            toRegisteredEntryType(
-              "news",
-              { label: "News", capabilityType: "post" },
-              "test",
-            ),
-          ],
-        ]),
+        queriedEntryDetails: { type: "post", canEdit: false },
         auth: {
           can: (cap: string) => {
             seen.push(cap);
-            return cap === "entry:post:edit_any";
+            return true;
           },
         },
-      }),
-    );
-
-    expect(nodes.find((n) => n.id === "edit-this")).toBeDefined();
-    expect(seen).toContain("entry:post:edit_any");
-    expect(seen).not.toContain("entry:news:edit_any");
-  });
-
-  test("appears for the entry's author when auth allows edit_own", () => {
-    const seen: string[] = [];
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        queriedEntry: { kind: "entry", id: 7 },
-        queriedEntryDetails: { type: "post", authorId: 1 },
-        auth: {
-          can: (cap: string) => {
-            seen.push(cap);
-            return cap === "entry:post:edit_own";
-          },
-        },
-      }),
-    );
-
-    expect(nodes.find((n) => n.id === "edit-this")).toBeDefined();
-    expect(seen).toContain("entry:post:edit_own");
-  });
-
-  test("does not appear when user lacks the capability for own or any", () => {
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        queriedEntry: { kind: "entry", id: 7 },
-        queriedEntryDetails: { type: "post", authorId: 999 },
-        auth: { can: deny },
       }),
     );
 
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
+    expect(seen.filter((cap) => cap.startsWith("entry:"))).toEqual([]);
   });
 });

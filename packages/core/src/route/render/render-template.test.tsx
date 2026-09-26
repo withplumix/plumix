@@ -508,6 +508,65 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('data-testid="plumix-admin-bar"');
   });
 
+  describe("the admin bar's Edit link follows canEditEntry", () => {
+    async function renderPostAs(
+      viewerRole: "contributor" | "editor",
+      authoredBy: "viewer" | "other",
+    ): Promise<{ body: string; entryId: number }> {
+      const theme = defineTheme({
+        templates: [
+          fallback(() => null),
+          entry(({ data }) => <article>{data.entry.title}</article>),
+        ],
+      });
+      const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+      const viewer = await h.seedUser(viewerRole);
+      const author =
+        authoredBy === "viewer" ? viewer : await h.seedUser("author");
+      const post = await h.factory.entry.create({
+        type: "post",
+        slug: "public",
+        title: "Public",
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(),
+      });
+
+      const request = await h.authenticateRequest(
+        new Request("https://cms.example/post/public"),
+        viewer.id,
+      );
+      const response = await h.dispatch(request);
+      return { body: await response.text(), entryId: post.id };
+    }
+
+    test("a contributor viewing their own post is offered Edit", async () => {
+      const { body, entryId } = await renderPostAs("contributor", "viewer");
+
+      expect(body).toContain(
+        `href="/_plumix/admin/entries/posts/${entryId}/edit"`,
+      );
+    });
+
+    test("a contributor viewing another author's post is not offered Edit", async () => {
+      const { body, entryId } = await renderPostAs("contributor", "other");
+
+      expect(body).toContain('data-testid="plumix-admin-bar"');
+      expect(body).not.toContain(
+        `/_plumix/admin/entries/posts/${entryId}/edit`,
+      );
+    });
+
+    test("an editor viewing another author's post is offered Edit", async () => {
+      const { body, entryId } = await renderPostAs("editor", "other");
+
+      expect(body).toContain(
+        `href="/_plumix/admin/entries/posts/${entryId}/edit"`,
+      );
+    });
+  });
+
   test("edit-mode render does NOT carry the PlumixAdminBar", async () => {
     const theme = defineTheme({
       templates: [

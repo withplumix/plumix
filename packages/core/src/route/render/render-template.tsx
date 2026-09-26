@@ -44,6 +44,7 @@ import {
 } from "../../dev/debug-panels/template-node-label.js";
 import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
+import { canEditEntry } from "../../entries/editability.js";
 import { escapeHtml } from "../../escape-html.js";
 import { nonEmpty } from "../../non-empty.js";
 import { applyCanonical } from "../../seo/canonical.js";
@@ -466,7 +467,7 @@ function renderTree({
     template.render({ ...deps, data, ctx });
   const queriedEntryDetails =
     "entry" in data
-      ? { type: data.entry.type, authorId: data.entry.authorId }
+      ? { type: data.entry.type, canEdit: canEditEntry(ctx, data.entry) }
       : undefined;
   // Body shortcodes get the post-expansion entry — its `title` is already
   // rendered, not the raw `[year]` source the title pass itself expands.
