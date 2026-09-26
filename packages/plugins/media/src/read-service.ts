@@ -6,13 +6,14 @@ import { entries } from "plumix/schema";
 import { escapeLikePattern, withBasePath } from "plumix/support";
 import * as v from "valibot";
 
+import { mediaAcceptSchema } from "./accept.js";
 import { parseMediaMeta } from "./meta.js";
 
 export const MEDIA_ENTRY_TYPE = "media";
 const MEDIA_READ_CAPABILITY = "entry:media:read";
 
-const DEFAULT_PAGE_SIZE = 24;
-const MAX_PAGE_SIZE = 100;
+export const DEFAULT_PAGE_SIZE = 24;
+export const MAX_PAGE_SIZE = 100;
 
 // 320px-wide auto-format thumbnail — enough for the 160px admin card at 2× DPI.
 const THUMBNAIL_OPTS = { width: 320, format: "auto", fit: "cover" } as const;
@@ -26,12 +27,7 @@ export const mediaListInputSchema = v.object({
   // MIME filter: string form (`"image/"`) does a `LIKE 'image/%'` prefix match;
   // array form matches the listed MIMEs exactly. Pushed into SQL so `limit`
   // counts only matching rows.
-  accept: v.optional(
-    v.union([
-      v.pipe(v.string(), v.maxLength(64)),
-      v.pipe(v.array(v.pipe(v.string(), v.maxLength(64))), v.maxLength(32)),
-    ]),
-  ),
+  accept: v.optional(mediaAcceptSchema),
   search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
 });
 
@@ -103,27 +99,12 @@ export async function listMedia(
     throw MediaReadError.forbidden(MEDIA_READ_CAPABILITY);
   }
 
-  const conditions: SQL[] = [
-    eq(entries.type, MEDIA_ENTRY_TYPE),
-    eq(entries.status, "published"),
-  ];
-  const acceptCondition = buildAcceptCondition(input.accept);
-  if (acceptCondition) conditions.push(acceptCondition);
-  if (input.search) {
-    const pattern = `%${escapeLikePattern(input.search)}%`;
-    conditions.push(sql`(
-      ${entries.title} LIKE ${pattern} ESCAPE '\\'
-      OR COALESCE(json_extract(${entries.meta}, '$.alt'), '') LIKE ${pattern} ESCAPE '\\'
-    )`);
-  }
-
-  const rows = await ctx.db
-    .select()
-    .from(entries)
-    .where(and(...conditions))
-    .orderBy(desc(entries.updatedAt), desc(entries.id))
-    .limit(input.limit + 1)
-    .offset(input.offset);
+  const rows = await queryMediaRows(ctx, {
+    accept: input.accept,
+    search: input.search,
+    limit: input.limit + 1,
+    offset: input.offset,
+  });
   const hasMore = rows.length > input.limit;
   const visibleRows = hasMore ? rows.slice(0, input.limit) : rows;
 
@@ -134,6 +115,45 @@ export async function listMedia(
     items.push(await buildMediaItem(ctx, row, meta));
   }
   return { items, hasMore };
+}
+
+interface MediaRowQuery {
+  readonly accept: string | readonly string[] | undefined;
+  readonly search: string | undefined;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+/**
+ * The one media list query — every surface that lists media (library, picker,
+ * REST, MCP, the lookup browse path) runs it, so they agree on which rows
+ * match and in what order. Callers own the capability gate and the row shape.
+ */
+export async function queryMediaRows(
+  ctx: AppContext,
+  query: MediaRowQuery,
+): Promise<Entry[]> {
+  const conditions: SQL[] = [
+    eq(entries.type, MEDIA_ENTRY_TYPE),
+    eq(entries.status, "published"),
+  ];
+  const acceptCondition = buildAcceptCondition(query.accept);
+  if (acceptCondition) conditions.push(acceptCondition);
+  if (query.search) {
+    const pattern = `%${escapeLikePattern(query.search)}%`;
+    conditions.push(sql`(
+      ${entries.title} LIKE ${pattern} ESCAPE '\\'
+      OR COALESCE(json_extract(${entries.meta}, '$.alt'), '') LIKE ${pattern} ESCAPE '\\'
+    )`);
+  }
+
+  return ctx.db
+    .select()
+    .from(entries)
+    .where(and(...conditions))
+    .orderBy(desc(entries.updatedAt), desc(entries.id))
+    .limit(query.limit)
+    .offset(query.offset);
 }
 
 /**
@@ -239,7 +259,7 @@ export async function purgeVariants(
 // Translate `accept` into a SQL predicate against the JSON `mime` field. Real
 // MIME strings don't contain LIKE wildcards and the input is plugin/agent
 // supplied, so no escaping is needed.
-function buildAcceptCondition(
+export function buildAcceptCondition(
   accept: string | readonly string[] | undefined,
 ): SQL | undefined {
   if (accept === undefined) return undefined;

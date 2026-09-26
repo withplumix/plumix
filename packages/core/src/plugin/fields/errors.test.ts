@@ -99,3 +99,20 @@ describe("FieldConfigError — sub-field factories", () => {
     expect(err.message).toContain("not a field in the same row");
   });
 });
+
+describe("FieldConfigError.acceptOutOfBounds", () => {
+  test("names the field, the accept and the limits it broke", () => {
+    const err = FieldConfigError.acceptOutOfBounds({
+      fieldKey: "file",
+      accept: "a".repeat(65),
+      maxLength: 64,
+      maxItems: 32,
+    });
+    expect(err).toBeInstanceOf(FieldConfigError);
+    expect(err.code).toBe("accept_out_of_bounds");
+    expect(err.fieldKey).toBe("file");
+    expect(err.message).toContain('field "file"');
+    expect(err.message).toContain("64 characters");
+    expect(err.message).toContain("32 types");
+  });
+});

@@ -189,6 +189,29 @@ describe("media() builder", () => {
     },
   );
 
+  test.each([
+    { case: "a prefix over 64 characters", accept: "a".repeat(65) },
+    {
+      case: "a list of 33 types",
+      accept: Array.from({ length: 33 }, (_, i) => `image/x-${String(i)}`),
+    },
+    { case: "a listed type over 64 characters", accept: ["a".repeat(65)] },
+  ])("rejects an accept media.list would refuse ($case)", ({ accept }) => {
+    const build = () => media("file").accept(accept);
+    expect(build).toThrow(FieldConfigError);
+    expect(build).toThrow(/accept/);
+  });
+
+  test("keeps an accept at the list limits", () => {
+    const accept = Array.from({ length: 32 }, () => "a".repeat(64));
+    expect(media("file").accept(accept).build().referenceTarget.scope).toEqual({
+      accept,
+    });
+    expect(
+      media("file").accept("a".repeat(64)).build().referenceTarget.scope,
+    ).toEqual({ accept: "a".repeat(64) });
+  });
+
   test(".role() only takes a declared role name", () => {
     // @ts-expect-error — "typo" is not a key of ImageRoles
     media("cover").role("typo");

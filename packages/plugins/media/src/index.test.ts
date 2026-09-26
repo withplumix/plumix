@@ -865,6 +865,117 @@ describe("@plumix/plugin-media — media.list", () => {
   });
 });
 
+interface LookupListOutput {
+  readonly items: readonly { readonly id: string }[];
+}
+
+async function seedMediaRow(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  authorId: number,
+  row: {
+    readonly title: string;
+    readonly alt?: string;
+    readonly publishedAt?: Date;
+    readonly updatedAt?: Date;
+  },
+): Promise<string> {
+  const entry = await h.factory.entry.create({
+    type: "media",
+    status: "published",
+    title: row.title,
+    authorId,
+    ...(row.publishedAt ? { publishedAt: row.publishedAt } : {}),
+    ...(row.updatedAt ? { updatedAt: row.updatedAt } : {}),
+    meta: {
+      mime: "image/png",
+      size: 8,
+      storageKey: `media/${row.title}`,
+      originalName: row.title,
+      alt: row.alt ?? null,
+    },
+  });
+  return String(entry.id);
+}
+
+describe("@plumix/plugin-media — lookup.list browse", () => {
+  test("returns the ids media.list returns for the same search, in the same order", async () => {
+    const h = await createDispatcherHarness({ plugins: [media()] });
+    const user = await h.seedUser("editor");
+    // Published order is the reverse of updated order, so the two lists
+    // agree only when they sort on the same column.
+    const editedLater = await seedMediaRow(h, user.id, {
+      title: "alpha-old.png",
+      publishedAt: new Date("2026-01-02T00:00:00Z"),
+      updatedAt: new Date("2026-03-01T00:00:00Z"),
+    });
+    const publishedLater = await seedMediaRow(h, user.id, {
+      title: "alpha-new.png",
+      publishedAt: new Date("2026-02-01T00:00:00Z"),
+      updatedAt: new Date("2026-02-02T00:00:00Z"),
+    });
+    await seedMediaRow(h, user.id, { title: "beta.png" });
+
+    const lookup = await rpcDispatch<LookupListOutput>(
+      h,
+      "lookup/list",
+      { kind: "media", query: "alpha" },
+      user.id,
+    );
+    const listed = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { search: "alpha" },
+      user.id,
+    );
+    expect(lookup.output?.items.map((item) => item.id)).toEqual([
+      editedLater,
+      publishedLater,
+    ]);
+    expect(listed.output?.items.map((item) => String(item.id))).toEqual([
+      editedLater,
+      publishedLater,
+    ]);
+  });
+
+  test("matches alt text as well as the title", async () => {
+    const h = await createDispatcherHarness({ plugins: [media()] });
+    const user = await h.seedUser("editor");
+    const byAlt = await seedMediaRow(h, user.id, {
+      title: "IMG_0042.png",
+      alt: "A sunset over the bay",
+    });
+    await seedMediaRow(h, user.id, { title: "IMG_0043.png", alt: "A harbour" });
+
+    const lookup = await rpcDispatch<LookupListOutput>(
+      h,
+      "lookup/list",
+      { kind: "media", query: "sunset" },
+      user.id,
+    );
+    expect(lookup.output?.items.map((item) => item.id)).toEqual([byAlt]);
+  });
+
+  test.each(["%", "_"])(
+    "treats a %s in the query as a literal character",
+    async (wildcard) => {
+      const h = await createDispatcherHarness({ plugins: [media()] });
+      const user = await h.seedUser("editor");
+      const literal = await seedMediaRow(h, user.id, {
+        title: `discount-50${wildcard}.png`,
+      });
+      await seedMediaRow(h, user.id, { title: "discount-500.png" });
+
+      const lookup = await rpcDispatch<LookupListOutput>(
+        h,
+        "lookup/list",
+        { kind: "media", query: `50${wildcard}` },
+        user.id,
+      );
+      expect(lookup.output?.items.map((item) => item.id)).toEqual([literal]);
+    },
+  );
+});
+
 describe("@plumix/plugin-media — media.delete", () => {
   test("removes the row + the storage object for the owner", async () => {
     const storage = memoryStorage().connect({});

@@ -110,7 +110,7 @@ describe("mediaLookupAdapter", () => {
     expect(rows).toEqual([]);
   });
 
-  test("list({ query }) searches by title and orders by publishedAt desc", async () => {
+  test("list({ query }) searches by title", async () => {
     const h = await harnessWithMediaPlugin();
     await seedMedia(h, {
       title: "alpha.png",
