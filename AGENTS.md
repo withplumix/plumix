@@ -76,6 +76,12 @@ The `plumix` package re-exports the public API surface from the internal `@plumi
 
 This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by ESLint's `no-restricted-imports` rule via the `noInternalImports` config in `@plumix/eslint-config`, which consumer packages opt into.
 
+### Core's layers
+
+`@plumix/core` is one package, arranged in layers that import only downward: `foundation` → `contracts` → `capabilities` → `surfaces` → `top` ([ADR 0010](docs/adr/0010-core-is-one-package-of-enforced-layers.md) has the table). Each folder belongs to exactly one layer. When a subsystem spans two layers, its lower half lives in a colocated `contract/` subfolder. `top` is the composition root and the assembled façades. Nothing inside core imports it. `import type` and dynamic `import()` count as edges, and no two subsystems in the same layer may import each other in a cycle. Each folder is also either client-safe or server-only, and nothing reachable from a client entry may reach server-only code.
+
+When new code needs something from a higher layer, move the contract down. Don't point the import up. Don't reach for a new package either: splitting a layer into its own package waits on the trigger the ADR names.
+
 ### Plugin model
 
 A plugin is a descriptor built with `definePlugin` (from `plumix/plugin`); options-taking plugins export a factory returning one instead — `menu({ locations })`, `media(...)`, `auditLog(...)`. The descriptor declares the plugin's schema (drizzle tables), routes, RPC procedures, admin routes/components, hooks, and capabilities. First-party plugins under `packages/plugins/*` are the canonical examples.
