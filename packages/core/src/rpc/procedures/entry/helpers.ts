@@ -1,4 +1,5 @@
 import type { SelectableAccessPolicy } from "../../../plugin/manifest.js";
+import type { BadRequestErrors } from "../../errors.js";
 import type { MetaPatch } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
@@ -75,10 +76,6 @@ export function withAccessChoice(
   return { upserts, deletes: [...deletes] };
 }
 
-interface AccessChoiceErrors {
-  BAD_REQUEST: (args: { data: { reason: string } }) => Error;
-}
-
 /**
  * Reject a per-entry access `key` the entry type doesn't declare — the
  * enforcement behind "an editor cannot select a policy the developer didn't
@@ -90,7 +87,7 @@ interface AccessChoiceErrors {
 export function assertAccessChoiceDeclared(
   policies: readonly SelectableAccessPolicy[] | undefined,
   access: string | null | undefined,
-  errors: Pick<AccessChoiceErrors, "BAD_REQUEST">,
+  errors: BadRequestErrors,
 ): void {
   if (access === undefined || access === null) return;
   if (!policies?.some((policy) => policy.key === access)) {

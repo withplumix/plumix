@@ -1,15 +1,10 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry } from "../../../db/schema/entries.js";
-import type { EntryEditErrors } from "../../../entries/editability.js";
+import type { GatedLookupErrors } from "../../errors.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import { getAutosave } from "../../../revisions/repository.js";
-
-/** Extends the edit gate's own shape, so the two cannot drift apart. */
-export interface PreviewableEntryErrors extends EntryEditErrors {
-  readonly NOT_FOUND: (opts: { data: { kind: string; id: number } }) => Error;
-}
 
 export interface PreviewableEntryInput {
   readonly entryId: number;
@@ -40,7 +35,7 @@ export interface PreviewableEntryInput {
 export async function previewableEntry(
   ctx: AuthenticatedAppContext,
   input: PreviewableEntryInput,
-  errors: PreviewableEntryErrors,
+  errors: GatedLookupErrors,
 ): Promise<Entry> {
   const { entryId, entryTypes } = input;
   const [row] = await ctx.db

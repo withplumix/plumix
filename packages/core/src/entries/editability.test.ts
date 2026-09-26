@@ -1,3 +1,5 @@
+import { createORPCErrorConstructorMap, ORPCError } from "@orpc/server";
+import * as v from "valibot";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AuthenticatedUser } from "../context/app.js";
@@ -5,6 +7,7 @@ import type { PluginRegistry } from "../plugin/registry.js";
 import type { EntryEditRow } from "./editability.js";
 import type { EntryViewer } from "./visibility.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { RPC_ERRORS } from "../rpc/errors.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { assertCanEditEntry, canEditEntry } from "./editability.js";
 
@@ -31,18 +34,17 @@ function row(authorId: number | null, type = "post"): EntryEditRow {
   return { type, authorId };
 }
 
-const errors = {
-  FORBIDDEN: (opts: { data: { capability: string } }) =>
-    Object.assign(new Error("forbidden"), {
-      capability: opts.data.capability,
-    }),
-};
+const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 
 function denial(ctx: EntryViewer, entry: EntryEditRow): string {
   try {
     assertCanEditEntry(ctx, entry, errors);
   } catch (thrown) {
-    return (thrown as { capability: string }).capability;
+    if (!(thrown instanceof ORPCError) || thrown.code !== "FORBIDDEN") {
+      throw thrown;
+    }
+    const data: unknown = thrown.data;
+    return v.parse(v.object({ capability: v.string() }), data).capability;
   }
   throw new Error("expected a denial");
 }

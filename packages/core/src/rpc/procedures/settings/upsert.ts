@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import type { JsonValue } from "../../../json.js";
-import type { RpcErrorsForMeta } from "../../meta/core.js";
+import type { ConflictErrors } from "../../errors.js";
 import type { MetaFieldError } from "../../meta/field-pipeline.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
@@ -171,7 +171,7 @@ function assertEncodedSize(
   group: string,
   key: string,
   value: JsonValue,
-  errors: RpcErrorsForMeta,
+  errors: ConflictErrors,
 ): void {
   const byteLength = new TextEncoder().encode(JSON.stringify(value)).length;
   if (byteLength > MAX_SETTINGS_VALUE_BYTES) {

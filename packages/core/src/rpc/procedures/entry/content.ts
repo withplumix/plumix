@@ -1,24 +1,15 @@
-import type {
-  BlockContentValidationIssue,
-  BlockRegistry,
-} from "@plumix/blocks";
+import type { BlockRegistry } from "@plumix/blocks";
 import { isEntryContent, validateEntryContent } from "@plumix/blocks";
 
 import type { EntryContent } from "../../../db/schema/entries.js";
+import type { BlockContentErrors, ConflictErrors } from "../../errors.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
-
-interface ContentErrors {
-  CONFLICT: (args: { data: { reason: string } }) => Error;
-  INVALID_BLOCK_CONTENT: (args: {
-    data: { issues: BlockContentValidationIssue[] };
-  }) => Error;
-}
 
 // valibot can't measure the post-serialize size of a structural payload,
 // so the cap lives here instead of on the schema.
 export function assertContentWithinByteCap(
   content: EntryContent | null | undefined,
-  errors: Pick<ContentErrors, "CONFLICT">,
+  errors: ConflictErrors,
 ): void {
   if (content == null) return;
   if (JSON.stringify(content).length > MAX_CONTENT_BYTES) {
@@ -29,7 +20,7 @@ export function assertContentWithinByteCap(
 export function assertContentValidAgainstRegistries(
   content: EntryContent | null | undefined,
   registries: { readonly blocks: BlockRegistry },
-  errors: Pick<ContentErrors, "INVALID_BLOCK_CONTENT">,
+  errors: BlockContentErrors,
 ): void {
   if (content == null) return;
   // Only the v2 envelope round-trips through validation. Legacy payloads
