@@ -3,10 +3,7 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
-import type { RouteIntent } from "../route/intent.js";
-import type { RouteMatch } from "../route/match.js";
-import type { PublicRouteMatch } from "../route/public-routes.js";
-import type { RedirectResolution } from "../route/redirects.js";
+import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
 import {
   gateToResponse,
@@ -46,23 +43,21 @@ import {
   listedEntryTypeNames,
   termPageEntryTypeNames,
 } from "../plugin/registry.js";
-import { matchRoute } from "../route/match.js";
-import { matchPublicRoute } from "../route/public-routes.js";
-import { matchRedirect } from "../route/redirects.js";
-import { renderErrorThroughTheme } from "../route/render/render-template.js";
-import { resolvePublicRoute } from "../route/resolve.js";
-import { canonicalRedirectTarget } from "../seo/canonical.js";
+import {
+  cacheableAssetNotFound,
+  renderErrorThroughTheme,
+  routePublicRequest,
+  STATIC_ASSET_EXT,
+} from "../route/index.js";
 import {
   injectAdminBaseHref,
   rewriteAdminShellLangDir,
 } from "./admin-shell.js";
 import {
   forbidden,
-  gone,
   jsonResponse,
   methodNotAllowed,
   notFound,
-  permanentRedirect,
   redirect,
   withNoStore,
 } from "./http.js";
@@ -114,24 +109,6 @@ function loadAuthFlowRoutes(): Promise<typeof AuthFlowRoutes> {
 // Filenames look like `index.html`, `chunk-abc.js`, `fonts/g.woff2` — paths
 // with a dot-suffix after the last slash. Deep-link SPA routes never match.
 const ASSET_LIKE = /\.[^/]+$/;
-
-// Extensions that only ever name static assets (favicon.ico, hashed chunks,
-// images, fonts). Slugs are slug-shaped by schema — never contain dots — so no
-// entry or term URL can collide (#1491). Deliberately excludes
-// content-plausible extensions (`.txt`, `.xml`, `.json`, `.html`) so routes
-// like an `ads.txt` or podcast-feed plugin keep working.
-const STATIC_ASSET_EXT =
-  /\.(?:ico|css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|wasm)$/i;
-
-// Cacheable because the extension check makes the path permanently
-// unroutable — a short TTL only bounds "a deploy added this asset". The
-// CDN stores GET+200 only, so this reaches browsers/CDNs, not the
-// shared read-through layer.
-function cacheableAssetNotFound(hint: string): Response {
-  const response = notFound(hint);
-  response.headers.set("cache-control", "public, max-age=300");
-  return response;
-}
 
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
 // Maps a path to its handler accessor on the lazily-loaded module, so the map
@@ -470,53 +447,22 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return tryPublicRoutes(app, ctx, url);
 }
 
-// The public site: only GET/HEAD are meaningful past this point. A plugin's
-// registered public routes answer first — `/robots.txt`, the sitemap and the
-// feeds are all plugin-owned now, and each answers ahead of the redirect table
-// so no rewrite rule can shadow one. Then a non-canonical URL 301s to its
-// slash-less form before the route map runs, and anything left renders through
-// the public router.
-async function tryPublicRoutes(
+// The public site. The route unit answers everything it can on its own; a
+// public route is served here, on the CDN terms it opted into.
+function tryPublicRoutes(
   app: PlumixApp,
   ctx: AppContext,
   url: URL,
 ): Promise<Response> {
-  const { pathname } = url;
-  if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
-    return methodNotAllowed(["GET", "HEAD"]);
+  const outcome = routePublicRequest(app, ctx, url);
+  switch (outcome.kind) {
+    case "response":
+      return Promise.resolve(outcome.response);
+    case "public-route":
+      return servePublicRoute(outcome.route, ctx);
+    case "content":
+      return dispatchPublicRoute(app, ctx, url, outcome);
   }
-
-  const publicRoute = matchPublicRoute(app.publicRoutes, pathname);
-  if (publicRoute !== null) return servePublicRoute(publicRoute, ctx);
-
-  // Plugin/site/theme-registered redirects (301/302/307/308) and 410s. Matched
-  // ahead of both the asset-404 shortcut (so a moved image/css/js can redirect)
-  // and the content route map (so a redirect shadows a would-be page). The
-  // registered public routes above still win.
-  const redirect = matchRedirect(url, app.redirects);
-  if (redirect !== null) return redirectResponse(redirect);
-
-  // Asset-shaped misses (favicon.ico, /assets/* the platform's asset layer
-  // didn't own) 404 cheaply before route resolution — no slug lookup, no
-  // themed render.
-  if (STATIC_ASSET_EXT.test(pathname)) {
-    return cacheableAssetNotFound("static-asset");
-  }
-
-  // Normalize a public page URL to its canonical (slash-less) shape before
-  // routing — the 301 target shares `canonicalUrl` with the rel=canonical tag.
-  const canonical = canonicalRedirectTarget(ctx, app.publicRoutes);
-  if (canonical !== null) return permanentRedirect(canonical);
-
-  return dispatchPublicRoute(app, ctx, url);
-}
-
-// Build the HTTP response for a matched redirect rule: a redirect status with
-// just the Location header, or a 410 for `gone`.
-function redirectResponse(resolution: RedirectResolution): Response {
-  return resolution.kind === "gone"
-    ? gone("redirect-gone")
-    : redirect(resolution.location, resolution.status);
 }
 
 // Whether this request carries a session, as the site's own authenticator reads
@@ -525,25 +471,14 @@ function ctxHasSession(ctx: AppContext): boolean {
   return requestHasSession(ctx.authenticator, ctx.request);
 }
 
-// The public route intent for a resolved match: an unmatched root is the front
-// page, any other unmatched URL is a 404 (never cached).
-function publicIntent(match: RouteMatch | null, url: URL): RouteIntent | null {
-  if (match !== null) return match.intent;
-  if (url.pathname === "/") return { kind: "front-page" };
-  return null;
-}
-
 async function dispatchPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
   url: URL,
+  routed: ContentRoute,
 ): Promise<Response> {
-  // Resolve the route once here and thread it into rendering so a cache miss
-  // doesn't re-run `matchRoute` on the hot public-render path.
-  const match = matchRoute(url, app.routeMap);
+  const { match, intent } = routed;
   try {
-    // Load the principal once, before the cache decision, so a policied route
-    // resolves its segment (and any I/O-bearing entitlement check) up front.
     // The loader early-returns for session-less traffic, so the anonymous hot
     // path — the only one that reaches a cache hit without a policy — pays
     // nothing.
@@ -596,9 +531,8 @@ async function dispatchPublicRoute(
     // read-through bypasses internally (recording the decision) and renders
     // live, so the telemetry stays uniform across cached and bypassed requests.
     if (cdn === undefined) {
-      return await renderPublicRoute(app, ctx, url, match, segment);
+      return await renderPublicRoute(app, ctx, routed, segment);
     }
-    const intent = publicIntent(match, url);
     return await readThrough({
       request: ctx.request,
       segment,
@@ -613,12 +547,10 @@ async function dispatchPublicRoute(
       cdn,
       defer: ctx.defer,
       telemetry: ctx.telemetry,
-      render: () => renderPublicRoute(app, ctx, url, match, segment),
-      // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
-      // and read-time reference resolution has finished accumulating the tags
-      // of the entities embedded in the page (#1508). The source thunks run only
-      // for the intent kind that needs them. The tag vocabulary is unchanged:
-      // segment variants share one tag set, so one publish purges them all.
+      render: () => renderPublicRoute(app, ctx, routed, segment),
+      // The source thunks run only for the intent kind that needs them. The
+      // tag vocabulary is unchanged: segment variants share one tag set, so
+      // one publish purges them all.
       tags: () => {
         const routeTags =
           intent === null
@@ -644,8 +576,7 @@ async function dispatchPublicRoute(
 async function renderPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
-  url: URL,
-  match: RouteMatch | null,
+  routed: ContentRoute,
   segment: Segment,
 ): Promise<Response> {
   const renderEnv = app.renderEnv;
@@ -654,14 +585,14 @@ async function renderPublicRoute(
   // segment, or no cache binding). Throws propagate to the caller's error path.
   const response = await ctx.telemetry.span("resolve", async (s) => {
     try {
-      return await resolvePublicRouteOrFallback(app, ctx, url, match);
+      return await routed.render(ctx);
     } finally {
       // Attributes read post-resolution: the resolver writes
       // `resolvedEntity` / `resolvedTemplate` onto ctx during the render it
       // encloses. In a `finally` so a throwing render still stamps whatever
       // had resolved — the failure path is the trace that matters most.
       // Lazy thunks, so the no-op collector never evaluates them.
-      s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
+      s.set("route.intent", () => routed.intent?.kind ?? "none");
       if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
       if (ctx.resolvedTemplate) {
         s.set("template.matched", ctx.resolvedTemplate);
@@ -798,26 +729,6 @@ function acceptsHtml(request: Request): boolean {
     accept.includes("application/xhtml+xml") ||
     accept.includes("*/*")
   );
-}
-
-async function resolvePublicRouteOrFallback(
-  app: PlumixApp,
-  ctx: AppContext,
-  url: URL,
-  match: RouteMatch | null,
-): Promise<Response> {
-  const renderEnv = app.renderEnv;
-  if (match !== null) {
-    return resolvePublicRoute(ctx, match, renderEnv);
-  }
-  if (url.pathname === "/") {
-    return resolvePublicRoute(
-      ctx,
-      { intent: { kind: "front-page" }, pattern: "/", params: {} },
-      renderEnv,
-    );
-  }
-  return notFound("public-route-not-found");
 }
 
 // What an unrecognised `/_plumix/` path answers with, shared so a dev-only
