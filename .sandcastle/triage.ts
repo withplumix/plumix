@@ -14,8 +14,8 @@ import {
 } from "./lib/github.js";
 import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
-import { looksLikeAnOutage } from "./lib/outage.js";
-import { createReadOnlySandbox } from "./lib/sandbox.js";
+import { looksLikeTheRunBeingOver } from "./lib/outage.js";
+import { closePlumixSandbox, createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
   awaitingAnAnswer,
@@ -174,7 +174,7 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      if (looksLikeAnOutage(reason)) outage ??= reason;
+      if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
       outcome = { status: "skipped", reason };
     }
 
@@ -194,7 +194,7 @@ const results = await drainAcrossLanes<TriageCandidate, TriageResult>({
   },
 });
 
-await Promise.all(sandboxes.map((sandbox) => sandbox.close()));
+await Promise.all(sandboxes.map((sandbox) => closePlumixSandbox(sandbox)));
 
 const promoted = results.flatMap(({ issue, outcome }) =>
   outcome.status === "promoted"

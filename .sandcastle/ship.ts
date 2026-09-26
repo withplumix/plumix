@@ -1,22 +1,25 @@
-import type { Ticket } from "./lib/github.js";
-import type { ShipOutcome } from "./lib/ticket.js";
+import type { QueuedPullRequest, Ticket } from "./lib/github.js";
 import {
   closeCompletedParent,
+  fileFollowUp,
   firstUnblockedUnassignedTicket,
+  isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
   releaseClaim,
   syncRepoToMain,
   ticketByNumber,
+  waitForMerge,
 } from "./lib/github.js";
-import { drainAcrossLanes } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
-import { looksLikeAnOutage } from "./lib/outage.js";
+import { runShipLoop } from "./lib/run.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
 const DEFAULT_LANES = 2;
+const MERGE_POLL_INTERVAL_MS = 120_000;
+const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
 
 interface ShipOptions {
@@ -48,64 +51,60 @@ const asDuration = (ms: number): string => {
     : `${minutes}m`;
 };
 
-interface ShipResult {
-  readonly ticket: Ticket;
-  readonly outcome: ShipOutcome;
-}
-
 const { onlyTicket, lanes, budgetMs } = readOptions(process.argv.slice(2));
 const endOfBudget = Date.now() + budgetMs;
 const claimed = new Set<number>();
-let outage: string | undefined;
+const laneCount = Math.max(1, onlyTicket ? 1 : lanes);
 
 say(
-  `Ship run — budget ${asDuration(budgetMs)}, ${lanes} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
+  `Ship run — budget ${asDuration(budgetMs)}, ${laneCount} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
 );
 
 syncRepoToMain();
 
-const takeNextTicket = (): Ticket | undefined => {
-  const candidate = onlyTicket
-    ? ticketByNumber(onlyTicket)
-    : firstUnblockedUnassignedTicket(claimed);
-  if (!candidate || claimed.has(candidate.number)) return undefined;
-  claimed.add(candidate.number);
-  return candidate;
-};
-
-const laneCount = Math.max(1, onlyTicket ? 1 : lanes);
-const results = await drainAcrossLanes<Ticket, ShipResult>({
-  lanes: laneCount,
-  nextItem: takeNextTicket,
-  stopDispatchingWhen: () =>
-    outage !== undefined ||
-    endOfBudget - Date.now() < MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS,
-  inLane: async (ticket) => {
-    const journal = new Journal(import.meta.dirname);
-    let outcome: ShipOutcome;
-    try {
-      outcome = await shipTicket(ticket, journal);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (looksLikeAnOutage(reason)) {
-        journal.finish("failed", reason);
-        releaseClaim(ticket.number);
-        outage ??= reason;
-        say(`  #${ticket.number} → left for the next run: ${reason}`);
-        return { ticket, outcome: { status: "blocked", reason } };
-      }
-      outcome = { status: "blocked", reason };
-    }
-
-    if (outcome.status === "shipped") {
-      journal.finish("shipped");
-    } else {
-      journal.finish("failed", outcome.reason);
-      parkTicket(ticket.number, outcome.reason, outcome.pullRequestUrl);
-    }
-    return { ticket, outcome };
+const report = await runShipLoop(
+  {
+    nextTicket: () => {
+      const candidate = onlyTicket
+        ? ticketByNumber(onlyTicket)
+        : firstUnblockedUnassignedTicket(claimed);
+      if (!candidate || claimed.has(candidate.number)) return undefined;
+      claimed.add(candidate.number);
+      return candidate;
+    },
+    ship: (ticket) => {
+      const journal = new Journal(import.meta.dirname);
+      return shipTicket(ticket, journal).then(
+        (outcome) => {
+          journal.finish(outcome.status === "queued" ? "shipped" : "failed");
+          return outcome;
+        },
+        (error: unknown) => {
+          journal.finish("failed", String(error));
+          throw error;
+        },
+      );
+    },
+    park: ({ number }, reason, pullRequestUrl) =>
+      parkTicket(number, reason, pullRequestUrl),
+    releaseClaim: ({ number }) => releaseClaim(number),
+    confirm: (pullRequest) =>
+      waitForMerge(pullRequest.number, {
+        pollEveryMs: MERGE_POLL_INTERVAL_MS,
+        giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
+        onPoll: (status) => say(`  #${pullRequest.number} ${status}`),
+      }),
+    fileFollowUp: ({ number }, pullRequestUrl, finding) =>
+      fileFollowUp(number, pullRequestUrl, finding),
+    ticketClosed: ({ number }) => isTicketClosed(number),
+    say,
   },
-});
+  {
+    lanes: laneCount,
+    withinBudget: () =>
+      endOfBudget - Date.now() >= MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS,
+  },
+);
 
 syncRepoToMain();
 for (const parent of parentsWithEveryChildClosed()) {
@@ -113,22 +112,19 @@ for (const parent of parentsWithEveryChildClosed()) {
   say(`  closed parent #${parent.number} — every sub-issue done`);
 }
 
-const shipped = results.filter(({ outcome }) => outcome.status === "shipped");
-const parked = results.filter(({ outcome }) => outcome.status !== "shipped");
-
 say(`\n${"=".repeat(60)}`);
-if (outage) {
-  say(`Stopped early — nothing the tickets did:\n  ${outage}`);
+if (report.stoppedBecause) say(`Stopped early — ${report.stoppedBecause}`);
+if (report.outage) {
+  say(`Stopped early — nothing the tickets did:\n  ${report.outage}`);
   say(
     `Every ticket still in flight kept its label, so the next run takes them.`,
   );
 }
 say(
-  `Shipped ${shipped.length}, parked ${parked.length}, ${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
+  `Merged ${report.merged.length}, parked ${report.parked.length}, ` +
+    `${asDuration(Math.max(0, endOfBudget - Date.now()))} of budget unused.`,
 );
-for (const { ticket, outcome } of shipped)
-  if (outcome.status === "shipped")
-    say(`  ✓ #${ticket.number} ${outcome.pullRequestUrl}`);
-for (const { ticket, outcome } of parked)
-  if (outcome.status === "blocked")
-    say(`  ⚑ #${ticket.number} — ${outcome.reason}`);
+for (const { ticket, pullRequest } of report.merged)
+  say(`  \u2713 #${ticket.number} ${pullRequest.url}`);
+for (const { ticket, reason } of report.parked)
+  say(`  \u2691 #${ticket.number} — ${reason}`);
