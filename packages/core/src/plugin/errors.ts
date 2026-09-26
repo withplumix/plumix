@@ -567,11 +567,12 @@ export class PluginContextError extends Error {
     id: string;
     fieldKey: string;
     pattern: string;
+    maxLength: number;
   }): PluginContextError {
     return new PluginContextError(
       "meta_box_field_invalid_key",
       `${ctx.kind} "${ctx.id}" declares field with invalid key "${ctx.fieldKey}" — ` +
-        `meta keys must match /${ctx.pattern}/.`,
+        `meta keys must match /${ctx.pattern}/ and be at most ${String(ctx.maxLength)} characters.`,
       ctx,
     );
   }

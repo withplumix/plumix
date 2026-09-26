@@ -859,6 +859,12 @@ describe("repeater() builder", () => {
     );
   });
 
+  test("rejects a subField key longer than the RPC write path accepts", () => {
+    expect(() => repeater("rows").fields([text("k".repeat(201))])).toThrow(
+      expect.objectContaining({ code: "sub_field_key_invalid" }),
+    );
+  });
+
   test("rejects duplicate subField keys at registration time", () => {
     expect(() =>
       repeater("rows").fields([text("label"), text("label").label("Other")]),
@@ -983,6 +989,12 @@ describe("group() builder", () => {
       /declares field "title" more than once/,
     );
     expect(() => group("seo").fields([text("__proto__")])).toThrow(/forbidden/);
+  });
+
+  test("rejects a member key longer than the RPC write path accepts", () => {
+    expect(() => group("seo").fields([text("k".repeat(201))])).toThrow(
+      expect.objectContaining({ code: "sub_field_key_invalid" }),
+    );
   });
 
   test("composite callbacks are typed against the stored shape, not the read shape", () => {

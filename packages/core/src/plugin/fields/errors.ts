@@ -20,6 +20,7 @@ interface FieldConfigErrorFields {
   min?: number;
   max?: number;
   pattern?: string;
+  maxLength?: number;
   role?: string;
 }
 
@@ -37,6 +38,7 @@ export class FieldConfigError extends Error {
   readonly min: number | undefined;
   readonly max: number | undefined;
   readonly pattern: string | undefined;
+  readonly maxLength: number | undefined;
   readonly role: string | undefined;
 
   private constructor(
@@ -54,6 +56,7 @@ export class FieldConfigError extends Error {
     this.min = fields.min;
     this.max = fields.max;
     this.pattern = fields.pattern;
+    this.maxLength = fields.maxLength;
     this.role = fields.role;
   }
 
@@ -87,11 +90,12 @@ export class FieldConfigError extends Error {
     containerKey: string;
     subFieldKey: string;
     pattern: string;
+    maxLength: number;
   }): FieldConfigError {
     return new FieldConfigError(
       "sub_field_key_invalid",
       `${ctx.container}("${ctx.containerKey}") field key "${ctx.subFieldKey}" ` +
-        `must match /${ctx.pattern}/.`,
+        `must match /${ctx.pattern}/ and be at most ${String(ctx.maxLength)} characters.`,
       ctx,
     );
   }

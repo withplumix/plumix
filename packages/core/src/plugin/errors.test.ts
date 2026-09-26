@@ -354,9 +354,12 @@ describe("PluginContextError — identifier + meta-box factories", () => {
       id: "seo",
       fieldKey: "bad key!",
       pattern: "^[a-zA-Z0-9_:-]+$",
+      maxLength: 200,
     });
     expect(err.code).toBe("meta_box_field_invalid_key");
     expect(err.fieldKey).toBe("bad key!");
+    expect(err.maxLength).toBe(200);
+    expect(err.message).toContain("at most 200 characters");
     expect(err.message).toContain(
       'entry meta box "seo" declares field with invalid key "bad key!"',
     );

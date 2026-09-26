@@ -1,5 +1,10 @@
 import * as v from "valibot";
 
+import {
+  META_FIELD_KEY_MAX_LENGTH,
+  META_FIELD_KEY_RE,
+} from "../../../plugin/validation/meta-field-key.js";
+
 // Group / page identifiers stay tight — lowercase snake_case ASCII so
 // they're safe in URLs (`/settings/<page>`), testids, and future
 // storage backends that may quote differently. Matches the
@@ -15,13 +20,13 @@ const settingsNameSchema = v.pipe(
 // Field-value keys share the permissive meta regex (`og:title`,
 // `my-field`, `2fa_enabled` all valid) so a plugin registering a
 // `MetaBoxField` via `registerSettingsGroup` isn't rejected at the
-// RPC boundary. Matches `META_FIELD_KEY_RE` in `plugin/validation/meta-box-fields.ts`.
+// RPC boundary.
 const settingsValueKeySchema = v.pipe(
   v.string(),
   v.trim(),
   v.minLength(1),
-  v.maxLength(200),
-  v.regex(/^[a-zA-Z0-9_:-]+$/, "settings value key must match [a-zA-Z0-9_:-]+"),
+  v.maxLength(META_FIELD_KEY_MAX_LENGTH),
+  v.regex(META_FIELD_KEY_RE, "settings value key must match [a-zA-Z0-9_:-]+"),
 );
 
 // One round-trip per group is the primary read pattern (admin card

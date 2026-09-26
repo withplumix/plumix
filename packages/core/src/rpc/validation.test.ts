@@ -1,10 +1,13 @@
 import * as v from "valibot";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { assertMetaBoxFields } from "../plugin/validation/meta-box-fields.js";
+import { settingsUpsertInputSchema } from "./procedures/settings/schemas.js";
 import {
   emailField,
   idParam,
   idPathParam,
+  metaInputSchema,
   nameField,
   setI18nResolver,
 } from "./validation.js";
@@ -120,5 +123,35 @@ describe("idPathParam", () => {
   test("rejects non-strings — URL params are always strings", () => {
     expect(() => v.parse(idPathParam, 1)).toThrow();
     expect(() => v.parse(idPathParam, null)).toThrow();
+  });
+});
+
+describe("meta field keys — registration and the RPC write path agree", () => {
+  const registers = (key: string): boolean => {
+    try {
+      assertMetaBoxFields("entry meta box", "seo", [
+        { key, label: "Field", type: "string", inputType: "text" },
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  test.each([
+    ["a valid short key", "subtitle", true],
+    ["a 200-character key", "k".repeat(200), true],
+    ["a 201-character key", "k".repeat(201), false],
+    ["a namespaced key", "og:title", true],
+    ["a key with a space", "og title", false],
+  ])("%s", (_name, key, valid) => {
+    expect(registers(key)).toBe(valid);
+    expect(v.safeParse(metaInputSchema, { [key]: "x" }).success).toBe(valid);
+    expect(
+      v.safeParse(settingsUpsertInputSchema, {
+        group: "seo",
+        values: { [key]: "x" },
+      }).success,
+    ).toBe(valid);
   });
 });

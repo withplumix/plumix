@@ -1,6 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import * as v from "valibot";
 
+import {
+  META_FIELD_KEY_MAX_LENGTH,
+  META_FIELD_KEY_RE,
+} from "../plugin/validation/meta-field-key.js";
 import { vMessage } from "./vmessage.js";
 
 export { setI18nResolver, vMessage } from "./vmessage.js";
@@ -112,8 +116,8 @@ const metaKeySchema = v.pipe(
   v.string(),
   v.trim(),
   v.minLength(1),
-  v.maxLength(200),
-  v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
+  v.maxLength(META_FIELD_KEY_MAX_LENGTH),
+  v.regex(META_FIELD_KEY_RE, "meta key must be alphanumeric/_/:/-"),
 );
 
 /**

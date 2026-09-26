@@ -53,10 +53,13 @@ describe("FieldConfigError — sub-field factories", () => {
       containerKey: "seo",
       subFieldKey: "bad key!",
       pattern: "^[a-zA-Z0-9_:-]+$",
+      maxLength: 200,
     });
     expect(err.code).toBe("sub_field_key_invalid");
     expect(err.container).toBe("group");
     expect(err.pattern).toBe("^[a-zA-Z0-9_:-]+$");
+    expect(err.maxLength).toBe(200);
+    expect(err.message).toContain("at most 200 characters");
     expect(err.message).toContain(
       'group("seo") field key "bad key!" must match',
     );
