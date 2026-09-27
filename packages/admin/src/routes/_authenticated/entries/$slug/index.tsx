@@ -44,6 +44,7 @@ import {
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
+import { destructiveRowClassName } from "@plumix/admin-ui/destructive";
 import {
   Empty,
   EmptyContent,
@@ -1231,7 +1232,7 @@ function TitleCell({
               onClick={() => {
                 onTrash(entry.id);
               }}
-              className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className={cn(destructiveRowClassName, "disabled:opacity-50")}
               data-testid={`content-list-row-trash-${String(entry.id)}`}
             >
               {isTrashing
@@ -1286,7 +1287,7 @@ function TitleCell({
               onClick={() => {
                 onDeletePermanent(entry.id);
               }}
-              className="text-muted-foreground hover:text-destructive"
+              className={destructiveRowClassName}
               data-testid={`content-list-row-delete-${String(entry.id)}`}
             >
               {renderLabel(M.rowDelete)}

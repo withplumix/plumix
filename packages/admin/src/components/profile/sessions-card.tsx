@@ -7,6 +7,7 @@ import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { parseUserAgent } from "@/lib/user-agent.js";
+import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
+import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 
 const M = {
   unknownDevice: defineMessage({
@@ -243,7 +245,7 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
           type="button"
           variant="ghost"
           size="sm"
-          className="text-destructive hover:text-destructive shrink-0"
+          className={cn(destructiveGhostClassName, "shrink-0")}
           onClick={() => {
             setConfirming(true);
           }}

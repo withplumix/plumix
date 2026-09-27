@@ -3,7 +3,14 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": []
+    "types": ["node"],
+    // Widen rootDir past `src` so the roster script and its test typecheck
+    // and resolve under eslint's project service. tsconfig.build.json pins it
+    // back to `src` for a clean dist.
+    "rootDir": ".",
+    // Never emit from this wide config — only tsconfig.build.json (src-only)
+    // emits.
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "scripts", "vitest.config.ts"]
 }

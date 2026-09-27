@@ -69,6 +69,10 @@
       "types": "./dist/command.d.ts",
       "default": "./dist/command.js"
     },
+    "./destructive": {
+      "types": "./dist/destructive.d.ts",
+      "default": "./dist/destructive.js"
+    },
     "./dialog": {
       "types": "./dist/dialog.d.ts",
       "default": "./dist/dialog.js"
@@ -185,13 +189,13 @@
       "types": "./dist/tooltip.d.ts",
       "default": "./dist/tooltip.js"
     },
-    "./utils": {
-      "types": "./dist/utils.d.ts",
-      "default": "./dist/utils.js"
-    },
     "./use-mobile": {
       "types": "./dist/use-mobile.d.ts",
       "default": "./dist/use-mobile.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
     }
   },
   "files": [
@@ -210,8 +214,10 @@
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "eslint",
     "publint": "publint",
+    "roster:sync": "tsx scripts/sync-roster.ts",
+    "test:unit": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore"
+    "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore && pnpm roster:sync"
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:dnd-kit",
@@ -237,14 +243,19 @@
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
-    "typescript": "catalog:"
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

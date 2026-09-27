@@ -2,7 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "stripInternal": true,
+    // The wide tsconfig.json adds node types for the roster script; the
+    // published source stays free of them.
+    "types": [],
+    "rootDir": "src",
+    "noEmit": false,
     "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
+  "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
+import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import {
   ArrowDown,
   ArrowUp,
@@ -163,7 +164,7 @@ export function SelectionToolbar({
           icon={<Trash2 className="size-4" />}
           onClick={act(() => state.removeSelected())}
           label={<Trans id="editor.selection.delete" message="Delete" />}
-          className="text-destructive hover:text-destructive"
+          className={destructiveGhostClassName}
         />
       </div>
     </TooltipProvider>

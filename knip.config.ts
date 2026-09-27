@@ -234,6 +234,13 @@ const config: KnipConfig = {
       entry: ["src/index.ts", "src/commands/index.ts", "e2e/*.spec.ts"],
       playwright: false,
     },
+    "packages/admin-ui": {
+      // Every `src/` module is a subpath export (`pnpm roster:sync` derives
+      // the map from them). Knip maps `dist` back through the tsconfig's
+      // rootDir, which is widened to the package root for the roster script,
+      // so it can't follow the map to `src/` on its own.
+      entry: ["src/*.{ts,tsx}"],
+    },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip
     // can follow. Same for the assembler script.

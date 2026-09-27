@@ -55,6 +55,7 @@ export const reactConfig = defineConfig(
         NO_PHYSICAL_CLASSES_SELECTOR,
         NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
+      "plumix/no-hand-rolled-destructive-tint": "error",
     },
   },
 );
