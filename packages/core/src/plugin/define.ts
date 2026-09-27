@@ -1,3 +1,5 @@
+import type { ShortcodeSpec } from "@plumix/blocks";
+
 import type { SchemaModule } from "../runtime/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type {
@@ -63,6 +65,13 @@ export interface PluginDescriptor<TConfig = undefined> {
    * taxonomy.
    */
   readonly afterSetup?: PluginAfterSetup;
+  /**
+   * Shortcodes the plugin declares statically, merged into the app's shortcode
+   * registry like `ctx.registerShortcode` calls. Declared here rather than
+   * registered, the build can recover them from source and ship them to the
+   * editor canvas, so a body expands there as it does on the page.
+   */
+  readonly shortcodes?: readonly ShortcodeSpec[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   readonly sqlMigrations?: readonly RawSqlMigration[];
@@ -102,6 +111,8 @@ export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
   readonly afterSetup?: PluginAfterSetup;
+  /** See {@link PluginDescriptor.shortcodes}. */
+  readonly shortcodes?: readonly ShortcodeSpec[];
 }
 
 /** The standard on-disk location of a plugin's compiled admin bundle, given
@@ -185,6 +196,7 @@ export function definePlugin<TConfig = undefined>(
     provides: setupOrInput.provides,
     setup: setupOrInput.setup,
     afterSetup: setupOrInput.afterSetup,
+    shortcodes: setupOrInput.shortcodes,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
     sqlMigrations: setupOrInput.sqlMigrations,

@@ -405,6 +405,11 @@ export interface PluginSetupContextBase {
    * the per-app shortcode registry at `buildApp` time with last-wins
    * precedence (core < plugin < theme). Duplicate tags across plugins
    * throw — tags are flat and unprefixed, so a collision is a real bug.
+   *
+   * Server-only: the build cannot trace a call's argument, so a shortcode
+   * registered here never reaches the editor canvas, which shows its raw
+   * `[tag]` source. Declare it in the descriptor's `shortcodes` field instead
+   * to have it expand there too.
    */
   registerShortcode(spec: ShortcodeSpec): void;
   /**

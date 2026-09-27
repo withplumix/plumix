@@ -72,6 +72,9 @@ export async function installPlugins({
       registry,
       extensions: mergedPluginExtensions,
     });
+    for (const spec of descriptor.shortcodes ?? []) {
+      ctx.registerShortcode(spec);
+    }
     await descriptor.setup(ctx, undefined);
   }
 

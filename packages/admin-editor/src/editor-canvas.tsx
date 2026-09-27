@@ -11,7 +11,9 @@ import type {
   BlockNode,
   BlockRegistry,
   HtmlAllowlist,
+  HydratedEntry,
   ResolvedBlockLoaders,
+  ShortcodeRegistry,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
@@ -21,9 +23,8 @@ import {
   editAppender,
   HtmlAllowlistProvider,
   parseLoaderData,
-  renderBlockTree,
 } from "@plumix/blocks";
-import { PlumixProvider } from "@plumix/blocks/renderer";
+import { BlockTree, PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
@@ -34,6 +35,8 @@ import { forwardedShortcut, isTypingTarget } from "./shortcuts.js";
 interface EditorCanvasProps {
   /** Block registry for the site (core + plugin blocks). */
   readonly registry: BlockRegistry;
+  /** Shortcodes rich-text bodies expand (core + plugin + theme). */
+  readonly shortcodes?: ShortcodeRegistry;
   /** Expected origin of the host (admin shell). */
   readonly origin: string;
   /** Seed tree for first paint, before the host pushes (from the SSR embed). */
@@ -48,6 +51,11 @@ interface EditorCanvasProps {
   /** The app's sanitiser allowlist (from the SSR embed), so raw-HTML and
    *  rich-text blocks keep the same markup here that the published page will. */
   readonly htmlAllowlist?: HtmlAllowlist;
+  /** The page's locale (from the SSR embed), for shortcode/`Intl` output. */
+  readonly locale?: string;
+  /** The queried entry (from the SSR embed) body shortcodes read — JSON-lossy,
+   *  see `parseRenderEnv`. */
+  readonly entry?: HydratedEntry | null;
 }
 
 // X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
@@ -65,11 +73,14 @@ const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
  */
 export function EditorCanvas({
   registry,
+  shortcodes,
   origin,
   initialTree = [],
   tokens,
   breakpoints,
   htmlAllowlist = BASELINE_HTML_ALLOWLIST,
+  locale,
+  entry,
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
   // Seed loader data from the SSR embed once (before React replaces the mount
@@ -314,7 +325,19 @@ export function EditorCanvas({
 
   return (
     <HtmlAllowlistProvider value={htmlAllowlist}>
-      <PlumixProvider value={{ registry, mode: "edit", tokens, breakpoints }}>
+      <PlumixProvider
+        value={{
+          registry,
+          mode: "edit",
+          tokens,
+          breakpoints,
+          loaderData,
+          locale,
+          shortcodes,
+          entry,
+          addBlockLabel,
+        }}
+      >
         <div
           ref={containerRef}
           data-testid="plumix-editor-canvas"
@@ -325,11 +348,9 @@ export function EditorCanvas({
         >
           {/* X-ray outline rule; the data-plumix-xray attribute above gates it. */}
           <style>{XRAY_STYLE}</style>
-          {/* renderBlockTree (not BlockRenderer) so the canvas doesn't re-emit
-              the SSR content-root boundary it was mounted into — just the
-              per-block data-plumix-id seam for selection. tokens/breakpoints
-              feed the per-block style emitter so token-or-custom edits paint
-              live. */}
+          {/* BlockTree (not BlockRenderer) so the canvas doesn't re-emit the
+              SSR content-root boundary it was mounted into — just the
+              per-block data-plumix-id seam for selection. */}
           {tree.length === 0 ? (
             // Empty document: the same in-canvas appender an empty slot shows,
             // flowing in content rather than as a host overlay.
@@ -337,12 +358,7 @@ export function EditorCanvas({
               {editAppender(undefined, addBlockLabel)}
             </div>
           ) : (
-            renderBlockTree(tree, registry, {
-              editing: true,
-              loaderData,
-              breakpoints,
-              addBlockLabel,
-            })
+            <BlockTree blocks={tree} />
           )}
         </div>
       </PlumixProvider>

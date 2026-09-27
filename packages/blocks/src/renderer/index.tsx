@@ -1,6 +1,6 @@
 // Context/provider/hooks/BlockRenderer live in context.js so leaf components
 // (Link, Image) import their hooks without pulling in this barrel — that cycles.
-export { BlockRenderer, PlumixProvider } from "./context.js";
+export { BlockRenderer, BlockTree, PlumixProvider } from "./context.js";
 export {
   useAuthMethods,
   useBasePath,

@@ -4,6 +4,7 @@ import {
   extractBlockModules,
   extractRegisteredBlockModules,
   resolveBlockModulePaths,
+  resolveShortcodeModulePaths,
 } from "./block-module-resolver.js";
 
 // Real config modules always import the factory from `plumix`; the extractor
@@ -330,5 +331,45 @@ describe("resolveBlockModulePaths", () => {
         "/app/theme/index.ts",
       ),
     ).toThrow(/\/app\/theme\/index\.ts/);
+  });
+});
+
+describe("resolveShortcodeModulePaths", () => {
+  test("resolves a plugin's `shortcodes` field to its import", () => {
+    const paths = resolveShortcodeModulePaths(
+      `${PLUGIN}
+       import { shortcodes } from "./shortcodes.js";
+       export default definePlugin("seo", { setup: () => {}, shortcodes });`,
+      "/pkgs/seo/dist/index.js",
+    );
+    expect(paths).toEqual([ref("/pkgs/seo/dist/shortcodes.js", "shortcodes")]);
+  });
+
+  test("resolves each imported element of a theme's `shortcodes` array", () => {
+    const paths = resolveShortcodeModulePaths(
+      `${THEME}
+       import year from "./year.js";
+       import { brand } from "@acme/shortcodes";
+       export default defineTheme({ shortcodes: [year, ...brand] });`,
+      "/app/theme/index.ts",
+    );
+    expect(paths).toEqual([
+      ref("/app/theme/year.js"),
+      ref("@acme/shortcodes", "brand"),
+    ]);
+  });
+
+  // The server still registers an inline shortcode; only the canvas can't
+  // import it, so it is skipped rather than failing the build.
+  test("skips a shortcode written inline rather than imported", () => {
+    const paths = resolveShortcodeModulePaths(
+      `${THEME}
+       import year from "./year.js";
+       export default defineTheme({
+         shortcodes: [year, { name: "x", render: () => "x" }],
+       });`,
+      "/app/theme/index.ts",
+    );
+    expect(paths).toEqual([ref("/app/theme/year.js")]);
   });
 });

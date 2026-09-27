@@ -1,11 +1,16 @@
 import { act } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test } from "vitest";
 
+import type { EntryContent, ShortcodeSpec } from "@plumix/blocks";
 import {
   BASELINE_HTML_ALLOWLIST,
   coreBlocks,
+  coreShortcodes,
   createBlockRegistry,
+  defineShortcode,
 } from "@plumix/blocks";
+import { BlockRenderer, PlumixProvider } from "@plumix/blocks/renderer";
 
 import { mountEditorRuntime } from "./mount.js";
 
@@ -21,6 +26,76 @@ afterEach(() => {
 });
 
 describe("mountEditorRuntime", () => {
+  describe("renders what the server edit-mode render shows", () => {
+    const price = defineShortcode({
+      name: "price",
+      render: ({ context }) =>
+        new Intl.NumberFormat(context.locale).format(1234.5),
+    });
+    const headline = defineShortcode({
+      name: "headline",
+      render: ({ context }) => {
+        const headline = context.entry?.headline;
+        return typeof headline === "string" ? headline : "";
+      },
+    });
+    const shortcodes = new Map<string, ShortcodeSpec>(
+      [...coreShortcodes, price, headline].map((spec) => [spec.name, spec]),
+    );
+
+    // Server-render the page in edit mode, then mount the canvas over it and
+    // read the same block back — the author must not watch the text flip.
+    const serverThenCanvas = (body: string): [string, string] => {
+      const content: EntryContent = {
+        version: "plumix.v2",
+        blocks: [{ id: "e1", name: "core/rich-text", attrs: { body } }],
+      };
+      document.body.innerHTML = renderToStaticMarkup(
+        <PlumixProvider
+          value={{
+            registry,
+            mode: "edit",
+            locale: "de",
+            shortcodes,
+            entry: { headline: "Sommer" },
+          }}
+        >
+          <BlockRenderer content={content} />
+        </PlumixProvider>,
+      );
+      const read = (): string =>
+        document.querySelector('[data-plumix-id="e1"]')?.textContent ?? "";
+      const server = read();
+      act(() => {
+        mountEditorRuntime({
+          doc: document,
+          registry,
+          shortcodes,
+          origin: "http://localhost",
+        });
+      });
+      return [server, read()];
+    };
+
+    test("expands a [year] rich-text body the way the server does", () => {
+      const [server, canvas] = serverThenCanvas("<p>© [year]</p>");
+      expect(server).toBe(`© ${new Date().getFullYear()}`);
+      expect(canvas).toBe(server);
+    });
+
+    test("formats with the page's locale, not the en fallback", () => {
+      const [server, canvas] = serverThenCanvas("<p>[price]</p>");
+      expect(server).toBe("1.234,5");
+      expect(canvas).toBe(server);
+    });
+
+    test("reads a field off the queried entry", () => {
+      const [server, canvas] = serverThenCanvas("<p>[headline]</p>");
+      expect(server).toBe("Sommer");
+      expect(canvas).toBe(server);
+    });
+  });
+
   test("mounts the canvas into the content root, seeded from the embedded tree", () => {
     const content = {
       version: "plumix.v2",
@@ -177,6 +252,40 @@ describe("mountEditorRuntime", () => {
     });
 
     expect(document.body.textContent).toContain("Alive");
+  });
+
+  test.each([
+    ["malformed JSON", "{"],
+    ["fields of the wrong kind", embed({ locale: 7, entry: "x", tokens: [] })],
+  ])("a render env with %s still renders the canvas", (_, renderEnv) => {
+    const content = {
+      version: "plumix.v2",
+      blocks: [
+        {
+          id: "e1",
+          name: "core/rich-text",
+          attrs: { body: "<p>© [year]</p>" },
+        },
+      ],
+    };
+    document.body.innerHTML =
+      `<div data-plumix-content-root>` +
+      `<script type="application/json" data-plumix-initial-tree>${embed(content)}</script>` +
+      `<script type="application/json" data-plumix-render-env>${renderEnv}</script>` +
+      `<div>ssr</div></div>`;
+
+    act(() => {
+      mountEditorRuntime({
+        doc: document,
+        registry,
+        shortcodes: new Map(coreShortcodes.map((spec) => [spec.name, spec])),
+        origin: "http://localhost",
+      });
+    });
+
+    expect(document.querySelector('[data-plumix-id="e1"]')?.textContent).toBe(
+      `© ${new Date().getFullYear()}`,
+    );
   });
 
   // The embed is the one allowlist the sanitiser takes on trust from the DOM.

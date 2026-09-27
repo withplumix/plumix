@@ -339,6 +339,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "sanitizeCssValue",
           "parseLoaderData",
           "serializeLoaderData",
+          "parseRenderEnv",
           "findBlockNode",
           "isAllowedHtmlAttr",
           "safeHtmlAttrs",
@@ -374,6 +375,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "parseEnvelope",
           "EDITOR_BRIDGE_CHANNEL",
         ],
+      },
+      {
+        reason:
+          "the boundary-less tree render the editor canvas mounts inside the " +
+          "content root `BlockRenderer` already emitted; a theme renders " +
+          "content through `BlockRenderer`",
+        names: ["BlockTree"],
       },
     ],
   },

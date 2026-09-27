@@ -3,7 +3,11 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import type { BlockModuleRef } from "./block-module-resolver.js";
-import { dedupe, resolveBlockModulePaths } from "./block-module-resolver.js";
+import {
+  dedupe,
+  resolveBlockModulePaths,
+  resolveShortcodeModulePaths,
+} from "./block-module-resolver.js";
 import { extractConfigModules } from "./config-modules.js";
 
 const MODULE_EXTS = [".ts", ".tsx", ".mts", ".js", ".jsx", ".mjs"] as const;
@@ -22,19 +26,47 @@ export function collectEditorBlockModules(
   configPath: string,
   configSource: string,
 ): readonly BlockModuleRef[] {
+  return collectEditorModules(
+    configPath,
+    configSource,
+    resolveBlockModulePaths,
+  );
+}
+
+/**
+ * Editor-importable shortcode modules for every shortcode a config's theme and
+ * plugins declare in their `shortcodes` field, resolved to files the same way
+ * {@link collectEditorBlockModules} resolves blocks.
+ */
+export function collectEditorShortcodeModules(
+  configPath: string,
+  configSource: string,
+): readonly BlockModuleRef[] {
+  return collectEditorModules(
+    configPath,
+    configSource,
+    resolveShortcodeModulePaths,
+  );
+}
+
+function collectEditorModules(
+  configPath: string,
+  configSource: string,
+  modulesOf: (source: string, file: string) => readonly BlockModuleRef[],
+): readonly BlockModuleRef[] {
   const { theme, plugins } = extractConfigModules(configSource, configPath);
-  // Plugin modules first, theme last: the canvas (`createBlockRegistry`) and the
-  // admin (`registerPluginBlock`) are both last-write-wins, so a theme block
-  // overrides a same-named plugin block — the `core < plugin < theme` precedence
-  // the server registry gives.
+  // Plugin modules first, theme last: the canvas registries and the admin
+  // (`registerPluginBlock`) are all last-write-wins, so a theme declaration
+  // overrides a same-named plugin one — the `core < plugin < theme`
+  // precedence the server registries give.
   const specifiers = [...plugins, ...(theme ? [theme] : [])];
 
   const refs: BlockModuleRef[] = [];
   for (const specifier of specifiers) {
     const file = resolveModuleFile(specifier, configPath);
-    if (!file) continue; // module not locatable — contributes no editor blocks
+    if (!file) continue; // module not locatable — contributes nothing
     const source = readFileSync(file, "utf8");
-    for (const ref of resolveBlockModulePaths(source, file)) {
+    for (const ref of modulesOf(source, file)) {
       refs.push({
         module: isAbsolute(ref.module) ? toSourceFile(ref.module) : ref.module,
         exportName: ref.exportName,

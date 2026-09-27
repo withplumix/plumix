@@ -154,6 +154,8 @@ export type {
 } from "./styles/style-field.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
+export { parseRenderEnv } from "./render-env.js";
+export type { RenderEnv } from "./render-env.js";
 export { findBlockNode } from "./find-block-node.js";
 export type {
   KnownTokenCategory,
