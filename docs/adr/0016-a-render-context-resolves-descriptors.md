@@ -7,8 +7,7 @@ hardcoded English: empty-state prompts, a file's "Download" fallback and an
 embed's `aria-label` among them. The one string that had been solved, the
 canvas's "Add a block", was resolved by the admin host and pushed across the
 bridge as a finished string. Each further string would have cost a field in the
-bridge message, both connection modules and the canvas state. The canvas also
-passed no locale into its render, so every block there rendered as `"en"`.
+bridge message, both connection modules and the canvas state.
 
 > **`BlockContext.t(descriptor, values?)` resolves a `{ id, message }`
 > descriptor against a compiled catalog for the render's locale. Each host
@@ -33,7 +32,10 @@ entry. No host, bridge or protocol changes.
 - **Canvas.** The host's existing `host:config` message carries the active
   locale and the catalog the admin already merged (its own, the editor's, each
   workspace plugin's and the blocks package's). There is one merge, not a
-  second one for the canvas.
+  second one for the canvas. Until that message arrives the canvas renders at
+  the page's locale from the render-env embed (#2630) with English strings;
+  the host's locale then replaces it, so the locale and the catalog a block
+  reads always belong together.
 - **Where a string's catalog lives** follows the dependency direction. A
   blocks-package string lives in `packages/blocks/locales`. A plugin's string
   lives in the plugin's catalog. `plumix i18n verify` gates both.

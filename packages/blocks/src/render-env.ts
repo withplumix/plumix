@@ -52,7 +52,7 @@ export const RENDER_ENV_POLICY = {
     "canvas has no hook runtime",
   catalog:
     "the host pushes its merged catalog over `host:config` after mount, " +
-    "with the locale it belongs to (ADR 0011)",
+    "with the locale it belongs to (ADR 0016)",
 } as const satisfies RenderEnvPolicy<PlumixContextValue>;
 
 type CarriedKey = {
