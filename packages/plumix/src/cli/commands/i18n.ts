@@ -1,6 +1,5 @@
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -16,6 +15,7 @@ import type {
   JsonObject,
 } from "@plumix/core";
 import { CliError, spawnInherit } from "@plumix/core/cli";
+import { compileCatalogs } from "@plumix/core/i18n-compile";
 
 import { report } from "../report.js";
 
@@ -79,6 +79,16 @@ export const i18nCommand: CommandDefinition = {
       await runExtractCheck(ctx, bin, rest);
       return;
     }
+    if (sub === "compile") {
+      const result = await compileCatalogs({
+        cwd: ctx.cwd,
+        linguiBin: bin,
+        args: rest.filter((arg) => arg !== "--dts"),
+        dts: rest.includes("--dts"),
+      });
+      if (!result.ok) throw CliError.i18nCompileFailed(result);
+      return;
+    }
     // Mirror migrate.ts: spawn `process.execPath` with a resolved bin
     // path so the command works on Windows (where `lingui`/`npx` are
     // .cmd shims that `spawn` without `shell: true` can't find).
@@ -102,17 +112,6 @@ function runInit(ctx: CommandContext): void {
   if (wroteConfig) writeFileSync(configPath, LINGUI_CONFIG_TEMPLATE);
   report.info(
     `  lingui.config.ts:                ${wroteConfig ? "created" : "exists, skipped"}`,
-  );
-
-  const scriptDir = resolve(ctx.cwd, "scripts");
-  const scriptPath = resolve(scriptDir, "i18n-compile-check.mjs");
-  const wroteScript = !existsSync(scriptPath);
-  if (wroteScript) {
-    mkdirSync(scriptDir, { recursive: true });
-    writeFileSync(scriptPath, COMPILE_CHECK_TEMPLATE);
-  }
-  report.info(
-    `  scripts/i18n-compile-check.mjs:  ${wroteScript ? "created" : "exists, skipped"}`,
   );
 
   const pkgPath = resolve(ctx.cwd, "package.json");
@@ -139,49 +138,6 @@ export default defineConfig({
     },
   ],
   format: formatter({ lineNumbers: false }),
-});
-`;
-
-// Cloned from packages/admin/scripts/i18n-compile-check.mjs — the
-// canonical contract: spawn \`lingui compile\` (no --strict), grep
-// stdout for "Compilation error", fail on parse errors but let missing
-// translations fall back silently.
-const COMPILE_CHECK_TEMPLATE = `#!/usr/bin/env node
-// Lingui's \`compile --strict\` fails on BOTH parse errors AND missing
-// translations. Most projects want parse errors to fail (ICU brace
-// mistakes etc.) but missing translations to fall back silently — the
-// source locale is ground truth and per-locale seeding is a separate
-// track.
-//
-// Spawn \`lingui compile\` (no --strict), stream its output, then exit
-// 1 if "Compilation error" appears anywhere — that's the marker for a
-// parse failure regardless of strict mode.
-import { spawn } from "node:child_process";
-
-const child = spawn(
-  "pnpm",
-  ["exec", "lingui", "compile", "--namespace", "es"],
-  { stdio: ["inherit", "pipe", "pipe"] },
-);
-
-let buffered = "";
-const tee = (stream, into) => {
-  stream.on("data", (chunk) => {
-    buffered += chunk.toString();
-    into.write(chunk);
-  });
-};
-tee(child.stdout, process.stdout);
-tee(child.stderr, process.stderr);
-
-child.on("exit", (code) => {
-  if (code !== 0) process.exit(code ?? 1);
-  if (/Compilation error/.test(buffered)) {
-    process.stderr.write(
-      "\\ni18n-compile-check: parse error detected — failing build.\\n",
-    );
-    process.exit(1);
-  }
 });
 `;
 
@@ -226,13 +182,17 @@ function mergePackageJson(pkg: PackageJsonShape): {
   changed: boolean;
 } {
   const newScripts: Record<string, string> = {
-    "i18n:extract": "lingui extract",
-    "i18n:compile": "lingui compile --namespace es",
+    // `extract` refuses to overwrite a hand-authored catalog, and
+    // `compile` emits ESM and fails on a catalog parse error.
+    "i18n:extract": "plumix i18n extract",
+    "i18n:compile": "plumix i18n compile",
     // `verify` is the source↔catalog drift gate — works for both
     // lingui-extracted catalogs and the hand-authored manifest pattern
     // plumix's own plugins use. Catches JSX `<Trans id="..." message="...">`
     // and object-literal `{ id, message }` descriptors uniformly.
     "i18n:check": "plumix i18n verify",
+    // So a published tarball never ships stale or missing `locales/*.mjs`.
+    prepack: "plumix i18n compile",
   };
   const newDeps: Record<string, string> = {
     "@lingui/cli": LINGUI_DEP_RANGE,

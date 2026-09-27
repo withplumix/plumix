@@ -14,6 +14,11 @@ const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
     `src/admin/${adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier)}.ts`,
 );
 
+// A first-party plugin's `i18n:compile` is `plumix i18n compile`, which
+// resolves `@lingui/cli` from the plugin's own root at run time — so the
+// plugin declares it, and nothing imports it.
+const PLUGIN_LINGUI_CLI = "@lingui/cli";
+
 const config: KnipConfig = {
   // `exports` check disabled at the project level — admin's vendored
   // shadcn/ui primitives (sidebar, dropdown-menu, sheet, table, etc.)
@@ -304,7 +309,7 @@ const config: KnipConfig = {
       // (a sibling workspace), not by `src/`. Declared as a devDep so
       // turbo's `^build` pulls its dist into the cold-CI graph before
       // `test:e2e` runs.
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },
@@ -359,7 +364,7 @@ const config: KnipConfig = {
         "lingui.config.ts",
         "locales/*.mjs",
       ],
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
     },
     // Same shape as plugin-menu: admin chunk loaded via `adminEntry`
@@ -376,7 +381,7 @@ const config: KnipConfig = {
         "lingui.config.ts",
         "locales/*.mjs",
       ],
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
     },
     // Same shape as plugin-blog: declarative plugin (no admin chunk,
@@ -390,7 +395,7 @@ const config: KnipConfig = {
         "lingui.config.ts",
         "locales/*.mjs",
       ],
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
     },
     // Admin chunk loaded via `adminEntry` at consumer build time; the
@@ -407,7 +412,11 @@ const config: KnipConfig = {
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a box off.
-      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
+      ignoreDependencies: [
+        PLUGIN_LINGUI_CLI,
+        "@plumix/runtime-cloudflare",
+        "@plumix/plugin-blog",
+      ],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },
@@ -421,7 +430,7 @@ const config: KnipConfig = {
         "lingui.config.ts",
         "locales/*.mjs",
       ],
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },
@@ -442,7 +451,11 @@ const config: KnipConfig = {
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a card off.
-      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
+      ignoreDependencies: [
+        PLUGIN_LINGUI_CLI,
+        "@plumix/runtime-cloudflare",
+        "@plumix/plugin-blog",
+      ],
       playwright: false,
     },
     // Admin chunk loaded via `adminEntry` at consumer build time; the
@@ -466,6 +479,7 @@ const config: KnipConfig = {
       // is here because the playground composes it for the `page` entry
       // type the seeded form lives on (#1883).
       ignoreDependencies: [
+        PLUGIN_LINGUI_CLI,
         "@plumix/runtime-cloudflare",
         "@plumix/plugin-pages",
       ],
@@ -489,7 +503,11 @@ const config: KnipConfig = {
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because this is the one playground that composes a second
       // plugin, so only here does `^build` need to reach it (#1883).
-      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
+      ignoreDependencies: [
+        PLUGIN_LINGUI_CLI,
+        "@plumix/runtime-cloudflare",
+        "@plumix/plugin-blog",
+      ],
       playwright: false,
     },
     // Not a pnpm workspace member — it carries its own node_modules so the

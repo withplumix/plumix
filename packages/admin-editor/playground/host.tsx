@@ -22,7 +22,8 @@ import "./playground.css";
 // production build (what e2e previews) won't runtime-compile a raw default
 // message, so an empty catalog would render ICU like "{count} selected"
 // literally — loading the compiled `en` catalog keeps the harness faithful.
-// `playground`/`playground:build` run `plumix-compile-catalogs` first.
+// `playground`/`playground:build` compile them first through core's
+// `plumix-compile-catalogs` bin — the compile `plumix i18n compile` runs.
 const CATALOGS = import.meta.glob<{ messages: Messages }>("../locales/*.mjs", {
   eager: true,
 });

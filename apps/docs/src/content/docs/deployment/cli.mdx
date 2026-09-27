@@ -116,13 +116,15 @@ plumix doctor
 
 ### `i18n`
 
-Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds `lingui.config.ts` and a compile-check script, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).
+Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds `lingui.config.ts` and `i18n:extract`, `i18n:compile`, `i18n:check` and `prepack` scripts that run these verbs, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).
 
 ```bash
 plumix i18n extract
 plumix i18n compile
 plumix i18n init
 ```
+
+`compile` writes an ES module `locales/<locale>.mjs` per catalog and exits non-zero when a catalog has a message Lingui can't parse, such as an unclosed `{`. A missing translation doesn't fail it: the message falls back to its source string. `--dts` also writes a `<locale>.d.mts` declaration beside each `.mjs`, for a package that imports a catalog by name through its `exports` map. Any other argument goes to `lingui compile`.
 
 Unlike every other command, `i18n` runs without loading `plumix.config.ts` — it is tooling for whatever package you run it from, not a step in a site's build.
 

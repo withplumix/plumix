@@ -61,7 +61,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "i18n:extract": "plumix i18n extract",
-    "i18n:compile": "plumix-compile-catalogs",
+    "i18n:compile": "plumix i18n compile",
     "i18n:check": "plumix i18n verify",
     "lint": "eslint",
     "publint": "publint",
@@ -83,6 +83,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@libsql/client": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
     "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",

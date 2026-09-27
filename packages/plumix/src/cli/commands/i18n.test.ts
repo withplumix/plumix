@@ -7,6 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -185,6 +186,28 @@ describe("plugin hand-authored catalogs", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  test("every plugin with catalogs runs its i18n scripts through plumix i18n", () => {
+    const withCatalogs = readdirSync(pluginsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((name) => existsSync(join(pluginsDir, name, "locales")));
+
+    expect(withCatalogs.length).toBeGreaterThan(0);
+
+    const offenders = withCatalogs.flatMap((name) => {
+      const pkg = JSON.parse(
+        readFileSync(join(pluginsDir, name, "package.json"), "utf8"),
+      ) as { scripts?: Record<string, string> };
+      return ["i18n:extract", "i18n:compile", "i18n:check"]
+        .filter(
+          (key) => pkg.scripts?.[key]?.startsWith("plumix i18n ") !== true,
+        )
+        .map((key) => `${name} ${key}`);
+    });
+
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe("i18nCommand", () => {
@@ -198,6 +221,7 @@ describe("i18nCommand", () => {
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   test("rejects an unknown subcommand with the supported list", async () => {
@@ -254,6 +278,117 @@ describe("i18nCommand", () => {
     await expect(
       i18nCommand.run(ctx({ cwd: dir, argv: ["extract"] })),
     ).rejects.toThrow(/@lingui\/cli not found/);
+  });
+
+  describe("compile", () => {
+    // Runs the real `lingui compile` against a fixture catalog: a cold
+    // Lingui start costs 1–3s per spawn, and the `--dts` case spawns twice.
+    const COMPILE_TIMEOUT = 20_000;
+    const require = createRequire(import.meta.url);
+    const linguiBin = join(
+      dirname(require.resolve("@lingui/cli")),
+      "lingui.js",
+    );
+
+    function seedCatalogs(catalogs: Readonly<Record<string, string>>): void {
+      writeFileSync(
+        join(dir, "lingui.config.js"),
+        `module.exports = { sourceLocale: "en", locales: ${JSON.stringify(
+          Object.keys(catalogs),
+        )}, catalogs: [{ path: "<rootDir>/locales/{locale}", include: ["src"] }] };\n`,
+      );
+      mkdirSync(join(dir, "locales"), { recursive: true });
+      for (const [locale, msgstr] of Object.entries(catalogs)) {
+        writeFileSync(
+          join(dir, "locales", `${locale}.po`),
+          `msgid ""\nmsgstr ""\n\nmsgid "greeting"\nmsgstr "${msgstr}"\n`,
+        );
+      }
+    }
+
+    const compiled = (ext: string): string[] =>
+      readdirSync(join(dir, "locales"))
+        .filter((name) => name.endsWith(ext))
+        .sort();
+
+    beforeEach(() => {
+      // Lingui loads a worker file it doesn't publish when the spawned
+      // process sees vitest's `NODE_ENV=test`.
+      vi.stubEnv("NODE_ENV", "production");
+      vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(linguiBin);
+      // Lingui's own progress output; silence it in tests.
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    });
+
+    test(
+      "fails on a catalog with a broken ICU message",
+      async () => {
+        seedCatalogs({ en: "Hello {name" });
+        await expect(
+          i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] })),
+        ).rejects.toMatchObject({ code: "i18n_compile_failed" });
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test(
+      "passes when a non-source locale has only missing translations",
+      async () => {
+        seedCatalogs({ en: "Hello {name}", de: "" });
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+        expect(compiled(".mjs")).toEqual(["de.mjs", "en.mjs"]);
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test(
+      "emits ESM catalogs without the caller passing --namespace",
+      async () => {
+        seedCatalogs({ en: "Hello" });
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+        const catalog = readFileSync(join(dir, "locales", "en.mjs"), "utf8");
+        expect(catalog).toMatch(/export const messages\s*=/);
+        expect(catalog).not.toMatch(/module\.exports/);
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test(
+      "writes a .d.mts beside every catalog with --dts, and none without",
+      async () => {
+        seedCatalogs({ en: "Hello", de: "Hallo" });
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+        expect(compiled(".d.mts")).toEqual([]);
+
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile", "--dts"] }));
+        expect(compiled(".d.mts")).toEqual(["de.d.mts", "en.d.mts"]);
+        expect(readFileSync(join(dir, "locales", "en.d.mts"), "utf8")).toBe(
+          "export declare const messages: Record<string, string | readonly string[]>;\n",
+        );
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test(
+      "forwards every argument but --dts to lingui",
+      async () => {
+        // `--strict` turns a missing translation into a failure, so the
+        // run only fails if the flag reached lingui.
+        seedCatalogs({ en: "Hello", de: "" });
+        await expect(
+          i18nCommand.run(ctx({ cwd: dir, argv: ["compile", "--strict"] })),
+        ).rejects.toMatchObject({ code: "i18n_compile_failed" });
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test("errors when @lingui/cli isn't resolvable", async () => {
+      vi.spyOn(i18nDeps, "resolveLinguiCliBin").mockReturnValue(null);
+      await expect(
+        i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] })),
+      ).rejects.toThrow(/@lingui\/cli not found/);
+    });
   });
 
   describe("verify", () => {
@@ -530,26 +665,19 @@ describe("i18nCommand", () => {
       expect(config).toContain("formatter({ lineNumbers: false })");
     });
 
-    test("scaffolds scripts/i18n-compile-check.mjs with the parse-error gate", async () => {
+    test("scaffolds no scripts/ directory", async () => {
       await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
-      const scriptPath = join(dir, "scripts", "i18n-compile-check.mjs");
-      expect(existsSync(scriptPath)).toBe(true);
-      const script = readFileSync(scriptPath, "utf8");
-      // Same contract as admin's: spawn `lingui compile` without
-      // `--strict` (the args array literally doesn't include it),
-      // grep stdout for "Compilation error", exit 1 on parse error.
-      expect(script).toMatch(/spawn\([\s\S]*"lingui",\s*"compile"/);
-      expect(script).not.toMatch(/"--strict"/);
-      expect(script).toMatch(/Compilation error/);
+      expect(existsSync(join(dir, "scripts"))).toBe(false);
     });
 
-    test("patches package.json with i18n scripts pinned to LINGUI_DEP_RANGE", async () => {
+    test("patches package.json with the plumix i18n verbs and devDeps pinned to LINGUI_DEP_RANGE", async () => {
       await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
       const pkg = readPkg(dir);
-      expect(pkg.scripts).toMatchObject({
-        "i18n:extract": "lingui extract",
-        "i18n:compile": "lingui compile --namespace es",
+      expect(pkg.scripts).toEqual({
+        "i18n:extract": "plumix i18n extract",
+        "i18n:compile": "plumix i18n compile",
         "i18n:check": "plumix i18n verify",
+        prepack: "plumix i18n compile",
       });
       // Pinning to the constant — a version bump must be a deliberate
       // test change so the gate against silent drift stays loud.
@@ -559,10 +687,6 @@ describe("i18nCommand", () => {
 
     test("re-running init preserves user edits to scaffolded files", async () => {
       await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
-      const scriptBefore = readFileSync(
-        join(dir, "scripts", "i18n-compile-check.mjs"),
-        "utf8",
-      );
       const pkgBefore = readFileSync(join(dir, "package.json"), "utf8");
 
       // Mutate the scaffolded files; re-running init must not clobber.
@@ -573,10 +697,7 @@ describe("i18nCommand", () => {
       expect(readFileSync(join(dir, "lingui.config.ts"), "utf8")).toBe(
         "// user edit\n",
       );
-      // The other targets were already in place, so they stay identical.
-      expect(
-        readFileSync(join(dir, "scripts", "i18n-compile-check.mjs"), "utf8"),
-      ).toBe(scriptBefore);
+      // package.json already had every key, so it stays identical.
       expect(readFileSync(join(dir, "package.json"), "utf8")).toBe(pkgBefore);
     });
 
@@ -600,7 +721,7 @@ describe("i18nCommand", () => {
       expect(pkg.scripts?.build).toBe("tsc");
       expect(pkg.scripts?.test).toBe("vitest");
       expect(pkg.devDependencies?.typescript).toBe("^5");
-      expect(pkg.scripts?.["i18n:extract"]).toBe("lingui extract");
+      expect(pkg.scripts?.["i18n:extract"]).toBe("plumix i18n extract");
       expect(pkg.devDependencies?.["@lingui/cli"]).toBe(LINGUI_DEP_RANGE);
     });
 
@@ -610,7 +731,12 @@ describe("i18nCommand", () => {
         JSON.stringify(
           {
             name: "test",
-            scripts: { "i18n:extract": "my-custom-extract" },
+            scripts: {
+              "i18n:extract": "my-custom-extract",
+              "i18n:compile": "my-custom-compile",
+              "i18n:check": "my-custom-check",
+              prepack: "my-custom-prepack",
+            },
             devDependencies: { "@lingui/cli": "5.0.0" },
           },
           null,
@@ -621,7 +747,12 @@ describe("i18nCommand", () => {
       await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
 
       const pkg = readPkg(dir);
-      expect(pkg.scripts?.["i18n:extract"]).toBe("my-custom-extract");
+      expect(pkg.scripts).toEqual({
+        "i18n:extract": "my-custom-extract",
+        "i18n:compile": "my-custom-compile",
+        "i18n:check": "my-custom-check",
+        prepack: "my-custom-prepack",
+      });
       expect(pkg.devDependencies?.["@lingui/cli"]).toBe("5.0.0");
     });
 

@@ -20,6 +20,7 @@ type CliErrorCode =
   | "i18n_check_drift"
   | "i18n_verify_drift"
   | "i18n_extract_hand_authored"
+  | "i18n_compile_failed"
   | "i18n_init_no_package_json"
   | "i18n_init_invalid_package_json"
   | "tooling_command_no_app"
@@ -392,6 +393,15 @@ export class CliError extends Error {
       "i18n_extract_hand_authored",
       "This package's catalogs are hand-authored — running `lingui extract` would rewrite `locales/*.po` and demote every existing entry to obsolete.",
       "Edit `locales/en.po` directly and run `plumix i18n verify` to check source ids against the catalog.",
+      undefined,
+    );
+  }
+
+  static i18nCompileFailed(ctx: { reason: string }): CliError {
+    return new CliError(
+      "i18n_compile_failed",
+      `Catalog compile failed: ${ctx.reason}`,
+      "Lingui's output above names the catalog and message that failed.",
       undefined,
     );
   }
