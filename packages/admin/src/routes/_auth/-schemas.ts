@@ -21,6 +21,24 @@ export const loginSchema = v.object({
   ),
 });
 
+export const loginSearchSchema = v.object({
+  oauth_error: v.optional(v.string()),
+  magic_link_error: v.optional(v.string()),
+  email_change_error: v.optional(v.string()),
+  // TanStack Router's default search-parser JSON-decodes values, so
+  // `?email_change_success=1` arrives as the *number* 1, not a
+  // string. Accept either shape and let the render logic coerce to
+  // a boolean — pinning to `v.string()` here would error the route
+  // when the verify route emits a numeric-looking flag.
+  email_change_success: v.optional(v.union([v.string(), v.number()])),
+  // Pre-auth locale override. Server-side `resolveLocale` consumes this
+  // same param to set `<html lang dir>`; the dropdown below lets the
+  // user flip it from inside the form.
+  lang: v.optional(v.string()),
+});
+
+export type LoginSearch = v.InferOutput<typeof loginSearchSchema>;
+
 export const bootstrapSchema = v.object({
   email: emailField,
   name: v.optional(nameField, ""),

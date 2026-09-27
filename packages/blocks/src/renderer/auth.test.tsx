@@ -52,7 +52,7 @@ function Methods(): React.ReactNode {
   return (
     <>
       {`ml:${m.magicLink}`}
-      {m.oauthProviders.map((p) => (
+      {m.oauth.map((p) => (
         <span key={p.key}>{p.label}</span>
       ))}
     </>
@@ -73,7 +73,7 @@ describe("useAuthMethods", () => {
       renderWith({
         passkey: true,
         magicLink: true,
-        oauthProviders: [{ key: "github", label: "GitHub" }],
+        oauth: [{ key: "github", label: "GitHub" }],
       }),
     ).toBe("ml:true<span>GitHub</span>");
   });

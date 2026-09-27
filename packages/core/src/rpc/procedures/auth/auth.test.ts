@@ -3,11 +3,13 @@ import { describe, expect, test } from "vitest";
 import type { RequestAuthenticator } from "../../../auth/authenticator.js";
 import type { Mailer } from "../../../auth/mailer/types.js";
 import { API_TOKEN_PREFIX, createApiToken } from "../../../auth/api-tokens.js";
+import { auth } from "../../../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../../../auth/cookies.js";
 import {
   lookupDeviceCodeByUserCode,
   requestDeviceCode,
 } from "../../../auth/device-flow.js";
+import { github, google } from "../../../auth/oauth/providers/index.js";
 import { createSession } from "../../../auth/sessions.js";
 import { hashToken } from "../../../auth/tokens.js";
 import { eq } from "../../../db/index.js";
@@ -112,30 +114,39 @@ describe("auth.session", () => {
   });
 });
 
-describe("auth.oauthProviders", () => {
-  test("empty by default — passkey-only deploy", async () => {
-    const h = await createRpcHarness();
-    const result = await h.client.auth.oauthProviders({});
-    expect(result).toEqual([]);
+describe("auth.signInMethods", () => {
+  const passkey = {
+    rpName: "Plumix",
+    rpId: "cms.example",
+    origin: "https://cms.example",
+  };
+  const client = { clientId: "id", clientSecret: "secret" };
+
+  test("reports magic-link off and no OAuth for a passkey-only config", async () => {
+    const h = await createRpcHarness({ auth: auth({ passkey }) });
+    const result = await h.client.auth.signInMethods({});
+    expect(result).toEqual({ magicLink: false, oauth: [] });
   });
 
-  test("returns key + label per configured provider", async () => {
+  test("reports magic-link on when auth.magicLink is configured", async () => {
     const h = await createRpcHarness({
-      oauthProviders: [{ key: "github", label: "GitHub" }],
+      auth: auth({ passkey, magicLink: { siteName: "Acme" } }),
     });
-    const result = await h.client.auth.oauthProviders({});
-    expect(result).toEqual([{ key: "github", label: "GitHub" }]);
+    const result = await h.client.auth.signInMethods({});
+    expect(result.magicLink).toBe(true);
   });
 
-  test("returns multiple providers in declared order", async () => {
+  test("returns key + label per configured OAuth provider, in declared order", async () => {
     const h = await createRpcHarness({
-      oauthProviders: [
-        { key: "github", label: "GitHub" },
-        { key: "google", label: "Google" },
-      ],
+      auth: auth({
+        passkey,
+        oauth: {
+          providers: { github: github(client), google: google(client) },
+        },
+      }),
     });
-    const result = await h.client.auth.oauthProviders({});
-    expect(result).toEqual([
+    const result = await h.client.auth.signInMethods({});
+    expect(result.oauth).toEqual([
       { key: "github", label: "GitHub" },
       { key: "google", label: "Google" },
     ]);

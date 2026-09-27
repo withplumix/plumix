@@ -508,7 +508,7 @@ msgid "editor.revisions.sheet.autosavesEmpty"
 msgstr "ستظهر عمليات الحفظ التلقائي هنا بعد إطلاق مسودات المنشورات المنشورة."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "رجوع"
 
@@ -668,7 +668,12 @@ msgid "userEdit.email.dialog.title"
 msgstr "تغيير البريد الإلكتروني"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.changeUnavailable"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.title"
 msgstr "تحقق من بريدك"
 
@@ -772,7 +777,7 @@ msgstr "متابعة"
 
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "المتابعة بـ {label}"
 
@@ -1425,13 +1430,13 @@ msgid "userInvite.email.label"
 msgstr "البريد الإلكتروني"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/bootstrap.tsx
-msgid "auth.bootstrap.email"
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.email.label"
 msgstr "البريد الإلكتروني"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
-msgid "login.email.label"
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.email"
 msgstr "البريد الإلكتروني"
 
 #. js-lingui-explicit-id
@@ -1445,7 +1450,7 @@ msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "تغيير البريد يتطلب تكوين magic-link mailer على الخادم. مرّر `auth.magicLink` و `mailer:` إلى `plumix({...})` للتفعيل."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.emailChange.success"
 msgstr "تم تأكيد البريد. سجّل الدخول بالعنوان الجديد."
 
@@ -1460,7 +1465,7 @@ msgid "validate.email.maxLength"
 msgstr "البريد الإلكتروني طويل جداً."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.submit"
 msgstr "أرسل لي رابطاً بالبريد"
 
@@ -1530,7 +1535,7 @@ msgid "auth.device.lookup.title"
 msgstr "أدخل الرمز من CLI"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.emailRequired"
 msgstr "أدخل بريدك الإلكتروني أعلاه أولاً."
 
@@ -1718,7 +1723,7 @@ msgid "validate.id.format"
 msgstr "يجب أن يكون id عدداً صحيحاً موجباً"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.description"
 msgstr "إذا كان هناك حساب بهذا البريد، فقد أرسلنا رابط تسجيل الدخول. ينتهي الرابط خلال 15 دقيقة."
 
@@ -2365,7 +2370,7 @@ msgid "core.adminNav.keyword.options"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.separator"
 msgstr "أو"
 
@@ -2924,7 +2929,7 @@ msgid "mailer.test.submit.pending"
 msgstr "جارٍ الإرسال…"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.pending"
 msgstr "جارٍ الإرسال…"
 
@@ -3005,12 +3010,12 @@ msgid "editor.revisions.diffDialog.description"
 msgstr "جنباً إلى جنب: هذه المراجعة (يساراً) مقابل المنشور الحالي (يميناً)."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.title"
 msgstr "تسجيل الدخول"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.submit"
 msgstr "تسجيل الدخول بـ passkey"
 
@@ -3061,7 +3066,7 @@ msgid "profile.sessions.signedIn"
 msgstr "سجّل الدخول {when}"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.pending"
 msgstr "جارٍ تسجيل الدخول…"
 
@@ -3694,7 +3699,7 @@ msgid "metaBox.link.url"
 msgstr "عنوان URL"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.description"
 msgstr "استخدم passkey، أو احصل على رابط برسالة لمرة واحدة، أو تابع مع مزود."
 

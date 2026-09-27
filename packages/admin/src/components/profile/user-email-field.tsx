@@ -41,7 +41,9 @@ import { vMessage } from "@plumix/core/validation";
 // Email field on the user-edit page. Three states:
 //
 //   1. No pending change → display the current email + a "Change
-//      email" button (only when the caller can edit).
+//      email" button (only when the caller can edit). A change is
+//      confirmed by a magic link, so on a site without magic-link
+//      sign-in the email is read-only and the field says why.
 //   2. Pending change → show a banner with the new email + expiry +
 //      a Cancel button. New change requests still work; the request
 //      flow auto-purges the prior pending row before issuing.
@@ -121,6 +123,8 @@ export function UserEmailField({
     orpc.user.pendingEmailChange.queryOptions({ input: { id: userId } }),
   );
   const pending = pendingQuery.data?.pending ?? null;
+  const signInMethods = useQuery(orpc.auth.signInMethods.queryOptions());
+  const magicLinkEnabled = signInMethods.data?.magicLink;
 
   const invalidate = (): Promise<void> =>
     queryClient.invalidateQueries({
@@ -170,7 +174,7 @@ export function UserEmailField({
         >
           {email}
         </p>
-        {canEdit ? (
+        {canEdit && magicLinkEnabled === true ? (
           <Button
             type="button"
             variant="outline"
@@ -186,6 +190,17 @@ export function UserEmailField({
           </Button>
         ) : null}
       </div>
+      {canEdit && magicLinkEnabled === false ? (
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="user-edit-email-change-unavailable"
+        >
+          <Trans
+            id="userEdit.email.changeUnavailable"
+            message="Changing the email needs magic-link sign-in, which this site hasn't configured."
+          />
+        </p>
+      ) : null}
 
       {/*
         Pending banner takes precedence over the post-mutation success

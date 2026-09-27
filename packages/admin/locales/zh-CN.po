@@ -508,7 +508,7 @@ msgid "editor.revisions.sheet.autosavesEmpty"
 msgstr "一旦有可用的「已发布的草稿」版本，自动保存将出现在这里。"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "返回"
 
@@ -668,7 +668,12 @@ msgid "userEdit.email.dialog.title"
 msgstr "更改电子邮箱地址"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.changeUnavailable"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.title"
 msgstr "请查收邮件"
 
@@ -772,7 +777,7 @@ msgstr "继续"
 
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "使用 {label} 继续"
 
@@ -1425,13 +1430,13 @@ msgid "userInvite.email.label"
 msgstr "电子邮箱"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/bootstrap.tsx
-msgid "auth.bootstrap.email"
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.email.label"
 msgstr "电子邮箱"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
-msgid "login.email.label"
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.email"
 msgstr "电子邮箱"
 
 #. js-lingui-explicit-id
@@ -1445,7 +1450,7 @@ msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "电子邮箱更改需要服务器端配置 Magic Link 邮件发送器。请向 `plumix({...})` 传入 `auth.magicLink` 和 `mailer:` 以启用。"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.emailChange.success"
 msgstr "电子邮箱已确认。使用新地址登录。"
 
@@ -1460,7 +1465,7 @@ msgid "validate.email.maxLength"
 msgstr "电子邮箱过长。"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.submit"
 msgstr "通过电子邮件发送链接"
 
@@ -1530,7 +1535,7 @@ msgid "auth.device.lookup.title"
 msgstr "从您的 CLI 输入代码"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.emailRequired"
 msgstr "请先在上方输入您的电子邮箱。"
 
@@ -1718,7 +1723,7 @@ msgid "validate.id.format"
 msgstr "id 必须为正整数"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.description"
 msgstr "如果此电子邮箱有账户，我们已发送登录链接。链接将在 15 分钟后过期。"
 
@@ -2365,7 +2370,7 @@ msgid "core.adminNav.keyword.options"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.separator"
 msgstr "或"
 
@@ -2924,7 +2929,7 @@ msgid "mailer.test.submit.pending"
 msgstr "发送中…"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.pending"
 msgstr "发送中…"
 
@@ -3005,12 +3010,12 @@ msgid "editor.revisions.diffDialog.description"
 msgstr "并排：此修订版本（左）与当前条目（右）。"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.title"
 msgstr "登录"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.submit"
 msgstr "使用 Passkey 登录"
 
@@ -3061,7 +3066,7 @@ msgid "profile.sessions.signedIn"
 msgstr "{when} 登录"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.pending"
 msgstr "登录中…"
 
@@ -3694,7 +3699,7 @@ msgid "metaBox.link.url"
 msgstr "URL"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.description"
 msgstr "使用 Passkey、获取一次性邮件链接,或使用提供商继续。"
 

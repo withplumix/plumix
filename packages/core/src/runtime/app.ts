@@ -75,7 +75,7 @@ import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
-export interface OAuthProviderSummary {
+interface OAuthProviderSummary {
   /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
   /** Human-readable name for the login button ("GitHub", "Google", …). */
@@ -95,7 +95,7 @@ export interface AuthMethodsSummary {
   /** True when `auth.magicLink` is configured. */
   readonly magicLink: boolean;
   /** `{ key, label }` per configured OAuth provider; empty when none. */
-  readonly oauthProviders: readonly OAuthProviderSummary[];
+  readonly oauth: readonly OAuthProviderSummary[];
 }
 
 /**
@@ -105,12 +105,15 @@ export interface AuthMethodsSummary {
  */
 export function resolveAuthMethods(
   authConfig: PlumixAuthConfig,
-  oauthProviders: readonly OAuthProviderSummary[],
 ): AuthMethodsSummary {
+  const providers = authConfig.oauth?.providers ?? {};
   return {
     passkey: true,
     magicLink: authConfig.magicLink !== undefined,
-    oauthProviders,
+    oauth: Object.entries(providers).map(([key, provider]) => ({
+      key,
+      label: provider.label,
+    })),
   };
 }
 
@@ -181,13 +184,9 @@ export interface PlumixApp {
    */
   readonly bootstrapAllowed: boolean;
   /**
-   * Public summary of configured OAuth providers — `{ key, label }` per
-   * entry, derived from the user's `oauth.providers` map at app build
-   * time. The login screen reads this verbatim through the
-   * `auth.oauthProviders` RPC; secrets never leave config.
+   * Projected auth methods for theme login pages and the admin login (via the
+   * `auth.signInMethods` RPC); see {@link AuthMethodsSummary}.
    */
-  readonly oauthProviders: readonly OAuthProviderSummary[];
-  /** Projected auth methods for theme login pages; see {@link AuthMethodsSummary}. */
   readonly authMethods: AuthMethodsSummary;
   readonly schema: SchemaModule;
   /**
@@ -403,14 +402,7 @@ export async function buildApp(
   }
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
-  const oauth = config.auth.oauth;
-  const oauthProviders: OAuthProviderSummary[] = oauth
-    ? Object.entries(oauth.providers).map(([key, provider]) => ({
-        key,
-        label: provider.label,
-      }))
-    : [];
-  const authMethods = resolveAuthMethods(config.auth, oauthProviders);
+  const authMethods = resolveAuthMethods(config.auth);
   const sessionPolicy = config.auth.sessions ?? DEFAULT_SESSION_POLICY;
   const authenticator =
     config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
@@ -497,7 +489,6 @@ export async function buildApp(
     sessionPolicy,
     authenticator,
     bootstrapAllowed,
-    oauthProviders,
     authMethods,
     schema,
     routeMap: compileRouteMap(registry),
