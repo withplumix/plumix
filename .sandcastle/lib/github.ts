@@ -277,22 +277,111 @@ const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
     "state,mergeStateStatus,statusCheckRollup,autoMergeRequest,headRefName",
   ]);
   const [owner, name] = REPO_SLUG.split("/");
-  const isInMergeQueue = ghJson<boolean>([
+  const held = ghJson<HeldBy>([
     "api",
     "graphql",
     "-f",
-    `query={repository(owner:"${owner}",name:"${name}"){pullRequest(number:${pullRequest}){isInMergeQueue}}}`,
+    `query=${HELD_BY_QUERY}`,
+    "-F",
+    `owner=${owner}`,
+    "-F",
+    `name=${name}`,
+    "-F",
+    `number=${pullRequest}`,
     "--jq",
-    ".data.repository.pullRequest.isInMergeQueue",
+    ".data.repository.pullRequest",
   ]);
   return {
     state: viewed.state,
     mergeStateStatus: viewed.mergeStateStatus,
     statusCheckRollup: viewed.statusCheckRollup,
-    isInMergeQueue,
+    isInMergeQueue: held.isInMergeQueue,
     autoMergeEnabled: viewed.autoMergeRequest !== null,
     openCodeScanningAlerts: openCodeScanningAlerts(pullRequest),
+    unresolvedReviewThreads: held.reviewThreads.nodes.flatMap(
+      ({ id, isResolved, path, line, comments }) => {
+        const [first] = comments.nodes;
+        if (isResolved || !first || first.author?.login === CODE_SCANNING_LOGIN)
+          return [];
+        return [
+          {
+            id,
+            author: first.author?.login ?? "ghost",
+            byABot: first.author?.__typename === "Bot",
+            location: `${path}${line ? `:${line}` : ""}`,
+            body: first.body,
+            url: first.url,
+          },
+        ];
+      },
+    ),
+    changesRequestedBy: held.latestReviews.nodes
+      .filter(
+        ({ state, author }) =>
+          state === "CHANGES_REQUESTED" && author?.__typename !== "Bot",
+      )
+      .map(({ author }) => author?.login ?? "ghost"),
   };
+};
+
+const CODE_SCANNING_LOGIN = "github-advanced-security";
+
+interface Author {
+  readonly login: string;
+  readonly __typename: string;
+}
+
+interface HeldBy {
+  readonly isInMergeQueue: boolean;
+  readonly reviewThreads: {
+    readonly nodes: readonly {
+      readonly id: string;
+      readonly isResolved: boolean;
+      readonly path: string;
+      readonly line: number | null;
+      readonly comments: {
+        readonly nodes: readonly {
+          readonly author: Author | null;
+          readonly body: string;
+          readonly url: string;
+        }[];
+      };
+    }[];
+  };
+  readonly latestReviews: {
+    readonly nodes: readonly {
+      readonly state: string;
+      readonly author: Author | null;
+    }[];
+  };
+}
+
+const HELD_BY_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      isInMergeQueue
+      reviewThreads(first: 100) {
+        nodes {
+          id isResolved path line
+          comments(first: 1) { nodes { author { login __typename } body url } }
+        }
+      }
+      latestReviews(first: 50) { nodes { state author { login __typename } } }
+    }
+  }
+}`;
+
+export const resolveReviewThreads = (threadIds: readonly string[]): void => {
+  for (const threadId of threadIds) {
+    gh([
+      "api",
+      "graphql",
+      "-f",
+      "query=mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { id } } }",
+      "-F",
+      `id=${threadId}`,
+    ]);
+  }
 };
 
 const openCodeScanningAlerts = (pullRequest: number): readonly string[] =>
@@ -303,8 +392,6 @@ const openCodeScanningAlerts = (pullRequest: number): readonly string[] =>
     '[.[] | "\\(.rule.description) at \\(.most_recent_instance.location.path):\\(.most_recent_instance.location.start_line)"]',
   ]);
 
-// The queue tests a merge group on its own branch, so a refusal there never
-// shows on the pull request's checks — the evidence is on the group's run.
 const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
   const runs = ghJson<
     readonly { databaseId: number; headBranch: string; conclusion: string }[]
@@ -341,8 +428,6 @@ const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Entering the queue briefly reads as neither queued nor auto-merging, so one
-// sighting is not enough to call the pull request dropped.
 const SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT = 2;
 
 export const waitForMerge = async (

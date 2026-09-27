@@ -51,6 +51,7 @@ describe("asCiEvidenceBrief", () => {
         { name: "Knip", log: "Unused exported types (1)\nPublicAuthor  type" },
       ],
       codeScanningAlerts: [],
+      reviewThreads: [],
     });
 
     expect(brief).toContain("#2647");
@@ -63,6 +64,7 @@ describe("asCiEvidenceBrief", () => {
     const brief = asCiEvidenceBrief(ticket, pullRequest, {
       logs: [],
       codeScanningAlerts: ["Improper code sanitization at a.ts:18"],
+      reviewThreads: [],
     });
 
     expect(brief).toContain("Improper code sanitization at a.ts:18");
@@ -74,7 +76,29 @@ describe("asCiEvidenceBrief", () => {
       asCiEvidenceBrief(ticket, pullRequest, {
         logs: [],
         codeScanningAlerts: [],
+        reviewThreads: [],
       }),
     ).toBeNull();
+  });
+
+  test("carries a bot's review threads with where they point", () => {
+    const brief = asCiEvidenceBrief(ticket, pullRequest, {
+      logs: [],
+      codeScanningAlerts: [],
+      reviewThreads: [
+        {
+          id: "t1",
+          author: "coderabbitai",
+          byABot: true,
+          location: "packages/core/src/a.ts:12",
+          body: "this drops the locale",
+          url: "https://github.com/o/r/pull/2647#discussion_r1",
+        },
+      ],
+    });
+
+    expect(brief).toContain("coderabbitai");
+    expect(brief).toContain("packages/core/src/a.ts:12");
+    expect(brief).toContain("this drops the locale");
   });
 });

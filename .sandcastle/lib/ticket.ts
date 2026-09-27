@@ -212,8 +212,6 @@ export const fixerFor = (
   };
 };
 
-// Runs the gates, handing each first failure to the fixer, until they are
-// green (null) or the fixer is out of rounds or declines (the reason).
 export const gatesUntilGreen = async (
   sandbox: Executor,
   gates: readonly Gate[],
@@ -343,8 +341,6 @@ export const shipTicket = async (
       }
     }
 
-    // Last, so they judge the branch exactly as it will be pushed: every
-    // review fix is in, and nothing but a gate fix follows them.
     const gateBlocked = await gatesUntilGreen(
       sandbox,
       [...GATES, CHANGESET_GATE],

@@ -266,10 +266,6 @@ jobs:
         id: screenshot-diff
         run: git diff --exit-code -- apps/docs/src/assets/screenshots
 
-      # The images the capture just wrote are the fix for the diff above, and
-      # they can only be made in the pinned container. Uploading them lets the
-      # ship loop commit them instead of parking the ticket for a person with
-      # docker. The step name above is read by .sandcastle/lib/repair.ts.
       - name: Upload the recaptured screenshots
         if: failure() && steps.screenshot-diff.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

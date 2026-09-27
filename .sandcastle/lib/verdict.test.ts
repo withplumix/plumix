@@ -12,6 +12,8 @@ const snapshot = (
   isInMergeQueue: true,
   autoMergeEnabled: false,
   openCodeScanningAlerts: [],
+  unresolvedReviewThreads: [],
+  changesRequestedBy: [],
   ...over,
 });
 
@@ -98,6 +100,66 @@ describe("judgeQueuedPullRequest", () => {
   test("a pull request waiting on auto-merge has not left the queue", () => {
     const verdict = judgeQueuedPullRequest(
       snapshot({ isInMergeQueue: false, autoMergeEnabled: true }),
+    );
+
+    expect(verdict.status).toBe("waiting");
+  });
+
+  const held = {
+    mergeStateStatus: "BLOCKED",
+    isInMergeQueue: false,
+    autoMergeEnabled: true,
+    statusCheckRollup: [run("Lint", "SUCCESS")],
+  };
+  const thread = (author: string, byABot: boolean) => ({
+    id: `thread-${author}`,
+    author,
+    byABot,
+    location: "packages/core/src/a.ts:12",
+    body: "this drops the locale",
+    url: "https://github.com/o/r/pull/1#discussion_r1",
+  });
+
+  test("a person's unresolved thread parks the ticket for a person, never for the fixer", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        ...held,
+        unresolvedReviewThreads: [thread("nasyrov", false)],
+      }),
+    );
+
+    expect(verdict).toMatchObject({ status: "failed", needsAPerson: true });
+    expect(verdict.status === "failed" && verdict.reason).toContain("nasyrov");
+  });
+
+  test("changes requested by a person park the ticket for a person", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({ ...held, changesRequestedBy: ["nasyrov"] }),
+    );
+
+    expect(verdict).toMatchObject({ status: "failed", needsAPerson: true });
+  });
+
+  test("a bot's unresolved thread is handed to the fixer as evidence", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        ...held,
+        unresolvedReviewThreads: [thread("coderabbitai", true)],
+      }),
+    );
+
+    expect(verdict).toMatchObject({
+      status: "failed",
+      reviewThreads: [
+        { author: "coderabbitai", body: "this drops the locale" },
+      ],
+    });
+    expect(verdict).not.toMatchObject({ needsAPerson: true });
+  });
+
+  test("threads on a pull request the queue is merging are left alone", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({ unresolvedReviewThreads: [thread("coderabbitai", true)] }),
     );
 
     expect(verdict.status).toBe("waiting");

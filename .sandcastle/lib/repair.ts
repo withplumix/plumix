@@ -4,10 +4,14 @@ import { join } from "node:path";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
-import type { MergeOutcome } from "./verdict.js";
+import type { MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { branchOfPullRequest, pushBranch } from "./github.js";
+import {
+  branchOfPullRequest,
+  pushBranch,
+  resolveReviewThreads,
+} from "./github.js";
 import { say } from "./log.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
 import {
@@ -22,8 +26,6 @@ import {
   readDeclinedTag,
 } from "./ticket.js";
 
-// Must match the step name in .github/workflows/ci.yml, which uploads the
-// recaptured images as SCREENSHOT_ARTIFACT when this step fails.
 export const SCREENSHOT_DIFF_STEP =
   "Assert the committed images are the ones the capture produces";
 const SCREENSHOT_ARTIFACT = "docs-screenshots";
@@ -49,14 +51,20 @@ export const failedOnlyOnTheScreenshotDiff = (
 interface CiEvidence {
   readonly logs: readonly { name: string; log: string }[];
   readonly codeScanningAlerts: readonly string[];
+  readonly reviewThreads: readonly ReviewThread[];
 }
 
 export const asCiEvidenceBrief = (
   ticket: Ticket,
   pullRequest: QueuedPullRequest,
-  { logs, codeScanningAlerts }: CiEvidence,
+  { logs, codeScanningAlerts, reviewThreads }: CiEvidence,
 ): string | null => {
-  if (logs.length === 0 && codeScanningAlerts.length === 0) return null;
+  if (
+    logs.length === 0 &&
+    codeScanningAlerts.length === 0 &&
+    reviewThreads.length === 0
+  )
+    return null;
 
   const sections = [
     `This branch is ${pullRequest.url} (#${pullRequest.number}), implementing #${ticket.number}. ` +
@@ -73,6 +81,12 @@ export const asCiEvidenceBrief = (
       `Code scanning blocks the merge:\n\n${codeScanningAlerts.map((alert) => `- ${alert}`).join("\n")}\n\n` +
         "Fix the code if the alert is right. If it is a false positive, do not work around it — " +
         "dismissing an alert is a person's call, so decline and say why.",
+    );
+  }
+  for (const { author, location, body, url } of reviewThreads) {
+    sections.push(
+      `**${author}** left an unresolved review thread on \`${location}\` (${url}):\n\n> ${body.split("\n").join("\n> ")}\n\n` +
+        "Address it in the code. If the reviewer is wrong, decline and say why.",
     );
   }
   return sections.join("\n\n");
@@ -209,6 +223,7 @@ export const repairPullRequest = async (
     const brief = asCiEvidenceBrief(ticket, pullRequest, {
       logs,
       codeScanningAlerts: refusal.codeScanningAlerts ?? [],
+      reviewThreads: refusal.reviewThreads ?? [],
     });
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
@@ -230,6 +245,7 @@ export const repairPullRequest = async (
     if (gateBlocked) return declined(gateBlocked);
 
     pushBranch(branch, sandbox.worktreePath);
+    resolveReviewThreads((refusal.reviewThreads ?? []).map(({ id }) => id));
     return { status: "repaired" };
   } finally {
     const { preservedWorktreePath } = await closePlumixSandbox(sandbox);

@@ -316,6 +316,55 @@ describe("runShipLoop", () => {
     expect(parked[0]?.reason).toContain("no space left");
   });
 
+  test("a refusal only a person can answer parks at once, without a repair", async () => {
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ({
+        status: "failed",
+        reason: "nasyrov requested changes",
+        failingChecks: [],
+        needsAPerson: true,
+      }),
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(0);
+    expect(parked[0]?.reason).toContain("nasyrov requested changes");
+  });
+
+  test("a queued pull request is confirmed while its lane moves on, not after the whole drain", async () => {
+    let confirmingTheFirst = false;
+    let sawItWhileShippingTheSecond = false;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1), ticket(2)]),
+      confirm: async (pr) => {
+        if (pr.number === 101) confirmingTheFirst = true;
+        return merged;
+      },
+      ship: async (t) => {
+        if (t.number === 2) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          sawItWhileShippingTheSecond = confirmingTheFirst;
+        }
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+    });
+
+    const report = await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(sawItWhileShippingTheSecond).toBe(true);
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 

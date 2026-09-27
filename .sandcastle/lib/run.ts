@@ -73,7 +73,38 @@ export const runShipLoop = async (
     ports.say(`\n${stoppedBecause}\nLeaving the rest of the queue untouched.`);
   };
 
-  const settled = await drainAcrossLanes<Ticket, Queued | undefined>({
+  const confirmRepairingWhatIsRefused = async ({
+    ticket,
+    pullRequest,
+  }: Queued): Promise<MergeOutcome> => {
+    let outcome = await ports.confirm(pullRequest);
+    for (
+      let repairs = 0;
+      outcome.status !== "merged" &&
+      !outcome.needsAPerson &&
+      repairs < REPAIRS_A_PULL_REQUEST_GETS;
+      repairs += 1
+    ) {
+      ports.say(
+        `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+      );
+      const repaired = await ports.repair(ticket, pullRequest, outcome);
+      if (repaired.status === "declined") {
+        return { status: "failed", reason: repaired.reason, failingChecks: [] };
+      }
+      ports.requeue(pullRequest);
+      outcome = await ports.confirm(pullRequest);
+    }
+    return outcome;
+  };
+
+  const confirming: {
+    readonly ticket: Ticket;
+    readonly pullRequest: QueuedPullRequest;
+    readonly outcome: Promise<PromiseSettledResult<MergeOutcome>>;
+  }[] = [];
+
+  await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
     stopDispatchingWhen: () =>
@@ -90,7 +121,7 @@ export const runShipLoop = async (
           `  #${ticket.number} left as it was — the harness threw: ${reason}`,
         );
         noteFailure(reason);
-        return undefined;
+        return;
       }
 
       if (outcome.status === "blocked") {
@@ -98,63 +129,42 @@ export const runShipLoop = async (
         parked.push({ ticket, reason: outcome.reason });
         ports.say(`  #${ticket.number} parked: ${outcome.reason}`);
         noteFailure(outcome.reason);
-        return undefined;
+        return;
       }
 
       failuresInARow = 0;
 
-      ports.say(`  #${ticket.number} queued ${outcome.pullRequest.url}`);
-      return { ticket, pullRequest: outcome.pullRequest };
+      const { pullRequest } = outcome;
+      ports.say(`  #${ticket.number} queued ${pullRequest.url}`);
+      confirming.push({
+        ticket,
+        pullRequest,
+        outcome: confirmRepairingWhatIsRefused({ ticket, pullRequest }).then(
+          (value) => ({ status: "fulfilled", value }),
+          (reason: unknown) => ({ status: "rejected", reason }),
+        ),
+      });
     },
   });
 
-  const queued = settled.flatMap((entry) => entry ?? []);
-  ports.say(`\n--- confirming ${queued.length} queued pull request(s) ---`);
-
-  const confirmRepairingWhatIsRefused = async ({
-    ticket,
-    pullRequest,
-  }: Queued): Promise<MergeOutcome> => {
-    let outcome = await ports.confirm(pullRequest);
-    for (
-      let repairs = 0;
-      outcome.status !== "merged" && repairs < REPAIRS_A_PULL_REQUEST_GETS;
-      repairs += 1
-    ) {
-      ports.say(
-        `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
-      );
-      const repaired = await ports.repair(ticket, pullRequest, outcome);
-      if (repaired.status === "declined") {
-        return { status: "failed", reason: repaired.reason, failingChecks: [] };
-      }
-      ports.requeue(pullRequest);
-      outcome = await ports.confirm(pullRequest);
-    }
-    return outcome;
-  };
-
-  const confirmations = await Promise.allSettled(
-    queued.map(confirmRepairingWhatIsRefused),
-  );
+  ports.say(`\n--- waiting on ${confirming.length} queued pull request(s) ---`);
 
   const merged: { ticket: Ticket; pullRequest: QueuedPullRequest }[] = [];
-  queued.forEach(({ ticket, pullRequest }, index) => {
-    const settledConfirmation = confirmations[index];
-    if (!settledConfirmation) return;
+  for (const { ticket, pullRequest, outcome } of confirming) {
+    const settledConfirmation = await outcome;
 
     if (settledConfirmation.status === "rejected") {
       const reason = `the run could not confirm ${pullRequest.url}: ${asReason(settledConfirmation.reason)}`;
       ports.park(ticket, reason, pullRequest.url);
       parked.push({ ticket, reason });
-      return;
+      continue;
     }
 
-    const outcome = settledConfirmation.value;
-    if (outcome.status !== "merged") {
-      ports.park(ticket, outcome.reason, pullRequest.url);
-      parked.push({ ticket, reason: outcome.reason });
-      return;
+    const confirmed = settledConfirmation.value;
+    if (confirmed.status !== "merged") {
+      ports.park(ticket, confirmed.reason, pullRequest.url);
+      parked.push({ ticket, reason: confirmed.reason });
+      continue;
     }
 
     if (!ports.ticketClosed(ticket)) {
@@ -163,7 +173,7 @@ export const runShipLoop = async (
       );
     }
     merged.push({ ticket, pullRequest });
-  });
+  }
 
   return { merged, parked, outage, stoppedBecause };
 };

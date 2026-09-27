@@ -11,7 +11,18 @@ export type MergeOutcome =
       readonly failingChecks: readonly FailingCheck[];
       readonly conflicted?: boolean;
       readonly codeScanningAlerts?: readonly string[];
+      readonly reviewThreads?: readonly ReviewThread[];
+      readonly needsAPerson?: boolean;
     };
+
+export interface ReviewThread {
+  readonly id: string;
+  readonly author: string;
+  readonly byABot: boolean;
+  readonly location: string;
+  readonly body: string;
+  readonly url: string;
+}
 
 export interface PullRequestSnapshot {
   readonly state: string;
@@ -25,6 +36,8 @@ export interface PullRequestSnapshot {
   readonly isInMergeQueue: boolean;
   readonly autoMergeEnabled: boolean;
   readonly openCodeScanningAlerts: readonly string[];
+  readonly unresolvedReviewThreads: readonly ReviewThread[];
+  readonly changesRequestedBy: readonly string[];
 }
 
 export type QueueVerdict =
@@ -71,12 +84,43 @@ export const judgeQueuedPullRequest = (
   );
   if (checksStillRunning) return { status: "waiting" };
 
+  if (pullRequest.isInMergeQueue) return { status: "waiting" };
+
+  const byPeople = pullRequest.unresolvedReviewThreads.filter(
+    ({ byABot }) => !byABot,
+  );
+  if (byPeople.length > 0 || pullRequest.changesRequestedBy.length > 0) {
+    const who = [
+      ...pullRequest.changesRequestedBy.map(
+        (login) => `${login} requested changes`,
+      ),
+      ...byPeople.map(
+        ({ author, url }) => `${author} left an open thread: ${url}`,
+      ),
+    ];
+    return {
+      status: "failed",
+      reason: `a person's review holds the merge — ${who.join("; ")}`,
+      failingChecks: [],
+      needsAPerson: true,
+    };
+  }
+
   if (pullRequest.openCodeScanningAlerts.length > 0) {
     return {
       status: "failed",
       reason: `code scanning blocks the merge: ${pullRequest.openCodeScanningAlerts.join("; ")}`,
       failingChecks: [],
       codeScanningAlerts: pullRequest.openCodeScanningAlerts,
+    };
+  }
+
+  if (pullRequest.unresolvedReviewThreads.length > 0) {
+    return {
+      status: "failed",
+      reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
+      failingChecks: [],
+      reviewThreads: pullRequest.unresolvedReviewThreads,
     };
   }
 
