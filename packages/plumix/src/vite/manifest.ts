@@ -1,6 +1,7 @@
 import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   collectNamedTemplates,
+  ConfiguredSlots,
   PluginRegistry,
   PlumixManifest,
   ResolvedI18n,
@@ -18,6 +19,7 @@ export interface ManifestBuildOptions {
   readonly namedTemplates?: ReturnType<typeof collectNamedTemplates>;
   readonly blocks?: readonly BlockSpec[];
   readonly i18n?: ResolvedI18n;
+  readonly configuredSlots?: ConfiguredSlots;
   /**
    * The site's theme, handed to plugins the way the runtime hands it over.
    * Required, because every registration a plugin makes from `theme:ready` is

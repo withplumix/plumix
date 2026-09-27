@@ -1480,7 +1480,7 @@ msgid "userInvite.email.invalid"
 msgstr "Введіть дійсну email-адресу"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Введіть дійсну email-адресу."
 
@@ -1945,7 +1945,7 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr "Вхід за magic-link не налаштований на цьому сайті."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.title"
 msgstr "Пошта"
 
@@ -2355,7 +2355,7 @@ msgid "editor.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
 
@@ -2557,7 +2557,7 @@ msgid "dashboard.recent.title"
 msgstr "Нещодавня активність"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.label"
 msgstr "Одержувач"
 
@@ -2899,7 +2899,7 @@ msgid "magicLink.error.registrationClosed"
 msgstr "Самостійна реєстрація недоступна, доки адміністратор не завершив налаштування."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.title"
 msgstr "Надіслати тестове повідомлення"
 
@@ -2914,12 +2914,12 @@ msgid "userInvite.submit.idle"
 msgstr "Надіслати запрошення"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.idle"
 msgstr "Надіслати тест"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.pending"
 msgstr "Надсилання…"
 
@@ -2934,7 +2934,7 @@ msgid "userEdit.email.dialog.submit.pending"
 msgstr "Надсилання…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.description"
 msgstr "Надсилає одноразове повідомлення через той самий транспорт, що й magic-link. Помилки виводяться тут дослівно — на відміну від процесу запиту magic-link, який навмисно поглинає помилки mailer, щоб форма відповіді не виявляла, чи зареєстровано email."
 
@@ -3243,12 +3243,12 @@ msgstr "Терміни"
 
 #. to: the recipient email address the test was sent to
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.feedback.ok"
 msgstr "Тестове повідомлення надіслано на {to}. Якщо воно не прийде протягом хвилини, перевірте журнали вашого транспортного адаптера."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.description"
 msgstr "Перевірка того, що налаштований транспорт вихідної пошти справді доставляє. Використовується magic-link входом, листами запрошень та будь-яким плагіном, що використовує спільний mailer."
 
@@ -3553,6 +3553,11 @@ msgstr "Цей сеанс більше не існує. Оновіть спис�
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "Ця сторінка налаштувань ще не посилається на жодні зареєстровані групи. Плагіни складають сторінки за допомогою хелпера registerSettingsPage:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+msgid "mailer.notConfigured"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

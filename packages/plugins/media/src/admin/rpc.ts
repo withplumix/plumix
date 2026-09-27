@@ -6,14 +6,6 @@ import { createPluginRpcClient } from "plumix/admin";
 
 import type { MediaRouter } from "../rpc.js";
 
-// The subdirectory mount the host exposes (see plumix-globals), used to prefix
-// the worker-routed `/_plumix/...` URLs the admin components build.
-export function pluginBasePath(): string {
-  return (
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
-  );
-}
-
 // Media's own `media/*` procedures.
 export const mediaRpc = createPluginRpcClient<MediaRouter>("media");
 

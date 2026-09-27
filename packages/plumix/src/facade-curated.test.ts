@@ -185,6 +185,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "injectManifestIntoHtml",
       "CORE_NAV_GROUPS",
       "MANIFEST_SCRIPT_ID",
+      "configuredSlotsOf",
       "collectRawSqlMigrations",
       "planRawSqlMigrations",
       "CORE_SCHEMA_MODULE",

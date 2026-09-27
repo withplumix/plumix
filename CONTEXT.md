@@ -295,6 +295,12 @@ What a runtime adapter hands core for one call into the runtime handler: the `en
 **Config slot**:
 A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot.
 
+**Infrastructure slot**:
+A config slot that holds an adapter the admin could offer an action for: `storage`, `imageDelivery`, `kv`, `cdn`, `mailer`. Not a capability: it says what the deployment can do, not what a user may. See ADR 0014.
+
+**Configured slot**:
+An infrastructure slot the site's resolved config sets. The plugin manifest carries only whether each one is configured; an admin affordance backed by one is hidden when it isn't. Not a capability. See ADR 0014.
+
 **Client address**:
 The network address a request came from, as the runtime's trusted proxy reported it and the runtime adapter handed core. Advisory: it describes the network path, never the principal, so no access decision reads it.
 _Avoid_: IP, client IP, remote address
@@ -405,7 +411,9 @@ them distinct by **always qualifying** them; bare use is a smell.
   "manifest".
 - **capability** — the **RBAC** sense (a permission string) vs the loose
   entitlement-label sense. Reserve "capability" for RBAC; use **entitlement**
-  for the membership label.
+  for the membership label. Neither an **infrastructure slot** nor a
+  **configured slot** is a capability: those say what the deployment can do,
+  a capability what a user may.
 - **template** — the **theme render unit** (this glossary) vs the stored
   **page-template** choice an entry can pick vs the **project template** in the
   scaffolder. Qualify when more than one is in play.
@@ -413,7 +421,8 @@ them distinct by **always qualifying** them; bare use is a smell.
   request and purged by tag) vs the **rendered asset** sense (bytes behind a
   content-addressed storage key, which nothing purges). Qualify when more
   than one is in play.
-- **slot** — the **config slot** (this glossary) vs a **descriptor slot** (a
+- **slot** — the **config slot** (this glossary), including its
+  **infrastructure slot** and **configured slot** senses, vs a **descriptor slot** (a
   named key on a plugin or theme descriptor, such as `i18n` or `templates`) vs
   a **slot input** (the block input holding child nodes) vs the **template
   slot** a theme's generic tier is made of. Qualify when more than one is in

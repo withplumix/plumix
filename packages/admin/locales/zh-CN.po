@@ -1480,7 +1480,7 @@ msgid "userInvite.email.invalid"
 msgstr "输入有效的电子邮箱地址"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "输入有效的电子邮箱地址。"
 
@@ -1945,7 +1945,7 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr "此站点未配置 Magic Link 登录。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.title"
 msgstr "邮件发送器"
 
@@ -2355,7 +2355,7 @@ msgid "editor.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
 
@@ -2557,7 +2557,7 @@ msgid "dashboard.recent.title"
 msgstr "最近活动"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.label"
 msgstr "收件人"
 
@@ -2899,7 +2899,7 @@ msgid "magicLink.error.registrationClosed"
 msgstr "在管理员完成设置之前，自助注册不可用。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.title"
 msgstr "发送测试消息"
 
@@ -2914,12 +2914,12 @@ msgid "userInvite.submit.idle"
 msgstr "发送邀请"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.idle"
 msgstr "发送测试"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.pending"
 msgstr "发送中…"
 
@@ -2934,7 +2934,7 @@ msgid "userEdit.email.dialog.submit.pending"
 msgstr "发送中…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.description"
 msgstr "通过 Magic Link 使用的同一传输发送一次性消息。错误将原样显示在此处 — 与 Magic Link 请求流程不同，后者会刻意吞下邮件错误，以免响应形态泄露电子邮箱是否已注册。"
 
@@ -3243,12 +3243,12 @@ msgstr "术语"
 
 #. to: the recipient email address the test was sent to
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.feedback.ok"
 msgstr "测试消息已发送至 {to}。如果一分钟内未送达,请检查您的传输适配器日志。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.description"
 msgstr "测试已配置的出站电子邮件传输是否真正送达。由 Magic Link 登录、邀请邮件以及任何使用共享邮件发送器的插件使用。"
 
@@ -3553,6 +3553,11 @@ msgstr "此会话不再存在。请刷新列表。"
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "此设置页面尚未指向已注册的分组。插件使用 registerSettingsPage 辅助函数创建页面："
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+msgid "mailer.notConfigured"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

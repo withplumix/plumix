@@ -14,9 +14,11 @@ import * as SonnerNs from "sonner";
 import * as TailwindMergeNs from "tailwind-merge";
 
 import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+import type { ConfiguredSlots } from "@plumix/core/manifest";
 
 import { adminBasePath } from "./admin-base.js";
 import { pluginCatalogLoaderRef } from "./i18n-boot.js";
+import { getConfiguredSlots } from "./manifest.js";
 import { registerPaletteCommand } from "./palette-commands.js";
 import {
   registerPluginBlock,
@@ -79,6 +81,10 @@ declare global {
       /** Subdirectory mount for plugin chunks to prefix their `/_plumix/...`
        *  fetches with; derived from the `<base href>` (see {@link adminBasePath}). */
       readonly basePath: string;
+      /** Which infrastructure slots the deployment fills, read off the
+       *  manifest; plugin chunks ask through `plumix/admin`'s
+       *  `isSlotConfigured`. */
+      readonly configuredSlots: ConfiguredSlots;
     };
   }
 }
@@ -97,6 +103,7 @@ export function bootPlumixGlobals(): void {
     registerPaletteCommand,
     runtime,
     basePath: adminBasePath(),
+    configuredSlots: getConfiguredSlots(),
     // Indirection through the ref so the manifest-bound loader
     // installed by `bootI18n` is reachable from plugin chunks that
     // load post-boot. Pre-boot callers hit the no-op default; the

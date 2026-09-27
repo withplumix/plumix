@@ -22,12 +22,14 @@ import type {
   AdminNavItem,
   BlockManifestEntry,
   BuiltManifest,
+  ConfiguredSlots,
   CoreIconName,
   DashboardWidgetManifestEntry,
   EntryMetaBoxFieldManifestEntry,
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
   FieldTypeManifestEntry,
+  InfrastructureSlot,
   MarkManifestEntry,
   PatternManifestEntry,
   PluginI18nManifest,
@@ -62,7 +64,11 @@ import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
 import { resolveImageRoleIndex } from "./image-roles.js";
-import { byPriorityThen, CORE_NAV_GROUPS } from "./manifest-types.js";
+import {
+  byPriorityThen,
+  configuredSlotsOf,
+  CORE_NAV_GROUPS,
+} from "./manifest-types.js";
 import { pluginCatalogUrl } from "./plugin-catalog-path.js";
 import { ENTRY_MENU_ICONS, TAXONOMY_MENU_ICONS } from "./registry.js";
 
@@ -144,8 +150,13 @@ export function buildManifest(
      *  i18n-slot plugin gets a URL. Only consulted alongside
      *  `plugins`; passing this set without `plugins` is a no-op. */
     readonly adminBundledPluginIds?: ReadonlySet<string>;
+    /** Routed through options — like `tokens` — because slot presence is
+     *  read off the site config, not the plugin registry. Omitted means no
+     *  slot is configured. */
+    readonly configuredSlots?: ConfiguredSlots;
   },
 ): BuiltManifest {
+  const configuredSlots = options?.configuredSlots ?? configuredSlotsOf({});
   const entries = Array.from(registry.entryTypes.values())
     .map((pt) => toEntryTypeManifest(pt, options?.namedTemplates?.[pt.name]))
     .sort(byPriorityThen((e) => e.name));
@@ -197,7 +208,12 @@ export function buildManifest(
     .map(toSettingsPageEntry)
     .sort(byPriorityThen((p) => p.name));
   assertSettingsPageGroupsExist(settingsPages, registry.settingsGroups);
-  const adminNav = projectAdminNav(registry, entries, termTaxonomies);
+  const adminNav = projectAdminNav(
+    registry,
+    entries,
+    termTaxonomies,
+    configuredSlots,
+  );
   const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
     .map(toDashboardWidgetEntry)
     .sort(byPriorityThen((w) => w.id));
@@ -244,6 +260,7 @@ export function buildManifest(
       options?.i18n,
       options?.adminBundledPluginIds,
     ),
+    configuredSlots,
   };
 }
 
@@ -294,8 +311,13 @@ interface MutableAdminNavGroup {
 // Built-in items core seeds into the projection. Each row is keyed by
 // the group id it lands in; capability gating is admin-side at render
 // time (the manifest projection ships every item, the sidebar drops
-// what the user can't see).
-const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
+// what the user can't see). A row naming a `slot` is dropped here when
+// the deployment doesn't fill it: the user may, but the site can't.
+const CORE_NAV_ITEMS: readonly {
+  groupId: string;
+  slot?: InfrastructureSlot;
+  item: AdminNavItem;
+}[] = [
   {
     groupId: "overview",
     item: {
@@ -345,6 +367,7 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
   },
   {
     groupId: "management",
+    slot: "mailer",
     item: {
       to: "/mailer",
       label: { id: "core.adminNav.item.mailer", message: "Mailer" },
@@ -403,7 +426,9 @@ function humanizeGroupId(id: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function seedNavGroups(): Map<string, MutableAdminNavGroup> {
+function seedNavGroups(
+  configuredSlots: ConfiguredSlots,
+): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
   for (const g of CORE_NAV_GROUPS) {
     groups.set(g.id, {
@@ -413,7 +438,8 @@ function seedNavGroups(): Map<string, MutableAdminNavGroup> {
       items: [],
     });
   }
-  for (const { groupId, item } of CORE_NAV_ITEMS) {
+  for (const { groupId, slot, item } of CORE_NAV_ITEMS) {
+    if (slot !== undefined && !configuredSlots[slot]) continue;
     groups.get(groupId)?.items.push(item);
   }
   return groups;
@@ -515,8 +541,9 @@ function projectAdminNav(
   registry: PluginRegistry,
   entries: readonly EntryTypeManifestEntry[],
   termTaxonomies: readonly TermTaxonomyManifestEntry[],
+  configuredSlots: ConfiguredSlots,
 ): readonly AdminNavGroup[] {
-  const groups = seedNavGroups();
+  const groups = seedNavGroups(configuredSlots);
   addEntryNavItems(groups, entries);
   addTaxonomyNavItems(groups, termTaxonomies);
   addAdminPageNavItems(groups, registry);

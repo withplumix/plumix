@@ -1,9 +1,14 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { MarkSpec } from "@plumix/blocks";
 import { defineBlock } from "@plumix/blocks";
 
-import type { EntryMenuIcon } from "./manifest.js";
+import type { PlumixConfig } from "../config.js";
+import type {
+  ConfiguredSlots,
+  EntryMenuIcon,
+  InfrastructureSlot,
+} from "./manifest.js";
 import {
   anonymousPolicy,
   definePolicy,
@@ -16,7 +21,7 @@ import { registerCoreSettings } from "../settings-core.js";
 import { buildManifest, deriveAdminSlug } from "./build-manifest.js";
 import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
-import { createPluginRegistry } from "./manifest.js";
+import { configuredSlotsOf, createPluginRegistry } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
 describe("buildManifest", () => {
@@ -26,6 +31,63 @@ describe("buildManifest", () => {
     };
     const manifest = buildManifest(createPluginRegistry(), { tokens });
     expect(manifest.tokens).toEqual(tokens);
+  });
+
+  test("reports every infrastructure slot the config leaves unset as not configured", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      configuredSlots: configuredSlotsOf({}),
+    });
+    expect(manifest.configuredSlots).toEqual({
+      storage: false,
+      imageDelivery: false,
+      kv: false,
+      cdn: false,
+      mailer: false,
+    });
+  });
+
+  test.each(["storage", "imageDelivery", "kv", "cdn", "mailer"] as const)(
+    "reports the %s slot as configured when the config sets it",
+    (slot) => {
+      const config: Pick<PlumixConfig, InfrastructureSlot> = {
+        [slot]: { adapter: "stand-in" },
+      };
+      const manifest = buildManifest(createPluginRegistry(), {
+        configuredSlots: configuredSlotsOf(config),
+      });
+      expect(manifest.configuredSlots).toEqual({
+        storage: false,
+        imageDelivery: false,
+        kv: false,
+        cdn: false,
+        mailer: false,
+        [slot]: true,
+      });
+    },
+  );
+
+  test("names only keys of the config as infrastructure slots", () => {
+    expectTypeOf<InfrastructureSlot>().toExtend<keyof PlumixConfig>();
+  });
+
+  test("a roster must name every infrastructure slot and nothing else", () => {
+    // @ts-expect-error — a roster missing `cdn` is not a ConfiguredSlots.
+    const missing: ConfiguredSlots = {
+      storage: true,
+      imageDelivery: true,
+      kv: true,
+      mailer: true,
+    };
+    const stray: ConfiguredSlots = {
+      storage: true,
+      imageDelivery: true,
+      kv: true,
+      cdn: true,
+      mailer: true,
+      // @ts-expect-error — `smtp` is not an infrastructure slot.
+      smtp: true,
+    };
+    expect([missing, stray]).toHaveLength(2);
   });
 
   test("projects the core site settings group + general page for the admin", () => {
@@ -142,10 +204,23 @@ describe("buildManifest", () => {
     expect(manifest.settingsPages).toEqual([]);
     expect(manifest.fieldTypes).toEqual([]);
     // Overview always carries Dashboard; Management carries Users +
-    // Allowed domains + Mailer + Settings. Capability filtering happens
-    // admin-side at render time — the projection ships every item.
+    // Allowed domains + Field values + Settings. Capability filtering
+    // happens admin-side at render time — the projection ships every item.
     const overview = manifest.adminNav.find((g) => g.id === "overview");
     expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
+    const management = manifest.adminNav.find((g) => g.id === "management");
+    expect(management?.items.map((i) => i.to)).toEqual([
+      "/users",
+      "/allowed-domains",
+      "/field-values",
+      "/settings",
+    ]);
+  });
+
+  test("lists Mailer under Management only when the mailer slot is configured", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      configuredSlots: { ...configuredSlotsOf({}), mailer: true },
+    });
     const management = manifest.adminNav.find((g) => g.id === "management");
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",

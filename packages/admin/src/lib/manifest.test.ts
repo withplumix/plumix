@@ -99,6 +99,18 @@ describe("readManifest", () => {
     expect(readManifest(doc).tokens).toEqual(tokens);
   });
 
+  test("carries the configured-slot roster through to consumers", () => {
+    const configuredSlots = {
+      storage: true,
+      imageDelivery: false,
+      kv: false,
+      cdn: false,
+      mailer: true,
+    };
+    const doc = withManifestScript(JSON.stringify({ configuredSlots }));
+    expect(readManifest(doc).configuredSlots).toEqual(configuredSlots);
+  });
+
   test("empty payload falls back to empty manifest", () => {
     const doc = withManifestScript("");
     expect(readManifest(doc)).toEqual({});

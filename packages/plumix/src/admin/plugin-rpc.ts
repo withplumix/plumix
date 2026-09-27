@@ -18,11 +18,7 @@ import { RPCLink } from "@orpc/client/fetch";
 
 import type { PluginRpcClient, PluginRpcRouter } from "@plumix/core";
 
-function basePath(): string {
-  return (
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
-  );
-}
+import { basePath } from "./runtime.js";
 
 /**
  * `TRouter` is the type of what the plugin's server module hands

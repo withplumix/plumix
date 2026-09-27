@@ -1480,7 +1480,7 @@ msgid "userInvite.email.invalid"
 msgstr "Enter a valid email address"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Enter a valid email address."
 
@@ -1945,7 +1945,7 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr "Magic-link sign-in isn't configured on this site."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.title"
 msgstr "Mailer"
 
@@ -2355,7 +2355,7 @@ msgid "editor.loading"
 msgstr "Opening the editor…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
 
@@ -2557,7 +2557,7 @@ msgid "dashboard.recent.title"
 msgstr "Recent activity"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.label"
 msgstr "Recipient"
 
@@ -2899,7 +2899,7 @@ msgid "magicLink.error.registrationClosed"
 msgstr "Self-signup is unavailable until an administrator has finished setup."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.title"
 msgstr "Send a test message"
 
@@ -2914,12 +2914,12 @@ msgid "userInvite.submit.idle"
 msgstr "Send invite"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.idle"
 msgstr "Send test"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.pending"
 msgstr "Sending…"
 
@@ -2934,7 +2934,7 @@ msgid "userEdit.email.dialog.submit.pending"
 msgstr "Sending…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.description"
 msgstr "Sends a one-off message via the same transport magic-link uses. Failures surface here verbatim — distinct from the magic-link request flow, which intentionally swallows mailer errors so the response shape can't leak whether an email is registered."
 
@@ -3243,12 +3243,12 @@ msgstr "Terms"
 
 #. to: the recipient email address the test was sent to
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.feedback.ok"
 msgstr "Test message sent to {to}. If it doesn't arrive within a minute, check your transport adapter's logs."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.description"
 msgstr "Test that the configured outbound-email transport actually delivers. Used by magic-link sign-in, invite emails, and any plugin that opts into the shared mailer."
 
@@ -3553,6 +3553,11 @@ msgstr "This session no longer exists. Refresh the list."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "This settings page doesn't reference any registered groups yet. Plugins compose pages with the registerSettingsPage helper:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+msgid "mailer.notConfigured"
+msgstr "This site can't send email yet. Outbound email needs a mailer: slot in plumix.config.ts."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx

@@ -1480,7 +1480,7 @@ msgid "userInvite.email.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً."
 
@@ -1945,7 +1945,7 @@ msgid "magicLinkRequest.error.notConfigured"
 msgstr "تسجيل الدخول بـ magic-link غير مكوَّن على هذا الموقع."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.title"
 msgstr "البريد"
 
@@ -2355,7 +2355,7 @@ msgid "editor.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
 
@@ -2557,7 +2557,7 @@ msgid "dashboard.recent.title"
 msgstr "النشاط الأخير"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.recipient.label"
 msgstr "المستلم"
 
@@ -2899,7 +2899,7 @@ msgid "magicLink.error.registrationClosed"
 msgstr "التسجيل الذاتي غير متاح حتى ينتهي المدير من الإعداد."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.title"
 msgstr "إرسال رسالة تجريبية"
 
@@ -2914,12 +2914,12 @@ msgid "userInvite.submit.idle"
 msgstr "إرسال الدعوة"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.idle"
 msgstr "إرسال تجريبي"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.submit.pending"
 msgstr "جارٍ الإرسال…"
 
@@ -2934,7 +2934,7 @@ msgid "userEdit.email.dialog.submit.pending"
 msgstr "جارٍ الإرسال…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.description"
 msgstr "يرسل رسالة لمرة واحدة عبر نفس النقل الذي يستخدمه magic-link. تظهر الإخفاقات هنا حرفياً — بخلاف تدفق طلب magic-link الذي يبتلع أخطاء mailer عمداً حتى لا يكشف شكل الاستجابة عن تسجيل البريد."
 
@@ -3243,12 +3243,12 @@ msgstr "المصطلحات"
 
 #. to: the recipient email address the test was sent to
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.test.feedback.ok"
 msgstr "أُرسلت رسالة تجريبية إلى {to}. إذا لم تصل خلال دقيقة، تحقق من سجلات محوّل النقل."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/mailer/index.tsx
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
 msgid "mailer.description"
 msgstr "اختبار أن نقل البريد الصادر المُكوَّن يسلّم فعلاً. يُستخدم بواسطة تسجيل دخول magic-link، رسائل الدعوات، وأي إضافة تستخدم mailer المشترك."
 
@@ -3553,6 +3553,11 @@ msgstr "لم تعد هذه الجلسة موجودة. حدّث القائمة."
 #: src/routes/_authenticated/settings/$page.tsx
 msgid "settings.page.empty.description"
 msgstr "صفحة الإعدادات هذه لا تشير إلى أي مجموعات مسجَّلة بعد. الإضافات تركّب الصفحات باستخدام مساعد registerSettingsPage:"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/mailer/-mailer-page.tsx
+msgid "mailer.notConfigured"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
