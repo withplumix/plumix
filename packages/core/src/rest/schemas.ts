@@ -75,7 +75,6 @@ function listEnvelopeSchema<TItem extends v.GenericSchema>(item: TItem) {
 export const entriesListEnvelopeSchema = listEnvelopeSchema(publicEntrySchema);
 export const termsListEnvelopeSchema = listEnvelopeSchema(publicTermSchema);
 
-export type PublicAuthor = v.InferOutput<typeof publicAuthorSchema>;
 export type PublicEntry = v.InferOutput<typeof publicEntrySchema>;
 export type PublicTerm = v.InferOutput<typeof publicTermSchema>;
 

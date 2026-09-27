@@ -128,6 +128,19 @@ describe("feed routes", () => {
     expect(body).toContain("<title>Hello World</title>");
   });
 
+  test("an item's title expands its shortcodes in both formats", async () => {
+    const h = await harness(blogPlugin);
+    await seedPost(h, "best-of", "Best of [year]");
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    for (const path of ["/feed", "/feed/atom"]) {
+      const body = await (await h.fetch(path)).text();
+      expect(body).toContain(`<title>Best of ${year}</title>`);
+    }
+  });
+
   test("GET /<type>/feed returns the type-scoped feed", async () => {
     const h = await harness(blogPlugin);
     await seedPost(h, "hello", "Hello World");

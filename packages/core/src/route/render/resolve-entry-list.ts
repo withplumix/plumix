@@ -183,7 +183,9 @@ export async function resolveEntryList(
       })
       .from(entryTerm)
       .innerJoin(terms, eq(entryTerm.termId, terms.id))
-      .where(inArray(entryTerm.entryId, entryIds)),
+      .where(inArray(entryTerm.entryId, entryIds))
+      // `id` tiebreaks the default-0 sortOrder so the order is deterministic.
+      .orderBy(entryTerm.sortOrder, terms.id),
     // Templates read `entry.meta.<field>` as the adapter's hydrated
     // shape — one level deep; a summary carries no meta of its own.
     resolveEntriesMeta(ctx, rows),
