@@ -62,9 +62,11 @@ export interface NodeSiteHandler {
   ) => Promise<void | ScheduledRunReport>;
 }
 
+// `db` is the runner's test seam; an embedder's cron writes to the site's own
+// database.
 export type CronOverrides = Omit<
   ScheduledRunnerOptions,
-  "app" | "env" | "fire"
+  "app" | "env" | "fire" | "db"
 >;
 
 export interface NodeSite {

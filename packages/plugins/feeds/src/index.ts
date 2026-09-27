@@ -15,7 +15,6 @@ import "./items.js"; // feed:items
 export type { ArchiveTypeFeed } from "./archive.js";
 export type { FeedScope } from "./scope.js";
 export type { FeedChannel, FeedFormat, FeedItem } from "./serialize.js";
-export { renderAtom, renderRss2 } from "./serialize.js";
 export { FEED_LIMIT } from "./items.js";
 
 /**

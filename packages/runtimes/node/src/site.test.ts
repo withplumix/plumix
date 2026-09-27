@@ -9,7 +9,7 @@ import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import * as schema from "plumix/schema";
-import { applyCoreTestSchema, createTestDb } from "plumix/test";
+import { applyCoreTestSchema } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import {
   afterEach,
@@ -23,7 +23,7 @@ import {
 
 import type { NodeConfig } from "./adapter.js";
 import type { Scheduler } from "./scheduler.js";
-import type { ServeProcessOptions } from "./site.js";
+import type { CronOverrides, ServeProcessOptions } from "./site.js";
 import { node } from "./adapter.js";
 import { listen } from "./http/test-support.js";
 import { nodeSqlite } from "./node-sqlite.js";
@@ -143,7 +143,6 @@ describe("createNodeSite — scheduled", () => {
     const logger = quiet();
 
     const cron = await site.startCron({
-      db: await createTestDb(),
       lease: false,
       clock,
       logger,
@@ -154,6 +153,21 @@ describe("createNodeSite — scheduled", () => {
     expect(logger.error).toHaveBeenCalledWith(
       `[plumix] cron "${CRON}": 1 task(s) failed: failing:always-fails`,
     );
+  });
+
+  test("the scheduler's run guard writes to the site's own database", async () => {
+    const { site, connected } = await siteFor();
+    const overrides: CronOverrides = {
+      lease: false,
+      logger: quiet(),
+      // @ts-expect-error -- a test seam, not an embedder's override (#2461)
+      db: undefined,
+    };
+
+    const cron = await site.startCron(overrides);
+    await cron.stop();
+
+    expect(connected).toContain(SCHEDULED_PATH);
   });
 });
 

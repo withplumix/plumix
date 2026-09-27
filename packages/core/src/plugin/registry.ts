@@ -151,11 +151,10 @@ export interface EntryTypeOptions {
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
-  /** Master visibility switch; defaults to `true`. Cascades to `showUI`/`showInSidebar`/`excludeFromGenericRpc`/`excludeFromSearch` when those are unset. */
+  /** Master visibility switch; defaults to `true`. Cascades to `showUI`/`showInSidebar`/`excludeFromSearch` when those are unset. */
   readonly isPublic?: boolean;
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
-  readonly excludeFromGenericRpc?: boolean;
   readonly excludeFromSearch?: boolean;
   readonly hasArchive?: boolean | string;
   readonly rewrite?: {
@@ -294,7 +293,6 @@ export interface TermTaxonomyOptions {
   readonly isPublic?: boolean;
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
-  readonly excludeFromGenericRpc?: boolean;
   /** Keep this taxonomy's terms out of public search results. Defaults from
    *  `isPublic`, so a navigation-menu taxonomy is excluded without a second
    *  declaration. The admin command palette ignores it — an editor searches
@@ -316,11 +314,7 @@ export interface TermTaxonomyOptions {
 
 type ResolvedVisibility = Pick<
   RegisteredEntryType,
-  | "isPublic"
-  | "showUI"
-  | "showInSidebar"
-  | "excludeFromGenericRpc"
-  | "excludeFromSearch"
+  "isPublic" | "showUI" | "showInSidebar" | "excludeFromSearch"
 >;
 
 function resolveVisibility(
@@ -332,7 +326,6 @@ function resolveVisibility(
     isPublic,
     showUI,
     showInSidebar: options.showInSidebar ?? showUI,
-    excludeFromGenericRpc: options.excludeFromGenericRpc ?? !isPublic,
     excludeFromSearch: options.excludeFromSearch ?? !isPublic,
   };
 }
@@ -465,7 +458,6 @@ export interface RegisteredEntryType extends EntryTypeOptions {
   readonly isPublic: boolean;
   readonly showUI: boolean;
   readonly showInSidebar: boolean;
-  readonly excludeFromGenericRpc: boolean;
   readonly excludeFromSearch: boolean;
 }
 
@@ -475,7 +467,6 @@ export interface RegisteredTermTaxonomy extends TermTaxonomyOptions {
   readonly isPublic: boolean;
   readonly showUI: boolean;
   readonly showInSidebar: boolean;
-  readonly excludeFromGenericRpc: boolean;
   readonly excludeFromSearch: boolean;
 }
 

@@ -164,12 +164,11 @@ Plugin-defined values work the same way. The comments plugin enables discussion 
 
 `isPublic` is the master switch and defaults to `true`. Set it to `false` and the router compiles no routes for the type, while the permalink builder returns null for its entries. There is nothing public left to link to.
 
-Narrower flags cascade from it, and you set one when you want a single surface to differ from the rest. Three of the four reach a surface today.
+Narrower flags cascade from it, and you set one when you want a single surface to differ from the rest.
 
 - `showUI` supplies the default `showInSidebar` inherits, so turning it off takes the sidebar entry with it.
 - `showInSidebar` is the flag the admin reads. `false` drops the type from the sidebar and from the dashboard's quick-create tiles, which is how a plugin ships its own management page in place of the generic list.
 - `excludeFromSearch` keeps the type out of site search results while leaving its own URLs live.
-- `excludeFromGenericRpc` resolves the same way, from `isPublic`, and is stored on the registration. Nothing in core, the admin or any shipped plugin reads it today, and the manifest projection drops it, so setting it changes no behaviour.
 
 ## Capabilities
 

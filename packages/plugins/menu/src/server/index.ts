@@ -1,4 +1,3 @@
-export { getEligibleMenuKinds } from "./eligibility.js";
 export { getMenuByName, getMenusByName } from "./getMenuByName.js";
 export {
   getMenuForLocation,

@@ -685,8 +685,8 @@ function slugify(input: string): string {
 // Explicit allowlist — only the destructured keys ship to the browser.
 // Adding a field to `EntryTypeOptions` / `RegisteredEntryType` does NOT
 // automatically leak it; it must be added here AND to `EntryTypeManifestEntry`
-// to surface in the admin. `registeredBy`, `rewrite`, `capabilities`,
-// `excludeFromGenericRpc` and `excludeFromSearch` stay server-side;
+// to surface in the admin. `registeredBy`, `rewrite`, `capabilities` and
+// `excludeFromSearch` stay server-side;
 // `capabilities` is authorization metadata.
 function toEntryTypeManifest(
   pt: RegisteredEntryType,

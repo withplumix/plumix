@@ -66,6 +66,7 @@ apps/
 └── docs/       @plumix-apps/docs      — Astro Starlight documentation site
 tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspace packages
 tooling/e2e-ports — guards every Playwright suite's ports against every other suite's
+tooling/published-surface — records a reason for every export a consumer can import
 ```
 
 ### The umbrella rule
@@ -75,6 +76,8 @@ The `plumix` package re-exports the public API surface from the internal `@plumi
 **Consumer packages — plugins, runtimes, examples, `create-plumix-app` — must import from `plumix` (or its subpaths). They must not import from the internal packages (`@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor`, `@plumix/admin-ui`) directly.**
 
 This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by ESLint's `no-restricted-imports` rule via the `noInternalImports` config in `@plumix/eslint-config`, which consumer packages opt into.
+
+Every export a consumer can import is a recorded decision in `tooling/published-surface`, and a PR that adds one adds its row, with a reason, to its roster.
 
 ### Core's layers
 
