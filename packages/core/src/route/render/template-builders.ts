@@ -32,6 +32,7 @@ import type {
   EntryTypeTargets,
   TermTaxonomyTargets,
 } from "./rule-selectors.js";
+import { NAMED_TEMPLATE_META_KEY } from "../contract/named-template-meta-key.js";
 import {
   archiveTypeTargets,
   authorTargets,
@@ -44,11 +45,7 @@ import {
   termTaxonomyTargets,
 } from "./rule-selectors.js";
 
-/**
- * Reserved entry-meta key holding an author's `named`-template choice — the
- * editor writes it, the resolver reads it. Part of the `__plumix_*` namespace.
- */
-export const NAMED_TEMPLATE_META_KEY = "__plumix_template";
+export { NAMED_TEMPLATE_META_KEY };
 
 /** What every builder ends in — the template, whatever selected it. */
 interface TemplateSelector<Data extends TemplateData> {

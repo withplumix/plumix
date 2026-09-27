@@ -1,6 +1,5 @@
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { JsonObject } from "../json.js";
 import type {
   ArchiveEntries,
   RegisteredArchiveType,
@@ -15,15 +14,13 @@ import type {
   ListingArchiveData,
   SearchData,
 } from "./render/resolved-entry.js";
-import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { accumulateEmbeddedTags } from "../cdn/embedded-tags.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { canEditEntry } from "../entries/editability.js";
-import { getAutosave } from "../revisions/repository.js";
-import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
+import { getAutosave, overlayAutosave } from "../revisions/repository.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { entrySearchCondition } from "../search/conditions.js";
 import { archiveEntries, termSlugParam } from "./archive-entries.js";
@@ -47,7 +44,6 @@ import {
   resolveAuthorRow,
   resolveEntryList,
 } from "./render/resolve-entry-list.js";
-import { NAMED_TEMPLATE_META_KEY } from "./render/template-builders.js";
 import { resolveSingleEntry } from "./single-entry.js";
 
 declare module "../hooks/types.js" {
@@ -455,16 +451,13 @@ function parsePageParam(raw: string | undefined): number {
 
 /**
  * When a valid `?preview=` token grants this exact entry, overlay the token
- * author's autosave onto the live row for render. Reserved `__plumix_*` meta
- * keys are stripped so the bag matches a live row's shape, and the live
- * slug/parentId are kept so the permalink stays correct. Passthrough on the
- * common no-token / no-autosave paths.
+ * author's autosave onto the live row for render (see {@link overlayAutosave}).
+ * Passthrough on the common no-token / no-autosave paths.
  */
 async function overlayPreviewAutosave(
   ctx: AppContext,
   entry: Entry,
 ): Promise<Entry> {
-  if (entry.status === "trash") return entry;
   const token = readPreviewToken(ctx);
   if (token === null) return entry;
   const grant = await verifyPreviewGrant(ctx.db, token);
@@ -475,39 +468,5 @@ async function overlayPreviewAutosave(
     { entryId: entry.id, authorId: grant.userId },
     entry,
   );
-  if (!autosave) return entry;
-  // Overlay only the drafted fields. `title` / `slug` / `parentId` / terms are
-  // live fields (the editor writes them with `saveAs: "live"`), so they come
-  // from `entry` — the autosave's `title` column is a stale snapshot frozen at
-  // the last draft write and must not override a later live title edit.
-  return {
-    ...entry,
-    content: autosave.content,
-    excerpt: autosave.excerpt,
-    // Keep the reserved template key so an unsaved `named`-template pick still
-    // drives resolution — otherwise preview would fall back to the default.
-    meta: withLiveAccessChoice(
-      entry.meta,
-      stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]),
-    ),
-  };
-}
-
-/**
- * Carry the *live* row's per-entry access choice through the overlay. Unlike
- * the template pick, an unsaved access pick must not drive the preview: the
- * gate resolves its policy from the persisted row (`policyForMatch` never sees
- * this overlay), so a bag reporting the draft's pick would tell the page one
- * thing about its own visibility and the gate another — and anything the page
- * publishes on the entry's behalf, a social card above all, would be decided
- * against a choice that gates nothing.
- */
-function withLiveAccessChoice(
-  live: JsonObject,
-  drafted: JsonObject,
-): JsonObject {
-  const choice = live[ACCESS_POLICY_META_KEY];
-  return choice === undefined
-    ? drafted
-    : { ...drafted, [ACCESS_POLICY_META_KEY]: choice };
+  return autosave === undefined ? entry : overlayAutosave(entry, autosave);
 }

@@ -1,4 +1,5 @@
 import type { AnyPluginDescriptor, JsonValue } from "plumix";
+import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -14,7 +15,9 @@ const blogPlugin = definePlugin("blog", (ctx) => {
     label: "Posts",
     isPublic: true,
     hasArchive: true,
-    supports: ["title", "editor", "excerpt"],
+    // As `@plumix/plugin-blog` declares it, so an edit to a published post
+    // lands on the editor's autosave.
+    supports: ["title", "editor", "excerpt", "autosave"],
   });
 });
 
@@ -65,10 +68,10 @@ async function seedPost(
 async function preview(
   h: DispatcherHarness,
   entryId: number,
+  admin?: User,
 ): Promise<SerpPreview> {
-  const admin = await h.seedUser("admin");
   const response = await h.fetch("/_plumix/rpc/seo/preview", {
-    as: admin,
+    as: admin ?? (await h.seedUser("admin")),
     json: { json: { entryId }, meta: [] },
   });
   response.assertStatus(200);
@@ -138,6 +141,36 @@ describe("the SERP preview procedure", () => {
     const id = await seedPost(h, { title: "About [site-title]" });
 
     expect((await preview(h, id)).title).toBe("About Demo");
+  });
+
+  test("keeps an autosave's reserved keys out of the data it computes from", async () => {
+    const h = await createHarness([
+      definePlugin("reserved", {
+        setup: (ctx) => {
+          ctx.addFilter("resolve:single:data", (data) => ({
+            ...data,
+            entry: {
+              ...data.entry,
+              title: `reserved:${Object.keys(data.entry.meta)
+                .filter((key) => key.startsWith("__plumix_"))
+                .join(",")}`,
+            },
+          }));
+        },
+      }),
+    ]);
+    const id = await seedPost(h);
+    const admin = await h.seedUser("admin");
+    const saved = await h.fetch("/_plumix/rpc/entry/update", {
+      as: admin,
+      json: { json: { id, excerpt: "Pending" }, meta: [] },
+    });
+    saved.assertStatus(200);
+
+    expect(await preview(h, id, admin)).toMatchObject({
+      title: "reserved:",
+      description: "Pending",
+    });
   });
 
   test("with no excerpt the description falls back to the tagline", async () => {
