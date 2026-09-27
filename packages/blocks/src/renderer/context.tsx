@@ -48,7 +48,7 @@ export interface RendererAuthMethods {
 }
 
 export type RendererQueriedEntry =
-  | { readonly kind: "entry"; readonly id: number }
+  | { readonly kind: "entry"; readonly id: number; readonly preview: boolean }
   | { readonly kind: "term"; readonly id: number }
   | { readonly kind: "author"; readonly id: number }
   | { readonly kind: "archive"; readonly entryType: string };

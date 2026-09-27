@@ -393,9 +393,14 @@ async function resolveSingle(
   if (!baseRow) return notFound("public-post-not-found");
   // A preview link renders the minting author's in-progress autosave, so the
   // "Preview current draft" action shows pending edits rather than the live row.
-  const row = await overlayPreviewAutosave(ctx, baseRow);
+  const overlaid = await overlayPreviewAutosave(ctx, baseRow);
+  const row = overlaid ?? baseRow;
 
-  ctx.resolvedEntity = { kind: "entry", id: row.id };
+  ctx.resolvedEntity = {
+    kind: "entry",
+    id: row.id,
+    preview: overlaid !== null,
+  };
 
   const editMode = resolveEditMode({
     editParam: new URL(ctx.request.url).searchParams.has("plumix.edit"),
@@ -452,21 +457,21 @@ function parsePageParam(raw: string | undefined): number {
 /**
  * When a valid `?preview=` token grants this exact entry, overlay the token
  * author's autosave onto the live row for render (see {@link overlayAutosave}).
- * Passthrough on the common no-token / no-autosave paths.
+ * Null on the common no-token / no-autosave paths, where the live row renders.
  */
 async function overlayPreviewAutosave(
   ctx: AppContext,
   entry: Entry,
-): Promise<Entry> {
+): Promise<Entry | null> {
   const token = readPreviewToken(ctx);
-  if (token === null) return entry;
+  if (token === null) return null;
   const grant = await verifyPreviewGrant(ctx.db, token);
-  if (grant === null) return entry;
-  if (grant.entryId !== entry.id) return entry;
+  if (grant === null) return null;
+  if (grant.entryId !== entry.id) return null;
   const autosave = await getAutosave(
     ctx.db,
     { entryId: entry.id, authorId: grant.userId },
     entry,
   );
-  return autosave === undefined ? entry : overlayAutosave(entry, autosave);
+  return autosave === undefined ? null : overlayAutosave(entry, autosave);
 }

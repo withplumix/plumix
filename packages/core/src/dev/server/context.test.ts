@@ -53,7 +53,7 @@ describe("collectDevErrorContext", () => {
   test("captures the resolved entity and template", () => {
     const context = collectDevErrorContext(
       ctxWith({
-        resolvedEntity: { kind: "entry", id: 12 },
+        resolvedEntity: { kind: "entry", id: 12, preview: false },
         resolvedTemplate: "post: hello",
       }),
     );

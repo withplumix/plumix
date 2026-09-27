@@ -173,7 +173,7 @@ describe("useUser", () => {
 
 describe("useQueriedEntry", () => {
   test("returns the queried entry from the active provider", () => {
-    const queriedEntry = { kind: "entry" as const, id: 42 };
+    const queriedEntry = { kind: "entry" as const, id: 42, preview: false };
 
     function Probe() {
       const result = useQueriedEntry();

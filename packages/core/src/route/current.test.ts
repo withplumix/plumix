@@ -13,12 +13,12 @@ function ctxWith(
 describe("isCurrentSource", () => {
   describe("entry kind", () => {
     test("matches when ctx.resolvedEntity is the same entry id", () => {
-      const ctx = ctxWith({ kind: "entry", id: 42 });
+      const ctx = ctxWith({ kind: "entry", id: 42, preview: false });
       expect(isCurrentSource(ctx, { kind: "entry", id: 42 })).toBe(true);
     });
 
     test("does not match a different entry id", () => {
-      const ctx = ctxWith({ kind: "entry", id: 42 });
+      const ctx = ctxWith({ kind: "entry", id: 42, preview: false });
       expect(isCurrentSource(ctx, { kind: "entry", id: 99 })).toBe(false);
     });
 
@@ -45,7 +45,7 @@ describe("isCurrentSource", () => {
     });
 
     test("does not cross-match entry id", () => {
-      const ctx = ctxWith({ kind: "entry", id: 7 });
+      const ctx = ctxWith({ kind: "entry", id: 7, preview: false });
       expect(isCurrentSource(ctx, { kind: "term", id: 7 })).toBe(false);
     });
   });
@@ -122,7 +122,7 @@ describe("isCurrentSource", () => {
 
     test("ignores resolvedEntity for custom-URL items (URL-only check)", () => {
       const ctx = ctxWith(
-        { kind: "entry", id: 99 },
+        { kind: "entry", id: 99, preview: false },
         "https://cms.example/contact",
       );
       expect(isCurrentSource(ctx, { kind: "custom", url: "/contact" })).toBe(

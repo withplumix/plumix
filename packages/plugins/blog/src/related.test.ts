@@ -201,7 +201,7 @@ describe("createRelatedPostsLoader", () => {
     await make(new Date(4000));
     await make(new Date(3000));
     await make(new Date(2000));
-    ctx.resolvedEntity = { kind: "entry", id: current.id };
+    ctx.resolvedEntity = { kind: "entry", id: current.id, preview: false };
 
     const capped = await run(() =>
       createRelatedPostsLoader(2)({ slugs: ["strip"] }, ctx),
@@ -237,7 +237,7 @@ describe("createRelatedPostsLoader", () => {
     ]);
     await f.entryTerm.create({ entryId: current.id, termId: topic.id });
     await f.entryTerm.create({ entryId: sibling.id, termId: topic.id });
-    ctx.resolvedEntity = { kind: "entry", id: current.id };
+    ctx.resolvedEntity = { kind: "entry", id: current.id, preview: false };
     const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
       new Date(),
     );

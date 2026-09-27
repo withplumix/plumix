@@ -51,7 +51,7 @@ describe("projectDebugSnapshot", () => {
       ctxWith({
         user: { id: 1, email: "a@b.c", role: "admin", meta: {} },
         tokenScopes: ["read:posts"],
-        resolvedEntity: { kind: "entry", id: 7 },
+        resolvedEntity: { kind: "entry", id: 7, preview: false },
         siteName: "My Site",
         cdn: { decorate: (response) => response },
         plugins: blogPlugins(),
@@ -63,7 +63,11 @@ describe("projectDebugSnapshot", () => {
     expect(snap.context.path).toBe("/blog/hello");
     expect(snap.context.user).toEqual({ email: "a@b.c", role: "admin" });
     expect(snap.context.tokenScopes).toEqual(["read:posts"]);
-    expect(snap.context.resolvedEntity).toEqual({ kind: "entry", id: 7 });
+    expect(snap.context.resolvedEntity).toEqual({
+      kind: "entry",
+      id: 7,
+      preview: false,
+    });
     expect(snap.context.siteName).toBe("My Site");
     expect(snap.context.slots).toEqual({
       cdn: true,

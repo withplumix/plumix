@@ -50,7 +50,7 @@ describe("pageTags", () => {
       pageTags({
         ...base,
         intent: { kind: "single", entryType: "post" },
-        resolvedEntity: { kind: "entry", id: 7 },
+        resolvedEntity: { kind: "entry", id: 7, preview: false },
       }),
     ).toEqual(["t:post", "e:7"]);
   });

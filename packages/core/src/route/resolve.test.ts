@@ -758,6 +758,93 @@ describe("resolvePublicRoute — single", () => {
     expect(body).not.toContain("Draft Title");
   });
 
+  describe("the resolved entity says whether the autosave was overlaid", () => {
+    function entityObserver() {
+      const seen: AppContext["resolvedEntity"][] = [];
+      const plugin = definePlugin("entity-observer", (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          seen.push(appCtx.resolvedEntity);
+          return manifest;
+        });
+      });
+      return { plugin, seen };
+    }
+
+    async function publishedPost(h: DispatcherHarness) {
+      const author = await h.seedUser("admin");
+      const live = await h.factory.entry.create({
+        type: "post",
+        slug: "hello",
+        title: "Live Title",
+        content: TIPTAP_BODY,
+        status: "published",
+        authorId: author.id,
+      });
+      const token = await createPreviewToken(h.db, {
+        entryId: live.id,
+        userId: author.id,
+      });
+      return { author, live, token };
+    }
+
+    test("an overlaid preview render is a preview", async () => {
+      const observer = entityObserver();
+      const h = await createDispatcherHarness({
+        plugins: [blogPlugin, observer.plugin],
+      });
+      const { author, live, token } = await publishedPost(h);
+      await upsertAutosave(h.db, {
+        entry: live,
+        authorId: author.id,
+        patch: {
+          title: "Live Title",
+          content: null,
+          excerpt: "Drafted excerpt",
+          meta: {},
+          metaDeletes: [],
+        },
+      });
+
+      await h.dispatch(
+        new Request(`https://cms.example/post/hello?preview=${token}`),
+      );
+
+      expect(observer.seen).toEqual([
+        { kind: "entry", id: live.id, preview: true },
+      ]);
+    });
+
+    test("a render without a token is not a preview", async () => {
+      const observer = entityObserver();
+      const h = await createDispatcherHarness({
+        plugins: [blogPlugin, observer.plugin],
+      });
+      const { live } = await publishedPost(h);
+
+      await h.dispatch(new Request("https://cms.example/post/hello"));
+
+      expect(observer.seen).toEqual([
+        { kind: "entry", id: live.id, preview: false },
+      ]);
+    });
+
+    test("a token with no autosave behind it is not a preview", async () => {
+      const observer = entityObserver();
+      const h = await createDispatcherHarness({
+        plugins: [blogPlugin, observer.plugin],
+      });
+      const { live, token } = await publishedPost(h);
+
+      await h.dispatch(
+        new Request(`https://cms.example/post/hello?preview=${token}`),
+      );
+
+      expect(observer.seen).toEqual([
+        { kind: "entry", id: live.id, preview: false },
+      ]);
+    });
+  });
+
   test("an invalid preview token still 404s the draft", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const author = await h.seedUser("admin");

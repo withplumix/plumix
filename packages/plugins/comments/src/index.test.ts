@@ -13,7 +13,7 @@ import { commentFactory } from "./test/factories.js";
 
 function ctxWith(
   db: CommentsTestDb,
-  resolvedEntity: { kind: "entry"; id: number } | null,
+  resolvedEntity: AppContext["resolvedEntity"],
 ): AppContext {
   return { ...createTestContext({ db }), resolvedEntity };
 }
@@ -121,7 +121,7 @@ describe("createCommentsThreadLoader", () => {
 
     const result = await load(
       { slugs: ["current"] },
-      ctxWith(db, { kind: "entry", id: entry.id }),
+      ctxWith(db, { kind: "entry", id: entry.id, preview: false }),
     );
 
     expect(result.current?.count).toBe(1);
@@ -135,7 +135,7 @@ describe("createCommentsThreadLoader", () => {
 
     const result = await load(
       { slugs: ["current"] },
-      ctxWith(db, { kind: "entry", id: entry.id }),
+      ctxWith(db, { kind: "entry", id: entry.id, preview: false }),
     );
 
     expect(result.current).toBeUndefined();

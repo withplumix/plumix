@@ -1,4 +1,9 @@
-import type { AnyPluginDescriptor, I18nInput, JsonObject } from "plumix";
+import type {
+  AnyPluginDescriptor,
+  I18nInput,
+  JsonObject,
+  TelemetryConfig,
+} from "plumix";
 import type { ThemeTokens } from "plumix/blocks";
 import type { Logger, LookupAdapter, OgImage } from "plumix/plugin";
 import type {
@@ -245,6 +250,8 @@ export interface HarnessOptions extends OgPluginOptions {
   readonly basePath?: string;
   /** Locales the site enables, for asserting a card ignores them. */
   readonly i18n?: I18nInput;
+  /** Telemetry consumers, for a suite counting what a render queries. */
+  readonly telemetry?: TelemetryConfig;
 }
 
 /** A fresh in-memory bucket, which is what a harness gets unless told otherwise. */
@@ -269,6 +276,7 @@ export async function createHarness(
     tokens,
     basePath,
     i18n,
+    telemetry,
     ...rest
   } = options;
   const harness = await createDispatcherHarness({
@@ -287,6 +295,7 @@ export async function createHarness(
     i18n,
     logger,
     imageDelivery,
+    telemetry,
     ...(cards === undefined && tokens === undefined
       ? {}
       : {
@@ -357,6 +366,7 @@ export interface FetchCardOptions extends HarnessFetchOptions {
 export interface SeedEntryOverrides {
   readonly title?: string;
   readonly slug?: string;
+  readonly excerpt?: string;
   readonly status?: "published" | "draft";
   readonly type?: string;
   /** Whose byline, for a suite asking about an author archive. */
@@ -388,6 +398,7 @@ export async function seedEntry(
     type: overrides.type ?? "post",
     title: overrides.title ?? "Hello World",
     ...(overrides.slug === undefined ? {} : { slug: overrides.slug }),
+    ...(overrides.excerpt === undefined ? {} : { excerpt: overrides.excerpt }),
     ...(overrides.publishedAt === undefined
       ? {}
       : { publishedAt: overrides.publishedAt }),
