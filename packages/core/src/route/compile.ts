@@ -80,6 +80,11 @@ export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${F
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
+  /**
+   * Set on auto rules, whose URLs core also emits as permalinks: the error to
+   * raise when a framework rule would answer those URLs first.
+   */
+  readonly onFrameworkCapture?: (frameworkPattern: string) => RouteCompileError;
 }
 
 /**
@@ -208,9 +213,12 @@ export function compileRouteMap(
     }
   }
 
+  const sorted = [...rules].sort((a, b) => a.priority - b.priority);
+  // Ahead of the duplicate check: an auto archive at `/search` is also a
+  // duplicate pattern, and this error names the registration and its slug.
+  assertAutoUrlsResolveToThemselves(sorted);
   assertUniquePatterns(rules);
-  rules.sort((a, b) => a.priority - b.priority);
-  return rules;
+  return sorted;
 }
 
 /**
@@ -237,6 +245,16 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
       kind: "archive",
       entryType: entryType.name,
     };
+    const { hasArchive } = entryType;
+    const onFrameworkCapture =
+      typeof hasArchive === "string"
+        ? (rawPattern: string) =>
+            RouteCompileError.invalidArchiveSlug({
+              entryType: entryType.name,
+              hasArchive,
+              rawPattern,
+            })
+        : rewriteSlugCapture(entryType, "entry_type", baseSlug);
     // Paginated variant goes first so /shop/page/2 doesn't accidentally
     // match the bare archive's URLPattern (it wouldn't today, but keep
     // the more-specific rule earlier as a defensive ordering invariant).
@@ -246,6 +264,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: entryType.registeredBy,
+      onFrameworkCapture,
     });
     rules.push({
       pattern: new URLPattern({ pathname: basePattern }),
@@ -253,14 +272,14 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: entryType.registeredBy,
+      onFrameworkCapture,
     });
   }
 
   // Hierarchical entry types match nested URLs like /about/team/leadership
   // via URLPattern's `:path+` catch-all. Plugins can opt out per-type
   // (rewrite.isHierarchical: false), which keeps the flat `:slug` pattern
-  // even when the data is hierarchical — same opt-out semantics
-  // `buildEntryPermalink` honors via `shouldNestUnderEntryParent`.
+  // even when the data is hierarchical.
   const capture = exposesHierarchicalUrls(entryType) ? ":path+" : ":slug";
   const singlePattern =
     baseSlug === "" ? `/${capture}` : `/${baseSlug}/${capture}`;
@@ -270,6 +289,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     intent: { kind: "single", entryType: entryType.name },
     priority: baseSlug === "" ? CATCH_ALL_ROUTE_PRIORITY : AUTO_ROUTE_PRIORITY,
     registeredBy: entryType.registeredBy,
+    onFrameworkCapture: rewriteSlugCapture(entryType, "entry_type", baseSlug),
   });
 
   return rules;
@@ -279,8 +299,8 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
  * True when a registered entry type or taxonomy exposes nested URLs via
  * `:path+`. `isHierarchical: true` is the data flag (the tree exists);
  * `rewrite.isHierarchical: false` opts URLs back to the flat single-
- * segment pattern even when the data is hierarchical — same opt-out the
- * outbound permalink helpers honor.
+ * segment pattern even when the data is hierarchical. The outbound permalink
+ * helpers ask this too, so the URLs they build are the shape compiled here.
  */
 export function exposesHierarchicalUrls(spec: {
   readonly isHierarchical?: boolean;
@@ -302,6 +322,11 @@ function autoRulesForTermTaxonomy(
   const basePattern = `/${baseSlug}/${capture}`;
   const paginatedPattern = `${basePattern}${FRAMEWORK_PAGINATION_SUFFIX}`;
   const intent: RouteIntent = { kind: "taxonomy", taxonomy: taxonomy.name };
+  const onFrameworkCapture = rewriteSlugCapture(
+    taxonomy,
+    "term_taxonomy",
+    baseSlug,
+  );
   return [
     {
       pattern: new URLPattern({ pathname: paginatedPattern }),
@@ -309,6 +334,7 @@ function autoRulesForTermTaxonomy(
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: taxonomy.registeredBy,
+      onFrameworkCapture,
     },
     {
       pattern: new URLPattern({ pathname: basePattern }),
@@ -316,6 +342,7 @@ function autoRulesForTermTaxonomy(
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: taxonomy.registeredBy,
+      onFrameworkCapture,
     },
   ];
 }
@@ -352,6 +379,20 @@ function baseSlugFor(
     });
   }
   return slug;
+}
+
+function rewriteSlugCapture(
+  spec: RegisteredEntryType | RegisteredTermTaxonomy,
+  registration: RegistrationKind,
+  baseSlug: string,
+): (frameworkPattern: string) => RouteCompileError {
+  return (rawPattern) =>
+    RouteCompileError.invalidRewriteSlug({
+      registration,
+      registrationName: spec.name,
+      rewriteSlug: baseSlug,
+      rawPattern,
+    });
 }
 
 function archiveSlugFor(
@@ -402,5 +443,40 @@ function assertUniquePatterns(rules: readonly CompiledRule[]): void {
       }
     }
     owner.set(rule.rawPattern, rule);
+  }
+}
+
+// A non-numeric segment, so the probe stays out of the URL space the framework
+// reserves on purpose: date archives (`/2026`) and root pagination (`/page/2`).
+const SAMPLE_SEGMENT = "sample";
+const SAMPLE_PAGE = "2";
+const CAPTURE_RE = /:(\w+)(?:\([^()]*\))?\+?/g;
+
+function samplePathFor(rawPattern: string): string {
+  return rawPattern.replace(CAPTURE_RE, (_, name: string) =>
+    name === "page" ? SAMPLE_PAGE : SAMPLE_SEGMENT,
+  );
+}
+
+/**
+ * The permalink builders emit every auto rule's URLs, so a framework rule
+ * that answers one of them first sends sitemaps, canonicals and menus to a
+ * page that is not the one they name. Probing the sorted rules rather than
+ * comparing patterns lets a plugin that shadows the framework rule keep the
+ * URL space it won. Explicit rewrites and archive types may shadow auto rules
+ * deliberately (ADR 0002), so only a framework winner is an error.
+ */
+function assertAutoUrlsResolveToThemselves(
+  sorted: readonly CompiledRule[],
+): void {
+  for (const rule of sorted) {
+    if (rule.onFrameworkCapture === undefined) continue;
+    const pathname = samplePathFor(rule.rawPattern);
+    const winner = sorted.find((candidate) =>
+      candidate.pattern.test({ pathname }),
+    );
+    if (winner?.registeredBy === null) {
+      throw rule.onFrameworkCapture(winner.rawPattern);
+    }
   }
 }

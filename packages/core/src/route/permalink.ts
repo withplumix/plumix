@@ -9,6 +9,7 @@ import { withBasePath } from "../base-path.js";
 import { chunkForD1, D1_MAX_BOUND_PARAMETERS, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
+import { exposesHierarchicalUrls } from "./compile.js";
 
 type PermalinkContext = Pick<AppContext, "db" | "plugins" | "basePath">;
 
@@ -229,20 +230,14 @@ function shouldNestUnderEntryParent(
   entryType: RegisteredEntryType,
   parentId: number | null,
 ): parentId is number {
-  if (parentId === null) return false;
-  if (entryType.isHierarchical !== true) return false;
-  // `rewrite.isHierarchical: false` opts out of nested URLs even when the
-  // type itself is hierarchical (matches WP's `rewrite => ['hierarchical' => false]`).
-  return entryType.rewrite?.isHierarchical !== false;
+  return parentId !== null && exposesHierarchicalUrls(entryType);
 }
 
 function shouldNestUnderTermParent(
   taxonomy: RegisteredTermTaxonomy,
   parentId: number | null,
 ): parentId is number {
-  if (parentId === null) return false;
-  if (taxonomy.isHierarchical !== true) return false;
-  return taxonomy.rewrite?.isHierarchical !== false;
+  return parentId !== null && exposesHierarchicalUrls(taxonomy);
 }
 
 /**

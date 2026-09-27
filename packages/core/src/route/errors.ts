@@ -49,32 +49,47 @@ export class RouteCompileError extends Error {
     this.secondOwner = fields.secondOwner;
   }
 
+  /**
+   * `rawPattern` names the framework rule that would serve the archive's URLs
+   * when the slug is well-formed but taken.
+   */
   static invalidArchiveSlug(ctx: {
     entryType: string;
     hasArchive: string;
+    rawPattern?: string;
   }): RouteCompileError {
+    const subject = `Entry type "${ctx.entryType}" has`;
     return new RouteCompileError(
       "invalid_archive_slug",
-      `Entry type "${ctx.entryType}" has invalid hasArchive "${ctx.hasArchive}" — ` +
-        `expected a single lowercase kebab-case path segment.`,
+      ctx.rawPattern === undefined
+        ? `${subject} invalid hasArchive "${ctx.hasArchive}" — ` +
+            `expected a single lowercase kebab-case path segment.`
+        : `${subject} hasArchive "${ctx.hasArchive}" ${collision(ctx.rawPattern)}`,
       ctx,
     );
   }
 
+  /**
+   * `rawPattern` names the framework rule that would serve the registration's
+   * URLs when the slug is well-formed but taken.
+   */
   static invalidRewriteSlug(ctx: {
     registration: RegistrationKind;
     registrationName: string;
     rewriteSlug: string;
+    rawPattern?: string;
   }): RouteCompileError {
+    const subject = `${REGISTRATION_LABEL[ctx.registration]} "${ctx.registrationName}" has`;
     const root =
       ctx.registration === "entry_type"
         ? ` (or "" to claim the site root)`
         : "";
     return new RouteCompileError(
       "invalid_rewrite_slug",
-      `${REGISTRATION_LABEL[ctx.registration]} "${ctx.registrationName}" has ` +
-        `invalid rewrite.slug "${ctx.rewriteSlug}" — expected a single ` +
-        `lowercase kebab-case path segment${root}.`,
+      ctx.rawPattern === undefined
+        ? `${subject} invalid rewrite.slug "${ctx.rewriteSlug}" — expected a ` +
+            `single lowercase kebab-case path segment${root}.`
+        : `${subject} rewrite.slug "${ctx.rewriteSlug}" ${collision(ctx.rawPattern)}`,
       ctx,
     );
   }
@@ -91,6 +106,13 @@ export class RouteCompileError extends Error {
       ctx,
     );
   }
+}
+
+function collision(frameworkPattern: string): string {
+  return (
+    `that collides with the framework route "${frameworkPattern}", ` +
+    `which would serve its URLs instead.`
+  );
 }
 
 function formatOwner(plugin: string | null): string {
