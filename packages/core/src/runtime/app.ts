@@ -75,7 +75,7 @@ import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
-export interface OAuthProviderSummary {
+interface OAuthProviderSummary {
   /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
   /** Human-readable name for the login button ("GitHub", "Google", …). */
