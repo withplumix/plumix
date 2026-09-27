@@ -230,6 +230,8 @@
     "@plumix/core": "workspace:*",
     "@tailwindcss/node": "catalog:tailwind",
     "@tailwindcss/oxide": "catalog:tailwind",
+    "@tanstack/history": "catalog:tanstack",
+    "@tanstack/router-core": "catalog:tanstack",
     "drizzle-kit": "catalog:drizzle",
     "esbuild": "catalog:",
     "jiti": "^2.7.0",

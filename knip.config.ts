@@ -140,6 +140,14 @@ const config: KnipConfig = {
     },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
+      // `@tanstack/react-router` types its own public API with types from
+      // `@tanstack/router-core` and `@tanstack/history`, so the shim's emitted
+      // declarations reference both and a consumer must be able to resolve
+      // them. Nothing under `src` names them, and knip reads source rather
+      // than `dist`, so it cannot see the use it is asking about. Typing every
+      // binding in `src/admin/react-router.ts` by hand would make the use
+      // visible; that is #2648, not a reason to leave the surface unresolvable.
+      ignoreDependencies: ["@tanstack/router-core", "@tanstack/history"],
       entry: [
         "src/index.ts",
         "src/plugin.ts",
