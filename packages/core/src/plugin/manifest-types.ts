@@ -2,8 +2,9 @@
 // precompiled admin and admin-editor read: the `PlumixManifest` payload and
 // its `*ManifestEntry` types, the core nav-group roster, the `<script>` id the
 // payload travels under, and the pure helpers the admin shares with the build
-// (`emptyManifest`, `byPriorityThen`, `seedFromMetaBoxes`). Kept free of
-// registry projection and HTML handling so neither ships to the admin.
+// (`emptyManifest`, `byPriorityThen`, `seedFromMetaBoxes`,
+// `configuredSlotsOf`). Kept free of registry projection and HTML handling so
+// neither ships to the admin.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
 import type {
@@ -16,6 +17,7 @@ import type {
 } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 
+import type { PlumixConfig } from "../config.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
@@ -392,6 +394,41 @@ export interface PlumixManifest {
    * don't appear here.
    */
   readonly pluginI18n?: PluginI18nManifest;
+  /**
+   * Which infrastructure slots the site's `plumix()` config fills. Fixed at
+   * build time, so it rides the manifest: an admin surface backed by a slot
+   * hides itself when the deployment can't do what it offers (ADR 0014).
+   */
+  readonly configuredSlots?: ConfiguredSlots;
+}
+
+// Constrains each slot name to a key of the config it is read off.
+type ConfigKey<K extends keyof PlumixConfig> = K;
+
+/**
+ * The `plumix()` config keys that hold an infrastructure adapter. A new
+ * `plumix()` key that holds an adapter the admin could offer an action for
+ * joins this union.
+ */
+export type InfrastructureSlot = ConfigKey<
+  "storage" | "imageDelivery" | "kv" | "cdn" | "mailer"
+>;
+
+/** Per infrastructure slot, whether the resolved config sets it — nothing about
+ *  the adapter behind it crosses to the admin. */
+export type ConfiguredSlots = Readonly<Record<InfrastructureSlot, boolean>>;
+
+/** Which infrastructure slots `config` fills. */
+export function configuredSlotsOf(
+  config: Pick<PlumixConfig, InfrastructureSlot>,
+): ConfiguredSlots {
+  return {
+    storage: config.storage !== undefined,
+    imageDelivery: config.imageDelivery !== undefined,
+    kv: config.kv !== undefined,
+    cdn: config.cdn !== undefined,
+    mailer: config.mailer !== undefined,
+  } satisfies Record<InfrastructureSlot, boolean>;
 }
 
 /** Per-plugin catalog URL maps. Flat record keyed by plugin id so
@@ -438,6 +475,7 @@ export function emptyManifest(): PlumixManifest {
     breakpoints: DEFAULT_BREAKPOINTS,
     i18n: { defaultLocale: "en", locales: [] },
     pluginI18n: {},
+    configuredSlots: configuredSlotsOf({}),
   };
 }
 

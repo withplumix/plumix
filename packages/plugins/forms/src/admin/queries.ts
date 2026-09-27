@@ -12,7 +12,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { createPluginRpcClient } from "plumix/admin";
+import { basePath, createPluginRpcClient } from "plumix/admin";
 
 import type { SubmissionsRouter } from "../rpc.js";
 import type {
@@ -40,14 +40,6 @@ const SUBMISSIONS_KEY = ["forms", "submissions"] as const;
 // submission can change what forms exist.
 const DEFINITIONS_KEY = ["forms", "definitions"] as const;
 
-// The subdirectory the host is mounted under, which every worker-routed
-// URL the admin builds has to carry.
-function pluginBasePath(): string {
-  return (
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
-  );
-}
-
 /** Where the export links point, under whatever the inbox is showing. */
 export function submissionsExportHref(
   filter: SubmissionFilter,
@@ -56,7 +48,7 @@ export function submissionsExportHref(
   const query = new URLSearchParams({ format });
   if (filter.form !== undefined) query.set("form", filter.form);
   if (filter.status !== undefined) query.set("status", filter.status);
-  return `${pluginBasePath()}${EXPORT_PATH}?${query.toString()}`;
+  return `${basePath()}${EXPORT_PATH}?${query.toString()}`;
 }
 
 /** The forms the plugin's registry knows about — no forms table exists. */

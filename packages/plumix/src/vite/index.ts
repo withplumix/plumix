@@ -24,6 +24,7 @@ import type {
 } from "@plumix/core";
 import {
   collectNamedTemplates,
+  configuredSlotsOf,
   generateSchemaSource,
   injectManifestIntoHtml,
   isTrustedDevHost,
@@ -615,6 +616,7 @@ async function regenerate(
       namedTemplates: collectNamedTemplates(config.theme.templates),
       blocks: config.theme.blocks,
       i18n: config.i18n,
+      configuredSlots: configuredSlotsOf(config),
       theme: config.theme,
       projectRoot: cwd,
       bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,

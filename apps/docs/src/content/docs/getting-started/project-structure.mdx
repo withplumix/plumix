@@ -248,6 +248,8 @@ The admin ships precompiled and is closed for modification. A plugin contributes
 
 The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, the constants naming which specifier maps to which shim, and `createPluginRpcClient` — the one client every plugin's admin code calls its own server-registered RPC procedures through, so no plugin hand-rolls the wire envelope, headers, or error unwrapping. It takes the type of the router the plugin handed `ctx.registerRpcRouter`, imported with `import type` so the server module stays out of the admin bundle, and infers every procedure's name, input and output from it — a renamed procedure or a reshaped output on the server is a type error at the call site.
 
+Two plain functions answer what the deployment is. `basePath()` is the subdirectory the site is mounted under (`""` at the domain root), which any `/_plumix/...` URL your admin code builds must carry. `isSlotConfigured(slot)` says whether `plumix.config.ts` fills an infrastructure slot — `storage`, `imageDelivery`, `kv`, `cdn` or `mailer` — so a surface that needs one can hide itself on a site without it. The answer is fixed when the site is built, so it is not a hook, and it throws if called before the admin shell has booted.
+
 ```ts no-typecheck
 import type { PluginRpcOutputs } from "plumix/admin";
 import { createPluginRpcClient, getRuntime } from "plumix/admin";

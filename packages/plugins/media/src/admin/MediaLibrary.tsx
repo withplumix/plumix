@@ -7,6 +7,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { basePath } from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +24,7 @@ import {
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaRouter } from "../rpc.js";
-import { mediaRpc, pluginBasePath } from "./rpc.js";
+import { mediaRpc } from "./rpc.js";
 
 // Descriptors that need runtime indirection — used outside JSX (aria
 // strings, native attribute values). JSX-text strings stay inline at
@@ -1228,7 +1229,7 @@ function MediaDetailDrawer({
               // but the route always sends `Content-Disposition:
               // attachment` for this query param, so downloads work
               // regardless of which mode `item.url` is in.
-              href={`${pluginBasePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
+              href={`${basePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
               download={item.title}
               data-testid="media-detail-download"
             >

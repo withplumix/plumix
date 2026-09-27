@@ -1,7 +1,8 @@
 // No `declare global { interface Window }` here — admin owns the
 // Window.plumix shape (it carries the `register*` helpers in addition
-// to `runtime`). This module is just the runtime slice plugin chunks
-// see, plus the throw if it's missing.
+// to `runtime`). This module is just the slice plugin chunks see — the
+// runtime and the deployment facts the shell publishes — plus the throw
+// if the shell hasn't booted.
 
 import type * as LinguiCoreNs from "@lingui/core";
 import type * as LinguiReactNs from "@lingui/react";
@@ -19,6 +20,10 @@ import type * as SonnerNs from "sonner";
 import type * as TailwindMergeNs from "tailwind-merge";
 
 import type { SharedAdminRuntimeKey } from "@plumix/core/admin";
+import type {
+  ConfiguredSlots,
+  InfrastructureSlot,
+} from "@plumix/core/manifest";
 
 import { AdminRuntimeError } from "../errors.js";
 
@@ -47,12 +52,40 @@ export type PlumixAdminRuntime = {
 
 export interface PlumixGlobal {
   readonly runtime?: PlumixAdminRuntime;
+  readonly basePath?: string;
+  readonly configuredSlots?: ConfiguredSlots;
+}
+
+function plumixGlobal(): PlumixGlobal | undefined {
+  return (globalThis as { plumix?: PlumixGlobal }).plumix;
 }
 
 export function getRuntime(): PlumixAdminRuntime {
-  const rt = (globalThis as { plumix?: PlumixGlobal }).plumix?.runtime;
+  const rt = plumixGlobal()?.runtime;
   if (!rt) {
     throw AdminRuntimeError.notInitialised();
   }
   return rt;
+}
+
+/**
+ * Whether the site's `plumix()` config fills `slot`. A surface backed by an
+ * infrastructure slot hides itself when this is `false`. A plain function,
+ * not a hook: the roster is fixed at build time, so it can't change during a
+ * session.
+ */
+export function isSlotConfigured(slot: InfrastructureSlot): boolean {
+  const slots = plumixGlobal()?.configuredSlots;
+  if (!slots) {
+    throw AdminRuntimeError.notInitialised();
+  }
+  return slots[slot];
+}
+
+/**
+ * The subdirectory the site is mounted under (`""` at the domain root), which
+ * every worker-routed `/_plumix/...` URL plugin admin code builds must carry.
+ */
+export function basePath(): string {
+  return plumixGlobal()?.basePath ?? "";
 }

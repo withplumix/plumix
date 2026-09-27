@@ -4,6 +4,7 @@ import type {
   AccessPolicyChoice,
   AdminNavGroup,
   AdminNavItem,
+  ConfiguredSlots,
   DashboardWidgetManifestEntry,
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
@@ -17,7 +18,11 @@ import type {
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-import { byPriorityThen, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
+import {
+  byPriorityThen,
+  configuredSlotsOf,
+  MANIFEST_SCRIPT_ID,
+} from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
   const el = doc.getElementById(MANIFEST_SCRIPT_ID);
@@ -62,6 +67,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   breakpoints: false,
   i18n: false,
   pluginI18n: false,
+  configuredSlots: false,
 } as const satisfies Record<keyof PlumixManifest, boolean>;
 
 // Non-matching values for known fields are dropped (silent, not coerced —
@@ -107,6 +113,14 @@ export function getThemeBreakpoints(
   source: PlumixManifest = currentManifest(),
 ): ThemeBreakpoints {
   return source.breakpoints ?? DEFAULT_BREAKPOINTS;
+}
+
+/** Which infrastructure slots the deployment fills; none when the manifest
+ *  names no roster. */
+export function getConfiguredSlots(
+  source: PlumixManifest = currentManifest(),
+): ConfiguredSlots {
+  return source.configuredSlots ?? configuredSlotsOf({});
 }
 
 export function getPatterns(

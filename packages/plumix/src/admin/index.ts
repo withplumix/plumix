@@ -18,8 +18,9 @@
 // Lingui's i18n, sonner's Toaster). Authors keep using bare specifiers; the
 // shims carry no stability guarantee beyond plumix's pre-1.0 policy.
 
-export { getRuntime } from "./runtime.js";
+export { basePath, getRuntime, isSlotConfigured } from "./runtime.js";
 export type { PlumixAdminRuntime, PlumixGlobal } from "./runtime.js";
+export type { InfrastructureSlot } from "@plumix/core/manifest";
 
 export { createPluginRpcClient } from "./plugin-rpc.js";
 export type {
