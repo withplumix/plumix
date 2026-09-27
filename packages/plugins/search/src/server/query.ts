@@ -1,7 +1,11 @@
 import type { AppContext } from "plumix/plugin";
 import { inArray, sql } from "plumix/db";
-import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
-import { terms } from "plumix/schema";
+import {
+  buildEntryPermalinks,
+  buildTermArchiveUrls,
+  resolveEntryList,
+} from "plumix/plugin";
+import { entries, terms } from "plumix/schema";
 
 import type { SearchSourceType } from "../db/schema.js";
 import type { RankingAlgorithm, RankingWeights } from "../ranking.js";
@@ -323,10 +327,28 @@ async function recentRows(
 }
 
 /**
+ * An entry's title as its own page shows it, shortcodes expanded, keyed by
+ * id. The index holds the raw title on purpose — an expanded `[year]` would
+ * freeze into it — so the page's entries are resolved in one batch here.
+ */
+async function resolvedEntryTitles(
+  ctx: AppContext,
+  ids: readonly number[],
+): Promise<ReadonlyMap<number, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await ctx.db
+    .select()
+    .from(entries)
+    .where(inArray(entries.id, [...ids]));
+  const resolved = await resolveEntryList(ctx, rows);
+  return new Map(resolved.map((entry) => [entry.id, entry.title]));
+}
+
+/**
  * `toResult` over a page: every nested row's ancestor chain is read in one
- * batched call per kind rather than one per row. Both kinds still
- * short-circuit to pure substitution for a flat type, so a page of flat
- * results costs no query at all.
+ * batched call per kind rather than one per row, and a flat type's URL is
+ * pure substitution. A term's name is not a shortcode field, so only the
+ * entries are resolved, for their titles.
  */
 async function toResults(
   ctx: AppContext,
@@ -334,6 +356,7 @@ async function toResults(
 ): Promise<(SearchResult | null)[]> {
   const entryRows: {
     index: number;
+    id: number;
     type: string;
     slug: string;
     parentId: number | null;
@@ -348,6 +371,7 @@ async function toResults(
     if (row.kind === "entry") {
       entryRows.push({
         index,
+        id: row.id,
         type: row.scope,
         slug: row.slug,
         parentId: row.parentId,
@@ -361,9 +385,13 @@ async function toResults(
       });
     }
   });
-  const [entryUrls, termUrls] = await Promise.all([
+  const [entryUrls, termUrls, entryTitles] = await Promise.all([
     buildEntryPermalinks(ctx, entryRows),
     buildTermArchiveUrls(ctx, termRows),
+    resolvedEntryTitles(
+      ctx,
+      entryRows.map(({ id }) => id),
+    ),
   ]);
   const urls = new Array<string | null>(rows.length).fill(null);
   entryRows.forEach(({ index }, i) => {
@@ -378,7 +406,9 @@ async function toResults(
     return {
       kind: row.kind,
       id: row.id,
-      title: row.title,
+      title:
+        (row.kind === "entry" ? entryTitles.get(row.id) : undefined) ??
+        row.title,
       url,
       snippet: highlightSnippet(row.snippet),
       score: row.score,

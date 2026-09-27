@@ -1,16 +1,13 @@
 import type { AppContext } from "../context/app.js";
+import type { Entry } from "../db/schema/entries.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { RestErrors } from "./errors.js";
 import type { PublicEntry } from "./schemas.js";
 import { EntryReadError } from "../entries/errors.js";
-import { getEntry, listEntries } from "../entries/read-service.js";
+import { findReadableEntry, listEntryRows } from "../entries/read-service.js";
+import { resolveEntryList } from "../route/render/resolve-entry-list.js";
 import { listEnvelope } from "./envelope.js";
-import {
-  apiVisibleMetaKeys,
-  loadEntriesTerms,
-  loadPublicAuthors,
-  projectEntry,
-} from "./projection.js";
+import { apiVisibleMetaKeys, projectEntry } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
 // Every entry-read failure mode (missing, reserved-type, forbidden, an
@@ -60,7 +57,7 @@ export async function listEntriesEnvelope(
 
   // Over-fetch one row to detect a next page without a separate COUNT — an
   // exact-multiple last page then reports no next link.
-  const fetched = await listEntries(context, {
+  const fetched = await listEntryRows(context, {
     type: entryType.name,
     orderBy: "published_at",
     order: "desc",
@@ -71,21 +68,13 @@ export async function listEntriesEnvelope(
   const hasNext = fetched.length > perPage;
   const rows = hasNext ? fetched.slice(0, perPage) : fetched;
 
-  const ids = rows.map((row) => row.id);
-  const authors = await loadPublicAuthors(
-    context,
-    rows.map((row) => row.authorId),
-  );
-  const termsByEntry = await loadEntriesTerms(context, ids);
+  // The same resolution a public page gets, so a title reads as it does
+  // there. It replaces the resource's own author and term reads: one batch
+  // of each for the page.
+  const resolved = await resolveEntryList(context, rows);
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
-  const data = rows.map((row) =>
-    projectEntry(
-      context.plugins,
-      row,
-      authors.get(row.authorId) ?? null,
-      termsByEntry.get(row.id) ?? {},
-      visibleMeta,
-    ),
+  const data = resolved.map((entry) =>
+    projectEntry(context.plugins, entry, visibleMeta),
   );
 
   return listEnvelope(data, { url, page, perPage, hasNext });
@@ -98,26 +87,20 @@ export async function getEntryItem(
   id: number,
   errors: RestErrors,
 ): Promise<PublicEntry> {
-  let entry: Awaited<ReturnType<typeof getEntry>>;
+  let row: Entry;
   try {
-    entry = await getEntry(context, { id });
+    row = await findReadableEntry(context, { id });
   } catch (error) {
     throw entryNotFound(error, errors) ?? error;
   }
 
   // The id resolved to an entry of a different collection — hide that it
   // exists rather than redirecting or 400ing.
-  if (entry.type !== entryType.name) {
+  if (row.type !== entryType.name) {
     throw errors.NOT_FOUND({ data: { kind: "entry" } });
   }
-  const authors = await loadPublicAuthors(context, [entry.authorId]);
-  const termsByEntry = await loadEntriesTerms(context, [entry.id]);
+  const [entry] = await resolveEntryList(context, [row]);
+  if (!entry) throw errors.NOT_FOUND({ data: { kind: "entry" } });
   const visibleMeta = apiVisibleMetaKeys(context.plugins, entryType.name);
-  return projectEntry(
-    context.plugins,
-    entry,
-    authors.get(entry.authorId) ?? null,
-    termsByEntry.get(entry.id) ?? {},
-    visibleMeta,
-  );
+  return projectEntry(context.plugins, entry, visibleMeta);
 }

@@ -68,6 +68,20 @@ export async function listEntries(
   ctx: AppContext,
   input: EntryListInput,
 ): Promise<readonly WithResolvedMeta<Entry>[]> {
+  const rows = await listEntryRows(ctx, input);
+  const bags = await resolveEntriesMeta(ctx, rows);
+  return rows.map((row, i) => ({ ...row, meta: bags[i] ?? {} }));
+}
+
+/**
+ * The stored rows behind {@link listEntries}, after the same visibility checks
+ * and before anything is resolved — for a caller that resolves them another
+ * way, as the REST API does through `resolveEntryList`.
+ */
+export async function listEntryRows(
+  ctx: AppContext,
+  input: EntryListInput,
+): Promise<readonly Entry[]> {
   const type = input.type ?? "post";
   if (!isAuthoredEntryType(type)) throw EntryReadError.reservedType(type);
   const readable = readableEntryRows(ctx, type);
@@ -121,15 +135,13 @@ export async function listEntries(
   const primary = input.order === "asc" ? asc(orderCol) : desc(orderCol);
   // `entries.id` is always a desc tiebreaker — pagination must be stable
   // across ties on the user-selected order column.
-  const rows = await ctx.db
+  return ctx.db
     .select()
     .from(entries)
     .where(and(...conditions))
     .orderBy(primary, desc(entries.id))
     .limit(input.limit)
     .offset(input.offset);
-  const bags = await resolveEntriesMeta(ctx, rows);
-  return rows.map((row, i) => ({ ...row, meta: bags[i] ?? {} }));
 }
 
 /**

@@ -1,9 +1,9 @@
 import type { AppContext } from "plumix";
 import type { SQL } from "plumix/db";
 import type { ArchiveAtPath } from "plumix/plugin";
-import { compileEntryQuery, desc, eq, publicEntryRows, sql } from "plumix/db";
-import { buildEntryPermalinks } from "plumix/plugin";
-import { entries, users } from "plumix/schema";
+import { compileEntryQuery, desc, publicEntryRows, sql } from "plumix/db";
+import { buildEntryPermalinks, resolveEntryList } from "plumix/plugin";
+import { entries } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";
@@ -72,25 +72,22 @@ export async function collectFeedItems(
   if (where === null) return null;
 
   const rows = await ctx.db
-    .select({
-      title: entries.title,
-      slug: entries.slug,
-      type: entries.type,
-      parentId: entries.parentId,
-      excerpt: entries.excerpt,
-      updatedAt: entries.updatedAt,
-      publishedAt: entries.publishedAt,
-      authorName: users.name,
-    })
+    .select()
     .from(entries)
-    .leftJoin(users, eq(entries.authorId, users.id))
     .where(where)
     .orderBy(desc(entries.publishedAt), desc(entries.id))
     .limit(FEED_LIMIT);
 
-  const paths = await buildEntryPermalinks(ctx, rows);
+  // Resolved, not read off the row, so an item's title carries the same
+  // shortcode expansion the entry's own page shows. The resolved `url` is
+  // null for a nested entry, so the links still come from the batched chain
+  // walk.
+  const [resolved, paths] = await Promise.all([
+    resolveEntryList(ctx, rows),
+    buildEntryPermalinks(ctx, rows),
+  ]);
   const items: FeedItem[] = [];
-  for (const [index, row] of rows.entries()) {
+  for (const [index, row] of resolved.entries()) {
     const path = paths[index];
     if (path === null || path === undefined) continue;
     const link = `${ctx.origin}${path}`;
@@ -103,7 +100,7 @@ export async function collectFeedItems(
       updated: row.updatedAt.toISOString(),
       published: (row.publishedAt ?? row.updatedAt).toISOString(),
       summary: row.excerpt ?? undefined,
-      author: row.authorName ?? undefined,
+      author: row.author.name ?? undefined,
     });
   }
   const scope: FeedScope = { archive: target.archive, params: target.params };

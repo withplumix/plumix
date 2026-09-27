@@ -250,6 +250,91 @@ describe("REST API — entries get", () => {
   });
 });
 
+describe("REST API — entry titles", () => {
+  const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+    new Date(),
+  );
+
+  test("the collection and the single entry expand a title's shortcodes", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+      title: "Best of [year]",
+    });
+
+    const list = (await (
+      await h.dispatch(apiGet("/_plumix/api/v1/posts"))
+    ).json()) as ListEnvelope;
+    expect(list.data[0]?.title).toBe(`Best of ${year}`);
+
+    const one = (await (
+      await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`))
+    ).json()) as Record<string, unknown>;
+    expect(one.title).toBe(`Best of ${year}`);
+  });
+
+  // What each read cost before its entries were resolved: the list its rows,
+  // authors and terms; the single entry its row, meta, term ids, authors and
+  // terms.
+  test("resolving the entries costs no more queries than the resource did before", async () => {
+    let queries = 0;
+    const h = await restHarness({
+      telemetry: {
+        consumers: [
+          {
+            id: "query-count",
+            onRequestEnd: (snapshot) => {
+              const flatten = (
+                spans: readonly TelemetrySpan[],
+              ): TelemetrySpan[] =>
+                spans.flatMap((span) => [span, ...flatten(span.children)]);
+              queries = flatten(snapshot.spans).filter((span) =>
+                span.name.startsWith("db: "),
+              ).length;
+            },
+          },
+        ],
+      },
+    });
+    const count = async (path: string): Promise<number> => {
+      await h.dispatch(apiGet(`/_plumix/api/v1${path}`));
+      await h.drainDeferred();
+      return queries;
+    };
+    const author = await h.factory.user.create({ role: "author" });
+    const news = await h.factory.term.create({ taxonomy: "category" });
+    const ids: number[] = [];
+    for (const title of ["Plain", "Also plain", "Still plain"]) {
+      const entry = await h.factory.entry.create({
+        type: "post",
+        status: "published",
+        authorId: author.id,
+        title,
+      });
+      await h.factory.entryTerm.create({ entryId: entry.id, termId: news.id });
+      ids.push(entry.id);
+    }
+
+    expect(await count("/posts")).toBe(3);
+    expect(await count(`/posts/${String(ids[0])}`)).toBeLessThanOrEqual(4);
+
+    // A title with a shortcode in it reads the site's settings for its
+    // context, once per request however many titles need it.
+    for (const title of ["Best of [year]", "Top of [year]"]) {
+      await h.factory.entry.create({
+        type: "post",
+        status: "published",
+        authorId: author.id,
+        title,
+      });
+    }
+    expect(await count("/posts")).toBe(3 + 1);
+  });
+});
+
 describe("REST API — public projection (default-deny)", () => {
   test("author is a compact public object — no email or role", async () => {
     const h = await restHarness();

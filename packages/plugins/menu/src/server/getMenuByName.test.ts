@@ -1,3 +1,4 @@
+import type { AnyPluginDescriptor } from "plumix";
 import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { eq } from "plumix/db";
 import {
@@ -12,6 +13,7 @@ import {
   adminUser,
   createTestContext,
   createTestDb,
+  createTracedContext,
   entryFactory,
   entryTermFactory,
   factoriesFor,
@@ -27,7 +29,7 @@ interface TestBundle {
 }
 
 async function buildRegistry(
-  plugins: ReturnType<typeof definePlugin>[],
+  plugins: readonly AnyPluginDescriptor[],
 ): Promise<TestBundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
@@ -62,27 +64,27 @@ interface SeedItemInput {
 // A registry that registers `menu` taxonomy plus a public `post` entry type
 // and `category` term taxonomy — the latter two so the entry/term lookup
 // adapters report results within scope. Built once per test for isolation.
+const menuTestHost = definePlugin("menu-test-host", (ctx) => {
+  ctx.registerEntryType("menu_item", {
+    label: "Menu items",
+    isHierarchical: true,
+    isPublic: false,
+    termTaxonomies: ["menu"],
+  });
+  ctx.registerTermTaxonomy("menu", {
+    label: "Menus",
+    isPublic: false,
+    entryTypes: ["menu_item"],
+  });
+  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    isPublic: true,
+  });
+});
+
 async function defaultRegistry(): Promise<TestBundle> {
-  return buildRegistry([
-    definePlugin("menu-test-host", (ctx) => {
-      ctx.registerEntryType("menu_item", {
-        label: "Menu items",
-        isHierarchical: true,
-        isPublic: false,
-        termTaxonomies: ["menu"],
-      });
-      ctx.registerTermTaxonomy("menu", {
-        label: "Menus",
-        isPublic: false,
-        entryTypes: ["menu_item"],
-      });
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        isPublic: true,
-      });
-    }),
-  ]);
+  return buildRegistry([menuTestHost]);
 }
 
 describe("getMenuByName", () => {
@@ -850,11 +852,15 @@ describe("getMenuByName", () => {
       const select = vi.spyOn(ctx.db, "select");
       await getMenusByName(ctx, ["one"]);
       const singleCount = select.mock.calls.length;
-      select.mockClear();
-
-      await getMenusByName(ctx, slugs);
-      expect(select.mock.calls.length).toBe(singleCount);
       select.mockRestore();
+
+      // A second request: the first one's memo would replay the linked
+      // entries' author and hide a query the batch still costs.
+      const next = ctxFor(db, await defaultRegistry());
+      const nextSelect = vi.spyOn(next.db, "select");
+      await getMenusByName(next, slugs);
+      expect(nextSelect.mock.calls.length).toBe(singleCount);
+      nextSelect.mockRestore();
     });
   });
 
@@ -874,10 +880,11 @@ describe("getMenuByName", () => {
     const select = vi.spyOn(ctx.db, "select");
     const menu = await getMenuByName(ctx, "lean");
     expect(menu?.items.map((i) => i.label)).toEqual(["Solo"]);
-    // terms + menu items + one adapter batch read. The published
+    // terms + menu items + one adapter batch read, then the admitted rows
+    // and their authors and terms for the resolved titles. The published
     // constraint rides the adapter's own WHERE via scope.status, not a
     // separate pre-filter query over the same ids.
-    expect(select.mock.calls.length).toBe(3);
+    expect(select.mock.calls.length).toBe(6);
     select.mockRestore();
   });
 
@@ -932,5 +939,68 @@ describe("getMenuByName", () => {
       "main",
     );
     expect(fresh?.items).toEqual([]);
+  });
+});
+
+describe("entry item labels at public render", () => {
+  // A traced context carries the app's shortcode registry, which the bare
+  // test context above leaves empty.
+  async function renderLinkedMenu(titles: readonly string[]): Promise<{
+    readonly labels: readonly string[];
+    readonly queries: number;
+  }> {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [menuTestHost],
+    });
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const menu = await f.term.create({ taxonomy: "menu", slug: "main" });
+    for (const [index, title] of titles.entries()) {
+      const post = await f.entry.create({
+        type: "post",
+        title,
+        status: "published",
+        authorId: author.id,
+      });
+      const item = await f.entry.create({
+        type: "menu_item",
+        title: "",
+        status: "published",
+        authorId: author.id,
+        sortOrder: index,
+        meta: { kind: "entry", entryId: post.id },
+      });
+      await f.entryTerm.create({ entryId: item.id, termId: menu.id });
+    }
+    const before = dbQueryCount();
+    const resolved = await run(() => getMenuByName(ctx, "main"));
+    return {
+      labels: resolved?.items.map((item) => item.label) ?? [],
+      queries: dbQueryCount() - before,
+    };
+  }
+
+  const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+    new Date(),
+  );
+
+  test("an entry item with no override shows the linked title with its shortcodes expanded", async () => {
+    const { labels } = await renderLinkedMenu(["Best of [year]"]);
+    expect(labels).toEqual([`Best of ${year}`]);
+  });
+
+  test("the linked entries resolve in one batch however many the menu holds", async () => {
+    const one = await renderLinkedMenu(["Best of [year]"]);
+    const three = await renderLinkedMenu([
+      "Best of [year]",
+      "Top of [year]",
+      "End of [year]",
+    ]);
+    expect(three.labels).toEqual([
+      `Best of ${year}`,
+      `Top of ${year}`,
+      `End of ${year}`,
+    ]);
+    expect(three.queries).toBe(one.queries);
   });
 });

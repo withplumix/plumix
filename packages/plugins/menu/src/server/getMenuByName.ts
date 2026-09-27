@@ -1,7 +1,7 @@
 import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "plumix/db";
-import { isCurrentSource, memoBatch } from "plumix/plugin";
+import { isCurrentSource, memoBatch, resolveEntryList } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";
@@ -240,7 +240,24 @@ async function resolveEntryRefs(
     scope: { entryTypes: eligibleTypes, status: "published" },
     ids: [...ids].map(String),
   });
-  return refMapFromResults(results);
+  const refs = refMapFromResults(results);
+  if (refs.size === 0) return refs;
+
+  // The adapter's label is the raw title, which is what the admin pickers
+  // edit. The public nav shows the title the entry's own page does, with
+  // its shortcodes expanded, so the rows the adapter admitted are resolved
+  // in one batch and their titles replace it.
+  const rows = await ctx.db
+    .select()
+    .from(entries)
+    .where(inArray(entries.id, [...refs.keys()]));
+  for (const entry of await resolveEntryList(ctx, rows)) {
+    const ref = refs.get(entry.id);
+    if (!ref) continue;
+    const title = entry.title.trim();
+    refs.set(entry.id, { ...ref, label: title === "" ? "(unnamed)" : title });
+  }
+  return refs;
 }
 
 async function resolveTermRefs(

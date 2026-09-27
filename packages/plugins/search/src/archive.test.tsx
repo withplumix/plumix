@@ -210,6 +210,23 @@ describe("the search page", () => {
     expect(body).toContain("/category/hydroponics");
   });
 
+  test("an entry's title shows its shortcodes expanded, and the index keeps the raw text", async () => {
+    await publish({ title: "Best of [year]", slug: "best-of" });
+    await index();
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    const byWord = await (await h.fetch("/search/best")).text();
+    expect(byWord).toContain(`Best of ${year}</a>`);
+    expect(byWord).not.toContain("Best of [year]");
+
+    const byTag = await (
+      await h.fetch(`/search/${encodeURIComponent("[year]")}`)
+    ).text();
+    expect(byTag).toContain("/post/best-of");
+  });
+
   test("an unpublished entry never reaches the page", async () => {
     await publish({ title: "Hydroponics draft", slug: "d", status: "draft" });
     await index();
