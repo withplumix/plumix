@@ -2817,6 +2817,78 @@ importers:
         specifier: 'catalog:'
         version: 3.9.6
 
+  tooling/published-surface:
+    devDependencies:
+      '@plumix/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@plumix/plugin-audit-log':
+        specifier: workspace:*
+        version: link:../../packages/plugins/audit-log
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../packages/plugins/blog
+      '@plumix/plugin-comments':
+        specifier: workspace:*
+        version: link:../../packages/plugins/comments
+      '@plumix/plugin-feeds':
+        specifier: workspace:*
+        version: link:../../packages/plugins/feeds
+      '@plumix/plugin-forms':
+        specifier: workspace:*
+        version: link:../../packages/plugins/forms
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../packages/plugins/media
+      '@plumix/plugin-menu':
+        specifier: workspace:*
+        version: link:../../packages/plugins/menu
+      '@plumix/plugin-og':
+        specifier: workspace:*
+        version: link:../../packages/plugins/og
+      '@plumix/plugin-pages':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pages
+      '@plumix/plugin-search':
+        specifier: workspace:*
+        version: link:../../packages/plugins/search
+      '@plumix/plugin-seo':
+        specifier: workspace:*
+        version: link:../../packages/plugins/seo
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/runtimes/cloudflare
+      '@plumix/runtime-node':
+        specifier: workspace:*
+        version: link:../../packages/runtimes/node
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.6
+      create-plumix-app:
+        specifier: workspace:*
+        version: link:../../packages/create-plumix-app
+      plumix:
+        specifier: workspace:*
+        version: link:../../packages/plumix
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: catalog:vitest
+        version: 4.1.11(@types/node@24.13.6)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
+
   tooling/typescript:
     devDependencies:
       '@plumix/prettier-config':

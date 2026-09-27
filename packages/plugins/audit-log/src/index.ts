@@ -32,11 +32,7 @@ export type {
   RunRetentionPurgeArgs,
   RunRetentionPurgeResult,
 } from "./server/retention.js";
-export {
-  assertValidRetention,
-  DEFAULT_RETENTION,
-  runRetentionPurge,
-} from "./server/retention.js";
+export { DEFAULT_RETENTION, runRetentionPurge } from "./server/retention.js";
 export { sqlite } from "./server/storage-sqlite.js";
 
 // Declaration-merge contribution. Declared optional so consumers that

@@ -20,6 +20,9 @@
     "plumix",
     "cms"
   ],
+  "exports": {
+    "./package.json": "./package.json"
+  },
   "bin": {
     "create-plumix-app": "./dist/index.js"
   },

@@ -52,14 +52,6 @@ export type { Indexability, IndexabilityReason } from "./indexable.js";
 export { indexable } from "./indexable.js";
 export { SEO_META_KEYS } from "./overrides.js";
 export type { SeoMetaBoxOptions } from "./meta-box.js";
-// What the editor's SERP preview is written from, and the counters' limits —
-// shared with the admin chunk so the two cannot disagree about either.
-export type { SerpOverrides, SerpPreview, SerpResult } from "./serp.js";
-export {
-  resolveSerp,
-  SERP_DESCRIPTION_LIMIT,
-  SERP_TITLE_LIMIT,
-} from "./serp.js";
 // The structured-data vocabulary, for a plugin describing its own content
 // through the three `seo:schema:*` tiers, and the serializer behind it for one
 // emitting a script of its own.

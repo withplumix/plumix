@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { resolveIslandChunkUrl } from "./index.js";
+import { resolveIslandChunkUrl } from "./island-chunk-url.js";
 
 describe("resolveIslandChunkUrl", () => {
   test("dev mode returns /@fs<absolute-id>", () => {

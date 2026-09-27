@@ -1,0 +1,38 @@
+{
+  "name": "@plumix/published-surface",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "test:build": "vitest run --config vitest.build.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@plumix/core": "workspace:*",
+    "@plumix/plugin-audit-log": "workspace:*",
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-comments": "workspace:*",
+    "@plumix/plugin-feeds": "workspace:*",
+    "@plumix/plugin-forms": "workspace:*",
+    "@plumix/plugin-media": "workspace:*",
+    "@plumix/plugin-menu": "workspace:*",
+    "@plumix/plugin-og": "workspace:*",
+    "@plumix/plugin-pages": "workspace:*",
+    "@plumix/plugin-search": "workspace:*",
+    "@plumix/plugin-seo": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
+    "@plumix/runtime-node": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "create-plumix-app": "workspace:*",
+    "plumix": "workspace:*",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:vitest"
+  },
+  "prettier": "@plumix/prettier-config"
+}

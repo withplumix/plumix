@@ -84,9 +84,6 @@ const LIBRARY_GROUP_LABEL: Label = {
   message: "Library",
 };
 
-// Re-export the canonical list from `media-blocks.ts` (server-clean).
-export { mediaBlocks };
-
 interface MediaPluginOptions {
   /**
    * MIME types accepted by `media.createUploadUrl`. The browser sends a
@@ -175,7 +172,6 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         // — we don't want the generic entries list, sidebar item,
         // or dashboard quick-card auto-registered too.
         isPublic: false,
-        excludeFromGenericRpc: false,
         hasArchive: false,
         menuIcon: "image",
       });

@@ -32,6 +32,15 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
+    // The covered packages are devDependencies so turbo's `^build` builds them
+    // before the roster suite reads their `.d.ts` by path; nothing imports them.
+    "tooling/published-surface": {
+      ignoreDependencies: [
+        /^@plumix\/(?:plugin|runtime)-/,
+        "create-plumix-app",
+        "plumix",
+      ],
+    },
     // `test/fixtures/` holds deliberately-violating source files that the
     // lint-rule suite feeds to ESLint by path. Nothing imports them.
     "tooling/eslint": {

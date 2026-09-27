@@ -157,51 +157,70 @@ describe("installPlugins", () => {
       isPublic: true,
       showUI: true,
       showInSidebar: true,
-      excludeFromGenericRpc: false,
       excludeFromSearch: false,
     });
     expect(registry.entryTypes.get("menu_item")).toMatchObject({
       isPublic: false,
       showUI: false,
       showInSidebar: false,
-      excludeFromGenericRpc: true,
       excludeFromSearch: true,
     });
     expect(registry.entryTypes.get("attachment")).toMatchObject({
       isPublic: true,
       showUI: true,
       showInSidebar: false,
-      excludeFromGenericRpc: false,
       excludeFromSearch: true,
     });
     expect(registry.entryTypes.get("form")).toMatchObject({
       isPublic: false,
       showUI: true,
       showInSidebar: true,
-      excludeFromGenericRpc: true,
       excludeFromSearch: true,
     });
     expect(registry.termTaxonomies.get("category")).toMatchObject({
       isPublic: true,
       showUI: true,
       showInSidebar: true,
-      excludeFromGenericRpc: false,
       excludeFromSearch: false,
     });
     expect(registry.termTaxonomies.get("menu")).toMatchObject({
       isPublic: false,
       showUI: true,
       showInSidebar: true,
-      excludeFromGenericRpc: true,
       excludeFromSearch: true,
     });
     expect(registry.termTaxonomies.get("internal")).toMatchObject({
       isPublic: false,
       showUI: false,
       showInSidebar: false,
-      excludeFromGenericRpc: true,
       excludeFromSearch: false,
     });
+  });
+
+  test("takes no generic-RPC exclusion, which nothing ever read", async () => {
+    const hooks = new HookRegistry();
+    const site = definePlugin("site", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerTermTaxonomy("category", { label: "Categories" });
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        // @ts-expect-error -- removed before 1.0 (#2461)
+        excludeFromGenericRpc: true,
+      });
+      ctx.registerTermTaxonomy("tag", {
+        label: "Tags",
+        // @ts-expect-error -- removed before 1.0 (#2461)
+        excludeFromGenericRpc: true,
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [site] });
+    expect(registry.entryTypes.get("post")).not.toHaveProperty(
+      "excludeFromGenericRpc",
+    );
+    expect(registry.termTaxonomies.get("category")).not.toHaveProperty(
+      "excludeFromGenericRpc",
+    );
   });
 
   test("resolves the capability namespace when a type is registered", async () => {

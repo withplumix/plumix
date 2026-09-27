@@ -229,7 +229,6 @@ const ENTRY_TYPE_OPTIONS = [
   "isPublic",
   "showUI",
   "showInSidebar",
-  "excludeFromGenericRpc",
   "excludeFromSearch",
   "hasArchive",
   "rewrite",
