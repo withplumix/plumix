@@ -124,7 +124,7 @@ export interface EditorState {
   readonly frameRequest: number;
 }
 
-export interface EditorActions {
+interface EditorActions {
   /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
   /** Insert several blocks at a top-level index as one step (a pattern's

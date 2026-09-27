@@ -19,8 +19,29 @@ import {
 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 
-import type { PublishActions } from "./editor-toolbar.js";
 import { useEditorStore } from "./provider.js";
+
+/** Draft-mode actions for a published entry with a pending autosave. The host
+ *  owns the mutations; the header only renders the buttons and their state. */
+export interface DraftMode {
+  readonly hasPendingDraft: boolean;
+  readonly onSaveDraft: () => void;
+  readonly onPublishDraft: () => void;
+  readonly onDiscardDraft: () => void;
+  readonly isSaving: boolean;
+  readonly isPublishing: boolean;
+  readonly isDiscarding: boolean;
+}
+
+/** Publish wiring injected by the host (no orpc in this package). When
+ *  `draftMode` is set the header shows save/publish/discard; otherwise a plain
+ *  Publish button (disabled once published). */
+export interface PublishActions {
+  readonly onPublish?: () => void;
+  readonly isPublished?: boolean;
+  readonly isPublishing?: boolean;
+  readonly draftMode?: DraftMode;
+}
 
 export interface EditorHeaderProps {
   /** Entry title shown (and edited inline) in the header. */

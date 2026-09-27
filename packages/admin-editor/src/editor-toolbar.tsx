@@ -58,28 +58,6 @@ export function deviceLabel(i18n: I18n, value: EditorDevice): string {
   }
 }
 
-/** Draft-mode actions for a published entry with a pending autosave. The host
- *  owns the mutations; the toolbar only renders the buttons and their state. */
-interface DraftMode {
-  readonly hasPendingDraft: boolean;
-  readonly onSaveDraft: () => void;
-  readonly onPublishDraft: () => void;
-  readonly onDiscardDraft: () => void;
-  readonly isSaving: boolean;
-  readonly isPublishing: boolean;
-  readonly isDiscarding: boolean;
-}
-
-/** Publish wiring injected by the host (no orpc in this package). When
- *  `draftMode` is set the toolbar shows save/publish/discard; otherwise a plain
- *  Publish button (disabled once published). */
-export interface PublishActions {
-  readonly onPublish?: () => void;
-  readonly isPublished?: boolean;
-  readonly isPublishing?: boolean;
-  readonly draftMode?: DraftMode;
-}
-
 /** Canvas toolbar above the iframe: the rails toggle on the left, and the
  *  device/zoom controls centered over the canvas. Title, undo/redo, preview and
  *  publish live in the full-width header; blocks are added from the left rail. */

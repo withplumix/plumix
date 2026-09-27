@@ -1,15 +1,7 @@
-export { connectCanvas } from "./connect-canvas.js";
-export type { CanvasConnection } from "./connect-canvas.js";
-export { connectRuntime } from "./connect-runtime.js";
-export type { RuntimeConnection } from "./connect-runtime.js";
-export { EditorCanvas } from "./editor-canvas.js";
-export { CanvasFrame } from "./canvas-frame.js";
-export {
-  EditorConfigProvider,
-  useEditorConfig,
-} from "./editor-config-context.js";
-export type { EditorConfig } from "./editor-config-context.js";
 export { PlumixEditor } from "./plumix-editor.js";
+export type { PlumixEditorProps } from "./plumix-editor.js";
+export type { InserterPattern } from "./block-catalog.js";
+export type { DraftMode, PublishActions } from "./editor-header.js";
 export { EDITOR_COMMAND_DESCRIPTORS } from "./editor-commands.js";
 export type {
   PluginFieldControl,
@@ -17,12 +9,3 @@ export type {
   ResolvePluginFieldType,
 } from "./block-input-control.js";
 export { bootEditor } from "./runtime.js";
-export { EditorProvider, useEditorStore } from "./provider.js";
-export { createEditorStore, MAX_ZOOM, MIN_ZOOM } from "./store.js";
-export type {
-  EditorActions,
-  EditorDevice,
-  EditorState,
-  EditorStore,
-  EditorStoreApi,
-} from "./store.js";
