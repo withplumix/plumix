@@ -17,7 +17,6 @@ const ports = (over: Partial<ShipPorts> = {}) => {
   const waiting = [ticket(1), ticket(2), ticket(3)];
   const parked: { number: number; reason: string }[] = [];
   const released: number[] = [];
-  const filed: string[] = [];
   const base: ShipPorts = {
     nextTicket: () => waiting.shift(),
     ship: async (t) => ({
@@ -28,11 +27,12 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     park: (t, reason) => void parked.push({ number: t.number, reason }),
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
-    fileFollowUp: (_t, _url, f) => void filed.push(f.summary),
+    rebaseOntoMain: async () => "rebased" as const,
+    requeue: () => {},
     ticketClosed: () => true,
     say: () => {},
   };
-  return { ports: { ...base, ...over }, parked, released, filed };
+  return { ports: { ...base, ...over }, parked, released };
 };
 
 const allLanes = { lanes: 2, withinBudget: () => true };
@@ -70,44 +70,6 @@ describe("runShipLoop", () => {
     expect(report.merged).toEqual([]);
     expect(parked).toHaveLength(3);
     expect(parked[0]?.reason).toContain("failing checks: Test");
-  });
-
-  test("an advisory finding is filed once the pull request has merged", async () => {
-    const { ports: p, filed } = ports({
-      ship: async (t) => ({
-        status: "queued",
-        pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
-        advisory: [
-          {
-            severity: "medium",
-            file: "a.ts",
-            summary: `dup in t${t.number}`,
-            why: "w",
-          },
-        ],
-      }),
-    });
-
-    await runShipLoop(p, allLanes);
-
-    expect(filed.sort()).toEqual(["dup in t1", "dup in t2", "dup in t3"]);
-  });
-
-  test("an advisory finding is not filed when the pull request never merged", async () => {
-    const { ports: p, filed } = ports({
-      confirm: async () => ciRed,
-      ship: async (t) => ({
-        status: "queued",
-        pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
-        advisory: [
-          { severity: "medium", file: "a.ts", summary: "dup", why: "w" },
-        ],
-      }),
-    });
-
-    await runShipLoop(p, allLanes);
-
-    expect(filed).toEqual([]);
   });
 
   test("a ticket blocked inside its lane is parked and never queued", async () => {
@@ -257,6 +219,57 @@ describe("runShipLoop", () => {
     await runShipLoop(p, { lanes: 1, withinBudget: () => true });
 
     expect(attempted).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test("a pull request that fails once is rebased and given a second chance", async () => {
+    const seen: string[] = [];
+    let attempts = 0;
+    const { ports: p, parked } = ports({
+      confirm: async () => {
+        attempts += 1;
+        return attempts <= 3 ? ciRed : merged;
+      },
+      rebaseOntoMain: async () => {
+        seen.push("rebased");
+        return "rebased" as const;
+      },
+      requeue: () => void seen.push("requeued"),
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen.filter((s) => s === "rebased")).toHaveLength(3);
+    expect(report.merged).toHaveLength(3);
+    expect(parked).toEqual([]);
+  });
+
+  test("a pull request that fails twice is parked, not rebased for ever", async () => {
+    let rebases = 0;
+    const { ports: p, parked } = ports({
+      confirm: async () => ciRed,
+      rebaseOntoMain: async () => {
+        rebases += 1;
+        return "rebased" as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(rebases).toBe(3);
+    expect(parked).toHaveLength(3);
+    expect(parked[0]?.reason).toContain("failing checks");
+  });
+
+  test("a rebase that conflicts parks at once, saying so", async () => {
+    const { ports: p, parked } = ports({
+      confirm: async () => ciRed,
+      rebaseOntoMain: async () => "conflicted" as const,
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked).toHaveLength(3);
+    expect(parked[0]?.reason).toContain("conflicts with main");
   });
 
   test("a budget that has run out hands out no work at all", async () => {

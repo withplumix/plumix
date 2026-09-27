@@ -1,11 +1,13 @@
 import type { QueuedPullRequest, Ticket } from "./lib/github.js";
 import {
+  branchOfPullRequest,
   closeCompletedParent,
-  fileFollowUp,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
+  queueForMerge,
+  rebaseOntoMain,
   releaseClaim,
   syncRepoToMain,
   ticketByNumber,
@@ -17,7 +19,7 @@ import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
-const DEFAULT_LANES = 2;
+const DEFAULT_LANES = 3;
 const MERGE_POLL_INTERVAL_MS = 120_000;
 const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
@@ -88,14 +90,15 @@ const report = await runShipLoop(
     park: ({ number }, reason, pullRequestUrl) =>
       parkTicket(number, reason, pullRequestUrl),
     releaseClaim: ({ number }) => releaseClaim(number),
+    rebaseOntoMain: async ({ number }) =>
+      rebaseOntoMain(branchOfPullRequest(number)),
+    requeue: ({ number }) => queueForMerge(number),
     confirm: (pullRequest) =>
       waitForMerge(pullRequest.number, {
         pollEveryMs: MERGE_POLL_INTERVAL_MS,
         giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
         onPoll: (status) => say(`  #${pullRequest.number} ${status}`),
       }),
-    fileFollowUp: ({ number }, pullRequestUrl, finding) =>
-      fileFollowUp(number, pullRequestUrl, finding),
     ticketClosed: ({ number }) => isTicketClosed(number),
     say,
   },

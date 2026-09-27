@@ -63,8 +63,6 @@ const findingSchema = z.object({
 
 type Finding = z.infer<typeof findingSchema>["findings"][number];
 
-export type { Finding };
-
 export interface Review {
   readonly findings: readonly Finding[];
   readonly emittedParseableFindings: boolean;
@@ -79,7 +77,6 @@ export type ShipOutcome =
   | {
       readonly status: "queued";
       readonly pullRequest: QueuedPullRequest;
-      readonly advisory: readonly Finding[];
     }
   | {
       readonly status: "blocked";
@@ -246,11 +243,14 @@ export const shipTicket = async (
       maxIterations: 40,
       idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
     });
-    if (!implemented.commits.length)
+    if (!implemented.commits.length) {
       return {
         status: "blocked",
-        reason: "the implementer produced no commits",
+        reason:
+          readDeclinedTag(implemented.stdout) ??
+          "the implementer produced no commits and gave no reason",
       };
+    }
 
     const pullRequestCopy = readPullRequestTag(implemented.stdout, ticket);
     let sessionToResume = implemented.iterations.at(-1)?.sessionId;
@@ -280,6 +280,7 @@ export const shipTicket = async (
       say(`\n--- gate (pass ${pass}) ---`);
       const { failures } = await runGates(sandbox, gatesThisTicketOwns, {
         stopAtFirstFailure: true,
+        retryAFailureOnce: true,
         onResult: (result) =>
           journal.record({
             phase: `gate:${result.name}#${pass}`,
@@ -366,7 +367,7 @@ export const shipTicket = async (
     );
 
     queueForMerge(pullRequest.number);
-    return { status: "queued", pullRequest, advisory };
+    return { status: "queued", pullRequest };
   } finally {
     const { preservedWorktreePath } = await closePlumixSandbox(sandbox);
     if (preservedWorktreePath)

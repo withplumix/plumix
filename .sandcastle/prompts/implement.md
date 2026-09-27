@@ -23,8 +23,20 @@ Do not run the full gate suite yourself. The harness runs typecheck, lint, forma
 test, i18n, knip, publint, attw and the changeset check after this phase and hands
 you any failure. Run single test files and targeted typechecks as you work.
 
-You are unattended: there is no user to ask. If the ticket needs a decision only a
-human can make, say so in your final message and stop.
+Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
+shared with every other checkout on that machine, and your own worktree's path does not resolve
+from in here, so prune reads every one of them as gone. Compare against `origin/main` with
+`git diff` and `git log` instead.
+
+You are unattended: there is no user to ask. Where the ticket cannot be built from
+here — it needs a decision only a human can make, or it depends on work that has
+not landed — emit the block below and commit nothing. The harness stops there and
+hands your reason to a human, so write it for them: what you checked, what blocks
+it, and what would unblock it.
+
+<declined>
+one or two paragraphs, or nothing at all if you are committing the work
+</declined>
 
 # Done
 

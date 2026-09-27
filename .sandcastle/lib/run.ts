@@ -1,5 +1,5 @@
 import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
-import type { Finding, ShipOutcome } from "./ticket.js";
+import type { ShipOutcome } from "./ticket.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
 
@@ -13,11 +13,10 @@ export interface ShipPorts {
   ) => void;
   readonly releaseClaim: (ticket: Ticket) => void;
   readonly confirm: (pullRequest: QueuedPullRequest) => Promise<MergeOutcome>;
-  readonly fileFollowUp: (
-    ticket: Ticket,
-    pullRequestUrl: string,
-    finding: Finding,
-  ) => void;
+  readonly rebaseOntoMain: (
+    pullRequest: QueuedPullRequest,
+  ) => Promise<"rebased" | "conflicted">;
+  readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
 }
@@ -30,7 +29,6 @@ export interface ShipLoopOptions {
 interface Queued {
   readonly ticket: Ticket;
   readonly pullRequest: QueuedPullRequest;
-  readonly advisory: readonly Finding[];
 }
 
 export interface ShipReport {
@@ -98,23 +96,44 @@ export const runShipLoop = async (
       failuresInARow = 0;
 
       ports.say(`  #${ticket.number} queued ${outcome.pullRequest.url}`);
-      return {
-        ticket,
-        pullRequest: outcome.pullRequest,
-        advisory: outcome.advisory,
-      };
+      return { ticket, pullRequest: outcome.pullRequest };
     },
   });
 
   const queued = settled.flatMap((entry) => entry ?? []);
   ports.say(`\n--- confirming ${queued.length} queued pull request(s) ---`);
 
+  const confirmOnceMoreOnCurrentMain = async (
+    pullRequest: QueuedPullRequest,
+    firstRefusal: MergeOutcome,
+  ): Promise<MergeOutcome> => {
+    if (firstRefusal.status === "merged") return firstRefusal;
+
+    ports.say(
+      `  #${pullRequest.number} did not land, rebasing onto main and trying once more`,
+    );
+    if ((await ports.rebaseOntoMain(pullRequest)) === "conflicted") {
+      return {
+        status: "failed",
+        reason: `${pullRequest.url} conflicts with main and cannot be rebased unattended`,
+        failingChecks: [],
+      };
+    }
+    ports.requeue(pullRequest);
+    return ports.confirm(pullRequest);
+  };
+
   const confirmations = await Promise.allSettled(
-    queued.map(async ({ pullRequest }) => ports.confirm(pullRequest)),
+    queued.map(async ({ pullRequest }) =>
+      confirmOnceMoreOnCurrentMain(
+        pullRequest,
+        await ports.confirm(pullRequest),
+      ),
+    ),
   );
 
   const merged: { ticket: Ticket; pullRequest: QueuedPullRequest }[] = [];
-  queued.forEach(({ ticket, pullRequest, advisory }, index) => {
+  queued.forEach(({ ticket, pullRequest }, index) => {
     const settledConfirmation = confirmations[index];
     if (!settledConfirmation) return;
 
@@ -137,8 +156,6 @@ export const runShipLoop = async (
         `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
       );
     }
-    for (const finding of advisory)
-      ports.fileFollowUp(ticket, pullRequest.url, finding);
     merged.push({ ticket, pullRequest });
   });
 

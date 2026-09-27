@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 
 import {
   DECISION_LABEL,
@@ -162,52 +163,6 @@ export const assignToSelf = (ticketNumber: number): void => {
   ]);
 };
 
-const openTicketsWaitingOn = (ticketNumber: number): readonly number[] =>
-  ghJson([
-    "api",
-    `repos/${REPO_SLUG}/issues/${ticketNumber}/dependencies/blocking`,
-    "--jq",
-    '[.[] | select(.state == "open") | .number]',
-  ]);
-
-const releaseTicketsWaitingOn = (ticketNumber: number): void => {
-  const parkedId = issueDatabaseId(ticketNumber);
-  for (const waiting of openTicketsWaitingOn(ticketNumber)) {
-    gh([
-      "api",
-      "--method",
-      "DELETE",
-      `repos/${REPO_SLUG}/issues/${waiting}/dependencies/blocked_by/${parkedId}`,
-    ]);
-  }
-};
-
-export const fileFollowUp = (
-  ticketNumber: number,
-  pullRequestUrl: string,
-  finding: {
-    readonly severity: string;
-    readonly file: string;
-    readonly line?: number;
-    readonly summary: string;
-    readonly why: string;
-  },
-): void => {
-  const where = `\`${finding.file}${finding.line ? `:${finding.line}` : ""}\``;
-  gh([
-    "issue",
-    "create",
-    "-R",
-    REPO_SLUG,
-    "--label",
-    TRIAGE_LABEL,
-    "--title",
-    finding.summary.slice(0, 120),
-    "--body",
-    `${TRIAGE_DISCLAIMER}\n\n*A reviewer raised this while shipping #${ticketNumber} (${pullRequestUrl}). Out of scope there, so it is filed rather than left in a merged pull request.*\n\n## Problem\n\n${where} — ${finding.summary}\n\n${finding.why}\n\nRefs #${ticketNumber}`,
-  ]);
-};
-
 export const releaseClaim = (ticketNumber: number): void => {
   gh([
     "issue",
@@ -225,7 +180,6 @@ export const parkTicket = (
   reason: string,
   pullRequestUrl?: string,
 ): void => {
-  releaseTicketsWaitingOn(ticketNumber);
   const openPullRequestNote = pullRequestUrl
     ? `\n\nThe branch is pushed and ${pullRequestUrl} is open, so the work is not lost.`
     : "";
@@ -360,6 +314,15 @@ export const waitForMerge = async (
       return {
         status: "failed",
         reason: "pull request was closed without merging",
+        failingChecks: [],
+      };
+    }
+
+    if (state.mergeStateStatus === "DIRTY") {
+      return {
+        status: "failed",
+        reason:
+          "the branch conflicts with main, so the queue will never take it",
         failingChecks: [],
       };
     }
@@ -545,3 +508,43 @@ export const blockIssueOn = (
     `issue_id=${issueDatabaseId(blockerNumber)}`,
   ]);
 };
+
+export const rebaseOntoMain = (branch: string): "rebased" | "conflicted" => {
+  const scratch = join(
+    REPO_ROOT,
+    ".sandcastle",
+    "worktrees",
+    `rebase-${branch.replace(/[^\w-]+/g, "-")}`,
+  );
+  git(["fetch", "-q", "origin", "main", branch]);
+  git(["worktree", "add", "--detach", "-f", scratch, `origin/${branch}`]);
+  try {
+    git(["rebase", "origin/main"], scratch);
+    git(["push", "--force-with-lease", "origin", `HEAD:${branch}`], scratch);
+    return "rebased";
+  } catch {
+    try {
+      git(["rebase", "--abort"], scratch);
+    } catch {
+      /* nothing to abort */
+    }
+    return "conflicted";
+  } finally {
+    try {
+      git(["worktree", "remove", "--force", scratch]);
+    } catch {
+      /* already gone */
+    }
+  }
+};
+
+export const branchOfPullRequest = (pullRequest: number): string =>
+  ghJson<{ headRefName: string }>([
+    "pr",
+    "view",
+    String(pullRequest),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "headRefName",
+  ]).headRefName;

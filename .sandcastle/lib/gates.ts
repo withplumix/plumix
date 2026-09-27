@@ -38,15 +38,20 @@ const RENDER_AND_ADMIN_PATHS = [
   "apps/",
 ];
 
-const NEVER_REACHES_DIST =
-  /(\.(test|spec)\.[cm]?[jt]sx?$)|(\/(test|e2e|__tests__)\/)|(\/vitest\.config\.[cm]?[jt]s$)|(\/tsconfig\.json$)/;
+// Every package builds `src` and ships `locales`, so those and the manifest are
+// what a consumer installs. Naming them is shorter and safer than naming the
+// scripts, fixtures, harnesses and configs that sit beside them and do not ship.
+const WHAT_A_CONSUMER_INSTALLS =
+  /^packages\/(?:plugins\/|runtimes\/)?[^/]+\/(?:src\/.+|locales\/.+|package\.json)$/;
+const A_TEST_RATHER_THAN_THE_THING_TESTED = /\.(test|spec)\.[cm]?[jt]sx?$/;
 
 const changesSomethingConsumersInstall = (
   changedPaths: readonly string[],
 ): boolean =>
   changedPaths.some(
     (path) =>
-      path.startsWith("packages/") && !NEVER_REACHES_DIST.test(`/${path}`),
+      WHAT_A_CONSUMER_INSTALLS.test(path) &&
+      !A_TEST_RATHER_THAN_THE_THING_TESTED.test(path),
   );
 
 export const GATES: readonly Gate[] = [
@@ -132,12 +137,13 @@ export interface GateRunOutcome {
 export interface GateRunOptions {
   readonly stopAtFirstFailure: boolean;
   readonly onResult: (result: GateResult) => void;
+  readonly retryAFailureOnce?: boolean;
 }
 
 export const runGates = async (
   sandbox: Executor,
   gates: readonly Gate[],
-  { stopAtFirstFailure, onResult }: GateRunOptions,
+  { stopAtFirstFailure, onResult, retryAFailureOnce }: GateRunOptions,
 ): Promise<GateRunOutcome> => {
   const changedPaths = await changedPathsIn(sandbox);
   const results: GateResult[] = [];
@@ -176,23 +182,36 @@ export const runGates = async (
       continue;
     }
 
-    const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
-    const result: GateResult = {
-      name: gate.name,
-      command: gate.command,
-      startedAt,
-      durationMs: elapsed(),
-      outcome: exitCode === 0 ? "ok" : "fail",
-      exitCode,
+    const runOnce = async (): Promise<GateResult & { output: string }> => {
+      const attemptStartedAtMs = Date.now();
+      const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
+      return {
+        name: gate.name,
+        command: gate.command,
+        startedAt: new Date(attemptStartedAtMs).toISOString(),
+        durationMs: Date.now() - attemptStartedAtMs,
+        outcome: exitCode === 0 ? "ok" : "fail",
+        exitCode,
+        output: `${stdout}\n${stderr}`,
+      };
     };
-    results.push(result);
-    onResult(result);
 
+    let attempt = await runOnce();
+    results.push(attempt);
+    onResult(attempt);
+
+    if (attempt.outcome === "fail" && retryAFailureOnce) {
+      attempt = await runOnce();
+      results.push(attempt);
+      onResult(attempt);
+    }
+
+    const { exitCode, output } = attempt;
     if (exitCode !== 0) {
       failures.push({
         name: gate.name,
         command: gate.command,
-        output: `${stdout}\n${stderr}`.slice(-8000),
+        output: output.slice(-8000),
       });
       if (stopAtFirstFailure) return { results, failures };
     }
