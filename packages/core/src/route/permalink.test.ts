@@ -9,6 +9,8 @@ import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { adminUser, createTestDb, factoriesFor } from "../test/index.js";
+import { compileRouteMap } from "./compile.js";
+import { matchRoute } from "./match.js";
 import {
   buildEntryPermalink,
   buildEntryPermalinks,
@@ -740,5 +742,98 @@ describe("buildTermArchiveUrlSync", () => {
         parentId: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("every built permalink routes back to its own intent", () => {
+  // Content slugs aren't checked at compile, so the samples stay clear of the
+  // URL space the framework reserves: date-shaped and `search`/`authors`.
+  const SLUGS = ["hello-world", "page", "a1"];
+  const ANCESTOR_CHAINS: readonly (readonly string[])[] = [
+    [],
+    ["parent"],
+    ["grand", "parent"],
+  ];
+
+  test("for flat and hierarchical, prefixed and root-mounted registrations", async () => {
+    const registry = await buildRegistry([
+      definePlugin("site", (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "shop" },
+        });
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "page" },
+        });
+        ctx.registerEntryType("guide", {
+          label: "Guides",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { isHierarchical: false },
+        });
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
+        });
+        ctx.registerTermTaxonomy("tag", { label: "Tags" });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          isHierarchical: true,
+          rewrite: { slug: "where" },
+        });
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          isHierarchical: true,
+          rewrite: { isHierarchical: false },
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const ctx = ctxFor(db, registry);
+    const rules = compileRouteMap(registry);
+    const resolve = (path: string | null) =>
+      path === null
+        ? null
+        : matchRoute(new URL(path, "https://cms.example"), rules)?.intent;
+
+    let checked = 0;
+    for (const slug of SLUGS) {
+      for (const ancestorSlugs of ANCESTOR_CHAINS) {
+        const parentId = ancestorSlugs.length === 0 ? null : 1;
+        for (const type of registry.entryTypes.keys()) {
+          const url = await buildEntryPermalink(
+            ctx,
+            { type, slug, parentId },
+            { ancestorSlugs },
+          );
+          expect(resolve(url), `${type} ${String(url)}`).toEqual({
+            kind: "single",
+            entryType: type,
+          });
+          checked++;
+        }
+        for (const taxonomy of registry.termTaxonomies.keys()) {
+          const url = await buildTermArchiveUrl(
+            ctx,
+            { taxonomy, slug, parentId },
+            { ancestorSlugs },
+          );
+          expect(resolve(url), `${taxonomy} ${String(url)}`).toEqual({
+            kind: "taxonomy",
+            taxonomy,
+          });
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBe(SLUGS.length * ANCESTOR_CHAINS.length * 8);
   });
 });

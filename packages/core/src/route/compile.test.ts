@@ -590,6 +590,82 @@ describe("compileRouteMap", () => {
     expect(() => compileRouteMap(rooted)).toThrow(/invalid rewrite\.slug/);
   });
 
+  test.each(["search", "authors"])(
+    "a taxonomy slugged %s, whose term URLs a framework route would serve, fails to compile",
+    async (slug) => {
+      const registry = await buildRegistry([
+        definePlugin("blog", (ctx) => {
+          ctx.registerTermTaxonomy("topic", {
+            label: "Topics",
+            rewrite: { slug },
+          });
+        }),
+      ]);
+      expect(() => compileRouteMap(registry)).toThrow(
+        new RegExp(
+          `Term taxonomy "topic" has rewrite\\.slug "${slug}" .*framework route`,
+        ),
+      );
+    },
+  );
+
+  test("an entry type slugged search loses its single and archive URLs to search, so it fails to compile", async () => {
+    const registry = await buildRegistry([
+      definePlugin("shop", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          rewrite: { slug: "search" },
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(registry)).toThrow(
+      /Entry type "product" has rewrite\.slug "search" .*framework route/,
+    );
+  });
+
+  test("a hasArchive slugged search is reported against hasArchive", async () => {
+    const registry = await buildRegistry([
+      definePlugin("shop", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          hasArchive: "search",
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(registry)).toThrow(
+      /Entry type "product" has hasArchive "search" .*"\/search"/,
+    );
+  });
+
+  test("the framework's documented overlaps still compile: hierarchical /page, the root, a private search type", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+        ctx.registerEntryType("landing", {
+          label: "Landings",
+          isPublic: true,
+          rewrite: { slug: "" },
+        });
+        ctx.registerEntryType("saved-search", {
+          label: "Saved searches",
+          isPublic: false,
+          hasArchive: true,
+          rewrite: { slug: "search" },
+        });
+      }),
+    ]);
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
+      "/page/:path+",
+      "/:slug",
+    ]);
+  });
+
   test("empty entry-type rewrite.slug still claims the site root", async () => {
     const registry = await buildRegistry([
       definePlugin("pages", (ctx) => {
