@@ -17,6 +17,11 @@ what you checked, why the code cannot fix it, and what would.
 one or two paragraphs, or nothing at all if you are committing a fix
 </declined>
 
+Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
+shared with every other checkout on that machine, and your own worktree's path does not resolve
+from in here, so prune reads every one of them as gone. Compare against `origin/main` with
+`git diff` and `git log` instead.
+
 The harness re-runs the full gate suite after this phase, so do not run it yourself.
 
 # Done
