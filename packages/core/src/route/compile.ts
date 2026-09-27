@@ -450,7 +450,7 @@ function assertUniquePatterns(rules: readonly CompiledRule[]): void {
 // reserves on purpose: date archives (`/2026`) and root pagination (`/page/2`).
 const SAMPLE_SEGMENT = "sample";
 const SAMPLE_PAGE = "2";
-const CAPTURE_RE = /:(\w+)(?:\([^)]*\))?\+?/g;
+const CAPTURE_RE = /:(\w+)(?:\([^()]*\))?\+?/g;
 
 function samplePathFor(rawPattern: string): string {
   return rawPattern.replace(CAPTURE_RE, (_, name: string) =>
