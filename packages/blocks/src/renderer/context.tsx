@@ -6,7 +6,11 @@ import type { HydratedEntry } from "../context-bags.js";
 import type { EntryContent } from "../entry-content.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
-import type { BlockRenderFilters } from "../render-block-tree.js";
+import type {
+  BlockNode,
+  BlockRenderFilters,
+  RenderBlockTreeOptions,
+} from "../render-block-tree.js";
 import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
@@ -14,6 +18,7 @@ import type { ImageResolver, RemotePattern } from "./image-attrs.js";
 import { useHtmlAllowlist } from "../html/context.js";
 import { serializeLoaderData } from "../loader-data.js";
 import { renderBlockTree } from "../render-block-tree.js";
+import { serializeRenderEnv } from "../render-env.js";
 import { RendererError } from "./errors.js";
 
 // `@plumix/core` depends on `@plumix/blocks`, not the reverse — these
@@ -77,6 +82,9 @@ export interface PlumixContextValue {
    *  filters — populated by core with a closure over its request-scoped
    *  `HookExecutor`. Absent in the editor canvas, which has no hook runtime. */
   readonly renderFilters?: BlockRenderFilters;
+  /** Localized "Add a block" label for the edit-mode appender, which the
+   *  editor host resolves and pushes into the canvas. */
+  readonly addBlockLabel?: string;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -101,6 +109,35 @@ export function PlumixProvider({
   );
 }
 
+// The one place a context becomes walker options, so a render input added to
+// the context reaches the server render and the editor canvas alike.
+function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
+  return {
+    breakpoints: ctx.breakpoints,
+    loaderData: ctx.loaderData,
+    locale: ctx.locale,
+    shortcodes: ctx.shortcodes,
+    entry: ctx.entry,
+    editing: ctx.mode === "edit",
+    renderFilters: ctx.renderFilters,
+    addBlockLabel: ctx.addBlockLabel,
+  };
+}
+
+/**
+ * The block tree rendered from the surrounding context, with no edit-mode
+ * boundary around it — what the editor canvas renders inside the content root
+ * the server already emitted.
+ */
+export function BlockTree({
+  blocks,
+}: {
+  readonly blocks: readonly BlockNode[];
+}): ReactNode {
+  const ctx = usePlumixContext("BlockTree");
+  return renderBlockTree(blocks, ctx.registry, renderOptions(ctx));
+}
+
 export function BlockRenderer({
   content,
 }: {
@@ -110,23 +147,14 @@ export function BlockRenderer({
   // The same hook the html / rich-text blocks read, so the embed below carries
   // what this render actually sanitized with.
   const htmlAllowlist = useHtmlAllowlist();
-  const tree = renderBlockTree(content.blocks, ctx.registry, {
-    breakpoints: ctx.breakpoints,
-    loaderData: ctx.loaderData,
-    locale: ctx.locale,
-    shortcodes: ctx.shortcodes,
-    entry: ctx.entry,
-    editing: ctx.mode === "edit",
-    renderFilters: ctx.renderFilters,
-  });
+  const tree = <BlockTree blocks={content.blocks} />;
   if (ctx.mode !== "edit") return tree;
   // Edit mode: wrap the content in a mount root the injected runtime renders
   // into, and embed the tree + the SSR-resolved loader data so the edit runtime
   // seeds both without a round-trip — blocks open with real data and keep it
   // across edits (loaders re-run only via a scoped refresh), plus the render
-  // env — tokens, breakpoints, allowlist — the runtime has no other way to
-  // learn. `<` is escaped so authored content can't break out of the JSON
-  // <script>.
+  // env the runtime has no other way to learn. `<` is escaped so authored
+  // content can't break out of the JSON <script>.
   return (
     <div data-plumix-content-root="">
       <script
@@ -150,11 +178,10 @@ export function BlockRenderer({
         type="application/json"
         data-plumix-render-env=""
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            tokens: ctx.tokens,
-            breakpoints: ctx.breakpoints,
-            htmlAllowlist,
-          }).replace(/</g, "\\u003c"),
+          __html: serializeRenderEnv(ctx, htmlAllowlist).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
       {tree}

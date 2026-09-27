@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { defineBlock } from "@plumix/blocks";
+import { defineBlock, defineShortcode } from "@plumix/blocks";
 
-import { buildEditorRegistry } from "./runtime.js";
+import { buildEditorRegistry, buildEditorShortcodes } from "./runtime.js";
 
 describe("buildEditorRegistry", () => {
   test("includes core blocks even with no plugin specs", () => {
@@ -24,5 +24,30 @@ describe("buildEditorRegistry", () => {
     });
     const registry = buildEditorRegistry([override]);
     expect(registry.get("core/rich-text")).toBe(override);
+  });
+});
+
+describe("buildEditorShortcodes", () => {
+  const context = { siteSettings: {}, locale: "en", entry: null };
+  const render = (
+    registry: ReturnType<typeof buildEditorShortcodes>,
+    name: string,
+  ): string | undefined => registry.get(name)?.render({ atts: {}, context });
+
+  test("includes the core shortcodes with none contributed", () => {
+    expect(render(buildEditorShortcodes(), "year")).toBe(
+      String(new Date().getFullYear()),
+    );
+  });
+
+  // The generated entry hands plugin specs before theme specs, so last-wins
+  // gives the server's `core < plugin < theme` precedence.
+  test("a later (theme) spec wins over an earlier (plugin) one of the same tag", () => {
+    const plugin = defineShortcode({ name: "brand", render: () => "Plugin" });
+    const theme = defineShortcode({ name: "brand", render: () => "Theme" });
+    expect(render(buildEditorShortcodes([plugin]), "brand")).toBe("Plugin");
+    expect(render(buildEditorShortcodes([plugin, theme]), "brand")).toBe(
+      "Theme",
+    );
   });
 });

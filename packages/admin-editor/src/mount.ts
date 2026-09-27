@@ -4,11 +4,10 @@ import { createRoot } from "react-dom/client";
 import type {
   BlockNode,
   BlockRegistry,
-  HtmlAllowlist,
-  ThemeBreakpoints,
-  ThemeTokens,
+  RenderEnv,
+  ShortcodeRegistry,
 } from "@plumix/blocks";
-import { isEntryContent } from "@plumix/blocks";
+import { isEntryContent, parseRenderEnv } from "@plumix/blocks";
 
 import { EditorCanvas } from "./editor-canvas.js";
 
@@ -16,6 +15,8 @@ interface MountEditorOptions {
   readonly doc: Document;
   /** Registry the canvas renders with (core + plugin blocks). */
   readonly registry: BlockRegistry;
+  /** Shortcodes the canvas expands (core + plugin + theme). */
+  readonly shortcodes?: ShortcodeRegistry;
   /** Host (admin shell) origin, for bridge message pinning. */
   readonly origin: string;
 }
@@ -29,22 +30,21 @@ interface MountEditorOptions {
 export function mountEditorRuntime({
   doc,
   registry,
+  shortcodes,
   origin,
 }: MountEditorOptions): (() => void) | null {
   const root = doc.querySelector("[data-plumix-content-root]");
   if (!(root instanceof Element)) return null;
 
   const initialTree = readInitialTree(doc);
-  const { tokens, breakpoints, htmlAllowlist } = readRenderEnv(doc);
   const reactRoot = createRoot(root);
   reactRoot.render(
     createElement(EditorCanvas, {
+      ...readRenderEnv(doc),
       registry,
+      shortcodes,
       origin,
       initialTree,
-      tokens,
-      breakpoints,
-      htmlAllowlist,
     }),
   );
   return () => reactRoot.unmount();
@@ -62,24 +62,9 @@ function readInitialTree(doc: Document): readonly BlockNode[] {
 }
 
 // The SSR embeds what the canvas — a fresh React tree with no server context —
-// would otherwise have to guess: the theme's tokens + breakpoints for per-block
-// style CSS, and the app's html allowlist so its sanitiser holds authored
-// markup to the rules the published page will.
-interface RenderEnvEmbed {
-  readonly tokens?: ThemeTokens;
-  readonly breakpoints?: ThemeBreakpoints;
-  readonly htmlAllowlist?: HtmlAllowlist;
-}
-
-function readRenderEnv(doc: Document): RenderEnvEmbed {
-  const script = doc.querySelector("[data-plumix-render-env]");
-  if (!script?.textContent) return {};
-  try {
-    const parsed: unknown = JSON.parse(script.textContent);
-    // A JSON scalar parses fine and then breaks every reader downstream; the
-    // canvas has no error boundary, so that is the whole editor, not a block.
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
-  } catch {
-    return {};
-  }
+// would otherwise have to guess; `parseRenderEnv` says what and why.
+function readRenderEnv(doc: Document): RenderEnv {
+  return parseRenderEnv(
+    doc.querySelector("[data-plumix-render-env]")?.textContent ?? "",
+  );
 }

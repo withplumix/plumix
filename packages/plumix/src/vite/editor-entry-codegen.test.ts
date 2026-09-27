@@ -40,7 +40,22 @@ describe("generateEditorEntrySource", () => {
     // A single `registerBlock` spec becomes `[pb0]`, an array passes through,
     // a missing export becomes `[]` — never a non-iterable in the spread.
     expect(source).toContain(
-      "bootEditor([...(Array.isArray(pb0) ? pb0 : pb0 ? [pb0] : [])]);",
+      "bootEditor({ blocks: [...(Array.isArray(pb0) ? pb0 : pb0 ? [pb0] : [])], shortcodes: [] });",
+    );
+  });
+
+  test("imports shortcode modules and hands them to bootEditor in order", () => {
+    const source = generateEditorEntrySource(
+      [],
+      [ref("/app/plugin/shortcodes.ts", "shortcodes"), ref("/app/theme/sc.ts")],
+    );
+    expect(source).toContain(
+      'import { shortcodes as ps0 } from "/app/plugin/shortcodes.ts";',
+    );
+    expect(source).toContain('import ps1 from "/app/theme/sc.ts";');
+    // Plugin before theme: the canvas registry is last-write-wins.
+    expect(source).toContain(
+      "bootEditor({ blocks: [], shortcodes: [...(Array.isArray(ps0) ? ps0 : ps0 ? [ps0] : []), ...(Array.isArray(ps1) ? ps1 : ps1 ? [ps1] : [])] });",
     );
   });
 

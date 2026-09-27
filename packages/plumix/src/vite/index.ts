@@ -50,7 +50,10 @@ import {
   resolveClientStack,
 } from "./dev-error-stack.js";
 import { createTerminalForwarder } from "./dev-error-terminal.js";
-import { collectEditorBlockModules } from "./editor-block-modules.js";
+import {
+  collectEditorBlockModules,
+  collectEditorShortcodeModules,
+} from "./editor-block-modules.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
 import {
@@ -589,13 +592,19 @@ async function regenerate(
   // edit gate authorizes it. Theme blocks (its `blocks` field) and plugin blocks
   // (their `ctx.registerBlock(s)` calls) are recovered from config source and
   // resolved to importable paths so the canvas renders them, not just core.
+  // Theme and plugin `shortcodes` fields are recovered the same way, so a
+  // rich-text body expands in the canvas as it does on the page.
+  const configSource = readFileSync(configPath, "utf8");
   const editorBlockModules = collectEditorBlockModules(
     configPath,
-    readFileSync(configPath, "utf8"),
+    configSource,
   );
   writeIfChanged(
     resolve(cwd, ".plumix/editor-entry.ts"),
-    generateEditorEntrySource(editorBlockModules),
+    generateEditorEntrySource(
+      editorBlockModules,
+      collectEditorShortcodeModules(configPath, configSource),
+    ),
   );
 
   const { manifest, registry } = await computeManifestAndRegistry(

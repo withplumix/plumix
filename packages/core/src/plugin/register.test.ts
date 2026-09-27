@@ -1267,6 +1267,26 @@ describe("registerShortcode", () => {
     );
   });
 
+  test("stores a shortcode declared in the descriptor's `shortcodes` field", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("seo", {
+      setup: () => undefined,
+      shortcodes: [{ name: "reading-time", render: () => "3 min" }],
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    expect(
+      registry.shortcodeSpecs.get("reading-time")?.spec.render({
+        atts: {},
+        context: { siteSettings: {}, locale: "en", entry: null },
+      }),
+    ).toBe("3 min");
+    expect(registry.shortcodeSpecs.get("reading-time")?.registeredBy).toBe(
+      "seo",
+    );
+  });
+
   test("throws when two plugins register the same shortcode tag", async () => {
     const hooks = new HookRegistry();
     const a = definePlugin("a", (ctx) => {

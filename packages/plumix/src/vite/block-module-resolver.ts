@@ -10,7 +10,8 @@ import {
 } from "./estree.js";
 
 /**
- * A block module the editor entry must import, and the export to take from it.
+ * A block (or shortcode) module the editor entry must import, and the export to
+ * take from it.
  * `module` is an import specifier (from the extractors) or a resolved absolute
  * path (from {@link resolveBlockModulePaths}); `exportName` is `"default"`, a
  * named export, or `"*"` — so the codegen imports the exact binding the author
@@ -103,11 +104,19 @@ export function resolveBlockModulePaths(
       reason: field.reason,
     });
   }
+  return resolveRelative(
+    [...field.modules, ...extractRegisteredBlockModules(source, moduleFsPath)],
+    moduleFsPath,
+  );
+}
+
+// Relative specifiers resolve against the declaring module's directory; bare
+// package specifiers pass through for Vite.
+function resolveRelative(
+  refs: readonly BlockModuleRef[],
+  moduleFsPath: string,
+): readonly BlockModuleRef[] {
   const dir = dirname(moduleFsPath);
-  const refs = [
-    ...field.modules,
-    ...extractRegisteredBlockModules(source, moduleFsPath),
-  ];
   return dedupe(
     refs.map((ref) => ({
       module: ref.module.startsWith(".")
@@ -204,6 +213,39 @@ export function extractBlockModules(
 ): BlockModuleResult {
   const program = parseModule(source, filename);
   const { importOf, factoryLocals } = buildImportMaps(program);
+  const blocksProp = configProperty(program, factoryLocals, "blocks");
+  return blocksProp
+    ? resolveBlocksProp(blocksProp, importOf)
+    : { ok: true, modules: [] };
+}
+
+/**
+ * Shortcode modules behind the `shortcodes` field of a module's plumix
+ * `defineTheme` / `definePlugin` config, with each relative `module` resolved
+ * against `moduleFsPath`'s directory. Best-effort, unlike a theme's `blocks`:
+ * the server registers an inline or computed shortcode either way, so one the
+ * editor bundle can't import is skipped — the canvas shows its raw `[tag]` —
+ * rather than failing the build.
+ */
+export function resolveShortcodeModulePaths(
+  source: string,
+  moduleFsPath: string,
+): readonly BlockModuleRef[] {
+  const program = parseModule(source, moduleFsPath);
+  const { importOf, factoryLocals } = buildImportMaps(program);
+  const prop = configProperty(program, factoryLocals, "shortcodes");
+  const refs: BlockModuleRef[] = [];
+  if (prop?.type === "Property") collectBindingRefs(prop.value, importOf, refs);
+  return resolveRelative(refs, moduleFsPath);
+}
+
+// The `field` property of the module's own config object literal, if it
+// declares one.
+function configProperty(
+  program: ESTree.Program,
+  factoryLocals: ReadonlySet<string>,
+  field: string,
+): ESTree.ObjectPropertyKind | undefined {
   const isFactory = factoryCall(factoryLocals);
 
   // Outermost factory calls only — a call nested inside another factory's
@@ -221,11 +263,11 @@ export function extractBlockModules(
   for (const call of topLevelCalls) {
     for (const arg of call.arguments) {
       if (arg.type !== "ObjectExpression") continue;
-      const blocksProp = arg.properties.find((p) => memberKey(p) === "blocks");
-      if (blocksProp) return resolveBlocksProp(blocksProp, importOf);
+      const prop = arg.properties.find((p) => memberKey(p) === field);
+      if (prop) return prop;
     }
   }
-  return { ok: true, modules: [] };
+  return undefined;
 }
 
 function collectImport(

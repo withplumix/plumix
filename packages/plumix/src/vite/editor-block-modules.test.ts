@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { collectEditorBlockModules } from "./editor-block-modules.js";
+import {
+  collectEditorBlockModules,
+  collectEditorShortcodeModules,
+} from "./editor-block-modules.js";
 
 describe("collectEditorBlockModules", () => {
   let dir: string;
@@ -86,5 +89,34 @@ describe("collectEditorBlockModules", () => {
     write("plumix.config.ts", source);
 
     expect(collectEditorBlockModules(configPath(), source)).toEqual([]);
+  });
+
+  test("orders plugin shortcode modules before the theme's, so the theme wins", () => {
+    write("plugin/shortcodes.ts", "export const shortcodes = [];");
+    write(
+      "plugin/index.ts",
+      `import { definePlugin } from "plumix/plugin";
+       import { shortcodes } from "./shortcodes.js";
+       export default definePlugin("p", { setup: () => {}, shortcodes });`,
+    );
+    write("theme/shortcodes.ts", "export default [];");
+    write(
+      "theme/index.ts",
+      `import { defineTheme } from "plumix/theme";
+       import shortcodes from "./shortcodes.js";
+       export default defineTheme({ shortcodes });`,
+    );
+    const source = `import { plumix } from "plumix";
+       import p from "./plugin";
+       import { theme } from "./theme";
+       export default plumix({ theme, plugins: [p()] });`;
+    write("plumix.config.ts", source);
+
+    // The canvas registry is last-write-wins, so this order is the
+    // `core < plugin < theme` precedence the server registry gives.
+    expect(collectEditorShortcodeModules(configPath(), source)).toEqual([
+      { module: join(dir, "plugin/shortcodes.ts"), exportName: "shortcodes" },
+      { module: join(dir, "theme/shortcodes.ts"), exportName: "default" },
+    ]);
   });
 });
