@@ -20,7 +20,10 @@
 
 export { basePath, getRuntime, isSlotConfigured } from "./runtime.js";
 export type { PlumixAdminRuntime, PlumixGlobal } from "./runtime.js";
-export type { InfrastructureSlot } from "@plumix/core/manifest";
+export type {
+  ConfiguredSlots,
+  InfrastructureSlot,
+} from "@plumix/core/manifest";
 
 export { createPluginRpcClient } from "./plugin-rpc.js";
 export type {
