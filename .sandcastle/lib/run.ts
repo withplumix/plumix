@@ -1,5 +1,5 @@
 import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
-import type { Finding, ShipOutcome } from "./ticket.js";
+import type { ShipOutcome } from "./ticket.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
 
@@ -13,11 +13,6 @@ export interface ShipPorts {
   ) => void;
   readonly releaseClaim: (ticket: Ticket) => void;
   readonly confirm: (pullRequest: QueuedPullRequest) => Promise<MergeOutcome>;
-  readonly fileFollowUp: (
-    ticket: Ticket,
-    pullRequestUrl: string,
-    finding: Finding,
-  ) => void;
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
 }
@@ -30,7 +25,6 @@ export interface ShipLoopOptions {
 interface Queued {
   readonly ticket: Ticket;
   readonly pullRequest: QueuedPullRequest;
-  readonly advisory: readonly Finding[];
 }
 
 export interface ShipReport {
@@ -98,11 +92,7 @@ export const runShipLoop = async (
       failuresInARow = 0;
 
       ports.say(`  #${ticket.number} queued ${outcome.pullRequest.url}`);
-      return {
-        ticket,
-        pullRequest: outcome.pullRequest,
-        advisory: outcome.advisory,
-      };
+      return { ticket, pullRequest: outcome.pullRequest };
     },
   });
 
@@ -114,7 +104,7 @@ export const runShipLoop = async (
   );
 
   const merged: { ticket: Ticket; pullRequest: QueuedPullRequest }[] = [];
-  queued.forEach(({ ticket, pullRequest, advisory }, index) => {
+  queued.forEach(({ ticket, pullRequest }, index) => {
     const settledConfirmation = confirmations[index];
     if (!settledConfirmation) return;
 
@@ -137,8 +127,6 @@ export const runShipLoop = async (
         `  warning: #${ticket.number} did not close — check the PR body's Fixes reference`,
       );
     }
-    for (const finding of advisory)
-      ports.fileFollowUp(ticket, pullRequest.url, finding);
     merged.push({ ticket, pullRequest });
   });
 

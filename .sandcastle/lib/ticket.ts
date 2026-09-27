@@ -63,8 +63,6 @@ const findingSchema = z.object({
 
 type Finding = z.infer<typeof findingSchema>["findings"][number];
 
-export type { Finding };
-
 export interface Review {
   readonly findings: readonly Finding[];
   readonly emittedParseableFindings: boolean;
@@ -79,7 +77,6 @@ export type ShipOutcome =
   | {
       readonly status: "queued";
       readonly pullRequest: QueuedPullRequest;
-      readonly advisory: readonly Finding[];
     }
   | {
       readonly status: "blocked";
@@ -367,7 +364,7 @@ export const shipTicket = async (
     );
 
     queueForMerge(pullRequest.number);
-    return { status: "queued", pullRequest, advisory };
+    return { status: "queued", pullRequest };
   } finally {
     const { preservedWorktreePath } = await closePlumixSandbox(sandbox);
     if (preservedWorktreePath)

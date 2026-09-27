@@ -17,7 +17,6 @@ const ports = (over: Partial<ShipPorts> = {}) => {
   const waiting = [ticket(1), ticket(2), ticket(3)];
   const parked: { number: number; reason: string }[] = [];
   const released: number[] = [];
-  const filed: string[] = [];
   const base: ShipPorts = {
     nextTicket: () => waiting.shift(),
     ship: async (t) => ({
@@ -28,11 +27,10 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     park: (t, reason) => void parked.push({ number: t.number, reason }),
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
-    fileFollowUp: (_t, _url, f) => void filed.push(f.summary),
     ticketClosed: () => true,
     say: () => {},
   };
-  return { ports: { ...base, ...over }, parked, released, filed };
+  return { ports: { ...base, ...over }, parked, released };
 };
 
 const allLanes = { lanes: 2, withinBudget: () => true };
@@ -70,44 +68,6 @@ describe("runShipLoop", () => {
     expect(report.merged).toEqual([]);
     expect(parked).toHaveLength(3);
     expect(parked[0]?.reason).toContain("failing checks: Test");
-  });
-
-  test("an advisory finding is filed once the pull request has merged", async () => {
-    const { ports: p, filed } = ports({
-      ship: async (t) => ({
-        status: "queued",
-        pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
-        advisory: [
-          {
-            severity: "medium",
-            file: "a.ts",
-            summary: `dup in t${t.number}`,
-            why: "w",
-          },
-        ],
-      }),
-    });
-
-    await runShipLoop(p, allLanes);
-
-    expect(filed.sort()).toEqual(["dup in t1", "dup in t2", "dup in t3"]);
-  });
-
-  test("an advisory finding is not filed when the pull request never merged", async () => {
-    const { ports: p, filed } = ports({
-      confirm: async () => ciRed,
-      ship: async (t) => ({
-        status: "queued",
-        pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
-        advisory: [
-          { severity: "medium", file: "a.ts", summary: "dup", why: "w" },
-        ],
-      }),
-    });
-
-    await runShipLoop(p, allLanes);
-
-    expect(filed).toEqual([]);
   });
 
   test("a ticket blocked inside its lane is parked and never queued", async () => {

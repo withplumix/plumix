@@ -1,7 +1,6 @@
 import type { QueuedPullRequest, Ticket } from "./lib/github.js";
 import {
   closeCompletedParent,
-  fileFollowUp,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
   parentsWithEveryChildClosed,
@@ -94,8 +93,6 @@ const report = await runShipLoop(
         giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
         onPoll: (status) => say(`  #${pullRequest.number} ${status}`),
       }),
-    fileFollowUp: ({ number }, pullRequestUrl, finding) =>
-      fileFollowUp(number, pullRequestUrl, finding),
     ticketClosed: ({ number }) => isTicketClosed(number),
     say,
   },
