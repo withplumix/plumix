@@ -68,7 +68,7 @@
     "provenance": true
   },
   "scripts": {
-    "i18n:compile": "plumix-compile-catalogs --dts",
+    "i18n:compile": "node ../core/bin/plumix-compile-catalogs.mjs --dts",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify",
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json",
