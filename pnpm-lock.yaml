@@ -183,6 +183,9 @@ catalogs:
       specifier: ^4.3.3
       version: 4.3.3
   tanstack:
+    '@tanstack/history':
+      specifier: ^1.162.1
+      version: 1.162.1
     '@tanstack/react-query':
       specifier: ^5.102.8
       version: 5.102.8
@@ -198,6 +201,9 @@ catalogs:
     '@tanstack/react-table':
       specifier: ^9.2.4
       version: 9.2.4
+    '@tanstack/router-core':
+      specifier: ^1.171.27
+      version: 1.171.27
     '@tanstack/router-plugin':
       specifier: ^1.168.35
       version: 1.168.35
@@ -2451,6 +2457,12 @@ importers:
       '@tailwindcss/oxide':
         specifier: catalog:tailwind
         version: 4.3.3
+      '@tanstack/history':
+        specifier: catalog:tanstack
+        version: 1.162.1
+      '@tanstack/router-core':
+        specifier: catalog:tanstack
+        version: 1.171.27
       drizzle-kit:
         specifier: catalog:drizzle
         version: 0.31.10
