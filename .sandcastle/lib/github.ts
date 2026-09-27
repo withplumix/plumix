@@ -163,26 +163,6 @@ export const assignToSelf = (ticketNumber: number): void => {
   ]);
 };
 
-const openTicketsWaitingOn = (ticketNumber: number): readonly number[] =>
-  ghJson([
-    "api",
-    `repos/${REPO_SLUG}/issues/${ticketNumber}/dependencies/blocking`,
-    "--jq",
-    '[.[] | select(.state == "open") | .number]',
-  ]);
-
-const releaseTicketsWaitingOn = (ticketNumber: number): void => {
-  const parkedId = issueDatabaseId(ticketNumber);
-  for (const waiting of openTicketsWaitingOn(ticketNumber)) {
-    gh([
-      "api",
-      "--method",
-      "DELETE",
-      `repos/${REPO_SLUG}/issues/${waiting}/dependencies/blocked_by/${parkedId}`,
-    ]);
-  }
-};
-
 export const releaseClaim = (ticketNumber: number): void => {
   gh([
     "issue",
@@ -200,7 +180,6 @@ export const parkTicket = (
   reason: string,
   pullRequestUrl?: string,
 ): void => {
-  releaseTicketsWaitingOn(ticketNumber);
   const openPullRequestNote = pullRequestUrl
     ? `\n\nThe branch is pushed and ${pullRequestUrl} is open, so the work is not lost.`
     : "";
