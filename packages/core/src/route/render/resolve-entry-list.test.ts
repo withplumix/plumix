@@ -9,6 +9,7 @@ import { entry as entryRef } from "../../plugin/fields/entry.js";
 import { number } from "../../plugin/fields/number.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { toggle } from "../../plugin/fields/toggle.js";
+import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   photoField,
   photoLookupAdapter,
@@ -112,7 +113,7 @@ describe("resolveEntryList author memoization", () => {
 });
 
 describe("resolveEntryList titles", () => {
-  test("expands each entry's title shortcodes, adding no query", async () => {
+  test("expands each entry's title shortcodes, sharing the page's settings read", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext();
     const author = await harness.factory.user.create({});
     const [best, plain] = await Promise.all([
@@ -126,14 +127,19 @@ describe("resolveEntryList titles", () => {
       new Date(),
     );
 
-    const resolved = await run(() => resolveEntryList(ctx, [best, plain]));
+    const resolved = await run(async () => {
+      // What a page render reads for its own `<title>` fallback.
+      await loadSiteSettings(ctx);
+      return resolveEntryList(ctx, [best, plain]);
+    });
 
     expect(resolved.map((entry) => entry.title)).toEqual([
       `Best of ${year}`,
       "Plain",
     ]);
-    // One author query and one term join for the whole batch.
-    expect(dbQueryCount()).toBe(2);
+    // The page's settings read, then one author query and one term join for
+    // the whole batch — the titles' shortcode context adds no settings read.
+    expect(dbQueryCount()).toBe(3);
   });
 });
 

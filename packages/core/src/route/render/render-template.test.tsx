@@ -1899,6 +1899,62 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain("Hi");
   });
 
+  test("a rich-text body shortcode reads the configured site settings", async () => {
+    const siteTitle = definePlugin("site-title", (ctx) => {
+      ctx.registerShortcode({
+        name: "site-title",
+        render: ({ context }) => {
+          const title = context.siteSettings.title;
+          return typeof title === "string" ? title : "";
+        },
+      });
+    });
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
+          ) : null,
+        ),
+      ],
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, siteTitle],
+      theme,
+    });
+    await h.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Acme",
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "welcome",
+      title: "Welcome",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "b",
+            name: "core/rich-text",
+            attrs: { body: "<p>Welcome to [site-title]</p>" },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/welcome"),
+    );
+    expect(await response.text()).toContain("<p>Welcome to Acme</p>");
+  });
+
   test("block:before_render / block:after_render decorate a real block render", async () => {
     const seen: string[] = [];
     const decorator = definePlugin("acme-decorator", (ctx) => {

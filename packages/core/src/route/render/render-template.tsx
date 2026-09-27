@@ -19,6 +19,7 @@ import {
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { SettingsBag } from "../../db/schema/settings.js";
 import type { TransformOpts } from "../../runtime/slots.js";
 import type { LoadedTemplateDeps } from "../../template-deps.js";
 import type { Template } from "../../template.js";
@@ -186,6 +187,7 @@ async function renderThroughThemeInner({
     template,
     deps,
     loaderData,
+    siteSettings: site,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
@@ -296,6 +298,9 @@ async function renderErrorThroughThemeInner({
     template,
     deps,
     loaderData: undefined,
+    // No settings read: this render is already the failure path, and one
+    // more DB round-trip here would let a database fault turn a 404 into a 500.
+    siteSettings: undefined,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
@@ -426,6 +431,7 @@ interface RenderTreeArgs {
   readonly template: Template;
   readonly deps: LoadedTemplateDeps;
   readonly loaderData: ResolvedBlockLoaders | undefined;
+  readonly siteSettings: SettingsBag | undefined;
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly htmlAllowlist: HtmlAllowlist;
@@ -452,6 +458,7 @@ function renderTree({
   breakpoints,
   htmlAllowlist,
   loaderData,
+  siteSettings,
   themeCss,
   editMode,
 }: RenderTreeArgs): string {
@@ -508,6 +515,7 @@ function renderTree({
         locale: ctx.locale.code,
         shortcodes: ctx.shortcodes,
         entry,
+        siteSettings,
         basePath: ctx.basePath,
         imageResolver: imageDelivery
           ? (src, opts) =>

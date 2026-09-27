@@ -20,6 +20,7 @@ export const RENDER_ENV_POLICY = {
   breakpoints: true,
   locale: true,
   entry: true,
+  siteSettings: true,
   registry:
     "functions; the editor bundle rebuilds it from the block modules the " +
     "build recovers from theme and plugin config",
@@ -104,7 +105,8 @@ export function parseRenderEnv(json: string): RenderEnv {
     return {};
   }
   if (!isJsonObject(parsed)) return {};
-  const { tokens, breakpoints, htmlAllowlist, locale, entry } = parsed;
+  const { tokens, breakpoints, htmlAllowlist, locale, entry, siteSettings } =
+    parsed;
   return {
     // Only the token entries' shape goes unchecked: our own SSR wrote them from
     // typed theme config on this page load, and the style emitter reads every
@@ -114,6 +116,7 @@ export function parseRenderEnv(json: string): RenderEnv {
     htmlAllowlist: decodeHtmlAllowlist(htmlAllowlist),
     locale: typeof locale === "string" ? locale : undefined,
     entry: isObject(entry) ? entry : undefined,
+    siteSettings: isObject(siteSettings) ? siteSettings : undefined,
   };
 }
 

@@ -120,6 +120,26 @@ describe("the SERP preview procedure", () => {
     expect((await preview(h, id)).title).toBe(`Retitled in ${year}`);
   });
 
+  test("resolves a title shortcode reading a site setting", async () => {
+    const h = await createHarness([
+      definePlugin("site-title", {
+        setup: (ctx) => {
+          ctx.registerShortcode({
+            name: "site-title",
+            render: ({ context }) => {
+              const title = context.siteSettings.title;
+              return typeof title === "string" ? title : "";
+            },
+          });
+        },
+      }),
+    ]);
+    await seedSettings(h, "site", { title: "Demo" });
+    const id = await seedPost(h, { title: "About [site-title]" });
+
+    expect((await preview(h, id)).title).toBe("About Demo");
+  });
+
   test("with no excerpt the description falls back to the tagline", async () => {
     const h = await createHarness();
     await seedSettings(h, "site", { tagline: "A tagline" });

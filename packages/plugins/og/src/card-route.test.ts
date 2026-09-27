@@ -669,6 +669,32 @@ describe("a card and the page it shares", () => {
     expect(body).not.toContain("[year]");
   });
 
+  test("serves the head's card for a title shortcode reading a site setting", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+      before: [
+        definePlugin("test_site_title", {
+          setup: (ctx) => {
+            ctx.registerShortcode({
+              name: "site-title",
+              render: ({ context }) => {
+                const title = context.siteSettings.title;
+                return typeof title === "string" ? title : "";
+              },
+            });
+          },
+        }),
+      ],
+    });
+    await seedEntry(harness, { slug: "about", title: "About [site-title]" });
+
+    const { response } = await cardFromHead(harness, "about");
+
+    expect(await response.assertStatus(200).text()).toContain(
+      "<text>About Example Site</text>",
+    );
+  });
+
   test("serves the head's card when a subscriber rewrites the page's title", async () => {
     const harness = await createHarness({
       renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
