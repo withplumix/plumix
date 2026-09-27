@@ -17,7 +17,7 @@ import { SOURCE_LOCALE } from "./contract.js";
  */
 const source = setupI18n({
   locale: SOURCE_LOCALE,
-  // `plumix-compile-catalogs` emits a deliberately loose `.d.mts` stub
+  // `plumix i18n compile --dts` emits a deliberately loose `.d.mts` stub
   // that predates any Lingui type; the file it describes is `lingui
   // compile` output, which is `Messages` by construction.
   messages: { [SOURCE_LOCALE]: messages as Messages },

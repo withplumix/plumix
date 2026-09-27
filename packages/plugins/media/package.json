@@ -45,7 +45,7 @@
   },
   "scripts": {
     "i18n:extract": "plumix i18n extract",
-    "i18n:compile": "plumix-compile-catalogs",
+    "i18n:compile": "plumix i18n compile",
     "i18n:check": "plumix i18n verify",
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",

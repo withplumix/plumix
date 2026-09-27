@@ -1099,6 +1099,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -1218,6 +1221,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -1337,6 +1343,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -1429,6 +1438,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -1642,6 +1654,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -1773,6 +1788,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -1892,6 +1910,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -2011,6 +2032,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -2132,6 +2156,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -2273,6 +2300,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0
@@ -2443,6 +2473,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.15.0

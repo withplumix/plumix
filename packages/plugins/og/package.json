@@ -49,7 +49,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules e2e/playwright-report e2e/test-results",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "i18n:check": "plumix i18n verify",
-    "i18n:compile": "plumix-compile-catalogs",
+    "i18n:compile": "plumix i18n compile",
     "i18n:extract": "plumix i18n extract",
     "lint": "eslint",
     "publint": "publint",
@@ -70,6 +70,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",

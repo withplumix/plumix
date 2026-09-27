@@ -20,6 +20,9 @@
       ]
     },
     "i18n:compile": {
+      // Plugins compile through the `plumix` bin, which runs its built CLI;
+      // at the root so a plugin added later gets the ordering too.
+      "dependsOn": ["^build"],
       "inputs": ["locales/*.po"],
       "outputs": ["locales/*.mjs", "locales/*.d.mts"]
     },

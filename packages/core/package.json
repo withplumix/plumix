@@ -89,6 +89,10 @@
       "types": "./dist/i18n/index.d.ts",
       "default": "./dist/i18n/index.js"
     },
+    "./i18n-compile": {
+      "types": "./i18n-compile/index.d.mts",
+      "default": "./i18n-compile/index.mjs"
+    },
     "./locales/*": {
       "types": "./locales/*.d.mts",
       "default": "./locales/*.mjs"
@@ -106,8 +110,13 @@
       "default": "./dist/telemetry-otel.js"
     }
   },
+  "bin": {
+    "plumix-compile-catalogs": "./bin/plumix-compile-catalogs.mjs"
+  },
   "files": [
+    "bin",
     "dist",
+    "i18n-compile",
     "locales",
     "README.md",
     "LICENSE"
@@ -123,7 +132,7 @@
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome",
-    "i18n:compile": "plumix-compile-catalogs --dts",
+    "i18n:compile": "node bin/plumix-compile-catalogs.mjs --dts",
     "lint": "eslint",
     "publint": "publint",
     "test:unit": "vitest run",
@@ -166,6 +175,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
+    "@lingui/cli": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",

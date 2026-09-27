@@ -48,13 +48,13 @@ Adding Ukrainian to a plugin whose strings are authored in English.
 
 <Steps>
 
-1. **Scaffold the tooling.** Run this from the plugin's package root. It writes a `lingui.config.ts` and a `scripts/i18n-compile-check.mjs`, adds `i18n:extract`, `i18n:compile` and `i18n:check` scripts, and adds the two `@lingui` packages as dev dependencies — each step skipped if it is already there. It does not touch your descriptor; the `i18n` slot is yours to write.
+1. **Scaffold the tooling.** Run this from the plugin's package root. It writes a `lingui.config.ts`, adds `i18n:extract`, `i18n:compile` and `i18n:check` scripts that run `plumix i18n extract`, `compile` and `verify`, adds a `prepack` script that runs `plumix i18n compile`, and adds the two `@lingui` packages as dev dependencies — each step skipped if it is already there. It does not touch your descriptor; the `i18n` slot is yours to write.
 
    ```sh
    pnpm plumix i18n init
    ```
 
-2. **Add the locale to the lingui config**, so a `.po` exists for it and `lingui compile` produces its `.mjs`.
+2. **Add the locale to the lingui config**, so a `.po` exists for it and `plumix i18n compile` produces its `.mjs`.
 
    ```ts no-typecheck
    import { defineConfig } from "@lingui/cli";
@@ -102,11 +102,7 @@ Adding Ukrainian to a plugin whose strings are authored in English.
    }
    ```
 
-6. **Compile before you publish**, so the `.mjs` exist at pack time. `i18n:compile` is a build input, not something a consumer runs.
-
-   ```sh
-   pnpm i18n:compile
-   ```
+   Packing compiles them: the `prepack` script `init` added runs `plumix i18n compile`, so `npm pack` and `npm publish` produce the `.mjs` before building the tarball. A consumer never compiles your catalogs.
 
 </Steps>
 
