@@ -243,11 +243,14 @@ export const shipTicket = async (
       maxIterations: 40,
       idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
     });
-    if (!implemented.commits.length)
+    if (!implemented.commits.length) {
       return {
         status: "blocked",
-        reason: "the implementer produced no commits",
+        reason:
+          readDeclinedTag(implemented.stdout) ??
+          "the implementer produced no commits and gave no reason",
       };
+    }
 
     const pullRequestCopy = readPullRequestTag(implemented.stdout, ticket);
     let sessionToResume = implemented.iterations.at(-1)?.sessionId;

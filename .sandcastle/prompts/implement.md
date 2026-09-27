@@ -28,8 +28,15 @@ shared with every other checkout on that machine, and your own worktree's path d
 from in here, so prune reads every one of them as gone. Compare against `origin/main` with
 `git diff` and `git log` instead.
 
-You are unattended: there is no user to ask. If the ticket needs a decision only a
-human can make, say so in your final message and stop.
+You are unattended: there is no user to ask. Where the ticket cannot be built from
+here — it needs a decision only a human can make, or it depends on work that has
+not landed — emit the block below and commit nothing. The harness stops there and
+hands your reason to a human, so write it for them: what you checked, what blocks
+it, and what would unblock it.
+
+<declined>
+one or two paragraphs, or nothing at all if you are committing the work
+</declined>
 
 # Done
 
