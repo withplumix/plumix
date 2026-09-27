@@ -137,21 +137,22 @@ describe("connectCanvas", () => {
   });
 
   test("pushes host:config to the canvas on ready when config is given", () => {
+    const catalog = { "blocks.appender.addBlock": ["Ajouter un bloc"] };
     const store = createEditorStore();
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({
       store,
       frameWindow: win,
       origin: ORIGIN,
-      config: { addBlockLabel: "Ajouter un bloc" },
+      config: { locale: "fr", catalog },
     });
 
     fromCanvas({ type: "canvas:ready" });
 
     const configMsg = hostMessages(posted).find(
       (m) => m.type === "host:config",
-    ) as { addBlockLabel?: string } | undefined;
-    expect(configMsg?.addBlockLabel).toBe("Ajouter un bloc");
+    );
+    expect(configMsg).toEqual({ type: "host:config", locale: "fr", catalog });
     conn.dispose();
   });
 

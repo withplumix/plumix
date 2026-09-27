@@ -5,6 +5,7 @@ import { setI18nResolver } from "@plumix/core/validation";
 
 import {
   ADMIN_CATALOGS,
+  BLOCKS_CATALOGS,
   EDITOR_CATALOGS,
   PLUGIN_CATALOGS,
 } from "./catalog-globs.js";
@@ -15,7 +16,7 @@ import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
 
 /**
- * The three catalog sets `bootI18n` merges. Injectable so a caller can state
+ * The catalog sets `bootI18n` merges. Injectable so a caller can state
  * which locales ship instead of inheriting whatever `i18n:compile` last wrote
  * to disk — the globs resolve at build time and can't be narrowed afterwards.
  */
@@ -23,12 +24,14 @@ export interface AdminCatalogs {
   readonly admin: CatalogMap;
   readonly plugins: CatalogMap;
   readonly editor: CatalogMap;
+  readonly blocks: CatalogMap;
 }
 
 const BUNDLED_CATALOGS: AdminCatalogs = {
   admin: ADMIN_CATALOGS,
   plugins: PLUGIN_CATALOGS,
   editor: EDITOR_CATALOGS,
+  blocks: BLOCKS_CATALOGS,
 };
 
 // Source locale: the language `descriptor.message` strings are authored
@@ -73,14 +76,24 @@ export async function bootI18n(
     catalogs.plugins,
     locale,
   );
-  const editorMessages = await loadEditorCatalog(catalogs.editor, locale);
-  // Editor + workspace plugins merged first, admin chrome last so admin
+  const editorMessages = await loadSourceFallbackCatalog(
+    catalogs.editor,
+    "../../../admin-editor/locales",
+    locale,
+  );
+  const blocksMessages = await loadSourceFallbackCatalog(
+    catalogs.blocks,
+    "../../../blocks/locales",
+    locale,
+  );
+  // Blocks lowest, then editor + workspace plugins, admin chrome last so admin
   // wins on collision. Slice 5's note had the opposite order; chrome
   // stability matters more than letting a plugin override
   // `breadcrumb.dashboard`. Workspace-plugin collisions on
   // admin-namespaced keys are a build-time concern (future linter,
   // not enforced here yet).
   i18n.load(locale, {
+    ...blocksMessages,
     ...editorMessages,
     ...workspaceMessages,
     ...adminMessages,
@@ -108,16 +121,16 @@ export async function bootI18n(
   );
 }
 
-// The editor catalog falls back to the source locale (unlike plugins) so its
-// chrome is never blank — admin always ships the editor, so an uncompiled
-// locale should still read English rather than the raw descriptor ids.
-async function loadEditorCatalog(
-  editor: CatalogMap,
+// The editor and blocks catalogs fall back to the source locale (unlike
+// plugins) so their strings are never blank — admin always ships both, so an
+// uncompiled locale should still read English rather than the raw ids.
+async function loadSourceFallbackCatalog(
+  catalogs: CatalogMap,
+  dir: string,
   locale: string,
 ): Promise<Messages> {
   const loader =
-    editor[`../../../admin-editor/locales/${locale}.mjs`] ??
-    editor[`../../../admin-editor/locales/${SOURCE_LOCALE}.mjs`];
+    catalogs[`${dir}/${locale}.mjs`] ?? catalogs[`${dir}/${SOURCE_LOCALE}.mjs`];
   if (!loader) return {};
   return (await loader()).messages;
 }

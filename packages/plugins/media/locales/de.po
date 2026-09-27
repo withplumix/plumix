@@ -501,3 +501,18 @@ msgstr ""
 #: src/blocks/file/index.tsx
 msgid "plugin.media.block.file.input.mime.label"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.downloadFallback"
+msgstr ""

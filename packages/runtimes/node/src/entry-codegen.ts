@@ -15,6 +15,8 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // `.vite/manifest.json` in a build, so SSR can inject the hashed
     // stylesheet links.
     'import assetManifest from "virtual:plumix/asset-manifest";',
+    // Each plugin's compiled catalogs by locale, for SSR block render strings.
+    'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
     'export * from "virtual:plumix/worker-exports";',
@@ -22,6 +24,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "const site = createNodeSite({",
     "  config,",
     "  assetManifest,",
+    "  pluginCatalogs,",
     "  entryUrl: import.meta.url,",
     "});",
     "",

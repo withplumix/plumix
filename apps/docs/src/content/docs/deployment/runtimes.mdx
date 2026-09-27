@@ -72,9 +72,10 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
      return [
        'import { buildApp } from "plumix/runtime";',
        'import assetManifest from "virtual:plumix/asset-manifest";',
+       'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
        `import config from ${JSON.stringify(configModule)};`,
        "",
-       "const app = await buildApp(config, { assetManifest });",
+       "const app = await buildApp(config, { assetManifest, pluginCatalogs });",
        "const handler = config.runtime.createHandler(app);",
        "",
        "Bun.serve({",

@@ -7,6 +7,8 @@
 // `admin-bar-` prefix keeps this surface's catalog distinct from a
 // later debug-bar catalog in the same flat locales/ dir.
 
+import type { CompiledCatalog } from "@plumix/blocks";
+import { resolveMessage } from "@plumix/blocks";
 import { messages as arMessages } from "@plumix/core/locales/admin-bar-ar";
 import { messages as deMessages } from "@plumix/core/locales/admin-bar-de";
 import { messages as enMessages } from "@plumix/core/locales/admin-bar-en";
@@ -16,8 +18,6 @@ import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
 import type { ResolvedMeta } from "../rpc/meta/core.js";
 
 export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
-
-type CompiledCatalog = Record<string, string | readonly string[]>;
 
 const CATALOGS: Readonly<Record<BarLocale, CompiledCatalog>> = {
   en: enMessages,
@@ -79,20 +79,6 @@ export function resolveBarLocale(user: {
     return stored as BarLocale;
   }
   return "en";
-}
-
-// Compiled lingui entries are token arrays (a lone string for plain
-// messages); the bar has no ICU placeholders, so anything else falls
-// back to the English source.
-export function resolveMessage(
-  catalog: CompiledCatalog,
-  descriptor: { readonly id: string; readonly message: string },
-): string {
-  const value = catalog[descriptor.id];
-  const text = typeof value === "string" ? value : value?.[0];
-  return typeof text === "string" && text.length > 0
-    ? text
-    : descriptor.message;
 }
 
 export function barMessages(locale: BarLocale): BarStrings {

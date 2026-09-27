@@ -8,6 +8,8 @@ import type { IslandProps } from "../island-props.js";
 interface EmbedFacadeProps {
   readonly src: string;
   readonly title: string;
+  /** The facade button's accessible name, localized by the block's render. */
+  readonly loadLabel: string;
   readonly caption: string;
   readonly provider: string;
   readonly sandboxed: boolean;
@@ -30,6 +32,7 @@ export function EmbedFacade(
   const {
     src,
     title,
+    loadLabel,
     caption,
     provider,
     sandboxed,
@@ -67,7 +70,7 @@ export function EmbedFacade(
           type="button"
           className="plumix-embed-facade"
           data-testid="embed-facade"
-          aria-label={`Load embed: ${title}`}
+          aria-label={loadLabel}
           style={{ ...box, cursor: "pointer" }}
           onClick={() => {
             setLoaded(true);

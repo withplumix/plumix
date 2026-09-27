@@ -35,6 +35,7 @@ import type { RouteRule } from "../route/intent.js";
 import type { PublicRouteTable } from "../route/public-routes.js";
 import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
+import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { RenderEnv } from "../route/render/render-env.js";
 import type { DocumentManifest } from "../theme.js";
 import type { DevRuntime } from "./dev.js";
@@ -60,6 +61,7 @@ import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
 import { compilePublicRoutes } from "../route/public-routes.js";
 import { assembleRedirects } from "../route/redirects.js";
+import { createBlockCatalogs } from "../route/render/block-catalog.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
@@ -267,6 +269,8 @@ export interface PlumixApp {
 // inline object literal that structurally satisfies the type.
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
+  /** `virtual:plumix/plugin-catalogs`: each plugin's compiled catalogs, by locale. */
+  readonly pluginCatalogs?: PluginCatalogs;
 }
 
 export async function buildApp(
@@ -455,6 +459,7 @@ export async function buildApp(
     templateDeps: registry.templateDeps,
     assetManifest,
     htmlAllowlist,
+    blockCatalogs: createBlockCatalogs(runtime.pluginCatalogs),
   };
 
   // Memoized so the heavy router module + handler construction happen once per

@@ -36,6 +36,14 @@ export interface NodeSiteOptions {
    */
   readonly assetManifest: PlumixApp["assetManifest"];
   /**
+   * Each plugin's compiled catalogs by locale, which the entry reads from
+   * `virtual:plumix/plugin-catalogs` — what SSR block renders resolve plugin
+   * strings from.
+   */
+  readonly pluginCatalogs?: NonNullable<
+    Parameters<typeof buildApp>[1]
+  >["pluginCatalogs"];
+  /**
    * The entry's own `import.meta.url`. `dist/client` sits beside the module,
    * so this is what names the assets directory the handler serves from.
    */
@@ -111,6 +119,7 @@ export interface NodeSite {
 export function createNodeSite({
   config,
   assetManifest,
+  pluginCatalogs,
   entryUrl,
 }: NodeSiteOptions): NodeSite {
   const assetsDir = resolve(dirname(fileURLToPath(entryUrl)), "../client");
@@ -120,7 +129,7 @@ export function createNodeSite({
     : {};
   const { trustProxy, bodySizeLimit, cron } = nodeConfig;
 
-  const appPromise = buildApp(config, { assetManifest });
+  const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
     (built ??= config.runtime.createHandler(app));

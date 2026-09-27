@@ -318,6 +318,8 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "CORE_BLOCK_NAMESPACE",
           "isReservedBlockName",
           "DEFAULT_BLOCK_CONTEXT",
+          "createMessageResolver",
+          "resolveMessage",
           "editAppender",
           "freshBlockId",
           "rewriteBlockNodeIds",

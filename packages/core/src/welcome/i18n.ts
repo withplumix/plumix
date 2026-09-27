@@ -6,13 +6,13 @@
 // source, so an untranslated locale renders English until a translator fills
 // its `.po`. The `welcome-` prefix keeps this surface distinct in the flat dir.
 
+import type { CompiledCatalog } from "@plumix/blocks";
+import { resolveMessage } from "@plumix/blocks";
 import { messages as arMessages } from "@plumix/core/locales/welcome-ar";
 import { messages as deMessages } from "@plumix/core/locales/welcome-de";
 import { messages as enMessages } from "@plumix/core/locales/welcome-en";
 import { messages as ukMessages } from "@plumix/core/locales/welcome-uk";
 import { messages as zhCnMessages } from "@plumix/core/locales/welcome-zh-CN";
-
-type CompiledCatalog = Record<string, string | readonly string[]>;
 
 const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   en: enMessages,
@@ -41,17 +41,6 @@ export interface WelcomeStrings {
   readonly body: string;
   readonly or: string;
   readonly openAdmin: string;
-}
-
-function resolveMessage(
-  catalog: CompiledCatalog,
-  descriptor: { readonly id: string; readonly message: string },
-): string {
-  const value = catalog[descriptor.id];
-  const text = typeof value === "string" ? value : value?.[0];
-  return typeof text === "string" && text.length > 0
-    ? text
-    : descriptor.message;
 }
 
 export function welcomeMessages(locale: string): WelcomeStrings {

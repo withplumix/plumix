@@ -29,6 +29,7 @@ import type {
 import type { I18nInput } from "../i18n/locale-registry.js";
 import type { RedirectRule } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
+import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { BoundSlots } from "../runtime/handler.js";
@@ -203,6 +204,12 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly assetManifest?: AssetManifest;
   /**
+   * Plugin compiled catalogs by locale, as `virtual:plumix/plugin-catalogs`
+   * hands them to the generated entry. Tests of localized block render
+   * strings pass one here.
+   */
+  readonly pluginCatalogs?: PluginCatalogs;
+  /**
    * Logger the request context carries. Defaults to the silent one; pass a
    * capturing logger to assert on what a handler reported.
    */
@@ -338,6 +345,7 @@ export async function createDispatcherHarness(
   });
   const built = await buildApp(config, {
     assetManifest: options.assetManifest,
+    pluginCatalogs: options.pluginCatalogs,
   });
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);

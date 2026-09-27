@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import type { BlockRegistry } from "../block-registry.js";
 import type { HydratedEntry, SiteSettings } from "../context-bags.js";
 import type { EntryContent } from "../entry-content.js";
+import type { CompiledCatalog } from "../i18n-label.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type {
@@ -68,6 +69,9 @@ export interface PlumixContextValue {
   readonly queriedEntry?: RendererQueriedEntry | null;
   /** Render locale, threaded to the walker for shortcode/`Intl` output. */
   readonly locale?: string;
+  /** Compiled catalog for `locale`, which a block's `render` resolves its
+   *  strings from via `BlockContext.t`. */
+  readonly catalog?: CompiledCatalog;
   /** Registered shortcodes for rich-text body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
@@ -84,9 +88,6 @@ export interface PlumixContextValue {
    *  filters — populated by core with a closure over its request-scoped
    *  `HookExecutor`. Absent in the editor canvas, which has no hook runtime. */
   readonly renderFilters?: BlockRenderFilters;
-  /** Localized "Add a block" label for the edit-mode appender, which the
-   *  editor host resolves and pushes into the canvas. */
-  readonly addBlockLabel?: string;
 }
 
 const PlumixContext = createContext<PlumixContextValue | null>(null);
@@ -118,12 +119,12 @@ function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
     breakpoints: ctx.breakpoints,
     loaderData: ctx.loaderData,
     locale: ctx.locale,
+    catalog: ctx.catalog,
     shortcodes: ctx.shortcodes,
     entry: ctx.entry,
     siteSettings: ctx.siteSettings,
     editing: ctx.mode === "edit",
     renderFilters: ctx.renderFilters,
-    addBlockLabel: ctx.addBlockLabel,
   };
 }
 

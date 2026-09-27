@@ -31,6 +31,20 @@ const PLACEHOLDER: CSSProperties = {
   fontSize: "0.875rem",
 };
 
+const PLACEHOLDER_PROMPT = {
+  id: "plugin.media.block.file.placeholder",
+  message: "Pick or upload a file, or paste a download URL.",
+};
+const DOWNLOAD_FALLBACK = {
+  id: "plugin.media.block.file.downloadFallback",
+  message: "Download",
+};
+
+function pickNonEmpty(picked: string | undefined, manual: unknown): string {
+  if (picked !== undefined && picked !== "") return picked;
+  return typeof manual === "string" ? manual : "";
+}
+
 export const fileBlock: BlockSpec = defineBlock({
   name: "media/file",
   title: { id: "plugin.media.block.file.title", message: "File" },
@@ -100,16 +114,15 @@ export const fileBlock: BlockSpec = defineBlock({
       if (!context.editing) return null;
       return (
         <div data-plumix-file-placeholder="" style={PLACEHOLDER}>
-          Pick or upload a file, or paste a download URL.
+          {context.t(PLACEHOLDER_PROMPT)}
         </div>
       );
     }
-    const picked =
-      media?.filename ??
-      (typeof attrs.filename === "string" ? attrs.filename : "");
-    const filename = picked.length > 0 ? picked : "Download";
-    const mime =
-      media?.mime ?? (typeof attrs.mime === "string" ? attrs.mime : "");
+    // The snapshot projects an absent filename/mime to "", so `??` would never
+    // reach the manual field — an empty picked value has to fall through.
+    const picked = pickNonEmpty(media?.filename, attrs.filename);
+    const filename = picked.length > 0 ? picked : context.t(DOWNLOAD_FALLBACK);
+    const mime = pickNonEmpty(media?.mime, attrs.mime);
     // `size` is manual-only — the picker's snapshot carries no byte size, so
     // unlike filename/mime it can't come from `media`.
     const meta = [formatSize(attrs.size), mime].filter(Boolean).join(" · ");

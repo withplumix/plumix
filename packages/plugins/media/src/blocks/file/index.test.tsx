@@ -61,6 +61,23 @@ describe("media/file v2", () => {
     expect(html).toContain("application/pdf");
   });
 
+  test("renders the manual filename when the picked asset has none", () => {
+    const html = renderBlockSpecToHtml(fileBlock, {
+      media: { url: "/_plumix/media/z/blob" },
+      filename: "annual-report.pdf",
+    });
+    expect(html).toContain('download="annual-report.pdf"');
+    expect(html).toContain(">annual-report.pdf</span>");
+  });
+
+  test("renders the manual mime when the picked asset has none", () => {
+    const html = renderBlockSpecToHtml(fileBlock, {
+      media: { url: "/_plumix/media/z/blob" },
+      mime: "application/pdf",
+    });
+    expect(html).toContain("application/pdf");
+  });
+
   test("offers a media picker and drops the dead mediaId + thumbnail inputs", () => {
     const names = fileBlock.inputs?.map((i) => i.name) ?? [];
     expect(names).toContain("media");
@@ -85,6 +102,32 @@ describe("media/file v2", () => {
       { editing: true },
     );
     expect(editing).toContain("data-plumix-file-placeholder");
+  });
+});
+
+describe("media/file localized render strings", () => {
+  const catalog = {
+    "plugin.media.block.file.placeholder": ["Datei auswählen oder hochladen."],
+    "plugin.media.block.file.downloadFallback": ["Herunterladen"],
+  };
+
+  test("resolves the editor placeholder through the catalog", () => {
+    const html = renderBlockSpecToHtml(
+      fileBlock,
+      { href: "" },
+      { editing: true, locale: "de", catalog },
+    );
+    expect(html).toContain("Datei auswählen oder hochladen.");
+  });
+
+  test("resolves the unnamed-file fallback into the link text and download name", () => {
+    const html = renderBlockSpecToHtml(
+      fileBlock,
+      { href: "/_plumix/media/x/y.zip" },
+      { locale: "de", catalog },
+    );
+    expect(html).toContain('download="Herunterladen"');
+    expect(html).toContain(">Herunterladen</span>");
   });
 });
 

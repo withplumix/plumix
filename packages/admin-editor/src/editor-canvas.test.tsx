@@ -188,12 +188,24 @@ describe("EditorCanvas", () => {
     spy.mockRestore();
   });
 
-  test("applies the host's pushed config label to the add affordance", () => {
+  test("renders at the host's active locale with its pushed catalog", () => {
+    const localized = createBlockRegistry([
+      ...coreBlocks,
+      {
+        name: "test/greeting",
+        render: ({ context }) => (
+          <p data-testid="greeting">
+            {context.locale}:
+            {context.t({ id: "test.greeting", message: "Hello" })}
+          </p>
+        ),
+      },
+    ]);
     const { container } = render(
-      <EditorCanvas registry={registry} origin={ORIGIN} />,
+      <EditorCanvas registry={localized} origin={ORIGIN} />,
     );
 
-    // Before config arrives, the appender falls back to English.
+    // Before config arrives, the appender renders its English source.
     expect(container.querySelector("[data-plumix-add]")?.textContent).toBe(
       "Add a block",
     );
@@ -203,7 +215,11 @@ describe("EditorCanvas", () => {
         new MessageEvent("message", {
           data: encode(EDITOR_BRIDGE_CHANNEL, {
             type: "host:config",
-            addBlockLabel: "Ajouter un bloc",
+            locale: "de",
+            catalog: {
+              "blocks.appender.addBlock": ["Block hinzufügen"],
+              "test.greeting": ["Hallo"],
+            },
           }),
           origin: ORIGIN,
         }),
@@ -211,8 +227,14 @@ describe("EditorCanvas", () => {
     });
 
     expect(container.querySelector("[data-plumix-add]")?.textContent).toBe(
-      "Ajouter un bloc",
+      "Block hinzufügen",
     );
+
+    pushTree([{ id: "g1", name: "test/greeting" }]);
+
+    expect(
+      container.querySelector('[data-testid="greeting"]')?.textContent,
+    ).toBe("de:Hallo");
   });
 
   test("hovering a block reports canvas:hover to the host", () => {

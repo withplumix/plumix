@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+import type {
+  CanvasConfig,
+  SerializedLoaderData,
+} from "@plumix/blocks/renderer";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 
 import { connectRuntime } from "./connect-runtime.js";
@@ -136,7 +139,7 @@ describe("connectRuntime (canvas/iframe side)", () => {
   });
 
   test("delivers a pushed host:config to onConfig", () => {
-    const seen: { addBlockLabel: string }[] = [];
+    const seen: CanvasConfig[] = [];
     const { win } = fakeParent();
     const conn = connectRuntime({
       parentWindow: win,
@@ -145,9 +148,10 @@ describe("connectRuntime (canvas/iframe side)", () => {
       onConfig: (config) => seen.push(config),
     });
 
-    fromHost({ type: "host:config", addBlockLabel: "Ajouter un bloc" });
+    const catalog = { "blocks.appender.addBlock": ["Ajouter un bloc"] };
+    fromHost({ type: "host:config", locale: "fr", catalog });
 
-    expect(seen.at(-1)).toEqual({ addBlockLabel: "Ajouter un bloc" });
+    expect(seen.at(-1)).toEqual({ locale: "fr", catalog });
     conn.dispose();
   });
 

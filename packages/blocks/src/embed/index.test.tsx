@@ -49,4 +49,39 @@ describe("core/embed", () => {
     });
     expect(html).toContain("<figcaption>Never gonna give you up</figcaption>");
   });
+
+  describe("localized render strings", () => {
+    const catalog = {
+      "blocks.embed.placeholder": ["Füge eine URL zum Einbetten hinzu."],
+      "blocks.embed.titleFallback": ["Eingebetteter Inhalt"],
+      "blocks.embed.load": ["Einbettung laden: ", ["title"]],
+    };
+
+    test("resolves the editor placeholder through the catalog", () => {
+      const html = renderBlockSpecToHtml(
+        embedBlock,
+        { url: "" },
+        { editing: true, locale: "de", catalog },
+      );
+      expect(html).toContain("Füge eine URL zum Einbetten hinzu.");
+    });
+
+    test("resolves the untitled fallback into the facade's load label", () => {
+      const html = renderBlockSpecToHtml(
+        embedBlock,
+        { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+        { locale: "de", catalog },
+      );
+      expect(html).toContain(
+        'aria-label="Einbettung laden: Eingebetteter Inhalt"',
+      );
+    });
+
+    test("renders the English source with no catalog", () => {
+      const html = renderBlockSpecToHtml(embedBlock, {
+        url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      });
+      expect(html).toContain('aria-label="Load embed: Embedded content"');
+    });
+  });
 });

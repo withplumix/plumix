@@ -8,7 +8,10 @@ import type {
   RenderBlockTreeOptions,
 } from "../render-block-tree.js";
 import { createBlockRegistry } from "../block-registry.js";
-import { renderBlockTree } from "../render-block-tree.js";
+import {
+  DEFAULT_BLOCK_CONTEXT,
+  renderBlockTree,
+} from "../render-block-tree.js";
 
 export { validateEntryContent as validateContent } from "../validate-content.js";
 
@@ -21,6 +24,7 @@ const EMPTY_CONTEXT: BlockContext = {
   locale: "en",
   shortcodes: null,
   editing: false,
+  t: DEFAULT_BLOCK_CONTEXT.t,
 };
 
 export { EMPTY_CONTEXT };

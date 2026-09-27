@@ -4,6 +4,11 @@ import { createElement, Fragment } from "react";
 import type { BlockRegistry } from "./block-registry.js";
 import type { HydratedEntry, SiteSettings } from "./context-bags.js";
 import type { RootTag } from "./html/root-tag.js";
+import type {
+  CompiledCatalog,
+  MessageDescriptorLike,
+  MessageValues,
+} from "./i18n-label.js";
 import type { JsonObject } from "./json.js";
 import type {
   BlockLoaderRecord,
@@ -19,6 +24,7 @@ import type {
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { resolveRootTag } from "./html/root-tag.js";
+import { resolveMessage } from "./i18n-label.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
 /**
@@ -44,6 +50,15 @@ export interface BlockContext {
   /** True inside the editor canvas — lets a block render edit-only affordances
    *  (e.g. an empty-state placeholder) that don't ship to the public page. */
   readonly editing: boolean;
+  /**
+   * Resolves a message descriptor to the active locale's string — how a
+   * block's `render` localizes the text it emits. Hosts pass catalogs, never
+   * strings; with no catalog wired it returns the descriptor's English source.
+   */
+  readonly t: (
+    descriptor: MessageDescriptorLike,
+    values?: MessageValues,
+  ) => string;
 }
 
 /**
@@ -137,10 +152,9 @@ export interface RenderBlockTreeOptions {
   readonly siteSettings?: SiteSettings;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
-  /** Localized "Add a block" label for the edit-mode empty-slot affordance.
-   *  The host resolves it (it owns Lingui) and passes it in; the canvas has no
-   *  i18n runtime. Defaults to English inside `editAppender` when absent. */
-  readonly addBlockLabel?: string;
+  /** The compiled catalog for `locale`, which `BlockContext.t` reads. Absent,
+   *  every descriptor resolves to its English source. */
+  readonly catalog?: CompiledCatalog;
 }
 
 /** The framework seam keys a block spreads onto its root element. Both
@@ -180,6 +194,15 @@ export type BlockNodeComponent<
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > = (props: BlockNodeRenderProps<Attrs, Loaders>) => ReactNode;
 
+/** A `BlockContext.t` over `catalog`. */
+export function createMessageResolver(
+  catalog: CompiledCatalog,
+): BlockContext["t"] {
+  return (descriptor, values) => resolveMessage(catalog, descriptor, values);
+}
+
+const ENGLISH_ONLY = createMessageResolver({});
+
 export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   entry: null,
   siteSettings: Object.freeze({}),
@@ -189,6 +212,7 @@ export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   locale: "en",
   shortcodes: null,
   editing: false,
+  t: ENGLISH_ONLY,
 });
 
 interface DevWarnState {
@@ -291,10 +315,10 @@ function materializeSlots(
               },
               // An empty slot shows the same in-canvas "Add a block"
               // affordance as the root — clicking it inserts into this slot.
-              editAppender(
-                { parentId: node.id, slotKey: key },
-                env.addBlockLabel,
-              ),
+              editAppender(childContext.t, {
+                parentId: node.id,
+                slotKey: key,
+              }),
             ),
       );
     };
@@ -310,7 +334,6 @@ interface WalkerEnv {
   readonly renderFilters: BlockRenderFilters | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly editing: boolean;
-  readonly addBlockLabel: string | undefined;
 }
 
 function renderNodes(
@@ -460,7 +483,6 @@ export function renderBlockTree(
     renderFilters: options?.renderFilters,
     loaderData: options?.loaderData,
     editing: options?.editing ?? false,
-    addBlockLabel: options?.addBlockLabel,
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,
@@ -469,6 +491,9 @@ export function renderBlockTree(
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
     editing: options?.editing ?? false,
+    t: options?.catalog
+      ? createMessageResolver(options.catalog)
+      : DEFAULT_BLOCK_CONTEXT.t,
   };
   return renderNodes(nodes, env, rootContext);
 }
