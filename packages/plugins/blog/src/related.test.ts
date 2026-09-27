@@ -214,4 +214,40 @@ describe("createRelatedPostsLoader", () => {
     );
     expect(defaulted.strip).toHaveLength(3);
   });
+
+  test("hands the strip its titles with shortcodes expanded", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const [current, sibling] = await Promise.all([
+      f.entry.create({
+        type: "post",
+        status: "published",
+        publishedAt: new Date(2000),
+        authorId: author.id,
+      }),
+      f.entry.create({
+        type: "post",
+        title: "Best of [year]",
+        status: "published",
+        publishedAt: new Date(1000),
+        authorId: author.id,
+      }),
+    ]);
+    await f.entryTerm.create({ entryId: current.id, termId: topic.id });
+    await f.entryTerm.create({ entryId: sibling.id, termId: topic.id });
+    ctx.resolvedEntity = { kind: "entry", id: current.id };
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    const related = await run(() =>
+      createRelatedPostsLoader(undefined)({ slugs: ["strip"] }, ctx),
+    );
+
+    expect(related.strip?.map((entry) => entry.title)).toEqual([
+      `Best of ${year}`,
+    ]);
+  });
 });

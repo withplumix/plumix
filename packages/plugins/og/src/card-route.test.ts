@@ -1,6 +1,8 @@
 import type { CdnStore, ConnectedCdn, Logger } from "plumix";
+import type { TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { entryPurgeTags, entryTag, eq } from "plumix/db";
+import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { describe, expect, test, vi } from "vitest";
 
@@ -14,6 +16,8 @@ import {
   createHarness,
   DEV_ORIGIN,
   fetchCard,
+  headOf,
+  ogImageOf,
   seedEntry,
 } from "./test/harness.js";
 
@@ -635,5 +639,57 @@ describe("a card and the visitor's locale", () => {
     // year, and no purge replaces stored bytes under an unchanged key. So the
     // card reads the site's locale, not the visitor's.
     expect(body).toContain("locale:en");
+  });
+});
+
+describe("a card and the page it shares", () => {
+  const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+    new Date(),
+  );
+
+  /** The card the page's own head names, fetched at the URL it names. */
+  async function cardFromHead(
+    harness: Awaited<ReturnType<typeof createHarness>>,
+    slug: string,
+  ): Promise<{ url: string; response: TestResponse }> {
+    const url = ogImageOf(await headOf(harness, slug)) ?? "";
+    return { url, response: await harness.fetch(new URL(url).pathname) };
+  }
+
+  test("serves the head's card for a title carrying a shortcode, expanded", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+    });
+    await seedEntry(harness, { slug: "best-of", title: "Best of [year]" });
+
+    const { response } = await cardFromHead(harness, "best-of");
+
+    const body = await response.assertStatus(200).text();
+    expect(body).toContain(`<text>Best of ${year}</text>`);
+    expect(body).not.toContain("[year]");
+  });
+
+  test("serves the head's card when a subscriber rewrites the page's title", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+      before: [
+        definePlugin("test_retitle", {
+          setup: (ctx) => {
+            ctx.addFilter("resolve:single:data", (data) => ({
+              ...data,
+              entry: { ...data.entry, title: "Retitled in [year]" },
+            }));
+          },
+        }),
+      ],
+    });
+    const id = await seedEntry(harness, { slug: "hello-world" });
+
+    const { url, response } = await cardFromHead(harness, "hello-world");
+
+    expect(new URL(url).pathname).toBe(await cardPath(harness, id, "png"));
+    expect(await response.assertStatus(200).text()).toContain(
+      `<text>Retitled in ${year}</text>`,
+    );
   });
 });

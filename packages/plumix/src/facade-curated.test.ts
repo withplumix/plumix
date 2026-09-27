@@ -775,6 +775,19 @@ test("no value is published by two subpaths", () => {
   ).toEqual([]);
 });
 
+// ADR 0015: a plugin asks core for a page's data through the call core's own
+// route makes, so the façade offers the resolvers and not the row assembler
+// three plugins once hand-rolled page data from.
+test("plumix/plugin offers core's page-data resolvers, not the row assembler", () => {
+  const plugin = loaded(facade, "./plugin");
+  expect(
+    ["resolveEntryData", "resolveEntryList", "resolveListingPage"].filter(
+      (name) => !(name in plugin),
+    ),
+  ).toEqual([]);
+  expect("buildResolvedEntries" in plugin).toBe(false);
+});
+
 describe("core's barrel", () => {
   const withheld = CORE_WITHHELD.flatMap((group) => group.names);
   const core = loaded(sources, "@plumix/core");

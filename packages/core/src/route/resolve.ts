@@ -1,5 +1,3 @@
-import { expandShortcodes } from "@plumix/blocks";
-
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
@@ -14,7 +12,6 @@ import type { EntryListing } from "./render/entry-listing.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
 import type {
-  EntryData,
   ListingArchiveData,
   SearchData,
 } from "./render/resolved-entry.js";
@@ -34,10 +31,6 @@ import { resolveEditMode } from "./edit-mode.js";
 import { findAuthorBySlug, findTermBySlug } from "./path-chain.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import {
-  buildResolvedEntries,
-  resolveAuthorRow,
-} from "./render/build-resolved-entries.js";
 import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
 import {
   archiveData,
@@ -46,15 +39,19 @@ import {
   DEFAULT_ARCHIVE_PER_PAGE,
   frontPageData,
   paginatedEntries,
+  resolveEntryData,
   termData,
 } from "./render/page-data.js";
 import { renderThroughTheme } from "./render/render-template.js";
+import {
+  resolveAuthorRow,
+  resolveEntryList,
+} from "./render/resolve-entry-list.js";
 import { NAMED_TEMPLATE_META_KEY } from "./render/template-builders.js";
 import { resolveSingleEntry } from "./single-entry.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
     "resolve:search:data": (
       data: SearchData,
     ) => SearchData | Promise<SearchData>;
@@ -172,7 +169,7 @@ async function resolveSearch(
   const initial: SearchData = {
     kind: "search",
     query,
-    entries: await buildResolvedEntries(ctx, result.rows),
+    entries: await resolveEntryList(ctx, result.rows),
     pagination: {
       page,
       perPage: DEFAULT_ARCHIVE_PER_PAGE,
@@ -410,28 +407,7 @@ async function resolveSingle(
     previewGrant: await previewTokenGrantsEntry(ctx, row),
   });
 
-  const [entry] = await buildResolvedEntries(ctx, [row]);
-  if (!entry) {
-    // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
-    throw new Error("buildResolvedEntries: empty result for one row");
-  }
-  const initial: EntryData = { kind: "entry", entry };
-  const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
-  // Expand shortcodes in the author-written entry title so both the
-  // document `<title>` and the theme-rendered heading resolve `[year]` &c.
-  // The spread is what makes the entry readable as an open bag: a shortcode
-  // looks its fields up by name, and TypeScript withholds the implicit index
-  // signature an `interface` would need to be read that way.
-  const entryContext = { ...data.entry };
-  const title = expandShortcodes(data.entry.title, ctx.shortcodes, {
-    siteSettings: {},
-    locale: ctx.locale.code,
-    entry: entryContext,
-  });
-  const expanded: EntryData = {
-    ...data,
-    entry: { ...data.entry, title },
-  };
+  const data = await resolveEntryData(ctx, row);
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
@@ -441,8 +417,8 @@ async function resolveSingle(
       slug: row.slug,
       databaseId: row.id,
     },
-    data: expanded,
-    title,
+    data,
+    title: data.entry.title,
     editMode,
   });
   return htmlResponseOrNotFound(html, "public-single-no-template");

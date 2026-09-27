@@ -1,8 +1,8 @@
 import {
   authenticated,
   base,
-  buildResolvedEntries,
   previewableEntry,
+  resolveEntryData,
 } from "plumix/plugin";
 import * as v from "valibot";
 
@@ -31,11 +31,7 @@ export function createSeoRouter(options: SeoRouterOptions) {
         { entryId: input.entryId, entryTypes: options.entryTypes },
         errors,
       );
-      const [entry] = await buildResolvedEntries(context, [row]);
-      if (entry === undefined) {
-        throw errors.NOT_FOUND({ data: { kind: "entry", id: input.entryId } });
-      }
-      return serpPreview(context, entry);
+      return serpPreview(context, await resolveEntryData(context, row));
     });
 
   return { preview };

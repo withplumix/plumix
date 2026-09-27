@@ -3,6 +3,7 @@ import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
+import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { describe, expect, test } from "vitest";
 
@@ -128,6 +129,32 @@ describe("the card preview in the entry editor", () => {
       skipped: "featured-preferred",
       src: `https://cdn.example/1200x630/${PHOTO}`,
     });
+  });
+
+  test("renders the title a page-data subscriber gives it, expanded", async () => {
+    const harness = await previewHarness({
+      before: [
+        definePlugin("test_retitle", {
+          setup: (ctx) => {
+            ctx.addFilter("resolve:single:data", (data) => ({
+              ...data,
+              entry: { ...data.entry, title: "Retitled in [year]" },
+            }));
+          },
+        }),
+      ],
+    });
+    const editor = await harness.seedUser("editor");
+    const id = await seedEntry(harness, { title: "Best of [year]" });
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    const preview = await previewOf(harness, id, editor);
+
+    expect(decode(preview.src ?? "")).toContain(
+      `<text>Retitled in ${year}</text>`,
+    );
   });
 
   test("names the entry's own share image, which outranks the card", async () => {

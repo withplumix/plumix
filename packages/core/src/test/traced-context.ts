@@ -38,6 +38,7 @@ export async function createTracedContext(
     request: options.request,
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
+    shortcodes: harness.app.shortcodes,
     telemetry: {
       consumers: [{ id: "traced-context", onRequestEnd: () => undefined }],
     },

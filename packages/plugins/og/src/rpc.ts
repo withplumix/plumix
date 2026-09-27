@@ -1,8 +1,8 @@
 import {
   authenticated,
   base,
-  buildResolvedEntries,
   previewableEntry,
+  resolveEntryData,
 } from "plumix/plugin";
 import * as v from "valibot";
 
@@ -43,14 +43,8 @@ export function createOgRouter(options: OgRouterOptions) {
         { entryId: input.entryId, entryTypes: options.entryTypes },
         errors,
       );
-      const [entry] = await buildResolvedEntries(context, [row]);
-      if (entry === undefined) {
-        throw errors.NOT_FOUND({
-          data: { kind: "entry", id: input.entryId },
-        });
-      }
       return previewCard({
-        data: { kind: "entry", entry },
+        data: await resolveEntryData(context, row),
         ctx: context,
         cards: options.cards,
         renderer: options.renderer,

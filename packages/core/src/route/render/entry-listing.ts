@@ -12,8 +12,8 @@ import {
 } from "../../entries/query.js";
 import { publicEntryRows } from "../../entries/visibility.js";
 import { publicEntryTypeNames } from "../../plugin/registry.js";
-import { buildResolvedEntries } from "./build-resolved-entries.js";
 import { paginatedEntries } from "./page-data.js";
+import { resolveEntryList } from "./resolve-entry-list.js";
 
 /**
  * The query every archive starts from: the public entries, and nothing a
@@ -93,9 +93,7 @@ export async function listEntryPage(
     entryQueryOrder(query),
   );
   return {
-    entries: result.outOfRange
-      ? []
-      : await buildResolvedEntries(ctx, result.rows),
+    entries: result.outOfRange ? [] : await resolveEntryList(ctx, result.rows),
     pagination: {
       page,
       perPage,

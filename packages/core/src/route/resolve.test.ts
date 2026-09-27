@@ -38,6 +38,10 @@ const shopPlugin = definePlugin("shop", (ctx) => {
   });
 });
 
+const YEAR = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+  new Date(),
+);
+
 const TIPTAP_BODY = {
   type: "doc",
   content: [{ type: "paragraph", content: [{ type: "text", text: "Body." }] }],
@@ -260,10 +264,53 @@ describe("resolvePublicRoute — single", () => {
       new Request("https://cms.example/post/shoes"),
     );
     const body = await response.text();
-    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
-      new Date(),
+    expect(body).toContain(`<h1>Best Shoes for ${YEAR}</h1>`);
+  });
+
+  test("expands a title a resolve:single:data subscriber rewrote", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "shoes",
+      title: "Shoes",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    h.spyFilter("resolve:single:data").override((data) => ({
+      ...data,
+      entry: { ...data.entry, title: "Retitled in [year]" },
+    }));
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/shoes"),
     );
-    expect(body).toContain(`<h1>Best Shoes for ${year}</h1>`);
+    const body = await response.text();
+    expect(body).toContain(`<title>Retitled in ${YEAR}</title>`);
+    expect(body).toContain(`<h1>Retitled in ${YEAR}</h1>`);
+  });
+
+  test("keeps an escaped shortcode in an untouched title literal", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "escaped",
+      title: "Write [[year]] for the year",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/escaped"),
+    );
+    expect(await response.text()).toContain(
+      "<h1>Write [year] for the year</h1>",
+    );
   });
 
   test("draft with a matching slug returns 404 (status gate)", async () => {
@@ -771,6 +818,25 @@ describe("resolvePublicRoute — archive", () => {
     expect(body.indexOf("Gadget")).toBeLessThan(body.indexOf("Widget"));
   });
 
+  test("expands a shortcode in a listed entry's title", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "best-of",
+      title: "Best of [year]",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    const body = await response.text();
+    expect(body).toContain(`Best of ${YEAR}`);
+    expect(body).not.toContain("[year]");
+  });
+
   test("archive with no published entries renders the empty-state copy", async () => {
     const h = await createDispatcherHarness({ plugins: [blogPlugin] });
     const response = await h.dispatch(new Request("https://cms.example/post"));
@@ -1227,6 +1293,32 @@ describe("resolvePublicRoute — taxonomy", () => {
     const body = await response.text();
     expect(body).toContain("<h1>News</h1>");
     expect(body).toContain("No entries yet.");
+  });
+
+  test("expands a shortcode in a listed entry's title", async () => {
+    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const author = await h.seedUser("admin");
+    const term = await h.factory.category.create({
+      slug: "news",
+      name: "News",
+    });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      slug: "best-of",
+      title: "Best of [year]",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({ entryId: entry.id, termId: term.id });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/category/news"),
+    );
+    const body = await response.text();
+    expect(body).toContain(`Best of ${YEAR}`);
+    expect(body).not.toContain("[year]");
   });
 
   test("lists published entries tagged with the term, newest first", async () => {

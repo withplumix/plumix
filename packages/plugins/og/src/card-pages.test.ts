@@ -273,6 +273,34 @@ describe("the card in a listing page's head", () => {
     ).assertStatus(200);
   });
 
+  test("renders the entry titles a listing card reads expanded", async () => {
+    const harness = await createHarness({
+      cards: [
+        card.archive().define({
+          key: ({ data }) =>
+            cardKey.of("posts", ...data.entries.map((entry) => entry.id)),
+          render: ({ data }) => ({
+            type: "text",
+            text: data.entries.map((entry) => entry.title).join(" | "),
+          }),
+        }),
+      ],
+    });
+    await seedEntry(harness, { title: "Best of [year]" });
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    const response = await fetchCard(harness, {
+      kind: "archive",
+      entryType: "post",
+    });
+
+    expect(await response.assertStatus(200).text()).toContain(
+      `<text>Best of ${year}</text>`,
+    );
+  });
+
   test("falls back to the site default on an archive that lists nothing", async () => {
     const harness = await createHarness({
       renderer: rasterRenderer(),

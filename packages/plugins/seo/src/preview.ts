@@ -1,4 +1,4 @@
-import type { ResolvedEntry, TemplateData } from "plumix";
+import type { EntryData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import {
   buildEntryPermalink,
@@ -25,14 +25,15 @@ import { loadSeoSettings, nonEmpty } from "./settings.js";
  */
 export async function serpPreview(
   ctx: AppContext,
-  entry: ResolvedEntry,
+  page: EntryData,
 ): Promise<SerpPreview> {
+  const { entry } = page;
   const [site, settings, path] = await Promise.all([
     loadSiteSettings(ctx),
     loadSeoSettings(ctx),
     buildEntryPermalink(ctx, entry),
   ]);
-  const data: TemplateData = { kind: "entry", entry: withoutOverride(entry) };
+  const data = withoutOverride(page);
   const facts = pageFacts(data);
   const decision = indexable(facts, settings);
   return {
@@ -58,7 +59,7 @@ export async function serpPreview(
 // for that one flag, and a preview computed from the saved one would contradict
 // the toggle the author is looking at. Fed through `pageFacts` rather than
 // hand-built, so what the chain reads here is what it reads on a render.
-function withoutOverride(entry: ResolvedEntry): ResolvedEntry {
-  const { [SEO_META_KEYS.noindex]: _noindex, ...meta } = entry.meta;
-  return { ...entry, meta };
+function withoutOverride(page: EntryData): EntryData {
+  const { [SEO_META_KEYS.noindex]: _noindex, ...meta } = page.entry.meta;
+  return { ...page, entry: { ...page.entry, meta } };
 }

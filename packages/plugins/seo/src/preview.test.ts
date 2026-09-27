@@ -1,4 +1,4 @@
-import type { JsonValue } from "plumix";
+import type { AnyPluginDescriptor, JsonValue } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -20,8 +20,13 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
-function createHarness(): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [blogPlugin, seo()], theme });
+function createHarness(
+  before: readonly AnyPluginDescriptor[] = [],
+): Promise<DispatcherHarness> {
+  return createDispatcherHarness({
+    plugins: [blogPlugin, ...before, seo()],
+    theme,
+  });
 }
 
 async function seedSettings(
@@ -37,6 +42,7 @@ async function seedSettings(
 async function seedPost(
   h: DispatcherHarness,
   overrides: {
+    readonly title?: string;
     readonly excerpt?: string;
     readonly meta?: Record<string, JsonValue>;
   } = {},
@@ -45,7 +51,7 @@ async function seedPost(
   const entry = await h.factory.entry.create({
     type: "post",
     slug: "hello",
-    title: "Hello",
+    title: overrides.title ?? "Hello",
     ...(overrides.excerpt === undefined ? {} : { excerpt: overrides.excerpt }),
     ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
     content: null,
@@ -93,6 +99,25 @@ describe("the SERP preview procedure", () => {
     const id = await seedPost(h);
 
     expect((await preview(h, id)).title).toBe("Hello · Demo");
+  });
+
+  test("resolves the title a page-data subscriber gives the page, expanded", async () => {
+    const h = await createHarness([
+      definePlugin("retitle", {
+        setup: (ctx) => {
+          ctx.addFilter("resolve:single:data", (data) => ({
+            ...data,
+            entry: { ...data.entry, title: "Retitled in [year]" },
+          }));
+        },
+      }),
+    ]);
+    const id = await seedPost(h, { title: "Best of [year]" });
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    expect((await preview(h, id)).title).toBe(`Retitled in ${year}`);
   });
 
   test("with no excerpt the description falls back to the tagline", async () => {
