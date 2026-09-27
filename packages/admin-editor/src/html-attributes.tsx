@@ -11,6 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
+import { destructiveRowClassName } from "@plumix/admin-ui/destructive";
 import { ChevronsUpDown, Plus, Trash2 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -133,7 +134,7 @@ function AttrRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="text-destructive hover:text-destructive size-8 shrink-0"
+        className={cn(destructiveRowClassName, "size-8 shrink-0")}
         data-testid={`html-attr-${name}-remove`}
         onClick={() => onChange(name, null)}
       >

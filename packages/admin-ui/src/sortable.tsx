@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVerticalIcon, XIcon } from "lucide-react";
 
 import { Button } from "./button.js";
+import { destructiveRowClassName } from "./destructive.js";
 
 // Generic vertical-list sortable primitive built around dnd-kit. Used
 // by `mediaList` / `userList` / `entryList` / repeater rows — any
@@ -139,8 +140,7 @@ function SortableRow({
           type="button"
           variant="ghost"
           size="icon-sm"
-          // Remove is the destructive action — muted until hovered, then red.
-          className="text-muted-foreground hover:text-destructive"
+          className={destructiveRowClassName}
           disabled={disabled}
           onClick={() => {
             onRemove(id);

@@ -434,3 +434,41 @@ describe("plumix/no-unparsed-property-typeof", () => {
     ).resolves.toEqual([]);
   });
 });
+
+describe("plumix/no-hand-rolled-destructive-tint", () => {
+  const withReact = new ESLint({
+    cwd: fixturesDir,
+    overrideConfigFile: true,
+    overrideConfig: [...baseConfig, ...reactConfig],
+  });
+  const tintReports = async (fixture: string) => {
+    const [result] = await withReact.lintFiles([fixture]);
+    return (result?.messages ?? [])
+      .filter(
+        (message) =>
+          message.ruleId === "plumix/no-hand-rolled-destructive-tint",
+      )
+      .map((message) => ({ line: message.line, message: message.message }));
+  };
+
+  it("rejects either tint spelled out inside a className, naming the export to import", async () => {
+    const reports = await tintReports("src/destructive-tint.violations.tsx");
+    expect(reports.map((report) => report.line)).toEqual([4, 7, 11, 17]);
+    expect(
+      reports.map(
+        (report) => /destructive\w+ClassName/.exec(report.message)?.[0],
+      ),
+    ).toEqual([
+      "destructiveGhostClassName",
+      "destructiveRowClassName",
+      "destructiveGhostClassName",
+      "destructiveRowClassName",
+    ]);
+  });
+
+  it("stays silent on the declarations themselves and on other destructive text", async () => {
+    await expect(
+      tintReports("src/destructive-tint.allowed.tsx"),
+    ).resolves.toEqual([]);
+  });
+});

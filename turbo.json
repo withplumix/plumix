@@ -153,6 +153,16 @@
       "dependsOn": ["^topo"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/demo/seed.sql"]
     },
+    "@plumix/admin-ui#test:unit": {
+      // The roster guard also reads the `plumix/admin/ui` façade entry, which
+      // lives in a downstream package `^topo` never reaches. Same `pkg#task`
+      // caveat as above: `^topo` is repeated.
+      "dependsOn": ["^topo"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/plumix/src/admin/ui.ts"
+      ]
+    },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
       // the artifacts of a real Vite build and the façade's published types,

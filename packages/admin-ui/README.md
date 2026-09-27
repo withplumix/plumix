@@ -11,10 +11,15 @@ pnpm --filter @plumix/admin-ui ui:add <component>   # e.g. dialog, badge
 ```
 
 This runs `shadcn add` against this package's `components.json` (components
-land flat in `src/`, `cn` imports resolve to `@plumix/admin-ui`) and formats
-the result. After adding, export it from `src/index.ts` and add a subpath to
-`exports` in `package.json` so consumers can `import … from
-"@plumix/admin-ui/<component>"`.
+land flat in `src/`, `cn` imports resolve to `@plumix/admin-ui`), formats the
+result, and runs `pnpm roster:sync`. That script derives the `exports` map in
+`package.json` and the `src/index.ts` barrel from the modules in `src/`, so
+the new component is importable as `@plumix/admin-ui/<component>` and from
+`plumix/admin/ui` with no hand-edits. Run it yourself after adding or removing
+a module by any other route; the package's roster test fails until you do.
+
+Both lists are generated — don't edit them. A module that must stay out of one
+goes in the exception table in `scripts/roster.ts`, with its reason.
 
 ## Theme
 
@@ -44,8 +49,17 @@ chunk against each minor before upgrading.
 ## Conventions
 
 **Destructive actions.** A standalone or primary destructive button (a delete
-button, a confirm dialog's action) uses `<Button variant="destructive">`. A
-destructive action sitting inline among non-destructive peers (a ghost action
-toolbar, a per-row "Remove") uses `variant="ghost"` plus the shared
-`destructiveGhostClassName` — never a hand-rolled `text-destructive` string, so
-the surfaces can't drift on what "destructive" looks like.
+button, a confirm dialog's action) uses `<Button variant="destructive">`. The
+two inline shapes each have a shared tint in `@plumix/admin-ui/destructive`
+(also on `plumix/admin/ui`):
+
+- `destructiveGhostClassName` — always red. For a destructive action sitting
+  inline among non-destructive peers: a ghost action toolbar's Delete, a
+  link-remove beside a URL field. Pair it with `variant="ghost"`.
+- `destructiveRowClassName` — muted until hovered, then red. For a destructive
+  action repeated once per row — a sortable list item's remove, a row's Trash
+  link — where a red control on every row would be noise.
+
+Compose either with `cn` when the control needs more utilities. Never spell a
+tint out by hand: `plumix/no-hand-rolled-destructive-tint` rejects it in a
+`className`, so the surfaces can't drift on what "destructive" looks like.
