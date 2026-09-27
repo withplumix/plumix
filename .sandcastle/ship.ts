@@ -1,19 +1,19 @@
-import type { QueuedPullRequest, Ticket } from "./lib/github.js";
+import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import {
-  branchOfPullRequest,
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
   queueForMerge,
-  rebaseOntoMain,
   releaseClaim,
   syncRepoToMain,
+  textsThatClaimAdrNumbers,
   ticketByNumber,
   waitForMerge,
 } from "./lib/github.js";
 import { say } from "./lib/log.js";
+import { repairPullRequest } from "./lib/repair.js";
 import { runShipLoop } from "./lib/run.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
@@ -56,6 +56,7 @@ const asDuration = (ms: number): string => {
 const { onlyTicket, lanes, budgetMs } = readOptions(process.argv.slice(2));
 const endOfBudget = Date.now() + budgetMs;
 const claimed = new Set<number>();
+const adrsHeldThisRun = new Set<number>();
 const laneCount = Math.max(1, onlyTicket ? 1 : lanes);
 
 say(
@@ -76,7 +77,11 @@ const report = await runShipLoop(
     },
     ship: (ticket) => {
       const journal = new Journal(import.meta.dirname);
-      return shipTicket(ticket, journal).then(
+      const nextAdr = nextFreeAdr(
+        textsThatClaimAdrNumbers().flatMap(adrNumbersIn),
+        adrsHeldThisRun,
+      );
+      return shipTicket(ticket, journal, nextAdr).then(
         (outcome) => {
           journal.finish(outcome.status === "queued" ? "shipped" : "failed");
           return outcome;
@@ -90,8 +95,19 @@ const report = await runShipLoop(
     park: ({ number }, reason, pullRequestUrl) =>
       parkTicket(number, reason, pullRequestUrl),
     releaseClaim: ({ number }) => releaseClaim(number),
-    rebaseOntoMain: async ({ number }) =>
-      rebaseOntoMain(branchOfPullRequest(number)),
+    repair: (ticket, pullRequest, refusal) => {
+      const journal = new Journal(import.meta.dirname);
+      return repairPullRequest(ticket, pullRequest, refusal, journal).then(
+        (outcome) => {
+          journal.finish(outcome.status === "repaired" ? "shipped" : "failed");
+          return outcome;
+        },
+        (error: unknown) => {
+          journal.finish("failed", String(error));
+          throw error;
+        },
+      );
+    },
     requeue: ({ number }) => queueForMerge(number),
     confirm: (pullRequest) =>
       waitForMerge(pullRequest.number, {

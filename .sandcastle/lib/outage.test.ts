@@ -19,6 +19,7 @@ describe("looksLikeTheRunBeingOver", () => {
     "quota exceeded for this organisation",
     "401 Unauthorized",
     "OAuth token has expired",
+    "main is red in the sandbox (knip), so no ticket can be judged against it",
   ])("stops the run on %s", (reason) => {
     expect(looksLikeTheRunBeingOver(reason)).toBe(true);
   });

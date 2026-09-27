@@ -13,9 +13,11 @@ export interface ShipPorts {
   ) => void;
   readonly releaseClaim: (ticket: Ticket) => void;
   readonly confirm: (pullRequest: QueuedPullRequest) => Promise<MergeOutcome>;
-  readonly rebaseOntoMain: (
+  readonly repair: (
+    ticket: Ticket,
     pullRequest: QueuedPullRequest,
-  ) => Promise<"rebased" | "conflicted">;
+    refusal: MergeOutcome,
+  ) => Promise<RepairOutcome>;
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
@@ -25,6 +27,12 @@ export interface ShipLoopOptions {
   readonly lanes: number;
   readonly withinBudget: () => boolean;
 }
+
+export type RepairOutcome =
+  | { readonly status: "repaired" }
+  | { readonly status: "declined"; readonly reason: string };
+
+export const REPAIRS_A_PULL_REQUEST_GETS = 2;
 
 interface Queued {
   readonly ticket: Ticket;
@@ -103,33 +111,31 @@ export const runShipLoop = async (
   const queued = settled.flatMap((entry) => entry ?? []);
   ports.say(`\n--- confirming ${queued.length} queued pull request(s) ---`);
 
-  const confirmOnceMoreOnCurrentMain = async (
-    pullRequest: QueuedPullRequest,
-    firstRefusal: MergeOutcome,
-  ): Promise<MergeOutcome> => {
-    if (firstRefusal.status === "merged") return firstRefusal;
-
-    ports.say(
-      `  #${pullRequest.number} did not land, rebasing onto main and trying once more`,
-    );
-    if ((await ports.rebaseOntoMain(pullRequest)) === "conflicted") {
-      return {
-        status: "failed",
-        reason: `${pullRequest.url} conflicts with main and cannot be rebased unattended`,
-        failingChecks: [],
-      };
+  const confirmRepairingWhatIsRefused = async ({
+    ticket,
+    pullRequest,
+  }: Queued): Promise<MergeOutcome> => {
+    let outcome = await ports.confirm(pullRequest);
+    for (
+      let repairs = 0;
+      outcome.status !== "merged" && repairs < REPAIRS_A_PULL_REQUEST_GETS;
+      repairs += 1
+    ) {
+      ports.say(
+        `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+      );
+      const repaired = await ports.repair(ticket, pullRequest, outcome);
+      if (repaired.status === "declined") {
+        return { status: "failed", reason: repaired.reason, failingChecks: [] };
+      }
+      ports.requeue(pullRequest);
+      outcome = await ports.confirm(pullRequest);
     }
-    ports.requeue(pullRequest);
-    return ports.confirm(pullRequest);
+    return outcome;
   };
 
   const confirmations = await Promise.allSettled(
-    queued.map(async ({ pullRequest }) =>
-      confirmOnceMoreOnCurrentMain(
-        pullRequest,
-        await ports.confirm(pullRequest),
-      ),
-    ),
+    queued.map(confirmRepairingWhatIsRefused),
   );
 
   const merged: { ticket: Ticket; pullRequest: QueuedPullRequest }[] = [];

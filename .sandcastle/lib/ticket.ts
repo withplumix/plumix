@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import type { RunAgentPhase, Thinker } from "./agent.js";
-import type { Executor, GateFailure } from "./gates.js";
+import type { Executor, Gate, GateFailure } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
@@ -29,7 +29,10 @@ import {
   HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
 
-const IMPLEMENTER: Thinker = { model: "claude-opus-5-5", effort: "medium" };
+export const IMPLEMENTER: Thinker = {
+  model: "claude-opus-5-5",
+  effort: "medium",
+};
 const REVIEWER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
@@ -187,6 +190,7 @@ const surveyMainForAlreadyRedGates = async (
 ): Promise<readonly string[]> => {
   const { failures } = await runGates(sandbox, GATES, {
     stopAtFirstFailure: false,
+    retryAFailureOnce: true,
     onResult: (result) =>
       journal.record({
         phase: `baseline:${result.name}`,
@@ -202,9 +206,104 @@ const surveyMainForAlreadyRedGates = async (
   return failures.map(({ name }) => name);
 };
 
+// A gate red on main cannot tell a ticket's regression from main's, and
+// skipping it for the ticket is how regressions reached CI unchecked. Either CI
+// is red too, and nothing can merge, or the sandbox has drifted from CI — both
+// are the run's problem to stop on, not a ticket's to route around.
+export const MAIN_IS_RED = "main is red in the sandbox";
+
+export const refuseToJudgeAgainstARedMain = (
+  gatesRedOnMain: readonly string[],
+): void => {
+  if (gatesRedOnMain.length === 0) return;
+  throw new Error(
+    `${MAIN_IS_RED} (${gatesRedOnMain.join(", ")}), so no ticket can be judged against it`,
+  );
+};
+
+export interface Fixer {
+  readonly apply: (phase: string, brief: string) => Promise<string | null>;
+}
+
+export const fixerFor = (
+  runAgentPhase: RunAgentPhase,
+  session: string | undefined,
+): Fixer => {
+  let sessionToResume = session;
+  return {
+    apply: async (phase, brief) => {
+      const fixed = await runAgentPhase(phase, IMPLEMENTER, {
+        promptFile: join(PROMPT_DIR, "fix.md"),
+        promptArgs: { FINDINGS: brief },
+        maxIterations: ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION,
+        idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
+        resumeSession: sessionToResume,
+      });
+      sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
+      if (fixed.commits.length > 0) return null;
+      return (
+        readDeclinedTag(fixed.stdout) ??
+        "the fixer changed nothing and gave no reason"
+      );
+    },
+  };
+};
+
+export interface GateBudget {
+  fixRoundsUsed: number;
+}
+
+// Runs the gates, handing each first failure to the fixer, until they are
+// green (null) or the fixer is out of rounds or declines (the reason).
+export const gatesUntilGreen = async (
+  sandbox: Executor,
+  gates: readonly Gate[],
+  journal: Journal,
+  fixer: Fixer,
+  budget: GateBudget,
+  label: string,
+): Promise<string | null> => {
+  for (let round = 1; ; round += 1) {
+    say(`\n--- gate (${label}, round ${round}) ---`);
+    const { failures } = await runGates(sandbox, gates, {
+      stopAtFirstFailure: true,
+      retryAFailureOnce: true,
+      onResult: (result) =>
+        journal.record({
+          phase: `gate:${result.name}#${label}.${round}`,
+          kind: "gate",
+          startedAt: result.startedAt,
+          durationMs: result.durationMs,
+          outcome: result.outcome,
+          detail: result.skippedBecause,
+          command: result.command,
+          exitCode: result.exitCode,
+        }),
+    });
+    const [failure] = failures;
+    if (!failure) return null;
+
+    budget.fixRoundsUsed += 1;
+    if (budget.fixRoundsUsed > MAX_GATE_FIX_ROUNDS) {
+      return `still failing \`${failure.command}\` after ${MAX_GATE_FIX_ROUNDS} fix rounds`;
+    }
+    say(
+      `--- fix gate failure (${budget.fixRoundsUsed}/${MAX_GATE_FIX_ROUNDS}) ---`,
+    );
+    const declined = await fixer.apply(
+      `fix#${label}.${round}`,
+      asGateFailureBrief(failure),
+    );
+    if (declined) {
+      return `\`${failure.command}\` still fails and the fixer changed nothing:\n\n${declined}`;
+    }
+  }
+};
+
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
+  nextAdr: string,
 ): Promise<ShipOutcome> => {
   const branch = `feat/${ticket.title
     .toLowerCase()
@@ -223,23 +322,14 @@ export const shipTicket = async (
 
   try {
     say("\n--- baseline gates on main ---");
-    const gatesAlreadyRedOnMain = await surveyMainForAlreadyRedGates(
-      sandbox,
-      journal,
-    );
-    if (gatesAlreadyRedOnMain.length > 0) {
-      say(
-        `  already red on main, will not be this ticket's problem: ${gatesAlreadyRedOnMain.join(", ")}`,
-      );
-    }
-    const gatesThisTicketOwns = [...GATES, CHANGESET_GATE].filter(
-      ({ name }) => !gatesAlreadyRedOnMain.includes(name),
+    refuseToJudgeAgainstARedMain(
+      await surveyMainForAlreadyRedGates(sandbox, journal),
     );
 
     say("\n--- implement ---");
     const implemented = await runAgentPhase("implement", IMPLEMENTER, {
       promptFile: join(PROMPT_DIR, "implement.md"),
-      promptArgs: { TICKET: String(ticket.number) },
+      promptArgs: { TICKET: String(ticket.number), NEXT_ADR: nextAdr },
       maxIterations: 40,
       idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
     });
@@ -253,66 +343,26 @@ export const shipTicket = async (
     }
 
     const pullRequestCopy = readPullRequestTag(implemented.stdout, ticket);
-    let sessionToResume = implemented.iterations.at(-1)?.sessionId;
-    let gateFixes = 0;
+    const fixer = fixerFor(
+      runAgentPhase,
+      implemented.iterations.at(-1)?.sessionId,
+    );
+    const budget: GateBudget = { fixRoundsUsed: 0 };
     let reviewFixes = 0;
     let pass = 0;
     let advisory: readonly Finding[] = [];
 
-    const applyFixes = async (brief: string): Promise<string | null> => {
-      const fixed = await runAgentPhase(`fix#${pass}`, IMPLEMENTER, {
-        promptFile: join(PROMPT_DIR, "fix.md"),
-        promptArgs: { FINDINGS: brief },
-        maxIterations: ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION,
-        idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
-        resumeSession: sessionToResume,
-      });
-      sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
-      if (fixed.commits.length > 0) return null;
-      return (
-        readDeclinedTag(fixed.stdout) ??
-        "the fixer changed nothing and gave no reason"
-      );
-    };
-
     while (true) {
       pass += 1;
-      say(`\n--- gate (pass ${pass}) ---`);
-      const { failures } = await runGates(sandbox, gatesThisTicketOwns, {
-        stopAtFirstFailure: true,
-        retryAFailureOnce: true,
-        onResult: (result) =>
-          journal.record({
-            phase: `gate:${result.name}#${pass}`,
-            kind: "gate",
-            startedAt: result.startedAt,
-            durationMs: result.durationMs,
-            outcome: result.outcome,
-            detail: result.skippedBecause,
-            command: result.command,
-            exitCode: result.exitCode,
-          }),
-      });
-
-      const [failure] = failures;
-      if (failure) {
-        gateFixes += 1;
-        if (gateFixes > MAX_GATE_FIX_ROUNDS) {
-          return {
-            status: "blocked",
-            reason: `still failing \`${failure.command}\` after ${MAX_GATE_FIX_ROUNDS} fix rounds`,
-          };
-        }
-        say(`--- fix gate failure (${gateFixes}/${MAX_GATE_FIX_ROUNDS}) ---`);
-        const declined = await applyFixes(asGateFailureBrief(failure));
-        if (declined) {
-          return {
-            status: "blocked",
-            reason: `\`${failure.command}\` still fails and the fixer changed nothing:\n\n${declined}`,
-          };
-        }
-        continue;
-      }
+      const gateBlocked = await gatesUntilGreen(
+        sandbox,
+        [...GATES, CHANGESET_GATE],
+        journal,
+        fixer,
+        budget,
+        `pass${pass}`,
+      );
+      if (gateBlocked) return { status: "blocked", reason: gateBlocked };
 
       say(`--- review (pass ${pass}) ---`);
       const findings = await reviewAll(
@@ -340,7 +390,10 @@ export const shipTicket = async (
       say(
         `--- fix ${blocking.length} ${BLOCKING_SEVERITY} finding(s) (${reviewFixes}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
-      const declined = await applyFixes(asFixBrief(blocking));
+      const declined = await fixer.apply(
+        `fix#review${pass}`,
+        asFixBrief(blocking),
+      );
       if (declined) {
         return {
           status: "blocked",

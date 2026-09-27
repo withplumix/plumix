@@ -16,6 +16,10 @@ that from what you write below.
    behaviours, in order, one RED then GREEN per cycle.
 3. **Changeset** if a consumer of a published package would notice. AGENTS.md says
    which package and which bump.
+   **ADR**, if the work records one: use the number the ticket names. If it names
+   none, use **{{NEXT_ADR}}**. Main, every open pull request and every open issue
+   were checked for it, and no other lane of this run holds it, so do not pick a
+   number of your own.
 4. **Commit** with `sentry-skills:commit`. Use `Fixes #{{TICKET}}` when every
    criterion is met, otherwise `Refs #{{TICKET}}`.
 
