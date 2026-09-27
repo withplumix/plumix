@@ -66,3 +66,71 @@ describe("gateBehindCheck", () => {
     expect(gateBehindCheck("Smoke (scaffold)")).toBeUndefined();
   });
 });
+
+const sandboxWhereACommandFailsOnce = (flaky: string) => {
+  let seen = 0;
+  return {
+    exec: async (command: string) => {
+      if (command !== flaky)
+        return { exitCode: 0, stdout: "", stderr: "", durationMs: 0 };
+      seen += 1;
+      return {
+        exitCode: seen === 1 ? 1 : 0,
+        stdout: "",
+        stderr: "",
+        durationMs: 0,
+      };
+    },
+  };
+};
+
+describe("a gate that fails once", () => {
+  test("is given a second run before the fixer is woken", async () => {
+    const { failures } = await runGates(
+      sandboxWhereACommandFailsOnce("lint"),
+      THREE_GATES,
+      {
+        stopAtFirstFailure: true,
+        onResult: ignoreResults,
+        retryAFailureOnce: true,
+      },
+    );
+
+    expect(failures).toEqual([]);
+  });
+
+  test("still fails when the second run agrees with the first", async () => {
+    const { failures } = await runGates(
+      sandboxWhereTheseCommandsFail(["lint"]),
+      THREE_GATES,
+      {
+        stopAtFirstFailure: true,
+        onResult: ignoreResults,
+        retryAFailureOnce: true,
+      },
+    );
+
+    expect(failures.map(({ name }) => name)).toEqual(["lint"]);
+  });
+
+  test("the retry is recorded, so a flake is visible instead of absorbed", async () => {
+    const seen: string[] = [];
+    await runGates(sandboxWhereACommandFailsOnce("lint"), THREE_GATES, {
+      stopAtFirstFailure: true,
+      onResult: ({ name, outcome }) => seen.push(`${name}:${outcome}`),
+      retryAFailureOnce: true,
+    });
+
+    expect(seen).toEqual(["typecheck:ok", "lint:fail", "lint:ok", "knip:ok"]);
+  });
+
+  test("without the option a failure is handed on at once", async () => {
+    const { failures } = await runGates(
+      sandboxWhereACommandFailsOnce("lint"),
+      THREE_GATES,
+      { stopAtFirstFailure: true, onResult: ignoreResults },
+    );
+
+    expect(failures.map(({ name }) => name)).toEqual(["lint"]);
+  });
+});

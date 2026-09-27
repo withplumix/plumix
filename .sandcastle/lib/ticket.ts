@@ -280,6 +280,7 @@ export const shipTicket = async (
       say(`\n--- gate (pass ${pass}) ---`);
       const { failures } = await runGates(sandbox, gatesThisTicketOwns, {
         stopAtFirstFailure: true,
+        retryAFailureOnce: true,
         onResult: (result) =>
           journal.record({
             phase: `gate:${result.name}#${pass}`,

@@ -132,12 +132,13 @@ export interface GateRunOutcome {
 export interface GateRunOptions {
   readonly stopAtFirstFailure: boolean;
   readonly onResult: (result: GateResult) => void;
+  readonly retryAFailureOnce?: boolean;
 }
 
 export const runGates = async (
   sandbox: Executor,
   gates: readonly Gate[],
-  { stopAtFirstFailure, onResult }: GateRunOptions,
+  { stopAtFirstFailure, onResult, retryAFailureOnce }: GateRunOptions,
 ): Promise<GateRunOutcome> => {
   const changedPaths = await changedPathsIn(sandbox);
   const results: GateResult[] = [];
@@ -176,23 +177,36 @@ export const runGates = async (
       continue;
     }
 
-    const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
-    const result: GateResult = {
-      name: gate.name,
-      command: gate.command,
-      startedAt,
-      durationMs: elapsed(),
-      outcome: exitCode === 0 ? "ok" : "fail",
-      exitCode,
+    const runOnce = async (): Promise<GateResult & { output: string }> => {
+      const attemptStartedAtMs = Date.now();
+      const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
+      return {
+        name: gate.name,
+        command: gate.command,
+        startedAt: new Date(attemptStartedAtMs).toISOString(),
+        durationMs: Date.now() - attemptStartedAtMs,
+        outcome: exitCode === 0 ? "ok" : "fail",
+        exitCode,
+        output: `${stdout}\n${stderr}`,
+      };
     };
-    results.push(result);
-    onResult(result);
 
+    let attempt = await runOnce();
+    results.push(attempt);
+    onResult(attempt);
+
+    if (attempt.outcome === "fail" && retryAFailureOnce) {
+      attempt = await runOnce();
+      results.push(attempt);
+      onResult(attempt);
+    }
+
+    const { exitCode, output } = attempt;
     if (exitCode !== 0) {
       failures.push({
         name: gate.name,
         command: gate.command,
-        output: `${stdout}\n${stderr}`.slice(-8000),
+        output: output.slice(-8000),
       });
       if (stopAtFirstFailure) return { results, failures };
     }
