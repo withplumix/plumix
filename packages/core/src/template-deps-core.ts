@@ -4,6 +4,7 @@ import type { AppContext } from "./context/app.js";
 import type { SettingsBag } from "./db/schema/settings.js";
 import type { JsonValue } from "./json.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";
+import { settingsTag } from "./cdn/contract/tags.js";
 import { memoBatch } from "./context/memo.js";
 import { settings } from "./db/schema/settings.js";
 
@@ -65,6 +66,9 @@ export async function settingsLoader(
       }
       return byGroup;
     },
+    // A settings write announces its group, so a read after it in the same
+    // request sees it — a group that had no rows included.
+    (group) => [settingsTag(group)],
   );
   const grouped: Record<string, SettingsBag> = {};
   unique.forEach((group, i) => {

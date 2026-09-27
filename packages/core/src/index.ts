@@ -135,7 +135,7 @@ export {
   entryTag,
   termPurgeTags,
   typeTag,
-} from "./cdn/tags.js";
+} from "./cdn/contract/tags.js";
 export { enqueuePurgeTags } from "./cdn/purge.js";
 // Exposed for a `cacheable: true` plugin route, which is the only party that
 // knows what its own response read. Core tags a page from its resolved intent;

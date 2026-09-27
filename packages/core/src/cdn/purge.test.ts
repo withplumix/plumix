@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app.js";
 import { withUser } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -10,6 +10,7 @@ import {
 } from "../plugin/registry.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
+import { settingsTag, userTag } from "./contract/tags.js";
 import {
   enqueuePurgeTags,
   flushPurgeTags,
@@ -22,7 +23,9 @@ beforeAll(async () => {
 });
 
 function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
-  const purgeTags = vi.fn(() => Promise.resolve());
+  const purgeTags = vi.fn<(tags: readonly string[]) => Promise<void>>(() =>
+    Promise.resolve(),
+  );
   const defer = vi.fn((p: Promise<unknown>) => {
     void p;
   });
@@ -219,6 +222,84 @@ describe("registerCorePurgeInvalidator", () => {
       flushPurgeTags(ctx);
 
       expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
+    },
+  );
+
+  const jane = { id: 4, name: "Jane", slug: "jane" };
+  const PURGING_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
+    ...ENTRY_EVENTS,
+    ...TERM_EVENTS,
+    ["user:updated", [jane, jane]],
+    ["user:deleted", [jane, { reassignedTo: 1 }]],
+  ];
+
+  // A memo that loads each key on a miss and records which keys it loaded.
+  function recordingMemo(ctx: AppContext) {
+    const loads: string[] = [];
+    const read = (key: string, tags?: readonly string[]) =>
+      ctx.memo(
+        key,
+        () => {
+          loads.push(key);
+          return Promise.resolve(key);
+        },
+        tags,
+      );
+    return { loads, read };
+  }
+
+  // The memo is the roster's second consumer (#2517): whatever an action
+  // purges, it also drops from the request memo — read here off the purge
+  // itself, so the two cannot be checked against separate lists — and on a
+  // site with no cdn at all.
+  it.each(PURGING_EVENTS)(
+    "%s drops the memo entries tagged with what it purges",
+    async (event, payload) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const purging = fakeCtx();
+      await fire(hooks, event, ...payload, purging.ctx);
+      flushPurgeTags(purging.ctx);
+      const purged = purging.purgeTags.mock.calls[0]?.[0] ?? [];
+      const { ctx } = fakeCtx("absent");
+      const { loads, read } = recordingMemo(ctx);
+      for (const tag of purged) await read(tag, [tag]);
+      await read("untagged");
+      await read("unrelated", ["e:999"]);
+      loads.length = 0;
+
+      await fire(hooks, event, ...payload, ctx);
+      for (const tag of purged) await read(tag, [tag]);
+      await read("untagged");
+      await read("unrelated", ["e:999"]);
+
+      expect(purged).not.toHaveLength(0);
+      expect(loads).toEqual(purged);
+    },
+  );
+
+  // Tags no page is stored under: the memo drops them, the CDN never hears.
+  it.each([
+    ["user:updated", [jane, jane], userTag(jane.id)],
+    ["user:deleted", [jane, { reassignedTo: 1 }], userTag(jane.id)],
+    ["settings:group_changed", [{ group: "site" }], settingsTag("site")],
+  ] as const)(
+    "%s drops its memo-only tag without purging it",
+    async (event, payload, tag) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const { ctx, purgeTags } = fakeCtx();
+      const { loads, read } = recordingMemo(ctx);
+      await read("own", [tag]);
+      loads.length = 0;
+
+      await fire(hooks, event, ...payload, ctx);
+      await read("own", [tag]);
+      flushPurgeTags(ctx);
+
+      expect(loads).toEqual(["own"]);
+      const purged = purgeTags.mock.calls.flatMap(([tags]) => tags);
+      expect(purged).not.toContain(tag);
     },
   );
 

@@ -13,6 +13,7 @@ import type {
   ResolvedEntry,
   ResolvedTerm,
 } from "./resolved-entry.js";
+import { userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
@@ -67,12 +68,17 @@ export async function resolveAuthorRow(
     authorMemoKey,
     async () =>
       new Map((await resolveAuthors(ctx, [row])).map((a) => [a.id, a])),
+    authorMemoTags,
   );
   // memoBatch answers one entry per id, and the loader has the row in hand.
   return author ?? publicAuthor(row, {});
 }
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
+// The author's own tag rather than the public types' tags every user change
+// also purges: an entry publish announces those, and must not drop an author
+// it did not touch.
+const authorMemoTags = (id: number): readonly string[] => [userTag(id)];
 
 // The projection itself — never spread the user row, which carries email and
 // the auth columns.
@@ -155,20 +161,26 @@ export async function resolveEntryList(
   // second call replays the row, and a mixed batch still costs a single
   // `IN(...)` query.
   const [authorRows, joinRows, metaBags] = await Promise.all([
-    memoBatch(ctx.memo, authorIds, authorMemoKey, async () => {
-      const rows = await ctx.db
-        .select({
-          id: users.id,
-          slug: users.slug,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
-          meta: users.meta,
-        })
-        .from(users)
-        .where(inArray(users.id, authorIds));
-      const authors = await resolveAuthors(ctx, rows);
-      return new Map(authors.map((a) => [a.id, a]));
-    }),
+    memoBatch(
+      ctx.memo,
+      authorIds,
+      authorMemoKey,
+      async () => {
+        const rows = await ctx.db
+          .select({
+            id: users.id,
+            slug: users.slug,
+            name: users.name,
+            avatarUrl: users.avatarUrl,
+            meta: users.meta,
+          })
+          .from(users)
+          .where(inArray(users.id, authorIds));
+        const authors = await resolveAuthors(ctx, rows);
+        return new Map(authors.map((a) => [a.id, a]));
+      },
+      authorMemoTags,
+    ),
     ctx.db
       .select({
         entryId: entryTerm.entryId,

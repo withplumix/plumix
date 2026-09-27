@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { entryPurgeTags, pageTags, termPurgeTags, typeTag } from "./tags.js";
+import { entryPurgeTags, termPurgeTags, typeTag } from "./contract/tags.js";
+import { pageTags } from "./tags.js";
 
 describe("entryPurgeTags", () => {
   it("purges the type tag and the entry tag", () => {

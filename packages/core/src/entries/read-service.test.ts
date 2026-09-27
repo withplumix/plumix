@@ -4,8 +4,11 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
 import { withUser } from "../context/app.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { fireEntryDeleted } from "../rpc/procedures/entry/lifecycle.js";
 import {
   entryGetInputSchema,
   entryListInputSchema,
@@ -370,6 +373,25 @@ describe("readEntryType", () => {
     expect(first).toBeNull();
     expect(second).toBeNull();
     expect(dbQueryCount()).toBe(1);
+  });
+
+  test("a read after deleting the entry in the same request finds it gone", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const post = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+    });
+
+    const [before, after] = await run(async () => {
+      const type = await readEntryType(ctx, post.id);
+      await ctx.db.delete(entries).where(eq(entries.id, post.id));
+      await fireEntryDeleted(ctx, post);
+      return [type, await readEntryType(ctx, post.id)];
+    });
+
+    expect(before).toBe("post");
+    expect(after).toBeNull();
   });
 });
 

@@ -161,17 +161,20 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<readonly HydratedReference[]>;
 
   /**
-   * Cache tags a hydrated payload contributes to the page that embeds it,
-   * so editing or deleting the referenced entity purges the pages that
-   * hydrated it (#1508). Called once per hydrated payload during
-   * read-time hydration; the tags fold into the embedding page's stored
-   * cache tags. Return the same tag the entity's own purge enqueues —
-   * the entry adapter returns `e:<id>`, the precise per-entity tag. Kinds
-   * whose entities carry no per-entity purge identity (e.g. `user`) omit
-   * this method; their references embed without a cache-tag dependency.
-   * Optional.
+   * Cache tags a referenced id contributes to whatever read it, so editing
+   * or deleting the referenced entity reaches everything that hydrated it.
+   * Feeds two readers: the tags fold into the embedding page's stored cache
+   * tags, so the entity's purge purges the page (#1508), and they tag the
+   * id's request-memo entry, so the entity's write in the same request drops
+   * it (#2517). Return the same tag the entity's own purge enqueues — the
+   * entry adapter returns `e:<id>`, the precise per-entity tag. Handed the
+   * id rather than a payload: a purge tag is identity, and an id that
+   * hydrated to nothing has no payload but still needs its tag, so it
+   * re-queries once the entity becomes visible. Kinds whose entities carry
+   * no per-entity purge identity (e.g. `user`) omit this method; their
+   * references embed without a cache-tag dependency. Optional.
    */
-  embeddedCacheTags?(payload: HydratedReference): readonly string[];
+  embeddedCacheTags?(id: string): readonly string[];
 
   /**
    * The image a hydrated payload of this kind stands for. The adapter that

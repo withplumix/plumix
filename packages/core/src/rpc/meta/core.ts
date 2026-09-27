@@ -1214,6 +1214,10 @@ async function resolveGroup(
     // concatenation would let one scope's text spill into the id.
     const key = principalKey(ctx);
     const groupKey = referenceGroupKey(target);
+    // Tagged by id, so the entity's own write in this request drops the
+    // entry — a memoized miss included (#2517).
+    const tagsFor = (id: string): readonly string[] =>
+      adapter.embeddedCacheTags?.(id) ?? [];
     const payloads = await memoBatch(
       ctx.memo,
       idList,
@@ -1227,11 +1231,13 @@ async function resolveGroup(
         }
         return loaded;
       },
+      tagsFor,
     );
     const byId = new Map<string, HydratedReference>();
     for (const [index, id] of idList.entries()) {
       // `null` is the memoized miss — an orphan stays an orphan for the
-      // rest of the request instead of being re-queried by a later batch.
+      // rest of the request instead of being re-queried by a later batch,
+      // until a write announces its id.
       // `undefined` cannot happen (one answer per id) but the index read
       // is checked.
       const payload = payloads[index];
@@ -1243,9 +1249,7 @@ async function resolveGroup(
       // accumulator back, so admin/REST reads populate it harmlessly.
       // Folded here rather than at the hydrate, so a batch answered from
       // the memo tags the page exactly as the batch that loaded it did.
-      if (adapter.embeddedCacheTags) {
-        accumulateEmbeddedTags(ctx, adapter.embeddedCacheTags(payload));
-      }
+      accumulateEmbeddedTags(ctx, tagsFor(id));
     }
     return { kind: "hydrated", byId };
   }
