@@ -498,6 +498,9 @@ test.describe("/users/$id/edit", () => {
   });
 });
 
+// The change control is offered only where magic-link sign-in is configured.
+const MAGIC_LINK_ON = { magicLink: true, oauth: [] };
+
 test.describe("/users/$id/edit — email change (self)", () => {
   const self = user({ id: 1, email: "admin@example.test", role: "admin" });
 
@@ -514,6 +517,7 @@ test.describe("/users/$id/edit — email change (self)", () => {
         "/auth/session": AUTHED_ADMIN,
         "/user/get": self,
         "/user/pendingEmailChange": { pending: null },
+        "/auth/signInMethods": MAGIC_LINK_ON,
         ...SELF_EDIT_LISTS,
       },
     });
@@ -545,6 +549,7 @@ test.describe("/users/$id/edit — email change (self)", () => {
       "/auth/session": AUTHED_ADMIN,
       "/user/get": self,
       "/user/pendingEmailChange": { pending: null },
+      "/auth/signInMethods": MAGIC_LINK_ON,
       ...SELF_EDIT_LISTS,
     });
     await page.route("**/_plumix/rpc/user/requestEmailChange", (route) =>
@@ -632,6 +637,7 @@ test.describe("/users/$id/edit — email change (admin editing other)", () => {
           role: "editor",
         }),
         "/user/pendingEmailChange": { pending: null },
+        "/auth/signInMethods": MAGIC_LINK_ON,
         "/auth/apiTokens/adminList": {
           items: [],
           total: 0,

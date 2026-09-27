@@ -21,10 +21,7 @@ import type { JsonObject } from "../json.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
 import type { ResolvedRoute } from "../route/match.js";
-import type {
-  AuthMethodsSummary,
-  OAuthProviderSummary,
-} from "../runtime/app.js";
+import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { DevRuntime } from "../runtime/dev.js";
 import type { EnvInput } from "../runtime/env-input.js";
@@ -71,7 +68,7 @@ const EMPTY_SHORTCODE_REGISTRY: ShortcodeRegistry = new Map();
 const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
   passkey: false,
   magicLink: false,
-  oauthProviders: Object.freeze([]),
+  oauth: Object.freeze([]),
 });
 const DEFAULT_I18N: ResolvedI18n = resolveLocales({
   defaultLocale: "en",
@@ -251,15 +248,9 @@ export interface AppContextBase<
    */
   readonly bootstrapAllowed: boolean;
   /**
-   * Configured OAuth providers — `{ key, label }` per entry. Empty when
-   * the deploy is passkey-only. Read by the login screen (via the
-   * `auth.oauthProviders` RPC) to render provider buttons; client
-   * credentials never reach this surface.
-   */
-  readonly oauthProviders: readonly OAuthProviderSummary[];
-  /**
    * Configured auth methods, fed to the render provider so a theme's own login
-   * page reads them via `useAuthMethods()`. See {@link AuthMethodsSummary}.
+   * page reads them via `useAuthMethods()`, and to the admin login through the
+   * `auth.signInMethods` RPC. See {@link AuthMethodsSummary}.
    */
   readonly authMethods: AuthMethodsSummary;
   /**
@@ -445,7 +436,6 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
    *  from `env`, memoized) for secrets that only exist at request time. */
   readonly mailer?: MailerInput;
   readonly i18n?: ResolvedI18n;
-  readonly oauthProviders?: readonly OAuthProviderSummary[];
   readonly authMethods?: AuthMethodsSummary;
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
@@ -546,7 +536,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     mailer: mailer && traceMailer(mailer, () => base.telemetry),
     i18n,
     locale,
-    oauthProviders: args.oauthProviders ?? [],
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
@@ -658,7 +647,6 @@ export function withUser<TSchema extends Record<string, unknown>>(
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),
     },
-    oauthProviders: ctx.oauthProviders,
     locale: resolveLocale({ request: ctx.request, user, i18n: ctx.i18n }),
   };
 }

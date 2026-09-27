@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { auth } from "../auth/config.js";
+import { github, google } from "../auth/oauth/providers/index.js";
 import { resolveAuthMethods } from "./app.js";
 
 const passkey = {
@@ -11,28 +12,35 @@ const passkey = {
 
 describe("resolveAuthMethods", () => {
   test("reports passkey on and magic-link off for a passkey-only config", () => {
-    expect(resolveAuthMethods(auth({ passkey }), [])).toEqual({
+    expect(resolveAuthMethods(auth({ passkey }))).toEqual({
       passkey: true,
       magicLink: false,
-      oauthProviders: [],
+      oauth: [],
     });
   });
 
   test("toggling magic-link in config flips what the accessor reports", () => {
-    expect(resolveAuthMethods(auth({ passkey }), []).magicLink).toBe(false);
+    expect(resolveAuthMethods(auth({ passkey })).magicLink).toBe(false);
     expect(
-      resolveAuthMethods(auth({ passkey, magicLink: { siteName: "Acme" } }), [])
+      resolveAuthMethods(auth({ passkey, magicLink: { siteName: "Acme" } }))
         .magicLink,
     ).toBe(true);
   });
 
-  test("passes the OAuth provider keys and labels through verbatim", () => {
-    const providers = [
+  test("projects each OAuth provider to its key and label, in declared order", () => {
+    const client = { clientId: "id", clientSecret: "secret" };
+    expect(
+      resolveAuthMethods(
+        auth({
+          passkey,
+          oauth: {
+            providers: { github: github(client), google: google(client) },
+          },
+        }),
+      ).oauth,
+    ).toEqual([
       { key: "github", label: "GitHub" },
       { key: "google", label: "Google" },
-    ];
-    expect(
-      resolveAuthMethods(auth({ passkey }), providers).oauthProviders,
-    ).toBe(providers);
+    ]);
   });
 });

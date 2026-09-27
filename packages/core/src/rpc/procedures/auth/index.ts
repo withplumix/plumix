@@ -4,13 +4,13 @@ import { credentialsRouter } from "./credentials/index.js";
 import { deviceFlowRouter } from "./device-flow/index.js";
 import { loginLinks } from "./login-links.js";
 import { mailerRouter } from "./mailer/index.js";
-import { oauthProviders } from "./oauth-providers.js";
 import { session } from "./session.js";
 import { sessionsRouter } from "./sessions/index.js";
+import { signInMethods } from "./sign-in-methods.js";
 
 export const authRouter = {
   session,
-  oauthProviders,
+  signInMethods,
   loginLinks,
   allowedDomains: allowedDomainsRouter,
   credentials: credentialsRouter,

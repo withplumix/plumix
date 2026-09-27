@@ -44,7 +44,7 @@ export interface RendererOAuthProvider {
 export interface RendererAuthMethods {
   readonly passkey: boolean;
   readonly magicLink: boolean;
-  readonly oauthProviders: readonly RendererOAuthProvider[];
+  readonly oauth: readonly RendererOAuthProvider[];
 }
 
 export type RendererQueriedEntry =

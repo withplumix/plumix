@@ -5,6 +5,7 @@ import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
 import { coreBlocks, coreMarks, createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { PlumixAuthConfig } from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
@@ -17,7 +18,7 @@ import type {
   FilterRest,
 } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { OAuthProviderSummary } from "../runtime/app.js";
+import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
@@ -27,6 +28,7 @@ import { createAppContext, withUser } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
+import { resolveAuthMethods } from "../runtime/app.js";
 import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
@@ -50,11 +52,11 @@ export interface BaseRpcHarnessOptions {
    */
   readonly env?: PlumixEnv;
   /**
-   * Provider keys the harness should report on `ctx.oauthProviders`. Pass
-   * `["github"]` etc. when exercising the auth.oauthProviders procedure;
-   * default `[]` matches a passkey-only deploy.
+   * Auth config the harness projects onto `ctx.authMethods`, the way
+   * `buildApp` does. Pass `auth({ passkey, magicLink, oauth })` when
+   * exercising `auth.signInMethods`; omitted, the context reports no methods.
    */
-  readonly oauthProviders?: readonly OAuthProviderSummary[];
+  readonly auth?: PlumixAuthConfig;
   /**
    * Override the default session-cookie authenticator. Tests for
    * external-IdP-style flows (cfAccess, custom guards) pass an
@@ -131,7 +133,7 @@ function buildContext(
   blocks: BlockRegistry,
   marks: readonly MarkSpec[],
   request: Request,
-  oauthProviders: readonly OAuthProviderSummary[],
+  authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
   mailer: Mailer | undefined,
   siteName: string | undefined,
@@ -145,7 +147,7 @@ function buildContext(
     blocks,
     marks,
     logger: silentLogger,
-    oauthProviders,
+    authMethods,
     authenticator,
     mailer,
     siteName,
@@ -176,7 +178,7 @@ function assemble<TUser extends User | null>(
   marks: readonly MarkSpec[],
   request: Request,
   user: TUser,
-  oauthProviders: readonly OAuthProviderSummary[],
+  authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
   mailer: Mailer | undefined,
   siteName: string | undefined,
@@ -189,7 +191,7 @@ function assemble<TUser extends User | null>(
     blocks,
     marks,
     request,
-    oauthProviders,
+    authMethods,
     authenticator,
     mailer,
     siteName,
@@ -222,7 +224,7 @@ function assemble<TUser extends User | null>(
         marks,
         req,
         targetUser,
-        oauthProviders,
+        authMethods,
         authenticator,
         mailer,
         siteName,
@@ -245,7 +247,7 @@ export async function createRpcHarness(
   const hooks = options.hooks ?? new HookRegistryImpl();
   const plugins = options.plugins ?? createPluginRegistry();
   const env = options.env ?? {};
-  const oauthProviders = options.oauthProviders ?? [];
+  const authMethods = options.auth && resolveAuthMethods(options.auth);
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
   const pluginBlockSpecs = Array.from(plugins.blockSpecs.values()).map(
@@ -271,7 +273,7 @@ export async function createRpcHarness(
       marks,
       request,
       user,
-      oauthProviders,
+      authMethods,
       options.authenticator,
       options.mailer,
       options.siteName,
@@ -288,7 +290,7 @@ export async function createRpcHarness(
     marks,
     request,
     null,
-    oauthProviders,
+    authMethods,
     options.authenticator,
     options.mailer,
     options.siteName,

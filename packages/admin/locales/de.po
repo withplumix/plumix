@@ -508,7 +508,7 @@ msgid "editor.revisions.sheet.autosavesEmpty"
 msgstr "Automatische Speicherungen erscheinen hier, sobald Entwürfe-von-veröffentlicht verfügbar sind."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.back"
 msgstr "Zurück"
 
@@ -668,7 +668,12 @@ msgid "userEdit.email.dialog.title"
 msgstr "E-Mail-Adresse ändern"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/components/profile/user-email-field.tsx
+msgid "userEdit.email.changeUnavailable"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.title"
 msgstr "E-Mail prüfen"
 
@@ -772,7 +777,7 @@ msgstr "Weiter"
 
 #. label: the OAuth provider's display name (e.g. 'Google', 'GitHub')
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "Weiter mit {label}"
 
@@ -1425,13 +1430,13 @@ msgid "userInvite.email.label"
 msgstr "E-Mail"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/bootstrap.tsx
-msgid "auth.bootstrap.email"
+#: src/routes/_auth/-login-screen.tsx
+msgid "login.email.label"
 msgstr "E-Mail"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
-msgid "login.email.label"
+#: src/routes/_auth/bootstrap.tsx
+msgid "auth.bootstrap.email"
 msgstr "E-Mail"
 
 #. js-lingui-explicit-id
@@ -1445,7 +1450,7 @@ msgid "userEdit.email.error.mailerNotConfigured"
 msgstr "Eine E-Mail-Änderung erfordert einen serverseitig konfigurierten Magic-Link-Mailer. Übergeben Sie `auth.magicLink` und `mailer:` an `plumix({...})` zum Aktivieren."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.emailChange.success"
 msgstr "E-Mail bestätigt. Mit der neuen Adresse anmelden."
 
@@ -1460,7 +1465,7 @@ msgid "validate.email.maxLength"
 msgstr "E-Mail ist zu lang."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.submit"
 msgstr "Link per E-Mail senden"
 
@@ -1530,7 +1535,7 @@ msgid "auth.device.lookup.title"
 msgstr "Code aus Ihrer CLI eingeben"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.emailRequired"
 msgstr "Zuerst Ihre E-Mail oben eingeben."
 
@@ -1718,7 +1723,7 @@ msgid "validate.id.format"
 msgstr "id muss eine positive Ganzzahl sein"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.sent.description"
 msgstr "Wenn ein Konto für diese E-Mail existiert, haben wir einen Anmelde-Link gesendet. Der Link läuft in 15 Minuten ab."
 
@@ -2365,7 +2370,7 @@ msgid "core.adminNav.keyword.options"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.separator"
 msgstr "oder"
 
@@ -2924,7 +2929,7 @@ msgid "mailer.test.submit.pending"
 msgstr "Wird gesendet…"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.magicLink.pending"
 msgstr "Wird gesendet…"
 
@@ -3005,12 +3010,12 @@ msgid "editor.revisions.diffDialog.description"
 msgstr "Nebeneinander: diese Revision (links) vs. der aktuelle Eintrag (rechts)."
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.title"
 msgstr "Anmelden"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.submit"
 msgstr "Mit Passkey anmelden"
 
@@ -3061,7 +3066,7 @@ msgid "profile.sessions.signedIn"
 msgstr "Angemeldet {when}"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.passkey.pending"
 msgstr "Anmeldung läuft…"
 
@@ -3694,7 +3699,7 @@ msgid "metaBox.link.url"
 msgstr "URL"
 
 #. js-lingui-explicit-id
-#: src/routes/_auth/login.tsx
+#: src/routes/_auth/-login-screen.tsx
 msgid "login.description"
 msgstr "Verwenden Sie einen Passkey, holen Sie sich einen einmaligen E-Mail-Link oder fahren Sie mit einem Anbieter fort."
 
