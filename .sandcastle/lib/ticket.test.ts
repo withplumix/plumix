@@ -1,13 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { looksLikeTheRunBeingOver } from "./outage.js";
 import { workersALaneOversubscribes } from "./sandbox.js";
 import {
   readDeclinedTag,
   readFindingsTag,
   readPullRequestTag,
-  refuseToJudgeAgainstARedMain,
 } from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
@@ -176,37 +174,5 @@ describe("workersALaneOversubscribes", () => {
     expect(workersALaneOversubscribes(4)).toBe(
       workersALaneOversubscribes(2) * 2,
     );
-  });
-});
-
-describe("refuseToJudgeAgainstARedMain", () => {
-  const redKnip = {
-    name: "knip",
-    command: "pnpm knip",
-    output: "Unused exported types (1)\nPublicAuthor  type  schemas.ts:78:13",
-  };
-
-  test("a green main lets the ticket be judged on every gate", () => {
-    expect(() => refuseToJudgeAgainstARedMain([])).not.toThrow();
-  });
-
-  test("a gate red on main stops the run instead of being skipped for the ticket", () => {
-    expect(() => refuseToJudgeAgainstARedMain([redKnip])).toThrow(
-      /main is red in the sandbox \(knip\)/,
-    );
-  });
-
-  test("the refusal carries what the gate printed, so a person can act on it", () => {
-    expect(() => refuseToJudgeAgainstARedMain([redKnip])).toThrow(
-      /Unused exported types \(1\)/,
-    );
-  });
-
-  test("the refusal is one the loop treats as the run being over", () => {
-    try {
-      refuseToJudgeAgainstARedMain([redKnip]);
-    } catch (error) {
-      expect(looksLikeTheRunBeingOver(String(error))).toBe(true);
-    }
   });
 });

@@ -15,14 +15,12 @@ import {
 import { CHANGESET_GATE, GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
-  mainCommit,
   openPullRequest,
   pushBranch,
   queueForMerge,
   resetBranchToMain,
 } from "./github.js";
 import { say } from "./log.js";
-import { oncePerKey } from "./once-per-key.js";
 import { MERGE_BASE } from "./repo.js";
 import {
   AN_HOUR_IN_SECONDS,
@@ -186,57 +184,6 @@ const reviewAll = async (
   return collected;
 };
 
-const surveyMainForAlreadyRedGates = async (
-  sandbox: Executor,
-  journal: Journal,
-): Promise<readonly GateFailure[]> => {
-  const { failures } = await runGates(sandbox, GATES, {
-    stopAtFirstFailure: false,
-    retryAFailureOnce: true,
-    onResult: (result) =>
-      journal.record({
-        phase: `baseline:${result.name}`,
-        kind: "gate",
-        startedAt: result.startedAt,
-        durationMs: result.durationMs,
-        outcome: result.outcome,
-        detail: result.skippedBecause,
-        command: result.command,
-        exitCode: result.exitCode,
-      }),
-  });
-  return failures;
-};
-
-// Main's gates are a fact about main, not about a ticket. Lanes that start on
-// the same commit share one survey, which also keeps them from running the
-// suite three times at once and failing it on contention alone.
-const surveyMainOnce = oncePerKey(surveyMainForAlreadyRedGates);
-
-const FAILURE_TAIL_A_PERSON_READS = 3_000;
-
-// A gate red on main cannot tell a ticket's regression from main's, and
-// skipping it for the ticket is how regressions reached CI unchecked. Either CI
-// is red too, and nothing can merge, or the sandbox has drifted from CI — both
-// are the run's problem to stop on, not a ticket's to route around.
-export const MAIN_IS_RED = "main is red in the sandbox";
-
-export const refuseToJudgeAgainstARedMain = (
-  gatesRedOnMain: readonly GateFailure[],
-): void => {
-  if (gatesRedOnMain.length === 0) return;
-  const names = gatesRedOnMain.map(({ name }) => name).join(", ");
-  const printed = gatesRedOnMain
-    .map(
-      ({ command, output }) =>
-        `\`${command}\`:\n${output.slice(-FAILURE_TAIL_A_PERSON_READS)}`,
-    )
-    .join("\n\n");
-  throw new Error(
-    `${MAIN_IS_RED} (${names}), so no ticket can be judged against it\n\n${printed}`,
-  );
-};
-
 export interface Fixer {
   readonly apply: (phase: string, brief: string) => Promise<string | null>;
 }
@@ -337,11 +284,6 @@ export const shipTicket = async (
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {
-    say("\n--- baseline gates on main ---");
-    refuseToJudgeAgainstARedMain(
-      await surveyMainOnce(mainCommit(), sandbox, journal),
-    );
-
     say("\n--- implement ---");
     const implemented = await runAgentPhase("implement", IMPLEMENTER, {
       promptFile: join(PROMPT_DIR, "implement.md"),
