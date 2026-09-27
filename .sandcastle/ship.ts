@@ -19,7 +19,7 @@ import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
-const DEFAULT_LANES = 2;
+const DEFAULT_LANES = 3;
 const MERGE_POLL_INTERVAL_MS = 120_000;
 const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
