@@ -4,7 +4,6 @@ import type {
   BlockSpec,
   MaterializedAttrs,
 } from "plumix/blocks";
-import type { AppContext } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { defineBlock } from "plumix/blocks";
 import { useBasePath } from "plumix/blocks/renderer";
@@ -42,16 +41,12 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
     bound: async ({ ctx, attrs }: BlockLoaderArgs): Promise<string | null> => {
       const form = registry.get(slugOf(attrs));
       if (form?.bind === undefined) return null;
-      // Safety: core hands every block loader the request's `AppContext`;
-      // `@plumix/blocks` types it `unknown` only because it sits below
-      // core in the import graph and cannot name the type.
-      const app = ctx as AppContext;
-      const resolved = app.resolvedEntity;
+      const resolved = ctx.resolvedEntity;
       // An archive has no row id to sign; any other kind is simply not
       // the one this form asked for.
       if (resolved === null || resolved.kind === "archive") return null;
       if (resolved.kind !== form.bind) return null;
-      return signBound(app, form.slug, {
+      return signBound(ctx, form.slug, {
         type: resolved.kind,
         id: resolved.id,
       });

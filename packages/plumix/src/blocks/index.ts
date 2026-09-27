@@ -13,6 +13,19 @@
  * augmentation must go through one specifier or it fractures.
  */
 
+import type { AppContext } from "@plumix/core";
+
+// Core depends on `@plumix/blocks`, so the blocks package cannot name the
+// context its loaders receive. This façade depends on both, so it fills the
+// seam here, and the augmentation ships in this entry's `.d.ts` to every
+// program that imports a loader type from `plumix/blocks`.
+// eslint-disable-next-line no-restricted-syntax -- the façade filling a seam it owns, not a consumer registry augmentation (consumers augment only "plumix")
+declare module "@plumix/blocks" {
+  interface BlockLoaderContextRegistry {
+    readonly ctx: AppContext;
+  }
+}
+
 export {
   BlockContentValidationError,
   blockTextRoster,

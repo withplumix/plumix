@@ -3,12 +3,25 @@ import type { JsonObject } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
-// `ctx` is `unknown` here because `@plumix/blocks` can't depend on
-// `@plumix/core` (where `AppContext` lives) — core depends on blocks.
-// Block authors typically widen it themselves or pull from a typed
-// re-export at the consumer boundary.
+// Core depends on this package, so `AppContext` can't be named here. The
+// `plumix/blocks` façade depends on both and fills this registry with it; a
+// program that never loads the façade — this package's own — sees `unknown`.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; only the `plumix/blocks` façade fills it.
+export interface BlockLoaderContextRegistry {}
+
+export type BlockLoaderContext = BlockLoaderContextRegistry extends {
+  readonly ctx: infer C;
+}
+  ? C
+  : unknown;
+
 export interface BlockLoaderArgs {
-  readonly ctx: unknown;
+  /**
+   * The request's `AppContext`. When the editor refreshes a loader no public
+   * URL was matched, so `resolvedEntity` and `resolvedRoute` are `null` there
+   * and a loader must handle that.
+   */
+  readonly ctx: BlockLoaderContext;
   readonly attrs: JsonObject;
 }
 
@@ -122,7 +135,7 @@ export interface ResolveBlockLoadersOptions {
 export async function resolveBlockLoaders(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,
-  ctx: unknown,
+  ctx: BlockLoaderContext,
   options: ResolveBlockLoadersOptions = {},
 ): Promise<ResolvedBlockLoaders> {
   const entries = collectLoaderEntries(nodes, registry);
@@ -138,7 +151,7 @@ export async function resolveBlockLoaders(
 
 async function resolveEntry(
   entry: LoaderEntry,
-  ctx: unknown,
+  ctx: BlockLoaderContext,
   onLoaderError: ((event: LoaderErrorEvent) => void) | undefined,
 ): Promise<ResolvedBlockLoaderData> {
   // `Promise.resolve().then(...)` traps a synchronous throw from `fn`
