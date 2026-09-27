@@ -418,31 +418,40 @@ describe("getMenuByName", () => {
       return local;
     }
 
-    test("entry-kind item is current when resolvedEntity matches its id", async () => {
-      const post = await factories.entry.create({
-        type: "post",
-        slug: "active",
-        title: "Active",
-        status: "published",
-        authorId,
-      });
-      const termId = await seedMenu("active");
-      await seedItems(termId, [
-        { title: "Other", meta: { kind: "custom", url: "/other" } },
-        { title: "Linked", meta: { kind: "entry", entryId: post.id } },
-      ]);
+    // A preview render overlays an autosave onto the same row, so it is still
+    // the page the menu links to.
+    test.each([
+      ["a public render", false],
+      ["a preview render", true],
+    ])(
+      "entry-kind item is current when resolvedEntity matches its id, on %s",
+      async (_case, preview) => {
+        const post = await factories.entry.create({
+          type: "post",
+          slug: "active",
+          title: "Active",
+          status: "published",
+          authorId,
+        });
+        const termId = await seedMenu("active");
+        await seedItems(termId, [
+          { title: "Other", meta: { kind: "custom", url: "/other" } },
+          { title: "Linked", meta: { kind: "entry", entryId: post.id } },
+        ]);
 
-      const localCtx = ctxAtUrl("https://test.example/post/active", {
-        kind: "entry",
-        id: post.id,
-      });
-      const menu = await getMenuByName(localCtx, "active");
-      const items = menu?.items ?? [];
-      // Entry-kind items render the linked entry's title — "Linked" is
-      // the menu item's stored title; "Active" is the post's live title.
-      expect(items.find((i) => i.label === "Active")?.isCurrent).toBe(true);
-      expect(items.find((i) => i.label === "Other")?.isCurrent).toBe(false);
-    });
+        const localCtx = ctxAtUrl("https://test.example/post/active", {
+          kind: "entry",
+          id: post.id,
+          preview,
+        });
+        const menu = await getMenuByName(localCtx, "active");
+        const items = menu?.items ?? [];
+        // Entry-kind items render the linked entry's title — "Linked" is
+        // the menu item's stored title; "Active" is the post's live title.
+        expect(items.find((i) => i.label === "Active")?.isCurrent).toBe(true);
+        expect(items.find((i) => i.label === "Other")?.isCurrent).toBe(false);
+      },
+    );
 
     test("custom-URL item is current when its href matches the request pathname", async () => {
       const termId = await seedMenu("paths");

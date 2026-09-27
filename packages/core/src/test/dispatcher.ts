@@ -46,6 +46,7 @@ import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
+import { createPreviewToken } from "../auth/preview-token.js";
 import { createSession } from "../auth/sessions.js";
 import { plumix } from "../config.js";
 import { createAppContext } from "../context/app.js";
@@ -245,6 +246,15 @@ export interface DispatcherHarness {
     userId: number,
   ) => Promise<Request>;
   readonly seedUser: (role?: UserRole) => Promise<User>;
+  /**
+   * A `?preview=` token granting `userId`'s preview of `entryId`, as the
+   * editor's preview link mints one — so a render carrying it overlays that
+   * user's autosave onto the entry.
+   */
+  readonly mintPreviewToken: (args: {
+    readonly entryId: number;
+    readonly userId: number;
+  }) => Promise<string>;
   /** Pre-bound factories. Mirrors the `factory` surface of createRpcHarness. */
   readonly factory: Factories;
   /**
@@ -377,6 +387,7 @@ export async function createDispatcherHarness(
     },
     seedUser: async (role = "subscriber") =>
       userFactory.transient({ db }).create({ role }),
+    mintPreviewToken: (args) => createPreviewToken(db, args),
     factory: factoriesFor(db),
     spyAction: (name) => spyAction(app.hooks, name),
     spyFilter: (name) => spyFilter(app.hooks, name),

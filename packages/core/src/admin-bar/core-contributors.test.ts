@@ -257,7 +257,7 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
   test("does not appear when queried entry lacks pre-resolved details", () => {
     const nodes = collectAdminBarNodes(
       withCore(),
-      ctx({ queriedEntry: { kind: "entry", id: 42 } }),
+      ctx({ queriedEntry: { kind: "entry", id: 42, preview: false } }),
     );
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
   });
@@ -267,7 +267,7 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
     const nodes = collectAdminBarNodes(
       withCore(),
       ctx({
-        queriedEntry: { kind: "entry", id: 42 },
+        queriedEntry: { kind: "entry", id: 42, preview: false },
         queriedEntryDetails: { type: "post", canEdit: true },
         auth: {
           can: (cap: string) => {
@@ -294,7 +294,7 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
     const nodes = collectAdminBarNodes(
       withCore(),
       ctx({
-        queriedEntry: { kind: "entry", id: 42 },
+        queriedEntry: { kind: "entry", id: 42, preview: false },
         queriedEntryDetails: { type: "post", canEdit: false },
         auth: {
           can: (cap: string) => {

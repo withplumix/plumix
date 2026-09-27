@@ -1,4 +1,4 @@
-import type { CdnStore, ConnectedCdn, Logger } from "plumix";
+import type { CdnStore, ConnectedCdn, Logger, TelemetrySpan } from "plumix";
 import type { TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { entryPurgeTags, entryTag, eq } from "plumix/db";
@@ -7,7 +7,7 @@ import { entries } from "plumix/schema";
 import { describe, expect, test, vi } from "vitest";
 
 import type { CardRenderer } from "./renderer.js";
-import type { SeedEntryOverrides } from "./test/harness.js";
+import type { HarnessOptions, SeedEntryOverrides } from "./test/harness.js";
 import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
@@ -22,6 +22,22 @@ import {
 } from "./test/harness.js";
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
+
+/**
+ * The queries a request made for one entry row by id — the lookup the card
+ * route resolves an entry card's live row through.
+ */
+function entryLookups(spans: readonly TelemetrySpan[]): string[] {
+  return spans.flatMap((span) => {
+    const sql = span.attributes["db.sql"];
+    const own =
+      typeof sql === "string" &&
+      sql.includes('from "entries" where "entries"."id" = ?')
+        ? [sql]
+        : [];
+    return [...own, ...entryLookups(span.children)];
+  });
+}
 
 // One edit time for every seed a URL comparison makes, so the font set is the
 // only input that differs between the two cards.
@@ -717,5 +733,91 @@ describe("a card and the page it shares", () => {
     expect(await response.assertStatus(200).text()).toContain(
       `<text>Retitled in ${year}</text>`,
     );
+  });
+
+  describe("rendered through a preview link", () => {
+    // A theme card keyed on a field the editor drafts: the excerpt lands on
+    // the author's autosave, not the live row, while the entry is published.
+    const excerptCard = card.entry().define({
+      key: ({ data }) => cardKey.of("excerpt", data.entry.excerpt ?? ""),
+      render: ({ data }) => ({
+        type: "text",
+        text: `excerpt:${data.entry.excerpt ?? ""}`,
+      }),
+    });
+
+    async function draftedExcerpt(options: HarnessOptions = {}) {
+      const harness = await createHarness({
+        renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+        cards: [excerptCard],
+        ...options,
+      });
+      const editor = await harness.seedUser("editor");
+      const id = await seedEntry(harness, {
+        slug: "hello-world",
+        excerpt: "Live excerpt",
+      });
+      const saved = await harness.fetch("/_plumix/rpc/entry/update", {
+        as: editor,
+        json: { json: { id, excerpt: "Drafted excerpt" }, meta: [] },
+      });
+      saved.assertStatus(200);
+      const token = await harness.mintPreviewToken({
+        entryId: id,
+        userId: editor.id,
+      });
+      return { harness, token };
+    }
+
+    test("serves the head's card, computed from the live entry", async () => {
+      const { harness, token } = await draftedExcerpt();
+
+      const html = await (
+        await harness.fetch(`/posts/hello-world?preview=${token}`)
+      ).text();
+      const url = ogImageOf(html) ?? "";
+      const response = await harness.fetch(new URL(url).pathname);
+
+      const body = await response.assertStatus(200).text();
+      expect(body).toContain("excerpt:Live excerpt");
+      expect(body).not.toContain("Drafted excerpt");
+    });
+
+    test("publishes the URL the public page publishes", async () => {
+      const { harness, token } = await draftedExcerpt();
+
+      const preview = ogImageOf(
+        await (
+          await harness.fetch(`/posts/hello-world?preview=${token}`)
+        ).text(),
+      );
+      const published = ogImageOf(await headOf(harness, "hello-world"));
+
+      expect(preview).toBeDefined();
+      expect(preview).toBe(published);
+    });
+
+    test("is the only render that goes back for the live row", async () => {
+      const lookups: string[][] = [];
+      const { harness, token } = await draftedExcerpt({
+        telemetry: {
+          consumers: [
+            {
+              id: "entry-lookups",
+              onRequestEnd: (snapshot) => {
+                lookups.push(entryLookups(snapshot.spans));
+              },
+            },
+          ],
+        },
+      });
+      lookups.length = 0;
+
+      await headOf(harness, "hello-world");
+      await harness.fetch(`/posts/hello-world?preview=${token}`);
+      await harness.drainDeferred();
+
+      expect(lookups).toEqual([[], [expect.any(String)]]);
+    });
   });
 });

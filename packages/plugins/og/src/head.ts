@@ -4,7 +4,7 @@
 // subscription in `index.ts` typecheck.
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { resolveListingPage, ruleLabel } from "plumix/plugin";
+import { ruleLabel } from "plumix/plugin";
 
 import type { OgImage } from "@plumix/plugin-seo";
 
@@ -14,7 +14,7 @@ import type { CardTarget } from "./card-target.js";
 import type { CardDefinition, CardSize } from "./card.js";
 import type { OgCardSkip, OgChainTrace } from "./chain-trace.js";
 import { resolveCardIdentity } from "./card-identity.js";
-import { cardUrl } from "./card-route.js";
+import { cardTargetData, cardUrl } from "./card-route.js";
 import { cardIdentityFor } from "./card-target.js";
 import { cardSize } from "./card.js";
 import { OG_PANEL_ID } from "./chain-trace.js";
@@ -103,25 +103,35 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
 
 /**
  * The page a card is rendered from, which is not always the page the head is
- * rendering. A card names an archive rather than one paginated slice of it, and
- * the route only ever resolves the archive's first page — so a head deeper in
- * the pagination has to ask the same question the route will, or it publishes a
- * digest taken over a different set of entries and every scraper following it
- * is redirected away from the image the page promised.
+ * rendering. Where the two differ the head has to ask the same question the
+ * route will, or it publishes a digest taken over different data and every
+ * scraper following it is redirected away from the image the page promised.
+ * They differ in two places:
  *
- * Costs a listing query, and only on `/page/2` and beyond: on the first page
- * the head is already holding exactly what the route would resolve.
+ * - A card names an archive rather than one paginated slice of it, and the
+ *   route only ever resolves the archive's first page.
+ * - A preview link renders the author's autosave over the entry, and the route
+ *   only ever resolves the live row — a card is public, so a draft is never on
+ *   it. The in-progress card is the editor's card preview's to show.
+ *
+ * Costs a query only on `/page/2` and beyond, or on a preview render: anywhere
+ * else the head is already holding exactly what the route would resolve.
  */
 async function cardPageData(
   ctx: AppContext,
   data: TemplateData,
 ): Promise<TemplateData> {
   const identity = cardIdentityFor(data);
-  if (identity === null || identity.kind === "entry" || identity.page === 1) {
-    return data;
-  }
-  const first = await resolveListingPage(ctx, identity.target);
-  return first?.data ?? data;
+  if (identity === null) return data;
+  const differs =
+    identity.kind === "entry" ? isPreviewRender(ctx) : identity.page !== 1;
+  if (!differs) return data;
+  return (await cardTargetData(ctx, identity.target)) ?? data;
+}
+
+function isPreviewRender(ctx: AppContext): boolean {
+  const entity = ctx.resolvedEntity;
+  return entity?.kind === "entry" && entity.preview;
 }
 
 export interface CardChoiceInput {

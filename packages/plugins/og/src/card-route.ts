@@ -198,19 +198,33 @@ async function resolveCardPage(
   ctx: AppContext,
   target: CardTarget,
 ): Promise<CardPage | null> {
-  // Every kind resolves through core, which is what keeps a card rendered from
-  // the page's own data rather than from a second, drifting copy of the
-  // queries behind it — pagination included, which core pins to page one.
-  const data =
-    target.kind === "entry"
-      ? await entryData(ctx, target.id)
-      : ((await resolveListingPage(ctx, target))?.data ?? null);
+  const data = await cardTargetData(ctx, target);
   if (data === null || !(await isShareablePage(ctx, data))) return null;
 
   const identity = cardIdentityFor(data);
   return identity === null ? null : { node: identity.node, data };
 }
 
+/**
+ * The data a card for `target` is computed from — the public page's, whichever
+ * page is asking. The head asks it too wherever the page it is rendering is not
+ * that page, since a digest taken over anything else names a card this route
+ * never serves.
+ */
+export async function cardTargetData(
+  ctx: AppContext,
+  target: CardTarget,
+): Promise<TemplateData | null> {
+  // Every kind resolves through core, which is what keeps a card rendered from
+  // the page's own data rather than from a second, drifting copy of the
+  // queries behind it — pagination included, which core pins to page one.
+  return target.kind === "entry"
+    ? entryData(ctx, target.id)
+    : ((await resolveListingPage(ctx, target))?.data ?? null);
+}
+
+// The live row, never an autosave: the card is public and edge cached, so a
+// draft an author is previewing has no place on it.
 async function entryData(
   ctx: AppContext,
   id: number,
