@@ -16,10 +16,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVerticalIcon, XIcon } from "lucide-react";
 
 import { Button } from "./button.js";
 import { destructiveRowClassName } from "./destructive.js";
+import { GripVertical, X } from "./icons.js";
 
 // Generic vertical-list sortable primitive built around dnd-kit. Used
 // by `mediaList` / `userList` / `entryList` / repeater rows — any
@@ -34,6 +34,10 @@ interface SortableListProps<T extends { readonly id: string }> {
   readonly renderItem: (item: T) => ReactNode;
   readonly disabled?: boolean;
   readonly testId?: string;
+  // Accessible names for the icon-only handle and remove buttons; admin-ui
+  // carries no catalog, so the caller passes them already localized.
+  readonly reorderLabel: string;
+  readonly removeLabel: string;
 }
 
 export function SortableList<T extends { readonly id: string }>({
@@ -43,6 +47,8 @@ export function SortableList<T extends { readonly id: string }>({
   renderItem,
   disabled = false,
   testId,
+  reorderLabel,
+  removeLabel,
 }: SortableListProps<T>): ReactNode {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -77,6 +83,8 @@ export function SortableList<T extends { readonly id: string }>({
               id={item.id}
               disabled={disabled}
               onRemove={onRemove}
+              reorderLabel={reorderLabel}
+              removeLabel={removeLabel}
               testId={testId ? `${testId}-row-${item.id}` : undefined}
             >
               {renderItem(item)}
@@ -94,6 +102,8 @@ interface SortableRowProps {
   readonly disabled: boolean;
   readonly onRemove?: (id: string) => void;
   readonly testId?: string;
+  readonly reorderLabel: string;
+  readonly removeLabel: string;
 }
 
 function SortableRow({
@@ -102,6 +112,8 @@ function SortableRow({
   disabled,
   onRemove,
   testId,
+  reorderLabel,
+  removeLabel,
 }: SortableRowProps): ReactNode {
   const {
     attributes,
@@ -127,12 +139,12 @@ function SortableRow({
         type="button"
         className="text-muted-foreground hover:text-foreground cursor-grab touch-none disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
-        aria-label="Reorder"
+        aria-label={reorderLabel}
         data-testid={testId ? `${testId}-handle` : undefined}
         {...attributes}
         {...listeners}
       >
-        <GripVerticalIcon className="size-4" />
+        <GripVertical className="size-4" />
       </button>
       <div className="min-w-0 flex-1">{children}</div>
       {onRemove ? (
@@ -145,10 +157,10 @@ function SortableRow({
           onClick={() => {
             onRemove(id);
           }}
-          aria-label="Remove"
+          aria-label={removeLabel}
           data-testid={testId ? `${testId}-remove` : undefined}
         >
-          <XIcon className="size-4" />
+          <X className="size-4" />
         </Button>
       ) : null}
     </li>

@@ -56,6 +56,14 @@ const M = {
     id: "metaBox.multiReference.addMore",
     message: "Add",
   }),
+  reorder: defineMessage({
+    id: "metaBox.multiReference.reorder",
+    message: "Reorder",
+  }),
+  remove: defineMessage({
+    id: "metaBox.multiReference.remove",
+    message: "Remove",
+  }),
   dialogDescription: defineMessage({
     id: "metaBox.multiReference.dialogDescription",
     message: "Search and pick {kind} entries",
@@ -186,6 +194,8 @@ export function MultiReferencePicker({
           items={sortableItems}
           onReorder={handleReorder}
           onRemove={required && value.length === 1 ? undefined : handleRemove}
+          reorderLabel={labelFn(M.reorder)}
+          removeLabel={labelFn(M.remove)}
           renderItem={(item) => {
             if (item.result) {
               return (

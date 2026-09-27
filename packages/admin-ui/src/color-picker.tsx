@@ -18,6 +18,9 @@ interface ColorPickerProps {
   readonly name?: string;
   readonly testId?: string;
   readonly placeholder?: string;
+  // Accessible name for the icon-less swatch button; admin-ui carries no
+  // catalog, so the caller passes it already localized.
+  readonly triggerLabel: string;
   // Forwarded to the hex input — the value control a label should name and
   // focus. Without this, a wrapping <FormControl> lands its injected id/aria on
   // the outer div (not a form field) and the input goes unlabelled.
@@ -34,6 +37,7 @@ export function ColorPicker({
   name,
   testId,
   placeholder = "#000000",
+  triggerLabel,
   id,
   "aria-describedby": ariaDescribedby,
   "aria-invalid": ariaInvalid,
@@ -48,7 +52,7 @@ export function ColorPicker({
           <button
             type="button"
             disabled={disabled}
-            aria-label="Open color picker"
+            aria-label={triggerLabel}
             data-testid={testId ? `${testId}-swatch` : undefined}
             className={cn(
               "border-input ring-ring/30 size-9 shrink-0 rounded-md border outline-hidden transition-[box-shadow] hover:ring-2 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50",

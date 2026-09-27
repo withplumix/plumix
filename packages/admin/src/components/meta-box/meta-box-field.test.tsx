@@ -5,6 +5,7 @@ import {
   registerPluginFieldType,
 } from "@/lib/plugin-registry.js";
 import { createQueryClient } from "@/providers/query-client.js";
+import { i18n } from "@lingui/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -27,6 +28,8 @@ function editorText(surface: HTMLElement): string {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  i18n.load({ en: {} });
+  i18n.activate("en");
   _resetPluginRegistry();
 });
 
@@ -522,6 +525,20 @@ describe("MetaBoxField dispatcher", () => {
     await userEvent.clear(hex);
     await userEvent.type(hex, "#abcdef");
     expect(onChange).toHaveBeenLastCalledWith("#abcdef");
+  });
+
+  test("color: the swatch trigger's accessible name comes from the active catalog", () => {
+    i18n.load({
+      de: { "metaBox.field.color.openPicker": "Farbwähler öffnen" },
+    });
+    i18n.activate("de");
+    renderWithI18n(
+      <Harness fieldDef={field({ inputType: "color" })} initial="#1a2b3c" />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input-swatch")).toHaveAttribute(
+      "aria-label",
+      "Farbwähler öffnen",
+    );
   });
 
   test("range: slider exposes value via the inline display + carries bounds on root", () => {
