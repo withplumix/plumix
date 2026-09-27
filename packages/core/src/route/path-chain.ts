@@ -1,7 +1,7 @@
 /**
  * Inbound counterpart to `permalink.ts` — given the segments captured
- * by a `:path+` URLPattern match, find the leaf entity (entry or term)
- * whose parent chain exactly matches the URL.
+ * by a `:path+` URLPattern match, find the entry whose parent chain
+ * exactly matches the URL. A term needs no chain: its slug is its address.
  *
  * The leaf is looked up by `(table, slug)` (single indexed lookup); for
  * multi-segment URLs the leaf's ancestor chain is then loaded via the
@@ -23,8 +23,7 @@ import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
-import { exposesHierarchicalUrls } from "./compile.js";
-import { loadAncestorSlugs, loadTermAncestorSlugs } from "./permalink.js";
+import { loadAncestorSlugs } from "./permalink.js";
 import { previewTokenGrantsEntry } from "./preview.js";
 
 export async function findEntryByPath(
@@ -61,89 +60,45 @@ export async function findEntryByPath(
   return chainsMatch(actual, expected) ? leaf : null;
 }
 
-export async function findTermByPath(
-  ctx: AppContext,
-  taxonomy: string,
-  segments: readonly string[],
-): Promise<Term | null> {
-  if (segments.length === 0) return null;
-  if (segments.some((segment) => segment === "")) return null;
-  const leafSlug = segments[segments.length - 1];
-  if (leafSlug === undefined) return null;
-
-  const leaf = await ctx.db.query.terms.findFirst({
-    where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, leafSlug)),
-  });
-  if (!leaf) return null;
-
-  const expected = segments.slice(0, -1);
-  const actual =
-    leaf.parentId === null
-      ? []
-      : await loadTermAncestorSlugs(ctx, leaf.parentId);
-
-  return chainsMatch(actual, expected) ? leaf : null;
-}
-
 /**
- * The term a URL's term segments name, read the way the router compiled the
- * taxonomy: where its URLs are flat, the one segment is the term's slug whether
- * or not the term is nested; otherwise the segments are its whole slug path.
+ * The term a slug names in a taxonomy. `(taxonomy, slug)` is unique, so the
+ * slug alone is the term's address — the ancestor segments of a nested URL
+ * identify nothing the slug didn't (ADR 0012).
  *
  * Memoized per request, because a term page asks twice — once to resolve its
  * subject, once when its listing's `inTerm` compiles — and both must be the
  * one lookup. A miss is remembered like a hit, so a term created later in the
  * same request (a cron invocation shares one memo) stays unfound to it.
  */
-export function findTermAt(
+export function findTermBySlug(
   ctx: AppContext,
   taxonomy: string,
-  segments: readonly string[],
+  slug: string,
 ): Promise<Term | null> {
-  return ctx.memo(termAtKey(taxonomy, segments), async () => {
-    const registered = ctx.plugins.termTaxonomies.get(taxonomy);
-    const flat =
-      registered !== undefined && !exposesHierarchicalUrls(registered);
-    const [slug] = segments;
-    if (!flat || segments.length !== 1 || slug === undefined || slug === "") {
-      return findTermByPath(ctx, taxonomy, segments);
-    }
-    return (
+  if (slug === "") return Promise.resolve(null);
+  return ctx.memo(
+    termKey(taxonomy, slug),
+    async () =>
       (await ctx.db.query.terms.findFirst({
         where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, slug)),
-      })) ?? null
-    );
-  });
+      })) ?? null,
+  );
 }
 
-/**
- * Remember a term loaded another way under the segments {@link findTermAt}
- * resolves it from, and return them — for a caller about to narrow a query by
- * it.
- */
-export async function rememberTermSegments(
-  ctx: AppContext,
-  term: Term,
-): Promise<readonly string[]> {
-  const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
-  const nested = taxonomy !== undefined && exposesHierarchicalUrls(taxonomy);
-  const segments =
-    nested && term.parentId !== null
-      ? [...(await loadTermAncestorSlugs(ctx, term.parentId)), term.slug]
-      : [term.slug];
-  await ctx.memo(termAtKey(term.taxonomy, segments), () =>
+/** Remember a term loaded another way as the term at its slug. */
+export async function rememberTerm(ctx: AppContext, term: Term): Promise<void> {
+  await ctx.memo(termKey(term.taxonomy, term.slug), () =>
     Promise.resolve(term),
   );
-  return segments;
 }
 
-function termAtKey(taxonomy: string, segments: readonly string[]): string {
-  return `core:term-at:${JSON.stringify([taxonomy, ...segments])}`;
+function termKey(taxonomy: string, slug: string): string {
+  return `core:term-at:${JSON.stringify([taxonomy, slug])}`;
 }
 
 /**
  * The user an author URL's slug names. Memoized per request for the reason
- * {@link findTermAt} is: the author page and its listing's `byAuthor` ask the
+ * {@link findTermBySlug} is: the author page and its listing's `byAuthor` ask the
  * same question.
  */
 export function findAuthorBySlug(

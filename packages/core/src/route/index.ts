@@ -97,7 +97,12 @@ export function routePublicRequest(
 // An unmatched root is the front page; any other unmatched URL is a 404.
 function unmatchedFallback(url: URL): RouteMatch | null {
   if (url.pathname !== "/") return null;
-  return { intent: { kind: "front-page" }, pattern: "/", params: {} };
+  return {
+    intent: { kind: "front-page" },
+    pattern: "/",
+    params: {},
+    isPermalinkRoute: true,
+  };
 }
 
 // Extensions that only ever name static assets (favicon.ico, hashed chunks,

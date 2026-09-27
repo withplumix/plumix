@@ -87,12 +87,13 @@ const match = (intent: RouteMatch["intent"]): RouteMatch => ({
   intent,
   pattern: "/",
   params: {},
+  isPermalinkRoute: true,
 });
 
 const matchWith = (
   intent: RouteMatch["intent"],
   params: Record<string, string>,
-): RouteMatch => ({ intent, pattern: "/", params });
+): RouteMatch => ({ intent, pattern: "/", params, isPermalinkRoute: true });
 
 // Narrow a gate result to a Response — a redirect/challenge case asserts it
 // short-circuited rather than allowed the render through.

@@ -24,7 +24,7 @@ import { resolveTermMeta } from "../../rpc/procedures/term/meta.js";
 import { archiveEntries } from "../archive-entries.js";
 import { archiveSlugForEntryType } from "../compile.js";
 import { paginate } from "../paginate.js";
-import { rememberAuthor, rememberTermSegments } from "../path-chain.js";
+import { rememberAuthor, rememberTerm } from "../path-chain.js";
 import { buildTermArchiveUrl } from "../permalink.js";
 import { resolveAuthorRow, resolveTerm } from "./build-resolved-entries.js";
 import { listEntryPage } from "./entry-listing.js";
@@ -128,13 +128,15 @@ export async function archiveData(
 }
 
 /**
- * `params` carries the term's segments as its URL spells them, the ones its
- * page was resolved from, so compiling the listing's `inTerm` replays that
- * lookup.
+ * `url` is the term's canonical URL, taken from the caller because the term
+ * page already built it to decide whether to redirect. `params` carries the
+ * capture its page was resolved from, so compiling the listing's `inTerm`
+ * replays that lookup.
  */
 export async function termData(
   ctx: AppContext,
   term: Term,
+  url: string | null,
   params: Record<string, string>,
   page: number,
 ): Promise<ResolvedListingPage | null> {
@@ -147,13 +149,7 @@ export async function termData(
   );
   if (listing === null) return null;
 
-  // Independent reads — the ancestor walk does not depend on the meta bag.
-  const [meta, url] = await Promise.all([
-    resolveTermMeta(ctx, term.taxonomy, term.meta),
-    // Single archive term: the async builder walks ancestors for the full
-    // nested URL (one call — no N+1).
-    buildTermArchiveUrl(ctx, term),
-  ]);
+  const meta = await resolveTermMeta(ctx, term.taxonomy, term.meta);
   const data = await ctx.hooks.applyFilter("resolve:term:data", {
     kind: "taxonomy",
     taxonomy: term.taxonomy,
@@ -283,8 +279,14 @@ export async function resolveListingPage(
       if (!term) return null;
       const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
       if (!taxonomy?.isPublic) return null;
-      const path = await rememberTermSegments(ctx, term);
-      return termData(ctx, term, { path: path.join("/") }, 1);
+      await rememberTerm(ctx, term);
+      return termData(
+        ctx,
+        term,
+        await buildTermArchiveUrl(ctx, term),
+        { path: term.slug },
+        1,
+      );
     }
     case "author": {
       const author = await ctx.db.query.users.findFirst({

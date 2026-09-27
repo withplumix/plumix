@@ -227,9 +227,8 @@ export { xmlEscape } from "./seo/xml.js";
 export { escapeHtml } from "./escape-html.js";
 // The reverse-routing vocabulary, for a plugin that answers at the site root
 // (`registerPublicRoute`) and has to address the same URL space the router
-// compiled — `findTermByPath` is the inbound half, the rest the outbound. A
-// feed or a sitemap that spelled any of these itself would drift from the
-// pages it points at the first time a rewrite option moved one.
+// compiled. A feed or a sitemap that spelled any of these itself would drift
+// from the pages it points at the first time a rewrite option moved one.
 export { dateRange } from "./route/date-range.js";
 export {
   archiveRoutes,
@@ -245,7 +244,6 @@ export {
   // pathnames the archive really answers at rather than reading `routes`.
   FRAMEWORK_PAGINATION_SUFFIX,
 } from "./route/compile.js";
-export { findTermByPath } from "./route/path-chain.js";
 // Which archive owns a URL and what its entry query is, and the routes every
 // such archive is listed at — so a package that shows an archive another way
 // (a feed) reads the same set of entries the page does (ADR 0008).

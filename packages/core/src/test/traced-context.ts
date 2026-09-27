@@ -25,13 +25,17 @@ export interface TracedContext {
  * function issues (request-memo coverage, N+1 guards).
  */
 export async function createTracedContext(
-  options: CreateDispatcherHarnessOptions = {},
+  options: CreateDispatcherHarnessOptions & {
+    /** The request the context serves, for a resolver that reads its URL. */
+    readonly request?: Request;
+  } = {},
 ): Promise<TracedContext> {
   const harness = await createDispatcherHarness(options);
   const ctx = createTestContext({
     db: harness.db,
     env: harness.env,
     clientAddress: options.clientAddress,
+    request: options.request,
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
     telemetry: {

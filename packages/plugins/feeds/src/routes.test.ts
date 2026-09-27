@@ -691,7 +691,7 @@ describe("term feed routes", () => {
     });
   });
 
-  test("a nested term's feed is served at its nested path", async () => {
+  test("a nested term's feed is served at its nested path and at its slug alone", async () => {
     const h = await harness(blogWithNestedTaxonomyPlugin);
     const author = await h.seedUser("admin");
     const europe = await h.factory.term.create({
@@ -720,9 +720,12 @@ describe("term feed routes", () => {
     nested.assertStatus(200);
     expect(await nested.text()).toContain("Paris Post");
 
-    // The flat URL for the nested term does not resolve (it isn't a top-level
-    // term), so it stays a 404.
-    (await h.fetch("/region/france/feed")).assertStatus(404);
+    // A term is addressed by its slug (ADR 0012), so the bare slug names the
+    // same term. The feed is this plugin's own route, which serves where it
+    // matched rather than redirecting to the nested path.
+    const bare = await h.fetch("/region/france/feed");
+    bare.assertStatus(200);
+    expect(await bare.text()).toContain("Paris Post");
   });
 
   test("a non-taxonomy /<x>/<y>/feed path is nobody's feed", async () => {

@@ -63,7 +63,6 @@ export {
   dateRange,
   entryGroups,
   exposesHierarchicalUrls,
-  findTermByPath,
   FRAMEWORK_PAGINATION_SUFFIX,
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,

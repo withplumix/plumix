@@ -27,4 +27,11 @@ export interface RouteRule {
   readonly rawPattern: string;
   readonly intent: RouteIntent;
   readonly priority: number;
+  /**
+   * Compiled by core from a registration's permalink configuration, so the
+   * URLs it matches are ones core also emits and core owns their canonical
+   * form. A plugin's `registerRewriteRule` is its own canon; `registeredBy`
+   * cannot tell the two apart, as it is set on auto rules too.
+   */
+  readonly isPermalinkRoute: boolean;
 }

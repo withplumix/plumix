@@ -105,6 +105,7 @@ export function compileRouteMap(
       intent: { kind: "front-page" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     // Paginated variant goes first so `/search/foo/page/2` doesn't
     // accidentally match the bare-query rule with `:query = "foo/page/2"`
@@ -115,6 +116,7 @@ export function compileRouteMap(
       intent: { kind: "search" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     {
       pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_QUERY_PATTERN }),
@@ -122,6 +124,7 @@ export function compileRouteMap(
       intent: { kind: "search" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     {
       pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_BARE_PATTERN }),
@@ -129,6 +132,7 @@ export function compileRouteMap(
       intent: { kind: "search" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     // Paginated variant first, mirroring search — keeps the more-specific rule
     // ahead of the bare `/authors/:slug`.
@@ -138,6 +142,7 @@ export function compileRouteMap(
       intent: { kind: "author" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     {
       pattern: new URLPattern({ pathname: FRAMEWORK_AUTHOR_PATTERN }),
@@ -145,6 +150,7 @@ export function compileRouteMap(
       intent: { kind: "author" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     },
     // Date archives, most-specific first (day → month → year, paginated before
     // bare) so a more-granular URL is never captured by a coarser rule.
@@ -163,6 +169,7 @@ export function compileRouteMap(
       intent: { kind: "date" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
+      isPermalinkRoute: true,
     })),
   ];
 
@@ -188,6 +195,7 @@ export function compileRouteMap(
       intent: registered.intent,
       priority: registered.priority,
       registeredBy: registered.registeredBy,
+      isPermalinkRoute: false,
     });
   }
 
@@ -209,6 +217,7 @@ export function compileRouteMap(
         intent: { kind: "custom", name: archive.name },
         priority: archive.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
         registeredBy: archive.registeredBy,
+        isPermalinkRoute: false,
       });
     }
   }
@@ -264,6 +273,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: entryType.registeredBy,
+      isPermalinkRoute: true,
       onFrameworkCapture,
     });
     rules.push({
@@ -272,6 +282,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: entryType.registeredBy,
+      isPermalinkRoute: true,
       onFrameworkCapture,
     });
   }
@@ -289,6 +300,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     intent: { kind: "single", entryType: entryType.name },
     priority: baseSlug === "" ? CATCH_ALL_ROUTE_PRIORITY : AUTO_ROUTE_PRIORITY,
     registeredBy: entryType.registeredBy,
+    isPermalinkRoute: true,
     onFrameworkCapture: rewriteSlugCapture(entryType, "entry_type", baseSlug),
   });
 
@@ -334,6 +346,7 @@ function autoRulesForTermTaxonomy(
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: taxonomy.registeredBy,
+      isPermalinkRoute: true,
       onFrameworkCapture,
     },
     {
@@ -342,6 +355,7 @@ function autoRulesForTermTaxonomy(
       intent,
       priority: AUTO_ROUTE_PRIORITY,
       registeredBy: taxonomy.registeredBy,
+      isPermalinkRoute: true,
       onFrameworkCapture,
     },
   ];

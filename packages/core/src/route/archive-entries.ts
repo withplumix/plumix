@@ -67,11 +67,11 @@ function entryTypeEntries(
 function termEntries(
   plugins: PluginRegistry,
   taxonomy: string,
-  path: readonly string[],
+  slug: string,
 ): EntryQuery {
   return publicEntriesQuery(plugins)
     .ofTypes(...termPageEntryTypeNames(plugins, taxonomy))
-    .inTerm(taxonomy, path);
+    .inTerm(taxonomy, slug);
 }
 
 /** An author's archive: their public entries of non-hierarchical types. */
@@ -117,10 +117,10 @@ function definedEntries(
     case "archive":
       return entryTypeEntries(plugins, archive.entryType);
     case "taxonomy": {
-      const path = termPathParam(params);
-      return path === null
+      const slug = termSlugParam(params);
+      return slug === null
         ? null
-        : termEntries(plugins, archive.taxonomy, path);
+        : termEntries(plugins, archive.taxonomy, slug);
     }
     case "author":
       return params.slug === undefined
@@ -142,16 +142,15 @@ function definedEntries(
 }
 
 /**
- * The term segments a taxonomy route captured: `:path+` where the taxonomy
- * exposes nested URLs, `:term` where they are flat.
+ * The slug of the term a taxonomy route captured: the last segment of a
+ * `:path+` capture, else the `:term` capture. The ancestors a nested URL spells
+ * out are decoration — a slug names one term in its taxonomy (ADR 0012).
  */
-export function termPathParam(
-  params: Record<string, string>,
-): readonly string[] | null {
+export function termSlugParam(params: Record<string, string>): string | null {
   if (params.path !== undefined && params.path !== "") {
-    return params.path.split("/");
+    return params.path.split("/").at(-1) ?? null;
   }
-  if (params.term !== undefined && params.term !== "") return [params.term];
+  if (params.term !== undefined && params.term !== "") return params.term;
   return null;
 }
 

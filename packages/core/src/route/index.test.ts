@@ -95,6 +95,7 @@ describe("routePublicRequest — stage order", () => {
       pattern: "/post/:slug",
       params: { slug: "hello" },
       intent: { kind: "single", entryType: "post" },
+      isPermalinkRoute: true,
     });
     expect(outcome.intent).toEqual({ kind: "single", entryType: "post" });
   });

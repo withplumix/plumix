@@ -9,6 +9,7 @@ function rule(pathname: string, priority = 50): RouteRule {
     rawPattern: pathname,
     intent: { kind: "single", entryType: "post" },
     priority,
+    isPermalinkRoute: true,
   };
 }
 

@@ -100,15 +100,19 @@ The prefix is the taxonomy name unless `rewrite.slug` overrides it, and `rewrite
 
 A term's parent has to belong to the same taxonomy, and the server rejects a cross-taxonomy parent on write. Deleting a term re-roots its children rather than removing them, setting their `parentId` to null, and drops that term's assignments.
 
-<Aside type="caution" title="Renaming a parent slug moves every term under it">
+<Aside type="caution" title="Renaming a slug moves that term's URL">
   Plumix assembles the nested path from the ancestors' slugs at render time.
-  Rename Italian to italian-regional and every URL below it changes with no
-  redirect behind it. Treat a parent slug as part of the public contract.
+  Rename Italian to italian-regional and every URL below it changes. The terms
+  under it still answer at their old URLs with a 301, because a term is found by
+  its own slug, but `/cuisine/italian` itself has no redirect behind it. Treat a
+  term's slug as part of the public contract.
 </Aside>
 
 ## Term archives
 
 A term archive is a paginated listing of the entries carrying that term. It shows entries that are `published` and carry a publish time, so a scheduled recipe stays off its cuisine archive until the cron flips it.
+
+A term is addressed by its slug, which is unique within its taxonomy. The ancestors in a nested URL identify nothing the slug didn't, so the archive routes a taxonomy compiles answer any path ending in the slug and 301 it to the term's canonical URL: `/cuisine/sicilian` and `/cuisine/french/sicilian` both redirect to `/cuisine/italian/sicilian`, keeping the page number and query string. A rule a plugin registers with `registerRewriteRule` is its own canon. `/dishes/:term` serves `/dishes/sicilian` as it stands, nested term or not, and never redirects.
 
 `archivePerPage` sets the page size and defaults to 20. It sits on the taxonomy, so cuisine archives and diet archives can page differently.
 

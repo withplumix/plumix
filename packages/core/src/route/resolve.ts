@@ -29,9 +29,10 @@ import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { entrySearchCondition } from "../search/conditions.js";
-import { archiveEntries, termPathParam } from "./archive-entries.js";
+import { archiveEntries, termSlugParam } from "./archive-entries.js";
 import { resolveEditMode } from "./edit-mode.js";
-import { findAuthorBySlug, findTermAt } from "./path-chain.js";
+import { findAuthorBySlug, findTermBySlug } from "./path-chain.js";
+import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import {
   buildResolvedEntries,
@@ -85,14 +86,18 @@ export async function resolvePublicRoute(
   match: RouteMatch,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  ctx.resolvedRoute = match;
+  ctx.resolvedRoute = {
+    pattern: match.pattern,
+    params: match.params,
+    intent: match.intent,
+  };
   switch (match.intent.kind) {
     case "single":
       return resolveSingle(ctx, match.intent, match.params, renderEnv);
     case "archive":
       return resolveArchive(ctx, match.intent, match.params, renderEnv);
     case "taxonomy":
-      return resolveTaxonomy(ctx, match.intent, match.params, renderEnv);
+      return resolveTaxonomy(ctx, match, match.intent, renderEnv);
     case "front-page":
       return resolveFrontPage(ctx, match.params, renderEnv);
     case "author":
@@ -188,18 +193,37 @@ async function resolveSearch(
 
 async function resolveTaxonomy(
   ctx: AppContext,
+  match: RouteMatch,
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
-  params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const path = termPathParam(params);
-  if (path === null) return notFound("public-term-not-found");
-  const term = await findTermAt(ctx, intent.taxonomy, path);
+  const { params } = match;
+  const slug = termSlugParam(params);
+  if (slug === null) return notFound("public-term-not-found");
+  const term = await findTermBySlug(ctx, intent.taxonomy, slug);
   if (term === null) return notFound("public-term-not-found");
+
+  // The slug found the term; the path around it is only canonical when core
+  // compiled the route. A plugin's rule serves at the URL it chose (ADR 0012).
+  const url = await buildTermArchiveUrl(ctx, term);
+  if (match.isPermalinkRoute && url !== null) {
+    const request = new URL(ctx.request.url);
+    const canonical =
+      params.page === undefined ? url : `${url}/page/${params.page}`;
+    if (withBasePath(request.pathname, ctx.basePath) !== canonical) {
+      return permanentRedirect(`${ctx.origin}${canonical}${request.search}`);
+    }
+  }
 
   ctx.resolvedEntity = { kind: "term", id: term.id };
 
-  const page = await termData(ctx, term, params, parsePageParam(params.page));
+  const page = await termData(
+    ctx,
+    term,
+    url,
+    params,
+    parsePageParam(params.page),
+  );
   if (page === null) return notFound("public-term-page-out-of-range");
   return renderListing(ctx, renderEnv, page, "public-taxonomy-no-template");
 }

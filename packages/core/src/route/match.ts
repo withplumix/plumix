@@ -12,7 +12,10 @@ export interface ResolvedRoute {
   readonly intent: RouteIntent;
 }
 
-export type RouteMatch = ResolvedRoute;
+/** The route as the resolver reads it: whether core owns the URL's canonical form. */
+export interface RouteMatch extends ResolvedRoute {
+  readonly isPermalinkRoute: boolean;
+}
 
 export function matchRoute(
   url: URL,
@@ -25,6 +28,7 @@ export function matchRoute(
       intent: rule.intent,
       pattern: rule.rawPattern,
       params: extractParams(result.pathname),
+      isPermalinkRoute: rule.isPermalinkRoute,
     };
   }
   return null;
