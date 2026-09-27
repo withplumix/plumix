@@ -38,6 +38,16 @@ const shopPlugin = definePlugin("shop", (ctx) => {
   });
 });
 
+const siteTitleShortcodePlugin = definePlugin("site-title", (ctx) => {
+  ctx.registerShortcode({
+    name: "site-title",
+    render: ({ context }) => {
+      const title = context.siteSettings.title;
+      return typeof title === "string" ? title : "";
+    },
+  });
+});
+
 const YEAR = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
   new Date(),
 );
@@ -265,6 +275,32 @@ describe("resolvePublicRoute — single", () => {
     );
     const body = await response.text();
     expect(body).toContain(`<h1>Best Shoes for ${YEAR}</h1>`);
+  });
+
+  test("a title shortcode reads the configured site settings", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, siteTitleShortcodePlugin],
+    });
+    await h.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Acme",
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "about",
+      title: "About [site-title]",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/about"),
+    );
+    expect(await response.text()).toContain("<h1>About Acme</h1>");
   });
 
   test("expands a title a resolve:single:data subscriber rewrote", async () => {
@@ -835,6 +871,30 @@ describe("resolvePublicRoute — archive", () => {
     const body = await response.text();
     expect(body).toContain(`Best of ${YEAR}`);
     expect(body).not.toContain("[year]");
+  });
+
+  test("a listed entry's title shortcode reads the configured site settings", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, siteTitleShortcodePlugin],
+    });
+    await h.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Acme",
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "news",
+      title: "News from [site-title]",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/post"));
+    expect(await response.text()).toContain("News from Acme");
   });
 
   test("archive with no published entries renders the empty-state copy", async () => {

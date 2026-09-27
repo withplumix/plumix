@@ -23,6 +23,7 @@ import {
 } from "../../images/role-images.js";
 import { resolveEntriesMeta } from "../../rpc/procedures/entry/meta.js";
 import { resolveTermsMeta } from "../../rpc/procedures/term/meta.js";
+import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   buildEntryPermalinkSync,
   buildTermArchiveUrlSync,
@@ -114,17 +115,22 @@ export function resolveTerm(
 /**
  * An entry's title with its shortcodes expanded, so `[year]` reads the same in
  * a heading, a listing and a card. The one place the shortcode context for a
- * title is built.
+ * title is built. The site settings load is request-memoized, so a page render
+ * that reads them for its `<title>` pays for them once.
  */
-export function expandEntryTitle(
+export async function expandEntryTitle(
   ctx: AppContext,
   entry: ResolvedEntry,
-): string {
+): Promise<string> {
+  // A title with no tag in it reads nothing, so a batch of plain titles costs
+  // no settings read — the same short-circuit `expandShortcodes` makes.
+  if (!entry.title.includes("[")) return entry.title;
+  const siteSettings = await loadSiteSettings(ctx);
   // The spread is what makes the entry readable as an open bag: a shortcode
   // looks its fields up by name, and TypeScript withholds the implicit index
   // signature an `interface` would need to be read that way.
   return expandShortcodes(entry.title, ctx.shortcodes, {
-    siteSettings: {},
+    siteSettings,
     locale: ctx.locale.code,
     entry: { ...entry },
   });
@@ -203,7 +209,7 @@ export async function resolveEntryList(
     );
     termsByEntryId.set(entryId, bucket);
   }
-  return rows.map((row, rowIdx) => {
+  const resolved = rows.map((row, rowIdx): ResolvedEntry => {
     const author = authorById.get(row.authorId);
     if (!author) {
       // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
@@ -212,7 +218,7 @@ export async function resolveEntryList(
       );
     }
     const meta = metaBags[rowIdx] ?? {};
-    const resolved: ResolvedEntry = {
+    return {
       ...row,
       meta,
       storedMeta: row.meta,
@@ -226,6 +232,11 @@ export async function resolveEntryList(
       author,
       url: buildEntryPermalinkSync(ctx, row),
     };
-    return { ...resolved, title: expandEntryTitle(ctx, resolved) };
   });
+  return Promise.all(
+    resolved.map(async (entry) => ({
+      ...entry,
+      title: await expandEntryTitle(ctx, entry),
+    })),
+  );
 }

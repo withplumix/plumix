@@ -265,7 +265,7 @@ export async function resolveEntryData(
   if (data.entry.title === entry.title) return data;
   return {
     ...data,
-    entry: { ...data.entry, title: expandEntryTitle(ctx, data.entry) },
+    entry: { ...data.entry, title: await expandEntryTitle(ctx, data.entry) },
   };
 }
 

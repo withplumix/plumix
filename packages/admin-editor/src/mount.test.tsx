@@ -39,8 +39,18 @@ describe("mountEditorRuntime", () => {
         return typeof headline === "string" ? headline : "";
       },
     });
+    const siteTitle = defineShortcode({
+      name: "site-title",
+      render: ({ context }) => {
+        const title = context.siteSettings.title;
+        return typeof title === "string" ? title : "";
+      },
+    });
     const shortcodes = new Map<string, ShortcodeSpec>(
-      [...coreShortcodes, price, headline].map((spec) => [spec.name, spec]),
+      [...coreShortcodes, price, headline, siteTitle].map((spec) => [
+        spec.name,
+        spec,
+      ]),
     );
 
     // Server-render the page in edit mode, then mount the canvas over it and
@@ -58,6 +68,7 @@ describe("mountEditorRuntime", () => {
             locale: "de",
             shortcodes,
             entry: { headline: "Sommer" },
+            siteSettings: { title: "Acme" },
           }}
         >
           <BlockRenderer content={content} />
@@ -92,6 +103,12 @@ describe("mountEditorRuntime", () => {
     test("reads a field off the queried entry", () => {
       const [server, canvas] = serverThenCanvas("<p>[headline]</p>");
       expect(server).toBe("Sommer");
+      expect(canvas).toBe(server);
+    });
+
+    test("reads the site's settings", () => {
+      const [server, canvas] = serverThenCanvas("<p>[site-title]</p>");
+      expect(server).toBe("Acme");
       expect(canvas).toBe(server);
     });
   });

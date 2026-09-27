@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 
 import type { BlockRegistry } from "../block-registry.js";
-import type { HydratedEntry } from "../context-bags.js";
+import type { HydratedEntry, SiteSettings } from "../context-bags.js";
 import type { EntryContent } from "../entry-content.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
@@ -72,6 +72,8 @@ export interface PlumixContextValue {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
   readonly entry?: HydratedEntry | null;
+  /** The site's `site` settings group, which shortcodes and blocks read. */
+  readonly siteSettings?: SiteSettings;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;
   /** Builds optimized image URLs (the `imageDelivery` transform); absent = no optimization. */
@@ -118,6 +120,7 @@ function renderOptions(ctx: PlumixContextValue): RenderBlockTreeOptions {
     locale: ctx.locale,
     shortcodes: ctx.shortcodes,
     entry: ctx.entry,
+    siteSettings: ctx.siteSettings,
     editing: ctx.mode === "edit",
     renderFilters: ctx.renderFilters,
     addBlockLabel: ctx.addBlockLabel,

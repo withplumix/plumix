@@ -133,6 +133,8 @@ export interface RenderBlockTreeOptions {
   readonly shortcodes?: ShortcodeRegistry;
   /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
   readonly entry?: HydratedEntry | null;
+  /** The site's `site` settings group, exposed via `BlockContext.siteSettings`. */
+  readonly siteSettings?: SiteSettings;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
   /** Localized "Add a block" label for the edit-mode empty-slot affordance.
@@ -463,6 +465,7 @@ export function renderBlockTree(
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,
     entry: options?.entry ?? DEFAULT_BLOCK_CONTEXT.entry,
+    siteSettings: options?.siteSettings ?? DEFAULT_BLOCK_CONTEXT.siteSettings,
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
     editing: options?.editing ?? false,

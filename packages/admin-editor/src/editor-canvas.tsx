@@ -14,6 +14,7 @@ import type {
   HydratedEntry,
   ResolvedBlockLoaders,
   ShortcodeRegistry,
+  SiteSettings,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
@@ -56,6 +57,8 @@ interface EditorCanvasProps {
   /** The queried entry (from the SSR embed) body shortcodes read — JSON-lossy,
    *  see `parseRenderEnv`. */
   readonly entry?: HydratedEntry | null;
+  /** The site's `site` settings group (from the SSR embed) shortcodes read. */
+  readonly siteSettings?: SiteSettings;
 }
 
 // X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
@@ -81,6 +84,7 @@ export function EditorCanvas({
   htmlAllowlist = BASELINE_HTML_ALLOWLIST,
   locale,
   entry,
+  siteSettings,
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
   // Seed loader data from the SSR embed once (before React replaces the mount
@@ -335,6 +339,7 @@ export function EditorCanvas({
           locale,
           shortcodes,
           entry,
+          siteSettings,
           addBlockLabel,
         }}
       >
