@@ -225,7 +225,6 @@ export const repairPullRequest = async (
       [install, ...GATES, CHANGESET_GATE],
       journal,
       fixer,
-      { fixRoundsUsed: 0 },
       "repair",
     );
     if (gateBlocked) return declined(gateBlocked);

@@ -212,10 +212,6 @@ export const fixerFor = (
   };
 };
 
-export interface GateBudget {
-  fixRoundsUsed: number;
-}
-
 // Runs the gates, handing each first failure to the fixer, until they are
 // green (null) or the fixer is out of rounds or declines (the reason).
 export const gatesUntilGreen = async (
@@ -223,9 +219,9 @@ export const gatesUntilGreen = async (
   gates: readonly Gate[],
   journal: Journal,
   fixer: Fixer,
-  budget: GateBudget,
   label: string,
 ): Promise<string | null> => {
+  let fixRoundsUsed = 0;
   for (let round = 1; ; round += 1) {
     say(`\n--- gate (${label}, round ${round}) ---`);
     const { failures } = await runGates(sandbox, gates, {
@@ -246,13 +242,11 @@ export const gatesUntilGreen = async (
     const [failure] = failures;
     if (!failure) return null;
 
-    budget.fixRoundsUsed += 1;
-    if (budget.fixRoundsUsed > MAX_GATE_FIX_ROUNDS) {
+    fixRoundsUsed += 1;
+    if (fixRoundsUsed > MAX_GATE_FIX_ROUNDS) {
       return `still failing \`${failure.command}\` after ${MAX_GATE_FIX_ROUNDS} fix rounds`;
     }
-    say(
-      `--- fix gate failure (${budget.fixRoundsUsed}/${MAX_GATE_FIX_ROUNDS}) ---`,
-    );
+    say(`--- fix gate failure (${fixRoundsUsed}/${MAX_GATE_FIX_ROUNDS}) ---`);
     const declined = await fixer.apply(
       `fix#${label}.${round}`,
       asGateFailureBrief(failure),
@@ -305,23 +299,12 @@ export const shipTicket = async (
       runAgentPhase,
       implemented.iterations.at(-1)?.sessionId,
     );
-    const budget: GateBudget = { fixRoundsUsed: 0 };
     let reviewFixes = 0;
     let pass = 0;
     let advisory: readonly Finding[] = [];
 
     while (true) {
       pass += 1;
-      const gateBlocked = await gatesUntilGreen(
-        sandbox,
-        [...GATES, CHANGESET_GATE],
-        journal,
-        fixer,
-        budget,
-        `pass${pass}`,
-      );
-      if (gateBlocked) return { status: "blocked", reason: gateBlocked };
-
       say(`--- review (pass ${pass}) ---`);
       const findings = await reviewAll(
         runAgentPhase,
@@ -359,6 +342,17 @@ export const shipTicket = async (
         };
       }
     }
+
+    // Last, so they judge the branch exactly as it will be pushed: every
+    // review fix is in, and nothing but a gate fix follows them.
+    const gateBlocked = await gatesUntilGreen(
+      sandbox,
+      [...GATES, CHANGESET_GATE],
+      journal,
+      fixer,
+      "final",
+    );
+    if (gateBlocked) return { status: "blocked", reason: gateBlocked };
 
     say("\n--- land ---");
     pushBranch(branch, sandbox.worktreePath);
