@@ -378,6 +378,11 @@ msgid "plugin.media.library.noMatches"
 msgstr "没有符合搜索条件的文件。"
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.storageRequired"
+msgstr "上传需要存储适配器 — 请在 plumix.config.ts 中设置 `storage:`。"
+
+#. js-lingui-explicit-id
 #: src/index.ts
 msgid "plugin.media.keyword.images"
 msgstr ""

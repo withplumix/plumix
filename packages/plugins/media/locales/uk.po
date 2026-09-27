@@ -378,6 +378,11 @@ msgid "plugin.media.library.noMatches"
 msgstr "Жодного файлу не знайдено за вашим запитом."
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.storageRequired"
+msgstr "Для завантаження потрібен адаптер сховища — задайте `storage:` у plumix.config.ts."
+
+#. js-lingui-explicit-id
 #: src/index.ts
 msgid "plugin.media.keyword.images"
 msgstr ""
