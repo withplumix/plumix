@@ -378,6 +378,11 @@ msgid "plugin.media.library.noMatches"
 msgstr "No files match your search."
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.library.storageRequired"
+msgstr "Uploads need a storage adapter — set `storage:` in plumix.config.ts."
+
+#. js-lingui-explicit-id
 #: src/index.ts
 msgid "plugin.media.keyword.images"
 msgstr "images"

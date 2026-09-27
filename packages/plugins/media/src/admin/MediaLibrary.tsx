@@ -7,7 +7,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { basePath } from "plumix/admin";
+import { basePath, isSlotConfigured } from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -341,6 +341,9 @@ export function MediaLibrary({
   const [dragging, setDragging] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isPicker = mode === "picker";
+  // Without a storage adapter every upload fails, so no gesture may start one
+  // (ADR 0014).
+  const canUpload = isSlotConfigured("storage");
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
@@ -492,7 +495,7 @@ export function MediaLibrary({
       data-testid="media-library"
       data-mode={mode}
       className="relative flex min-h-full gap-6"
-      {...dropProps}
+      {...(canUpload ? dropProps : {})}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-6">
         <header className="flex items-center justify-between">
@@ -519,7 +522,9 @@ export function MediaLibrary({
               data-testid="media-library-search"
               className="w-56"
             />
-            <UploadButton onSelect={(files) => void startUpload(files)} />
+            {canUpload && (
+              <UploadButton onSelect={(files) => void startUpload(files)} />
+            )}
           </div>
         </header>
 
@@ -553,11 +558,21 @@ export function MediaLibrary({
                 message="No files match your search."
               />
             </p>
-          ) : (
+          ) : canUpload ? (
             <Dropzone
               onSelect={(files) => void startUpload(files)}
               highlight={dragging}
             />
+          ) : (
+            <p
+              data-testid="media-library-storage-required"
+              className="text-muted-foreground text-sm"
+            >
+              <Trans
+                id="plugin.media.library.storageRequired"
+                message="Uploads need a storage adapter — set `storage:` in plumix.config.ts."
+              />
+            </p>
           ))}
 
         {list.status === "success" && items.length > 0 && (
