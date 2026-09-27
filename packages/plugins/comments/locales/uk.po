@@ -175,6 +175,11 @@ msgid "plugin.comments.error.unreachable"
 msgstr "Не вдалося надіслати ваш коментар. Спробуйте ще раз."
 
 #. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.load_failed"
+msgstr "Не вдалося завантажити ці коментарі. Спробуйте ще раз."
+
+#. js-lingui-explicit-id
 #: src/refusals.ts
 msgid "plugin.comments.error.invalid_json"
 msgstr "Не вдалося прочитати цей коментар."

@@ -190,6 +190,11 @@ msgid "plugin.comments.error.unreachable"
 msgstr "Your comment could not be sent. Please try again."
 
 #. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.load_failed"
+msgstr "Those comments could not be loaded. Please try again."
+
+#. js-lingui-explicit-id
 #: src/refusals.ts
 msgid "plugin.comments.error.invalid_json"
 msgstr "That comment could not be read."

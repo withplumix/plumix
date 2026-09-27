@@ -175,6 +175,11 @@ msgid "plugin.comments.error.unreachable"
 msgstr "无法发送你的评论，请重试。"
 
 #. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.load_failed"
+msgstr "无法加载这些评论，请重试。"
+
+#. js-lingui-explicit-id
 #: src/refusals.ts
 msgid "plugin.comments.error.invalid_json"
 msgstr "无法读取该评论。"

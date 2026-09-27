@@ -7,10 +7,15 @@
 // belongs on the theme's own component, which imports this and is the
 // thing that hydrates.
 import { useCallback, useRef, useState } from "react";
+import { labelSourceText } from "plumix/i18n";
 
+import type { ResolvedComment } from "./server/load-thread.js";
 import type { CommentFormError, CommentStatus } from "./types.js";
-import { postComment, submitAction } from "./wire.js";
+import { LOAD_FAILED } from "./messages.js";
+import { REFUSALS } from "./refusals.js";
+import { fetchCommentPage, postComment, submitAction } from "./wire.js";
 
+export type { ResolvedComment } from "./server/load-thread.js";
 export type { CommentFormError, CommentStatus } from "./types.js";
 
 /** One comment, as a theme's own controls collect it. */
@@ -121,4 +126,92 @@ export function usePlumixCommentForm(options: {
   );
 
   return { errors, submitting, status, errorFor, submit };
+}
+
+/**
+ * What a theme loading older comments gets back: the comments, and
+ * whether there are more. The markup is the theme's, and so is the first
+ * page, which the `comments` template dep already rendered.
+ */
+export interface PlumixCommentThreadState {
+  /**
+   * Every root comment this hook has loaded, oldest page last, each with
+   * its replies. Empty until the first `loadMore` lands.
+   */
+  readonly comments: readonly ResolvedComment[];
+  /** Whether a page older than the last one loaded is still there. */
+  readonly hasMore: boolean;
+  /** True from the moment a request leaves until its answer lands. */
+  readonly loading: boolean;
+  /** Why the last request came back empty-handed, or null. */
+  readonly error: string | null;
+  /**
+   * Fetch the next older page and append it. A failed page is retried by
+   * calling this again.
+   */
+  loadMore(): Promise<void>;
+}
+
+/**
+ * The older root comments of a thread, without the rendering of them.
+ *
+ *     const thread = usePlumixCommentThread({
+ *       entryId: props.entryId,
+ *       cursor: props.cursor,
+ *     });
+ *
+ * `cursor` is the `nextCursor` of the thread the template rendered, so
+ * the first press loads the page after it. Every comment carries
+ * `createdAt` as a `Date`, as it does server-side, so one item component
+ * renders both.
+ */
+export function usePlumixCommentThread(options: {
+  readonly entryId: number;
+  /** The rendered thread's `nextCursor`; null when it had no more. */
+  readonly cursor: string | null;
+  /**
+   * The subdirectory this deployment is mounted under. Read from the page
+   * when omitted, which is right for a theme island on a public page.
+   */
+  readonly basePath?: string;
+}): PlumixCommentThreadState {
+  const { entryId, basePath } = options;
+  const [comments, setComments] = useState<readonly ResolvedComment[]>([]);
+  const [hasMore, setHasMore] = useState(options.cursor !== null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // A ref because nothing renders it, and a retry after a failure must
+  // ask for the page that failed rather than the one after it.
+  const cursor = useRef(options.cursor);
+  // The same guard `usePlumixCommentForm.submit` keeps, for the same
+  // reason: a second press in one tick would append one page twice.
+  const inFlight = useRef(false);
+
+  const loadMore = useCallback(async (): Promise<void> => {
+    if (!hasMore || inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true);
+    try {
+      const answer = await fetchCommentPage(entryId, cursor.current, basePath);
+      if (!answer.ok) {
+        setError(
+          labelSourceText(
+            answer.reason === "unreachable"
+              ? LOAD_FAILED
+              : REFUSALS[answer.reason].message,
+          ),
+        );
+        return;
+      }
+      cursor.current = answer.nextCursor;
+      setComments((loaded) => [...loaded, ...answer.comments]);
+      setHasMore(answer.hasMore);
+      setError(null);
+    } finally {
+      inFlight.current = false;
+      setLoading(false);
+    }
+  }, [entryId, basePath, hasMore]);
+
+  return { comments, hasMore, loading, error, loadMore };
 }
