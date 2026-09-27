@@ -143,12 +143,24 @@ describe("entryQuery", () => {
     ).toEqual(["tagged"]);
   });
 
-  test("inTerm cannot resolve an unknown path, so the query has no answer", async () => {
-    expect(
-      await selected(entryQuery().inTerm("category", ["missing"])),
-    ).toBeNull();
+  test("inTerm resolves a nested term from its slug alone", async () => {
+    expect(await selected(entryQuery().inTerm("category", "tennis"))).toEqual([
+      "tagged",
+    ]);
+  });
+
+  test("inTerm addresses the term by a path's last segment, whatever precedes it", async () => {
     expect(
       await selected(entryQuery().inTerm("category", ["tennis", "sport"])),
+    ).toEqual([]);
+    expect(
+      await selected(entryQuery().inTerm("category", ["golf", "tennis"])),
+    ).toEqual(["tagged"]);
+  });
+
+  test("inTerm cannot resolve an unknown slug, so the query has no answer", async () => {
+    expect(
+      await selected(entryQuery().inTerm("category", ["missing"])),
     ).toBeNull();
     expect(await selected(entryQuery().inTerm("tag", ["tennis"]))).toBeNull();
   });

@@ -36,6 +36,8 @@ _Avoid_: termTaxonomy (that is the code identifier; the domain word is taxonomy)
 
 **Slug**:
 The URL-safe identifier of an entry (unique per type) or term (unique per taxonomy).
+A term is addressed by its slug alone; the ancestors in a nested term URL are
+canonical decoration, not part of its address (ADR 0012).
 
 **Status**:
 An entry's publication state: `draft`, `published`, `scheduled`, or `trash`.

@@ -5,7 +5,7 @@ import { metaJsonPath } from "../db/meta-path.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { dateRange } from "../route/date-range.js";
-import { findAuthorBySlug, findTermAt } from "../route/path-chain.js";
+import { findAuthorBySlug, findTermBySlug } from "../route/path-chain.js";
 import { EntryQueryError } from "./errors.js";
 
 /**
@@ -18,7 +18,7 @@ type EntryNarrowing =
   | {
       readonly kind: "term";
       readonly taxonomy: string;
-      readonly path: readonly string[];
+      readonly slug: string;
     }
   | { readonly kind: "author"; readonly slug: string }
   | {
@@ -86,11 +86,11 @@ export interface EntryQuery {
   /** Entries of these types. Two calls intersect, they don't union. */
   ofTypes: (...names: readonly string[]) => EntryQuery;
   /**
-   * Entries attached to the term at this slug path in this taxonomy — one
-   * segment for a top-level term, `parent/child` for a nested one, and the
-   * slug alone for any term of a taxonomy whose URLs are flat. It is the path
-   * the term's page sits at, so a term page and a query naming it agree. A
-   * path no term answers to leaves the query unresolvable.
+   * Entries attached to the term this slug, or the last segment of this slug
+   * path, names in this taxonomy. The last segment addresses the term: a slug
+   * is unique in its taxonomy, so the ancestors before it identify nothing,
+   * and a term page and a query naming it agree whichever URL the page was
+   * reached at. A slug no term answers to leaves the query unresolvable.
    */
   inTerm: (taxonomy: string, path: string | readonly string[]) => EntryQuery;
   /**
@@ -196,7 +196,7 @@ function queryOf(state: QueryState): EntryQuery {
       narrowedBy({
         kind: "term",
         taxonomy,
-        path: typeof path === "string" ? [path] : path,
+        slug: typeof path === "string" ? path : (path.at(-1) ?? ""),
       }),
     byAuthor: (slug: string) => narrowedBy({ kind: "author", slug }),
     inDateRange: (
@@ -245,7 +245,11 @@ async function conditionsFor(
     case "types":
       return [inArray(entries.type, [...narrowing.names])];
     case "term": {
-      const term = await findTermAt(ctx, narrowing.taxonomy, narrowing.path);
+      const term = await findTermBySlug(
+        ctx,
+        narrowing.taxonomy,
+        narrowing.slug,
+      );
       if (term === null) return null;
       const attached = ctx.db
         .select({ id: entryTerm.entryId })
@@ -339,7 +343,7 @@ export function entryQueryOrder(query: EntryQuery): readonly SQL[] {
 /**
  * The one condition a query narrows by, for the caller to `and` onto its own.
  * A query that narrows nothing compiles to a condition every row satisfies;
- * `null` is a query that names something no row could match — a term path
+ * `null` is a query that names something no row could match — a term slug
  * nothing answers to — which a route surface reads as a 404 rather than as an
  * empty result.
  *

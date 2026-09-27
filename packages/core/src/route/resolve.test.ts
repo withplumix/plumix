@@ -1520,34 +1520,117 @@ describe("resolvePublicRoute — taxonomy", () => {
     expect(body).not.toContain("Wine 06");
   });
 
-  test("hierarchical taxonomy with mismatched ancestor returns 404", async () => {
-    const hierarchicalTaxPlugin = definePlugin("geo", (ctx) => {
+  // Europe > France, with a published post filed under France. `places` adds a
+  // plugin's own `/places/:term` rule on top of the nested auto route.
+  async function seedRegions(
+    options: { places?: boolean; basePath?: string } = {},
+  ) {
+    const geo = definePlugin("geo", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerTermTaxonomy("region", {
         label: "Regions",
         isHierarchical: true,
         entryTypes: ["post"],
       });
+      if (options.places === true) {
+        ctx.registerRewriteRule("/places/:term", {
+          kind: "taxonomy",
+          taxonomy: "region",
+        });
+      }
     });
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalTaxPlugin],
+      plugins: [geo],
+      basePath: options.basePath,
     });
+    const author = await h.seedUser("admin");
     const europe = await h.factory.term.create({
       taxonomy: "region",
       slug: "europe",
       name: "Europe",
     });
-    await h.factory.term.create({
+    const france = await h.factory.term.create({
       taxonomy: "region",
       slug: "france",
       name: "France",
       parentId: europe.id,
     });
-    // /region/asia/france — "france" exists under "europe", not "asia".
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "wine",
+      title: "Wine",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: france.id });
+    return h;
+  }
+
+  test("a plugin rule capturing :term lists a nested term of a nested-URL taxonomy", async () => {
+    const h = await seedRegions({ places: true });
     const response = await h.dispatch(
-      new Request("https://cms.example/region/asia/france"),
+      new Request("https://cms.example/places/france"),
     );
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>France</h1>");
+    expect(body).toContain("Wine");
+  });
+
+  test("a plugin rule capturing :term still lists a top-level term", async () => {
+    const h = await seedRegions({ places: true });
+    const response = await h.dispatch(
+      new Request("https://cms.example/places/europe"),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>Europe</h1>");
+  });
+
+  test("a plugin rule's URL is served as it is, never redirected to the term's canonical URL", async () => {
+    const h = await seedRegions({ places: true });
+    const response = await h.dispatch(
+      new Request("https://cms.example/places/france?ref=feed"),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  test.each([
+    ["a nested term's bare slug", "/region/france"],
+    ["a path through the wrong ancestor", "/region/asia/france"],
+  ])("%s on core's route 301s to the canonical URL", async (_case, path) => {
+    const h = await seedRegions();
+    const response = await h.dispatch(
+      new Request(`https://cms.example${path}`),
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/region/europe/france",
+    );
+  });
+
+  test.each(["/region/europe/france", "/region/europe"])(
+    "the canonical URL %s serves without a redirect",
+    async (path) => {
+      const h = await seedRegions();
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`),
+      );
+      expect(response.status).toBe(200);
+    },
+  );
+
+  test("a non-canonical later page 301s with its page number, base path and query string kept", async () => {
+    const h = await seedRegions({ basePath: "/blog" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/blog/region/france/page/2?utm=x"),
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/blog/region/europe/france/page/2?utm=x",
+    );
   });
 
   test("draft entries tagged with the term are excluded", async () => {
@@ -1763,6 +1846,7 @@ describe("resolvePublicRoute — each built-in archive lists its entry query", (
   ])("%s looks its subject up once", async (_kind, path, table) => {
     const traced = await createTracedContext({
       plugins: [archiveQueriesPlugin],
+      request: new Request(`https://cms.example${path}`),
     });
     const h = traced.harness;
     const author = await h.factory.author.create({
