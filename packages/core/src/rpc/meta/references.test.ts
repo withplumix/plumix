@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { AppContext } from "../../context/app.js";
+import type { Entry } from "../../db/schema/entries.js";
 import type { JsonValue } from "../../json.js";
 import type {
   MetaBoxField,
@@ -10,6 +11,9 @@ import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { PhotoReference } from "../../test/photo-lookup.js";
 import { embeddedPageTags } from "../../cdn/embedded-tags.js";
 import { withUser } from "../../context/app.js";
+import { eq } from "../../db/index.js";
+import { entries } from "../../db/schema/entries.js";
+import { readEntryType } from "../../entries/read-service.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
 import {
   adminUser,
@@ -21,6 +25,8 @@ import {
 import { photoField, photoProfilePlugin } from "../../test/photo-lookup.js";
 import { authedCtx, createRpcHarness } from "../../test/rpc.js";
 import { createTracedContext } from "../../test/traced-context.js";
+import { fireEntryPublished } from "../procedures/entry/lifecycle.js";
+import { publishDueScheduledEntries } from "../procedures/entry/publish-scheduled.js";
 import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
   MetaSanitizationError,
@@ -1694,5 +1700,106 @@ describe("reference hydration memo (request-scoped)", () => {
 
     expect((asEditor[0]?.featured as { id: string }).id).toBe(String(draft.id));
     expect(asVisitor[0]?.featured).toBeNull();
+  });
+});
+
+// A write in the same execution announces itself through the lifecycle action
+// it already fires, and the memo drops what that write made stale (#2517). The
+// traced harness configures no `cdn`, so none of this rides on a CDN.
+describe("reference hydration memo (invalidated by a write)", () => {
+  const featured: MetaBoxField = {
+    key: "featured",
+    label: "Featured",
+    type: "string",
+    inputType: "entry",
+    referenceTarget: { kind: "entry", scope: { entryTypes: ["post"] } },
+  };
+  const findFeatured = (key: string) =>
+    key === "featured" ? featured : undefined;
+  const bagsFor = (id: number) => [
+    { findField: findFeatured, decoded: { featured: String(id) } },
+  ];
+
+  async function publish(ctx: AppContext, entry: Entry, title: string) {
+    const [row] = await ctx.db
+      .update(entries)
+      .set({ status: "published", title })
+      .where(eq(entries.id, entry.id))
+      .returning();
+    if (row === undefined) throw new Error("the entry to publish is gone");
+    await fireEntryPublished(ctx, row);
+  }
+
+  test("a hydration after publishing the entry reads the post-write payload", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const admin = await harness.factory.admin.create({});
+    const draft = await harness.factory.entry.create({
+      authorId: admin.id,
+      type: "post",
+      status: "draft",
+      title: "Before",
+    });
+    const editor = withUser(ctx, admin, null);
+
+    await run(async () => {
+      const before = await resolveMetaBags(editor, bagsFor(draft.id));
+      await publish(editor, draft, "After");
+      const queriesBeforeRehydrate = dbQueryCount();
+      const after = await resolveMetaBags(editor, bagsFor(draft.id));
+
+      expect((before[0]?.featured as { title: string }).title).toBe("Before");
+      expect((after[0]?.featured as { title: string }).title).toBe("After");
+      expect(dbQueryCount()).toBeGreaterThan(queriesBeforeRehydrate);
+    });
+  });
+
+  test("an id that hydrated to nothing hydrates once it is published", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const draft = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "draft",
+      title: "Hidden",
+    });
+
+    await run(async () => {
+      const before = await resolveMetaBags(ctx, bagsFor(draft.id));
+      await publish(ctx, draft, "Visible");
+      const after = await resolveMetaBags(ctx, bagsFor(draft.id));
+
+      expect(before[0]?.featured).toBeNull();
+      expect((after[0]?.featured as { title: string }).title).toBe("Visible");
+    });
+  });
+
+  test("a bulk publish leaves what it did not write memoized", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const kept = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+    });
+    await harness.factory.entry.createList(3, {
+      authorId: author.id,
+      type: "post",
+      status: "scheduled",
+      publishedAt: new Date(Date.now() - 1000),
+    });
+
+    await run(async () => {
+      await resolveMetaBags(ctx, bagsFor(kept.id));
+      await readEntryType(ctx, kept.id);
+      expect(await publishDueScheduledEntries(ctx)).toBe(3);
+      const queriesAfterPublish = dbQueryCount();
+      await resolveMetaBags(ctx, bagsFor(kept.id));
+      await readEntryType(ctx, kept.id);
+
+      // Three posts of the same type published, and neither the hydrated
+      // post nor its type row is read again: each publish drops its own
+      // entry's tags, not the type's.
+      expect(dbQueryCount()).toBe(queriesAfterPublish);
+    });
   });
 });

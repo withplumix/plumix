@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { and, eq } from "./db/index.js";
+import { settings } from "./db/schema/settings.js";
 import { settingsLoader } from "./template-deps-core.js";
 import { createTracedContext } from "./test/traced-context.js";
 
@@ -72,5 +74,42 @@ describe("settingsLoader request memoization", () => {
     expect(first).toEqual({});
     expect(second).toEqual({});
     expect(dbQueryCount()).toBe(1);
+  });
+
+  test("a read after a write to the group in the same request sees the write", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    await harness.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Before",
+    });
+
+    const [before, after] = await run(async () => {
+      const first = await settingsLoader(["site", "social"], ctx);
+      await ctx.db
+        .update(settings)
+        .set({ value: "After" })
+        .where(and(eq(settings.group, "site"), eq(settings.key, "title")));
+      await ctx.db
+        .insert(settings)
+        .values({ group: "social", key: "handle", value: "@plumix" });
+      await ctx.hooks.doAction(
+        "settings:group_changed",
+        { group: "site", set: { title: "After" }, removed: [] },
+        ctx,
+      );
+      await ctx.hooks.doAction(
+        "settings:group_changed",
+        { group: "social", set: { handle: "@plumix" }, removed: [] },
+        ctx,
+      );
+      return [first, await settingsLoader(["site", "social"], ctx)];
+    });
+
+    expect(before).toEqual({ site: { title: "Before" } });
+    expect(after).toEqual({
+      site: { title: "After" },
+      social: { handle: "@plumix" },
+    });
   });
 });

@@ -2,7 +2,7 @@ import type { AppContext } from "../../context/app.js";
 import type { EntryQuery } from "../../entries/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { Pagination, ResolvedEntry } from "./resolved-entry.js";
-import { typeTag } from "../../cdn/tags.js";
+import { typeTag } from "../../cdn/contract/tags.js";
 import { sql } from "../../db/index.js";
 import {
   compileEntryQuery,

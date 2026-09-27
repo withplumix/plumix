@@ -1,5 +1,5 @@
 import type { AppContext } from "../context/app.js";
-import { normalizeTag } from "./tags.js";
+import { normalizeTag } from "./contract/tags.js";
 
 // Per-request accumulator of cache tags for entities embedded into a page
 // via read-time reference resolution (#1508). When resolution materializes

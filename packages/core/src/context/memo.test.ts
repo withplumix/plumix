@@ -68,6 +68,84 @@ describe("createRequestMemo", () => {
   });
 });
 
+describe("createRequestMemo invalidation", () => {
+  const counting = () => {
+    const loads: string[] = [];
+    const load = (key: string) => () => {
+      loads.push(key);
+      return Promise.resolve(key);
+    };
+    return { loads, load };
+  };
+
+  test("drops the entries carrying a tag, and only those", async () => {
+    const memo = createRequestMemo();
+    const { loads, load } = counting();
+    await memo("test:a", load("a"), ["e:1"]);
+    await memo("test:b", load("b"), ["e:2", "t:post"]);
+    await memo("test:c", load("c"));
+
+    memo.invalidate(["t:post"]);
+    await memo("test:a", load("a"), ["e:1"]);
+    await memo("test:b", load("b"), ["e:2", "t:post"]);
+    await memo("test:c", load("c"));
+
+    expect(loads).toEqual(["a", "b", "c", "b"]);
+  });
+
+  test("a tag matches whatever case either side spelled it in", async () => {
+    const memo = createRequestMemo();
+    const { loads, load } = counting();
+    await memo("test:typed", load("typed"), ["t:Post"]);
+
+    memo.invalidate(["t:post"]);
+    await memo("test:typed", load("typed"), ["t:Post"]);
+
+    expect(loads).toEqual(["typed", "typed"]);
+  });
+
+  test("a reload after a drop is itself dropped by the next write", async () => {
+    const memo = createRequestMemo();
+    const { loads, load } = counting();
+    await memo("test:row", load("row"), ["e:1"]);
+    memo.invalidate(["e:1"]);
+    await memo("test:row", load("row"), ["e:1"]);
+    memo.invalidate(["e:1"]);
+    await memo("test:row", load("row"), ["e:1"]);
+
+    expect(loads).toEqual(["row", "row", "row"]);
+  });
+
+  test("a load that rejects after its entry was dropped leaves the reload in place", async () => {
+    const memo = createRequestMemo();
+    let fail: (error: Error) => void = () => undefined;
+    const failing = memo(
+      "test:raced",
+      () =>
+        new Promise<string>((_, reject) => {
+          fail = reject;
+        }),
+      ["e:1"],
+    );
+    memo.invalidate(["e:1"]);
+    const reloaded = memo("test:raced", () => Promise.resolve("fresh"), [
+      "e:1",
+    ]);
+    fail(new Error("transient"));
+    await expect(failing).rejects.toThrow("transient");
+
+    let calls = 0;
+    const replay = await memo("test:raced", () => {
+      calls += 1;
+      return Promise.resolve("again");
+    });
+
+    expect(await reloaded).toBe("fresh");
+    expect(replay).toBe("fresh");
+    expect(calls).toBe(0);
+  });
+});
+
 describe("memoBatch", () => {
   test("misses share one batched load; later calls replay per id", async () => {
     const memo = createRequestMemo();
@@ -131,5 +209,30 @@ describe("memoBatch", () => {
     expect(await memoBatch(memo, [9], key, loadAll)).toEqual([null]);
     expect(await memoBatch(memo, [9], key, loadAll)).toEqual([null]);
     expect(batches).toBe(1);
+  });
+
+  test("a memoized miss carries its id's tags and loads again once dropped", async () => {
+    const memo = createRequestMemo();
+    const asked: (readonly number[])[] = [];
+    let visible = new Map<number, string>();
+    const loadAll = (missing: readonly number[]) => {
+      asked.push(missing);
+      return Promise.resolve(visible);
+    };
+    const key = (id: number) => `test:tagged:${String(id)}`;
+    const tags = (id: number) => [`e:${String(id)}`];
+
+    expect(await memoBatch(memo, [1, 2], key, loadAll, tags)).toEqual([
+      null,
+      null,
+    ]);
+    visible = new Map([[1, "one"]]);
+    memo.invalidate(["e:1"]);
+
+    expect(await memoBatch(memo, [1, 2], key, loadAll, tags)).toEqual([
+      "one",
+      null,
+    ]);
+    expect(asked).toEqual([[1, 2], [1]]);
   });
 });

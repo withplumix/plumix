@@ -1,6 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { RequestMemo } from "../context/memo.js";
-import { normalizeTag } from "./tags.js";
+import { normalizeTag } from "./contract/tags.js";
 
 // Per-request tag accumulator for a `cacheable: true` plugin route. The
 // handler names what its response depends on while it runs; the read-through

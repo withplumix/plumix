@@ -7,7 +7,7 @@ import type {
   LookupAdapter,
   LookupResult,
 } from "../../../plugin/lookup.js";
-import { entryTag } from "../../../cdn/tags.js";
+import { entryTag } from "../../../cdn/contract/tags.js";
 import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
@@ -120,8 +120,8 @@ export const entryLookupAdapter = {
   // coarse `t:<type>` tag is deliberately omitted — it would purge the
   // page on any publish of that type, and `e:<id>` alone already covers
   // every change to this specific entry.
-  embeddedCacheTags(payload) {
-    const numericId = parseEntryId(payload.id);
+  embeddedCacheTags(id) {
+    const numericId = parseEntryId(id);
     return numericId === null ? [] : [entryTag(numericId)];
   },
 } satisfies LookupAdapter<EntryFieldScope>;

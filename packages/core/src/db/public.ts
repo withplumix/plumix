@@ -16,7 +16,7 @@ export {
   entryTag,
   termPurgeTags,
   typeTag,
-} from "../cdn/tags.js";
+} from "../cdn/contract/tags.js";
 export { enqueuePurgeTags } from "../cdn/purge.js";
 // What core's own entry search means — how a query parses, and what matching
 // title and excerpt with `LIKE` involves — so a plugin that replaces the search

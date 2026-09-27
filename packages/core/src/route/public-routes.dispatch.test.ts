@@ -10,8 +10,8 @@ import {
   grant,
   rolePolicy,
 } from "../access/policy.js";
+import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
-import { entryPurgeTags } from "../cdn/tags.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 

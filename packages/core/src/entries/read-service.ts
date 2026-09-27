@@ -10,6 +10,7 @@ import type {
   EntryListInput,
   EntryListOrderColumn,
 } from "../rpc/procedures/entry/schemas.js";
+import { entryTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -42,13 +43,17 @@ export async function readEntryType(
   ctx: AppContext,
   id: number,
 ): Promise<string | null> {
-  return ctx.memo(`core:entry-type:${String(id)}`, async () => {
-    const [row] = await ctx.db
-      .select({ type: entries.type })
-      .from(entries)
-      .where(eq(entries.id, id));
-    return row?.type ?? null;
-  });
+  return ctx.memo(
+    `core:entry-type:${String(id)}`,
+    async () => {
+      const [row] = await ctx.db
+        .select({ type: entries.type })
+        .from(entries)
+        .where(eq(entries.id, id));
+      return row?.type ?? null;
+    },
+    [entryTag(id)],
+  );
 }
 
 type EntryRead = WithResolvedMeta<Entry> & {

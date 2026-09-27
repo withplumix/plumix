@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 import type { JsonObject } from "../../json.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
+import { eq } from "../../db/index.js";
+import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";
@@ -109,6 +111,46 @@ describe("resolveEntryList author memoization", () => {
     expect(mixed.map((e) => e.author.name).sort()).toEqual(["Ada", "Lin"]);
     // One batched author query per call at most — no per-id fan-out.
     expect(dbQueryCount()).toBe(4);
+  });
+
+  test("a call after renaming the author in the same request reads the new name", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    const author = await harness.factory.user.create({ name: "Ada" });
+    const post = await harness.factory.entry.create({ authorId: author.id });
+
+    const [before, after] = await run(async () => {
+      const first = await resolveEntryList(ctx, [post]);
+      const [renamed] = await ctx.db
+        .update(users)
+        .set({ name: "Grace" })
+        .where(eq(users.id, author.id))
+        .returning();
+      if (renamed === undefined) throw new Error("the author is gone");
+      await ctx.hooks.doAction("user:updated", renamed, author, ctx);
+      return [first, await resolveEntryList(ctx, [post])];
+    });
+
+    expect(before[0]?.author.name).toBe("Ada");
+    expect(after[0]?.author.name).toBe("Grace");
+  });
+
+  test("publishing an entry leaves its author memoized", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const author = await harness.factory.user.create({ name: "Ada" });
+    const post = await harness.factory.entry.create({
+      authorId: author.id,
+      status: "published",
+    });
+
+    await run(async () => {
+      await resolveEntryList(ctx, [post]);
+      await ctx.hooks.doAction("entry:published", post, ctx);
+      const queriesAfterPublish = dbQueryCount();
+      await resolveEntryList(ctx, [post]);
+
+      // The terms join only — the author row still replays.
+      expect(dbQueryCount()).toBe(queriesAfterPublish + 1);
+    });
   });
 });
 

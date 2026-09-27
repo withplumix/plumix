@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { resolveReferences } from "../rpc/meta/core.js";
 import { createTestContext } from "../test/context.js";
 import { entryFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { createTracedContext } from "../test/traced-context.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { runScheduledTasks } from "./scheduled.js";
 
@@ -71,5 +74,49 @@ describe("scheduled publish purges the CDN", () => {
     await runScheduledTasks(app, ctx, "*/5 * * * *");
 
     expect(defer).not.toHaveBeenCalled();
+  });
+});
+
+// One invocation builds one context, so every task reads one request memo.
+// The publish announces itself through the same roster as the purge above,
+// and that is what keeps a task's write visible to the tasks after it (#2517)
+// — on a site with no cdn configured, as this one is.
+describe("scheduled publish is visible to later tasks in the invocation", () => {
+  it("a task after publish-scheduled hydrates the published entry", async () => {
+    const { harness, ctx } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const due = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "scheduled",
+      title: "Due",
+      publishedAt: new Date(Date.now() - 1000),
+    });
+    const hydrated: (string | null)[] = [];
+    const hydrate = (id: string): RegisteredScheduledTask => ({
+      id,
+      registeredBy: "test",
+      handler: async (taskCtx) => {
+        const [payload] = await resolveReferences(
+          taskCtx,
+          "entry",
+          [String(due.id)],
+          { scope: { entryTypes: ["post"] } },
+        );
+        hydrated.push(payload?.title ?? null);
+      },
+    });
+    const app = {
+      scheduledTasks: [
+        hydrate("before"),
+        ...harness.app.scheduledTasks,
+        hydrate("after"),
+      ],
+    };
+
+    const report = await runScheduledTasks(app, ctx);
+
+    expect(report.failed).toEqual([]);
+    expect(hydrated).toEqual([null, "Due"]);
   });
 });

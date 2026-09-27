@@ -8,9 +8,11 @@ import {
 import {
   entryPurgeTags,
   normalizeTag,
+  settingsTag,
   termPurgeTags,
-  typeTag,
-} from "./tags.js";
+  usersPurgeTags,
+  userTag,
+} from "./contract/tags.js";
 
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
@@ -26,10 +28,17 @@ import {
 // GC'd with it.
 const pending = new WeakMap<RequestMemo, Set<string>>();
 
+/**
+ * Announce that a write changed what `tags` describe. The request memo drops
+ * its entries carrying any of them straight away — a later read in the same
+ * execution loads the written row (#2517) — and, where the CDN can purge by
+ * tag, the tags accumulate for the post-request flush.
+ */
 export function enqueuePurgeTags(
   ctx: AppContext,
   tags: readonly string[],
 ): void {
+  ctx.memo.invalidate(tags);
   // A provider that cannot invalidate by tag has no `purgeTags` at all, so
   // there is nothing to accumulate for — freshness is that site's only control.
   if (ctx.cdn?.purgeTags === undefined || tags.length === 0) return;
@@ -56,10 +65,19 @@ export function flushPurgeTags(ctx: AppContext): void {
 }
 
 /**
- * Register core's CDN purge subscribers. Called at app boot when a
- * cdn slot is configured; each entry mutation enqueues `t:<type>` + `e:<id>`,
- * each term mutation enqueues `t:<type>` for the taxonomy's entry types, for
- * the post-request flush.
+ * Register core's roster of writes: each lifecycle action becomes the tags of
+ * what it changed. Each entry mutation enqueues `t:<type>` + `e:<id>`, each
+ * term mutation `t:<type>` for the taxonomy's entry types, each user mutation
+ * every public type's tag.
+ *
+ * One roster, two consumers: the CDN purge and the request memo both read what
+ * {@link enqueuePurgeTags} is handed, so they cannot disagree about which
+ * write means which tag. A user write also names `u:<id>` and a settings write
+ * `s:<group>` — tags no page is stored under, so they go to the memo alone
+ * rather than costing a site a purge that could clear nothing. Registered at
+ * every boot, CDN or not — the memo needs it everywhere, and without a CDN the
+ * purge half accumulates nothing. Every handler is synchronous for the memo's
+ * sake; see `RequestMemo.invalidate`.
  */
 export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   // Entry lifecycle actions that change what the public sees — published,
@@ -82,15 +100,14 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onEntry(entry, ctx),
   );
 
-  // Author feeds and every public entry's permalink and listing print the
-  // author, and each is stored under a public type's tag — so a rename, a
-  // re-slug, or a delete (which reassigns entries without an entry action)
-  // purges them all, whatever type the author wrote.
-  const onUser = (ctx: AppContext): void => {
-    enqueuePurgeTags(ctx, publicEntryTypeNames(ctx.plugins).map(typeTag));
+  // A delete reassigns entries without an entry action, so the public types'
+  // tags are what reaches the pages that printed the author.
+  const onUser = (user: { readonly id: number }, ctx: AppContext): void => {
+    enqueuePurgeTags(ctx, usersPurgeTags(publicEntryTypeNames(ctx.plugins)));
+    ctx.memo.invalidate([userTag(user.id)]);
   };
-  hooks.addAction("user:updated", (_user, _previous, ctx) => onUser(ctx));
-  hooks.addAction("user:deleted", (_user, _deletion, ctx) => onUser(ctx));
+  hooks.addAction("user:updated", (user, _previous, ctx) => onUser(user, ctx));
+  hooks.addAction("user:deleted", (user, _deletion, ctx) => onUser(user, ctx));
 
   // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
   // A term archive is stored under the `t:<type>` tags of its taxonomy's entry
@@ -110,4 +127,8 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   hooks.addAction("term:meta_changed", (term, _changes, ctx) =>
     onTerm(term, ctx),
   );
+
+  hooks.addAction("settings:group_changed", (changes, ctx) => {
+    ctx.memo.invalidate([settingsTag(changes.group)]);
+  });
 }

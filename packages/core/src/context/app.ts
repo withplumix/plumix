@@ -207,9 +207,10 @@ export interface AppContextBase<
    * the settled value to later callers — hot single-row lookups
    * (settings group, author row, entry type, menu cluster) dedupe
    * inside the service functions without new API surface. The cache
-   * dies with the context; rejections are not memoized. No invalidation
-   * on writes, and `withUser` derivations share it — see the contract
-   * notes on {@link RequestMemo}.
+   * dies with the context; rejections are not memoized. A tagged entry
+   * drops when a write in the same execution announces one of its tags;
+   * an untagged one never does. `withUser` derivations share it — see the
+   * contract notes on {@link RequestMemo}.
    */
   readonly memo: RequestMemo;
   /**

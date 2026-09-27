@@ -290,9 +290,10 @@ export async function buildApp(
   // has to be set before `buildApp` for capture to happen at all.
   const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
   registerCoreSearchHandlers(hooks);
-  // Only subscribe the CDN purge invalidator when a cdn is configured;
-  // without one every entry mutation would accumulate tags no flush consumes.
-  if (config.cdn !== undefined) registerCorePurgeInvalidator(hooks);
+  // Unconditional: the request memo drops what a write announced whether or
+  // not a cdn is configured, and without one the purge half accumulates
+  // nothing.
+  registerCorePurgeInvalidator(hooks);
   const seededRegistry = createPluginRegistry();
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { RequestMemo } from "../context/memo.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy } from "./policy.js";
@@ -27,17 +28,16 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-type RequestMemoStub = <T>(key: string, load: () => Promise<T>) => Promise<T>;
-
 // A memo pre-seeded with `single-entry:*` rows keyed exactly as
 // `resolveSingleEntry` computes them. A hit replays the seeded row (its
 // `load` never runs); a miss loads live — no `resolveSingleEntry` under test
 // here reaches the DB because every single-intent case seeds its key.
 function seededMemo(
   rows: Record<string, { meta: Record<string, unknown> } | null>,
-): RequestMemoStub {
-  return <T>(key: string, load: () => Promise<T>): Promise<T> =>
+): RequestMemo {
+  const memo = <T>(key: string, load: () => Promise<T>): Promise<T> =>
     key in rows ? Promise.resolve(rows[key] as T) : load();
+  return Object.assign(memo, { invalidate: () => undefined });
 }
 
 let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -53,7 +53,7 @@ async function ctx(args: {
   user?: AuthenticatedUser | null;
   entryTypes?: Readonly<Record<string, EntryTypeAccess | undefined>>;
   archiveTypes?: Readonly<Record<string, AccessPolicy>>;
-  memo?: RequestMemoStub;
+  memo?: RequestMemo;
 }): Promise<AppContext> {
   const plugins = createPluginRegistry();
   await installPlugins({
