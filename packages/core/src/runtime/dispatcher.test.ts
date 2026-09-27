@@ -2505,6 +2505,7 @@ describe("dispatcher — telemetry consumers", () => {
     expect(resolve?.attributes["resolve.entity"]).toEqual({
       kind: "entry",
       id: entry.id,
+      preview: false,
     });
     expect(resolve?.attributes["template.matched"]).toBe("fallback");
     expect(byName("render")?.attributes["render.node"]).toBe("post: hello");
