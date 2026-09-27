@@ -17,6 +17,7 @@ const SHIPPED: AdminCatalogs = {
   },
   plugins: {},
   editor: {},
+  blocks: {},
 };
 
 const originalLang = document.documentElement.lang;
@@ -64,5 +65,29 @@ describe("bootI18n", () => {
     });
     expect(message()).toBe("Boot-test fallback");
     expect(message()).not.toBe("SENTINEL");
+  });
+
+  test("merges the blocks catalog under the editor's for the active locale", async () => {
+    document.documentElement.lang = "de";
+    await bootI18n({
+      ...SHIPPED,
+      blocks: {
+        "../../../blocks/locales/de.mjs": () =>
+          Promise.resolve({
+            messages: {
+              "blocks.appender.addBlock": ["Block hinzufügen"],
+              "shared.id": ["from blocks"],
+            },
+          }),
+      },
+      editor: {
+        "../../../admin-editor/locales/de.mjs": () =>
+          Promise.resolve({ messages: { "shared.id": ["from editor"] } }),
+      },
+    });
+    expect(i18n.messages["blocks.appender.addBlock"]).toEqual([
+      "Block hinzufügen",
+    ]);
+    expect(i18n.messages["shared.id"]).toEqual(["from editor"]);
   });
 });

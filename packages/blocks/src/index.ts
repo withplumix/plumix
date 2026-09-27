@@ -32,10 +32,17 @@ export type {
 
 // ─── Walker + render contract ───────────────────────────────────────────────
 export {
+  createMessageResolver,
   DEFAULT_BLOCK_CONTEXT,
   isBlockNodeArray,
   renderBlockTree,
 } from "./render-block-tree.js";
+export { resolveMessage } from "./i18n-label.js";
+export type {
+  CompiledCatalog,
+  MessageDescriptorLike,
+  MessageValues,
+} from "./i18n-label.js";
 export { editAppender } from "./edit-appender.js";
 export { freshBlockId, rewriteBlockNodeIds } from "./rewrite-node-ids.js";
 export { countProse } from "./count-prose.js";

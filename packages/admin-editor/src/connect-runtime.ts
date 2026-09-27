@@ -1,6 +1,7 @@
 import type { BlockNode } from "@plumix/blocks";
 import type {
   BlockRect,
+  CanvasConfig,
   CanvasMessage,
   HandshakeMessage,
   SerializedLoaderData,
@@ -51,8 +52,8 @@ interface ConnectRuntimeOptions {
   readonly onTree: (tree: readonly BlockNode[]) => void;
   /** Called with a scoped refresh's re-resolved loader data (node-keyed). */
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
-  /** Called with the host's resolved canvas chrome (e.g. localized labels). */
-  readonly onConfig?: (config: { readonly addBlockLabel: string }) => void;
+  /** Called with the host's active locale and compiled catalog. */
+  readonly onConfig?: (config: CanvasConfig) => void;
   /** Called when the host toggles the X-ray (outline-all-blocks) view. */
   readonly onXray?: (enabled: boolean) => void;
 }
@@ -103,7 +104,7 @@ export function connectRuntime({
         onLoaderData?.(message.data);
         break;
       case "host:config":
-        onConfig?.({ addBlockLabel: message.addBlockLabel });
+        onConfig?.({ locale: message.locale, catalog: message.catalog });
         break;
       case "host:xray":
         onXray?.(message.enabled);

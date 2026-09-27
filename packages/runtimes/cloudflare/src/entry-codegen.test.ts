@@ -74,6 +74,14 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("buildApp(config, {");
   });
 
+  test("imports the plugin catalogs virtual module and threads it into buildApp", () => {
+    const source = entry("./config.ts");
+    expect(source).toContain(
+      'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
+    );
+    expect(source).toContain("  pluginCatalogs,\n});");
+  });
+
   test("re-exports the worker-exports virtual module so config can surface named exports (e.g. Durable Objects)", () => {
     expect(entry("./config.ts")).toContain(
       'export * from "virtual:plumix/worker-exports";',

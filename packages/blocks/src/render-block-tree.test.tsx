@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
-import { renderBlockTree } from "./render-block-tree.js";
+import { DEFAULT_BLOCK_CONTEXT, renderBlockTree } from "./render-block-tree.js";
 
 function withProductionEnv<T>(fn: () => T): T {
   const previous = process.env.NODE_ENV;
@@ -820,5 +820,54 @@ describe("renderBlockTree", () => {
       expect(html).toBe("");
       expect(warn).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("renderBlockTree — message descriptors", () => {
+  const greeting = { id: "test.greeting", message: "Hello" };
+  const loadEmbed = { id: "test.loadEmbed", message: "Load {title}" };
+  const i18nRegistry = createBlockRegistry([
+    {
+      name: "test/greeting",
+      render: ({ context }) => (
+        <p>
+          {context.t(greeting)}|{context.t(loadEmbed, { title: "Clip" })}
+        </p>
+      ),
+    },
+  ]);
+  const nodes: readonly BlockNode[] = [{ id: "g1", name: "test/greeting" }];
+
+  test("resolves a descriptor through the supplied compiled catalog", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(nodes, i18nRegistry, {
+        locale: "fr",
+        catalog: {
+          "test.greeting": ["Bonjour"],
+          "test.loadEmbed": ["Charger ", ["title"]],
+        },
+      }),
+    );
+
+    expect(html).toContain("<p>Bonjour|Charger Clip</p>");
+  });
+
+  test("renders the source English message when no catalog is supplied", () => {
+    const html = renderToStaticMarkup(renderBlockTree(nodes, i18nRegistry));
+
+    expect(html).toContain("<p>Hello|Load Clip</p>");
+  });
+
+  test("falls back to the source message for an id the catalog lacks", () => {
+    const html = renderToStaticMarkup(
+      renderBlockTree(nodes, i18nRegistry, { catalog: {} }),
+    );
+
+    expect(html).toContain("<p>Hello|Load Clip</p>");
+  });
+
+  test("the default render context resolves to the source English message", () => {
+    expect(DEFAULT_BLOCK_CONTEXT.t(greeting)).toBe("Hello");
+    expect(DEFAULT_BLOCK_CONTEXT.t({ id: "test.bare" })).toBe("test.bare");
   });
 });

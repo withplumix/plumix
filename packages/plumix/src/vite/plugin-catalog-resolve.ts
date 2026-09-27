@@ -180,6 +180,39 @@ export async function stagePluginCatalogs(
   );
 }
 
+/**
+ * Every installed plugin's compiled catalog on disk, by locale — the source of
+ * `virtual:plumix/plugin-catalogs`, which SSR resolves block render strings
+ * from. Read off the same `i18n` slot admin staging reads, so a plugin declares
+ * nothing new. A declared locale with no compiled file is skipped rather than
+ * fatal: SSR falls back to each descriptor's English source.
+ */
+export async function collectPluginCatalogFiles(
+  plugins: readonly AnyPluginDescriptor[],
+  projectRoot: string,
+): Promise<Map<string, string[]>> {
+  const files = new Map<string, string[]>();
+  for (const plugin of plugins) {
+    if (!plugin.i18n) continue;
+    const dir = await resolveCatalogDir(
+      plugin.id,
+      plugin.i18n.catalogPath,
+      projectRoot,
+    );
+    if (dir === null) continue;
+    for (const locale of plugin.i18n.locales) {
+      const file = resolve(dir, `${locale}.mjs`);
+      try {
+        await stat(file);
+      } catch {
+        continue;
+      }
+      files.set(locale, [...(files.get(locale) ?? []), file]);
+    }
+  }
+  return files;
+}
+
 // Resolve the per-plugin catalog source directory. The npm-name
 // convention (workspace + npm-installed plugins) is the only supported
 // path; absolute `catalogPath` values are honored verbatim. Returns

@@ -5,6 +5,7 @@
 // described here, including the handshake ones; the transport that carries
 // them lives in ./bridge.
 
+import type { CompiledCatalog } from "../i18n-label.js";
 import type { JsonObject } from "../json.js";
 import type { BlockNode } from "../render-block-tree.js";
 
@@ -35,16 +36,22 @@ export interface SlotRect {
   readonly height: number;
 }
 
+/** The host's active locale and its merged compiled catalog, which the canvas
+ *  threads into its render so every block resolves strings the way SSR does.
+ *  The host passes catalogs, never resolved strings. */
+export interface CanvasConfig {
+  readonly locale: string;
+  readonly catalog: CompiledCatalog;
+}
+
 /** Parent (admin shell) → canvas (iframe). */
 export type HostMessage =
   | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
-  | {
-      // Static, locale-dependent canvas chrome the host resolves (it owns the
-      // i18n runtime; the canvas does not). Sent once the canvas is ready and
-      // again if the locale changes. Currently just the "Add a block" label.
+  | ({
+      // The locale the canvas renders at (it has no i18n runtime of its own).
+      // Sent once the canvas is ready and again if the locale changes.
       readonly type: "host:config";
-      readonly addBlockLabel: string;
-    }
+    } & CanvasConfig)
   | {
       // A scoped refresh's re-resolved loader data, node-keyed (same shape
       // `serializeLoaderData` emits). The canvas merges it into its loader map.

@@ -17,6 +17,9 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // for the client environment. The SSR renderer reads it to inject
     // hashed `<link rel="stylesheet">` tags after the theme's `link[]`.
     'import assetManifest from "virtual:plumix/asset-manifest";',
+    // Each plugin's compiled catalogs by locale, lazy-imported, so SSR block
+    // renders resolve plugin strings for the request locale.
+    'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
     // Re-export named worker-level exports (e.g. Durable Object classes)
@@ -30,6 +33,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     // worker passes no dev flag.
     "const appPromise = buildApp(config, {",
     "  assetManifest,",
+    "  pluginCatalogs,",
     "});",
     "let handler;",
     "",

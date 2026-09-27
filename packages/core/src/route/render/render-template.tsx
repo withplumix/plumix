@@ -5,6 +5,7 @@ import { renderToString } from "react-dom/server";
 import type {
   BlockNode,
   BlockRenderFilters,
+  CompiledCatalog,
   HtmlAllowlist,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
@@ -134,8 +135,14 @@ async function renderThroughThemeInner({
   title,
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string | null> {
-  const { theme, document, templateDeps, assetManifest, htmlAllowlist } =
-    renderEnv;
+  const {
+    theme,
+    document,
+    templateDeps,
+    assetManifest,
+    htmlAllowlist,
+    blockCatalogs,
+  } = renderEnv;
   const rules = templateRules(theme.templates);
   // The resolution walk is a `template` span (nested under `render`) carrying
   // the full explain as a lazy attribute — the Template panel reads it back
@@ -191,6 +198,7 @@ async function renderThroughThemeInner({
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
+    catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
     editMode,
   });
@@ -250,8 +258,14 @@ async function renderErrorThroughThemeInner({
   kind,
   data,
 }: RenderErrorArgs): Promise<string> {
-  const { theme, document, templateDeps, assetManifest, htmlAllowlist } =
-    renderEnv;
+  const {
+    theme,
+    document,
+    templateDeps,
+    assetManifest,
+    htmlAllowlist,
+    blockCatalogs,
+  } = renderEnv;
   const variant = ERROR_VARIANTS[kind];
   const raw =
     resolveErrorTemplate(templateRules(theme.templates), variant.tier)
@@ -304,6 +318,7 @@ async function renderErrorThroughThemeInner({
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
+    catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
     editMode: LIVE_EDIT_MODE,
   });
@@ -435,6 +450,7 @@ interface RenderTreeArgs {
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly htmlAllowlist: HtmlAllowlist;
+  readonly catalog: CompiledCatalog;
   // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
   readonly themeCss: readonly string[];
   readonly editMode: EditModeDecision;
@@ -457,6 +473,7 @@ function renderTree({
   tokens,
   breakpoints,
   htmlAllowlist,
+  catalog,
   loaderData,
   siteSettings,
   themeCss,
@@ -513,6 +530,7 @@ function renderTree({
         authMethods: ctx.authMethods,
         queriedEntry: ctx.resolvedEntity,
         locale: ctx.locale.code,
+        catalog,
         shortcodes: ctx.shortcodes,
         entry,
         siteSettings,

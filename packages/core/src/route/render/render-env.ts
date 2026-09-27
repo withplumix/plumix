@@ -3,6 +3,7 @@ import type { HtmlAllowlist } from "@plumix/blocks";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { DocumentManifest, ThemeDescriptor } from "../../theme.js";
 import type { AssetManifest } from "./asset-manifest.js";
+import type { BlockCatalogs } from "./block-catalog.js";
 
 /**
  * The app-level render environment — the values fixed at app-build time that
@@ -23,4 +24,6 @@ export interface RenderEnv {
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly htmlAllowlist: HtmlAllowlist;
+  /** The catalog a block's `render` resolves its strings from, per locale. */
+  readonly blockCatalogs: BlockCatalogs;
 }

@@ -50,9 +50,9 @@ export const RENDER_ENV_POLICY = {
   renderFilters:
     "server-only: closes over the request-scoped hook executor, and the " +
     "canvas has no hook runtime",
-  addBlockLabel:
-    "canvas chrome the host resolves (it owns Lingui) and pushes over the " +
-    "bridge after mount",
+  catalog:
+    "the host pushes its merged catalog over `host:config` after mount, " +
+    "with the locale it belongs to (ADR 0016)",
 } as const satisfies RenderEnvPolicy<PlumixContextValue>;
 
 type CarriedKey = {

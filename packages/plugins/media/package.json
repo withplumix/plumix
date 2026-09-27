@@ -30,6 +30,7 @@
       "types": "./dist/fields.d.ts",
       "default": "./dist/fields.js"
     },
+    "./locales/*": "./locales/*.mjs",
     "./package.json": "./package.json"
   },
   "files": [

@@ -1,6 +1,10 @@
 import type { ReactElement } from "react";
 import { createElement } from "react";
 
+import type { BlockContext } from "./render-block-tree.js";
+
+const ADD_BLOCK = { id: "blocks.appender.addBlock", message: "Add a block" };
+
 // Inline-styled because this renders inside the canvas iframe, which carries the
 // theme's CSS, not admin-ui's. Theme-agnostic muted gray so it reads as editor
 // chrome on any background. `currentColor` is avoided for the same reason.
@@ -27,16 +31,14 @@ const STYLE: Record<string, string> = {
  * canvas click-delegation turns into an add-intent; it has no event handler so
  * the renderer stays pure (the same code string-renders for SSR, where this is
  * never emitted because it's edit-only). `target` identifies an empty slot;
- * omit it for the root document. `label` is the localized text — resolved by
- * the host (which owns Lingui) and threaded in, since the canvas has no i18n
- * runtime; it falls back to English when the host hasn't pushed config yet.
+ * omit it for the root document. `t` is the render context's resolver.
  */
 export function editAppender(
+  t: BlockContext["t"],
   target?: {
     readonly parentId: string;
     readonly slotKey: string;
   },
-  label = "Add a block",
 ): ReactElement {
   return createElement(
     "button",
@@ -49,6 +51,6 @@ export function editAppender(
       }),
       style: STYLE,
     },
-    label,
+    t(ADD_BLOCK),
   );
 }

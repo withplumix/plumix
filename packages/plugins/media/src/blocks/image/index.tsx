@@ -28,6 +28,11 @@ function normalizeMediaValue(raw: unknown): MediaValue | null {
   };
 }
 
+const PLACEHOLDER = {
+  id: "plugin.media.block.image.placeholder",
+  message: "No image",
+};
+
 export const imageBlock: BlockSpec = defineBlock({
   name: "media/image",
   title: { id: "plugin.media.block.image.title", message: "Image" },
@@ -132,7 +137,7 @@ export const imageBlock: BlockSpec = defineBlock({
       return (
         <figure data-plumix-image-placeholder="" style={{ margin: 0 }}>
           <span data-plumix-image-placeholder-icon="" aria-hidden="true" />
-          <span>No image</span>
+          <span>{context.t(PLACEHOLDER)}</span>
         </figure>
       );
     }

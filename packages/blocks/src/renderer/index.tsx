@@ -53,6 +53,7 @@ export type { Envelope, Handshake, HandshakeRole } from "./bridge.js";
 export { EDITOR_BRIDGE_CHANNEL } from "./editor-protocol.js";
 export type {
   BlockRect,
+  CanvasConfig,
   CanvasMessage,
   EditorBridgeMessage,
   HandshakeMessage,

@@ -1,4 +1,5 @@
 import type { JsonObject } from "plumix";
+import type { RenderBlockTreeOptions } from "plumix/blocks";
 import type { ImageResolver } from "plumix/blocks/renderer";
 import {
   blockTextRoster,
@@ -18,7 +19,11 @@ import { imageBlock } from "./index.js";
 // both wrap blocks in this provider).
 function renderWithProvider(
   attrs: JsonObject,
-  opts: { readonly resolver?: ImageResolver; readonly editing?: boolean } = {},
+  opts: {
+    readonly resolver?: ImageResolver;
+    readonly editing?: boolean;
+    readonly catalog?: RenderBlockTreeOptions["catalog"];
+  } = {},
 ): string {
   const registry = createBlockRegistry([imageBlock]);
   const node = { id: "t", name: "media/image", attrs };
@@ -30,7 +35,10 @@ function renderWithProvider(
         mode: opts.editing ? "edit" : "live",
       }}
     >
-      {renderBlockTree([node], registry, { editing: opts.editing })}
+      {renderBlockTree([node], registry, {
+        editing: opts.editing,
+        catalog: opts.catalog,
+      })}
     </PlumixProvider>,
   );
 }
@@ -135,6 +143,17 @@ describe("media/image v2", () => {
     expect(html).toContain("data-plumix-image-placeholder");
     expect(html).toContain("No image");
     expect(html).not.toContain("<img");
+  });
+
+  test("resolves the editor placeholder's label through the catalog", () => {
+    const html = renderWithProvider(
+      { src: "" },
+      {
+        editing: true,
+        catalog: { "plugin.media.block.image.placeholder": ["Kein Bild"] },
+      },
+    );
+    expect(html).toContain("<span>Kein Bild</span>");
   });
 
   test("renders no placeholder on the public page for an empty src", () => {

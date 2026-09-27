@@ -10,6 +10,7 @@ function renderFacade(overrides: Record<string, unknown> = {}) {
     <EmbedFacade
       src="https://www.youtube-nocookie.com/embed/abc"
       title="Clip"
+      loadLabel="Load embed: Clip"
       caption=""
       provider="youtube"
       sandboxed={false}

@@ -22,6 +22,7 @@ import {
 } from "@plumix/core";
 
 import {
+  collectPluginCatalogFiles,
   findAdminBundledPluginsDir,
   findPluginPackageRoot,
   isAdminBundledPlugin,
@@ -459,3 +460,52 @@ async function linkPlugin(
   await mkdir(scopeDir, { recursive: true });
   await symlink(target, join(scopeDir, `plugin-${pluginId}`), "dir");
 }
+
+describe("collectPluginCatalogFiles — real FS", () => {
+  let projectRoot: string;
+
+  beforeEach(async () => {
+    projectRoot = await realpath(
+      await mkdtemp(join(tmpdir(), "plumix-catalog-collect-")),
+    );
+    await writeFile(join(projectRoot, "package.json"), JSON.stringify({}));
+    const pluginDir = join(projectRoot, "node_modules/@plumix/plugin-vendor");
+    await mkdir(join(pluginDir, "locales"), { recursive: true });
+    await writeFile(
+      join(pluginDir, "package.json"),
+      JSON.stringify({ name: "@plumix/plugin-vendor", type: "module" }),
+    );
+    for (const locale of ["en", "de"]) {
+      await writeFile(
+        join(pluginDir, "locales", `${locale}.mjs`),
+        "export const messages = {};\n",
+      );
+    }
+  });
+
+  afterEach(async () => {
+    await rm(projectRoot, { recursive: true, force: true });
+  });
+
+  test("lists every declared locale's compiled catalog by locale, skipping any not on disk", async () => {
+    const vendor = definePlugin("vendor", () => undefined, {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de", "uk"],
+        catalogPath: "./locales",
+      },
+    });
+    const bare = definePlugin("bare", () => undefined);
+
+    const files = await collectPluginCatalogFiles([vendor, bare], projectRoot);
+
+    const locales = join(
+      projectRoot,
+      "node_modules/@plumix/plugin-vendor/locales",
+    );
+    expect(Object.fromEntries(files)).toEqual({
+      en: [join(locales, "en.mjs")],
+      de: [join(locales, "de.mjs")],
+    });
+  });
+});

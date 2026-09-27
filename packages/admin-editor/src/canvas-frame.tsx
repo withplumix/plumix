@@ -77,12 +77,7 @@ export function CanvasFrame({
 }: CanvasFrameProps): ReactElement {
   const { registry } = useEditorConfig();
   const { i18n } = useLingui();
-  // The canvas has no i18n runtime, so resolve its chrome (the in-canvas "Add a
-  // block" affordance, root + empty slots) here and push it over the bridge.
-  const addBlockLabel = i18n._({
-    id: "editor.canvas.addBlock",
-    message: "Add a block",
-  });
+  const locale = i18n.locale;
   const store = useEditorStoreApi();
   const camera = useCameraStoreApi();
   const clipboard = useMemo(
@@ -153,7 +148,12 @@ export function CanvasFrame({
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
       onClipboard: (op) => void clipboard.run(op),
-      config: { addBlockLabel },
+      // The canvas has no i18n runtime, so hand it the locale and the catalog
+      // the admin already merged (its own, the editor's, every workspace
+      // plugin's and the blocks package's); blocks resolve their strings from
+      // it. Read here, not as a dep: Lingui hands back a fresh `{}` for a
+      // locale with nothing loaded, which would reconnect on every render.
+      config: { locale, catalog: i18n.messages },
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
@@ -170,7 +170,8 @@ export function CanvasFrame({
     handleWheel,
     keyHandlerRef,
     requestAdd,
-    addBlockLabel,
+    i18n,
+    locale,
     clipboard,
   ]);
 

@@ -18,9 +18,15 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
-import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
+import type {
+  BlockRect,
+  CanvasConfig,
+  SlotRect,
+} from "@plumix/blocks/renderer";
 import {
   BASELINE_HTML_ALLOWLIST,
+  createMessageResolver,
+  DEFAULT_BLOCK_CONTEXT,
   editAppender,
   HtmlAllowlistProvider,
   parseLoaderData,
@@ -95,10 +101,9 @@ export function EditorCanvas({
       document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
     ),
   );
-  // Canvas chrome the host resolves (it owns Lingui; the canvas has none).
-  // Undefined until config arrives, so editAppender's own default is the single
-  // English fallback for the pre-config window.
-  const [addBlockLabel, setAddBlockLabel] = useState<string>();
+  // The host's locale + catalog (it owns Lingui; the canvas has none).
+  // Undefined until config arrives, so the pre-config window renders English.
+  const [config, setConfig] = useState<CanvasConfig>();
   // X-ray view: the host pushes the toggle over the bridge; a CSS rule (gated by
   // the data-plumix-xray attribute below) then outlines every block.
   const [xray, setXray] = useState(false);
@@ -112,7 +117,7 @@ export function EditorCanvas({
       onTree: setTree,
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
-      onConfig: (config) => setAddBlockLabel(config.addBlockLabel),
+      onConfig: setConfig,
       onXray: setXray,
     });
     connectionRef.current = connection;
@@ -336,11 +341,13 @@ export function EditorCanvas({
           tokens,
           breakpoints,
           loaderData,
-          locale,
+          // The host's locale once it arrives, so it matches the catalog the
+          // host pushed alongside it; the page's until then.
+          locale: config?.locale ?? locale,
+          catalog: config?.catalog,
           shortcodes,
           entry,
           siteSettings,
-          addBlockLabel,
         }}
       >
         <div
@@ -360,7 +367,11 @@ export function EditorCanvas({
             // Empty document: the same in-canvas appender an empty slot shows,
             // flowing in content rather than as a host overlay.
             <div style={{ padding: "2rem" }}>
-              {editAppender(undefined, addBlockLabel)}
+              {editAppender(
+                config
+                  ? createMessageResolver(config.catalog)
+                  : DEFAULT_BLOCK_CONTEXT.t,
+              )}
             </div>
           ) : (
             <BlockTree blocks={tree} />

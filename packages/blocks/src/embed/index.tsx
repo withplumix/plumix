@@ -4,6 +4,16 @@ import { defineBlock } from "../block-registry.js";
 import { EmbedFacade } from "./EmbedFacade.js";
 import { resolveEmbed } from "./resolve.js";
 
+const PLACEHOLDER = {
+  id: "blocks.embed.placeholder",
+  message: "Add a YouTube, Vimeo, Loom, Spotify, or CodePen URL to embed.",
+};
+const TITLE_FALLBACK = {
+  id: "blocks.embed.titleFallback",
+  message: "Embedded content",
+};
+const LOAD = { id: "blocks.embed.load", message: "Load embed: {title}" };
+
 export const embedBlock = defineBlock({
   name: "core/embed",
   title: { id: "block.core.embed.title", message: "Embed" },
@@ -75,7 +85,7 @@ export const embedBlock = defineBlock({
             textAlign: "center",
           }}
         >
-          Add a YouTube, Vimeo, Loom, Spotify, or CodePen URL to embed.
+          {context.t(PLACEHOLDER)}
         </div>
       );
     }
@@ -83,7 +93,7 @@ export const embedBlock = defineBlock({
     const title =
       typeof attrs.title === "string" && attrs.title.length > 0
         ? attrs.title
-        : "Embedded content";
+        : context.t(TITLE_FALLBACK);
     const caption = typeof attrs.caption === "string" ? attrs.caption : "";
 
     // The iframe (with its sandbox/referrer protections) is never rendered
@@ -96,6 +106,9 @@ export const embedBlock = defineBlock({
         prefetch="visible"
         src={resolved.src}
         title={title}
+        // Resolved here: the island hydrates from its props alone, with no
+        // render context on the client to resolve a descriptor against.
+        loadLabel={context.t(LOAD, { title })}
         caption={caption}
         provider={resolved.provider}
         sandboxed={resolved.sandboxed}

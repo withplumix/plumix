@@ -987,6 +987,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier

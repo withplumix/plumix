@@ -70,9 +70,11 @@ import {
 import { computeManifestAndRegistry } from "./manifest.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import {
+  collectPluginCatalogFiles,
   findAdminBundledPluginsDir,
   stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
+import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
 import { stageUserPublic } from "./public-staging.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
@@ -101,6 +103,9 @@ const SERIALIZE_RESOLVED_ID = "\0" + SERIALIZE_VIRTUAL_ID;
 const WORKER_EXPORTS_VIRTUAL_ID = "virtual:plumix/worker-exports";
 const WORKER_EXPORTS_RESOLVED_ID = "\0" + WORKER_EXPORTS_VIRTUAL_ID;
 
+const PLUGIN_CATALOGS_VIRTUAL_ID = "virtual:plumix/plugin-catalogs";
+const PLUGIN_CATALOGS_RESOLVED_ID = "\0" + PLUGIN_CATALOGS_VIRTUAL_ID;
+
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
@@ -109,6 +114,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   // Populated from `runtime.workerExports` on each regenerate; served by the
   // `virtual:plumix/worker-exports` module the generated worker re-exports.
   let workerExports: readonly string[] = [];
+  // Populated from each plugin's `i18n` slot on each regenerate; served by the
+  // `virtual:plumix/plugin-catalogs` module the generated entry imports.
+  let pluginCatalogFiles: ReadonlyMap<string, readonly string[]> = new Map();
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
@@ -281,6 +289,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
       if (id === SERIALIZE_VIRTUAL_ID) return SERIALIZE_RESOLVED_ID;
       if (id === WORKER_EXPORTS_VIRTUAL_ID) return WORKER_EXPORTS_RESOLVED_ID;
+      if (id === PLUGIN_CATALOGS_VIRTUAL_ID) return PLUGIN_CATALOGS_RESOLVED_ID;
       // `<file>?plumix-orig` — the SSR shim imports the original module
       // from this virtual ID; `transform` short-circuits on it so the
       // shim isn't recursively wrapped. The shim emits an absolute path,
@@ -299,6 +308,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       }
       if (id === WORKER_EXPORTS_RESOLVED_ID) {
         return generateWorkerExportsSource(workerExports);
+      }
+      if (id === PLUGIN_CATALOGS_RESOLVED_ID) {
+        return generatePluginCatalogsSource(pluginCatalogFiles);
       }
       if (id === SERIALIZE_RESOLVED_ID) {
         // Re-export `IslandShim` (the SSR island runtime) resolved from the
@@ -342,6 +354,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
       workerExports = emitted.workerExports;
+      pluginCatalogFiles = emitted.pluginCatalogFiles;
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
       // User `public/` is staged BEFORE admin so the admin SPA's
       // freshness check still works against its own source mtime —
@@ -487,6 +500,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         void regenerate(root, options.configFile, { fresh: true })
           .then(async (emitted) => {
             workerExports = emitted.workerExports;
+            pluginCatalogFiles = emitted.pluginCatalogFiles;
             await stageUserPublic({ workspaceRoot: root, publicDir });
             await stageAdminAssets(
               publicDir,
@@ -543,6 +557,7 @@ async function regenerate(
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
   workerExports: readonly string[];
+  pluginCatalogFiles: ReadonlyMap<string, readonly string[]>;
   editorBlockModules: readonly BlockModuleRef[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
@@ -630,6 +645,7 @@ async function regenerate(
     registry,
     plugins: config.plugins,
     workerExports: config.runtime.workerExports ?? [],
+    pluginCatalogFiles: await collectPluginCatalogFiles(config.plugins, cwd),
     editorBlockModules,
   };
 }

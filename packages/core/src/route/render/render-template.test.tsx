@@ -2096,6 +2096,62 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const body = await response.text();
     expect(body).toContain("loaded-on-server");
   });
+
+  test("a block's render resolves its strings from the request locale's catalogs", async () => {
+    const greetingPlugin = definePlugin("acme-greeting", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/greeting",
+          render: ({ context }) => (
+            <p data-testid="greeting">
+              {context.t({ id: "acme.greeting", message: "Hello" })}
+            </p>
+          ),
+        }),
+      );
+    });
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
+          data.entry.contentBlocks ? (
+            <BlockRenderer content={data.entry.contentBlocks} />
+          ) : null,
+        ),
+      ],
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, greetingPlugin],
+      theme,
+      i18n: { defaultLocale: "de", locales: ["de", "en"] },
+      pluginCatalogs: {
+        de: [
+          () => Promise.resolve({ messages: { "acme.greeting": ["Hallo"] } }),
+        ],
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "greeting",
+      title: "Greeting",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "g", name: "acme/greeting", attrs: {} }],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/greeting"),
+    );
+    expect(await response.text()).toContain(
+      '<p data-testid="greeting">Hallo</p>',
+    );
+  });
 });
 
 // A block whose loader always rejects. In dev the failure must escalate to the

@@ -1,5 +1,6 @@
 import type {
   BlockRect,
+  CanvasConfig,
   HandshakeMessage,
   HostMessage,
   SerializedLoaderData,
@@ -57,9 +58,9 @@ interface ConnectCanvasOptions {
   /** A clipboard shortcut fired with focus inside the iframe; the host performs
    *  the copy/cut/paste against its tree + the system clipboard. */
   readonly onClipboard?: (op: "copy" | "cut" | "paste") => void;
-  /** Host-resolved canvas chrome (localized labels) pushed once the canvas is
-   *  ready. The canvas has no i18n runtime, so the host owns these strings. */
-  readonly config?: { readonly addBlockLabel: string };
+  /** The active locale and merged catalog, pushed once the canvas is ready.
+   *  The canvas has no i18n runtime, so the host hands it the catalog. */
+  readonly config?: CanvasConfig;
 }
 
 // The iframe runtime usually boots after the parent mounts, so a single hello
@@ -95,10 +96,7 @@ export function connectCanvas({
 
   const pushConfig = (): void => {
     if (config) {
-      post({
-        type: "host:config",
-        addBlockLabel: config.addBlockLabel,
-      });
+      post({ type: "host:config", ...config });
     }
   };
 

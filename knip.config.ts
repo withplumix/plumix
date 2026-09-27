@@ -320,6 +320,13 @@ const config: KnipConfig = {
     "packages/core": {
       entry: ["lingui.config.ts", "locales/*.mjs"],
     },
+    // The blocks catalog is hand-authored (its descriptors are object
+    // literals no macro pass sees); its config drives `lingui compile`, and the
+    // compiled catalogs load through core's `./locales/*` import and admin's
+    // i18n-boot glob — knip can see neither consumer.
+    "packages/blocks": {
+      entry: ["lingui.config.ts", "locales/*.mjs"],
+    },
     // The editor's lingui config + compiled catalogs are loaded by the CLI
     // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
     // see either consumer.
@@ -331,12 +338,6 @@ const config: KnipConfig = {
         "src/index.ts",
         "lingui.config.ts",
         "locales/*.mjs",
-        // Catalog-extractor mirror for `@plumix/blocks` block metadata
-        // descriptors (title/description/keywords/input labels). Exists so
-        // `lingui extract` picks the ids into admin-editor's `.po` (the block
-        // specs live in another package, outside this extract scope); never
-        // imported at runtime.
-        "src/block-i18n.ts",
         // Visual e2e for the standalone editor playground. With the playwright
         // plugin off (below), list the config + specs so they aren't flagged;
         // the Vite playground entries (vite.config.ts, the HTML script modules)
