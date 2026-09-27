@@ -58,9 +58,11 @@ const linkField: MetaBoxFieldManifestEntry = {
 function Harness({
   initial,
   onChangeSpy,
+  field = linkField,
 }: {
   initial: unknown;
   onChangeSpy?: (next: unknown) => void;
+  field?: MetaBoxFieldManifestEntry;
 }): ReactNode {
   const form = useForm<Record<string, unknown>>({
     defaultValues: { cta: initial },
@@ -69,7 +71,7 @@ function Harness({
   return (
     <QueryClientProvider client={queryClient}>
       <Form {...form}>
-        <MetaBoxField field={linkField} name="cta" />
+        <MetaBoxField field={field} name="cta" />
         {onChangeSpy ? <Spy onChange={onChangeSpy} /> : null}
       </Form>
     </QueryClientProvider>
@@ -188,6 +190,33 @@ describe("LinkField", () => {
     expect(screen.getByTestId("meta-box-field-cta-input-url")).toBeVisible();
     expect(
       screen.queryByTestId("meta-box-field-cta-input-pick"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("adornments wrap the URL input and not the link text", () => {
+    renderWithI18n(
+      <Harness
+        initial={{ url: "example.com" }}
+        field={{ ...linkField, prepend: "https://", append: "/" }}
+      />,
+    );
+    const url = screen.getByTestId("meta-box-field-cta-input-url");
+    const prepend = screen.getByTestId("meta-box-field-cta-input-url-prepend");
+    const append = screen.getByTestId("meta-box-field-cta-input-url-append");
+    expect(prepend).toHaveTextContent("https://");
+    expect(append).toHaveTextContent("/");
+    expect(
+      prepend.compareDocumentPosition(url) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      url.compareDocumentPosition(append) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(url).toHaveValue("example.com");
+    expect(
+      screen.queryByTestId("meta-box-field-cta-input-label-prepend"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-cta-input-label-append"),
     ).not.toBeInTheDocument();
   });
 });

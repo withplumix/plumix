@@ -457,7 +457,7 @@ test.describe("/entries/$slug (list)", () => {
     await page.getByTestId("content-list-row-1").hover();
     await page.getByTestId("content-list-row-duplicate-1").click();
 
-    expect(duplicated[0]).toMatchObject({ id: 1 });
+    await expect.poll(() => duplicated[0]).toMatchObject({ id: 1 });
     await expect(page.getByTestId("toast-success")).toBeVisible();
     await expect(page.getByTestId("content-list-row-3")).toBeVisible();
   });

@@ -64,11 +64,13 @@ import { text } from "plumix/fields";
 export const unit = text("unit").placeholder("g").maxLength(12);
 ```
 
-`.prepend()` and `.append()` put static adornments beside the input, which is how a unit suffix or a currency symbol gets there without becoming part of the value.
+`.prepend()` and `.append()` put static adornments beside the input, which is how a unit suffix or a currency symbol gets there without becoming part of the value. Only `text`, `textarea`, `email`, `url`, `password`, [`number`](#number) and [`link`](#link) take them, and setting either key on another type is a compile error.
 
 ### textarea
 
 A multi-line text input. Storage and every chain method match [`text`](#text); only the control differs, so a long value gets a box that grows rather than a line that scrolls.
+
+Its adornments are strips rather than inline text: `.prepend()` renders above the box and `.append()` below it.
 
 ### email
 
@@ -165,6 +167,14 @@ export const servings = number("servings").min(1).max(50).step(1).required();
 ```
 
 The constraint walker enforces `.min()` and `.max()` server-side. `.step()` only shapes the input, and omitting it leaves the renderer at 1.
+
+`.prepend()` and `.append()` put static text beside the input, as they do on [`text`](#text). A write still stores the bare number.
+
+```ts
+import { number } from "plumix/fields";
+
+export const weight = number("weight").min(0).append("kg");
+```
 
 ### color
 
@@ -364,6 +374,8 @@ export const video = link("video").label("Video walkthrough");
 ```
 
 The admin's entry picker can fill the URL from an entry, which stores that entry's permalink as a path. On write, the value is rebuilt from those three keys, so a stray property never persists, and the URL is checked against the same allowlist rich-text link marks use: relative forms, plus `http`, `https`, `mailto` and `tel`. A `javascript:` or `data:` URL fails, because the value ends up in an anchor `href`.
+
+`.prepend()` and `.append()` frame the URL input only, not the link text beside it.
 
 ## Plugin field types
 

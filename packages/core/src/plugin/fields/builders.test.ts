@@ -6,6 +6,7 @@ import type {
   TermReferenceSummary,
   UserReferenceSummary,
 } from "../lookup.js";
+import type { MetaBoxField, NumberMetaBoxField } from "./meta-box-field.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
 import { seedFromMetaBoxes } from "../manifest-types.js";
@@ -68,6 +69,31 @@ describe("number() builder", () => {
       required: true,
       span: 6,
     });
+  });
+
+  test("chains prepend/append adornments into a number definition", () => {
+    const field = number("w").prepend("$").append("kg").build();
+    expectTypeOf(field).toEqualTypeOf<NumberMetaBoxField>();
+    expect(field).toMatchObject({ prepend: "$", append: "kg" });
+  });
+
+  test("an object-literal field of a type that renders no adornments rejects them", () => {
+    const _checkbox: MetaBoxField = {
+      key: "agree",
+      label: "Agree",
+      type: "boolean",
+      inputType: "checkbox",
+      // @ts-expect-error — only string, number and link fields take adornments.
+      prepend: "x",
+    };
+    const _legacy: MetaBoxField = {
+      key: "rating",
+      label: "Rating",
+      type: "string",
+      inputType: "stars",
+      // @ts-expect-error — the catch-all variant takes none either.
+      append: "x",
+    };
   });
 
   test("rejects text-shaped chains at the type level", () => {

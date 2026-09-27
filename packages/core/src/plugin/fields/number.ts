@@ -12,6 +12,8 @@ import { humanizeFieldKey } from "./builder.js";
 
 interface NumberFieldState extends UniversalFieldState {
   readonly placeholder?: Label;
+  readonly prepend?: Label;
+  readonly append?: Label;
   readonly default?: number;
   readonly min?: number;
   readonly max?: number;
@@ -65,6 +67,16 @@ export class NumberFieldBuilder<
 
   placeholder(placeholder: Label): NumberFieldBuilder<K, V, S> {
     return this.#fork({ placeholder });
+  }
+
+  /** Static adornment rendered before the input (e.g. a currency symbol). */
+  prepend(prepend: Label): NumberFieldBuilder<K, V, S> {
+    return this.#fork({ prepend });
+  }
+
+  /** Static adornment rendered after the input (e.g. a unit suffix). */
+  append(append: Label): NumberFieldBuilder<K, V, S> {
+    return this.#fork({ append });
   }
 
   /** Default for absent keys, applied at read decode (and seeded into

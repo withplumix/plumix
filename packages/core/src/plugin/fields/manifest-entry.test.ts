@@ -53,6 +53,13 @@ describe("toMetaBoxFieldEntry()", () => {
     });
   });
 
+  test("projects a number field's adornments onto the entry", () => {
+    const entry = toMetaBoxFieldEntry(
+      number("weight").prepend("~").append("kg").build(),
+    );
+    expect(entry).toMatchObject({ prepend: "~", append: "kg" });
+  });
+
   test("strips callback-valued properties from the wire shape", () => {
     const definitions = compileMetaBoxFields([
       text("slug")

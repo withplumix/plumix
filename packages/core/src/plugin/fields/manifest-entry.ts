@@ -30,7 +30,7 @@ export interface MetaBoxFieldManifestEntry {
   readonly inputType: string;
   readonly description?: Label;
   readonly required?: boolean;
-  /** Static input adornments — see `MetaBoxFieldBase.prepend` / `.append`. */
+  /** Static input adornments — see `StringMetaBoxField.prepend` / `.append`. */
   readonly prepend?: Label;
   readonly append?: Label;
   readonly placeholder?: Label;
@@ -107,6 +107,8 @@ export interface MetaBoxFieldManifestEntry {
 // shape mirrors that union and renderers branch on `inputType`.
 interface MetaBoxFieldOptionView {
   readonly placeholder?: Label;
+  readonly prepend?: Label;
+  readonly append?: Label;
   readonly maxLength?: number;
   readonly min?: number | string;
   readonly max?: number | string;
@@ -149,8 +151,8 @@ export function toMetaBoxFieldEntry(
     inputType: field.inputType,
     description: field.description,
     required: field.required,
-    prepend: field.prepend,
-    append: field.append,
+    prepend: view.prepend,
+    append: view.append,
     placeholder: view.placeholder,
     maxLength: view.maxLength,
     min: view.min,

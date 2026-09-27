@@ -16,6 +16,7 @@ export * from "./empty.js";
 export * from "./field.js";
 export * from "./form.js";
 export * from "./input.js";
+export * from "./input-group.js";
 export * from "./kbd.js";
 export * from "./label.js";
 export * from "./pagination.js";

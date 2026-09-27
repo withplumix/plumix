@@ -25,6 +25,10 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import {
+  InputGroupInput,
+  InputGroupTextarea,
+} from "@plumix/admin-ui/input-group";
 import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
 import {
   Select,
@@ -41,6 +45,7 @@ import { CANONICAL_INPUT_TYPES } from "@plumix/core/fields";
 import { formatTemporalValue } from "@plumix/core/manifest";
 
 import type { LookupItem } from "./lookup/types.js";
+import { AdornedControl } from "./adorned-control.js";
 import { GroupField } from "./group-field.js";
 import { evaluateJsonDraft } from "./json-draft.js";
 import { LinkField } from "./link-field.js";
@@ -230,18 +235,36 @@ export function MetaBoxField({
           );
         }
 
+        const adorned =
+          ADORNED_INPUT_TYPES.has(field.inputType) &&
+          (field.prepend !== undefined || field.append !== undefined) &&
+          getPluginFieldType(field.inputType) === undefined;
+        const control = (
+          <FormControl>
+            {renderNativeInput({
+              field,
+              rhf,
+              disabled,
+              testId: inputTestId,
+              renderLabel,
+              adorned,
+            })}
+          </FormControl>
+        );
         return (
           <FormItem className={className} data-testid={testIdPrefix}>
             <FormLabel>{labelText}</FormLabel>
-            <FormControl>
-              {renderNativeInput({
-                field,
-                rhf,
-                disabled,
-                testId: inputTestId,
-                renderLabel,
-              })}
-            </FormControl>
+            {adorned ? (
+              <AdornedControl
+                field={field}
+                testId={inputTestId}
+                block={field.inputType === "textarea"}
+              >
+                {control}
+              </AdornedControl>
+            ) : (
+              control
+            )}
             {field.description ? (
               <FormDescription data-testid={`${testIdPrefix}-description`}>
                 {renderLabel(field.description)}
@@ -254,6 +277,18 @@ export function MetaBoxField({
     />
   );
 }
+
+// Types whose control takes `prepend` / `append`. Decided by `inputType`
+// rather than by the keys' presence, so a key that reaches another type
+// (untyped JS, a plugin type) renders nothing. `link` places its own.
+const ADORNED_INPUT_TYPES: ReadonlySet<string> = new Set([
+  "text",
+  "email",
+  "url",
+  "password",
+  "number",
+  "textarea",
+]);
 
 // Radix Select / RadioGroup reject an empty-string item value (Radix reserves
 // it for "no selection"), but a plugin author may legitimately register an
@@ -312,6 +347,8 @@ interface NativeInputContext {
   disabled: boolean;
   testId: string;
   renderLabel: ReturnType<typeof useLabel>;
+  // Sits inside an `AdornedControl`: emit the input-group control variant.
+  adorned: boolean;
 }
 
 // Identity / validation / test-hook attributes shared by the plain
@@ -343,8 +380,9 @@ function fieldPlaceholder({
 function renderTextareaField(ctx: NativeInputContext): ReactNode {
   const { field, rhf } = ctx;
   const placeholderText = fieldPlaceholder(ctx);
+  const Control = ctx.adorned ? InputGroupTextarea : Textarea;
   return (
-    <Textarea
+    <Control
       {...nativeCommonProps(ctx)}
       value={asString(rhf.value)}
       maxLength={field.maxLength}
@@ -361,8 +399,9 @@ function renderTextareaField(ctx: NativeInputContext): ReactNode {
 function renderNumberField(ctx: NativeInputContext): ReactNode {
   const { field, rhf } = ctx;
   const placeholderText = fieldPlaceholder(ctx);
+  const Control = ctx.adorned ? InputGroupInput : Input;
   return (
-    <Input
+    <Control
       {...nativeCommonProps(ctx)}
       type="number"
       value={asNumberInputValue(rhf.value)}
@@ -726,8 +765,9 @@ function renderDateTimeField(ctx: NativeInputContext): ReactNode {
   // contract.
   const htmlType =
     field.inputType === "datetime" ? "datetime-local" : field.inputType;
+  const Control = ctx.adorned ? InputGroupInput : Input;
   return (
-    <Input
+    <Control
       {...nativeCommonProps(ctx)}
       type={htmlType}
       value={
@@ -814,8 +854,9 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     field.inputType === "password"
       ? field.inputType
       : "text";
+  const Control = ctx.adorned ? InputGroupInput : Input;
   return (
-    <Input
+    <Control
       {...nativeCommonProps(ctx)}
       type={htmlType}
       value={asString(rhf.value)}
