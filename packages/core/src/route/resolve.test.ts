@@ -573,6 +573,55 @@ describe("resolvePublicRoute — single", () => {
     expect(await preview.text()).toContain("access:members");
   });
 
+  test("a preview overlay keeps the autosave's reserved keys out of the entry's meta", async () => {
+    const reservedTheme = defineTheme({
+      templates: [
+        fallback(({ data }) => {
+          if (!("entry" in data)) return null;
+          const reserved = Object.keys(data.entry.meta).filter((key) =>
+            key.startsWith("__plumix_"),
+          );
+          return createElement("h1", null, `reserved:${reserved.join(",")}`);
+        }),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: reservedTheme,
+    });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Live Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+    });
+    // Every autosave carries its snapshot envelope under a reserved key.
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: {
+        title: "Live Title",
+        content: TIPTAP_BODY,
+        excerpt: null,
+        meta: { drafted: true },
+        metaDeletes: [],
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: live.id,
+      userId: author.id,
+    });
+
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+
+    expect(await preview.text()).toContain("<h1>reserved:</h1>");
+  });
+
   test("a preview overlay honors an unsaved named-template choice", async () => {
     // Theme with a `named` template for posts, plus the default fallback.
     const landingTheme = defineTheme({

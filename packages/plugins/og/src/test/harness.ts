@@ -129,6 +129,9 @@ const testBlog = definePlugin("test_blog", {
     ctx.registerEntryType("column", {
       label: "Columns",
       isPublic: true,
+      // An access pick on a published column lands on the editor's autosave,
+      // which is where a preview and the page could disagree about it.
+      supports: ["title", "editor", "autosave"],
       access: {
         default: anonymousPolicy,
         policies: [

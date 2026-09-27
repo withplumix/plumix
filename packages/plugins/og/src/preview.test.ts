@@ -1,4 +1,4 @@
-import type { ImageDelivery } from "plumix";
+import type { ImageDelivery, JsonObject } from "plumix";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
@@ -258,6 +258,70 @@ describe("the card preview in the entry editor", () => {
     };
     expect(await previewOf(harness, gated, editor)).toEqual(unreachable);
     expect(await previewOf(harness, perEntry, editor)).toEqual(unreachable);
+  });
+
+  test("answers from the live access choice, as the page does, not a pending one", async () => {
+    // The gate resolves policy from the persisted row, so an unsaved pick
+    // gates nothing yet: the page keeps publishing a card for the entry an
+    // author just drafted to members-only, and withholds one from the entry
+    // they drafted back to public.
+    const harness = await previewHarness({ siteDefaultImage: SITE_DEFAULT });
+    const editor = await harness.seedUser("editor");
+    const drafted = async (
+      meta: JsonObject,
+      access: string | null,
+    ): Promise<number> => {
+      const id = await seedEntry(harness, { type: "column", meta });
+      const saved = await harness.fetch("/_plumix/rpc/entry/update", {
+        as: editor,
+        json: { json: { id, access }, meta: [] },
+      });
+      saved.assertStatus(200);
+      return id;
+    };
+    const toMembers = await drafted({}, "members");
+    const toPublic = await drafted(
+      { [ACCESS_POLICY_META_KEY]: "members" },
+      null,
+    );
+
+    expect((await previewOf(harness, toMembers, editor)).outcome).toBe("card");
+    expect(await previewOf(harness, toPublic, editor)).toEqual({
+      outcome: "site-default",
+      skipped: "not-shareable",
+      src: SITE_DEFAULT,
+    });
+  });
+
+  test("keeps an autosave's reserved keys out of the data it computes from", async () => {
+    const harness = await previewHarness({
+      before: [
+        definePlugin("test_reserved", {
+          setup: (ctx) => {
+            ctx.addFilter("resolve:single:data", (data) => ({
+              ...data,
+              entry: {
+                ...data.entry,
+                title: `reserved:${Object.keys(data.entry.meta)
+                  .filter((key) => key.startsWith("__plumix_"))
+                  .join(",")}`,
+              },
+            }));
+          },
+        }),
+      ],
+    });
+    const editor = await harness.seedUser("editor");
+    const id = await seedEntry(harness);
+    const saved = await harness.fetch("/_plumix/rpc/entry/update", {
+      as: editor,
+      json: { json: { id, excerpt: "Pending" }, meta: [] },
+    });
+    saved.assertStatus(200);
+
+    const preview = await previewOf(harness, id, editor);
+
+    expect(decode(preview.src ?? "")).toContain("<text>reserved:</text>");
   });
 
   test("refuses a card for an entry type that is not public", async () => {

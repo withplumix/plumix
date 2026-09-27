@@ -3,8 +3,10 @@ import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
 import type { Db } from "../context/app.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
+import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
+import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template-meta-key.js";
 import { RevisionRepositoryError } from "./errors.js";
 import {
   AUTOSAVE_TYPE,
@@ -16,6 +18,7 @@ import {
   asDraftRow,
   encodeSnapshotEnvelope,
   REVISION_MESSAGE_META_KEY,
+  stripReservedMeta,
 } from "./snapshot-envelope.js";
 
 // 21 chars × 64-char alphabet = 126 bits of entropy — collision-
@@ -258,6 +261,41 @@ export async function getAutosave(
   // row that happens to be missing most of its fields.
   if (!liveRow) return undefined;
   return asDraftRow(liveRow, edits);
+}
+
+/**
+ * The live row as a preview of `autosave` renders it — the one overlay every
+ * preview goes through, so a preview never reads a row the page it previews
+ * would not. Whose autosave, and whether the caller may see it, stay with the
+ * caller.
+ *
+ * Only the drafted fields come from the autosave. `title`, `slug`, `parentId`
+ * and terms are live fields (the editor writes them with `saveAs: "live"`), and
+ * the autosave's `title` column is a snapshot frozen at its last write. Reserved
+ * `__plumix_*` meta is stripped so the bag matches a live row's shape, except
+ * the named-template pick, so an unsaved choice still drives resolution.
+ *
+ * The live access choice replaces the draft's: the gate resolves policy from
+ * the persisted row, so a bag reporting the draft's pick would tell the page one
+ * thing about its own visibility and the gate another — and anything published
+ * on the entry's behalf, a social card above all, would be decided against a
+ * choice that gates nothing.
+ *
+ * A trashed entry passes through: it has no draft to preview.
+ */
+export function overlayAutosave(live: Entry, autosave: Entry): Entry {
+  if (live.status === "trash") return live;
+  const drafted = stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]);
+  const choice = live.meta[ACCESS_POLICY_META_KEY];
+  return {
+    ...live,
+    content: autosave.content,
+    excerpt: autosave.excerpt,
+    meta:
+      choice === undefined
+        ? drafted
+        : { ...drafted, [ACCESS_POLICY_META_KEY]: choice },
+  };
 }
 
 /**

@@ -4,7 +4,7 @@ import type { GatedLookupErrors } from "../../errors.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
-import { getAutosave } from "../../../revisions/repository.js";
+import { getAutosave, overlayAutosave } from "../../../revisions/repository.js";
 
 export interface PreviewableEntryInput {
   readonly entryId: number;
@@ -19,13 +19,14 @@ export interface PreviewableEntryInput {
  * yet — so the gate is the editor's own, not the read gate a published entry
  * would pass for anyone.
  *
- * The pending autosave is overlaid because on a type supporting autosave a
- * *published* entry's meta edits land on a per-user draft row rather than the
- * live one, so the live row alone would answer with the state before the
- * author's last change — exactly the question a preview procedure exists to
- * answer. `title` stays live, since the editor writes it straight to the live
- * row and publish never promotes it. Meta references are left unresolved; a
- * caller needing them resolved runs the row through `resolveEntryList`.
+ * The caller's pending autosave is overlaid because on a type supporting
+ * autosave a *published* entry's meta edits land on a per-user draft row rather
+ * than the live one, so the live row alone would answer with the state before
+ * the author's last change — exactly the question a preview procedure exists to
+ * answer. The overlay is {@link overlayAutosave}, the one a preview link's
+ * render goes through, so both read the row the page would. Meta references
+ * are left unresolved; a caller needing them resolved runs the row through
+ * `resolveEntryList`.
  *
  * `entryTypes` is load-bearing, and must be the caller's own registered types
  * rather than a wide or user-supplied list: unlike `entry.get`, this gate does
@@ -55,12 +56,5 @@ export async function previewableEntry(
     { entryId: row.id, authorId: ctx.user.id },
     row,
   );
-  return autosave === undefined
-    ? row
-    : {
-        ...row,
-        content: autosave.content,
-        excerpt: autosave.excerpt,
-        meta: autosave.meta,
-      };
+  return autosave === undefined ? row : overlayAutosave(row, autosave);
 }
