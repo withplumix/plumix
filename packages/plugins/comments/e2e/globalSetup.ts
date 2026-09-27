@@ -7,6 +7,10 @@ import { commentFactory } from "../src/test/factories.js";
 
 const NOJS_SLUG = "comment-without-javascript";
 const NOJS_EMAIL = "grace@example.test";
+const LOAD_MORE_SLUG = "older-comments";
+// One root more than the default `rootsPerPage`, so exactly the oldest
+// is left for the load-more button to fetch.
+const LOAD_MORE_ROOTS = 21;
 
 // All e2e seeding happens here — once, in the quiet window after the worker
 // boots but before any spec drives it. Seeding from a spec races the live
@@ -33,6 +37,7 @@ export default async function globalSetup(): Promise<void> {
     authorId: author.id,
     status: "published",
   });
+  const seed = commentFactory.transient({ db });
   const pending = await commentFactory.transient({ db }).create({
     entryId: single.id,
     status: "pending",
@@ -62,13 +67,34 @@ export default async function globalSetup(): Promise<void> {
     bodyMd: "already approved",
   });
 
+  const loadMore = await factories.entry.create({
+    type: "post",
+    title: "Older comments",
+    slug: LOAD_MORE_SLUG,
+    authorId: author.id,
+    status: "published",
+  });
+  // Distinct days, oldest first, so the keyset page order is the seed
+  // order and the first root seeded is the one past the first page.
+  const roots = [];
+  for (let day = 1; day <= LOAD_MORE_ROOTS; day++) {
+    roots.push(
+      await seed.create({
+        entryId: loadMore.id,
+        status: "approved",
+        bodyMd: `older root ${String(day)}`,
+        createdAt: new Date(Date.UTC(2026, 0, day)),
+      }),
+    );
+  }
+  const [oldestRoot] = roots;
+
   const bulkEntry = await factories.entry.create({
     type: "post",
     title: "Bulk target",
     authorId: author.id,
     status: "published",
   });
-  const seed = commentFactory.transient({ db });
   const first = await seed.create({ entryId: bulkEntry.id, status: "pending" });
   const second = await seed.create({
     entryId: bulkEntry.id,
@@ -83,6 +109,8 @@ export default async function globalSetup(): Promise<void> {
       pendingId: pending.id,
       bulkEntryId: bulkEntry.id,
       bulkIds: [first.id, second.id],
+      loadMoreSlug: LOAD_MORE_SLUG,
+      oldestRootId: oldestRoot?.id,
     }),
     "utf8",
   );

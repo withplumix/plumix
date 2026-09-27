@@ -8,7 +8,7 @@ import {
 import type { ResolvedCommentsConfig } from "./config.js";
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
-import { SUBMIT_ROUTE_PATH } from "./contract.js";
+import { LIST_ROUTE_PATH, SUBMIT_ROUTE_PATH } from "./contract.js";
 import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
@@ -117,7 +117,7 @@ export function comments(options: CommentsConfig = {}) {
       });
       ctx.registerRoute({
         method: "GET",
-        path: "/list",
+        path: LIST_ROUTE_PATH,
         auth: "public",
         handler: createListHandler(config),
       });

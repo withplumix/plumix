@@ -175,6 +175,11 @@ msgid "plugin.comments.error.unreachable"
 msgstr "تعذّر إرسال تعليقك. يرجى المحاولة مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.load_failed"
+msgstr "تعذّر تحميل هذه التعليقات. يرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
 #: src/refusals.ts
 msgid "plugin.comments.error.invalid_json"
 msgstr "تعذّرت قراءة هذا التعليق."

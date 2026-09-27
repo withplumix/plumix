@@ -27,7 +27,12 @@ async function seedRoots(harness: Harness, entryId: number, n: number) {
 }
 
 interface ListPage {
-  comments: { id: number; bodyHtml: string; replies: { bodyHtml: string }[] }[];
+  comments: {
+    id: number;
+    bodyHtml: string;
+    createdAt: string;
+    replies: { bodyHtml: string }[];
+  }[];
   hasMore: boolean;
   nextCursor: string | null;
 }
@@ -120,6 +125,18 @@ describe("GET /_plumix/comments/list", () => {
     );
     expect(second.hasMore).toBe(false);
     expect(second.nextCursor).toBeNull();
+  });
+
+  test("sends createdAt as an ISO-8601 string, which the wire module revives", async () => {
+    const harness = await harnessWith({ entryTypes: ["post"] });
+    const entry = await seedPost(harness);
+    await seedRoots(harness, entry.id, 1);
+
+    const res = await harness.fetch(
+      `/_plumix/comments/list?entryId=${String(entry.id)}`,
+    );
+    const page = await res.json<ListPage>();
+    expect(page.comments[0]?.createdAt).toBe("2026-06-01T00:00:00.000Z");
   });
 
   test("never leaks author email or ip hash in the payload", async () => {

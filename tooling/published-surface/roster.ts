@@ -139,6 +139,16 @@ export const ROSTER: Readonly<
           "CommentStatus",
         ],
       },
+      {
+        reason:
+          "the headless load-more, for a theme island paging in older root " +
+          "comments and rendering them with its own item component",
+        names: [
+          "usePlumixCommentThread",
+          "PlumixCommentThreadState",
+          "ResolvedComment",
+        ],
+      },
     ],
     "./schema": [
       { reason: SCHEMA_MODULE, names: ["comments", "Comment", "NewComment"] },

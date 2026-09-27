@@ -59,3 +59,9 @@ export const UNREACHABLE: Label = {
   id: "plugin.comments.error.unreachable",
   message: "Your comment could not be sent. Please try again.",
 };
+
+/** Shown when a page of older comments did not arrive. */
+export const LOAD_FAILED: Label = {
+  id: "plugin.comments.error.load_failed",
+  message: "Those comments could not be loaded. Please try again.",
+};

@@ -10,6 +10,14 @@ export const SUBMIT_ROUTE_PATH = "/submit";
 export const SUBMIT_PATH = `/_plumix/comments${SUBMIT_ROUTE_PATH}`;
 
 /**
+ * Where older root comments are paged from. Unpublished, like the submit
+ * path: a theme reaches it through `usePlumixCommentThread`, so the URL is
+ * only ever built beside the deployment's base path.
+ */
+export const LIST_ROUTE_PATH = "/list";
+export const LIST_PATH = `/_plumix/comments${LIST_ROUTE_PATH}`;
+
+/**
  * The honeypot, named for what a bot expects to find rather than for what
  * it is: the trap works by looking like an ordinary field. Never echoed
  * back into a form the handler hands a visitor, which would fill it for
