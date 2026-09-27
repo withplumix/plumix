@@ -1,10 +1,13 @@
 import type { QueuedPullRequest, Ticket } from "./lib/github.js";
 import {
+  branchOfPullRequest,
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
+  queueForMerge,
+  rebaseOntoMain,
   releaseClaim,
   syncRepoToMain,
   ticketByNumber,
@@ -87,6 +90,9 @@ const report = await runShipLoop(
     park: ({ number }, reason, pullRequestUrl) =>
       parkTicket(number, reason, pullRequestUrl),
     releaseClaim: ({ number }) => releaseClaim(number),
+    rebaseOntoMain: async ({ number }) =>
+      rebaseOntoMain(branchOfPullRequest(number)),
+    requeue: ({ number }) => queueForMerge(number),
     confirm: (pullRequest) =>
       waitForMerge(pullRequest.number, {
         pollEveryMs: MERGE_POLL_INTERVAL_MS,

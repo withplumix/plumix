@@ -27,6 +27,8 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     park: (t, reason) => void parked.push({ number: t.number, reason }),
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
+    rebaseOntoMain: async () => "rebased" as const,
+    requeue: () => {},
     ticketClosed: () => true,
     say: () => {},
   };
@@ -217,6 +219,57 @@ describe("runShipLoop", () => {
     await runShipLoop(p, { lanes: 1, withinBudget: () => true });
 
     expect(attempted).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test("a pull request that fails once is rebased and given a second chance", async () => {
+    const seen: string[] = [];
+    let attempts = 0;
+    const { ports: p, parked } = ports({
+      confirm: async () => {
+        attempts += 1;
+        return attempts <= 3 ? ciRed : merged;
+      },
+      rebaseOntoMain: async () => {
+        seen.push("rebased");
+        return "rebased" as const;
+      },
+      requeue: () => void seen.push("requeued"),
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen.filter((s) => s === "rebased")).toHaveLength(3);
+    expect(report.merged).toHaveLength(3);
+    expect(parked).toEqual([]);
+  });
+
+  test("a pull request that fails twice is parked, not rebased for ever", async () => {
+    let rebases = 0;
+    const { ports: p, parked } = ports({
+      confirm: async () => ciRed,
+      rebaseOntoMain: async () => {
+        rebases += 1;
+        return "rebased" as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(rebases).toBe(3);
+    expect(parked).toHaveLength(3);
+    expect(parked[0]?.reason).toContain("failing checks");
+  });
+
+  test("a rebase that conflicts parks at once, saying so", async () => {
+    const { ports: p, parked } = ports({
+      confirm: async () => ciRed,
+      rebaseOntoMain: async () => "conflicted" as const,
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked).toHaveLength(3);
+    expect(parked[0]?.reason).toContain("conflicts with main");
   });
 
   test("a budget that has run out hands out no work at all", async () => {

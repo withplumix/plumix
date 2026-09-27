@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 
 import {
   DECISION_LABEL,
@@ -519,3 +520,43 @@ export const blockIssueOn = (
     `issue_id=${issueDatabaseId(blockerNumber)}`,
   ]);
 };
+
+export const rebaseOntoMain = (branch: string): "rebased" | "conflicted" => {
+  const scratch = join(
+    REPO_ROOT,
+    ".sandcastle",
+    "worktrees",
+    `rebase-${branch.replace(/[^\w-]+/g, "-")}`,
+  );
+  git(["fetch", "-q", "origin", "main", branch]);
+  git(["worktree", "add", "--detach", "-f", scratch, `origin/${branch}`]);
+  try {
+    git(["rebase", "origin/main"], scratch);
+    git(["push", "--force-with-lease", "origin", `HEAD:${branch}`], scratch);
+    return "rebased";
+  } catch {
+    try {
+      git(["rebase", "--abort"], scratch);
+    } catch {
+      /* nothing to abort */
+    }
+    return "conflicted";
+  } finally {
+    try {
+      git(["worktree", "remove", "--force", scratch]);
+    } catch {
+      /* already gone */
+    }
+  }
+};
+
+export const branchOfPullRequest = (pullRequest: number): string =>
+  ghJson<{ headRefName: string }>([
+    "pr",
+    "view",
+    String(pullRequest),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "headRefName",
+  ]).headRefName;

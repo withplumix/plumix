@@ -13,6 +13,10 @@ export interface ShipPorts {
   ) => void;
   readonly releaseClaim: (ticket: Ticket) => void;
   readonly confirm: (pullRequest: QueuedPullRequest) => Promise<MergeOutcome>;
+  readonly rebaseOntoMain: (
+    pullRequest: QueuedPullRequest,
+  ) => Promise<"rebased" | "conflicted">;
+  readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
 }
@@ -99,8 +103,33 @@ export const runShipLoop = async (
   const queued = settled.flatMap((entry) => entry ?? []);
   ports.say(`\n--- confirming ${queued.length} queued pull request(s) ---`);
 
+  const confirmOnceMoreOnCurrentMain = async (
+    pullRequest: QueuedPullRequest,
+    firstRefusal: MergeOutcome,
+  ): Promise<MergeOutcome> => {
+    if (firstRefusal.status === "merged") return firstRefusal;
+
+    ports.say(
+      `  #${pullRequest.number} did not land, rebasing onto main and trying once more`,
+    );
+    if ((await ports.rebaseOntoMain(pullRequest)) === "conflicted") {
+      return {
+        status: "failed",
+        reason: `${pullRequest.url} conflicts with main and cannot be rebased unattended`,
+        failingChecks: [],
+      };
+    }
+    ports.requeue(pullRequest);
+    return ports.confirm(pullRequest);
+  };
+
   const confirmations = await Promise.allSettled(
-    queued.map(async ({ pullRequest }) => ports.confirm(pullRequest)),
+    queued.map(async ({ pullRequest }) =>
+      confirmOnceMoreOnCurrentMain(
+        pullRequest,
+        await ports.confirm(pullRequest),
+      ),
+    ),
   );
 
   const merged: { ticket: Ticket; pullRequest: QueuedPullRequest }[] = [];
