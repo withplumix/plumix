@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript";
 import { beforeAll, describe, expect, test } from "vitest";
@@ -248,5 +249,69 @@ describe("types", () => {
       }
     }
     expect(twice).toEqual([]);
+  });
+});
+
+// `@plumix/blocks` sits below core and cannot name `AppContext`, so the
+// `plumix/blocks` façade fills the loader-context seam. The fixture is what a
+// plugin file writes: nothing but the façade and `AppContext`'s own home, read
+// through the published declarations a plugin build resolves.
+describe("block loader context", () => {
+  const fixture = resolve(packageDir, "test", "block-loader-ctx.fixture.ts");
+  const source = `
+import { defineBlock } from "plumix/blocks";
+import type { BlockLoaderArgs } from "plumix/blocks";
+import type { AppContext } from "plumix/plugin";
+
+type Exact<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
+
+export const block = defineBlock({
+  name: "fixture/loader",
+  title: "Loader",
+  render: () => null,
+  loaders: {
+    ctx: async ({ ctx }: BlockLoaderArgs) => {
+      const exact: Exact<typeof ctx, AppContext> = true;
+      return exact;
+    },
+  },
+});
+`;
+
+  test("a loader reads ctx as the request's AppContext", () => {
+    const config = ts.getParsedCommandLineOfConfigFile(
+      resolve(packageDir, "tsconfig.json"),
+      {},
+      { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
+    );
+    if (config === undefined) throw new Error("tsconfig.json did not parse");
+    const host = ts.createCompilerHost(config.options);
+    const getSourceFile = host.getSourceFile.bind(host);
+    const fileExists = host.fileExists.bind(host);
+    host.getSourceFile = (file, language, ...rest) =>
+      file === fixture
+        ? ts.createSourceFile(file, source, language)
+        : getSourceFile(file, language, ...rest);
+    host.fileExists = (file) => file === fixture || fileExists(file);
+    const program = ts.createProgram([fixture], config.options, host);
+
+    expect(
+      ts
+        .getPreEmitDiagnostics(program, program.getSourceFile(fixture))
+        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n")),
+    ).toEqual([]);
+  }, 30_000);
+
+  // The fill is a type-only edge: a theme bundling `plumix/blocks` for the
+  // browser must not pull core in with it.
+  test("the façade's emitted JS does not import core", () => {
+    const emitted = readFileSync(
+      resolve(packageDir, "dist", "blocks", "index.js"),
+      "utf8",
+    );
+    expect(emitted).not.toMatch(/["']@plumix\/core["']/);
   });
 });

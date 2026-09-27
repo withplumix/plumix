@@ -73,6 +73,8 @@ export {
 } from "./loaders.js";
 export type {
   BlockLoaderArgs,
+  BlockLoaderContext,
+  BlockLoaderContextRegistry,
   BlockLoaderFn,
   BlockLoaderRecord,
   LoaderEntry,
