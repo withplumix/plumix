@@ -318,6 +318,15 @@ export const waitForMerge = async (
       };
     }
 
+    if (state.mergeStateStatus === "DIRTY") {
+      return {
+        status: "failed",
+        reason:
+          "the branch conflicts with main, so the queue will never take it",
+        failingChecks: [],
+      };
+    }
+
     const failures = failedCheckNames(state);
     if (failures.length > 0) {
       return {
