@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 
-import { isEntryContent } from "@plumix/blocks";
+import { expandShortcodes, isEntryContent } from "@plumix/blocks";
 
 import type { AppContext } from "../../context/app.js";
 import type { Entry } from "../../db/schema/entries.js";
@@ -52,7 +52,7 @@ async function resolveAuthors(
 
 /**
  * One author, from a row the caller already has. Shares the per-author request
- * memo with {@link buildResolvedEntries}, so an author archive — which
+ * memo with {@link resolveEntryList}, so an author archive — which
  * resolves its subject and then lists that same author's entries — projects
  * and hydrates them once, not twice.
  */
@@ -112,12 +112,32 @@ export function resolveTerm(
 }
 
 /**
- * Resolve raw entry rows into `ResolvedEntry` — author, terms, and the
- * basePath-correct permalink each entry needs for rendering. Batched
+ * An entry's title with its shortcodes expanded, so `[year]` reads the same in
+ * a heading, a listing and a card. The one place the shortcode context for a
+ * title is built.
+ */
+export function expandEntryTitle(
+  ctx: AppContext,
+  entry: ResolvedEntry,
+): string {
+  // The spread is what makes the entry readable as an open bag: a shortcode
+  // looks its fields up by name, and TypeScript withholds the implicit index
+  // signature an `interface` would need to be read that way.
+  return expandShortcodes(entry.title, ctx.shortcodes, {
+    siteSettings: {},
+    locale: ctx.locale.code,
+    entry: { ...entry },
+  });
+}
+
+/**
+ * Resolve raw entry rows into `ResolvedEntry` — author, terms, the
+ * basePath-correct permalink and the shortcode-expanded title each entry
+ * needs for rendering. Batched
  * (mirrors WordPress's `update_post_caches`): one `IN(...)` query for
  * authors, one entry_term×terms join for terms — no N+1 per entry.
  */
-export async function buildResolvedEntries(
+export async function resolveEntryList(
   ctx: AppContext,
   rows: readonly Entry[],
 ): Promise<readonly ResolvedEntry[]> {
@@ -188,11 +208,11 @@ export async function buildResolvedEntries(
     if (!author) {
       // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
       throw new Error(
-        `buildResolvedEntries: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
+        `resolveEntryList: entry ${String(row.id)} references missing author ${String(row.authorId)}`,
       );
     }
     const meta = metaBags[rowIdx] ?? {};
-    return {
+    const resolved: ResolvedEntry = {
       ...row,
       meta,
       storedMeta: row.meta,
@@ -206,5 +226,6 @@ export async function buildResolvedEntries(
       author,
       url: buildEntryPermalinkSync(ctx, row),
     };
+    return { ...resolved, title: expandEntryTitle(ctx, resolved) };
   });
 }

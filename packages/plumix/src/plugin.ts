@@ -84,7 +84,6 @@ export {
 export {
   archiveTypeTargets,
   authorTargets,
-  buildResolvedEntries,
   dateTargets,
   entryTypeMatch,
   entryTypeTargets,
@@ -92,6 +91,8 @@ export {
   metaEquals,
   pageFacts,
   resolveErrorRule,
+  resolveEntryData,
+  resolveEntryList,
   resolveErrorTemplate,
   resolveListingPage,
   resolveRule,

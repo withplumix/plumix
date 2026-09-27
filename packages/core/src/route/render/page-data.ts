@@ -10,6 +10,7 @@ import type {
   ArchiveData,
   AuthorArchiveData,
   DateArchiveData,
+  EntryData,
   FrontPageData,
   ResolvedAuthor,
   TaxonomyData,
@@ -26,11 +27,17 @@ import { archiveSlugForEntryType } from "../compile.js";
 import { paginate } from "../paginate.js";
 import { rememberAuthor, rememberTermSegments } from "../path-chain.js";
 import { buildTermArchiveUrl } from "../permalink.js";
-import { resolveAuthorRow, resolveTerm } from "./build-resolved-entries.js";
 import { listEntryPage } from "./entry-listing.js";
+import {
+  expandEntryTitle,
+  resolveAuthorRow,
+  resolveEntryList,
+  resolveTerm,
+} from "./resolve-entry-list.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
+    "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
     "resolve:archive:data": (
       data: ArchiveData,
     ) => ArchiveData | Promise<ArchiveData>;
@@ -233,6 +240,36 @@ export async function dateData(
     node: { kind: "date", year, month, day },
     data,
     title: dateTitle(year, month, day),
+  };
+}
+
+/**
+ * One entry's page data, from a row the caller has already fetched and gated —
+ * the entry-shaped sibling of {@link resolveListingPage}, and the call core's
+ * own single-entry route makes. Takes a row rather than an id because who may
+ * see which version of an entry differs by caller: the public route gates on
+ * status and a preview token, an admin preview on the editor's session.
+ */
+export async function resolveEntryData(
+  ctx: AppContext,
+  row: Entry,
+): Promise<EntryData> {
+  const [entry] = await resolveEntryList(ctx, [row]);
+  if (!entry) {
+    // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
+    throw new Error("resolveEntryList: empty result for one row");
+  }
+  const data = await ctx.hooks.applyFilter("resolve:single:data", {
+    kind: "entry",
+    entry,
+  });
+  // A title a subscriber rewrote is expanded as one an author wrote. An
+  // untouched one was expanded at mint, and expanding it again would unescape
+  // a literal `[[tag]]` into a live one.
+  if (data.entry.title === entry.title) return data;
+  return {
+    ...data,
+    entry: { ...data.entry, title: expandEntryTitle(ctx, data.entry) },
   };
 }
 

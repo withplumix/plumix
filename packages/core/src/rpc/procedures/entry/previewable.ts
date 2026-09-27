@@ -25,7 +25,7 @@ export interface PreviewableEntryInput {
  * author's last change — exactly the question a preview procedure exists to
  * answer. `title` stays live, since the editor writes it straight to the live
  * row and publish never promotes it. Meta references are left unresolved; a
- * caller needing them resolved runs the row through `buildResolvedEntries`.
+ * caller needing them resolved runs the row through `resolveEntryList`.
  *
  * `entryTypes` is load-bearing, and must be the caller's own registered types
  * rather than a wide or user-supplied list: unlike `entry.get`, this gate does

@@ -93,11 +93,15 @@ export {
 } from "./runtime/scheduled-guard.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
-export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
-// The listing pages core routes, resolved from an identity rather than from a
-// URL — for a plugin serving something of its own *about* a page it did not
-// route to, such as a social card at a URL of its own (#1981).
-export { resolveListingPage } from "./route/render/page-data.js";
+// The page data core renders, for a plugin serving something of its own
+// *about* a page it did not route to, such as a social card at a URL of its
+// own (#1981): one entry from a row the caller gated, a batch of entries, or a
+// listing page resolved from an identity rather than from a URL (ADR 0015).
+export { resolveEntryList } from "./route/render/resolve-entry-list.js";
+export {
+  resolveEntryData,
+  resolveListingPage,
+} from "./route/render/page-data.js";
 export type {
   ListingPageTarget,
   ResolvedListingPage,

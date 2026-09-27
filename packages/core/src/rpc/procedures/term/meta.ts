@@ -125,7 +125,7 @@ export async function resolveTermsMeta(
  * Settle one term's stored bag and return the bag a reader should decode —
  * the term counterpart of `settleEntryMeta`, which says why the settle hangs
  * off the single-item read and not the decode. The public renderer reads term
- * meta through `page-data.ts` and `build-resolved-entries.ts`, neither of
+ * meta through `page-data.ts` and `resolve-entry-list.ts`, neither of
  * which comes through here.
  */
 export async function settleTermMeta(

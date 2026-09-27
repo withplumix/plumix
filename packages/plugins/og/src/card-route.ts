@@ -2,7 +2,7 @@ import type { TemplateData } from "plumix";
 import type { AppContext, ResolvedNode } from "plumix/plugin";
 import { eq } from "plumix/db";
 import {
-  buildResolvedEntries,
+  resolveEntryData,
   resolveListingPage,
   serveRenderedAsset,
   tagCdnEntry,
@@ -198,9 +198,9 @@ async function resolveCardPage(
   ctx: AppContext,
   target: CardTarget,
 ): Promise<CardPage | null> {
-  // Every kind but an entry resolves through core, which is what keeps a card
-  // rendered from the page's own data rather than from a second, drifting copy
-  // of the queries behind it — pagination included, which core pins to page one.
+  // Every kind resolves through core, which is what keeps a card rendered from
+  // the page's own data rather than from a second, drifting copy of the
+  // queries behind it — pagination included, which core pins to page one.
   const data =
     target.kind === "entry"
       ? await entryData(ctx, target.id)
@@ -220,10 +220,7 @@ async function entryData(
     .from(entries)
     .where(eq(entries.id, id))
     .limit(1);
-  if (!row) return null;
-
-  const [entry] = await buildResolvedEntries(ctx, [row]);
-  return entry === undefined ? null : { kind: "entry", entry };
+  return row ? resolveEntryData(ctx, row) : null;
 }
 
 interface AskedCard {

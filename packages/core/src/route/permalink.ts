@@ -122,7 +122,7 @@ export async function buildTermArchiveUrls(
 
 /**
  * Sync subset of `buildEntryPermalink`; returns `null` when an ancestor
- * chain lookup is required so callers (e.g., `buildResolvedEntries`)
+ * chain lookup is required so callers (e.g., `resolveEntryList`)
  * can avoid the per-entry CTE.
  */
 export function buildEntryPermalinkSync(
@@ -142,7 +142,7 @@ export function buildEntryPermalinkSync(
 /**
  * Sync subset of `buildTermArchiveUrl` — mirror of `buildEntryPermalinkSync`.
  * Returns `null` when a nested term needs an ancestor-chain DB walk, so
- * callers (e.g. `buildResolvedEntries`) attach a `url` without a per-term CTE.
+ * callers (e.g. `resolveEntryList`) attach a `url` without a per-term CTE.
  */
 export function buildTermArchiveUrlSync(
   ctx: Pick<AppContext, "plugins" | "basePath">,

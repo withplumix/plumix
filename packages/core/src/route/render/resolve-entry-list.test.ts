@@ -16,7 +16,7 @@ import {
   photoUrl,
 } from "../../test/photo-lookup.js";
 import { createTracedContext } from "../../test/traced-context.js";
-import { buildResolvedEntries } from "./build-resolved-entries.js";
+import { resolveEntryList } from "./resolve-entry-list.js";
 import { forEntryType } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
 
@@ -69,7 +69,7 @@ const dossierPlugin = definePlugin("test-dossier", (ctx) => {
   });
 });
 
-describe("buildResolvedEntries author memoization", () => {
+describe("resolveEntryList author memoization", () => {
   test("a second call with an already-seen author skips the author query", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext();
     const author = await harness.factory.user.create({ name: "Ada" });
@@ -79,8 +79,8 @@ describe("buildResolvedEntries author memoization", () => {
     ]);
 
     const [first, second] = await run(async () => [
-      await buildResolvedEntries(ctx, [post]),
-      await buildResolvedEntries(ctx, [other]),
+      await resolveEntryList(ctx, [post]),
+      await resolveEntryList(ctx, [other]),
     ]);
 
     expect(first[0]?.author.name).toBe("Ada");
@@ -101,8 +101,8 @@ describe("buildResolvedEntries author memoization", () => {
     ]);
 
     const [, mixed] = await run(async () => [
-      await buildResolvedEntries(ctx, [adaPost]),
-      await buildResolvedEntries(ctx, [adaOther, linPost]),
+      await resolveEntryList(ctx, [adaPost]),
+      await resolveEntryList(ctx, [adaOther, linPost]),
     ]);
 
     expect(mixed.map((e) => e.author.name).sort()).toEqual(["Ada", "Lin"]);
@@ -111,7 +111,33 @@ describe("buildResolvedEntries author memoization", () => {
   });
 });
 
-describe("buildResolvedEntries reference meta resolution", () => {
+describe("resolveEntryList titles", () => {
+  test("expands each entry's title shortcodes, adding no query", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const [best, plain] = await Promise.all([
+      harness.factory.entry.create({
+        authorId: author.id,
+        title: "Best of [year]",
+      }),
+      harness.factory.entry.create({ authorId: author.id, title: "Plain" }),
+    ]);
+    const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
+      new Date(),
+    );
+
+    const resolved = await run(() => resolveEntryList(ctx, [best, plain]));
+
+    expect(resolved.map((entry) => entry.title)).toEqual([
+      `Best of ${year}`,
+      "Plain",
+    ]);
+    // One author query and one term join for the whole batch.
+    expect(dbQueryCount()).toBe(2);
+  });
+});
+
+describe("resolveEntryList reference meta resolution", () => {
   const refsPlugin = definePlugin("test-refs", (ctx) => {
     ctx.registerEntryMetaBox("relations", {
       label: "Relations",
@@ -167,7 +193,7 @@ describe("buildResolvedEntries reference meta resolution", () => {
       ),
     );
 
-    const resolved = await run(() => buildResolvedEntries(ctx, rows));
+    const resolved = await run(() => resolveEntryList(ctx, rows));
 
     for (const entry of resolved) {
       const related = entry.meta.related as {
@@ -208,8 +234,8 @@ describe("whereMeta against a real row", () => {
       meta: { filedOn: "2026-01-01", subject: String(subject.id) },
     });
 
-    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
-    if (!entry) throw new Error("buildResolvedEntries returned no entry");
+    const [entry] = await run(() => resolveEntryList(ctx, [row]));
+    if (!entry) throw new Error("resolveEntryList returned no entry");
 
     // What a template reads: decoded and hydrated.
     expect(entry.meta.filedOn).toBeInstanceOf(Date);
@@ -264,9 +290,7 @@ describe("whereMeta against a real row", () => {
     const canonical = await seed({ sealed: true });
     const token = await seed({ sealed: 1 });
 
-    const resolved = await run(() =>
-      buildResolvedEntries(ctx, [canonical, token]),
-    );
+    const resolved = await run(() => resolveEntryList(ctx, [canonical, token]));
     const sealed = forEntryType("post")
       .whereMeta("sealed", true)
       .template(() => null);
@@ -317,7 +341,7 @@ describe("whereMeta against a real row", () => {
       meta: { sealed: 1 },
     });
 
-    await run(() => buildResolvedEntries(ctx, [token]));
+    await run(() => resolveEntryList(ctx, [token]));
 
     const stored = await harness.db.query.entries.findFirst({
       where: (row, { eq }) => eq(row.id, token.id),
@@ -346,7 +370,7 @@ describe("whereMeta against a real row", () => {
     const offSchema = await seed({ codename: 42, clearance: "7" });
 
     const resolved = await run(() =>
-      buildResolvedEntries(ctx, [canonical, offSchema]),
+      resolveEntryList(ctx, [canonical, offSchema]),
     );
     const named = forEntryType("post")
       .whereMeta("codename", "42")
@@ -415,9 +439,9 @@ describe("term meta on the render path", () => {
       termId: term.id,
     });
 
-    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+    const [entry] = await run(() => resolveEntryList(ctx, [row]));
     const [resolved] = entry?.terms ?? [];
-    if (!resolved) throw new Error("buildResolvedEntries returned no term");
+    if (!resolved) throw new Error("resolveEntryList returned no term");
 
     // What a template reads off `data.entry.terms[n].meta`.
     expect(resolved.meta.taggedOn).toEqual(
@@ -453,9 +477,9 @@ describe("term meta on the render path", () => {
       termId: term.id,
     });
 
-    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+    const [entry] = await run(() => resolveEntryList(ctx, [row]));
     const [resolved] = entry?.terms ?? [];
-    if (!resolved) throw new Error("buildResolvedEntries returned no term");
+    if (!resolved) throw new Error("resolveEntryList returned no term");
 
     expect(resolved.meta.termTone).toBe("warm");
     // The column itself is untouched — a rule predicate still sees no key.
@@ -499,7 +523,7 @@ describe("term meta on the render path", () => {
       harness.factory.entryTerm.create({ entryId: second.id, termId: solo.id }),
     ]);
 
-    const entries = await run(() => buildResolvedEntries(ctx, [first, second]));
+    const entries = await run(() => resolveEntryList(ctx, [first, second]));
     const byId = new Map(entries.map((e) => [e.id, e]));
     const onFirst = byId.get(first.id)?.terms ?? [];
     const onSecond = byId.get(second.id)?.terms ?? [];
@@ -553,7 +577,7 @@ function photoPlugin(tagged: boolean) {
   });
 }
 
-describe("buildResolvedEntries role images", () => {
+describe("resolveEntryList role images", () => {
   async function seedListing(role: boolean) {
     const traced = await createTracedContext({ plugins: [photoPlugin(role)] });
     const { harness } = traced;
@@ -589,7 +613,7 @@ describe("buildResolvedEntries role images", () => {
   test("projects a group-nested role onto every entry and term, adding no query", async () => {
     const tagged = await seedListing(true);
     const resolved = await tagged.run(() =>
-      buildResolvedEntries(tagged.ctx, tagged.rows),
+      resolveEntryList(tagged.ctx, tagged.rows),
     );
 
     const url = photoUrl(tagged.photo.id);
@@ -601,7 +625,7 @@ describe("buildResolvedEntries role images", () => {
     // The identical site with the role tag removed — the reference fields, and
     // so the hydration batch, are the same. The projection reads that batch.
     const untagged = await seedListing(false);
-    await untagged.run(() => buildResolvedEntries(untagged.ctx, untagged.rows));
+    await untagged.run(() => resolveEntryList(untagged.ctx, untagged.rows));
     expect(tagged.dbQueryCount()).toBe(untagged.dbQueryCount());
   });
 
@@ -629,7 +653,7 @@ describe("buildResolvedEntries role images", () => {
       ),
     );
 
-    const resolved = await run(() => buildResolvedEntries(ctx, rows));
+    const resolved = await run(() => resolveEntryList(ctx, rows));
 
     for (const entry of resolved) {
       expect(entry.author.images.featured).toEqual({
@@ -660,7 +684,7 @@ describe("buildResolvedEntries role images", () => {
       meta: { layout: { cover: String(broken.id) } },
     });
 
-    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+    const [entry] = await run(() => resolveEntryList(ctx, [row]));
 
     expect(entry?.images.featured).toBeNull();
   });

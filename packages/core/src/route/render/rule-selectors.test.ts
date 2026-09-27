@@ -221,7 +221,7 @@ describe("the match constructors", () => {
 });
 
 // Both read the stored bag. A fixture fills the decoded sibling to match, so
-// only the test below turns on the split; `build-resolved-entries.test.ts`
+// only the test below turns on the split; `resolve-entry-list.test.ts`
 // runs the same pair off a real row, where the two genuinely differ.
 const entryData = (meta: Record<string, unknown>) =>
   ({ entry: { meta, storedMeta: meta } }) as unknown as TemplateData;

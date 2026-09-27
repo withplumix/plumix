@@ -186,7 +186,7 @@ declare module "../../plugin/fields/contributions.js" {
 }
 
 // Both bags, same values: the rules below turn on which key is read, not on
-// the stored/decoded split — `build-resolved-entries.test.ts` covers that.
+// the stored/decoded split — `resolve-entry-list.test.ts` covers that.
 const entryData = (meta: Record<string, unknown>): TemplateData =>
   ({
     kind: "entry",
