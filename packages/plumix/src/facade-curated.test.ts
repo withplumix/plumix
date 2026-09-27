@@ -517,24 +517,10 @@ const CURATED: Readonly<Record<string, Curated>> = {
     withheld: [
       {
         reason:
-          "the editor's React surface, which the admin mounts from " +
-          "`@plumix/admin-editor` directly; the canvas boots through " +
-          "`bootEditor` alone",
-        names: [
-          "connectCanvas",
-          "connectRuntime",
-          "EditorCanvas",
-          "CanvasFrame",
-          "EditorConfigProvider",
-          "useEditorConfig",
-          "PlumixEditor",
-          "EDITOR_COMMAND_DESCRIPTORS",
-          "EditorProvider",
-          "useEditorStore",
-          "createEditorStore",
-          "MAX_ZOOM",
-          "MIN_ZOOM",
-        ],
+          "the editor's React surface and its command roster, which the " +
+          "admin imports from `@plumix/admin-editor` directly; the canvas " +
+          "boots through `bootEditor` alone",
+        names: ["PlumixEditor", "EDITOR_COMMAND_DESCRIPTORS"],
       },
     ],
   },

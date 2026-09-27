@@ -55,6 +55,7 @@ import {
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { PublishActions } from "@plumix/admin-editor";
 import type { EntryContent } from "@plumix/blocks";
 import type { ResolvedMeta } from "@plumix/core";
 import type { Label } from "@plumix/core/i18n";
@@ -939,7 +940,7 @@ function EntryEditor({
 
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
   const handleSaveDraft = useCallback(
-    () => contentDebouncer.flush(),
+    () => void contentDebouncer.flush(),
     [contentDebouncer],
   );
   const handlePublishDraft = useCallback(
@@ -961,7 +962,7 @@ function EntryEditor({
     });
   }, [discardDraft]);
 
-  const publishActions = useMemo(
+  const publishActions = useMemo<PublishActions>(
     () =>
       isEditWithDraft
         ? {

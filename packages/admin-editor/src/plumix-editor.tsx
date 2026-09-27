@@ -26,7 +26,7 @@ import { defineEntryContent } from "@plumix/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
 import type { ResolvePluginFieldType } from "./block-input-control.js";
-import type { PublishActions } from "./editor-toolbar.js";
+import type { PublishActions } from "./editor-header.js";
 import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
@@ -53,7 +53,7 @@ const NO_CAPABILITIES: ReadonlySet<string> = new Set();
 // memo and re-render every panel). Mirrors NO_CAPABILITIES above.
 const NO_TOKENS: ThemeTokens = {};
 
-interface PlumixEditorProps {
+export interface PlumixEditorProps {
   /** Seed content; the editor owns state thereafter (uncontrolled). */
   readonly defaultValue?: EntryContent;
   /** URL the canvas iframe loads — the entry's real route with `?plumix.edit`. */
@@ -95,7 +95,7 @@ interface PlumixEditorProps {
   /** Admin-provided document settings (slug/excerpt/parent/metaboxes) rendered
    *  in the Page tab; the host owns its persistence. */
   readonly documentPanel?: ReactNode;
-  /** Publish / save-draft / discard wiring for the toolbar (host mutations). */
+  /** Publish / save-draft / discard wiring for the header (host mutations). */
   readonly publish?: PublishActions;
   /** Host-rendered "Revisions" affordance for the header, opening the
    *  revision-history sheet. Kept as a slot so the orpc-backed sheet lives in
