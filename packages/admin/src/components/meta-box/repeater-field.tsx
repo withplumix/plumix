@@ -55,6 +55,17 @@ const EDIT_ROW_LABEL = defineMessage({
   comment: "n: 1-based index of the repeater row",
 });
 
+// Accessible names for the icon-only drag handle and remove button on each row.
+const REORDER_ROW_LABEL = defineMessage({
+  id: "metaBox.repeater.reorderRow",
+  message: "Reorder",
+});
+
+const REMOVE_ROW_LABEL = defineMessage({
+  id: "metaBox.repeater.removeRow",
+  message: "Remove",
+});
+
 // Render-side tolerance for malformed rows from migration / hand-edited
 // DB rows. Bad rows drop from display but the validator still rejects
 // them on save, surfacing the error to the author at write time.
@@ -175,6 +186,8 @@ export function RepeaterField({
           items={items}
           onReorder={handleReorder}
           onRemove={disabled ? undefined : handleRemove}
+          reorderLabel={renderLabel(REORDER_ROW_LABEL)}
+          removeLabel={renderLabel(REMOVE_ROW_LABEL)}
           disabled={disabled}
           testId={`${testId}-list`}
           renderItem={(item) => (

@@ -2335,6 +2335,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.color.openPicker"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "In neuem Tab öffnen"
@@ -2567,6 +2572,16 @@ msgid "metaBox.multiReference.orphan"
 msgstr "Referenz fehlt — entfernen oder erneut auswählen"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.removeRow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
 msgstr "Entfernt diesen Begriff und löst die Zuweisung von allen Beiträgen, die ihn verwenden. Untergeordnete werden auf Stammebene gehoben (deren Beiträge behalten ihre anderen Begriffszuweisungen)."
@@ -2580,6 +2595,16 @@ msgstr "Umbenennen"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.label"
 msgstr "Passkey umbenennen"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.reorder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.reorderRow"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx

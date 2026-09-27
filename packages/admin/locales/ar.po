@@ -2335,6 +2335,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.color.openPicker"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "فتح في علامة تبويب جديدة"
@@ -2567,6 +2572,16 @@ msgid "metaBox.multiReference.orphan"
 msgstr "المرجع مفقود — احذف أو اختر مجدداً"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.removeRow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
 msgstr "يحذف هذا المصطلح ويفصل ارتباطه عن أي منشورات تستخدمه. يُرفّع الأبناء إلى المستوى الجذر (تبقى منشوراتهم محتفظة بارتباطاتها الأخرى)."
@@ -2580,6 +2595,16 @@ msgstr "إعادة تسمية"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.label"
 msgstr "إعادة تسمية passkey"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.reorder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.reorderRow"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx

@@ -2335,6 +2335,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.color.openPicker"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "在新标签页中打开"
@@ -2567,6 +2572,16 @@ msgid "metaBox.multiReference.orphan"
 msgstr "引用缺失 — 移除或重新选择"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.removeRow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
 msgstr "删除此术语并解除使用它的所有文章的关联。子项将提升到根级别（其文章保留其他术语分配）。"
@@ -2580,6 +2595,16 @@ msgstr "重命名"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.label"
 msgstr "重命名 Passkey"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.reorder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.reorderRow"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx

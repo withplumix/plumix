@@ -74,6 +74,10 @@ const M = {
     id: "metaBox.field.json.invalid",
     message: "Invalid JSON",
   }),
+  colorOpenPicker: defineMessage({
+    id: "metaBox.field.color.openPicker",
+    message: "Open color picker",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Schema-driven field renderer wired to react-hook-form. Each meta-box
@@ -431,6 +435,7 @@ function renderColorField({
   rhf,
   disabled,
   testId,
+  renderLabel,
 }: NativeInputContext): ReactNode {
   return (
     <ColorPicker
@@ -442,6 +447,7 @@ function renderColorField({
       required={field.required}
       name={rhf.name}
       testId={testId}
+      triggerLabel={renderLabel(M.colorOpenPicker)}
     />
   );
 }

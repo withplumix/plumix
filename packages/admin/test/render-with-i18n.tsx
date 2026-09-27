@@ -5,10 +5,10 @@ import { render, renderHook } from "@testing-library/react";
 
 // Module-top init: idempotent — running it once per test worker keeps
 // `i18n.locale === "en"` for every component test that renders a
-// `<Trans>` or calls `useLingui` / `useLabel`. No test in admin
-// mutates the catalog (`load`) or the active locale (`activate`)
-// outside of `LocaleSwitcher`'s own suite, which scopes its mutations
-// via its own `beforeEach`.
+// `<Trans>` or calls `useLingui` / `useLabel`. A suite that loads a
+// catalog or activates another locale resets both to `en` in its own
+// `beforeEach` / `afterEach`, so the mutation never leaks to the next
+// test.
 i18n.load({ en: {} });
 i18n.activate("en");
 

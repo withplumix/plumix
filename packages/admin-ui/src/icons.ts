@@ -120,6 +120,7 @@ export {
   UserPlus,
   Users,
   Watch,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";

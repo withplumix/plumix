@@ -2335,6 +2335,11 @@ msgid "editor.preview.tooltip"
 msgstr "Open a preview in a new tab"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/meta-box-field.tsx
+msgid "metaBox.field.color.openPicker"
+msgstr "Open color picker"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "Open in new tab"
@@ -2567,6 +2572,16 @@ msgid "metaBox.multiReference.orphan"
 msgstr "Reference missing — remove or re-pick"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.remove"
+msgstr "Remove"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.removeRow"
+msgstr "Remove"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.delete.cardDescription"
 msgstr "Removes this term and unassigns it from any entries that use it. Descendants are promoted to root level (their entries keep their other term assignments)."
@@ -2580,6 +2595,16 @@ msgstr "Rename"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.rename.label"
 msgstr "Rename passkey"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/multi-reference-picker.tsx
+msgid "metaBox.multiReference.reorder"
+msgstr "Reorder"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.reorderRow"
+msgstr "Reorder"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
