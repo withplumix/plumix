@@ -102,29 +102,31 @@ describe("gate applicability", () => {
     ).toBe(true);
   });
 
-  test("a test-only change to a published package needs no changeset", () => {
-    expect(
-      CHANGESET_GATE.appliesWhen?.([
-        "packages/admin-editor/src/block-i18n.test.ts",
-        "packages/admin-editor/test/lingui-macro-stub.ts",
-        "packages/admin-editor/vitest.config.ts",
-        "packages/admin-editor/tsconfig.json",
-      ]),
-    ).toBe(false);
+  test.each([
+    "packages/admin-ui/src/input-group.tsx",
+    "packages/core/locales/en.po",
+    "packages/plugins/media/package.json",
+  ])("a change consumers install needs a changeset: %s", (path) => {
+    expect(CHANGESET_GATE.appliesWhen?.([path])).toBe(true);
   });
 
-  test("a source change beside a test still needs one", () => {
-    expect(
-      CHANGESET_GATE.appliesWhen?.([
-        "packages/admin-editor/src/block-i18n.test.ts",
-        "packages/admin-editor/src/block-i18n.ts",
-      ]),
-    ).toBe(true);
+  test.each([
+    "packages/admin-ui/scripts/roster.ts",
+    "packages/admin-editor/src/block-i18n.test.ts",
+    "packages/admin-editor/test/lingui-macro-stub.ts",
+    "packages/admin/e2e/editor.spec.ts",
+    "packages/admin-editor/vitest.config.ts",
+    "packages/admin-editor/tsconfig.json",
+  ])("a change nothing installs needs none: %s", (path) => {
+    expect(CHANGESET_GATE.appliesWhen?.([path])).toBe(false);
   });
 
-  test("the build config is not test-only, because it decides what ships", () => {
+  test("one shipped file among unshipped ones still needs a changeset", () => {
     expect(
-      CHANGESET_GATE.appliesWhen?.(["packages/core/tsconfig.build.json"]),
+      CHANGESET_GATE.appliesWhen?.([
+        "packages/admin-ui/scripts/roster.ts",
+        "packages/admin-ui/src/destructive.ts",
+      ]),
     ).toBe(true);
   });
 
