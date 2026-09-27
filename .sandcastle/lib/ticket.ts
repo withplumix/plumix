@@ -15,12 +15,14 @@ import {
 import { CHANGESET_GATE, GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
+  mainCommit,
   openPullRequest,
   pushBranch,
   queueForMerge,
   resetBranchToMain,
 } from "./github.js";
 import { say } from "./log.js";
+import { oncePerKey } from "./once-per-key.js";
 import { MERGE_BASE } from "./repo.js";
 import {
   AN_HOUR_IN_SECONDS,
@@ -187,7 +189,7 @@ const reviewAll = async (
 const surveyMainForAlreadyRedGates = async (
   sandbox: Executor,
   journal: Journal,
-): Promise<readonly string[]> => {
+): Promise<readonly GateFailure[]> => {
   const { failures } = await runGates(sandbox, GATES, {
     stopAtFirstFailure: false,
     retryAFailureOnce: true,
@@ -203,8 +205,15 @@ const surveyMainForAlreadyRedGates = async (
         exitCode: result.exitCode,
       }),
   });
-  return failures.map(({ name }) => name);
+  return failures;
 };
+
+// Main's gates are a fact about main, not about a ticket. Lanes that start on
+// the same commit share one survey, which also keeps them from running the
+// suite three times at once and failing it on contention alone.
+const surveyMainOnce = oncePerKey(surveyMainForAlreadyRedGates);
+
+const FAILURE_TAIL_A_PERSON_READS = 3_000;
 
 // A gate red on main cannot tell a ticket's regression from main's, and
 // skipping it for the ticket is how regressions reached CI unchecked. Either CI
@@ -213,11 +222,18 @@ const surveyMainForAlreadyRedGates = async (
 export const MAIN_IS_RED = "main is red in the sandbox";
 
 export const refuseToJudgeAgainstARedMain = (
-  gatesRedOnMain: readonly string[],
+  gatesRedOnMain: readonly GateFailure[],
 ): void => {
   if (gatesRedOnMain.length === 0) return;
+  const names = gatesRedOnMain.map(({ name }) => name).join(", ");
+  const printed = gatesRedOnMain
+    .map(
+      ({ command, output }) =>
+        `\`${command}\`:\n${output.slice(-FAILURE_TAIL_A_PERSON_READS)}`,
+    )
+    .join("\n\n");
   throw new Error(
-    `${MAIN_IS_RED} (${gatesRedOnMain.join(", ")}), so no ticket can be judged against it`,
+    `${MAIN_IS_RED} (${names}), so no ticket can be judged against it\n\n${printed}`,
   );
 };
 
@@ -323,7 +339,7 @@ export const shipTicket = async (
   try {
     say("\n--- baseline gates on main ---");
     refuseToJudgeAgainstARedMain(
-      await surveyMainForAlreadyRedGates(sandbox, journal),
+      await surveyMainOnce(mainCommit(), sandbox, journal),
     );
 
     say("\n--- implement ---");

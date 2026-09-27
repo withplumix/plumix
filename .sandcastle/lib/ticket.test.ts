@@ -180,19 +180,31 @@ describe("workersALaneOversubscribes", () => {
 });
 
 describe("refuseToJudgeAgainstARedMain", () => {
+  const redKnip = {
+    name: "knip",
+    command: "pnpm knip",
+    output: "Unused exported types (1)\nPublicAuthor  type  schemas.ts:78:13",
+  };
+
   test("a green main lets the ticket be judged on every gate", () => {
     expect(() => refuseToJudgeAgainstARedMain([])).not.toThrow();
   });
 
   test("a gate red on main stops the run instead of being skipped for the ticket", () => {
-    expect(() => refuseToJudgeAgainstARedMain(["knip"])).toThrow(
+    expect(() => refuseToJudgeAgainstARedMain([redKnip])).toThrow(
       /main is red in the sandbox \(knip\)/,
+    );
+  });
+
+  test("the refusal carries what the gate printed, so a person can act on it", () => {
+    expect(() => refuseToJudgeAgainstARedMain([redKnip])).toThrow(
+      /Unused exported types \(1\)/,
     );
   });
 
   test("the refusal is one the loop treats as the run being over", () => {
     try {
-      refuseToJudgeAgainstARedMain(["knip"]);
+      refuseToJudgeAgainstARedMain([redKnip]);
     } catch (error) {
       expect(looksLikeTheRunBeingOver(String(error))).toBe(true);
     }

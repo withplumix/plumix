@@ -603,3 +603,6 @@ export const textsThatClaimAdrNumbers = (): readonly string[] => {
   ]);
   return [onMain, ...inOpenPullRequests, ...inOpenIssues];
 };
+
+export const mainCommit = (): string =>
+  git(["rev-parse", "origin/main"]).trim();
