@@ -47,7 +47,7 @@ interface RawPackageJson {
   readonly plumix?: { scaffold?: RawScaffoldMeta };
 }
 
-const DEFAULT_SECRETS_FILE = ".dev.vars";
+const DEFAULT_SECRETS_FILE = ".env";
 
 export interface Registry {
   readonly runtimes: readonly RuntimeDescriptor[];

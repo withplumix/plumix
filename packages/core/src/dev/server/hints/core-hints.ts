@@ -47,11 +47,11 @@ const UNTYPED_MATCHERS: readonly Matcher[] = [
       "The database is missing a table your query needs. Run `plumix migrate` " +
       "to apply pending migrations to your local D1 database, then reload.",
   }),
-  // A required secret isn't set. In dev, secrets live in `.dev.vars`.
+  // A required secret isn't set. In dev, secrets live in `.env`.
   signature(/missing (?:required )?secret/i, {
     title: "Add the missing secret",
     body:
-      "A required secret isn't set. Add it to `.dev.vars` in your project root " +
+      "A required secret isn't set. Add it to `.env` in your project root " +
       "(one `KEY=value` per line), then restart `plumix dev`.",
   }),
 ];

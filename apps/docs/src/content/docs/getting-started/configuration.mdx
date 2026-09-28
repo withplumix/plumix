@@ -91,7 +91,7 @@ export const resend: EnvInput<Mailer> = (env) => ({
 
 The resolver runs once per isolate rather than once per request. The result is memoized by the resolver's identity, so a value that owns a connection, such as an SMTP transport or a pooled client, is built once and reused. `env` is stable across an isolate's lifetime, which is what makes that safe.
 
-The slots that take an `EnvInput` are `mailer`, the passkey `origin` and `allowedOrigins`, each OAuth provider's client credentials, R2's `s3` credentials, and the whole libSQL connection config, which is typed `EnvInput<LibsqlConfig>` rather than exposing one resolver field. Locally their values come from `.dev.vars`; in production they are secrets on the deploy.
+The slots that take an `EnvInput` are `mailer`, the passkey `origin` and `allowedOrigins`, each OAuth provider's client credentials, R2's `s3` credentials, and the whole libSQL connection config, which is typed `EnvInput<LibsqlConfig>` rather than exposing one resolver field. Locally their values come from `.env`; in production they are secrets on the deploy.
 
 <Aside type="caution" title="T has to be a non-callable value">
   `resolveEnvInput` tells a literal from a resolver with `typeof input ===
@@ -402,7 +402,7 @@ export const vite: PlumixConfigInput["vite"] = {
 
 ## Related
 
-[Project Structure](/getting-started/project-structure/) covers the rest of the files this one sits beside. [Secrets](/deployment/secrets/) goes further into `.dev.vars`, production secrets and the `EnvInput` slots. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` half of the runtime slots. [Cloudflare Workers](/deployment/cloudflare/) covers what each adapter factory actually binds to. [Access & Identity](/access/overview/) covers the `auth` slot's principals and sessions, and [Passkeys](/access/passkeys/) covers the relying-party fields inside it. [Plugins](/plugins/overview/) covers what goes in the `plugins` array. [Themes](/themes/overview/) covers the `theme` slot. [Permalinks and Slugs](/routing/permalinks/) covers the URLs `redirects` and `basePath` reshape.
+[Project Structure](/getting-started/project-structure/) covers the rest of the files this one sits beside. [Secrets](/deployment/secrets/) goes further into `.env`, production secrets and the `EnvInput` slots. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` half of the runtime slots. [Cloudflare Workers](/deployment/cloudflare/) covers what each adapter factory actually binds to. [Access & Identity](/access/overview/) covers the `auth` slot's principals and sessions, and [Passkeys](/access/passkeys/) covers the relying-party fields inside it. [Plugins](/plugins/overview/) covers what goes in the `plugins` array. [Themes](/themes/overview/) covers the `theme` slot. [Permalinks and Slugs](/routing/permalinks/) covers the URLs `redirects` and `basePath` reshape.
 
 ## Next steps
 

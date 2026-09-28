@@ -46,8 +46,8 @@ const probes = definePlugin("probes", (ctx) => {
     handler: () => new Response(Buffer.from(${JSON.stringify(PIXEL)}, "base64"), { headers: { "content-type": "image/png" } }),
   });
   ctx.registerPublicRoute({
-    path: "/secret",
-    handler: (_request, app) => new Response(String(app.env.PROBE_SECRET ?? "")),
+    path: "/env",
+    handler: (_request, app) => Response.json({ A: app.env.PROBE_A ?? null, B: app.env.PROBE_B ?? null }),
   });
   ctx.registerPublicRoute({
     path: "/slow-response",
@@ -89,11 +89,11 @@ interface Started {
   readonly exited: Promise<number | null>;
 }
 
-function start(dir: string): Promise<Started> {
+function start(dir: string, env: NodeJS.ProcessEnv = {}): Promise<Started> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["dist/server/worker.js"], {
       cwd: dir,
-      env: { ...process.env, PORT: "0", HOST: "127.0.0.1" },
+      env: { ...process.env, PORT: "0", HOST: "127.0.0.1", ...env },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -125,8 +125,9 @@ function start(dir: string): Promise<Started> {
 async function withServer(
   dir: string,
   body: (started: Started) => Promise<void>,
+  env?: NodeJS.ProcessEnv,
 ): Promise<void> {
-  const started = await start(dir);
+  const started = await start(dir, env);
   try {
     await body(started);
   } finally {
@@ -142,8 +143,6 @@ beforeAll(async () => {
   dir = scaffoldConsumerProject("plumix-node-entry-", "");
   marker = join(dir, "drained.marker");
   writeFileSync(join(dir, "plumix.config.mjs"), config(marker));
-  // Only `plumix dev` reads this; the built entry must not.
-  writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
   const native = join(dir, "node_modules/my-native");
   mkdirSync(native);
   writeFileSync(
@@ -236,11 +235,33 @@ describe("the built site served by node", () => {
     60_000,
   );
 
+  test("production loads .env from the working directory, and the environment wins over it", async () => {
+    const envFile = join(dir, ".env");
+    writeFileSync(envFile, "PROBE_A=fromfile\nPROBE_B=fromfile\n");
+    try {
+      await withServer(
+        dir,
+        async ({ origin }) => {
+          expect(await (await fetch(`${origin}/env`)).json()).toEqual({
+            A: "platform",
+            B: "fromfile",
+          });
+        },
+        { PROBE_A: "platform" },
+      );
+    } finally {
+      rmSync(envFile);
+    }
+  }, 60_000);
+
   test(
-    "production loads no .env file: a value only that file carries is absent",
+    "production starts cleanly with no .env file",
     () =>
       withServer(dir, async ({ origin }) => {
-        expect(await (await fetch(`${origin}/secret`)).text()).toBe("");
+        expect(await (await fetch(`${origin}/env`)).json()).toEqual({
+          A: null,
+          B: null,
+        });
       }),
     60_000,
   );

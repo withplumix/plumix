@@ -13,7 +13,7 @@ import {
 
 // Smallest config that dogfoods `@plumix/plugin-media` in isolation. `pnpm dev`
 // here, then open /_plumix/admin. Presigned R2 uploads need the S3 keys in
-// `.dev.vars` (see `r2`'s docs); without them uploads route through the worker.
+// `.env` (see `r2`'s docs); without them uploads route through the worker.
 
 export default plumix({
   runtime: cloudflare(),

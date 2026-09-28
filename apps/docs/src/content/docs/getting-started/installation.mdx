@@ -129,7 +129,7 @@ pnpm exec plumix migrate apply --local
 
 ## Adding a sign-in method later
 
-The wizard's sign-in question saves you an edit. It locks nothing in. Picking GitHub OAuth adds a `github(...)` provider to the `auth` block and writes `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` into `.dev.vars`. Picking magic links adds a `magicLink` block and sets `mailer: consoleMailer()`, which logs the sign-in link to the terminal instead of sending mail. Both are edits to `plumix.config.ts` you can make by hand afterwards.
+The wizard's sign-in question saves you an edit. It locks nothing in. Picking GitHub OAuth adds a `github(...)` provider to the `auth` block and writes `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` into `.env`. Picking magic links adds a `magicLink` block and sets `mailer: consoleMailer()`, which logs the sign-in link to the terminal instead of sending mail. Both are edits to `plumix.config.ts` you can make by hand afterwards.
 
 Cloudflare Access appears in the same list when the runtime is Cloudflare. It replaces the request authenticator rather than adding a login form, so the identity provider in front of the worker decides who the user is.
 
@@ -142,7 +142,7 @@ Cloudflare Access appears in the same list when the runtime is Cloudflare. It re
 
 ## Related
 
-[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the nine official plugins.
+[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.env`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the nine official plugins.
 
 ## Next steps
 

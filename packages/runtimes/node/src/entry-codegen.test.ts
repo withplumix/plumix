@@ -20,7 +20,7 @@ describe("node generateEntry", () => {
 
   test("threads the virtual modules into the site the package ships", () => {
     expect(source).toContain(
-      'import { createNodeSite } from "@plumix/runtime-node";',
+      'import { createNodeSite, loadEnvFileWhenMain } from "@plumix/runtime-node";',
     );
     expect(source).toContain(
       'import assetManifest from "virtual:plumix/asset-manifest";',
@@ -44,6 +44,12 @@ describe("node generateEntry", () => {
     expect(source).toContain("export const startCron = site.startCron;");
     expect(source).toContain("export const dispose = site.dispose;");
     expect(source).toContain("site.serveWhenMain(import.meta.main);");
+  });
+
+  test("loads .env only when run, and before the site is built", () => {
+    const load = source.indexOf("loadEnvFileWhenMain(import.meta.main);");
+    expect(load).toBeGreaterThan(-1);
+    expect(load).toBeLessThan(source.indexOf("createNodeSite({"));
   });
 
   test("holds imports and calls, and no logic of its own", () => {

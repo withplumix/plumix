@@ -76,7 +76,8 @@
       ],
       "readme": "scaffold/README-deploy.md",
       "files": {
-        "wrangler.jsonc": "scaffold/wrangler.jsonc"
+        "wrangler.jsonc": "scaffold/wrangler.jsonc",
+        ".env.example": "scaffold/env.example"
       },
       "capabilities": {
         "storage": {

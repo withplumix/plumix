@@ -10,7 +10,7 @@ const cloudflareRuntime: RuntimeDescriptor = {
   configSlots: {},
   deps: {},
   devDeps: {},
-  secretsFile: ".dev.vars",
+  secretsFile: ".env",
   files: {
     "wrangler.jsonc": `{
   "name": "__PROJECT_NAME__",

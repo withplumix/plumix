@@ -96,7 +96,7 @@ Version families that release in lockstep get a **named catalog** under `catalog
 
 ### Env & secrets
 
-Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local Worker secrets live in `.dev.vars` (gitignored). Never paste secret values into commits, logs, or chat.
+Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local secrets live in `.env` (gitignored) on every runtime, and the environment wins over it. Never paste secret values into commits, logs, or chat.
 
 ### Earned types
 

@@ -614,6 +614,7 @@ export const ROSTER: Readonly<
           "embedder",
         names: [
           "createNodeSite",
+          "loadEnvFileWhenMain",
           "NodeSite",
           "NodeSiteHandler",
           "NodeSiteOptions",
