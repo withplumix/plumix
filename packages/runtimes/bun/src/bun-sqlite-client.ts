@@ -42,18 +42,29 @@ function loadBunSqlite(): typeof BunSqlite {
   return process.getBuiltinModule("bun:sqlite") as typeof BunSqlite;
 }
 
+// A raw `sql` Date reaches the driver untouched, and Bun cannot bind one:
+// alone it is taken for a named-parameter object and binds NULL. Epoch
+// milliseconds is what libsql and `nodeSqlite` bind. A boolean binds as 1/0
+// on Bun already.
 const bind = (params: BindValue[]): BunSqlite.SQLQueryBindings[] =>
-  params as BunSqlite.SQLQueryBindings[];
+  params.map((value) => (value instanceof Date ? value.valueOf() : value));
 
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
 const rowsChanged = (result: BunSqlite.Changes): number =>
   Number(result.changes);
 
+// Bun's `changes` counts the rows a trigger wrote, so a one-row `UPDATE` of an
+// entry reports 2 once its change-feed trigger fires; SQL's `changes()` counts
+// the statement's own rows. It keeps the last write's count across statements
+// that write nothing, so it is read only when Bun reports a change. A Bun
+// bug, reproduced on 1.4.2: better-sqlite3 and `node:sqlite` report 1.
 function exactChanges(
-  _counter: BunSqlite.Statement<{ changes: number }>,
+  counter: BunSqlite.Statement<{ changes: number }>,
   result: BunSqlite.Changes,
 ): BunSqlite.Changes {
-  return result;
+  if (Number(result.changes) === 0) return result;
+  const changes = counter.get()?.changes ?? result.changes;
+  return { ...result, changes };
 }
 
 // Every statement drizzle's session issues lands on one of these members, so
