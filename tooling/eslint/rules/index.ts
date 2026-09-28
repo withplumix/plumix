@@ -2,6 +2,7 @@ import type { ESLint } from "eslint";
 
 import { noBareObjectInput } from "./no-bare-object-input.js";
 import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
+import { noErrorMessageInUi } from "./no-error-message-in-ui.js";
 import { noForgedApp } from "./no-forged-app.js";
 import { noHandRolledDestructiveTint } from "./no-hand-rolled-destructive-tint.js";
 import { noModuleMocking } from "./no-module-mocking.js";
@@ -28,6 +29,7 @@ export const plumixPlugin: ESLint.Plugin = {
   rules: {
     "no-bare-object-input": noBareObjectInput,
     "no-chained-type-assertion": noChainedTypeAssertion,
+    "no-error-message-in-ui": noErrorMessageInUi,
     "no-forged-app": noForgedApp,
     "no-hand-rolled-destructive-tint": noHandRolledDestructiveTint,
     "no-module-mocking": noModuleMocking,

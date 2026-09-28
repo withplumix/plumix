@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toDate } from "@/lib/dates.js";
-import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -12,7 +11,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { Label } from "@plumix/core/i18n";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   AlertDialog,
@@ -34,6 +32,11 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
+import {
+  describeRpcError,
+  rpcErrorCode,
+  rpcErrorReason,
+} from "@plumix/core/admin";
 
 const M = {
   unknownDevice: defineMessage({
@@ -80,7 +83,9 @@ export function SessionsCard(): ReactNode {
   const label = useLabel();
   const queryClient = useQueryClient();
   const [revokeAllFeedback, setRevokeAllFeedback] = useState<
-    { kind: "ok"; revoked: number } | { kind: "error"; message: Label } | null
+    | { kind: "ok"; revoked: number }
+    | { kind: "error"; message: MessageDescriptor }
+    | null
   >(null);
 
   const list = useQuery(orpc.auth.sessions.list.queryOptions({ input: {} }));
@@ -102,7 +107,7 @@ export function SessionsCard(): ReactNode {
     onError: (err) => {
       setRevokeAllFeedback({
         kind: "error",
-        message: err instanceof Error ? err.message : M.revokeAllFallback,
+        message: describeRpcError(err, {}, M.revokeAllFallback),
       });
     },
   });
@@ -183,7 +188,7 @@ interface SessionRowProps {
 
 function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
   const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<Label | null>(null);
+  const [error, setError] = useState<MessageDescriptor | null>(null);
   const ua = parseUserAgent(session.userAgent);
   const Icon = ua.icon;
   const createdAt = toDate(session.createdAt);
@@ -408,9 +413,8 @@ function useDeviceLabel(ua: ReturnType<typeof parseUserAgent>): string {
   return label(M.unknownDevice);
 }
 
-function formatRevokeError(err: unknown): Label {
-  if (extractReason(err) === "current_session") return M.revokeCurrent;
-  if (extractCode(err) === "NOT_FOUND") return M.revokeNotFound;
-  if (err instanceof Error) return err.message;
-  return M.revokeFallback;
+function formatRevokeError(err: unknown): MessageDescriptor {
+  if (rpcErrorReason(err) === "current_session") return M.revokeCurrent;
+  if (rpcErrorCode(err) === "NOT_FOUND") return M.revokeNotFound;
+  return describeRpcError(err, {}, M.revokeFallback);
 }

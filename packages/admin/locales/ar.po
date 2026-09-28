@@ -997,6 +997,11 @@ msgid "userEdit.email.error.requestFallback"
 msgstr "تعذّر طلب التغيير. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
+msgid "editor.revision.restoreFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "تعذّر إبطال الجلسات. حاول مرة أخرى."
@@ -1012,7 +1017,7 @@ msgid "apiTokens.revoke.fallback"
 msgstr "تعذّر الإلغاء. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saveFailed"
 msgstr "تعذّر حفظ الإعدادات."
 
@@ -2740,7 +2745,7 @@ msgid "terms.edit.submit"
 msgstr "حفظ التغييرات"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.idle"
 msgstr "حفظ التغييرات"
 
@@ -2750,7 +2755,7 @@ msgid "editor.plainForm.status.saved"
 msgstr "تم الحفظ"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "تم الحفظ."
 
@@ -2765,7 +2770,7 @@ msgid "userEdit.submit.pending"
 msgstr "جارٍ الحفظ…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.pending"
 msgstr "جارٍ الحفظ…"
 
@@ -3485,7 +3490,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "هذا الجهاز لا يدعم passkeys."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr ""
 

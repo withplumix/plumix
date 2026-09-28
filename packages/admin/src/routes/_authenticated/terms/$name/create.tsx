@@ -30,7 +30,7 @@ import { ArrowLeft } from "@plumix/admin-ui/icons";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
-import { useTermErrorMessage } from "./-errors.js";
+import { describeTermError } from "./-errors.js";
 
 const M = {
   createFallback: defineMessage({
@@ -83,8 +83,9 @@ function NewTermRoute(): ReactNode {
   const queryClient = useQueryClient();
   const { taxonomy } = Route.useRouteContext();
   const renderLabel = useLabel();
-  const mapTermError = useTermErrorMessage();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   // For hierarchical termTaxonomies we pull the existing term set so the
   // parent picker can render a depth-indented list. Skipped for flat
@@ -135,7 +136,7 @@ function NewTermRoute(): ReactNode {
       });
     },
     onError: (err) => {
-      setServerError(mapTermError(err, renderLabel(M.createFallback)));
+      setServerError(describeTermError(err, M.createFallback));
     },
   });
 
@@ -192,7 +193,7 @@ function NewTermRoute(): ReactNode {
                 values.slug.length === 0 &&
                 slugify(values.name).length === 0
               ) {
-                setServerError(renderLabel(M.emptySlug));
+                setServerError(M.emptySlug);
                 return;
               }
               createTerm.mutate(values);

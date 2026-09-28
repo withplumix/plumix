@@ -237,12 +237,8 @@ function UsersListRoute(): ReactNode {
       </div>
 
       {query.isError ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {label(
-              query.error instanceof Error ? query.error.message : M.loadFailed,
-            )}
-          </AlertDescription>
+        <Alert variant="destructive" data-testid="users-list-load-error">
+          <AlertDescription>{label(M.loadFailed)}</AlertDescription>
         </Alert>
       ) : (
         <DataTable<UserListRow>

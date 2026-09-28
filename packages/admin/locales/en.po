@@ -997,6 +997,11 @@ msgid "userEdit.email.error.requestFallback"
 msgstr "Couldn't request the change. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
+msgid "editor.revision.restoreFailed"
+msgstr "Couldn't restore this revision — try again."
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "Couldn't revoke sessions. Try again."
@@ -1012,7 +1017,7 @@ msgid "apiTokens.revoke.fallback"
 msgstr "Couldn't revoke. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saveFailed"
 msgstr "Couldn't save settings."
 
@@ -2740,7 +2745,7 @@ msgid "terms.edit.submit"
 msgstr "Save changes"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.idle"
 msgstr "Save changes"
 
@@ -2750,7 +2755,7 @@ msgid "editor.plainForm.status.saved"
 msgstr "Saved"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "Saved."
 
@@ -2765,7 +2770,7 @@ msgid "userEdit.submit.pending"
 msgstr "Saving…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.pending"
 msgstr "Saving…"
 
@@ -3485,7 +3490,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr "This entry changed since the preview loaded — reload and retry."
 

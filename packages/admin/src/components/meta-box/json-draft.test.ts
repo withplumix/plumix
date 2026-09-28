@@ -22,10 +22,8 @@ describe("evaluateJsonDraft", () => {
   });
 
   test("invalid JSON reports a parse error and yields no value", () => {
-    const result = evaluateJsonDraft("{not-json");
-    expect(result.kind).toBe("error");
-    if (result.kind === "error") {
-      expect(result.message.length).toBeGreaterThan(0);
-    }
+    // The engine's parse message is English the admin didn't choose, so the
+    // result carries only the fact of the failure.
+    expect(evaluateJsonDraft("{not-json")).toEqual({ kind: "error" });
   });
 });

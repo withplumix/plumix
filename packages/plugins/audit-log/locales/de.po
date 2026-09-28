@@ -33,11 +33,10 @@ msgstr "Keine passenden Audit-Ereignisse."
 msgid "plugin.auditLog.shell.loadMore"
 msgstr "Mehr laden"
 
-#. message: the underlying error message from the RPC failure
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx
-msgid "plugin.auditLog.shell.error"
-msgstr "Audit-Log konnte nicht geladen werden: {message}"
+msgid "plugin.auditLog.shell.loadFailed"
+msgstr "Audit-Log konnte nicht geladen werden."
 
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx

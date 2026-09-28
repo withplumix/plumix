@@ -288,11 +288,9 @@ function TaxonomyListRoute(): ReactNode {
       </div>
 
       {query.isError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="taxonomy-list-load-error">
           <AlertDescription>
-            {query.error instanceof Error
-              ? query.error.message
-              : renderLabel(termTaxonomyLabel(taxonomy, "loadErrorItems"))}
+            {renderLabel(termTaxonomyLabel(taxonomy, "loadErrorItems"))}
           </AlertDescription>
         </Alert>
       ) : (

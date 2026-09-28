@@ -90,6 +90,8 @@ export class PluginErrorBoundary extends Component<Props, State> {
   override render(): ReactNode {
     if (this.state.error === null) return this.props.children;
     const { kind, pluginLabel } = this.props;
+    // Shown verbatim: a plugin component's exception has no descriptor to map
+    // to, so its text is the only diagnostic, shown under a localized heading.
     const message = this.state.error.message;
     const label = pluginLabel ?? i18n._(M.unknownPlugin);
 

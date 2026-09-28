@@ -1122,7 +1122,7 @@ function JsonControl({
   const labelFn = useLabel();
   const initialFormatted = formatInitial(value);
   const [draft, setDraft] = useState(initialFormatted);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MessageDescriptor | null>(null);
   // Detect external resyncs (e.g. `form.reset()` post-save) by
   // comparing the formatted shape of the incoming `value` against
   // a state-tracked snapshot. State-during-render is React's
@@ -1136,7 +1136,7 @@ function JsonControl({
   }
 
   // Interpret each edit: blank clears to `null`, valid JSON propagates the
-  // parsed value, invalid JSON surfaces the parse message and leaves the last
+  // parsed value, invalid JSON shows the localized notice and leaves the last
   // good value in place. `onBlur` is wired on the shell (CodeMirror has no
   // single focusable input to hang it on) so rhf still marks the field touched.
   const handleRaw = (raw: string): void => {
@@ -1149,7 +1149,7 @@ function JsonControl({
       setError(null);
       onChange(result.value);
     } else {
-      setError(result.message || labelFn(M.invalidJson));
+      setError(M.invalidJson);
     }
   };
 
@@ -1171,7 +1171,7 @@ function JsonControl({
       </Suspense>
       {error ? (
         <p className="text-destructive text-xs" data-testid={`${testId}-error`}>
-          {error}
+          {labelFn(error)}
         </p>
       ) : null}
     </div>

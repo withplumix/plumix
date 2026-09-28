@@ -44,7 +44,6 @@ import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
-import { ORPCError } from "@orpc/client";
 import {
   useMutation,
   useQueries,
@@ -58,7 +57,6 @@ import * as v from "valibot";
 import type { PublishActions } from "@plumix/admin-editor";
 import type { EntryContent } from "@plumix/blocks";
 import type { ResolvedMeta } from "@plumix/core";
-import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
 import {
@@ -73,6 +71,7 @@ import {
 import { idPathParam } from "@plumix/core/validation";
 
 import { PlainFormRouteInner } from "./-plain-form-route.js";
+import { restoreErrorDescriptor } from "./-restore-error.js";
 
 const M = {
   published: defineMessage({
@@ -98,10 +97,6 @@ const M = {
   staleLoading: defineMessage({
     id: "editor.stale.loading",
     message: "Loading…",
-  }),
-  revisionConflict: defineMessage({
-    id: "editor.revision.conflict",
-    message: "This entry changed since the preview loaded — reload and retry.",
   }),
 } satisfies Record<string, MessageDescriptor>;
 
@@ -1134,14 +1129,10 @@ function RevisionPreview({
   const target = new URL(previewLink.url, window.location.origin);
   target.searchParams.set("plumix.edit", "");
 
-  const restoreErrorLabel: Label | null =
-    restore.error instanceof ORPCError && restore.error.code === "CONFLICT"
-      ? M.revisionConflict
-      : restore.error instanceof Error
-        ? restore.error.message
-        : null;
   const restoreError =
-    restoreErrorLabel !== null ? renderLabel(restoreErrorLabel) : null;
+    restore.error === null
+      ? null
+      : renderLabel(restoreErrorDescriptor(restore.error));
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
 

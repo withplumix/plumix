@@ -1,7 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -34,6 +33,7 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
 import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
 import { Textarea } from "@plumix/admin-ui/textarea";
+import { rpcErrorCode, rpcErrorReason } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 // Descriptors used outside JSX — error helpers + the textarea
@@ -613,10 +613,10 @@ function formatLookupError(err: unknown): MessageDescriptor {
   // already_denied); NOT_FOUND signals "no row matches this user_code".
   // Branch on code first so a future CONFLICT/reason addition doesn't
   // silently fall through to the generic message.
-  const code = extractCode(err);
+  const code = rpcErrorCode(err);
   if (code === "NOT_FOUND") return M.errLookupNotFound;
   if (code === "CONFLICT") {
-    const reason = extractReason(err);
+    const reason = rpcErrorReason(err);
     if (reason === "expired") return M.errLookupExpired;
     if (reason === "already_approved") return M.errLookupAlreadyApproved;
     if (reason === "already_denied") return M.errLookupAlreadyDenied;
@@ -625,8 +625,8 @@ function formatLookupError(err: unknown): MessageDescriptor {
 }
 
 function formatApproveError(err: unknown): MessageDescriptor {
-  if (extractCode(err) === "CONFLICT") {
-    const reason = extractReason(err);
+  if (rpcErrorCode(err) === "CONFLICT") {
+    const reason = rpcErrorReason(err);
     if (reason === "expired") return M.errApproveExpired;
     if (reason === "already_approved") return M.errApproveAlreadyApproved;
     if (reason === "already_denied") return M.errApproveAlreadyDenied;

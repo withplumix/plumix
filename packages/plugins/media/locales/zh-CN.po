@@ -293,6 +293,11 @@ msgid "plugin.media.error.csrfTokenMissing"
 msgstr "请求被 CSRF 检查拦截。请重新加载页面并重试。"
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.generic"
+msgstr "出了点问题。请重试。"
+
+#. js-lingui-explicit-id
 #: src/admin/MediaPickerField.tsx
 msgid "plugin.media.pickerField.empty"
 msgstr "未选择媒体"

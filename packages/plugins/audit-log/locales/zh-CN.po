@@ -33,11 +33,10 @@ msgstr "没有匹配的审计事件。"
 msgid "plugin.auditLog.shell.loadMore"
 msgstr "加载更多"
 
-#. message: the underlying error message from the RPC failure
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx
-msgid "plugin.auditLog.shell.error"
-msgstr "无法加载审计日志：{message}"
+msgid "plugin.auditLog.shell.loadFailed"
+msgstr "无法加载审计日志。"
 
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx

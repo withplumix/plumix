@@ -48,6 +48,15 @@ export function pluginConfig(): readonly Linter.Config[] {
         ],
       },
     },
+    // The modules a plugin's `adminEntry` reaches live under `src/admin/` by
+    // convention, and they render into the admin shell, so the admin's rule on
+    // a caught error's `message` (ADR 0018) holds there too. The rest of the
+    // plugin runs on the server, where nothing it reads reaches a screen.
+    {
+      files: ["src/admin/**/*.ts", "src/admin/**/*.tsx"],
+      ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
+      rules: { "plumix/no-error-message-in-ui": "error" },
+    },
     // Compiled Lingui catalogs ship with /* eslint-disable */ headers;
     // tripping the unused-disable check on every build adds no signal.
     { ignores: ["locales/**"] },

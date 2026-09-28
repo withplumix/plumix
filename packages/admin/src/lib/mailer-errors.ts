@@ -1,9 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-import type { Label } from "@plumix/core/i18n";
-
-import { extractReason } from "./orpc-errors.js";
+import { describeRpcError } from "@plumix/core/admin";
 
 const M = {
   notConfigured: defineMessage({
@@ -22,15 +20,15 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-/** Map an `orpc.auth.mailer.testSend` failure to a renderable label.
- *  Known oRPC reasons resolve to a translated descriptor; raw `Error`
- *  text from plugin-author throws surfaces verbatim via the string
- *  branch of `Label`; everything else falls through to the generic
- *  retry message. */
-export function testSendErrorMessage(err: unknown): Label {
-  const reason = extractReason(err);
-  if (reason === "mailer_not_configured") return M.notConfigured;
-  if (reason === "mailer_send_failed") return M.sendFailed;
-  if (err instanceof Error) return err.message;
-  return M.fallback;
+/** Map an `orpc.auth.mailer.testSend` failure to the descriptor the page
+ *  shows: a known reason's copy, else the generic retry message. */
+export function testSendErrorMessage(err: unknown): MessageDescriptor {
+  return describeRpcError(
+    err,
+    {
+      mailer_not_configured: M.notConfigured,
+      mailer_send_failed: M.sendFailed,
+    },
+    M.fallback,
+  );
 }

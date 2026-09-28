@@ -7,7 +7,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { basePath, isSlotConfigured } from "plumix/admin";
+import { basePath, describeRpcError, isSlotConfigured } from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -171,6 +171,32 @@ function toSelection(item: MediaItem): MediaSelection {
   };
 }
 
+/**
+ * The upload PUT's failure. It never reaches oRPC, so there is no `reason` to
+ * read — the HTTP status is what tells the banner what went wrong. `status` is
+ * null when the request never got an answer.
+ */
+class UploadPutError extends Error {
+  static {
+    UploadPutError.prototype.name = "UploadPutError";
+  }
+
+  readonly status: number | null;
+
+  private constructor(status: number | null, message: string) {
+    super(message);
+    this.status = status;
+  }
+
+  static rejected(status: number): UploadPutError {
+    return new UploadPutError(status, `upload PUT answered ${String(status)}`);
+  }
+
+  static unreachable(): UploadPutError {
+    return new UploadPutError(null, "upload PUT got no response");
+  }
+}
+
 // Browser PUT with progress reporting. `fetch()` in 2026 still doesn't
 // expose request-body progress; XMLHttpRequest's `upload.onprogress` is
 // the only portable signal. The signed headers must be echoed verbatim.
@@ -192,9 +218,9 @@ function putWithProgress(
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`upload_failed_${String(xhr.status)}`));
+      else reject(UploadPutError.rejected(xhr.status));
     };
-    xhr.onerror = () => reject(new Error("upload_network_error"));
+    xhr.onerror = () => reject(UploadPutError.unreachable());
     xhr.send(body);
   });
 }
@@ -207,14 +233,14 @@ interface PendingUpload {
 
 interface MediaUploadState {
   readonly pending: readonly PendingUpload[];
-  readonly errorMsg: string | null;
-  readonly setErrorMsg: (msg: string | null) => void;
+  readonly error: MessageDescriptor | null;
+  readonly setError: (error: MessageDescriptor | null) => void;
   readonly startUpload: (files: readonly File[]) => Promise<void>;
 }
 
 function useMediaUpload(invalidateList: () => void): MediaUploadState {
   const [pending, setPending] = useState<readonly PendingUpload[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [error, setError] = useState<MessageDescriptor | null>(null);
 
   const uploadOne = useCallback(async (file: File): Promise<void> => {
     const slot: PendingUpload = {
@@ -255,7 +281,7 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
         throw error;
       }
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : String(error));
+      setError(uploadErrorLabel(error));
     } finally {
       setPending((prev) => prev.filter((p) => p.id !== slot.id));
     }
@@ -273,7 +299,7 @@ function useMediaUpload(invalidateList: () => void): MediaUploadState {
     [uploadOne, invalidateList],
   );
 
-  return { pending, errorMsg, setErrorMsg, startUpload };
+  return { pending, error, setError, startUpload };
 }
 
 // Generic intersection-observer-on-sentinel hook. Re-binds when the
@@ -390,21 +416,19 @@ export function MediaLibrary({
     list.data?.pages.length,
   );
 
-  const { pending, errorMsg, setErrorMsg, startUpload } =
+  const { pending, error, setError, startUpload } =
     useMediaUpload(invalidateList);
 
   const remove = useMutation({
     mutationFn: (id: number) => mediaRpc.delete({ id }),
     onSuccess: invalidateList,
-    onError: (error) =>
-      setErrorMsg(error instanceof Error ? error.message : String(error)),
+    onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
   const update = useMutation({
     mutationFn: (input: { id: number; alt: string }) => mediaRpc.update(input),
     onSuccess: invalidateList,
-    onError: (error) =>
-      setErrorMsg(error instanceof Error ? error.message : String(error)),
+    onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
   // Drop anywhere on the page — including the empty state, the loading
@@ -688,11 +712,11 @@ export function MediaLibrary({
         />
       )}
 
-      {errorMsg && (
+      {error && (
         <ErrorBanner
           testIdRoot="media-library-banner-error"
-          message={friendlyError(errorMsg, (d) => i18n._(d))}
-          onDismiss={() => setErrorMsg(null)}
+          message={i18n._(error)}
+          onDismiss={() => setError(null)}
         />
       )}
     </div>
@@ -703,11 +727,11 @@ function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer.types).includes("Files");
 }
 
-// Map opaque RPC `reason` codes to actionable, translatable text. The
-// error banner is the only surface a user sees when an upload fails —
-// raw reasons like `mime_mismatch` read like 404s. Several codes share
-// a descriptor (`payload_too_large` + `rpc_413` etc.) — the translator
-// translates one message, the lookup serves it for every aliased code.
+// Map opaque RPC `reason` codes and PUT statuses to actionable, translatable
+// text. The error banner is the only surface a user sees when an upload fails
+// — raw reasons like `mime_mismatch` read like 404s. Several codes share a
+// descriptor — the translator translates one message, the lookup serves it for
+// every aliased code.
 const ERROR_DESCRIPTORS = {
   storageNotConfigured: {
     id: "plugin.media.error.storageNotConfigured",
@@ -748,14 +772,16 @@ const ERROR_DESCRIPTORS = {
     id: "plugin.media.error.csrfTokenMissing",
     message: "Request blocked by CSRF check. Reload the page and try again.",
   },
+  generic: {
+    id: "plugin.media.error.generic",
+    message: "Something went wrong. Try again.",
+  },
 } satisfies Record<string, MessageDescriptor>;
 
-const FRIENDLY_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
+const REASON_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
   storage_not_configured: ERROR_DESCRIPTORS.storageNotConfigured,
   payload_too_large: ERROR_DESCRIPTORS.payloadTooLarge,
-  rpc_413: ERROR_DESCRIPTORS.payloadTooLarge,
   unsupported_media_type: ERROR_DESCRIPTORS.unsupportedMediaType,
-  rpc_415: ERROR_DESCRIPTORS.unsupportedMediaType,
   content_type_mismatch: ERROR_DESCRIPTORS.unsupportedMediaType,
   mime_mismatch: ERROR_DESCRIPTORS.mimeMismatch,
   object_not_found: ERROR_DESCRIPTORS.objectNotFound,
@@ -767,16 +793,18 @@ const FRIENDLY_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
   csrf_token_missing: ERROR_DESCRIPTORS.csrfTokenMissing,
 };
 
-/**
- * Resolve a server `reason` code to a translated string. Returns the
- * raw code when no descriptor matches (developer-facing fallback).
- */
-function friendlyError(
-  raw: string,
-  render: (d: MessageDescriptor) => string,
-): string {
-  const descriptor = FRIENDLY_ERRORS[raw];
-  return descriptor ? render(descriptor) : raw;
+const PUT_STATUS_ERRORS: Readonly<Record<number, MessageDescriptor>> = {
+  411: ERROR_DESCRIPTORS.contentLengthRequired,
+  413: ERROR_DESCRIPTORS.payloadTooLarge,
+  415: ERROR_DESCRIPTORS.unsupportedMediaType,
+};
+
+function uploadErrorLabel(error: unknown): MessageDescriptor {
+  if (error instanceof UploadPutError && error.status !== null) {
+    const byStatus = PUT_STATUS_ERRORS[error.status];
+    if (byStatus) return byStatus;
+  }
+  return describeRpcError(error, REASON_ERRORS, ERROR_DESCRIPTORS.generic);
 }
 
 function ErrorBanner({

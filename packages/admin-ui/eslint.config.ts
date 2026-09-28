@@ -1,9 +1,9 @@
 import { defineConfig } from "eslint/config";
 
-import { baseConfig } from "@plumix/eslint-config/base";
+import { adminUiConfig, baseConfig } from "@plumix/eslint-config/base";
 import { reactConfig } from "@plumix/eslint-config/react";
 
-export default defineConfig(baseConfig, reactConfig, {
+export default defineConfig(baseConfig, adminUiConfig, reactConfig, {
   // Vendored shadcn/ui primitives (plus the `cn` helper and the
   // `useIsMobile` hook shadcn ships with the sidebar) — kept verbatim, bar one
   // edit marked PLUMIX DIVERGENCE in `sidebar.tsx`, so `shadcn diff` upgrades

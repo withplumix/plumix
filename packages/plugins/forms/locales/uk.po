@@ -293,8 +293,8 @@ msgstr "Скасувати"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.writeError"
-msgstr "Не вдалося виконати:"
+msgid "plugin.forms.inbox.writeFailed"
+msgstr "Не вдалося виконати. Спробуйте знову."
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

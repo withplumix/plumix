@@ -33,11 +33,10 @@ msgstr "Подій за заданими умовами немає."
 msgid "plugin.auditLog.shell.loadMore"
 msgstr "Завантажити ще"
 
-#. message: the underlying error message from the RPC failure
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx
-msgid "plugin.auditLog.shell.error"
-msgstr "Не вдалося завантажити журнал: {message}"
+msgid "plugin.auditLog.shell.loadFailed"
+msgstr "Не вдалося завантажити журнал."
 
 #. js-lingui-explicit-id
 #: src/admin/AuditLogShell.tsx

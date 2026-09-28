@@ -1,69 +1,64 @@
-import { describe, expect, test } from "vitest";
+import type { MessageDescriptor } from "@lingui/core";
+import { ORPCError } from "@orpc/client";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { renderHookWithI18n } from "../../../../../test/render-with-i18n.js";
-import { useTermErrorMessage } from "./-errors.js";
+import { describeTermError } from "./-errors.js";
 
-// Public-API contract for the term-mutation error → friendly-copy
-// translator. Hooks form because the resolver needs the active
-// `i18n` instance to render descriptors at the call locale; the
-// underlying reason-table is the durable contract the route forms
-// rely on for `setServerError(mapTerm(err, fallback))`.
+// Public-API contract for the term-mutation error → descriptor
+// translator; the reason table is what the route forms rely on for
+// `setServerError(describeTermError(err, fallback))`.
 
-function withReason(reason: string): unknown {
-  return { data: { reason } };
+const fallback: MessageDescriptor = {
+  id: "test.fallback",
+  message: "Couldn't save the term.",
+};
+
+function withReason(reason: string): ORPCError<"CONFLICT", unknown> {
+  return new ORPCError("CONFLICT", { data: { reason } });
 }
 
-describe("useTermErrorMessage", () => {
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("describeTermError", () => {
   test("slug_taken → localized duplicate-slug message", () => {
-    const { result } = renderHookWithI18n(() => useTermErrorMessage());
-    expect(result.current(withReason("slug_taken"), "fb")).toMatch(
-      /slug already exists/i,
-    );
+    expect(
+      describeTermError(withReason("slug_taken"), fallback).message,
+    ).toMatch(/slug already exists/i);
   });
 
   test("parent_mismatch → localized cross-taxonomy message", () => {
-    const { result } = renderHookWithI18n(() => useTermErrorMessage());
-    expect(result.current(withReason("parent_mismatch"), "fb")).toMatch(
-      /different taxonomy/i,
-    );
+    expect(
+      describeTermError(withReason("parent_mismatch"), fallback).message,
+    ).toMatch(/different taxonomy/i);
   });
 
   test("parent_is_self and parent_cycle alias to one ancestor message", () => {
-    const { result } = renderHookWithI18n(() => useTermErrorMessage());
-    const a = result.current(withReason("parent_is_self"), "fb");
-    const b = result.current(withReason("parent_cycle"), "fb");
+    const a = describeTermError(withReason("parent_is_self"), fallback);
+    const b = describeTermError(withReason("parent_cycle"), fallback);
     expect(a).toBe(b);
-    expect(a).toMatch(/its own ancestor/i);
+    expect(a.message).toMatch(/its own ancestor/i);
   });
 
-  test("unknown reason falls through to the thrown Error's own message", () => {
-    const { result } = renderHookWithI18n(() => useTermErrorMessage());
-    const err = new Error("server explained the failure");
-    expect(result.current(err, "fb")).toBe("server explained the failure");
-  });
-
-  test("non-Error throws fall to the caller-provided fallback", () => {
-    const { result } = renderHookWithI18n(() => useTermErrorMessage());
-    expect(result.current("just a string", "couldn't save")).toBe(
-      "couldn't save",
-    );
-    expect(result.current(undefined, "fallback B")).toBe("fallback B");
-  });
-
-  test("an Error with a server `reason` prefers the reason mapping over .message", () => {
-    // Real oRPC errors arrive as `class extends Error` with `data` —
-    // pin that the reason wins so a generic `err.message` ("Bad
-    // Request") doesn't shadow the friendly translation.
-    const err = Object.assign(new Error("Bad Request"), {
-      data: { reason: "slug_taken" },
+  test("a failure with no mapped reason shows the caller's fallback, not its own message", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const err = new ORPCError("FORBIDDEN", {
+      message: "server explained the failure",
     });
-    expect(result(useTermErrorMessage)(err, "fb")).toMatch(
-      /slug already exists/i,
+    expect(describeTermError(err, fallback)).toBe(fallback);
+  });
+
+  test("an unknown reason shows the caller's fallback", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(describeTermError(withReason("insert_failed"), fallback)).toBe(
+      fallback,
     );
+  });
+
+  test("non-Error throws show the caller's fallback", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(describeTermError("just a string", fallback)).toBe(fallback);
+    expect(describeTermError(undefined, fallback)).toBe(fallback);
   });
 });
-
-function result(hook: typeof useTermErrorMessage) {
-  const { result } = renderHookWithI18n(hook);
-  return result.current;
-}

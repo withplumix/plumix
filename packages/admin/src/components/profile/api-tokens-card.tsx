@@ -14,7 +14,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
-import type { Label } from "@plumix/core/i18n";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   AlertDialog,
@@ -69,6 +68,7 @@ import {
   TableRow,
 } from "@plumix/admin-ui/table";
 import { Textarea } from "@plumix/admin-ui/textarea";
+import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 // Renders the API-token surface for a target user. Two modes:
@@ -288,12 +288,16 @@ function ApiTokensCardView({
     secret: string;
     name: string;
   } | null>(null);
-  const [createError, setCreateError] = useState<Label | null>(null);
+  const [createError, setCreateError] = useState<MessageDescriptor | null>(
+    null,
+  );
   const [revokeTarget, setRevokeTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const [revokeError, setRevokeError] = useState<Label | null>(null);
+  const [revokeError, setRevokeError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   // Hoisted: lingui/no-expression-in-message rejects member exprs inline.
   const bdiRevokeName = <bdi>{revokeTarget?.name ?? ""}</bdi>;
@@ -341,9 +345,7 @@ function ApiTokensCardView({
                     });
                   },
                   onError: (err) => {
-                    setCreateError(
-                      err instanceof Error ? err.message : M.mintFallback,
-                    );
+                    setCreateError(describeRpcError(err, {}, M.mintFallback));
                   },
                 },
               );
@@ -499,9 +501,7 @@ function ApiTokensCardView({
                 onRevoke(revokeTarget.id, {
                   onSuccess: () => setRevokeTarget(null),
                   onError: (err) => {
-                    setRevokeError(
-                      err instanceof Error ? err.message : M.revokeFallback,
-                    );
+                    setRevokeError(describeRpcError(err, {}, M.revokeFallback));
                   },
                 });
               }}
@@ -526,7 +526,7 @@ function CreateTokenForm({
 }: {
   onSubmit: (values: CreateFormValues) => void;
   pending: boolean;
-  error: Label | null;
+  error: MessageDescriptor | null;
 }): ReactNode {
   const label = useLabel();
   const form = useForm({

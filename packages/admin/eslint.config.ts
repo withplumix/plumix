@@ -1,6 +1,6 @@
 import { defineConfig } from "eslint/config";
 
-import { baseConfig } from "@plumix/eslint-config/base";
+import { adminUiConfig, baseConfig } from "@plumix/eslint-config/base";
 import { i18nStrictConfig } from "@plumix/eslint-config/i18n";
 import { reactConfig } from "@plumix/eslint-config/react";
 
@@ -13,6 +13,7 @@ import { STRICT_UNWRAPPED_FILES } from "./scripts/strict-unwrapped-files.mjs";
 
 export default defineConfig(
   baseConfig,
+  adminUiConfig,
   reactConfig,
   i18nStrictConfig,
   // ESLint flat config rejects `files: []`; the conditional spread

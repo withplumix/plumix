@@ -293,6 +293,11 @@ msgid "plugin.media.error.csrfTokenMissing"
 msgstr "تم حظر الطلب بواسطة فحص CSRF. أعد تحميل الصفحة وحاول مجدداً."
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.generic"
+msgstr "حدث خطأ ما. حاول مجدداً."
+
+#. js-lingui-explicit-id
 #: src/admin/MediaPickerField.tsx
 msgid "plugin.media.pickerField.empty"
 msgstr "لم يتم اختيار وسائط"

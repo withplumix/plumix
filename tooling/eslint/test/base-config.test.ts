@@ -3,7 +3,8 @@ import type { Linter } from "eslint";
 import { ESLint } from "eslint";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { baseConfig } from "../base.js";
+import { adminUiConfig, baseConfig } from "../base.js";
+import { pluginConfig } from "../plugin.js";
 import { reactConfig } from "../react.js";
 
 // The seam is taken as high as it goes: fixtures on disk are linted through
@@ -92,6 +93,21 @@ const unparsedTypeofReports = messageIdReports(
 const chainedAssertionReports = messageIdReports(
   "plumix/no-chained-type-assertion",
 );
+
+async function errorMessageReports(
+  config: Linter.Config[],
+  fixture: string,
+): Promise<{ messageId: string | undefined; line: number }[]> {
+  const instance = new ESLint({
+    cwd: fixturesDir,
+    overrideConfigFile: true,
+    overrideConfig: config,
+  });
+  const [result] = await instance.lintFiles([fixture]);
+  return (result?.messages ?? [])
+    .filter((message) => message.ruleId === "plumix/no-error-message-in-ui")
+    .map((message) => ({ messageId: message.messageId, line: message.line }));
+}
 
 describe("plumix/no-reflect-get and plumix/no-reflect-apply", () => {
   it("rejects Reflect.get and Reflect.apply", async () => {
@@ -469,6 +485,53 @@ describe("plumix/no-hand-rolled-destructive-tint", () => {
   it("stays silent on the declarations themselves and on other destructive text", async () => {
     await expect(
       tintReports("src/destructive-tint.allowed.tsx"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-error-message-in-ui", () => {
+  const adminUi = [...baseConfig, ...adminUiConfig];
+
+  it("rejects a caught error's message read in admin source", async () => {
+    await expect(
+      errorMessageReports(adminUi, "src/error-message-in-ui.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "errorMessageInUi", line: 6 },
+      { messageId: "errorMessageInUi", line: 11 },
+      { messageId: "errorMessageInUi", line: 15 },
+      { messageId: "shownVerbatimReasonTooThin", line: 20 },
+      { messageId: "errorMessageInUi", line: 25 },
+    ]);
+  });
+
+  it("stays silent on a descriptor's message, a console argument and a read the hatch explains", async () => {
+    await expect(
+      errorMessageReports(adminUi, "src/error-message-in-ui.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("exempts test files", async () => {
+    await expect(
+      errorMessageReports(
+        adminUi,
+        "src/error-message-in-ui.violations.test.ts",
+      ),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays out of admin source until a package opts in", async () => {
+    await expect(
+      errorMessageReports(baseConfig, "src/error-message-in-ui.violations.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("reaches a plugin's admin sources and nothing else in the plugin", async () => {
+    const plugin = [...pluginConfig()];
+    await expect(
+      errorMessageReports(plugin, "src/admin/error-message-in-ui.plugin.ts"),
+    ).resolves.toEqual([{ messageId: "errorMessageInUi", line: 2 }]);
+    await expect(
+      errorMessageReports(plugin, "src/error-message-in-ui.plugin-server.ts"),
     ).resolves.toEqual([]);
   });
 });
