@@ -68,6 +68,11 @@ export function defineTestConfig(
           },
           {
             extends: true,
+            // A request the page makes for a file that does not exist would
+            // otherwise get the package's own index.html, and Vite follows its
+            // entry script into the whole app. Deps it finds there are
+            // optimized mid-run, and the reload hangs the run.
+            appType: "custom",
             define: { ...TEST_TIER_DEFINES },
             // Scan the browser tests up front: a dependency Vite first meets
             // mid-run is optimized then, and the reload that follows fails

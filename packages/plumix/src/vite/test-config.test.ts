@@ -15,6 +15,7 @@ function tiers(config: ViteUserConfig) {
     []) as readonly TestProjectInlineConfiguration[];
   return projects.map((project) => ({
     extends: project.extends,
+    appType: project.appType,
     define: project.define,
     optimizeDeps: project.optimizeDeps,
     name: project.test?.name,
