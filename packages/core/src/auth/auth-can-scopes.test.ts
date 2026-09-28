@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vitest";
 
+import type { PluginRegistry } from "../plugin/registry.js";
 import type { createTestDb } from "../test/harness.js";
 import { createAppContext, withUser } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
+import { entryCapability, termCapability } from "./contract/capability.js";
 
 // `auth.can()` is the single gate every capability check goes through —
 // settings RPC, entry RPC, plugin route handlers all consult it. These
@@ -13,10 +16,11 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 function buildCtx(args: {
   role: "subscriber" | "contributor" | "author" | "editor" | "admin";
   tokenScopes?: readonly string[] | null;
+  plugins?: PluginRegistry;
 }) {
   const db = {} as Awaited<ReturnType<typeof createTestDb>>;
   const hooks = new HookRegistry();
-  const plugins = createPluginRegistry();
+  const plugins = args.plugins ?? createPluginRegistry();
   const baseCtx = createAppContext({
     db,
     env: {},
@@ -77,5 +81,37 @@ describe("auth.can — tokenScopes narrowing", () => {
       plugins,
     });
     expect(ctx.auth.can("entry:post:read")).toBe(false);
+  });
+});
+
+describe("auth.can — capability references", () => {
+  test("resolves an entry reference to the namespace its type pools under", async () => {
+    const ctx = buildCtx({
+      role: "editor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    expect(ctx.auth.can(entryCapability("news", "edit_any"))).toBe(true);
+    expect(ctx.auth.can("entry:news:edit_any")).toBe(false);
+  });
+
+  test("narrows a reference by the token scope its resolved string names", async () => {
+    const ctx = buildCtx({
+      role: "editor",
+      tokenScopes: ["entry:post:read"],
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    expect(ctx.auth.can(entryCapability("news", "read"))).toBe(true);
+    expect(ctx.auth.can(entryCapability("news", "edit_any"))).toBe(false);
+  });
+
+  test("resolves a term reference under its taxonomy", () => {
+    const plugins = createPluginRegistry();
+    plugins.capabilities.set("term:tag:assign", {
+      name: "term:tag:assign",
+      minRole: "contributor",
+      registeredBy: null,
+    });
+    const ctx = buildCtx({ role: "contributor", plugins });
+    expect(ctx.auth.can(termCapability("tag", "assign"))).toBe(true);
   });
 });

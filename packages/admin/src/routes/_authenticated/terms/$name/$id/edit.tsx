@@ -56,7 +56,10 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { ArrowLeft } from "@plumix/admin-ui/icons";
-import { seedFromMetaBoxes } from "@plumix/core/manifest";
+import {
+  seedFromMetaBoxes,
+  termTaxonomyCapability,
+} from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "../-constants.js";
@@ -113,7 +116,12 @@ export const Route = createFileRoute("/_authenticated/terms/$name/$id/edit")({
     }
     // Minimum bar is `:read`; edit/delete actions gate separately
     // below so a read-only user can still land on the screen.
-    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:read`)) {
+    if (
+      !hasCap(
+        context.user.capabilities,
+        termTaxonomyCapability(taxonomy, "read"),
+      )
+    ) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
@@ -151,8 +159,14 @@ function EditTermRoute(): ReactNode {
   const { id: termId } = Route.useParams();
   const { user, taxonomy } = Route.useRouteContext();
 
-  const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
-  const canDelete = hasCap(user.capabilities, `term:${taxonomy.name}:delete`);
+  const canEdit = hasCap(
+    user.capabilities,
+    termTaxonomyCapability(taxonomy, "edit"),
+  );
+  const canDelete = hasCap(
+    user.capabilities,
+    termTaxonomyCapability(taxonomy, "delete"),
+  );
   const isHierarchical = taxonomy.isHierarchical === true;
 
   const { data: term } = useSuspenseQuery(

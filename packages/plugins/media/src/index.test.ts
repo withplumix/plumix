@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { buildManifest, HookRegistry, installPlugins } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import {
   createDispatcherHarness,
@@ -91,8 +91,11 @@ describe("@plumix/plugin-media — registration", () => {
       id: "plugin.media.adminPage.title",
       message: "Media Library",
     });
-    expect(page?.capability).toBe("entry:media:read");
-    expect(registry.capabilities.get(page?.capability ?? "")).toBeDefined();
+    const shipped = buildManifest(registry)
+      .adminNav.flatMap((group) => group.items)
+      .find((item) => item.to === "/pages/media");
+    expect(shipped?.capability).toBe("entry:media:read");
+    expect(registry.capabilities.get("entry:media:read")).toBeDefined();
     // Custom nav group between Entries (100) and Taxonomies (200) —
     // media isn't a content surface like Posts/Pages, so it doesn't
     // belong nested under "Entries".
@@ -148,19 +151,49 @@ interface RpcResult<TOutput> {
   readonly error: OrpcErrorPayload | undefined;
 }
 
+/** An API token's secret, for a caller narrowed to the token's scopes. */
+interface Bearer {
+  readonly secret: string;
+}
+
+/** A session user by id, a scoped API token, or nobody. */
+type Caller = number | Bearer | null;
+
+async function mintToken(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  userId: number,
+  scopes: string[],
+): Promise<Bearer> {
+  const { secret } = await h.factory.apiToken.create({ userId, scopes });
+  return { secret };
+}
+
+async function asCaller(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  request: Request,
+  caller: Caller,
+): Promise<Request> {
+  if (caller === null) return request;
+  if (typeof caller === "number") {
+    return h.authenticateRequest(request, caller);
+  }
+  const headers = new Headers(request.headers);
+  headers.set("authorization", `Bearer ${caller.secret}`);
+  return new Request(request, { headers });
+}
+
 async function rpcDispatch<TOutput>(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   procedure: string,
   input: Record<string, unknown>,
-  userId: number | null,
+  caller: Caller,
 ): Promise<RpcResult<TOutput>> {
   const base = plumixRequest(`/_plumix/rpc/${procedure}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ json: input }),
   });
-  const request =
-    userId !== null ? await h.authenticateRequest(base, userId) : base;
+  const request = await asCaller(h, base, caller);
   const response = await h.dispatch(request);
   const body = (await response.json().catch(() => ({}))) as {
     json?: unknown;
@@ -1030,6 +1063,28 @@ describe("@plumix/plugin-media — media.delete", () => {
     expect(await storage.head(seeded.storageKey)).toBeNull();
   });
 
+  test("a token without the delete scope cannot delete its own asset", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "own.png");
+    const token = await mintToken(h, owner.id, [
+      "entry:media:read",
+      "entry:media:create",
+      "entry:media:edit_own",
+    ]);
+
+    const { status, error } = await rpcDispatch(
+      h,
+      "media/delete",
+      { id: seeded.id },
+      token,
+    );
+    expect(status).toBe(403);
+    expect(error?.data?.capability).toBe("entry:media:delete");
+    expect(await storage.head(seeded.storageKey)).not.toBeNull();
+  });
+
   test("returns NOT_FOUND for a non-existent id", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
@@ -1340,6 +1395,106 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
       ),
     );
     expect(response.status).toBe(403);
+  });
+
+  // Whoever minted the draft finishes it — the same rule at the worker route
+  // and at `confirm`, so what a caller may do does not hang on whether the
+  // storage presigns.
+  async function draftFor(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    caller: Caller,
+  ): Promise<CreateUploadUrlOutput> {
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      caller,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    return created.output;
+  }
+
+  async function putBytes(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    draft: CreateUploadUrlOutput,
+    caller: Caller,
+  ): Promise<Response> {
+    const request = plumixRequest(draft.uploadUrl, {
+      method: "PUT",
+      headers: {
+        ...draft.headers,
+        "content-length": String(PNG_1X1_BYTES.byteLength),
+      },
+      body: PNG_1X1_BYTES,
+    });
+    return h.dispatch(await asCaller(h, request, caller));
+  }
+
+  test("an owner holding only create finishes their upload at the worker route and confirm", async () => {
+    const { h } = await setupBindingOnlyHarness();
+    const owner = await h.seedUser("contributor");
+    const token = await mintToken(h, owner.id, ["entry:media:create"]);
+
+    const draft = await draftFor(h, token);
+    expect((await putBytes(h, draft, token)).status).toBe(204);
+    const confirmed = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: draft.mediaId },
+      token,
+    );
+    expect(confirmed.status).toBe(200);
+  });
+
+  test("an owner without create is refused at the worker route and confirm", async () => {
+    const { h, stub } = await setupBindingOnlyHarness();
+    const owner = await h.seedUser("contributor");
+    const draft = await draftFor(h, owner.id);
+    const token = await mintToken(h, owner.id, [
+      "entry:media:read",
+      "entry:media:edit_own",
+    ]);
+
+    const put = await putBytes(h, draft, token);
+    expect(put.status).toBe(403);
+    expect(await put.json()).toEqual({ error: "forbidden" });
+
+    await stub.put(draft.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    const confirmed = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: draft.mediaId },
+      token,
+    );
+    expect(confirmed.status).toBe(403);
+    expect(confirmed.error?.data?.capability).toBe("entry:media:create");
+  });
+
+  test("a non-owner is refused at the worker route and confirm, edit_any or not", async () => {
+    const { h, stub } = await setupBindingOnlyHarness();
+    const owner = await h.seedUser("contributor");
+    const editor = await h.seedUser("editor");
+    const draft = await draftFor(h, owner.id);
+
+    expect((await putBytes(h, draft, editor.id)).status).toBe(403);
+
+    await stub.put(draft.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    const confirmed = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: draft.mediaId },
+      editor.id,
+    );
+    expect(confirmed.status).toBe(403);
+    expect(confirmed.error?.data?.capability).toBe("entry:media:create");
   });
 
   test("malformed id in URL path is rejected (400) before any DB hit", async () => {

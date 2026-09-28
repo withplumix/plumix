@@ -8,9 +8,9 @@ import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import {
-  entryCapability,
   entryCapabilityByName,
   entryCapabilityNamespace,
+  namespacedEntryCapability,
 } from "../../../entries/capabilities.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
@@ -172,7 +172,10 @@ export const restore = base
     if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);
-    const readCapability = entryCapability(namespace, "read_revisions");
+    const readCapability = namespacedEntryCapability(
+      namespace,
+      "read_revisions",
+    );
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }
@@ -181,7 +184,10 @@ export const restore = base
     // directly (legacy types). `restore_revision` gates both — pair
     // it with `edit_*` so a viewer who can't edit the entry can't
     // restore on it either.
-    const restoreCapability = entryCapability(namespace, "restore_revision");
+    const restoreCapability = namespacedEntryCapability(
+      namespace,
+      "restore_revision",
+    );
     if (!context.auth.can(restoreCapability)) {
       throw errors.FORBIDDEN({ data: { capability: restoreCapability } });
     }
@@ -267,7 +273,7 @@ export const restore = base
     const isPublishTransition =
       revision.status === "published" && live.status !== "published";
     if (isPublishTransition) {
-      const publishCapability = entryCapability(namespace, "publish");
+      const publishCapability = namespacedEntryCapability(namespace, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }
@@ -352,7 +358,10 @@ export const setMessage = base
     if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);
-    const readCapability = entryCapability(namespace, "read_revisions");
+    const readCapability = namespacedEntryCapability(
+      namespace,
+      "read_revisions",
+    );
     if (!context.auth.can(readCapability)) {
       throw errors.FORBIDDEN({ data: { capability: readCapability } });
     }

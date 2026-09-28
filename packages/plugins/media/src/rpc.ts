@@ -1,10 +1,12 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
 import { and, eq } from "plumix/db";
 import {
+  assertCanDeleteEntry,
   assertCanEditEntry,
   authenticated,
   base,
   requireCapability,
+  resolveCapability,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { withBasePath } from "plumix/support";
@@ -26,6 +28,7 @@ import {
   resolveMediaUrl,
   thumbnailFor,
 } from "./read-service.js";
+import { canFinishUpload, MEDIA_CREATE_CAPABILITY } from "./upload-gate.js";
 
 interface MediaRpcOptions {
   readonly acceptedTypes: readonly string[];
@@ -91,32 +94,10 @@ async function loadMediaRow(
   return row;
 }
 
-/**
- * Binning someone else's asset turns on the `delete` capability; an owner is
- * carried through by ownership alone. Looser than core's own trash gate, which
- * asks `delete` of everyone including the author — left as it was rather than
- * tightened on the way past.
- *
- * The capability is spelled out rather than resolved through the registry, so
- * it would miss the namespace a pooled media type gates under; #2436 covers
- * the gates that still have that defect.
- */
-function assertCanDeleteMedia(
-  context: AuthenticatedAppContext,
-  row: typeof entries.$inferSelect,
-  errors: Pick<MediaRpcErrors, "FORBIDDEN">,
-): void {
-  if (row.authorId === context.user.id) return;
-  const capability = "entry:media:delete";
-  if (!context.auth.can(capability)) {
-    throw errors.FORBIDDEN({ data: { capability } });
-  }
-}
-
 export function createMediaRouter(options: MediaRpcOptions) {
   const acceptedTypeSet = new Set(options.acceptedTypes);
 
-  // Capability gating already keeps `entry:media:create` to the
+  // Capability gating already keeps media `create` to the
   // contributor+ tier (`registerEntryType` derives it). For at-scale
   // deployments add a per-user quota or rate limit on this procedure —
   // a single contributor can otherwise mint as many presigned URLs as
@@ -124,7 +105,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
   // server-side draft GC + KV-backed counter belong here.
   const createUploadUrl = base
     .use(authenticated)
-    .use(requireCapability("entry:media:create"))
+    .use(requireCapability(MEDIA_CREATE_CAPABILITY))
     .input(
       v.object({
         filename: v.pipe(v.string(), v.minLength(1), v.maxLength(255)),
@@ -249,13 +230,14 @@ export function createMediaRouter(options: MediaRpcOptions) {
         .limit(1);
       if (row?.type !== MEDIA_ENTRY_TYPE) throw notFound();
 
-      // Confirm is owner-only — `entry:media:edit_any` is for editing
-      // existing assets, not finalizing someone else's drafts. A
-      // non-owner shouldn't be able to publish another user's
-      // half-completed upload.
-      if (row.authorId !== context.user.id) {
+      if (!canFinishUpload(context, row)) {
         throw errors.FORBIDDEN({
-          data: { capability: "entry:media:create" },
+          data: {
+            capability: resolveCapability(
+              context.plugins,
+              MEDIA_CREATE_CAPABILITY,
+            ),
+          },
         });
       }
 
@@ -405,7 +387,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
       const notFound = (): Error =>
         errors.NOT_FOUND({ data: { kind: "media", id: input.id } });
       const row = await loadMediaRow(context, input.id, errors);
-      assertCanDeleteMedia(context, row, errors);
+      assertCanDeleteEntry(context, row, errors);
 
       // Delete the row first, then the bytes. If the storage delete
       // fails we'd rather leave an orphan in the bucket (admin can

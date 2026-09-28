@@ -5,22 +5,27 @@ export * as v from "valibot";
 
 // Definition, RPC, hooks, the registries a plugin reads, and the harness its
 // own tests assemble an app from. `applyOverride` is how a content-type plugin
-// lets a site reshape the types it registers. Prefer `canEditEntry` /
-// `assertCanEditEntry` to a hand-built `entry:<type>:edit_any`, which misses
-// the namespace a pooled type gates under; `requireCapability` still covers
-// row-independent checks.
+// lets a site reshape the types it registers. A capability is named by what it
+// guards — `entryCapability(type, action)`, `termCapability(taxonomy, action)`
+// — and never spelled, since a spelled `entry:<type>:*` misses the namespace a
+// pooled type gates under; `resolveCapability` spells one only for a denial
+// payload. `canEditEntry` / `canDeleteEntry` answer the row-dependent
+// questions.
 export {
   applyOverride,
+  assertCanDeleteEntry,
   assertCanEditEntry,
   authenticated,
   base,
   buildManifest,
+  canDeleteEntry,
   canEditEntry,
   createAppContext,
   createPluginRegistry,
   DEFAULT_HOOK_PRIORITY,
   definePlugin,
   ENTRY_MENU_ICONS,
+  entryCapability,
   findEntryMetaField,
   findTermMetaField,
   findUserMetaField,
@@ -38,7 +43,9 @@ export {
   projectImageRoles,
   registerCoreLookupAdapters,
   requireCapability,
+  resolveCapability,
   TAXONOMY_MENU_ICONS,
+  termCapability,
 } from "@plumix/core";
 
 // `tryGetContext` serves a component rendered without a context argument, such
@@ -152,6 +159,7 @@ export type {
   BlockManifestEntry,
   BlockRenderHookContext,
   BuiltManifest,
+  CapabilityNamespaces,
   ContextExtensionEntry,
   CoreIconName,
   CoreSchema,
@@ -172,6 +180,7 @@ export type {
   DevErrorHintDoc,
   DevErrorPanel,
   EntryArchive,
+  EntryCapability,
   EntryChange,
   EntryEditErrors,
   EntryListing,
@@ -307,6 +316,7 @@ export type {
   StoredTermMetaOf,
   TargetMatcher,
   TaxonomyMenuIcon,
+  TermCapability,
   TermMeta,
   TermMetaBoxManifestEntry,
   TermMetaBoxOptions,

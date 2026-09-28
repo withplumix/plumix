@@ -12,6 +12,7 @@ import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
+import { entryTypeCapability } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
 
 const M = {
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/create")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw notFound();
     }
-    const createCapability = `entry:${entryType.capabilityType}:create`;
+    const createCapability = entryTypeCapability(entryType, "create");
     if (!hasCap(context.user.capabilities, createCapability)) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw notFound();

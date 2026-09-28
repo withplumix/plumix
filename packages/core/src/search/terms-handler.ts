@@ -4,10 +4,10 @@ import type {
   SearchGroup,
   SearchResultItem,
 } from "./admin-search.js";
+import { spellTermCapability } from "../auth/contract/capability.js";
 import { and, asc, inArray } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
-import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
 import { termSearchCondition } from "./conditions.js";
 
 // Max rows scanned across all taxonomies for one query; bucketed per
@@ -31,7 +31,7 @@ export async function termsSearchHandler(
   if (tokens.length === 0) return [];
 
   const readable = [...ctx.plugins.termTaxonomies.entries()].filter(([name]) =>
-    ctx.auth.can(taxonomyCapability(name, "read")),
+    ctx.auth.can(spellTermCapability(name, "read")),
   );
   if (readable.length === 0) return [];
 

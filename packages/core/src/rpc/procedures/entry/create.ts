@@ -3,8 +3,8 @@ import type { ResolvedMeta } from "../../meta/core.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {
-  entryCapability,
   entryCapabilityNamespace,
+  namespacedEntryCapability,
 } from "../../../entries/capabilities.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { authenticated } from "../../authenticated.js";
@@ -50,7 +50,7 @@ export const create = base
     }
 
     const namespace = entryCapabilityNamespace(context.plugins, filtered.type);
-    const createCapability = entryCapability(namespace, "create");
+    const createCapability = namespacedEntryCapability(namespace, "create");
     if (!context.auth.can(createCapability)) {
       throw errors.FORBIDDEN({ data: { capability: createCapability } });
     }
@@ -58,7 +58,7 @@ export const create = base
     const requiresPublishCap =
       filtered.status === "published" || filtered.status === "scheduled";
     if (requiresPublishCap) {
-      const publishCapability = entryCapability(namespace, "publish");
+      const publishCapability = namespacedEntryCapability(namespace, "publish");
       if (!context.auth.can(publishCapability)) {
         throw errors.FORBIDDEN({ data: { capability: publishCapability } });
       }

@@ -1,5 +1,6 @@
 import type { AppContext } from "../../../context/app.js";
 import type { TermsPatchErrors } from "../../errors.js";
+import { spellTermCapability } from "../../../auth/contract/capability.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";
@@ -59,9 +60,8 @@ export async function assertTermsPatchValid(
     if (!context.plugins.termTaxonomies.has(taxonomy)) {
       throwers.taxonomyNotFound(taxonomy);
     }
-    if (!context.auth.can(`term:${taxonomy}:assign`)) {
-      throwers.forbidden(`term:${taxonomy}:assign`);
-    }
+    const assign = spellTermCapability(taxonomy, "assign");
+    if (!context.auth.can(assign)) throwers.forbidden(assign);
   }
   for (const [taxonomy, termIds] of Object.entries(termsPatch)) {
     const unique = Array.from(new Set(termIds));

@@ -1,3 +1,7 @@
+import type {
+  Capability,
+  CapabilityNamespaces,
+} from "../../../auth/contract/capability.js";
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
@@ -10,6 +14,7 @@ import type {
   SettledRow,
 } from "../../meta/core.js";
 import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
+import { resolveCapability } from "../../../auth/contract/capability.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
   findEntryMetaField,
@@ -67,10 +72,11 @@ export function assertEntryMetaCapabilities(
   registry: PluginRegistry,
   entryType: string,
   patch: MetaPatch,
-  auth: { can(capability: string): boolean },
+  auth: { can(capability: Capability): boolean },
   errors: CapabilityErrors,
 ): void {
   assertMetaCapabilities(
+    registry,
     patch,
     (key) => findEntryMetaField(registry, entryType, key),
     auth,
@@ -84,9 +90,10 @@ export function assertEntryMetaCapabilities(
  * field-level capability gate uniformly.
  */
 export function assertMetaCapabilities(
+  registry: CapabilityNamespaces,
   patch: MetaPatch,
-  findField: (key: string) => { readonly capability?: string } | undefined,
-  auth: { can(capability: string): boolean },
+  findField: (key: string) => { readonly capability?: Capability } | undefined,
+  auth: { can(capability: Capability): boolean },
   errors: CapabilityErrors,
 ): void {
   const touched = new Set<string>([...patch.upserts.keys(), ...patch.deletes]);
@@ -94,7 +101,9 @@ export function assertMetaCapabilities(
     const field = findField(key);
     if (!field?.capability) continue;
     if (!auth.can(field.capability)) {
-      throw errors.FORBIDDEN({ data: { capability: field.capability } });
+      throw errors.FORBIDDEN({
+        data: { capability: resolveCapability(registry, field.capability) },
+      });
     }
   }
 }

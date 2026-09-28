@@ -4,7 +4,7 @@
 // directory depend on their variant types directly, breaking the former
 // `fields/* → manifest` import cycle. Re-exported unchanged from the public
 // `@plumix/core/manifest` barrel.
-
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { ImageRoleName } from "../image-roles.js";
@@ -101,7 +101,7 @@ export interface MetaBoxFieldBase {
    * on repeater subfields are ignored (a row's gate is the parent
    * repeater field's gate). Defaults to no gating.
    */
-  readonly capability?: string;
+  readonly capability?: Capability;
   /**
    * Expose this field's value on the public REST API. Default-deny: meta is
    * hidden from REST responses unless a field opts in with `showInApi: true`,

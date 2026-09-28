@@ -17,13 +17,15 @@ Four nouns carry the access model.
 - A **principal** is the actor a request resolved to. Handlers read it as `ctx.user`, which is an authenticated user or `null`.
 - A **session** is a server-issued credential a browser carries in a cookie. One row in `sessions`, one `plumix_session` cookie, one user.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
-- A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can("entry:recipe:publish")` instead of comparing roles by hand.
+- A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can(entryCapability("recipe", "publish"))` instead of comparing roles by hand.
 
 Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships seventeen. Eight are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other nine are flat.
 
 `ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential. It is still personal data, and core's own hook documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
 
 Roles are one ordered ladder, `subscriber`, `contributor`, `author`, `editor`, `admin`. A capability names the lowest role that holds it, and every role above that holds it too, so there is no per-user permission list to maintain. Registering the `recipe` entry type mints eight capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`; registering the `cuisine` taxonomy mints five.
+
+Code names an entry or term capability by what it guards, with `entryCapability(type, action)` or `termCapability(taxonomy, action)` from `plumix/plugin`, and never spells the string. A type registered with `capabilityType` pools its permissions under another type's namespace, and the reference resolves to that namespace wherever it is checked: `auth.can`, `requireCapability`, a route's `auth`, a lookup adapter, a field or admin page. What reaches the admin or a `FORBIDDEN` payload is still the resolved string. Flat capabilities such as `settings:manage` stay strings.
 
 The `auth` slot is not optional. A config without one does not type-check, and `auth()` validates its input as the config module loads, throwing `PlumixConfigError` with the offending path named. Its one required block is `passkey`, so every site has a working sign-in method from its first deploy.
 
@@ -58,7 +60,7 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 4. **Read the principal.** Any plugin can mount a raw route and let the dispatcher gate it:
 
    ```ts
-   import { definePlugin } from "plumix/plugin";
+   import { definePlugin, entryCapability } from "plumix/plugin";
 
    export const recipes = definePlugin("recipes", {
      setup: (ctx) => {
@@ -70,14 +72,14 @@ The `auth` slot is not optional. A config without one does not type-check, and `
            Response.json({
              email: appCtx.user?.email ?? null,
              role: appCtx.user?.role ?? null,
-             canPublish: appCtx.auth.can("entry:recipe:publish"),
+             canPublish: appCtx.auth.can(entryCapability("recipe", "publish")),
            }),
        });
      },
    });
    ```
 
-   The route serves at `/_plumix/recipes/whoami`. Signed out it answers 401 and your handler never runs; `auth: { capability: "entry:recipe:publish" }` instead of `"authenticated"` turns the shortfall into a 403.
+   The route serves at `/_plumix/recipes/whoami`. Signed out it answers 401 and your handler never runs; `auth: { capability: entryCapability("recipe", "publish") }` instead of `"authenticated"` turns the shortfall into a 403.
 
    A write method on that route also passes the dispatcher's CSRF gate, which requires the `X-Plumix-Request` header — one a plain HTML `<form method="post">` cannot set, so a no-JavaScript submit cannot reach a plugin route at all. A route that has to accept one declares `formPost: true`, dropping the header requirement and leaving the Origin check as the whole control: the submit has to carry an Origin (or Referer) matching the site, where an ordinary request is only rejected for contradicting one. It exempts the POST and nothing else, so a route registered as `method: "*"` still gates every other write method. Only an `auth: "public"` route may take it, and declaring it on a gated route throws at registration.
 

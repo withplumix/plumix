@@ -61,6 +61,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
+import { entryTypeCapability } from "@plumix/core/manifest";
 
 import { EntriesBulkBar } from "./-entries-bulk-bar.js";
 
@@ -818,9 +819,9 @@ function ContentListRoute(): ReactNode {
   // resolved for the type. Missing the cap? Hide the button — the new-post
   // route also redirects on `beforeLoad` but we shouldn't surface the button
   // at all.
-  const createCapability = `entry:${entryType.capabilityType}:create`;
+  const createCapability = entryTypeCapability(entryType, "create");
   const canCreate = hasCap(user.capabilities, createCapability);
-  const deleteCapability = `entry:${entryType.capabilityType}:delete`;
+  const deleteCapability = entryTypeCapability(entryType, "delete");
   const canDelete = hasCap(user.capabilities, deleteCapability);
 
   const {

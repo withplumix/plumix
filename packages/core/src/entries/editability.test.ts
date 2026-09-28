@@ -9,7 +9,12 @@ import type { EntryViewer } from "./visibility.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { RPC_ERRORS } from "../rpc/errors.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
-import { assertCanEditEntry, canEditEntry } from "./editability.js";
+import {
+  assertCanDeleteEntry,
+  assertCanEditEntry,
+  canDeleteEntry,
+  canEditEntry,
+} from "./editability.js";
 
 const CALLER: AuthenticatedUser = {
   id: 1,
@@ -36,9 +41,13 @@ function row(authorId: number | null, type = "post"): EntryEditRow {
 
 const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 
-function denial(ctx: EntryViewer, entry: EntryEditRow): string {
+function denial(
+  ctx: EntryViewer,
+  entry: EntryEditRow,
+  assert = assertCanEditEntry,
+): string {
   try {
-    assertCanEditEntry(ctx, entry, errors);
+    assert(ctx, entry, errors);
   } catch (thrown) {
     if (!(thrown instanceof ORPCError) || thrown.code !== "FORBIDDEN") {
       throw thrown;
@@ -174,5 +183,96 @@ describe("a type pooled onto another's capabilities", () => {
     expect(denial(pooledViewer([]), row(STRANGER_ID, "news"))).toBe(
       "entry:post:edit_any",
     );
+  });
+});
+
+// Deleting takes `delete` for any row, and `edit_any` on top for someone
+// else's — the trash lifecycle's rule, distinct from the edit gate above.
+const DELETE_CASES = [
+  { tier: "nothing", capabilities: [], own: false, any: false },
+  {
+    tier: "delete",
+    capabilities: ["entry:post:delete"],
+    own: true,
+    any: false,
+  },
+  {
+    tier: "edit_any",
+    capabilities: ["entry:post:edit_any"],
+    own: false,
+    any: false,
+  },
+  {
+    tier: "delete and edit_any",
+    capabilities: ["entry:post:delete", "entry:post:edit_any"],
+    own: true,
+    any: true,
+  },
+  // `edit_own` is the edit gate's, and grants no delete.
+  {
+    tier: "edit_own",
+    capabilities: ["entry:post:edit_own"],
+    own: false,
+    any: false,
+  },
+] as const;
+
+describe("canDeleteEntry", () => {
+  for (const { tier, capabilities, own, any } of DELETE_CASES) {
+    test(`a caller holding ${tier} may delete their own row: ${String(own)}`, () => {
+      expect(canDeleteEntry(viewer(capabilities), row(CALLER.id))).toBe(own);
+    });
+
+    test(`a caller holding ${tier} may delete another's row: ${String(any)}`, () => {
+      expect(canDeleteEntry(viewer(capabilities), row(STRANGER_ID))).toBe(any);
+    });
+  }
+
+  test("an anonymous caller owns nothing, even against an authorless row", () => {
+    expect(canDeleteEntry(viewer(["entry:post:delete"], null), row(null))).toBe(
+      false,
+    );
+  });
+
+  test("gates a pooled type under the namespace it pools into", async () => {
+    const pooled = { ...viewer([]), plugins: await pooledEntryTypeRegistry() };
+    const holding = (capabilities: readonly string[]): EntryViewer => ({
+      ...pooled,
+      auth: viewer(capabilities).auth,
+    });
+    expect(
+      canDeleteEntry(holding(["entry:post:delete"]), row(CALLER.id, "news")),
+    ).toBe(true);
+    expect(
+      canDeleteEntry(holding(["entry:news:delete"]), row(CALLER.id, "news")),
+    ).toBe(false);
+    expect(
+      denial(holding([]), row(CALLER.id, "news"), assertCanDeleteEntry),
+    ).toBe("entry:post:delete");
+  });
+});
+
+describe("assertCanDeleteEntry", () => {
+  test("returns without throwing for a caller the predicate admits", () => {
+    expect(() =>
+      assertCanDeleteEntry(
+        viewer(["entry:post:delete"]),
+        row(CALLER.id),
+        errors,
+      ),
+    ).not.toThrow();
+  });
+
+  test("reports delete to a caller without it, and edit_any to a non-owner holding delete", () => {
+    expect(denial(viewer([]), row(STRANGER_ID), assertCanDeleteEntry)).toBe(
+      "entry:post:delete",
+    );
+    expect(
+      denial(
+        viewer(["entry:post:delete"]),
+        row(STRANGER_ID),
+        assertCanDeleteEntry,
+      ),
+    ).toBe("entry:post:edit_any");
   });
 });

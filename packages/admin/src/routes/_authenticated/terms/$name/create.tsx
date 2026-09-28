@@ -27,6 +27,7 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { ArrowLeft } from "@plumix/admin-ui/icons";
+import { termTaxonomyCapability } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "./-constants.js";
@@ -65,7 +66,12 @@ export const Route = createFileRoute("/_authenticated/terms/$name/create")({
     }
     // `term.create` requires `${name}:edit` — gate the route too so a
     // caller without edit doesn't land on a form that will 403 on save.
-    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:edit`)) {
+    if (
+      !hasCap(
+        context.user.capabilities,
+        termTaxonomyCapability(taxonomy, "edit"),
+      )
+    ) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw redirect({
         to: "/terms/$name",

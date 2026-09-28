@@ -1717,8 +1717,10 @@ const duplicateCases: readonly DuplicateCase[] = [
         capability: variant,
       });
     },
-    read: (registry) =>
-      registry.lookupAdapters.get("report")?.capability ?? undefined,
+    read: (registry) => {
+      const capability = registry.lookupAdapters.get("report")?.capability;
+      return typeof capability === "string" ? capability : undefined;
+    },
     core: {
       identifier: "user",
       register: (ctx) => {

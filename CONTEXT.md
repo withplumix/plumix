@@ -230,7 +230,7 @@ A person with a persisted account row (email, slug, role, meta). The request-tim
 A user's fixed tier on the ordered ladder `subscriber < contributor < author < editor < admin`, where higher tiers inherit lower capabilities.
 
 **Capability**:
-A named permission string (`<entity>:<type>:<action>`) mapped to a minimum role. See the disambiguation note — distinct from an entitlement label.
+A named permission string (`<entity>:<type>:<action>`) mapped to a minimum role. A plugin names an entry or term capability by resource type and action, and the registry spells the string. See the disambiguation note — distinct from an entitlement label.
 _Avoid_: permission, cap
 
 **Session**:

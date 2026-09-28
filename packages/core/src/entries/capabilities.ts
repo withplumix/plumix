@@ -1,7 +1,9 @@
+import type { PostCapabilityAction } from "../auth/contract/capability.js";
 import type {
   PluginRegistry,
   RegisteredEntryType,
 } from "../plugin/registry.js";
+import { spellEntryCapability } from "../auth/contract/capability.js";
 
 /**
  * The namespace an entry type's `entry:<capabilityType>:*` capabilities live
@@ -14,11 +16,11 @@ export type EntryCapabilityNamespace = Pick<
   "capabilityType"
 >;
 
-export function entryCapability(
+export function namespacedEntryCapability(
   namespace: EntryCapabilityNamespace,
-  action: string,
+  action: PostCapabilityAction,
 ): string {
-  return `entry:${namespace.capabilityType}:${action}`;
+  return spellEntryCapability(namespace.capabilityType, action);
 }
 
 export type EntryTypeLookup = Pick<PluginRegistry, "entryTypes">;
@@ -41,7 +43,10 @@ export function entryCapabilityNamespace(
 export function entryCapabilityByName(
   registry: EntryTypeLookup,
   type: string,
-  action: string,
+  action: PostCapabilityAction,
 ): string {
-  return entryCapability(entryCapabilityNamespace(registry, type), action);
+  return namespacedEntryCapability(
+    entryCapabilityNamespace(registry, type),
+    action,
+  );
 }

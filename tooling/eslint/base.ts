@@ -143,6 +143,7 @@ export const baseConfig = defineConfig(
       "plumix/no-chained-type-assertion": "error",
       "plumix/no-reflect-apply": "error",
       "plumix/no-reflect-get": "error",
+      "plumix/no-spelled-capability": "error",
       "plumix/no-unknown-return": "error",
       "plumix/no-unknown-type-alias": "error",
       "plumix/no-unparsed-property-typeof": "error",
@@ -196,6 +197,20 @@ export const adminUiConfig = defineConfig({
   ignores: TEST_SOURCE,
   rules: { "plumix/no-error-message-in-ui": "error" },
 });
+
+// The modules a package defines the `entry:` / `term:` capability shape in,
+// exempt from `plumix/no-spelled-capability` by path relative to the package.
+// Re-declares the rule over the same production-source scope, since flat
+// config replaces a rule's options wholesale.
+export function capabilityDefiners(definers: readonly string[]) {
+  return defineConfig({
+    files: PRODUCTION_SOURCE,
+    ignores: TEST_SOURCE,
+    rules: {
+      "plumix/no-spelled-capability": ["error", { definers }],
+    },
+  });
+}
 
 // Public-API boundary. Consumer packages (plugins, runtimes, the scaffolder)
 // must import from the public `plumix` umbrella, never reach into the internal

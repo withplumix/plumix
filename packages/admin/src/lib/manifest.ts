@@ -21,7 +21,9 @@ import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 import {
   byPriorityThen,
   configuredSlotsOf,
+  entryTypeCapability,
   MANIFEST_SCRIPT_ID,
+  termTaxonomyCapability,
 } from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
@@ -185,7 +187,7 @@ export function visibleEntryTypes(
     // weren't meant to be a generic content surface either (e.g. the
     // media plugin renders its own Media Library page).
     if (!pt.showInSidebar) return false;
-    return caps.has(`entry:${pt.capabilityType}:edit_own`);
+    return caps.has(entryTypeCapability(pt, "edit_own"));
   });
 }
 
@@ -215,7 +217,7 @@ export function visibleTermTaxonomies(
 ): readonly TermTaxonomyManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.termTaxonomies ?? []).filter((tax) =>
-    caps.has(`term:${tax.name}:read`),
+    caps.has(termTaxonomyCapability(tax, "read")),
   );
 }
 

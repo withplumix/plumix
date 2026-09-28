@@ -15,12 +15,15 @@ import {
   grant,
   redirectToLogin,
 } from "../access/policy.js";
+import { entryCapability } from "../auth/contract/capability.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { registerCoreSettings } from "../settings-core.js";
+import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { buildManifest, deriveAdminSlug } from "./build-manifest.js";
 import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
+import { text } from "./fields/builder.js";
 import { configuredSlotsOf, createPluginRegistry } from "./manifest.js";
 import { installPlugins } from "./register.js";
 
@@ -1914,5 +1917,70 @@ describe("buildManifest visibility projection", () => {
     expect(
       manifest.patterns.find((p) => p.name === "acme/plain")?.preview,
     ).toBeUndefined();
+  });
+});
+
+describe("buildManifest capability references", () => {
+  const newsDesk = definePlugin("news-desk", (ctx) => {
+    ctx.registerAdminPage({
+      path: "/desk",
+      title: "Desk",
+      nav: { group: "content", label: "Desk" },
+      capability: entryCapability("news", "edit_any"),
+      component: "DeskPage",
+    });
+    ctx.registerDashboardWidget({
+      id: "news-desk:queue",
+      title: "Queue",
+      capability: entryCapability("news", "publish"),
+      component: "QueueWidget",
+    });
+    ctx.registerEntryMetaBox("desk", {
+      label: "Desk",
+      entryTypes: ["news"],
+      capability: entryCapability("news", "edit_own"),
+      fields: [text("desk").capability(entryCapability("news", "delete"))],
+    });
+  });
+
+  test("ships each reference as the string of the namespace its type pools into", async () => {
+    const manifest = buildManifest(await pooledEntryTypeRegistry(newsDesk));
+
+    const desk = manifest.adminNav
+      .flatMap((group) => group.items)
+      .find((item) => item.to === "/pages/desk");
+    expect(desk?.capability).toBe("entry:post:edit_any");
+    expect(manifest.dashboardWidgets[0]?.capability).toBe("entry:post:publish");
+    expect(manifest.entryMetaBoxes[0]?.capability).toBe("entry:post:edit_own");
+    expect(manifest.entryMetaBoxes[0]?.fields[0]?.capability).toBe(
+      "entry:post:delete",
+    );
+  });
+
+  test("resolves a reference to a type a later-installed plugin registers", async () => {
+    const early = definePlugin("early", (ctx) => {
+      ctx.registerAdminPage({
+        path: "/gazette",
+        title: "Gazette",
+        nav: { group: "content", label: "Gazette" },
+        capability: entryCapability("gazette", "read"),
+        component: "GazettePage",
+      });
+    });
+    const late = definePlugin("late", (ctx) => {
+      ctx.registerEntryType("gazette", {
+        label: "Gazette",
+        capabilityType: "post",
+      });
+    });
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [early, late],
+    });
+
+    const gazette = buildManifest(registry)
+      .adminNav.flatMap((group) => group.items)
+      .find((item) => item.to === "/pages/gazette");
+    expect(gazette?.capability).toBe("entry:post:read");
   });
 });

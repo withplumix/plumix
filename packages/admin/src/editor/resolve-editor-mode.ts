@@ -1,3 +1,5 @@
+import { entryTypeCapability } from "@plumix/core/manifest";
+
 type EditorMode = "create" | "edit-live" | "edit-with-draft";
 
 interface SupportsInput {
@@ -58,10 +60,10 @@ export function resolveEditorMode({
   if (!isLiveStatus) return "edit-live";
 
   const canEditAny = capabilities.has(
-    `entry:${entryType.capabilityType}:edit_any`,
+    entryTypeCapability(entryType, "edit_any"),
   );
   const canEditOwn = capabilities.has(
-    `entry:${entryType.capabilityType}:edit_own`,
+    entryTypeCapability(entryType, "edit_own"),
   );
   // Author flag is required for the `edit_own` branch — a viewer who
   // can edit their own posts but isn't the author of THIS row falls

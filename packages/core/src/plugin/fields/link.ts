@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { StringFieldState } from "./builder.js";
@@ -103,7 +104,7 @@ export class LinkFieldBuilder<
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): LinkFieldBuilder<K, V, S> {
+  capability(capability: Capability): LinkFieldBuilder<K, V, S> {
     return this.#fork({ capability });
   }
 

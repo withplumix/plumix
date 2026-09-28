@@ -1,3 +1,4 @@
+import type { Capability } from "../auth/contract/capability.js";
 import type { AppContext } from "../context/app.js";
 
 // Reference fields (entry / term / user / media) share three
@@ -205,7 +206,7 @@ export interface RegisteredLookupAdapter<
    * `exists`) already runs after the entity-level write capability
    * check, so this gate covers only the picker-facing surface.
    */
-  readonly capability: string | null;
+  readonly capability: Capability | null;
   readonly registeredBy: string | null;
 }
 
@@ -213,5 +214,5 @@ export interface LookupAdapterOptions<TScope = unknown> {
   readonly kind: string;
   readonly adapter: LookupAdapter<TScope>;
   /** See `RegisteredLookupAdapter.capability`. `null` opts out (public lookup). */
-  readonly capability?: string | null;
+  readonly capability?: Capability | null;
 }

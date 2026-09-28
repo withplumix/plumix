@@ -3,7 +3,7 @@ import type { Linter } from "eslint";
 import { ESLint } from "eslint";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { adminUiConfig, baseConfig } from "../base.js";
+import { adminUiConfig, baseConfig, capabilityDefiners } from "../base.js";
 import { pluginConfig } from "../plugin.js";
 import { reactConfig } from "../react.js";
 
@@ -120,6 +120,41 @@ describe("plumix/no-reflect-get and plumix/no-reflect-apply", () => {
 
   it("stays silent on other Reflect members and on ordinary get/apply calls", async () => {
     await expect(plumixReports("src/reflect.allowed.ts")).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-spelled-capability", () => {
+  it("rejects entry and term capabilities spelled as string or template literals", async () => {
+    await expect(
+      plumixReports("src/spelled-capability.violations.ts"),
+    ).resolves.toEqual(
+      [4, 5, 6, 7, 8].map((line) => ({
+        ruleId: "plumix/no-spelled-capability",
+        line,
+      })),
+    );
+  });
+
+  it("stays silent on hook names, flat capabilities and runtime-spelled actions", async () => {
+    await expect(
+      plumixReports("src/spelled-capability.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent in a module a package names as a capability definer", async () => {
+    const definer = "src/spelled-capability.definer.ts";
+    const withDefiner = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [...baseConfig, ...capabilityDefiners([definer])],
+    });
+    const [result] = await withDefiner.lintFiles([definer]);
+    expect(
+      (result?.messages ?? []).filter(
+        (message) => message.ruleId === "plumix/no-spelled-capability",
+      ),
+    ).toEqual([]);
+    await expect(plumixReports(definer)).resolves.toHaveLength(5);
   });
 });
 

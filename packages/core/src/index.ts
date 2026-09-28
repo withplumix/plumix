@@ -113,11 +113,28 @@ export type {
   WithResolvedMeta,
 } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
-export { entryCapability } from "./entries/capabilities.js";
+// A capability named by the resource it guards (#2436): the registry spells
+// the string, so a pooled type's namespace is never written by hand.
+export {
+  entryCapability,
+  resolveCapability,
+  termCapability,
+} from "./auth/contract/capability.js";
+export type {
+  Capability,
+  CapabilityNamespaces,
+  EntryCapability,
+  TermCapability,
+} from "./auth/contract/capability.js";
 // The entry edit gate (#2416), so a plugin asks whether a caller may edit a
 // row instead of assembling an `entry:<type>:*` string and missing the
 // namespace a pooled type gates under.
-export { assertCanEditEntry, canEditEntry } from "./entries/editability.js";
+export {
+  assertCanDeleteEntry,
+  assertCanEditEntry,
+  canDeleteEntry,
+  canEditEntry,
+} from "./entries/editability.js";
 export type { EntryEditErrors } from "./entries/editability.js";
 // The entry change feed (#2121): read a bounded batch, do the work, then
 // acknowledge it.

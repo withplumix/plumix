@@ -49,3 +49,5 @@ export const stubRow = { id: "" } as unknown as Row;
 export function seedBag(bag: Record<string, unknown>): string {
   return String(bag.id);
 }
+
+export const spelledInTest = "entry:post:edit_any";

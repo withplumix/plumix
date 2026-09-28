@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { buildManifest, HookRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import { menu } from "./index.js";
@@ -47,8 +47,11 @@ describe("@plumix/plugin-menu", () => {
       id: "plugin.menu.menu.plural",
       message: "Menus",
     });
-    expect(page?.capability).toBe("term:menu:manage");
-    expect(registry.capabilities.get(page?.capability ?? "")).toBeDefined();
+    const shipped = buildManifest(registry)
+      .adminNav.flatMap((group) => group.items)
+      .find((item) => item.to === "/pages/menus");
+    expect(shipped?.capability).toBe("term:menu:manage");
+    expect(registry.capabilities.get("term:menu:manage")).toBeDefined();
     expect(page?.nav?.group).toEqual({
       id: "appearance",
       label: { id: "core.adminNav.appearance", message: "Appearance" },
