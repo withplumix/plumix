@@ -18,6 +18,10 @@ export interface ShipPorts {
     pullRequest: QueuedPullRequest,
     refusal: MergeOutcome,
   ) => Promise<RepairOutcome>;
+  readonly rerunFailedChecks: (
+    pullRequest: QueuedPullRequest,
+    refusal: MergeOutcome,
+  ) => Promise<boolean>;
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
@@ -33,6 +37,12 @@ export type RepairOutcome =
   | { readonly status: "declined"; readonly reason: string };
 
 export const REPAIRS_A_PULL_REQUEST_GETS = 2;
+
+const failedOnItsOwnChecks = (refusal: MergeOutcome): boolean =>
+  refusal.status === "failed" &&
+  refusal.failingChecks.length > 0 &&
+  !refusal.fromTheMergeGroup &&
+  !refusal.conflicted;
 
 interface Queued {
   readonly ticket: Ticket;
@@ -78,6 +88,17 @@ export const runShipLoop = async (
     pullRequest,
   }: Queued): Promise<MergeOutcome> => {
     let outcome = await ports.confirm(pullRequest);
+    if (
+      outcome.status === "failed" &&
+      failedOnItsOwnChecks(outcome) &&
+      (await ports.rerunFailedChecks(pullRequest, outcome))
+    ) {
+      ports.say(
+        `  #${pullRequest.number} refused (${outcome.reason}), re-running the failed jobs once`,
+      );
+      ports.requeue(pullRequest);
+      outcome = await ports.confirm(pullRequest);
+    }
     for (
       let repairs = 0;
       outcome.status !== "merged" &&

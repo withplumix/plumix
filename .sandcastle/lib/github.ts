@@ -464,6 +464,7 @@ export const waitForMerge = async (
               : ""
           }`,
           failingChecks,
+          fromTheMergeGroup: true,
         };
       }
     } else {
@@ -688,3 +689,13 @@ export const textsThatClaimAdrNumbers = (): readonly string[] => {
   ]);
   return [onMain, ...inOpenPullRequests, ...inOpenIssues];
 };
+
+export const rerunFailedJobs = (runIds: readonly string[]): boolean =>
+  runIds.filter((runId) => {
+    try {
+      gh(["run", "rerun", runId, "-R", REPO_SLUG, "--failed"]);
+      return true;
+    } catch {
+      return false;
+    }
+  }).length > 0;

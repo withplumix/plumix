@@ -29,6 +29,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
     repair: async () => ({ status: "repaired" }) as const,
+    rerunFailedChecks: async () => true,
     requeue: () => {},
     ticketClosed: () => true,
     say: () => {},
@@ -226,6 +227,7 @@ describe("runShipLoop", () => {
     const seen: string[] = [];
     let attempts = 0;
     const { ports: p, parked } = ports({
+      rerunFailedChecks: async () => false,
       confirm: async () => {
         attempts += 1;
         return attempts <= 3 ? ciRed : merged;
@@ -249,6 +251,7 @@ describe("runShipLoop", () => {
     const handed: MergeOutcome[] = [];
     let attempts = 0;
     const { ports: p } = ports({
+      rerunFailedChecks: async () => false,
       nextTicket: drainingFrom([ticket(1)]),
       confirm: async () => (++attempts === 1 ? ciRed : merged),
       repair: async (_ticket, _pr, refusal) => {
@@ -402,6 +405,80 @@ describe("runShipLoop", () => {
 
     expect(shipped).toEqual([1, 2]);
     expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
+  });
+
+  test("a pull request's own failed check is re-run once before any repair", async () => {
+    const seen: string[] = [];
+    let confirms = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++confirms === 1 ? ciRed : merged),
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async () => {
+        seen.push("repair");
+        return { status: "repaired" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["rerun"]);
+    expect(report.merged).toHaveLength(1);
+    expect(parked).toEqual([]);
+  });
+
+  test("a check that fails again after its re-run goes to repair", async () => {
+    const seen: string[] = [];
+    let confirms = 0;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++confirms <= 2 ? ciRed : merged),
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async () => {
+        seen.push("repair");
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["rerun", "repair"]);
+  });
+
+  test.each([
+    [
+      "the merge group failed",
+      { ...ciRed, fromTheMergeGroup: true } satisfies MergeOutcome,
+    ],
+    [
+      "the branch conflicts",
+      { ...ciRed, failingChecks: [], conflicted: true } satisfies MergeOutcome,
+    ],
+  ])("when %s, nothing is re-run", async (_, refusal) => {
+    const seen: string[] = [];
+    let confirms = 0;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++confirms === 1 ? refusal : merged),
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async () => {
+        seen.push("repair");
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["repair"]);
   });
 
   test("a budget that has run out hands out no work at all", async () => {
