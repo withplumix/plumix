@@ -2,7 +2,7 @@ import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 
 import type { ApiCorsConfig } from "../config.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";

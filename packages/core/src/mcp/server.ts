@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import * as v from "valibot";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "./tool.js";
 import { McpToolError, toToolErrorResult } from "./errors.js";
 import { toToolInputJsonSchema } from "./schema-projection.js";

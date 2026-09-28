@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { normalizeTag } from "./contract/tags.js";
 
 // Per-request accumulator of cache tags for entities embedded into a page

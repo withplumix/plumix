@@ -1,43 +1,14 @@
+import type {
+  DebugHistoryEntry,
+  DebugHistoryStore,
+  DebugSnapshot,
+} from "../../context/dev-runtime.js";
 import type { JsonValue } from "../../json.js";
-import type { DebugSnapshot } from "./snapshot.js";
 
-/**
- * One captured request in the dev request-history: the finished request's
- * identity/outcome plus its {@link DebugSnapshot}. Everything here is inert
- * JSON — the store serializes the snapshot on {@link DebugHistoryStore.save},
- * so an entry never pins a live `ctx`, `Request`, DB connection, or closure.
- * `id` is the request id (the switcher selects and {@link DebugHistoryStore.find}
- * looks up by it); `startedAt`/`status`/`durationMs` label an entry without
- * reopening the snapshot.
- */
-export interface DebugHistoryEntry {
-  readonly id: string;
-  /** When the request began (epoch ms) — the request envelope's `startedAt`. */
-  readonly startedAt: number;
-  readonly status: number;
-  readonly durationMs: number;
-  readonly snapshot: DebugSnapshot;
-}
-
-/**
- * A bounded, transport-agnostic store of the most recent requests. Four
- * readers share it unchanged — the debug bar, the HTTP read routes and the two
- * dev MCP tools — which is why it is the capture layer's and not any one
- * surface's. The in-memory ring is dev-only and tree-shaken from production.
- */
-export interface DebugHistoryStore {
-  /**
-   * Capture one finished request. The snapshot is deep-copied to inert JSON
-   * and payload-bounded (oversized strings truncated) before storing, so the
-   * store never retains a live reference and its footprint stays flat. Past
-   * the entry-count or total-byte caps the oldest entries are evicted.
-   */
-  save(entry: DebugHistoryEntry): void;
-  /** The stored entry with this request id, or undefined. */
-  find(id: string): DebugHistoryEntry | undefined;
-  /** Every stored entry, newest first. */
-  get(): readonly DebugHistoryEntry[];
-}
+export type {
+  DebugHistoryEntry,
+  DebugHistoryStore,
+} from "../../context/dev-runtime.js";
 
 export interface DebugHistoryStoreOptions {
   /** Ring capacity; drop-oldest past it. */

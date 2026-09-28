@@ -17,7 +17,7 @@ import {
 } from "@oslojs/webauthn";
 import { eq } from "drizzle-orm";
 
-import type { Db } from "../../context/app.js";
+import type { Db } from "../../context/app-context.js";
 import type { Credential } from "../../db/schema/credentials.js";
 import type { ResolvedPasskeyConfig } from "./config.js";
 import type { AuthenticationOptions, AuthenticationResponse } from "./types.js";

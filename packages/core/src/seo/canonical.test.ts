@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PublicRouteTable } from "../route/public-routes.js";
 import { compilePublicRoutes } from "../route/public-routes.js";
 import { testConfig } from "../test/config.js";

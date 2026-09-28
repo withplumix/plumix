@@ -4,8 +4,8 @@ import type {
   RegisteredEntryType,
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
+import type { RouteIntent, RouteRule } from "./contract/intent.js";
 import type { RegistrationKind } from "./errors.js";
-import type { RouteIntent, RouteRule } from "./intent.js";
 import { RouteCompileError } from "./errors.js";
 import { matchRoute } from "./match.js";
 

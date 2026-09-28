@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type {
   ConnectedObjectStorage,
   GetOptions,
-} from "../../runtime/slots.js";
+} from "../../runtime/contract/slots.js";
 import { memoryStorage } from "../../runtime/memory-storage.js";
 import { failingCases } from "./case.js";
 import { objectStorageContractCases } from "./object-storage.js";

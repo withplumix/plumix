@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { ImageRoleName } from "../plugin/image-roles.js";
 import type { LookupAdapter } from "../plugin/lookup.js";
 import type { MetaBoxField } from "../plugin/manifest.js";

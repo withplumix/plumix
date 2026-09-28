@@ -1,4 +1,4 @@
-import type { Segment } from "../access/policy.js";
+import type { Segment } from "../../access/contract/access.js";
 import type { PlumixEnv } from "./bindings.js";
 
 /**

@@ -1,4 +1,4 @@
-import type { AuthenticatedAppContext } from "../../../context/app.js";
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { NewUser, User } from "../../../db/schema/users.js";
 import type { ResolvedMeta } from "../../meta/core.js";
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";

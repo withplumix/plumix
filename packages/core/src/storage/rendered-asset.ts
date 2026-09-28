@@ -1,4 +1,4 @@
-import type { ConnectedObjectStorage } from "../runtime/slots.js";
+import type { ConnectedObjectStorage } from "../runtime/contract/slots.js";
 
 // A content-addressed key names one immutable representation, so the bytes
 // behind it can be held for as long as a client cares to.

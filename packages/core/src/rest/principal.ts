@@ -1,6 +1,6 @@
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
-import { withUser } from "../context/app.js";
+import { withUser } from "../auth/with-user.js";
 
 // The lowest role: reads published content, holds no edit/admin capability.
 // An anonymous REST request reads through this principal, so the entry

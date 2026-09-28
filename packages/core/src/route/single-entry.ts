@@ -14,7 +14,7 @@
  * principal-invariant and safe under the `withUser`-shared request memo.
  */
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";

@@ -4,7 +4,7 @@ import type {
   ConnectedObjectStorage,
   GetOptions,
   GetResult,
-} from "../../runtime/slots.js";
+} from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import { describeContract, drainKeys } from "./case.js";
 

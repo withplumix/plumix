@@ -1,10 +1,10 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
-import { withUser } from "../context/app.js";
+import { withUser } from "../auth/with-user.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../plugin/register.js";

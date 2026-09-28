@@ -1,13 +1,13 @@
 import type {
   AppContext,
   CoreSchema,
-  CreateAppContextArgs,
   Db,
   DeferFn,
-} from "../context/app.js";
+} from "../context/app-context.js";
+import type { CreateAppContextArgs } from "../context/app.js";
 import type { Invocation, PlumixHandler } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
-import type { PlumixEnv } from "./bindings.js";
+import type { PlumixEnv } from "./contract/bindings.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
@@ -17,7 +17,7 @@ import type {
   ImageDelivery,
   RequestScopedDb,
   RequestScopedDbArgs,
-} from "./slots.js";
+} from "./contract/slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
 import { flushPurgeTags } from "../cdn/purge.js";

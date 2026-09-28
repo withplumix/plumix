@@ -1,14 +1,14 @@
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type {
   Invocation,
   PlumixHandler,
   ScheduledRunReport,
 } from "./adapter.js";
+import type { DatabaseAdapter } from "./contract/slots.js";
 import type { PlumixHandlerOptions } from "./handler.js";
-import type { DatabaseAdapter } from "./slots.js";
 import { auth } from "../auth/config.js";
 import { enqueuePurgeTags } from "../cdn/purge.js";
 import { plumix } from "../config.js";

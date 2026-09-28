@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { createRequestMemo } from "../context/memo.js";
 import { cdnTagsFor, tagCdnEntry } from "./route-tags.js";
 

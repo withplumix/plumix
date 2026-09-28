@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { eq, like, or } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";

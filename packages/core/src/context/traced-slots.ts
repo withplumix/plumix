@@ -1,11 +1,11 @@
-import type { Mailer } from "../auth/mailer/types.js";
+import type { Mailer } from "../auth/contract/mailer.js";
 import type {
   AssetsBinding,
   CdnStore,
   ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
-} from "../runtime/slots.js";
+} from "../runtime/contract/slots.js";
 import type { TelemetryCollector } from "./telemetry.js";
 
 /**

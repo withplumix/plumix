@@ -4,7 +4,7 @@ import type {
   CreateApiTokenInput,
   MintedApiToken,
 } from "../auth/api-tokens.js";
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type {
   AllowedDomain,
   NewAllowedDomain,

@@ -1,5 +1,5 @@
-import type { AppContext } from "../context/app.js";
-import type { RouteIntent, RouteRule } from "./intent.js";
+import type { AppContext } from "../context/app-context.js";
+import type { RouteIntent, RouteRule } from "./contract/intent.js";
 import type { RouteMatch } from "./match.js";
 import type { PublicRouteMatch, PublicRouteTable } from "./public-routes.js";
 import type { CompiledRedirects, RedirectResolution } from "./redirects.js";

@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { ValidInvite } from "../invite.js";

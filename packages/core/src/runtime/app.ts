@@ -2,6 +2,7 @@ import type { RPCHandler } from "@orpc/server/fetch";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
+import type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
 import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
@@ -12,7 +13,7 @@ import type {
   ShortcodeRegistry,
 } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
@@ -22,16 +23,16 @@ import type {
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RestDispatch } from "../rest/build-handler.js";
 import type { RestRoute } from "../rest/rest-routes.js";
-import type { RouteRule } from "../route/intent.js";
+import type { RouteRule } from "../route/contract/intent.js";
 import type { PublicRouteTable } from "../route/public-routes.js";
 import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { RenderEnv } from "../route/render/render-env.js";
 import type { DocumentManifest } from "../theme.js";
+import type { SchemaModule } from "./contract/slots.js";
 import type { DevRuntime } from "./dev.js";
 import type { EnvInput } from "./env-input.js";
-import type { SchemaModule } from "./slots.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -74,28 +75,7 @@ import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
-interface OAuthProviderSummary {
-  /** Map key in `auth.oauth.providers`; the URL path segment. */
-  readonly key: string;
-  /** Human-readable name for the login button ("GitHub", "Google", …). */
-  readonly label: string;
-}
-
-/**
- * The configured auth methods, projected from `auth({ … })` config for a theme
- * to render its own login/registration controls. The theme-side analog of the
- * admin login's provider list: a custom login page reads this (via
- * `useAuthMethods()`) and shows a button per enabled method, so adding or
- * removing a method in config changes the page with no theme code change.
- */
-export interface AuthMethodsSummary {
-  /** Passkey is always configured, so this is always `true` today. */
-  readonly passkey: boolean;
-  /** True when `auth.magicLink` is configured. */
-  readonly magicLink: boolean;
-  /** `{ key, label }` per configured OAuth provider; empty when none. */
-  readonly oauth: readonly OAuthProviderSummary[];
-}
+export type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
 
 /**
  * Project the enabled auth methods from resolved config. Pure: the same config

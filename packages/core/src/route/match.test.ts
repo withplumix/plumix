@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { RouteRule } from "./intent.js";
+import type { RouteRule } from "./contract/intent.js";
 import { matchRoute } from "./match.js";
 
 function rule(pathname: string, priority = 50): RouteRule {

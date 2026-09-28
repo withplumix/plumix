@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { Mailer } from "../auth/mailer/types.js";
+import type { Mailer } from "../auth/contract/mailer.js";
 
 interface CapturedMail {
   readonly to: string;

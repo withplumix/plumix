@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PlumixEnv } from "../../runtime/bindings.js";
-import type { CdnStore, ConnectedCdn } from "../../runtime/slots.js";
+import type { PlumixEnv } from "../../runtime/contract/bindings.js";
+import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import type { CloudflareCdnConfig } from "./cloudflare.js";
 import { describeCdnContract } from "../../test/conformance/cdn.js";
 import { cloudflare } from "./cloudflare.js";

@@ -1,4 +1,4 @@
-import type { AppContextExtensions } from "../context/app.js";
+import type { AppContextExtensions } from "../context/app-context.js";
 import { PluginContextError } from "./errors.js";
 
 export interface ContextExtensionEntry {

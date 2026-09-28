@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { EmailMessage } from "./types.js";
+import type { EmailMessage } from "../contract/mailer.js";
 import { consoleMailer } from "./console.js";
 
 type LoggerCall = readonly [tag: string, meta: EmailMessage];

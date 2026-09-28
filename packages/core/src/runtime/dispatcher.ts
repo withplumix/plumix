@@ -1,17 +1,17 @@
 import type { AccessPolicy, Segment } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
+import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 import {
   gateToResponse,
   policyForMatch,
   resolveLoginPath,
 } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
-import { PRIVATE_SEGMENT } from "../access/segments.js";
 import {
   authenticateTraced,
   requestHasSession,
@@ -24,6 +24,7 @@ import {
 } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { canAccessAdmin } from "../auth/rbac.js";
+import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import {
   requestCarriesEphemeralGrant,
@@ -35,7 +36,6 @@ import { readThrough, readThroughRoute } from "../cdn/read-through.js";
 import { cdnTagsFor } from "../cdn/route-tags.js";
 import { pageTags } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
-import { withUser } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";

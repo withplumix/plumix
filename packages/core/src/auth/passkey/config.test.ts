@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import type { PlumixEnv } from "../../runtime/bindings.js";
+import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import { resolvePasskeyConfig, resolvePasskeyOrigins } from "./config.js";
 
 const envWith = (fields: Record<string, string>): PlumixEnv => fields;

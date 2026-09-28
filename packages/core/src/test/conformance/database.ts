@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { expect } from "vitest";
 
-import type { Db } from "../../context/app.js";
-import type { PlumixEnv } from "../../runtime/bindings.js";
-import type { DatabaseAdapter } from "../../runtime/slots.js";
+import type { Db } from "../../context/app-context.js";
+import type { PlumixEnv } from "../../runtime/contract/bindings.js";
+import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import {
   CORE_SQL_MIGRATIONS,

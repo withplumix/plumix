@@ -1,4 +1,9 @@
-import type { AppContext, Db, DeferFn, Logger } from "../context/app.js";
+import type {
+  AppContext,
+  Db,
+  DeferFn,
+  Logger,
+} from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type {
   ActionArgs,
@@ -10,14 +15,14 @@ import type {
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { PlumixApp } from "../runtime/app.js";
-import type { PlumixEnv } from "../runtime/bindings.js";
-import type { BoundSlots } from "../runtime/handler.js";
+import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
-} from "../runtime/slots.js";
+} from "../runtime/contract/slots.js";
+import type { BoundSlots } from "../runtime/handler.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { HarnessFetchOptions } from "./request.js";

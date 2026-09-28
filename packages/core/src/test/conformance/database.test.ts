@@ -3,7 +3,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { describe, expect, test } from "vitest";
 
-import type { DatabaseAdapter } from "../../runtime/slots.js";
+import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import { failingCases } from "./case.js";
 import { databaseContractCases } from "./database.js";
 

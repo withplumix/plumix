@@ -1,10 +1,10 @@
-import type { PlumixEnv } from "../../runtime/bindings.js";
-import type { EnvInput } from "../../runtime/env-input.js";
+import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type {
   CdnProvider,
   CdnStore,
   ConnectedCdn,
-} from "../../runtime/slots.js";
+} from "../../runtime/contract/slots.js";
+import type { EnvInput } from "../../runtime/env-input.js";
 import { resolveEnvInput } from "../../runtime/env-input.js";
 import { responseAllowsSharedStorage } from "../decision.js";
 import { CloudflareCdnError } from "./errors.js";

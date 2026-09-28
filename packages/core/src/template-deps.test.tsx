@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { Db, Logger } from "./context/app.js";
+import type { Db, Logger } from "./context/app-context.js";
 import type { RegisteredTemplateDep } from "./template-deps.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";

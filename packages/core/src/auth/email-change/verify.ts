@@ -1,4 +1,4 @@
-import type { Db } from "../../context/app.js";
+import type { Db } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
 import { and, eq, isNull, isUniqueConstraintError } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";

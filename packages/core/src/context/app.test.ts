@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { Mailer } from "../auth/mailer/types.js";
+import type { Mailer } from "../auth/contract/mailer.js";
 import { testConfig } from "../test/config.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createAppContext } from "./app.js";

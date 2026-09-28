@@ -1,7 +1,7 @@
 import { createORPCErrorConstructorMap } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
-import { withUser } from "../../../context/app.js";
+import { withUser } from "../../../auth/with-user.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { RPC_ERRORS } from "../../errors.js";

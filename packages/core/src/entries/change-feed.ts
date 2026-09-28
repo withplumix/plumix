@@ -1,4 +1,4 @@
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { EntryChangeKind } from "../db/schema/entry_changes.js";
 import { asc, chunkForD1, inArray } from "../db/index.js";
 import { entryChanges } from "../db/schema/entry_changes.js";

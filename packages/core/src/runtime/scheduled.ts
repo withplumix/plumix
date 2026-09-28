@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { ScheduledRunReport } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cdn/purge.js";

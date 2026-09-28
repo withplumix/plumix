@@ -1,8 +1,8 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
+import type { DatabaseAdapter } from "../runtime/contract/slots.js";
 import type { EnvInput } from "../runtime/env-input.js";
-import type { DatabaseAdapter } from "../runtime/slots.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 import { traceSqlClient } from "./trace-libsql.js";
 

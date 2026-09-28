@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AssetsBinding } from "../../runtime/slots.js";
+import type { AssetsBinding } from "../../runtime/contract/slots.js";
 import type { AssetsNotFound } from "./assets.js";
 import { assetsContractCases, describeAssetsContract } from "./assets.js";
 import { failingCases } from "./case.js";

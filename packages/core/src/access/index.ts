@@ -7,4 +7,4 @@
 export type { EntryAccessSubject } from "./gate.js";
 export { entryAllowsAnonymousAccess } from "./gate.js";
 export * from "./policy.js";
-export { PRIVATE_SEGMENT } from "./segments.js";
+export { PRIVATE_SEGMENT } from "./contract/segments.js";

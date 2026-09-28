@@ -1,11 +1,11 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type {
   ArchiveEntries,
   RegisteredArchiveType,
   TitledListingArchiveResolution,
 } from "../plugin/manifest.js";
-import type { RouteIntent } from "./intent.js";
+import type { RouteIntent } from "./contract/intent.js";
 import type { RouteMatch } from "./match.js";
 import type { EntryListing } from "./render/entry-listing.js";
 import type { ResolvedListingPage } from "./render/page-data.js";

@@ -1,4 +1,4 @@
-import type { AuthenticatedAppContext } from "../../../context/app.js";
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import type { GatedLookupErrors } from "../../errors.js";
 import { eq } from "../../../db/index.js";

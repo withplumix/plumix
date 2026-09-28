@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { HookExecutor } from "../../../hooks/registry.js";
 import type { RenderedDevErrorPanel } from "../../ui/index.js";
 import type { DevErrorPanel } from "./types.js";

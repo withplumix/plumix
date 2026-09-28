@@ -3,7 +3,7 @@
 // When TC39 AsyncContext ships, swap the import here; consumers stay unchanged.
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { AppContext } from "./app.js";
+import type { AppContext } from "./app-context.js";
 import type { TelemetrySpan } from "./telemetry.js";
 import { ContextError } from "./errors.js";
 

@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { SettingsBag } from "../db/schema/settings.js";
 import { settingsLoader } from "../template-deps-core.js";
 

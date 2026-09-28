@@ -1,9 +1,9 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
-import { withUser } from "../context/app.js";
+import { withUser } from "../auth/with-user.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";

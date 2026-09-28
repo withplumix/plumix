@@ -1,5 +1,5 @@
-import type { Logger } from "../../context/app.js";
-import type { EmailMessage, Mailer } from "./types.js";
+import type { Logger } from "../../context/app-context.js";
+import type { EmailMessage, Mailer } from "../contract/mailer.js";
 
 interface ConsoleMailerOptions {
   /**

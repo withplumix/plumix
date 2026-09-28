@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { AdminSearchInput, SearchGroup } from "./admin-search.js";
 import { and, desc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";

@@ -1,4 +1,4 @@
-import type { Db } from "../../../context/app.js";
+import type { Db } from "../../../context/app-context.js";
 import { and, eq, exists, isNull, ne } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Db, Logger } from "./app.js";
+import type { Db, Logger } from "./app-context.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";

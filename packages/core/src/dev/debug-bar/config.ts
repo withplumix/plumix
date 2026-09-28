@@ -1,8 +1,9 @@
-// Local: referenced only by DebugBarInput/NormalizedDebugBar in this file.
-// Users write the position as a string literal, so it needs no public name.
-type DebugBarPosition =
-  "bottom-right" | "bottom-left" | "top-right" | "top-left";
+import type {
+  DebugBarPosition,
+  NormalizedDebugBar,
+} from "../../context/dev-runtime.js";
 
+export type { NormalizedDebugBar } from "../../context/dev-runtime.js";
 /**
  * `dev.bar`: the overlay itself. Only what the bar alone reads lives here —
  * which panels it shows is `dev.panels`, read identically by the history read
@@ -18,12 +19,6 @@ export type DebugBarInput =
       readonly position?: DebugBarPosition;
       readonly defaultOpen?: boolean;
     };
-
-export interface NormalizedDebugBar {
-  readonly enabled: boolean;
-  readonly position: DebugBarPosition;
-  readonly defaultOpen: boolean;
-}
 
 export function normalizeDebugBar(
   input: DebugBarInput | undefined,

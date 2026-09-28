@@ -1,4 +1,4 @@
-import type { Db } from "../../../context/app.js";
+import type { Db } from "../../../context/app-context.js";
 import type { Term } from "../../../db/schema/terms.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";

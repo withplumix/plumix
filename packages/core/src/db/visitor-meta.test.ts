@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { VisitorMetaOptions } from "./visitor-meta.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTestContext } from "../test/context.js";

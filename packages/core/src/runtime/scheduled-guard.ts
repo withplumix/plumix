@@ -1,8 +1,8 @@
 import { and, eq, lte, sql } from "drizzle-orm";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { PlumixApp } from "./app.js";
-import type { PlumixEnv } from "./bindings.js";
+import type { PlumixEnv } from "./contract/bindings.js";
 import {
   scheduledTaskClaims,
   scheduledTaskLeases,

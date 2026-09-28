@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AuthenticatedUser } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
 import { resolveLocales } from "./locale-registry.js";
 import { resolveLocale } from "./resolve-locale.js";

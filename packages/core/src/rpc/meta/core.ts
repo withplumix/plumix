@@ -3,7 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { Capability } from "../../auth/contract/capability.js";
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { MetaFieldValues } from "../../plugin/fields/condition.js";
 import type {

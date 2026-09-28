@@ -1,7 +1,7 @@
 import type {
   AppContext,
   AuthenticatedAppContext,
-} from "../../../context/app.js";
+} from "../../../context/app-context.js";
 import type {
   Entry,
   EntryStatus,

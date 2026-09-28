@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type { RegisteredScheduledTask } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";

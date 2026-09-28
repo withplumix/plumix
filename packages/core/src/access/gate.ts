@@ -14,7 +14,7 @@
  */
 
 import type { PlumixAuthConfig } from "../auth/config.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";

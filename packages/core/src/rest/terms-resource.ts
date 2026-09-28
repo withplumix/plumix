@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { RegisteredTermTaxonomy } from "../plugin/manifest.js";
 import type { RestErrors } from "./errors.js";
 import type { PublicTerm } from "./schemas.js";

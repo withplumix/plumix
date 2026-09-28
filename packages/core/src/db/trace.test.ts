@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import { requestStore } from "../context/stores.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";

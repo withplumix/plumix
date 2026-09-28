@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { accumulateEmbeddedTags, embeddedPageTags } from "./embedded-tags.js";
 
 // The accumulator keys off `ctx.request`, so each fake context needs its

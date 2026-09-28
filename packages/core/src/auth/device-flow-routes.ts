@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PlumixApp } from "../runtime/app.js";
 import { withBasePath } from "../base-path.js";
 import { jsonResponse } from "../runtime/http.js";

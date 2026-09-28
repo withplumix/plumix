@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
 import type { DebugHistoryEntry } from "./request-history/store.js";
 import { jsonResponse, methodNotAllowed, notFound } from "../runtime/http.js";

@@ -1,4 +1,4 @@
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import { and, eq, inArray, notInArray, sql } from "../db/index.js";

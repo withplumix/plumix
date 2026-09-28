@@ -1,5 +1,5 @@
-import type { Db, Logger } from "../../context/app.js";
-import type { Mailer } from "../mailer/types.js";
+import type { Db, Logger } from "../../context/app-context.js";
+import type { Mailer } from "../contract/mailer.js";
 import { withBasePath } from "../../base-path.js";
 import { and, eq, gte } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";

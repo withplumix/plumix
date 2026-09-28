@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 import { count } from "drizzle-orm";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
 import type { EntryQuery } from "../../entries/query.js";

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
-import type { ConnectedCdn } from "../runtime/slots.js";
+import type { AppContext } from "../context/app-context.js";
+import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tryGetContext } from "../context/stores.js";

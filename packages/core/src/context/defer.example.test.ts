@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "./app.js";
+import type { AppContext, Db } from "./app-context.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";

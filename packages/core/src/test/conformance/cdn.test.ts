@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { CdnStore, ConnectedCdn } from "../../runtime/slots.js";
+import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import { responseAllowsSharedStorage } from "../../cdn/decision.js";
 import { failingCases } from "./case.js";
 import { cdnContractCases, describeCdnContract } from "./cdn.js";

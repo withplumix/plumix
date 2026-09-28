@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 
 /**
  * A plugin-contributed dev error page panel (#1626). Plugins add theirs via the

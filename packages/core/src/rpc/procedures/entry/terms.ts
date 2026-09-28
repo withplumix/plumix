@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { TermsPatchErrors } from "../../errors.js";
 import { spellTermCapability } from "../../../auth/contract/capability.js";
 import { and, eq, inArray } from "../../../db/index.js";

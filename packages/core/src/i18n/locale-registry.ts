@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AuthenticatedUser } from "../context/app-context.js";
 import { I18nConfigError } from "./errors.js";
 
 export type LocaleDirection = "ltr" | "rtl";

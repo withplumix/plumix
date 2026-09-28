@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { TelemetrySpan } from "../context/telemetry.js";
 import type {
   CreateDispatcherHarnessOptions,

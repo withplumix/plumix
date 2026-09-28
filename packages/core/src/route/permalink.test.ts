@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";

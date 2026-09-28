@@ -1,5 +1,5 @@
 import type { Capability } from "../auth/contract/capability.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 
 // Reference fields (entry / term / user / media) share three
 // operations per target kind: write-time existence check, read-time

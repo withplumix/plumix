@@ -1,4 +1,4 @@
-import type { Db } from "../../context/app.js";
+import type { Db } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
 import type { PlumixSelfSignupConfig } from "../config.js";
 import type { OAuthProfile } from "./types.js";

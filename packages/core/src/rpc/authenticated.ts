@@ -1,5 +1,5 @@
 import { authenticateTraced } from "../auth/authenticator.js";
-import { withUser } from "../context/app.js";
+import { withUser } from "../auth/with-user.js";
 import { base } from "./base.js";
 
 export const authenticated = base.middleware(

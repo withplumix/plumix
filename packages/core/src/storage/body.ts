@@ -1,4 +1,4 @@
-import type { ObjectBody } from "../runtime/slots.js";
+import type { ObjectBody } from "../runtime/contract/slots.js";
 
 /** Read any `ObjectBody` the port accepts into one contiguous byte array. */
 export async function bodyToBytes(body: ObjectBody): Promise<Uint8Array> {

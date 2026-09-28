@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
 import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
-import { withUser } from "../../../context/app.js";
+import { withUser } from "../../../auth/with-user.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";

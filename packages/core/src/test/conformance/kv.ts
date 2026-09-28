@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import type { ConnectedKv } from "../../runtime/slots.js";
+import type { ConnectedKv } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import { describeContract, drainKeys } from "./case.js";
 
