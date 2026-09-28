@@ -968,9 +968,7 @@ function ContentListRoute(): ReactNode {
       {query.isError ? (
         <Alert variant="destructive" data-testid="content-list-load-error">
           <AlertDescription>
-            {query.error instanceof Error
-              ? query.error.message
-              : renderLabel(entryTypeLabel(entryType, "loadErrorItems"))}
+            {renderLabel(entryTypeLabel(entryType, "loadErrorItems"))}
           </AlertDescription>
         </Alert>
       ) : (

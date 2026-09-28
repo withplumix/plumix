@@ -151,6 +151,7 @@ afterEach(async () => {
   });
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("SubmissionsShell", () => {
@@ -372,7 +373,8 @@ describe("SubmissionsShell", () => {
     });
   });
 
-  test("says so when a write does not go through", async () => {
+  test("says so when a write does not go through, in its own words", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     stubInbox({
       list: [{ submissions: [CONTACT_ROW], nextCursor: null }],
       get: CONTACT_ROW,
@@ -384,9 +386,12 @@ describe("SubmissionsShell", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("forms-detail-write-error")).toHaveTextContent(
-        "archive_failed",
+        "That did not go through. Try again.",
       );
     });
+    expect(
+      screen.getByTestId("forms-detail-write-error"),
+    ).not.toHaveTextContent("archive_failed");
   });
 
   test("says so when the submission is no longer there", async () => {

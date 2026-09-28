@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toDate } from "@/lib/dates.js";
-import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -13,11 +12,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { Label } from "@plumix/core/i18n";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -36,6 +33,7 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 // Email field on the user-edit page. Three states:
@@ -116,7 +114,7 @@ export function UserEmailField({
   const { formatRelative } = useFormatters();
   const label = useLabel();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<Label | null>(null);
+  const [error, setError] = useState<MessageDescriptor | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const pendingQuery = useQuery(
@@ -284,7 +282,7 @@ function ChangeEmailDialog({
   currentEmail: string;
   onSubmit: (newEmail: string) => void;
   pending: boolean;
-  error: Label | null;
+  error: MessageDescriptor | null;
   placeholder: string;
 }): ReactNode {
   const label = useLabel();
@@ -369,7 +367,9 @@ function ChangeEmailDialog({
               >
                 <Trans id="userEdit.email.dialog.cancel" message="Cancel" />
               </AlertDialogCancel>
-              <AlertDialogAction
+              {/* Not AlertDialogAction: that closes the dialog on click, which
+                  would discard a failure the user needs to read and correct. */}
+              <Button
                 type="submit"
                 disabled={pending}
                 data-testid="user-edit-email-change-submit"
@@ -385,7 +385,7 @@ function ChangeEmailDialog({
                     message="Send confirmation"
                   />
                 )}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </form>
         </Form>
@@ -394,13 +394,12 @@ function ChangeEmailDialog({
   );
 }
 
-function formatRequestError(err: unknown): Label {
-  if (extractCode(err) === "CONFLICT") {
-    const reason = extractReason(err);
-    if (reason === "email_taken") return M.emailTaken;
-    if (reason === "mailer_not_configured") return M.mailerNotConfigured;
-    if (reason === "account_disabled") return M.accountDisabled;
-  }
-  if (err instanceof Error) return err.message;
-  return M.requestFallback;
+const REQUEST_ERRORS: Readonly<Record<string, MessageDescriptor>> = {
+  email_taken: M.emailTaken,
+  mailer_not_configured: M.mailerNotConfigured,
+  account_disabled: M.accountDisabled,
+};
+
+function formatRequestError(err: unknown): MessageDescriptor {
+  return describeRpcError(err, REQUEST_ERRORS, M.requestFallback);
 }

@@ -486,7 +486,7 @@ describe("MetaBoxField dispatcher", () => {
       await userEvent.paste("{not-json");
       expect(
         screen.getByTestId("meta-box-field-k-input-error"),
-      ).toBeInTheDocument();
+      ).toHaveTextContent("Invalid JSON");
 
       // Valid JSON — error clears, parsed value propagates.
       await userEvent.keyboard("{Control>}a{/Control}");

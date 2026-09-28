@@ -17,14 +17,14 @@ interface ErrorBoundaryFallbackProps {
   readonly reset: () => void;
 }
 
-/** Translated fallback for TanStack Router's `defaultErrorComponent` slot.
- *  The raw `error.message` stays untranslated — it comes from the failing
- *  call site (stack traces, server error codes, etc.) and is the diagnostic
- *  payload a translator can't help with. */
+/** Translated fallback for TanStack Router's `defaultErrorComponent` slot. */
 export function ErrorBoundaryFallback({
   error,
 }: ErrorBoundaryFallbackProps): ReactNode {
   const [show, setShow] = useState(false);
+  // Shown verbatim: a client exception has no descriptor to map to, so its
+  // text is the only diagnostic, kept behind a toggle under a localized heading.
+  const detail = error.message;
   return (
     <div className="mx-auto my-12 flex max-w-2xl flex-col gap-4">
       <Empty>
@@ -63,7 +63,7 @@ export function ErrorBoundaryFallback({
           data-testid="error-boundary-message"
           className="bg-muted overflow-auto rounded-sm p-3 text-start font-mono text-xs"
         >
-          {error.message}
+          {detail}
         </pre>
       ) : null}
     </div>

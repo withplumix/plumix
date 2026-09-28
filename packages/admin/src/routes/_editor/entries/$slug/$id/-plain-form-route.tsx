@@ -24,8 +24,8 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
-import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+import { describeRpcError } from "@plumix/core/admin";
 
 const M = {
   saveFailed: defineMessage({
@@ -65,9 +65,9 @@ export function PlainFormRouteInner({
   // Last meta bag we persisted — autosave diffs against it and sends only the
   // changed keys, so untouched foreign keys aren't re-validated on every write.
   const lastSavedMetaRef = useRef<Record<string, unknown>>(seededMeta);
-  // String branch carries plugin-author `err.message` verbatim; the
-  // descriptor branch surfaces the localized fallback.
-  const [serverError, setServerError] = useState<Label | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
   const [serverFieldErrors, setServerFieldErrors] = useState<
     readonly MetaFieldServerError[] | null
   >(null);
@@ -120,7 +120,7 @@ export function PlainFormRouteInner({
       });
     },
     onError: (err) => {
-      setServerError(err instanceof Error ? err.message : M.saveFailed);
+      setServerError(describeRpcError(err, {}, M.saveFailed));
       setServerFieldErrors(extractMetaFieldErrors(err) ?? null);
     },
   });

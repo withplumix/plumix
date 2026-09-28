@@ -293,8 +293,8 @@ msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.writeError"
-msgstr "That did not go through:"
+msgid "plugin.forms.inbox.writeFailed"
+msgstr "That did not go through. Try again."
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

@@ -35,6 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 // What the admin shell publishes on `window.plumix` from the manifest.
@@ -61,6 +62,24 @@ function renderLibrary(mode: MediaLibraryProps["mode"]): void {
       </QueryClientProvider>
     </I18nProvider>,
   );
+}
+
+// The upload PUT goes through XMLHttpRequest for its progress events, so the
+// browser boundary is stubbed here rather than fetch.
+function stubPutStatus(status: number): void {
+  class FakeXhr {
+    status = 0;
+    readonly upload = { onprogress: null };
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    readonly open = vi.fn();
+    readonly setRequestHeader = vi.fn();
+    send(): void {
+      this.status = status;
+      setTimeout(() => this.onload?.(), 0);
+    }
+  }
+  vi.stubGlobal("XMLHttpRequest", FakeXhr);
 }
 
 // Returns whether the page claimed the drop (`preventDefault`).
@@ -117,6 +136,64 @@ describe.each(MODES)("MediaLibrary in %s mode", (mode) => {
       ).toBeInTheDocument();
       expect(screen.getByTestId("media-library-upload")).toBeInTheDocument();
       expect(screen.queryByTestId("media-library-storage-required")).toBeNull();
+    });
+
+    test("a missing storage adapter explains itself in the banner", async () => {
+      stub = stubPluginRpc("media", {
+        list: () => ({ items: [], hasMore: false }),
+        createUploadUrl: () => {
+          throw new PluginRpcError("CONFLICT", {
+            status: 409,
+            data: { reason: "storage_not_configured" },
+          });
+        },
+      });
+      renderLibrary(mode);
+      await screen.findByTestId("media-library-dropzone");
+
+      dropFile();
+
+      expect(
+        await screen.findByTestId("media-library-banner-error"),
+      ).toHaveTextContent(
+        "No storage adapter is wired up — set `storage:` in plumix.config.ts.",
+      );
+    });
+
+    test("a PUT refused as too large says the file exceeds the cap", async () => {
+      stub = stubPluginRpc("media", {
+        list: () => ({ items: [], hasMore: false }),
+        createUploadUrl: () => ({
+          uploadUrl: "https://bucket.example/upload",
+          method: "PUT",
+          headers: {},
+          mediaId: 7,
+          storageKey: "cat.png",
+          expiresAt: 0,
+        }),
+        delete: () => ({ id: 7 }),
+      });
+      stubPutStatus(413);
+      renderLibrary(mode);
+      await screen.findByTestId("media-library-dropzone");
+
+      dropFile();
+
+      expect(
+        await screen.findByTestId("media-library-banner-error"),
+      ).toHaveTextContent("File exceeds the configured maxUploadSize.");
+    });
+
+    test("an unmapped failure shows the generic copy", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      renderLibrary(mode);
+      await screen.findByTestId("media-library-dropzone");
+
+      dropFile();
+
+      expect(
+        await screen.findByTestId("media-library-banner-error"),
+      ).toHaveTextContent("Something went wrong. Try again.");
     });
 
     test("a dropped file requests an upload URL", async () => {

@@ -293,6 +293,11 @@ msgid "plugin.media.error.csrfTokenMissing"
 msgstr "Anfrage durch CSRF-Prüfung blockiert. Seite neu laden und erneut versuchen."
 
 #. js-lingui-explicit-id
+#: src/admin/MediaLibrary.tsx
+msgid "plugin.media.error.generic"
+msgstr "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
 #: src/admin/MediaPickerField.tsx
 msgid "plugin.media.pickerField.empty"
 msgstr "Keine Medien ausgewählt"

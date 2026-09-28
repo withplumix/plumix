@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { describeRpcError } from "plumix/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +85,10 @@ const M = {
   exportJson: { id: "plugin.forms.inbox.exportJson", message: "Export JSON" },
   yes: { id: "plugin.forms.answer.yes", message: "Yes" },
   no: { id: "plugin.forms.answer.no", message: "No" },
+  writeFailed: {
+    id: "plugin.forms.inbox.writeFailed",
+    message: "That did not go through. Try again.",
+  },
 } satisfies Record<string, MessageDescriptor>;
 
 const NONE = "—";
@@ -384,7 +389,14 @@ function SubmissionDetail({
   const row = submission.data;
   // One line for whichever write failed: three buttons and a save that
   // silently re-enable are indistinguishable from three that worked.
-  const failed = setStatus.error ?? setNote.error ?? remove.error;
+  const failure = setStatus.error ?? setNote.error ?? remove.error;
+  // Memoized on the error so the fallback's console log fires once per
+  // failure, not once per render.
+  const failed = useMemo<MessageDescriptor | null>(
+    () =>
+      failure === null ? null : describeRpcError(failure, {}, M.writeFailed),
+    [failure],
+  );
 
   if (submission.isLoading) {
     return (
@@ -512,11 +524,7 @@ function SubmissionDetail({
           data-testid="forms-detail-write-error"
           className="text-destructive text-sm"
         >
-          <Trans
-            id="plugin.forms.inbox.writeError"
-            message="That did not go through:"
-          />{" "}
-          {failed.message}
+          {i18n._(failed)}
         </p>
       )}
 

@@ -13,7 +13,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { Label } from "@plumix/core/i18n";
 import type { AllowedDomain, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
@@ -42,6 +41,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
+import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 const USER_ROLES = [
@@ -110,8 +110,9 @@ export const Route = createFileRoute("/_authenticated/allowed-domains/")({
 function AllowedDomainsRoute(): ReactNode {
   const label = useLabel();
   const queryClient = useQueryClient();
-  // String branch is plugin-author text rendered verbatim.
-  const [serverError, setServerError] = useState<Label | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const list = useQuery(
     orpc.auth.allowedDomains.list.queryOptions({ input: {} }),
@@ -447,11 +448,10 @@ function DomainRow({
   );
 }
 
-function mapError(err: unknown): Label {
-  if (err && typeof err === "object" && "data" in err) {
-    const data = (err as { data?: { reason?: string } }).data;
-    if (data?.reason === "domain_exists") return M.errDomainExists;
-  }
-  if (err instanceof Error) return err.message;
-  return M.errFallback;
+function mapError(err: unknown): MessageDescriptor {
+  return describeRpcError(
+    err,
+    { domain_exists: M.errDomainExists },
+    M.errFallback,
+  );
 }

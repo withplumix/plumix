@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { describeRpcError } from "plumix/admin";
 import {
   Button,
   Input,
@@ -26,14 +27,12 @@ const MAX_DIFF_PREVIEW_FIELDS = 3;
 const ANY_VALUE = "__any__";
 
 // Descriptors that need runtime indirection — used outside JSX
-// (placeholder attribute, option labels, error template with embedded
-// value). JSX-text strings stay inline at their `<Trans>` callsite for
+// (placeholder attribute, option labels, the load-failure copy). JSX-text strings stay inline at their `<Trans>` callsite for
 // extraction discoverability.
 const M = {
-  errorTemplate: {
-    id: "plugin.auditLog.shell.error",
-    message: "Failed to load audit log: {message}",
-    comment: "message: the underlying error message from the RPC failure",
+  loadFailed: {
+    id: "plugin.auditLog.shell.loadFailed",
+    message: "Failed to load the audit log.",
   },
   filterDatePresetAll: {
     id: "plugin.auditLog.filter.preset.all",
@@ -219,6 +218,12 @@ export function AuditLogShell(): ReactNode {
   const [filters, setFilters] = useFilterUrlState();
   const list = useAuditLogList(filterToRpcInput(filters));
   const { i18n } = useLingui();
+  // Memoized on the error so the fallback's console log fires once per
+  // failure, not once per render.
+  const loadError = useMemo<MessageDescriptor | null>(
+    () => (list.error ? describeRpcError(list.error, {}, M.loadFailed) : null),
+    [list.error],
+  );
 
   const rows = list.data?.pages.flatMap((p) => p.rows) ?? [];
 
@@ -236,13 +241,9 @@ export function AuditLogShell(): ReactNode {
       />
       {list.isLoading ? (
         <div data-testid="audit-log-loading" />
-      ) : list.error instanceof Error ? (
+      ) : loadError ? (
         <div data-testid="audit-log-error" className="text-destructive text-sm">
-          {i18n._(
-            M.errorTemplate.id,
-            { message: list.error.message },
-            { message: M.errorTemplate.message },
-          )}
+          {i18n._(loadError)}
         </div>
       ) : rows.length === 0 ? (
         <p

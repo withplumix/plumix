@@ -1,8 +1,12 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { testSendErrorMessage } from "./mailer-errors.js";
 
 describe("testSendErrorMessage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test("known `mailer_not_configured` reason resolves to the localized descriptor", () => {
     const err = { data: { reason: "mailer_not_configured" } };
     const result = testSendErrorMessage(err);
@@ -16,16 +20,10 @@ describe("testSendErrorMessage", () => {
     expect(result).toMatchObject({ id: "mailer.test.error.sendFailed" });
   });
 
-  test("raw `Error` returns the plugin-author message as a string", () => {
-    // Critical: this is the behavior the previous synthetic-descriptor
-    // shape (`{id:"mailer.test.error.runtime", message: err.message}`)
-    // masked — it returned an unextracted descriptor that emitted a
-    // Lingui `_missing` event on every render. The union shape returns
-    // the raw string so the render-site discriminator skips Lingui
-    // entirely for plugin-author text.
-    const result = testSendErrorMessage(new Error("plugin-author copy"));
-    expect(typeof result).toBe("string");
-    expect(result).toBe("plugin-author copy");
+  test("an unmapped `Error` falls back to the retry message, not its text", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const result = testSendErrorMessage(new Error("Internal Server Error"));
+    expect(result).toMatchObject({ id: "mailer.test.error.fallback" });
   });
 
   test("unrecognized shape falls back to the translatable retry message", () => {

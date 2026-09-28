@@ -60,7 +60,7 @@ import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { TAXONOMY_LIST_DEFAULT_SEARCH } from "../-constants.js";
-import { useTermErrorMessage } from "../-errors.js";
+import { describeTermError } from "../-errors.js";
 
 const M = {
   saveFallback: defineMessage({
@@ -221,8 +221,9 @@ function EditTermContent({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const renderLabel = useLabel();
-  const mapTermError = useTermErrorMessage();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
   const [serverFieldErrors, setServerFieldErrors] = useState<
     readonly MetaFieldServerError[] | null
   >(null);
@@ -279,7 +280,7 @@ function EditTermContent({
         setServerFieldErrors(fieldErrors);
         return;
       }
-      setServerError(mapTermError(err, renderLabel(M.saveFallback)));
+      setServerError(describeTermError(err, M.saveFallback));
     },
   });
 
@@ -361,9 +362,10 @@ function DeleteCard({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const renderLabel = useLabel();
-  const mapTermError = useTermErrorMessage();
   const [confirming, setConfirming] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const deleteTerm = useMutation({
     mutationFn: () => orpc.term.delete.call({ id: termId }),
@@ -385,7 +387,7 @@ function DeleteCard({
       });
     },
     onError: (err) => {
-      setServerError(mapTermError(err, renderLabel(M.deleteFallback)));
+      setServerError(describeTermError(err, M.deleteFallback));
     },
   });
 
@@ -444,7 +446,7 @@ function DeleteCard({
           </AlertDialogHeader>
           {serverError ? (
             <Alert variant="destructive" data-testid="term-delete-error">
-              <AlertDescription>{serverError}</AlertDescription>
+              <AlertDescription>{renderLabel(serverError)}</AlertDescription>
             </Alert>
           ) : null}
           <AlertDialogFooter>

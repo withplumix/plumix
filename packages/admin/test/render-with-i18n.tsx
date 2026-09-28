@@ -31,7 +31,7 @@ export function renderWithI18n(node: ReactNode): ReturnType<typeof render> {
 
 /**
  * Hook variant — same `I18nProvider` wrapping for `renderHook`.
- * Use when testing a custom hook (e.g. `useTermErrorMessage`) that
+ * Use when testing a custom hook that
  * calls `useLabel` / `useLingui` internally.
  */
 export function renderHookWithI18n<TResult, TProps>(

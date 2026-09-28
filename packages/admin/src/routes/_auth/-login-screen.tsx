@@ -1,11 +1,12 @@
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { useEmailChangeErrorMessage } from "@/lib/email-change-errors.js";
 import { useMagicLinkErrorMessage } from "@/lib/magic-link-errors.js";
 import {
+  magicLinkRequestErrorDescriptor,
   requestMagicLink,
-  useMagicLinkRequestErrorMessage,
 } from "@/lib/magic-link.js";
 import { readManifest } from "@/lib/manifest.js";
 import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
@@ -13,7 +14,9 @@ import { orpc } from "@/lib/orpc.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
 import { refetchSession } from "@/lib/session.js";
+import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
@@ -43,20 +46,28 @@ import type { LoginSearch } from "./-schemas.js";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "./-locale-param.js";
 import { loginSchema } from "./-schemas.js";
 
+const M = {
+  emailRequired: defineMessage({
+    id: "login.magicLink.emailRequired",
+    message: "Enter your email above first.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
 // Split out of `login.tsx` so a test can mount the screen without the
 // file-based route tree; the route only hands it the validated search.
 export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const router = useRouter();
   const manifest = readManifest();
   const { i18n } = useLingui();
+  const renderLabel = useLabel();
   const renderPasskeyError = usePasskeyErrorMessage();
   const renderMagicLinkError = useMagicLinkErrorMessage();
   const renderOAuthError = useOAuthErrorMessage();
   const renderEmailChangeError = useEmailChangeErrorMessage();
-  const renderMagicLinkRequestError = useMagicLinkRequestErrorMessage();
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
+  const [magicLinkError, setMagicLinkError] =
+    useState<MessageDescriptor | null>(null);
 
   const signInMethods = useQuery(orpc.auth.signInMethods.queryOptions());
   const magicLinkEnabled = signInMethods.data?.magicLink === true;
@@ -81,7 +92,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
       setMagicLinkSent(false);
     },
     onSuccess: () => setMagicLinkSent(true),
-    onError: (err) => setMagicLinkError(renderMagicLinkRequestError(err)),
+    onError: (err) => setMagicLinkError(magicLinkRequestErrorDescriptor(err)),
   });
 
   const form = useForm({
@@ -97,11 +108,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
   const onMagicLinkClick = (): void => {
     const email = form.getValues("email").trim();
     if (!email) {
-      setMagicLinkError(
-        i18n._("login.magicLink.emailRequired", undefined, {
-          message: "Enter your email above first.",
-        }),
-      );
+      setMagicLinkError(M.emailRequired);
       return;
     }
     magicLink.mutate({ email });
@@ -223,7 +230,9 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
 
             {magicLinkError ? (
               <Alert variant="destructive" data-testid="login-magic-link-error">
-                <AlertDescription>{magicLinkError}</AlertDescription>
+                <AlertDescription>
+                  {renderLabel(magicLinkError)}
+                </AlertDescription>
               </Alert>
             ) : null}
 

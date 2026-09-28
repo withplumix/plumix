@@ -35,6 +35,9 @@ export type {
 export {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
   adminRuntimeShimSlug,
+  describeRpcError,
+  rpcErrorCode,
+  rpcErrorReason,
 } from "@plumix/core/admin";
 export type {
   SharedAdminRuntimeKey,

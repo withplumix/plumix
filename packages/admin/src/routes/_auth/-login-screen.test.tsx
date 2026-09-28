@@ -1,6 +1,6 @@
 import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { renderWithRouter } from "../../../test/render-with-router.js";
@@ -39,6 +39,32 @@ describe("LoginScreen", () => {
     expect(
       await screen.findByTestId("login-magic-link-submit"),
     ).toBeInTheDocument();
+  });
+
+  test("shows the localized retry copy when the link request fails", async () => {
+    // The magic-link request isn't an RPC, so the stub answers it 404.
+    stubRpc({ "auth/signInMethods": () => ({ magicLink: true, oauth: [] }) });
+    await renderLogin();
+
+    fireEvent.change(screen.getByTestId("login-email-input"), {
+      target: { value: "jane@example.com" },
+    });
+    fireEvent.click(await screen.findByTestId("login-magic-link-submit"));
+
+    expect(
+      await screen.findByTestId("login-magic-link-error"),
+    ).toHaveTextContent("Couldn't send the link. Try again.");
+  });
+
+  test("asks for an email before requesting a link", async () => {
+    stubRpc({ "auth/signInMethods": () => ({ magicLink: true, oauth: [] }) });
+    await renderLogin();
+
+    fireEvent.click(await screen.findByTestId("login-magic-link-submit"));
+
+    expect(
+      await screen.findByTestId("login-magic-link-error"),
+    ).toHaveTextContent("Enter your email above first.");
   });
 
   test("renders a button per configured OAuth provider", async () => {

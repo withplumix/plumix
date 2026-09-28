@@ -1,4 +1,6 @@
+import type { AnyRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -44,4 +46,48 @@ export async function renderWithRouter(
   await router.load();
   renderWithI18n(<RouterProvider router={router} />);
   return { pathname: () => router.state.location.pathname };
+}
+
+interface RouteMount {
+  /** The route's own path template, as its file declares it. */
+  readonly path: string;
+  /** The URL the router opens on. */
+  readonly url: string;
+  /** What the signed-in user may do, as `_authenticated` would hand it down. */
+  readonly capabilities: readonly string[];
+}
+
+/**
+ * Mount a real admin route — its loaders, queries and component — under a root
+ * that stands in for `_authenticated`, without the rest of the tree. Queries
+ * don't retry, so a failed load reaches the screen before `findBy` gives up.
+ */
+export async function renderRoute(
+  route: AnyRoute,
+  { path, url, capabilities }: RouteMount,
+): Promise<void> {
+  const rootRoute = createRootRoute({
+    beforeLoad: () => ({ user: { id: 1, capabilities } }),
+  });
+  // The file route was built against the generated tree's parent; re-parenting
+  // it is what `update` is for, but its options type is pinned to that tree.
+  const mounted = route.update({
+    id: path,
+    path,
+    getParentRoute: () => rootRoute,
+  } as never);
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([mounted]),
+    history: createMemoryHistory({ initialEntries: [url] }),
+  });
+  await router.load();
+  renderWithI18n(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }

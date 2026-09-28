@@ -87,13 +87,12 @@ const MESSAGES: Record<MagicLinkRequestErrorCode, MessageDescriptor> = {
 
 const registry = createStrictErrorDescriptorRegistry(MESSAGES, "network");
 
-/** Convenience hook for the login route — resolves a thrown
- *  `MagicLinkRequestError` (or any unknown thrown value) through
- *  `useLabel` so the consumer renders a flat localized string.
- *  Unknown / non-MagicLinkRequestError values surface the generic
- *  `network` fallback descriptor. */
-export function useMagicLinkRequestErrorMessage(): (error: unknown) => string {
-  const resolve = registry.useMessage();
-  return (error) =>
-    resolve(error instanceof MagicLinkRequestError ? error.code : "network");
+/** The descriptor the login screen shows for a failed link request. Anything
+ *  that isn't a `MagicLinkRequestError` gets the generic `network` copy. */
+export function magicLinkRequestErrorDescriptor(
+  error: unknown,
+): MessageDescriptor {
+  return registry.descriptor(
+    error instanceof MagicLinkRequestError ? error.code : "network",
+  );
 }

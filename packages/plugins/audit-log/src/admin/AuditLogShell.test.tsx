@@ -11,7 +11,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { stubPluginRpc } from "plumix/admin/test";
+import { PluginRpcError, stubPluginRpc } from "plumix/admin/test";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -80,12 +80,29 @@ describe("AuditLogShell", () => {
     });
     cleanup();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   test("renders the empty-state when no audit rows match", async () => {
     mockListPages([{ rows: [], nextCursor: null }]);
     renderShell();
     expect(await screen.findByTestId("audit-log-empty")).toBeInTheDocument();
+  });
+
+  test("a failed load shows localized copy, not the error's message", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    stub = stubPluginRpc("audit_log", {
+      list: () => {
+        throw new PluginRpcError("INTERNAL_SERVER_ERROR", {
+          message: "Internal server error",
+        });
+      },
+    });
+    renderShell();
+
+    const error = await screen.findByTestId("audit-log-error");
+    expect(error).toHaveTextContent("Failed to load the audit log.");
+    expect(error).not.toHaveTextContent("Internal server error");
   });
 
   test("renders one row per audit entry with event + subject labels", async () => {

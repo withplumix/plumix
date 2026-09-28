@@ -188,6 +188,15 @@ export const baseConfig = defineConfig(
   },
 );
 
+// The admin shows a failure through a descriptor it chose, never a caught
+// error's `message` (ADR 0018). Opted into by the admin packages; a plugin's
+// admin sources get it from `pluginConfig`, which scopes it to `src/admin/`.
+export const adminUiConfig = defineConfig({
+  files: PRODUCTION_SOURCE,
+  ignores: TEST_SOURCE,
+  rules: { "plumix/no-error-message-in-ui": "error" },
+});
+
 // Public-API boundary. Consumer packages (plugins, runtimes, the scaffolder)
 // must import from the public `plumix` umbrella, never reach into the internal
 // @plumix/{core,admin,blocks} packages. Packages opt in by spreading this

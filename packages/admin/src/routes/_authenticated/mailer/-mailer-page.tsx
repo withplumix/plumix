@@ -12,7 +12,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { Label } from "@plumix/core/i18n";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -101,7 +100,9 @@ function MailerTestSend({
 }): ReactNode {
   const label = useLabel();
   const [feedback, setFeedback] = useState<
-    { kind: "ok"; to: string } | { kind: "error"; message: Label } | null
+    | { kind: "ok"; to: string }
+    | { kind: "error"; message: MessageDescriptor }
+    | null
   >(null);
 
   const form = useForm({

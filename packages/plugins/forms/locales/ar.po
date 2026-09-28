@@ -293,8 +293,8 @@ msgstr "إلغاء"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.writeError"
-msgstr "لم يتم ذلك:"
+msgid "plugin.forms.inbox.writeFailed"
+msgstr "لم يتم ذلك. حاول مجدداً."
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

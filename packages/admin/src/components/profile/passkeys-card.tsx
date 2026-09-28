@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toDate } from "@/lib/dates.js";
-import { extractCode, extractReason } from "@/lib/orpc-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
@@ -12,7 +11,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { Label } from "@plumix/core/i18n";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   AlertDialog,
@@ -36,6 +34,11 @@ import {
 import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
+import {
+  describeRpcError,
+  rpcErrorCode,
+  rpcErrorReason,
+} from "@plumix/core/admin";
 
 const M = {
   unnamed: defineMessage({
@@ -129,7 +132,9 @@ interface PasskeysCardProps {
 export function PasskeysCard({ userEmail }: PasskeysCardProps): ReactNode {
   const label = useLabel();
   const queryClient = useQueryClient();
-  const [enrollError, setEnrollError] = useState<Label | null>(null);
+  const [enrollError, setEnrollError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const list = useQuery(orpc.auth.credentials.list.queryOptions({ input: {} }));
 
@@ -244,8 +249,12 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(cred.name ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [renameError, setRenameError] = useState<Label | null>(null);
-  const [deleteError, setDeleteError] = useState<Label | null>(null);
+  const [renameError, setRenameError] = useState<MessageDescriptor | null>(
+    null,
+  );
+  const [deleteError, setDeleteError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const rename = useMutation({
     mutationFn: (name: string) =>
@@ -506,17 +515,15 @@ function pickTransportDescriptor(cred: PasskeyWire): MessageDescriptor | null {
   return M.transportSecurityKey;
 }
 
-function formatRenameError(err: unknown): Label {
-  if (extractCode(err) === "NOT_FOUND") return M.notFound;
-  if (err instanceof Error) return err.message;
-  return M.renameFallback;
+function formatRenameError(err: unknown): MessageDescriptor {
+  if (rpcErrorCode(err) === "NOT_FOUND") return M.notFound;
+  return describeRpcError(err, {}, M.renameFallback);
 }
 
-function formatDeleteError(err: unknown): Label {
-  if (extractReason(err) === "last_credential") return M.lastCredential;
-  if (extractCode(err) === "NOT_FOUND") return M.notFound;
-  if (err instanceof Error) return err.message;
-  return M.deleteFallback;
+function formatDeleteError(err: unknown): MessageDescriptor {
+  if (rpcErrorReason(err) === "last_credential") return M.lastCredential;
+  if (rpcErrorCode(err) === "NOT_FOUND") return M.notFound;
+  return describeRpcError(err, {}, M.deleteFallback);
 }
 
 // Surface-specific copy for `registerWithPasskey` failures during add-
@@ -524,7 +531,7 @@ function formatDeleteError(err: unknown): Label {
 // table but tuned to the "you're already signed in, adding a device"
 // flow (no `registration_closed` because authed users always pass that
 // check).
-function formatPasskeyEnrollError(err: unknown): Label {
+function formatPasskeyEnrollError(err: unknown): MessageDescriptor {
   if (err instanceof PasskeyError) {
     switch (err.code) {
       case "user_cancelled":
@@ -539,6 +546,5 @@ function formatPasskeyEnrollError(err: unknown): Label {
         return M.enrollEmailMismatch;
     }
   }
-  if (err instanceof Error) return err.message;
-  return M.enrollFallback;
+  return describeRpcError(err, {}, M.enrollFallback);
 }

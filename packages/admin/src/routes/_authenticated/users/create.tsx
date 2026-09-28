@@ -20,7 +20,6 @@ import {
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { Label } from "@plumix/core/i18n";
 import type { User, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
@@ -49,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
+import { describeRpcError } from "@plumix/core/admin";
 import { vMessage } from "@plumix/core/validation";
 
 import {
@@ -119,8 +119,9 @@ function InviteUserRoute(): ReactNode {
   const navigate = useNavigate();
   const label = useLabel();
   const [view, setView] = useState<ViewState>({ status: "idle" });
-  // String branch carries plugin-author `err.message` verbatim.
-  const [serverError, setServerError] = useState<Label | null>(null);
+  const [serverError, setServerError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const inviteUser = useMutation({
     mutationFn: (input: { email: string; name: string; role: UserRole }) =>
@@ -334,16 +335,8 @@ function buildInviteUrl(token: string): string {
   return `${window.location.origin}${ADMIN_BASE_PATH}/accept-invite/${token}`;
 }
 
-// Surface server-side errors with a human-friendly message where we can.
-// The RPC layer throws with `.data.reason` on CONFLICT — everything else
-// falls through as a generic "try again".
-function mapInviteError(err: unknown): Label {
-  if (err && typeof err === "object" && "data" in err) {
-    const data = (err as { data?: { reason?: string } }).data;
-    if (data?.reason === "email_taken") return M.errEmailTaken;
-  }
-  if (err instanceof Error) return err.message;
-  return M.errFallback;
+function mapInviteError(err: unknown): MessageDescriptor {
+  return describeRpcError(err, { email_taken: M.errEmailTaken }, M.errFallback);
 }
 
 function InviteSuccess({

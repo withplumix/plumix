@@ -113,9 +113,7 @@ export function TermForm({
   readonly isHierarchical: boolean;
   readonly parentOptions: readonly ParentOption[];
   readonly isSubmitting: boolean;
-  /** Server-side error. Pass a localized descriptor (`Label`) or a raw
-   *  `err.message` string; resolved through `useLabel()` at render. */
-  readonly serverError: Label | null;
+  readonly serverError: MessageDescriptor | null;
   /** Path-addressed meta write rejections from the server — pinned
    *  onto the addressed inputs inline (`meta.<path>`). */
   readonly serverFieldErrors?: readonly MetaFieldServerError[] | null;

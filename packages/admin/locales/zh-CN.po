@@ -997,6 +997,11 @@ msgid "userEdit.email.error.requestFallback"
 msgstr "无法请求更改。请重试。"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
+msgid "editor.revision.restoreFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revokeAll.fallback"
 msgstr "无法登出会话。请重试。"
@@ -1012,7 +1017,7 @@ msgid "apiTokens.revoke.fallback"
 msgstr "撤销失败。请重试。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saveFailed"
 msgstr "无法保存设置。"
 
@@ -2740,7 +2745,7 @@ msgid "terms.edit.submit"
 msgstr "保存更改"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.idle"
 msgstr "保存更改"
 
@@ -2750,7 +2755,7 @@ msgid "editor.plainForm.status.saved"
 msgstr "已保存"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.saved"
 msgstr "已保存。"
 
@@ -2765,7 +2770,7 @@ msgid "userEdit.submit.pending"
 msgstr "保存中…"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/$page.tsx
+#: src/routes/_authenticated/settings/-settings-group-card.tsx
 msgid "settings.page.submit.pending"
 msgstr "保存中…"
 
@@ -3485,7 +3490,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "此设备不支持 Passkey。"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/-restore-error.ts
 msgid "editor.revision.conflict"
 msgstr ""
 

@@ -177,6 +177,23 @@ Where the boundary genuinely cannot be decoded yet, keep the check with a `Not p
 in the comment directly above the statement, naming what is holding the schema up. The words after
 the marker are counted, as with `// Safety:` and `Not JSON:`.
 
+### Failure copy
+
+The admin shows every failure through a localized `MessageDescriptor` it chose, never a caught
+error's `message` ([ADR 0018](docs/adr/0018-the-admin-shows-a-failure-through-a-descriptor-it-chose.md)).
+oRPC fills `message` with its own English name for the code, and a plugin's throw arrives masked,
+so there is no author text in it to pass through. Reading `.message` off an `Error` or a subclass —
+`query.error` and `mutation.error` included — is rejected by `plumix/no-error-message-in-ui` in the
+admin packages and every plugin's `src/admin/`. Map the failure with `describeRpcError` from
+`plumix/admin` and a site-specific fallback, and type the state that holds it
+`MessageDescriptor | null`. Authored text a procedure sends as data, like the meta field errors'
+`Label`, is content and stays.
+
+An argument to `console.*` is exempt. A render boundary that shows a client exception as secondary
+detail keeps the read with a `// Shown verbatim: …` sentence directly above the statement; the
+words after the marker are counted, as with `// Safety:`. Never silence it with a bare disable
+comment.
+
 ## Tests
 
 One vitest suite per package. Two layouts, in order of preference:

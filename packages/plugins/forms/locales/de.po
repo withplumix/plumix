@@ -293,8 +293,8 @@ msgstr "Abbrechen"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.writeError"
-msgstr "Das hat nicht geklappt:"
+msgid "plugin.forms.inbox.writeFailed"
+msgstr "Das hat nicht geklappt. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
