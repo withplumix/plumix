@@ -50,8 +50,7 @@ const bind = (params: BindValue[]): BunSqlite.SQLQueryBindings[] =>
   params.map((value) => (value instanceof Date ? value.valueOf() : value));
 
 const rowsReturned = (rows: readonly unknown[]): number => rows.length;
-const rowsChanged = (result: BunSqlite.Changes): number =>
-  Number(result.changes);
+const rowsChanged = (result: BunSqlite.Changes): number => result.changes;
 
 // Bun's `changes` counts the rows a trigger wrote, so a one-row `UPDATE` of an
 // entry reports 2 once its change-feed trigger fires; SQL's `changes()` counts
@@ -62,7 +61,7 @@ function exactChanges(
   counter: BunSqlite.Statement<{ changes: number }>,
   result: BunSqlite.Changes,
 ): BunSqlite.Changes {
-  if (Number(result.changes) === 0) return result;
+  if (result.changes === 0) return result;
   const changes = counter.get()?.changes ?? result.changes;
   return { ...result, changes };
 }
@@ -71,7 +70,7 @@ function exactChanges(
 // this is where the client earns its query spans. Spans carry the params as
 // the caller bound them, as the libsql wrap records them.
 function statement(
-  stmt: BunSqlite.Statement,
+  stmt: BunSqlite.Statement<unknown, BunSqlite.SQLQueryBindings[]>,
   sql: string,
   counter: BunSqlite.Statement<{ changes: number }>,
 ): BunSqliteStatement {
@@ -105,15 +104,20 @@ export function openBunSqlite(path: string): BunSqliteClient {
   mkdirSync(dirname(path), { recursive: true });
   const { Database } = loadBunSqlite();
   const database = new Database(path);
-  database.exec("PRAGMA journal_mode = WAL");
-  database.exec(`PRAGMA busy_timeout = ${String(BUSY_TIMEOUT_MS)}`);
-  database.exec("PRAGMA synchronous = NORMAL");
-  database.exec("PRAGMA foreign_keys = ON");
+  database.run("PRAGMA journal_mode = WAL");
+  database.run(`PRAGMA busy_timeout = ${String(BUSY_TIMEOUT_MS)}`);
+  database.run("PRAGMA synchronous = NORMAL");
+  database.run("PRAGMA foreign_keys = ON");
   const counter = database.prepare<{ changes: number }, []>(
     "SELECT changes() AS changes",
   );
   return {
-    prepare: (sql) => statement(database.prepare(sql), sql, counter),
+    prepare: (sql) =>
+      statement(
+        database.prepare<unknown, BunSqlite.SQLQueryBindings[]>(sql),
+        sql,
+        counter,
+      ),
     close: () => database.close(),
   };
 }

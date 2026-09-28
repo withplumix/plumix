@@ -3018,6 +3018,9 @@ importers:
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../prettier
+      '@plumix/runtime-bun':
+        specifier: workspace:*
+        version: link:../../packages/runtimes/bun
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
         version: link:../../packages/runtimes/cloudflare

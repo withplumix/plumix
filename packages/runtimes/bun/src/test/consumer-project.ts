@@ -44,7 +44,9 @@ export async function plumixOn(
   args: readonly string[],
 ): Promise<CliResult> {
   const [command, ...prefix] =
-    runtime === "bun" ? ["bun", "--bun", PLUMIX_SCRIPT] : ["node", PLUMIX_SCRIPT];
+    runtime === "bun"
+      ? ["bun", "--bun", PLUMIX_SCRIPT]
+      : ["node", PLUMIX_SCRIPT];
   try {
     const { stdout, stderr } = await promisify(execFile)(
       command,
@@ -89,7 +91,10 @@ export default plumix({
  * links, so `plumix` and this package resolve from there the way they do from
  * an app root.
  */
-export function scaffoldConsumerProject(prefix: string, config: string): string {
+export function scaffoldConsumerProject(
+  prefix: string,
+  config: string,
+): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   const modules = join(dir, "node_modules");
   mkdirSync(join(modules, "@plumix"), { recursive: true });

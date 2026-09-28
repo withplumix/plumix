@@ -242,6 +242,9 @@ const config: KnipConfig = {
       ],
       playwright: false,
     },
+    "packages/runtimes/bun": {
+      entry: ["src/index.ts", "src/commands/index.ts"],
+    },
     "packages/runtimes/node": {
       // With knip's playwright plugin off, the export-map entries and the
       // specs are listed by hand.

@@ -512,6 +512,25 @@ export const ROSTER: Readonly<
       },
     ],
   },
+  "@plumix/runtime-bun": {
+    ".": [
+      {
+        reason: "the database slot a site config wires",
+        names: [
+          "bunSqlite",
+          "BunSqliteConfig",
+          "BunSqliteDatabase",
+          "BunSqliteDatabaseAdapter",
+        ],
+      },
+    ],
+    "./commands": [
+      {
+        reason: "the CLI commands `plumix` loads from the configured runtime",
+        names: ["commands", "migrate"],
+      },
+    ],
+  },
   "@plumix/runtime-cloudflare": {
     ".": [
       {

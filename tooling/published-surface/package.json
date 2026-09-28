@@ -23,6 +23,7 @@
     "@plumix/plugin-search": "workspace:*",
     "@plumix/plugin-seo": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
+    "@plumix/runtime-bun": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/runtime-node": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
