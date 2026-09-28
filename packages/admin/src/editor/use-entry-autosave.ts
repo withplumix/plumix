@@ -13,10 +13,7 @@ type EntryUpdateInput = Parameters<typeof orpc.entry.update.call>[0];
 type EntryRow = Awaited<ReturnType<typeof orpc.entry.update.call>>;
 
 /** What one field group contributes to an `entry.update` write. */
-type EntryUpdatePatch = Omit<
-  EntryUpdateInput,
-  "id" | "expectedLiveUpdatedAt"
->;
+type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "expectedLiveUpdatedAt">;
 
 /**
  * A set of fields that autosave together. The hook keeps the group's
@@ -125,11 +122,11 @@ function createEntryAutosave<G extends Record<string, unknown>>(
         if (outcome.kind === "recovered") {
           if (outcome.updatedAt) liveUpdatedAt = outcome.updatedAt;
           // The token moved under the write but the edit is intact: send it
-          // once more rather than leave it unsaved until the next keystroke.
-          if (attempt === 0) {
-            await save(1);
-            return;
-          }
+          // once more rather than leave it unsaved until the next keystroke. A
+          // second conflict stays quiet too — nothing was lost, and the next
+          // edit sends it on the re-anchored token.
+          if (attempt === 0) await save(1);
+          return;
         }
         if (!failed) {
           failed = true;

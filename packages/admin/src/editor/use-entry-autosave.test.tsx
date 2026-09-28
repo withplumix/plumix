@@ -155,7 +155,7 @@ describe("useEntryAutosave", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 
-  test("a conflict that survives the retry is not retried again", async () => {
+  test("a conflict that survives the retry is not retried again, and stays quiet", async () => {
     const rpc = stubRpc({
       "entry/update": () => {
         throw staleConflict();
@@ -163,7 +163,8 @@ describe("useEntryAutosave", () => {
       "entry/get": () => row({ updatedAt: T1 }),
     });
     const title = titleField();
-    const { result } = renderAutosave({ title: title.group });
+    const onError = vi.fn();
+    const { result } = renderAutosave({ title: title.group }, onError);
 
     title.value = "Hello world";
     act(() => result.current.schedule.title());
@@ -172,6 +173,9 @@ describe("useEntryAutosave", () => {
     expect(
       rpc.calls.filter((c) => c.procedure === "entry/update"),
     ).toHaveLength(2);
+    // The token was re-anchored and the edit is intact, so the next edit
+    // sends it: nothing failed that the author needs to hear about.
+    expect(onError).not.toHaveBeenCalled();
   });
 
   test("a genuine failure reports once across failing ticks and a success re-arms it", async () => {
