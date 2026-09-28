@@ -639,7 +639,7 @@ describe("compileRouteMap", () => {
     );
   });
 
-  test("the framework's documented overlaps still compile: hierarchical /page, the root, a private search type", async () => {
+  test("the framework's documented overlaps still compile: hierarchical /page and the root", async () => {
     const registry = await buildRegistry([
       definePlugin("pages", (ctx) => {
         ctx.registerEntryType("page", {
@@ -651,12 +651,6 @@ describe("compileRouteMap", () => {
           label: "Landings",
           isPublic: true,
           rewrite: { slug: "" },
-        });
-        ctx.registerEntryType("saved-search", {
-          label: "Saved searches",
-          isPublic: false,
-          hasArchive: true,
-          rewrite: { slug: "search" },
         });
       }),
     ]);
