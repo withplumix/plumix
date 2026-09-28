@@ -76,6 +76,16 @@ export type {
   AuthenticatedHarnessOptions,
 } from "./rpc.js";
 
+// Serves oRPC procedures from the test at the fetch boundary, through oRPC's own
+// `RPCHandler`, for a client under test that calls the real wire.
+export { RpcReplyError, stubRpcEndpoint } from "./rpc-stub.js";
+export type {
+  RpcStub,
+  RpcStubCall,
+  RpcStubRoutes,
+  StubRpcEndpointOptions,
+} from "./rpc-stub.js";
+
 export { buildRequest, TestResponse } from "./request.js";
 export type { FetchOptions, HarnessFetchOptions } from "./request.js";
 
