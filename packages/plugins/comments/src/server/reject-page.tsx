@@ -42,7 +42,7 @@ export function rejectPage(ctx: AppContext, refused: RefusedComment): Response {
       <body>
         <main>
           <CommentMarkup
-            action={withBasePath(SUBMIT_PATH, ctx.basePath)}
+            action={withBasePath(SUBMIT_PATH, ctx.config.basePath)}
             entryId={refused.entryId}
             // The same ids the form on the page had, so the summary's
             // links and the labels still address the controls a visitor

@@ -22,7 +22,7 @@ describe("path-chain lookups after a write in the same request", () => {
 
   test("an author slug reads the user who holds it after a re-slug", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [blog],
+      config: { plugins: [blog] },
     });
     const user = await harness.factory.user.create({ slug: "ada" });
 
@@ -52,7 +52,7 @@ describe("path-chain lookups after a write in the same request", () => {
 
   test("a term created after a lookup missed it is found", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [blog],
+      config: { plugins: [blog] },
     });
 
     const [before, after] = await run(async () => {

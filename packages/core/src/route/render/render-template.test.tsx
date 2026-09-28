@@ -67,7 +67,9 @@ async function seedPost(
 describe("SEO — canonical + render:document seam", () => {
   test("a public page renders exactly one canonical with the slash-less absolute URL", async () => {
     const theme = defineTheme({ templates: [fallback(() => null)] });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     await seedPost(h);
 
     const head = await dispatchHead(h, "https://cms.example/post/hello");
@@ -90,8 +92,7 @@ describe("SEO — canonical + render:document seam", () => {
     });
     const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, seoPlugin],
-      theme,
+      config: { plugins: [blogPlugin, seoPlugin], theme: theme },
     });
     await seedPost(h);
 
@@ -108,7 +109,9 @@ describe("SEO — canonical + render:document seam", () => {
         link: [{ rel: "canonical", href: "https://cms.example/from-theme" }],
       },
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     await seedPost(h);
 
     const head = await dispatchHead(h, "https://cms.example/post/hello");
@@ -130,7 +133,9 @@ async function seedSiteSettings(
 describe("render — document title", () => {
   test("an untitled entry falls back for <title> — no empty or orphan-separator title", async () => {
     const theme = defineTheme({ templates: [fallback(() => null)] });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     await seedSiteSettings(h, { title: "Demo" });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -163,7 +168,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -195,7 +202,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -224,7 +233,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -252,7 +263,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -291,7 +304,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.factory.user.create({
       email: "byline-author@example.test",
       name: "Eve Author",
@@ -325,7 +340,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     const createdEntry = await h.factory.entry.create({
       type: "post",
@@ -372,7 +389,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -407,9 +426,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme,
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      config: {
+        plugins: [blogPlugin],
+        theme,
+        i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -442,9 +463,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme,
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      config: {
+        plugins: [blogPlugin],
+        theme,
+        i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      },
     });
     const author = await h.seedUser("admin");
 
@@ -486,7 +509,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
         entry(({ data }) => <article>{data.entry.title}</article>),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -519,7 +544,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
           entry(({ data }) => <article>{data.entry.title}</article>),
         ],
       });
-      const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+      const h = await createDispatcherHarness({
+        config: { plugins: [blogPlugin], theme: theme },
+      });
       const viewer = await h.seedUser(viewerRole);
       const author =
         authoredBy === "viewer" ? viewer : await h.seedUser("author");
@@ -574,7 +601,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
         entry(({ data }) => <article>{data.entry.title}</article>),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -609,7 +638,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
         entry(({ data }) => <article>{data.entry.title}</article>),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -638,9 +669,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme,
-      i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
+      config: {
+        plugins: [blogPlugin],
+        theme,
+        i18n: { defaultLocale: "ar", locales: ["ar", "en"] },
+      },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -669,7 +702,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       document: { html: { lang: "fr" } },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -697,7 +732,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       document: { body: { className: "font-sans theme-light" } },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -727,8 +764,6 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme,
       assetManifest: {
         "src/theme/index.ts": {
           file: "_plumix/assets/theme-abc123.js",
@@ -736,6 +771,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
           css: ["_plumix/assets/theme-def456.css"],
         },
       },
+      config: { plugins: [blogPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -779,7 +815,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
         document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
         css: [...themeCss],
       });
-      const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+      const h = await createDispatcherHarness({
+        config: { plugins: [blogPlugin], theme: theme },
+      });
       const author = await h.seedUser("admin");
       await h.factory.entry.create({
         type: "post",
@@ -850,7 +888,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -895,7 +935,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -942,7 +984,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -990,7 +1034,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1031,7 +1077,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1072,7 +1120,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1111,7 +1161,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1154,7 +1206,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [seoPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [seoPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1194,7 +1248,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1234,7 +1290,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1277,7 +1335,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1320,7 +1380,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1363,7 +1425,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1401,7 +1465,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1437,7 +1503,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1476,7 +1544,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       document: { titleTemplate: "%s · Plumix Starter" },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1511,7 +1581,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1551,7 +1623,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1590,7 +1664,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       document: { titleTemplate: "%s · Plumix" },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1618,7 +1694,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1654,7 +1732,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       document: { titleTemplate: "%s · Theme" },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1687,7 +1767,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1731,7 +1813,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1770,7 +1854,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1808,7 +1894,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1844,7 +1932,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.db.insert(entriesTable).values({
       type: "post",
@@ -1874,7 +1964,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1921,8 +2013,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, siteTitle],
-      theme,
+      config: { plugins: [blogPlugin, siteTitle], theme: theme },
     });
     await h.factory.setting.create({
       group: "site",
@@ -1979,8 +2070,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, decorator],
-      theme,
+      config: { plugins: [blogPlugin, decorator], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2020,7 +2110,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2072,8 +2164,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, probePlugin],
-      theme,
+      config: { plugins: [blogPlugin, probePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2122,13 +2213,15 @@ describe("resolvePublicRoute — single entry through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, greetingPlugin],
-      theme,
-      i18n: { defaultLocale: "de", locales: ["de", "en"] },
       pluginCatalogs: {
         de: [
           () => Promise.resolve({ messages: { "acme.greeting": ["Hallo"] } }),
         ],
+      },
+      config: {
+        plugins: [blogPlugin, greetingPlugin],
+        theme,
+        i18n: { defaultLocale: "de", locales: ["de", "en"] },
       },
     });
     const author = await h.seedUser("admin");
@@ -2233,8 +2326,10 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
   test("dev gate on: a throwing loader fails to the dev error page naming the block", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, throwingLoaderPlugin],
-      theme: throwingLoaderTheme,
+      config: {
+        plugins: [blogPlugin, throwingLoaderPlugin],
+        theme: throwingLoaderTheme,
+      },
     });
     await seedLoaderPost(h, "acme/throwing-loader");
 
@@ -2256,8 +2351,10 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
   test("dev gate off: the same loader failure stays isolated and the page renders", async () => {
     delete process.env.PLUMIX_DEV;
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, throwingLoaderPlugin],
-      theme: throwingLoaderTheme,
+      config: {
+        plugins: [blogPlugin, throwingLoaderPlugin],
+        theme: throwingLoaderTheme,
+      },
     });
     await seedLoaderPost(h, "acme/throwing-loader");
 
@@ -2276,8 +2373,10 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
   test("dev gate on: the failing loader query is surfaced, flagged as failed", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, failingQueryPlugin],
-      theme: throwingLoaderTheme,
+      config: {
+        plugins: [blogPlugin, failingQueryPlugin],
+        theme: throwingLoaderTheme,
+      },
     });
     await seedLoaderPost(h, "acme/failing-query");
 
@@ -2312,7 +2411,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2354,7 +2455,9 @@ describe("resolvePublicRoute — archive through theme", () => {
         )),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2408,8 +2511,7 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, probePlugin],
-      theme,
+      config: { plugins: [blogPlugin, probePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2476,8 +2578,7 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, probePlugin],
-      theme,
+      config: { plugins: [blogPlugin, probePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2517,7 +2618,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2556,7 +2659,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2592,7 +2697,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     // Seed 25 entries; ARCHIVE_LIMIT is 20 so page 2 has 5.
     for (let i = 0; i < 25; i++) {
@@ -2634,8 +2741,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [smallPagePlugin],
-      theme,
+      config: { plugins: [smallPagePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2663,7 +2769,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2692,7 +2800,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2718,7 +2828,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -2758,7 +2870,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const writer = await h.factory.user.create({
       email: "ada@example.test",
       name: "Ada Author",
@@ -2845,8 +2959,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [topicPlugin],
-      theme,
+      config: { plugins: [topicPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     const term = await h.factory.term.create({
@@ -2905,8 +3018,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [smallPageTaxonomy],
-      theme,
+      config: { plugins: [smallPageTaxonomy], theme: theme },
     });
     const author = await h.seedUser("admin");
     const term = await h.factory.term.create({
@@ -2951,7 +3063,9 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [topicPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [topicPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.term.create({
       taxonomy: "topic",
@@ -3010,8 +3124,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [categoryPlugin],
-      theme,
+      config: { plugins: [categoryPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     const cat = await h.factory.term.create({
@@ -3053,8 +3166,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [topicPlugin],
-      theme,
+      config: { plugins: [topicPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     const term = await h.factory.term.create({
@@ -3098,8 +3210,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [topicPlugin],
-      theme,
+      config: { plugins: [topicPlugin], theme: theme },
     });
     await h.factory.term.create({
       taxonomy: "topic",
@@ -3141,8 +3252,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [topicPlugin],
-      theme,
+      config: { plugins: [topicPlugin], theme: theme },
     });
     const writer = await h.factory.user.create({
       email: "secret@example.test",
@@ -3188,8 +3298,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [categoryPlugin],
-      theme,
+      config: { plugins: [categoryPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     const t = await h.factory.term.create({
@@ -3240,7 +3349,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3275,7 +3386,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3323,7 +3436,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [mixedPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [mixedPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3366,7 +3481,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3405,7 +3522,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3432,7 +3551,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
     const theme = defineTheme({
       templates: [fallback(() => null), frontPage(() => null)],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/page/0"),
@@ -3458,8 +3579,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, pagesPlugin],
-      theme,
+      config: { plugins: [blogPlugin, pagesPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3513,8 +3633,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [pagesPlugin, blogPostsPlugin],
-      theme,
+      config: { plugins: [pagesPlugin, blogPostsPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3546,8 +3665,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [homepagePlugin],
-      theme,
+      config: { plugins: [homepagePlugin], theme: theme },
     });
     const response = await h.dispatch(new Request("https://cms.example/"));
     const body = await response.text();
@@ -3571,7 +3689,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     h.spyFilter("resolve:front-page:data").override((data) => ({
       ...data,
       entries: data.entries.filter(
@@ -3631,7 +3751,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/search/hello"),
     );
@@ -3643,8 +3765,7 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("search results filter entries whose title matches the query", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: searchHitListTheme,
+      config: { plugins: [blogPlugin], theme: searchHitListTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3684,7 +3805,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     // 25 matches, default per-page 20 → page 2 has 5 entries
     for (let i = 0; i < 25; i++) {
@@ -3716,7 +3839,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/search"),
     );
@@ -3739,7 +3864,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3761,8 +3888,7 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("search results match a phrase in the entry excerpt", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: searchHitListTheme,
+      config: { plugins: [blogPlugin], theme: searchHitListTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3798,8 +3924,7 @@ describe("resolvePublicRoute — search through theme", () => {
   // filter rather than reassociating past it.
   test("an excerpt match on an unpublished entry stays out of the results", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: searchHitListTheme,
+      config: { plugins: [blogPlugin], theme: searchHitListTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3841,8 +3966,7 @@ describe("resolvePublicRoute — search through theme", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [mediaPlugin],
-      theme: searchHitListTheme,
+      config: { plugins: [mediaPlugin], theme: searchHitListTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3882,7 +4006,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3905,8 +4031,7 @@ describe("resolvePublicRoute — search through theme", () => {
     // Without escaping, SQLite LIKE treats `_` as a wildcard — a query of
     // `_` would match every entry. The framework escapes user wildcards.
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: searchHitListTheme,
+      config: { plugins: [blogPlugin], theme: searchHitListTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -3956,7 +4081,9 @@ describe("resolvePublicRoute — search through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     h.app.hooks.addFilter(
       "resolve:search:data",
       (data) => ({ ...data, query: `filtered:${data.query}` }),
@@ -3974,7 +4101,9 @@ describe("resolvePublicRoute — search through theme", () => {
     const theme = defineTheme({
       templates: [fallback(() => null), search(() => null)],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/search/anything/page/99"),
     );
@@ -3989,7 +4118,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       document: { titleTemplate: "%s · Plumix", title: "Q&A: $& explained" },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(new Request("https://cms.example/"));
 
     expect(await response.text()).toContain(
@@ -4006,7 +4137,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       document: { titleTemplate: "%s · Plumix" },
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/never-existed"),
     );
@@ -4034,8 +4167,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, headWriter],
-      theme,
+      config: { plugins: [blogPlugin, headWriter], theme: theme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/never-existed"),
@@ -4059,8 +4191,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
     });
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, brokenPlugin],
-      theme,
+      config: { plugins: [blogPlugin, brokenPlugin], theme: theme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/never-existed"),
@@ -4076,7 +4207,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       templates: [fallback(() => null), notFound(() => <main />)],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/never-existed"),
     );
@@ -4100,7 +4233,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/post/never-existed"),
     );
@@ -4120,7 +4255,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/post/never-existed"),
     );
@@ -4133,7 +4270,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       templates: [fallback(() => null)],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/post/never-existed"),
     );
@@ -4161,7 +4300,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -4196,7 +4337,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -4229,7 +4372,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     h.spyFilter("resolve:single:data").override(() => {
       throw new Error("kaboom-resolver-secret");
     });
@@ -4267,7 +4412,9 @@ describe("resolvePublicRoute — error pages through theme", () => {
       ],
     });
 
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -4330,12 +4477,14 @@ describe("html allowlist — operator config reaches the renderer", () => {
 
   test("an operator's extraTags/extraAttributes survive the render", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: htmlTheme,
-      blocks: {
-        htmlAllowlist: {
-          extraTags: ["img"],
-          extraAttributes: { img: ["src", "alt"] },
+      config: {
+        plugins: [blogPlugin],
+        theme: htmlTheme,
+        blocks: {
+          htmlAllowlist: {
+            extraTags: ["img"],
+            extraAttributes: { img: ["src", "alt"] },
+          },
         },
       },
     });
@@ -4350,8 +4499,7 @@ describe("html allowlist — operator config reaches the renderer", () => {
 
   test("without the override the same markup is stripped to the baseline", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: htmlTheme,
+      config: { plugins: [blogPlugin], theme: htmlTheme },
     });
     await seedHtmlEntry(h);
 
@@ -4369,12 +4517,14 @@ describe("html allowlist — operator config reaches the renderer", () => {
   // under it need pinning on the composed path, not just in their own unit.
   test("the floors still hold against an override that names denied tags", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: htmlTheme,
-      blocks: {
-        htmlAllowlist: {
-          extraTags: ["script", "iframe"],
-          extraAttributes: { p: ["onclick"] },
+      config: {
+        plugins: [blogPlugin],
+        theme: htmlTheme,
+        blocks: {
+          htmlAllowlist: {
+            extraTags: ["script", "iframe"],
+            extraAttributes: { p: ["onclick"] },
+          },
         },
       },
     });
@@ -4412,12 +4562,14 @@ describe("html allowlist — operator config reaches the renderer", () => {
 
   test("core/rich-text honours the override too, not just core/html", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: htmlTheme,
-      blocks: {
-        htmlAllowlist: {
-          extraTags: ["img"],
-          extraAttributes: { img: ["src"] },
+      config: {
+        plugins: [blogPlugin],
+        theme: htmlTheme,
+        blocks: {
+          htmlAllowlist: {
+            extraTags: ["img"],
+            extraAttributes: { img: ["src"] },
+          },
         },
       },
     });
@@ -4454,9 +4606,11 @@ describe("html allowlist — operator config reaches the renderer", () => {
   // assertion that the edit-mode dispatch actually joins them.
   test("an edit-mode dispatch embeds the operator's allowlist for the canvas", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: htmlTheme,
-      blocks: { htmlAllowlist: { extraTags: ["img"] } },
+      config: {
+        plugins: [blogPlugin],
+        theme: htmlTheme,
+        blocks: { htmlAllowlist: { extraTags: ["img"] } },
+      },
     });
     const author = await seedHtmlEntry(h);
 

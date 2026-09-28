@@ -80,7 +80,7 @@ export async function handleMagicLinkRequest(
         ? parsed.output.redirectTo
         : undefined,
       origin: ctx.origin,
-      basePath: app.basePath,
+      basePath: app.config.basePath,
       mailer: ctx.mailer,
       siteName: app.config.auth.magicLink.siteName,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
@@ -123,14 +123,14 @@ export async function handleMagicLinkVerify(
   app: PlumixApp,
 ): Promise<Response> {
   if (!app.config.auth.magicLink) {
-    return loginError(app.basePath, "token_invalid");
+    return loginError(app.config.basePath, "token_invalid");
   }
 
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError(app.basePath, "missing_token");
+  if (!token) return loginError(app.config.basePath, "missing_token");
   if (token.length > MAX_TOKEN_LENGTH)
-    return loginError(app.basePath, "token_invalid");
+    return loginError(app.config.basePath, "token_invalid");
 
   try {
     const { user, created } = await verifyMagicLink(ctx.db, token, {
@@ -146,7 +146,7 @@ export async function handleMagicLinkVerify(
     // otherwise the admin, as before.
     const destination = resolveSafeRedirect(
       url.searchParams.get("redirectTo"),
-      withBasePath(ADMIN_PATH, app.basePath),
+      withBasePath(ADMIN_PATH, app.config.basePath),
     );
     return redirectTo(destination, {
       "set-cookie": cookieHeader,
@@ -154,10 +154,10 @@ export async function handleMagicLinkVerify(
   } catch (error) {
     if (error instanceof MagicLinkError) {
       ctx.logger.warn("magic_link_verify_rejected", { code: error.code });
-      return loginError(app.basePath, error.code);
+      return loginError(app.config.basePath, error.code);
     }
     ctx.logger.error("magic_link_verify_failed", { error });
-    return loginError(app.basePath, "token_invalid");
+    return loginError(app.config.basePath, "token_invalid");
   }
 }
 

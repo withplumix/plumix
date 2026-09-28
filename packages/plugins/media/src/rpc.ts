@@ -205,7 +205,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
         return {
           uploadUrl: withBasePath(
             `/_plumix/media/upload/${String(created.id)}`,
-            context.basePath,
+            context.config.basePath,
           ),
           method: "PUT",
           headers: { "content-type": normalizedMime },
@@ -315,7 +315,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
         storage,
         meta.storageKey,
         published.id,
-        context.basePath,
+        context.config.basePath,
       );
       return {
         id: published.id,

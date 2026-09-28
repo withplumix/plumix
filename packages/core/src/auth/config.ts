@@ -126,16 +126,8 @@ export interface PlumixAuthInput {
   readonly loginPath?: string;
 }
 
-export interface PlumixAuthConfig {
+export interface PlumixAuthConfig extends PlumixAuthInput {
   readonly kind: "plumix";
-  readonly passkey: PasskeyConfig;
-  readonly sessions?: SessionPolicy;
-  readonly oauth?: PlumixOAuthConfig;
-  readonly magicLink?: PlumixMagicLinkConfig;
-  readonly authenticator?: RequestAuthenticator;
-  readonly bootstrapVia?: BootstrapVia;
-  readonly selfSignup?: PlumixSelfSignupConfig;
-  readonly loginPath?: string;
 }
 
 export interface PlumixConfigIssue {
@@ -408,7 +400,7 @@ const authInputSchema = v.object({
       ),
     ),
   ),
-});
+} satisfies { readonly [K in keyof PlumixAuthInput]?: v.GenericSchema });
 
 function toIssues(
   issues: readonly v.BaseIssue<unknown>[],
@@ -425,15 +417,5 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     const issues = toIssues(result.issues);
     throw PlumixConfigError.invalidAuthConfig({ issues });
   }
-  return {
-    kind: "plumix",
-    passkey: input.passkey,
-    sessions: input.sessions,
-    oauth: input.oauth,
-    magicLink: input.magicLink,
-    authenticator: input.authenticator,
-    bootstrapVia: input.bootstrapVia,
-    selfSignup: input.selfSignup,
-    loginPath: input.loginPath,
-  };
+  return { ...input, kind: "plumix" };
 }

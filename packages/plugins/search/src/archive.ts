@@ -50,7 +50,7 @@ function pageUrl(
 ): string {
   return withBasePath(
     `/search/${encodeURIComponent(query)}/page/${String(page)}`,
-    appCtx.basePath,
+    appCtx.config.basePath,
   );
 }
 

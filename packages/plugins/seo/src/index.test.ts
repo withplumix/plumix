@@ -72,7 +72,9 @@ const photoPlugin = definePlugin("photos", (ctx) => {
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
 function createHarness(): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [blogPlugin, seo()], theme });
+  return createDispatcherHarness({
+    config: { plugins: [blogPlugin, seo()], theme: theme },
+  });
 }
 
 async function seedSettings(
@@ -218,8 +220,7 @@ describe("head meta", () => {
     // type's fields for one, so a role field an appearance box nests in a
     // group answers where the walk this replaced saw nothing.
     const h = await createDispatcherHarness({
-      plugins: [photoPlugin, seo()],
-      theme,
+      config: { plugins: [photoPlugin, seo()], theme: theme },
     });
     await seedPost(h, { meta: { appearance: { hero: "p1" } } });
 
@@ -239,8 +240,7 @@ describe("head meta", () => {
 
   test("a photo nobody described carries neither alt tag", async () => {
     const h = await createDispatcherHarness({
-      plugins: [photoPlugin, seo()],
-      theme,
+      config: { plugins: [photoPlugin, seo()], theme: theme },
     });
     await seedPost(h, { meta: { appearance: { hero: "p2" } } });
 
@@ -266,13 +266,15 @@ describe("head meta", () => {
 
   test("a theme-set head field wins and is not duplicated", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, seo()],
-      theme: defineTheme({
-        templates: [fallback(() => null)],
-        document: {
-          meta: [{ property: "og:site_name", content: "From Theme" }],
-        },
-      }),
+      config: {
+        plugins: [blogPlugin, seo()],
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          document: {
+            meta: [{ property: "og:site_name", content: "From Theme" }],
+          },
+        }),
+      },
     });
     await seedSettings(h, "site", { title: "Demo" });
     await seedPost(h);
@@ -300,7 +302,9 @@ describe("head meta", () => {
       [blogPlugin, seo(), custom],
       [blogPlugin, custom, seo()],
     ]) {
-      const h = await createDispatcherHarness({ plugins, theme });
+      const h = await createDispatcherHarness({
+        config: { plugins: plugins, theme: theme },
+      });
       await seedSettings(h, "site", { tagline: "A tagline" });
       await seedPost(h, { excerpt: "My excerpt" });
 
@@ -314,7 +318,9 @@ describe("head meta", () => {
   });
 
   test("no head meta at all without the plugin installed", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     await seedSettings(h, "site", { title: "Demo" });
     await seedPost(h);
 
@@ -339,8 +345,7 @@ describe("the og:image chain", () => {
 
   test("a subscriber's image outranks the site default", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, seo(), card],
-      theme,
+      config: { plugins: [blogPlugin, seo(), card], theme: theme },
     });
     await seedSettings(h, "seo", {
       default_og_image: "https://cms.example/og.png",
@@ -364,7 +369,9 @@ describe("the og:image chain", () => {
       [blogPlugin, seo(), card],
       [blogPlugin, card, seo()],
     ]) {
-      const h = await createDispatcherHarness({ plugins, theme });
+      const h = await createDispatcherHarness({
+        config: { plugins: plugins, theme: theme },
+      });
       await seedSettings(h, "seo", {
         default_og_image: "https://cms.example/og.png",
       });
@@ -510,8 +517,7 @@ describe("per-entry overrides", () => {
       }));
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, seo(), card],
-      theme,
+      config: { plugins: [blogPlugin, seo(), card], theme: theme },
     });
     await seedSettings(h, "seo", {
       default_og_image: "https://cms.example/og.png",
@@ -554,11 +560,13 @@ describe("per-entry overrides", () => {
 
   test("a search title is the whole title, not a fragment for a template", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, seo()],
-      theme: defineTheme({
-        templates: [fallback(() => null)],
-        document: { titleTemplate: "%s · Demo" },
-      }),
+      config: {
+        plugins: [blogPlugin, seo()],
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          document: { titleTemplate: "%s · Demo" },
+        }),
+      },
     });
     await seedPost(h, { meta: { seo_title: "How to knead dough" } });
 

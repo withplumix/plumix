@@ -65,11 +65,13 @@ export async function createFormsHarness(
   options: FormsHarnessOptions = {},
 ): Promise<FormsHarness> {
   const harness = await createDispatcherHarness({
-    plugins: [blog, ...plugins],
-    theme: themeWith(options.themeBlocks ?? [], options.entryTemplate),
     env: options.env,
     clientAddress: options.clientAddress,
-    basePath: options.basePath,
+    config: {
+      plugins: [blog, ...plugins],
+      theme: themeWith(options.themeBlocks ?? [], options.entryTemplate),
+      basePath: options.basePath,
+    },
   });
   await applyFormsSchema(harness.db);
   return harness;

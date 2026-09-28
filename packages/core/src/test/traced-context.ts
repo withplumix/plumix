@@ -39,8 +39,10 @@ export async function createTracedContext(
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
     shortcodes: harness.app.shortcodes,
-    telemetry: {
-      consumers: [{ id: "traced-context", onRequestEnd: () => undefined }],
+    config: {
+      telemetry: {
+        consumers: [{ id: "traced-context", onRequestEnd: () => undefined }],
+      },
     },
   });
   const dbSpans = (): readonly TelemetrySpan[] =>

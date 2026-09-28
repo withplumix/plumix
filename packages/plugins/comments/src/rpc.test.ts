@@ -2,12 +2,11 @@ import type { RequestAuthenticator } from "plumix/auth";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {
-  createAppContext,
   createPluginRegistry,
   HookRegistry,
   installPlugins,
 } from "plumix/plugin";
-import { editorUser, factoriesFor } from "plumix/test";
+import { createTestContext, editorUser, factoriesFor } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import type { ModerationCommentDTO } from "./rpc.js";
@@ -53,7 +52,7 @@ async function buildHarness(role: UserRole = "editor") {
       ? await editorUser.transient({ db }).create({})
       : await factoriesFor(db).user.create({ role });
 
-  const ctx = createAppContext({
+  const ctx = createTestContext({
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),

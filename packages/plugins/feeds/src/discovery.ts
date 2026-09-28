@@ -23,7 +23,7 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
   const pathname = new URL(ctx.request.url).pathname;
   const feedPath = feedUnder(listingPath(route, pathname));
   return servesFeed(ctx.plugins, archive, feedPath)
-    ? withBasePath(feedPath, ctx.basePath)
+    ? withBasePath(feedPath, ctx.config.basePath)
     : null;
 }
 

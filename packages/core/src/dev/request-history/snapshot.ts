@@ -55,11 +55,10 @@ export type DebugContextSource = Pick<
   AppContext,
   | "request"
   | "origin"
-  | "basePath"
+  | "config"
   | "resolvedEntity"
   | "user"
   | "tokenScopes"
-  | "siteName"
   | "locale"
   | "cdn"
   | "storage"
@@ -86,11 +85,11 @@ export function projectDebugSnapshot(
       method: ctx.request.method,
       path: url.pathname,
       origin: ctx.origin,
-      basePath: ctx.basePath,
+      basePath: ctx.config.basePath,
       resolvedEntity: ctx.resolvedEntity,
       user: ctx.user ? { email: ctx.user.email, role: ctx.user.role } : null,
       tokenScopes: ctx.tokenScopes,
-      siteName: ctx.siteName ?? null,
+      siteName: ctx.config.auth.magicLink?.siteName ?? null,
       locale: { code: ctx.locale.code, direction: ctx.locale.direction },
       slots: {
         cdn: Boolean(ctx.cdn),

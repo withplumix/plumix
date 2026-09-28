@@ -14,7 +14,9 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 async function harness(): Promise<
   Awaited<ReturnType<typeof createDispatcherHarness>>
 > {
-  const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+  const h = await createDispatcherHarness({
+    config: { plugins: [blogPlugin] },
+  });
   const author = await h.seedUser("admin");
   await h.factory.entry.create({
     type: "post",

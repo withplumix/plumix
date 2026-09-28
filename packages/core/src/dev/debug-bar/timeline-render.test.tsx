@@ -24,7 +24,9 @@ describe("debug bar Timeline panel (end to end)", () => {
 
   test("records dispatch, resolve, render, and database spans for a real render", async () => {
     process.env.PLUMIX_DEV = "1";
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",

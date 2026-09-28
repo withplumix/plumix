@@ -5,7 +5,6 @@ import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { and, eq } from "plumix/db";
 import {
-  createAppContext,
   createPluginRegistry,
   definePlugin,
   HookRegistry,
@@ -15,6 +14,7 @@ import {
 import { settings, terms } from "plumix/schema";
 import {
   adminUser,
+  createTestContext,
   createTestDb,
   editorUser,
   entryFactory,
@@ -93,7 +93,7 @@ async function buildHarness(
         ? await editorUser.transient({ db }).create({})
         : await factories.user.create({ role });
 
-  const ctx = createAppContext({
+  const ctx = createTestContext({
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),

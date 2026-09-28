@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { resolveReturnUrl } from "./return-url.js";
 
 const SUBMIT = "/_plumix/forms/submit";
-const ctx = { origin: "https://site.example", basePath: "" };
+const ctx = { origin: "https://site.example", config: { basePath: "" } };
 
 const post = (
   url = `https://site.example${SUBMIT}`,
@@ -85,7 +85,10 @@ describe("resolveReturnUrl", () => {
   });
 
   describe("under a subdirectory deployment", () => {
-    const sub = { origin: "https://site.example", basePath: "/blog" };
+    const sub = {
+      origin: "https://site.example",
+      config: { basePath: "/blog" },
+    };
     const request = post(`https://site.example/blog${SUBMIT}`);
 
     test("refuses the endpoint at its based path", () => {

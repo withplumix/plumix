@@ -641,7 +641,10 @@ describe("auth.mailer.testSend", () => {
         return Promise.resolve();
       },
     };
-    const h = await createRpcHarness({ authAs: "admin", mailer });
+    const h = await createRpcHarness({
+      authAs: "admin",
+      config: { mailer: mailer },
+    });
 
     const result = await h.client.auth.mailer.testSend({
       to: "ops@example.com",
@@ -658,7 +661,10 @@ describe("auth.mailer.testSend", () => {
     const mailer: Mailer = {
       send: () => Promise.reject(new Error("smtp boom")),
     };
-    const h = await createRpcHarness({ authAs: "admin", mailer });
+    const h = await createRpcHarness({
+      authAs: "admin",
+      config: { mailer: mailer },
+    });
 
     await expect(
       h.client.auth.mailer.testSend({ to: "ops@example.com" }),

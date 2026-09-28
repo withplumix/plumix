@@ -74,7 +74,9 @@ describe("debug bar plugin panel", () => {
 
   test("a plugin records during a request and its panel shows the data", async () => {
     process.env.PLUMIX_DEV = "1";
-    const h = await createDispatcherHarness({ plugins: [demoPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [demoPlugin], theme: theme },
+    });
 
     const html = await seedAndRender(h);
 
@@ -88,9 +90,11 @@ describe("debug bar plugin panel", () => {
   test("disabling the panel removes both its render and its data", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
-      plugins: [demoPlugin],
-      theme,
-      dev: { panels: { "debug-demo": false } },
+      config: {
+        plugins: [demoPlugin],
+        theme,
+        dev: { panels: { "debug-demo": false } },
+      },
     });
 
     const html = await seedAndRender(h);

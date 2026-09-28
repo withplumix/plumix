@@ -40,7 +40,9 @@ const contentPlugin = definePlugin("content", (ctx) => {
 });
 
 function createHarness(options?: SeoOptions): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [contentPlugin, seo(options)] });
+  return createDispatcherHarness({
+    config: { plugins: [contentPlugin, seo(options)] },
+  });
 }
 
 function entryBoxScope(h: DispatcherHarness): readonly string[] | undefined {
@@ -64,7 +66,9 @@ describe("a registry name that cannot be a settings key", () => {
       ctx.registerEntryType("fine", { label: "Fine", isPublic: true });
     });
 
-    const h = await createDispatcherHarness({ plugins: [oddly, seo()] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [oddly, seo()] },
+    });
 
     const group = h.app.plugins.settingsGroups.get("seo");
     const keys = group?.fields.map((field) => field.key) ?? [];
@@ -100,7 +104,9 @@ describe("SEO meta box scope", () => {
         access: { default: membersOnlyPolicy },
       });
     });
-    const h = await createDispatcherHarness({ plugins: [gated, seo()] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [gated, seo()] },
+    });
 
     expect(entryBoxScope(h)).toEqual(["post", "lesson"]);
   });

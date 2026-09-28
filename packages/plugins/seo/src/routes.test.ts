@@ -234,17 +234,24 @@ function settingsSaver(group: string): AnyPluginDescriptor {
   });
 }
 
+type HarnessConfig = NonNullable<CreateDispatcherHarnessOptions["config"]>;
+
 function createHarness(
   plugins: readonly AnyPluginDescriptor[] = [blogPlugin],
   options: {
     readonly cdn?: ConnectedCdn;
     readonly basePath?: string;
     readonly logger?: Logger;
-    readonly telemetry?: CreateDispatcherHarnessOptions["telemetry"];
-    readonly theme?: CreateDispatcherHarnessOptions["theme"];
+    readonly telemetry?: HarnessConfig["telemetry"];
+    readonly theme?: HarnessConfig["theme"];
   } = {},
 ): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [...plugins, seo()], ...options });
+  const { cdn, logger, ...slots } = options;
+  return createDispatcherHarness({
+    cdn,
+    logger,
+    config: { ...slots, plugins: [...plugins, seo()] },
+  });
 }
 
 // `plumix` exports no span type; this is the part of one a query count reads.

@@ -57,8 +57,8 @@ async function hashThroughHarness(clientAddress?: string): Promise<{
   readonly hash: string;
 }> {
   const harness = await createDispatcherHarness({
-    plugins: [echoVisitorHash],
     clientAddress,
+    config: { plugins: [echoVisitorHash] },
   });
   const response = await harness.fetch(HASH_ROUTE);
   response.assertStatus(200);
@@ -143,8 +143,8 @@ describe("readVisitorMeta", () => {
 
   test("buckets two visitors of one install apart, by the address each request carried", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [echoVisitorHash],
       clientAddress: "203.0.113.7",
+      config: { plugins: [echoVisitorHash] },
     });
 
     const overridden = await harness.fetch(HASH_ROUTE, {
@@ -167,8 +167,8 @@ describe("readVisitorMeta", () => {
 
   test("carries the address a hand-built request was dispatched with", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [echoVisitorHash],
       clientAddress: "203.0.113.7",
+      config: { plugins: [echoVisitorHash] },
     });
 
     const response = await harness.dispatch(

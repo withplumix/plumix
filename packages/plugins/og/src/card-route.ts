@@ -53,7 +53,7 @@ export function cardUrl(
   extension: string,
 ): string {
   const path = `${CARD_URL_PREFIX}/${cardAssetPath(target, digest, extension)}`;
-  return `${ctx.origin}${withBasePath(path, ctx.basePath)}`;
+  return `${ctx.origin}${withBasePath(path, ctx.config.basePath)}`;
 }
 
 // Names one card within the site, and is the last segments of both the URL and

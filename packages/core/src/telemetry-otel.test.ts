@@ -102,12 +102,14 @@ async function otelHarness(
   const { calls, fetchStub } = capturingFetch();
   const snapshots: TelemetrySnapshot[] = [];
   const h = await createDispatcherHarness({
-    ...harness,
-    telemetry: {
-      consumers: [
-        otelConsumer({ endpoint: ENDPOINT, fetch: fetchStub, ...consumer }),
-        { id: "probe", onRequestEnd: (s) => void snapshots.push(s) },
-      ],
+    config: {
+      ...harness,
+      telemetry: {
+        consumers: [
+          otelConsumer({ endpoint: ENDPOINT, fetch: fetchStub, ...consumer }),
+          { id: "probe", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
     },
   });
   return { h, calls, snapshots };

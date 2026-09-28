@@ -1,7 +1,15 @@
-import { expect, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
 
+import type {
+  AnyPluginDescriptor,
+  PlumixConfig,
+  PlumixConfigInput,
+} from "./config.js";
+import type { ResolvedI18n } from "./i18n/locale-registry.js";
+import type { RedirectRule } from "./route/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type { DatabaseAdapter, ImageDelivery } from "./runtime/slots.js";
+import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { fallback } from "./route/render/template-builders.js";
@@ -174,4 +182,63 @@ test("plumix() carries the raw dev config through untouched", () => {
 test("plumix() leaves dev undefined when unset", () => {
   const config = plumix({ runtime, database, auth: authConfig });
   expect(config.dev).toBeUndefined();
+});
+
+// `Required` makes a newly declared slot a compile error here until it is set,
+// so the identity check below covers it without anyone remembering to.
+const everySlot: Required<PlumixConfigInput> = {
+  runtime,
+  database,
+  auth: authConfig,
+  storage: { kind: "mock", connect: () => ({}) as never },
+  imageDelivery: { kind: "mock", url: (src) => src },
+  kv: { kind: "mock", connect: () => ({}) as never },
+  cdn: { kind: "mock", connect: () => null },
+  mailer: { send: () => Promise.resolve() },
+  theme,
+  plugins: [],
+  i18n: { defaultLocale: "en", locales: ["en", "fr"] },
+  redirects: [],
+  basePath: "/docs/",
+  mcp: { enabled: true },
+  api: { enabled: true },
+  dev: { bar: false },
+  telemetry: { consumers: [] },
+  blocks: { htmlAllowlist: {} },
+  images: { remotePatterns: [] },
+  vite: {},
+};
+
+const RESOLVED_SLOTS = new Set([
+  "theme",
+  "plugins",
+  "i18n",
+  "redirects",
+  "basePath",
+]);
+
+test("plumix() hands every pass-through slot on as the object the operator wrote", () => {
+  const config = plumix(everySlot);
+  const passThrough = Object.keys(everySlot).filter(
+    (key) => !RESOLVED_SLOTS.has(key),
+  );
+  expect(passThrough.length).toBeGreaterThan(0);
+  for (const key of passThrough) {
+    expect(config[key as keyof PlumixConfig], key).toBe(
+      everySlot[key as keyof PlumixConfigInput],
+    );
+  }
+});
+
+test("PlumixConfig declares exactly the input's slots, resolving only the five it normalizes", () => {
+  expectTypeOf<keyof PlumixConfig>().toEqualTypeOf<keyof PlumixConfigInput>();
+  expectTypeOf<PlumixConfig["theme"]>().toEqualTypeOf<ThemeDescriptor>();
+  expectTypeOf<PlumixConfig["plugins"]>().toEqualTypeOf<
+    readonly AnyPluginDescriptor[]
+  >();
+  expectTypeOf<PlumixConfig["i18n"]>().toEqualTypeOf<ResolvedI18n>();
+  expectTypeOf<PlumixConfig["redirects"]>().toEqualTypeOf<
+    readonly RedirectRule[]
+  >();
+  expectTypeOf<PlumixConfig["basePath"]>().toEqualTypeOf<string>();
 });

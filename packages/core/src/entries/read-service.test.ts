@@ -476,7 +476,7 @@ describe("reference meta resolution", () => {
       });
     });
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [refsPlugin],
+      config: { plugins: [refsPlugin] },
     });
     const users = await Promise.all(
       Array.from({ length: 3 }, () => harness.factory.user.create({})),

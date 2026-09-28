@@ -25,7 +25,9 @@ async function seeded(
   argv: readonly string[],
   database?: PlumixApp["config"]["database"],
 ) {
-  const harness = await createDispatcherHarness({ plugins: [plugin] });
+  const harness = await createDispatcherHarness({
+    config: { plugins: [plugin] },
+  });
   const author = await harness.factory.user.create({});
   const post = await harness.factory.entry.create({
     authorId: author.id,

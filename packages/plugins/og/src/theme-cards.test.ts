@@ -34,16 +34,18 @@ async function createHarness(
 ): Promise<DispatcherHarness> {
   const face = new Uint8Array([0x00, 0x01, 0x00, 0x00]);
   return createDispatcherHarness({
-    plugins: [
-      testBlog,
-      og({ renderer: createFakeRenderer().renderer, fonts: options.fonts }),
-    ],
     storage: memoryStorage().connect({}),
     assets: { fetch: () => Promise.resolve(new Response(face)) },
-    theme: defineTheme({
-      templates: [fallback(() => null)],
-      ogCards: options.cards,
-    }),
+    config: {
+      plugins: [
+        testBlog,
+        og({ renderer: createFakeRenderer().renderer, fonts: options.fonts }),
+      ],
+      theme: defineTheme({
+        templates: [fallback(() => null)],
+        ogCards: options.cards,
+      }),
+    },
   });
 }
 

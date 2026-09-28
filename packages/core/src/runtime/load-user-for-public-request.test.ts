@@ -126,7 +126,7 @@ describe("dispatchPublicRoute → loadUserForPublicRequest wiring", () => {
     const authenticate =
       vi.fn<(request: Request) => Promise<AuthResult | null>>();
     const h = await createDispatcherHarness({
-      authenticator: { authenticate },
+      config: { auth: { authenticator: { authenticate } } },
     });
 
     await h.dispatch(plumixRequest("/", { method: "GET" }));
@@ -139,7 +139,7 @@ describe("dispatchPublicRoute → loadUserForPublicRequest wiring", () => {
       (request: Request) => Promise<AuthResult | null>
     >(() => Promise.resolve(null));
     const h = await createDispatcherHarness({
-      authenticator: { authenticate },
+      config: { auth: { authenticator: { authenticate } } },
     });
     const user = await h.seedUser("editor");
     const request = await h.authenticateRequest(
@@ -154,8 +154,12 @@ describe("dispatchPublicRoute → loadUserForPublicRequest wiring", () => {
 
   test("authenticator throwing on a public request degrades through the existing error boundary instead of escaping the dispatcher", async () => {
     const h = await createDispatcherHarness({
-      authenticator: {
-        authenticate: () => Promise.reject(new Error("db blip")),
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.reject(new Error("db blip")),
+          },
+        },
       },
     });
     const user = await h.seedUser("editor");

@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import type { AppContext, Db } from "./app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { testConfig } from "../test/config.js";
 import { createDeferQueue } from "../test/defer.js";
 import { createAppContext } from "./app.js";
 
@@ -40,6 +41,7 @@ describe("ctx.defer — runnable example", () => {
       db: stubDb,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: new HookRegistry(),
       plugins: createPluginRegistry(),
       defer: queue.defer,

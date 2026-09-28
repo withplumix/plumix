@@ -534,7 +534,7 @@ function renderTree({
         shortcodes: ctx.shortcodes,
         entry,
         siteSettings,
-        basePath: ctx.basePath,
+        basePath: ctx.config.basePath,
         imageResolver: imageDelivery
           ? (src, opts) =>
               imageDelivery.url(src, {
@@ -544,7 +544,7 @@ function renderTree({
                 format: opts?.format as TransformOpts["format"],
               })
           : undefined,
-        imageRemotePatterns: ctx.imageRemotePatterns,
+        imageRemotePatterns: ctx.config.images?.remotePatterns,
         renderFilters,
       },
     },
@@ -557,7 +557,7 @@ function renderTree({
       : createElement(PlumixAdminBar, {
           hooks: ctx.hooks,
           request: ctx.request,
-          siteName: ctx.siteName ?? "Site",
+          siteName: ctx.config.auth.magicLink?.siteName ?? "Site",
           auth: ctx.auth,
           queriedEntryDetails,
           entryTypes: ctx.plugins.entryTypes,
@@ -622,9 +622,9 @@ function renderTree({
     hoisted +
     titleFallback +
     voidTagsToHtml("link", document.link) +
-    bundledCssTags(assetManifest, command, ctx.basePath) +
-    devThemeCssLinks(themeCss, command, ctx.basePath) +
-    devThemeStylesTag(command, ctx.basePath) +
+    bundledCssTags(assetManifest, command, ctx.config.basePath) +
+    devThemeCssLinks(themeCss, command, ctx.config.basePath) +
+    devThemeStylesTag(command, ctx.config.basePath) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
@@ -632,14 +632,14 @@ function renderTree({
     body,
     assetManifest,
     command,
-    ctx.basePath,
+    ctx.config.basePath,
   );
   const withRuntimes = injectEditorBootstrap(
     withIslands,
     editMode.injectRuntime,
     assetManifest,
     command,
-    ctx.basePath,
+    ctx.config.basePath,
   );
   const bodyContent =
     scripts.bodyStart.map(scriptToHtml).join("") +

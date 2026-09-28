@@ -40,9 +40,7 @@ const linkTheme = defineTheme({
 
 test("Link resolves entry/term permalinks with the configured basePath", async () => {
   const h = await createDispatcherHarness({
-    plugins: [blog],
-    theme: linkTheme,
-    basePath: "/blog",
+    config: { plugins: [blog], theme: linkTheme, basePath: "/blog" },
   });
   const author = await h.seedUser("admin");
   const term = await h.factory.term.create({

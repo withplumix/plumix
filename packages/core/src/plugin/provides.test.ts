@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { createAppContext } from "../context/app.js";
 import { getContext, requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import { definePlugin } from "./define.js";
@@ -191,6 +192,7 @@ describe("provides phase", () => {
       db: stubDb,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: result.hooks,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,
@@ -214,6 +216,7 @@ describe("provides phase", () => {
         db: stubDb,
         env: {},
         request: new Request("https://x.example/"),
+        config: testConfig(),
         hooks: new HookRegistry(),
         plugins: { entryTypes: new Map() } as never,
         appContextExtensions: malformed,
@@ -247,6 +250,7 @@ describe("provides phase", () => {
       db: stubDb,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: result.hooks,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,

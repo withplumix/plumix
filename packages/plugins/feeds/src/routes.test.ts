@@ -28,7 +28,9 @@ import { FEED_TAG } from "./respond.js";
 function harness(
   ...plugins: readonly AnyPluginDescriptor[]
 ): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [...plugins, feeds()] });
+  return createDispatcherHarness({
+    config: { plugins: [...plugins, feeds()] },
+  });
 }
 
 // `plumix` exports no span type; this is the part of one these tests read.
@@ -316,16 +318,18 @@ describe("feed routes", () => {
     ): Promise<{ readonly queries: number; readonly body: string }> {
       let queries = 0;
       const h = await createDispatcherHarness({
-        plugins: [pagesPlugin, feeds()],
-        telemetry: {
-          consumers: [
-            {
-              id: "query-count",
-              onRequestEnd: (snapshot) => {
-                queries = countDbSpans(snapshot.spans);
+        config: {
+          plugins: [pagesPlugin, feeds()],
+          telemetry: {
+            consumers: [
+              {
+                id: "query-count",
+                onRequestEnd: (snapshot) => {
+                  queries = countDbSpans(snapshot.spans);
+                },
               },
-            },
-          ],
+            ],
+          },
         },
       });
       const author = await h.seedUser("admin");
@@ -1164,16 +1168,18 @@ describe("archive-type feeds", () => {
       plugins: readonly AnyPluginDescriptor[],
     ): Promise<{ readonly reads: number; readonly body: string }> {
       const h = await createDispatcherHarness({
-        plugins,
-        telemetry: {
-          consumers: [
-            {
-              id: "sql",
-              onRequestEnd: (snapshot) => {
-                statements = sqlOf(snapshot.spans);
+        config: {
+          plugins,
+          telemetry: {
+            consumers: [
+              {
+                id: "sql",
+                onRequestEnd: (snapshot) => {
+                  statements = sqlOf(snapshot.spans);
+                },
               },
-            },
-          ],
+            ],
+          },
         },
       });
       await h.factory.category.create({ slug: "summer" });
@@ -1289,8 +1295,10 @@ describe("archive-type feeds", () => {
 
   test("the advertised feed carries the base prefix", async () => {
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      plugins: [eventsPlugin, feeds()],
+      config: {
+        basePath: "/custom-directory",
+        plugins: [eventsPlugin, feeds()],
+      },
     });
     expect(await advertised(h, "/custom-directory/events/summer")).toEqual([
       "https://cms.example/custom-directory/events/summer/feed",
@@ -1579,8 +1587,7 @@ describe("the site's own settings", () => {
 
   test("the feed carries the base prefix in its item links and its self URL", async () => {
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      plugins: [blogPlugin, feeds()],
+      config: { basePath: "/custom-directory", plugins: [blogPlugin, feeds()] },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -1669,8 +1676,8 @@ describe("a feed at the edge", () => {
   test("declares a shared freshness window and is stored under the type it lists", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, feeds()],
       cdn,
+      config: { plugins: [blogPlugin, feeds()] },
     });
     await seedPost(h, "hello", "Hello World");
 
@@ -1687,8 +1694,8 @@ describe("a feed at the edge", () => {
   test("publishing a post purges every cached feed it can appear in", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogWithTaxonomyPlugin, feeds()],
       cdn,
+      config: { plugins: [blogWithTaxonomyPlugin, feeds()] },
     });
     await h.factory.category.create({ slug: "news", name: "News" });
     const paths = ["/feed", "/post/feed", "/category/news/feed"];
@@ -1717,7 +1724,10 @@ describe("a feed at the edge", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerTermTaxonomy("topic", { label: "Topics" });
     });
-    const h = await createDispatcherHarness({ plugins: [site, feeds()], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [site, feeds()] },
+    });
     const admin = await h.seedUser("admin");
     const topic = await h.factory.term.create({
       taxonomy: "topic",
@@ -1752,8 +1762,8 @@ describe("a feed at the edge", () => {
   test("renaming an author purges their cached feed", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, feeds()],
       cdn,
+      config: { plugins: [blogPlugin, feeds()] },
     });
     const admin = await h.seedUser("admin");
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
@@ -1786,8 +1796,8 @@ describe("a feed at the edge", () => {
   test("deleting an author purges their cached feed", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, feeds()],
       cdn,
+      config: { plugins: [blogPlugin, feeds()] },
     });
     const admin = await h.seedUser("admin");
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
@@ -1820,8 +1830,8 @@ describe("a feed at the edge", () => {
   test("a plugin archive that never opted into caching serves its feed live", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [seriesArchive(false), feeds()],
       cdn,
+      config: { plugins: [seriesArchive(false), feeds()] },
     });
 
     const res = await h.fetch("/series/summer/feed");
@@ -1835,8 +1845,8 @@ describe("a feed at the edge", () => {
   test("a plugin archive's feed is purged by a publish of any type its scope can read", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [seriesArchive(true), feeds()],
       cdn,
+      config: { plugins: [seriesArchive(true), feeds()] },
     });
     (await h.fetch("/series/summer/feed")).assertStatus(200);
     await h.drainDeferred();
@@ -1853,8 +1863,8 @@ describe("a feed at the edge", () => {
   test("saving the site settings purges every cached feed", async () => {
     const { cdn, put, purgeTags } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, feeds()],
       cdn,
+      config: { plugins: [blogPlugin, feeds()] },
     });
     const admin = await h.seedUser("admin");
     (await h.fetch("/post/feed")).assertStatus(200);
@@ -1876,8 +1886,8 @@ describe("a feed at the edge", () => {
   test("a private site's feed 404s and is never stored", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, feeds()],
       cdn,
+      config: { plugins: [blogPlugin, feeds()] },
     });
     await seedPost(h, "hello", "Hello World");
     await h.factory.setting.create({
@@ -1897,7 +1907,9 @@ describe("a feed at the edge", () => {
 
 describe("without the plugin installed", () => {
   test("nothing serves a feed and no page advertises one", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await seedPost(h, "hello", "Hello World");
 
     (await h.fetch("/feed")).assertStatus(404);

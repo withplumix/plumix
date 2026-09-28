@@ -11,7 +11,9 @@ const DEFAULT_EXPORT = 'export * from "@plumix/plugin-audit-log/schema";';
 
 let app: PlumixApp;
 beforeAll(async () => {
-  ({ app } = await createDispatcherHarness({ plugins: [auditLog()] }));
+  ({ app } = await createDispatcherHarness({
+    config: { plugins: [auditLog()] },
+  }));
 });
 
 function emittedSchema(storage?: AuditLogStorage): string {
@@ -43,14 +45,16 @@ describe("auditLog() — plumix migrate generate", () => {
   test("binds a custom storage's own tables for runtime queries", async () => {
     const events = sqliteTable("audit_events", (t) => ({ id: t.integer() }));
     const { app: custom } = await createDispatcherHarness({
-      plugins: [
-        auditLog({
-          storage: sink({
-            module: { events },
-            specifier: "@example/audit-sink/schema",
+      config: {
+        plugins: [
+          auditLog({
+            storage: sink({
+              module: { events },
+              specifier: "@example/audit-sink/schema",
+            }),
           }),
-        }),
-      ],
+        ],
+      },
     });
 
     expect(custom.schema.events).toBe(events);

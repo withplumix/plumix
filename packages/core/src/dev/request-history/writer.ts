@@ -35,7 +35,8 @@ export function debugHistoryConsumer(
   return {
     id: "debug-history",
     onRequestEnd: (snapshot, ctx) => {
-      if (isRingReader(new URL(ctx.request.url).pathname, ctx.basePath)) return;
+      if (isRingReader(new URL(ctx.request.url).pathname, ctx.config.basePath))
+        return;
       history.save({
         id: snapshot.request.requestId,
         startedAt: snapshot.request.startedAt,

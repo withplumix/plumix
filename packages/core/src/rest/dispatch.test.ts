@@ -99,9 +99,8 @@ function restHarness(
   options: CreateDispatcherHarnessOptions = {},
 ): Promise<DispatcherHarness> {
   return createDispatcherHarness({
-    api: { enabled: true },
-    plugins: [blog],
     ...options,
+    config: { api: { enabled: true }, plugins: [blog], ...options.config },
   });
 }
 
@@ -311,21 +310,23 @@ describe("REST API — entry titles", () => {
   test("resolving the entries costs no more queries than the resource did before", async () => {
     let queries = 0;
     const h = await restHarness({
-      telemetry: {
-        consumers: [
-          {
-            id: "query-count",
-            onRequestEnd: (snapshot) => {
-              const flatten = (
-                spans: readonly TelemetrySpan[],
-              ): TelemetrySpan[] =>
-                spans.flatMap((span) => [span, ...flatten(span.children)]);
-              queries = flatten(snapshot.spans).filter((span) =>
-                span.name.startsWith("db: "),
-              ).length;
+      config: {
+        telemetry: {
+          consumers: [
+            {
+              id: "query-count",
+              onRequestEnd: (snapshot) => {
+                const flatten = (
+                  spans: readonly TelemetrySpan[],
+                ): TelemetrySpan[] =>
+                  spans.flatMap((span) => [span, ...flatten(span.children)]);
+                queries = flatten(snapshot.spans).filter((span) =>
+                  span.name.startsWith("db: "),
+                ).length;
+              },
             },
-          },
-        ],
+          ],
+        },
       },
     });
     const count = async (path: string): Promise<number> => {
@@ -458,7 +459,7 @@ describe("REST API — pagination", () => {
 
 describe("REST API — type exposure", () => {
   test("a custom public type is reachable automatically", async () => {
-    const h = await restHarness({ plugins: [catalog] });
+    const h = await restHarness({ config: { plugins: [catalog] } });
     await seedPublished(h, 1, "book");
 
     const res = await h.dispatch(apiGet("/_plumix/api/v1/books"));
@@ -469,7 +470,7 @@ describe("REST API — type exposure", () => {
   });
 
   test("a non-public type is not exposed (404)", async () => {
-    const h = await restHarness({ plugins: [catalog] });
+    const h = await restHarness({ config: { plugins: [catalog] } });
     await seedPublished(h, 1, "ledger");
 
     const res = await h.dispatch(apiGet("/_plumix/api/v1/ledgers"));
@@ -505,7 +506,7 @@ const apiPlugin = definePlugin("test-api-plugin", (ctx) => {
 
 describe("REST API — plugin resource seam", () => {
   test("a public plugin resource is reachable and in the spec", async () => {
-    const h = await restHarness({ plugins: [apiPlugin] });
+    const h = await restHarness({ config: { plugins: [apiPlugin] } });
 
     const res = await h.dispatch(apiGet("/_plumix/api/v1/system/diag/ping"));
     expect(res.status).toBe(200);
@@ -518,7 +519,7 @@ describe("REST API — plugin resource seam", () => {
   });
 
   test("an `authenticated` resource is 401 anonymously, 200 with a PAT", async () => {
-    const h = await restHarness({ plugins: [apiPlugin] });
+    const h = await restHarness({ config: { plugins: [apiPlugin] } });
     const { userId, secret } = await mintPat(h, { role: "editor" });
 
     const anon = await h.dispatch(apiGet("/_plumix/api/v1/system/diag/whoami"));
@@ -532,7 +533,7 @@ describe("REST API — plugin resource seam", () => {
   });
 
   test("a capability resource is 403 without the grant, 200 with it", async () => {
-    const h = await restHarness({ plugins: [apiPlugin] });
+    const h = await restHarness({ config: { plugins: [apiPlugin] } });
     const { secret } = await mintPat(h, { role: "admin" });
 
     const forbidden = await h.dispatch(
@@ -558,7 +559,9 @@ describe("REST API — plugin resource capability references", () => {
   });
 
   test("gates a reference on the namespace its type pools into", async () => {
-    const h = await restHarness({ plugins: [pooledEntryTypesPlugin, newsApi] });
+    const h = await restHarness({
+      config: { plugins: [pooledEntryTypesPlugin, newsApi] },
+    });
     const path = "/_plumix/api/v1/system/news/privileged";
     const narrow = await mintPat(h, { scopes: ["entry:post:read"] });
     const pooled = await mintPat(h, { scopes: ["entry:post:edit_any"] });
@@ -588,11 +591,13 @@ describe("REST API — plugin resource collisions", () => {
   test("two plugins claiming overlapping paths are rejected at boot", async () => {
     await expect(
       createDispatcherHarness({
-        api: { enabled: true },
-        plugins: [
-          resourcePlugin("dup-a", "/feed/{id}/dup"),
-          resourcePlugin("dup-b", "/feed/{slug}/dup"),
-        ],
+        config: {
+          api: { enabled: true },
+          plugins: [
+            resourcePlugin("dup-a", "/feed/{id}/dup"),
+            resourcePlugin("dup-b", "/feed/{slug}/dup"),
+          ],
+        },
       }),
     ).rejects.toThrow(/dup/i);
   });
@@ -600,8 +605,10 @@ describe("REST API — plugin resource collisions", () => {
   test("a plugin path that shadows a core route is rejected at boot", async () => {
     await expect(
       createDispatcherHarness({
-        api: { enabled: true },
-        plugins: [resourcePlugin("shadow", "/{anything}")],
+        config: {
+          api: { enabled: true },
+          plugins: [resourcePlugin("shadow", "/{anything}")],
+        },
       }),
     ).rejects.toThrow(/shadow|reserved|core/i);
   });
@@ -625,7 +632,9 @@ describe("REST API — CORS by auth mode", () => {
 
   test("a configured origin is echoed on anonymous reads; others are not", async () => {
     const h = await restHarness({
-      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      config: {
+        api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      },
     });
     await seedPublished(h, 1);
 
@@ -648,7 +657,7 @@ describe("REST API — CORS by auth mode", () => {
 
   test("`*` opens anonymous reads to any origin", async () => {
     const h = await restHarness({
-      api: { enabled: true, cors: { origins: "*" } },
+      config: { api: { enabled: true, cors: { origins: "*" } } },
     });
     await seedPublished(h, 1);
 
@@ -661,7 +670,7 @@ describe("REST API — CORS by auth mode", () => {
 
   test("PAT-authed responses are never CORS-exposed", async () => {
     const h = await restHarness({
-      api: { enabled: true, cors: { origins: "*" } },
+      config: { api: { enabled: true, cors: { origins: "*" } } },
     });
     const { secret } = await mintPat(h, { role: "editor" });
 
@@ -680,7 +689,9 @@ describe("REST API — CORS by auth mode", () => {
 
   test("preflight is answered for allowed origins and refused otherwise", async () => {
     const h = await restHarness({
-      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      config: {
+        api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      },
     });
 
     const ok = await h.dispatch(
@@ -839,7 +850,7 @@ describe("REST API — term resources", () => {
         ],
       });
     });
-    const h = await restHarness({ plugins: [blog, withTermMeta] });
+    const h = await restHarness({ config: { plugins: [blog, withTermMeta] } });
     const term = await h.factory.term.create({
       taxonomy: "category",
       name: "News",
@@ -938,7 +949,7 @@ describe("REST API — meta visibility (default-deny)", () => {
         ],
       });
     });
-    const h = await restHarness({ plugins: [blog, refs] });
+    const h = await restHarness({ config: { plugins: [blog, refs] } });
     const owner = await h.factory.user.create({ name: "Owner One" });
     const id = await seedWithMeta(h, { owner: String(owner.id) });
 
@@ -974,7 +985,9 @@ describe("REST API — meta visibility (default-deny)", () => {
       });
 
     const read = async (showInApi: boolean) => {
-      const h = await restHarness({ plugins: [blog, photos(showInApi)] });
+      const h = await restHarness({
+        config: { plugins: [blog, photos(showInApi)] },
+      });
       const photoId = await seedWithMeta(h, {});
       const id = await seedWithMeta(h, { cover: String(photoId) });
       const itemRes = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
@@ -1022,7 +1035,7 @@ describe("REST API — meta visibility (default-deny)", () => {
         ],
       });
     });
-    const h = await restHarness({ plugins: [blog, nested] });
+    const h = await restHarness({ config: { plugins: [blog, nested] } });
     const photoId = await seedWithMeta(h, {});
     const id = await seedWithMeta(h, { layout: { cover: String(photoId) } });
 
@@ -1059,7 +1072,7 @@ describe("REST API — meta visibility (default-deny)", () => {
         ],
       });
     });
-    const h = await restHarness({ plugins: [blog, nested] });
+    const h = await restHarness({ config: { plugins: [blog, nested] } });
     const photoId = await seedWithMeta(h, {});
     const id = await seedWithMeta(h, { layout: { cover: String(photoId) } });
 
@@ -1307,7 +1320,9 @@ describe("REST API — freshness", () => {
 
   test("a preflight declares no-store", async () => {
     const h = await restHarness({
-      api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      config: {
+        api: { enabled: true, cors: { origins: ["https://app.example"] } },
+      },
     });
 
     const res = await h.dispatch(
@@ -1335,10 +1350,12 @@ describe("REST API — telemetry", () => {
   test("a REST request produces a rest procedure span in the snapshot", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await restHarness({
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 

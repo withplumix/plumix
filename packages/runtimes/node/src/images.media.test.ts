@@ -26,9 +26,8 @@ test("a disk-stored upload is transformed through the media route, gated exactly
   const storage = diskStorage({ dir: join(dir, "media") }).connect({});
   const slot = images({ cacheDir: join(dir, "cache") });
   const h = await createDispatcherHarness({
-    plugins: [media()],
     storage,
-    imageDelivery: slot,
+    config: { plugins: [media()], imageDelivery: slot },
   });
   const user = await h.seedUser("contributor");
   const png = await sharp({

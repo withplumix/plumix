@@ -19,7 +19,7 @@ export const setLocale = base
   .use(requireCapability(EDIT_OWN_CAPABILITY))
   .input(inputSchema)
   .handler(async ({ input, context, errors }) => {
-    const match = findEnabledLocale(context.i18n, input.code);
+    const match = findEnabledLocale(context.config.i18n, input.code);
     if (!match) {
       throw errors.CONFLICT({
         data: { reason: "locale_not_supported", key: input.code },
@@ -38,7 +38,7 @@ export const setLocale = base
       buildLocaleCookie(
         match.code,
         isSecureRequest(context.request),
-        context.basePath,
+        context.config.basePath,
       ),
     );
   });

@@ -399,7 +399,7 @@ export async function handleSignout(
     sameSite: "Lax",
     // Must match the Path the session was minted with (see mintSessionAndCookie)
     // or the browser won't clear it.
-    path: withBasePath("/", ctx.basePath),
+    path: withBasePath("/", ctx.config.basePath),
   });
   // If the configured authenticator runs an external session (CF
   // Access, SAML), surface the IdP logout URL so the admin client can

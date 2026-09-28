@@ -49,7 +49,7 @@ export async function handleDeviceCodeRequest(
   );
 
   const verificationUri = new URL(
-    withBasePath(VERIFICATION_PATH, app.basePath),
+    withBasePath(VERIFICATION_PATH, app.config.basePath),
     ctx.origin,
   ).toString();
   const verificationUriComplete = `${verificationUri}?user_code=${encodeURIComponent(userCode)}`;

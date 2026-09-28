@@ -68,7 +68,7 @@ export function PlumixDebugBar({
           <div
             className="plumix-debug-bar__history"
             data-plumix-debug-switch=""
-            data-plumix-debug-endpoint={switcherEndpoint(ctx.basePath)}
+            data-plumix-debug-endpoint={switcherEndpoint(ctx.config.basePath)}
           >
             <select
               className="plumix-debug-bar__switcher"

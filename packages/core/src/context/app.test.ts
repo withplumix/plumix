@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Mailer } from "../auth/mailer/types.js";
+import { testConfig } from "../test/config.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createAppContext } from "./app.js";
 
@@ -24,12 +25,15 @@ describe("createAppContext mailer resolution", () => {
       request: new Request("https://cms.example/"),
       hooks: harness.app.hooks,
       plugins: harness.app.plugins,
-      // The config slot now accepts an `(env) => Mailer` resolver; the context
-      // must hand consumers the resolved transport, with the request env.
-      mailer: (env) => {
-        seenEnv.push(env);
-        return mailer;
-      },
+      config: testConfig({
+        // The config slot now accepts an `(env) => Mailer` resolver; the
+        // context must hand consumers the resolved transport, with the request
+        // env.
+        mailer: (env) => {
+          seenEnv.push(env);
+          return mailer;
+        },
+      }),
     });
 
     // Delegation, not identity — the context wraps the resolved transport in
@@ -49,7 +53,7 @@ describe("createAppContext mailer resolution", () => {
       request: new Request("https://cms.example/"),
       hooks: harness.app.hooks,
       plugins: harness.app.plugins,
-      mailer,
+      config: testConfig({ mailer }),
     });
 
     await ctx.mailer?.send({ to: "u@example.com", subject: "s", text: "t" });
@@ -65,6 +69,7 @@ describe("createAppContext origin resolution", () => {
     db: harness.db,
     env: harness.env,
     request,
+    config: harness.app.config,
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
   });
@@ -131,10 +136,12 @@ describe("createAppContext platform I/O tracing", () => {
         },
         purgeTags: () => Promise.resolve(),
       },
-      mailer: { send: () => Promise.resolve() },
-      // A consumer without `sample` always votes yes, activating the real
-      // collector — the same seam production uses.
-      telemetry: { consumers: [{ id: "in-test" }] },
+      config: testConfig({
+        mailer: { send: () => Promise.resolve() },
+        // A consumer without `sample` always votes yes, activating the real
+        // collector — the same seam production uses.
+        telemetry: { consumers: [{ id: "in-test" }] },
+      }),
     });
 
     await ctx.assets?.fetch(new Request("https://cms.example/x"));

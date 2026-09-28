@@ -10,10 +10,14 @@ import { generateToken, hashToken } from "./tokens.js";
 describe("RequestAuthenticator — dispatcher integration", () => {
   test("configured auth.sessions caps session lifetime through the authenticator", async () => {
     const h = await createDispatcherHarness({
-      sessions: {
-        maxAgeSeconds: 30,
-        absoluteMaxAgeSeconds: 60,
-        refreshThreshold: 0.5,
+      config: {
+        auth: {
+          sessions: {
+            maxAgeSeconds: 30,
+            absoluteMaxAgeSeconds: 60,
+            refreshThreshold: 0.5,
+          },
+        },
       },
     });
     const user = await h.factory.user.create({ role: "editor" });
@@ -56,7 +60,7 @@ describe("RequestAuthenticator — dispatcher integration", () => {
 
   test("custom authenticator overrides the default and authenticates via header", async () => {
     const h = await createDispatcherHarness({
-      authenticator: customHeaderAuth(),
+      config: { auth: { authenticator: customHeaderAuth() } },
     });
     // Seed a user the custom auth will resolve to.
     const seeded = await h.factory.user.create({
@@ -90,7 +94,9 @@ describe("RequestAuthenticator — dispatcher integration", () => {
         handler: () => new Response("ok", { status: 200 }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [tokenProbePlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [tokenProbePlugin] },
+    });
     const editor = await h.factory.user.create({ role: "editor" });
 
     // Token A: scoped to `entry:post:edit_any` — should pass.

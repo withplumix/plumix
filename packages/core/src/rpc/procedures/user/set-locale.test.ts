@@ -34,7 +34,7 @@ describe("user.setLocale", () => {
 
   test("Set-Cookie is marked Secure when the request is over HTTPS", async () => {
     const h = await createDispatcherHarness({
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      config: { i18n: { defaultLocale: "en", locales: ["en", "ar"] } },
     });
     const admin = await h.seedUser("admin");
     const request = await h.authenticateRequest(
@@ -54,7 +54,7 @@ describe("user.setLocale", () => {
 
   test("attaches Set-Cookie: plumix_locale=<code>; Path=/_plumix/ on success", async () => {
     const h = await createDispatcherHarness({
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      config: { i18n: { defaultLocale: "en", locales: ["en", "ar"] } },
     });
     const admin = await h.seedUser("admin");
     const request = await h.authenticateRequest(

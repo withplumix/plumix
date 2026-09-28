@@ -37,7 +37,9 @@ describe("debug bar Template panel (end to end)", () => {
 
   test("surfaces the full resolution walk a real render resolved", async () => {
     process.env.PLUMIX_DEV = "1";
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",

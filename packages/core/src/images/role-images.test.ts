@@ -134,7 +134,7 @@ describe("resolveImageRoles", () => {
 
   test("hydrates the ids of every stored bag in one query", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [batchPlugin],
+      config: { plugins: [batchPlugin] },
     });
     const author = await harness.factory.user.create({});
     const photos = await Promise.all(
@@ -159,7 +159,7 @@ describe("resolveImageRoles", () => {
 
   test("splits a batch wider than one statement's id limit into chunks", async () => {
     const { ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [batchPlugin],
+      config: { plugins: [batchPlugin] },
     });
     // 150 distinct ids, none of which exist: the chunking is about how many
     // statements the ids are bound across, not about what they resolve to.
@@ -177,7 +177,7 @@ describe("resolveImageRoles", () => {
 
   test("reads an id the bag still holds in the retired snapshot shape", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [batchPlugin],
+      config: { plugins: [batchPlugin] },
     });
     const author = await harness.factory.user.create({});
     const photo = await harness.factory.entry.create({
@@ -198,7 +198,7 @@ describe("resolveImageRoles", () => {
 
   test("reads a user's roles out of stored user meta", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const author = await harness.factory.user.create({});
     const photo = await harness.factory.entry.create({

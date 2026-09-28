@@ -1527,7 +1527,7 @@ describe("reference hydration memo (request-scoped)", () => {
 
   test("a second batch sharing an id issues no further hydration query", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const id = await seedPhoto(harness);
 
@@ -1548,7 +1548,7 @@ describe("reference hydration memo (request-scoped)", () => {
 
   test("a later batch queries only the ids it has not seen", async () => {
     const { harness, ctx, run, dbSpans } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const seen = await seedPhoto(harness);
     const fresh = await seedPhoto(harness);
@@ -1575,7 +1575,7 @@ describe("reference hydration memo (request-scoped)", () => {
 
   test("an orphan memoizes as missing rather than being re-queried", async () => {
     const { ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
 
     await run(async () => {
@@ -1588,14 +1588,16 @@ describe("reference hydration memo (request-scoped)", () => {
   });
 
   test("a second request hydrates the same id again", async () => {
-    const first = await createTracedContext({ plugins: [photoProfilePlugin] });
+    const first = await createTracedContext({
+      config: { plugins: [photoProfilePlugin] },
+    });
     const id = await seedPhoto(first.harness);
     const bags = [{ findField: findShot, decoded: { shot: id } }];
     await first.run(() => resolveMetaBags(first.ctx, bags));
 
     const second = await createTracedContext({
-      plugins: [photoProfilePlugin],
       db: first.harness.db,
+      config: { plugins: [photoProfilePlugin] },
     });
     const resolved = await second.run(() => resolveMetaBags(second.ctx, bags));
 
@@ -1631,7 +1633,7 @@ describe("reference hydration memo (request-scoped)", () => {
 
   test("batches racing on one id hydrate it once between them", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const id = await seedPhoto(harness);
     const bags = [{ findField: findShot, decoded: { shot: id } }];
@@ -1649,7 +1651,7 @@ describe("reference hydration memo (request-scoped)", () => {
 
   test("the same id under two scopes hydrates once per scope", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const id = await seedPhoto(harness);
     // One field key under two scopes, so the scope is the only thing that

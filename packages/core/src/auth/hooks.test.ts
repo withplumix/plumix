@@ -244,10 +244,14 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
 
   test("user:signed_out is silent for a session past the configured cap", async () => {
     const h = await createDispatcherHarness({
-      sessions: {
-        maxAgeSeconds: 30,
-        absoluteMaxAgeSeconds: 60,
-        refreshThreshold: 0.5,
+      config: {
+        auth: {
+          sessions: {
+            maxAgeSeconds: 30,
+            absoluteMaxAgeSeconds: 60,
+            refreshThreshold: 0.5,
+          },
+        },
       },
     });
     const seeded = await h.factory.user.create({ role: "editor" });
@@ -284,8 +288,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
   test("user:signed_in fires with method=magic_link, firstSignIn=false on existing-user verify", async () => {
     const mailer = makeMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Test" },
-      mailer,
+      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
     });
     const seeded = await h.factory.user.create({
       email: "alice@example.test",
@@ -320,8 +323,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     // gated) + the email's domain is on the allowlist.
     const mailer = makeMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Test" },
-      mailer,
+      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
     });
     await h.factory.user.create({ email: "existing@allowed.test" });
     await h.factory.allowedDomain.create({

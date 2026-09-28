@@ -333,7 +333,9 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         ),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [seoPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [seoPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -376,7 +378,9 @@ describe("renderThroughTheme — template deps lifecycle", () => {
         ),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [broken], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [broken], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -427,7 +431,9 @@ describe("core settings dep", () => {
         ),
       ],
     });
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -488,8 +494,7 @@ describe("theme-level flat dep declarations", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogTypePlugin],
-      theme,
+      config: { plugins: [blogTypePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -536,8 +541,7 @@ describe("theme-level flat dep declarations", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogTypePlugin],
-      theme,
+      config: { plugins: [blogTypePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -582,8 +586,7 @@ describe("theme-level flat dep declarations", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogTypePlugin],
-      theme,
+      config: { plugins: [blogTypePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -625,8 +628,7 @@ describe("theme-level flat dep declarations", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogTypePlugin],
-      theme,
+      config: { plugins: [blogTypePlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({

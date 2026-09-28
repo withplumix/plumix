@@ -40,7 +40,7 @@ const site = definePlugin("site", (ctx) => {
 let h: DispatcherHarness;
 
 beforeEach(async () => {
-  h = await createDispatcherHarness({ plugins: [site] });
+  h = await createDispatcherHarness({ config: { plugins: [site] } });
 });
 
 describe("archiveAtPath", () => {
@@ -162,7 +162,9 @@ describe("archiveBaseRoutes", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
     });
-    const { app } = await createDispatcherHarness({ plugins: [rooted] });
+    const { app } = await createDispatcherHarness({
+      config: { plugins: [rooted] },
+    });
 
     expect(
       archiveBaseRoutes(app.plugins).filter((route) => route.pattern === "/"),

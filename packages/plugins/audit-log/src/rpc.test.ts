@@ -2,11 +2,8 @@ import type { RequestAuthenticator } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
-import {
-  createAppContext,
-  createPluginRegistry,
-  HookRegistry,
-} from "plumix/plugin";
+import { createPluginRegistry, HookRegistry } from "plumix/plugin";
+import { createTestContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -76,7 +73,7 @@ function buildContext(role: UserRole): AppContext {
     emailVerifiedAt: null,
     disabledAt: null,
   };
-  return createAppContext({
+  return createTestContext({
     db: {} as never,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),

@@ -4,7 +4,7 @@ import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";
 import { matchPublicRoute } from "../route/public-routes.js";
 
-type CanonicalContext = Pick<AppContext, "request" | "origin" | "basePath">;
+type CanonicalContext = Pick<AppContext, "request" | "origin" | "config">;
 
 /**
  * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
@@ -28,7 +28,7 @@ export function canonicalUrl(ctx: CanonicalContext): string {
   // The dispatcher already stripped any base prefix from the request, so the
   // pathname is root-relative; re-add the prefix on the way out.
   const canonical = canonicalPath(new URL(ctx.request.url).pathname);
-  return `${ctx.origin}${withBasePath(canonical, ctx.basePath)}`;
+  return `${ctx.origin}${withBasePath(canonical, ctx.config.basePath)}`;
 }
 
 /**
@@ -79,7 +79,7 @@ export function canonicalRedirectTarget(
   const target = canonicalPath(url.pathname);
   if (url.pathname === target) return null;
   if (isCanonicalExempt(url.pathname, publicRoutes)) return null;
-  return `${ctx.origin}${withBasePath(target, ctx.basePath)}${url.search}`;
+  return `${ctx.origin}${withBasePath(target, ctx.config.basePath)}${url.search}`;
 }
 
 function hasCanonical(manifest: DocumentManifest): boolean {

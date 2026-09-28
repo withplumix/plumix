@@ -22,7 +22,7 @@ let rpc: SearchHarness["rpc"];
 
 beforeEach(async () => {
   ({ h, admin, rpc, runSchedule } = await createSearchHarness({
-    plugins: [contentPlugin, search()],
+    config: { plugins: [contentPlugin, search()] },
   }));
 });
 

@@ -101,8 +101,7 @@ async function formSite(
   plugins: readonly AnyPluginDescriptor[],
 ): Promise<() => Promise<string>> {
   const harness = await createDispatcherHarness({
-    plugins: [testBlog, ...plugins],
-    theme: formTheme,
+    config: { plugins: [testBlog, ...plugins], theme: formTheme },
   });
   await applyCommentsSchema(harness.db);
   await seedPost(harness, "hello-world");
@@ -138,8 +137,10 @@ describe("the comment form in a theme template", () => {
 describe("comments read path through the dispatcher", () => {
   test("renders approved comments on a single post and excludes pending", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [testBlog, comments({ entryTypes: ["post"] })],
-      theme,
+      config: {
+        plugins: [testBlog, comments({ entryTypes: ["post"] })],
+        theme,
+      },
     });
     await applyCommentsSchema(harness.db);
     const entry = await seedPost(harness, "hello-world");
@@ -173,8 +174,10 @@ describe("comments read path through the dispatcher", () => {
     // check up into the shared enablement helper would take it away from
     // them, which is the opposite of what the fix is for.
     const harness = await createDispatcherHarness({
-      plugins: [gatedBlog, comments({ entryTypes: ["post"] })],
-      theme,
+      config: {
+        plugins: [gatedBlog, comments({ entryTypes: ["post"] })],
+        theme,
+      },
     });
     await applyCommentsSchema(harness.db);
     const entry = await seedPost(harness, "members-only");
@@ -191,8 +194,7 @@ describe("comments read path through the dispatcher", () => {
 
   test("renders no thread for a comment-disabled entry type", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [testBlog, comments()],
-      theme,
+      config: { plugins: [testBlog, comments()], theme: theme },
     });
     await applyCommentsSchema(harness.db);
     const entry = await seedPost(harness, "quiet");
@@ -212,8 +214,10 @@ describe("comments read path through the dispatcher", () => {
 
   test("renders a reply nested under its parent", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [testBlog, comments({ entryTypes: ["post"] })],
-      theme,
+      config: {
+        plugins: [testBlog, comments({ entryTypes: ["post"] })],
+        theme,
+      },
     });
     await applyCommentsSchema(harness.db);
     const entry = await seedPost(harness, "threaded");
@@ -245,8 +249,13 @@ describe("comments read path through the dispatcher", () => {
   // affordance, and the public list route reveals the next page.
   test("shows a load-more affordance and reveals the next root page", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [testBlog, comments({ entryTypes: ["post"], rootsPerPage: 2 })],
-      theme,
+      config: {
+        plugins: [
+          testBlog,
+          comments({ entryTypes: ["post"], rootsPerPage: 2 }),
+        ],
+        theme,
+      },
     });
     await applyCommentsSchema(harness.db);
     const entry = await seedPost(harness, "busy");

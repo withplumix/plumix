@@ -10,6 +10,7 @@ import {
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
 } from "../../plugin/registry.js";
+import { testConfig } from "../../test/config.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
 function ctxWith(
@@ -18,7 +19,7 @@ function ctxWith(
   return {
     request: new Request("https://cms.example/blog/hello?secret=1"),
     origin: "https://cms.example",
-    basePath: "",
+    config: testConfig(),
     resolvedEntity: null,
     user: null,
     tokenScopes: null,
@@ -52,7 +53,10 @@ describe("projectDebugSnapshot", () => {
         user: { id: 1, email: "a@b.c", role: "admin", meta: {} },
         tokenScopes: ["read:posts"],
         resolvedEntity: { kind: "entry", id: 7, preview: false },
-        siteName: "My Site",
+        config: testConfig({
+          mailer: { send: () => Promise.resolve() },
+          auth: { magicLink: { siteName: "My Site" } },
+        }),
         cdn: { decorate: (response) => response },
         plugins: blogPlugins(),
       }),

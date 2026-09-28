@@ -59,13 +59,13 @@ export async function harnessWith(
   {
     blog = testBlog,
     ...options
-  }: Omit<CreateDispatcherHarnessOptions, "plugins"> & {
+  }: CreateDispatcherHarnessOptions & {
     readonly blog?: AnyPluginDescriptor;
   } = {},
 ): Promise<Harness> {
   const harness = await createHarness({
     ...options,
-    plugins: [blog, comments(config)],
+    config: { ...options.config, plugins: [blog, comments(config)] },
   });
   await applyCommentsSchema(harness.db);
   return harness;

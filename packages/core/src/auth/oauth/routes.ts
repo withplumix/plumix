@@ -28,7 +28,8 @@ export async function handleOAuthStart(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError(app.basePath, "provider_not_configured");
+  if (!provider)
+    return loginError(app.config.basePath, "provider_not_configured");
 
   // Block OAuth on a fresh deploy when the operator left bootstrap on
   // the passkey rail. An OAuth signup before any user exists would
@@ -39,11 +40,15 @@ export async function handleOAuthStart(
   if (!ctx.bootstrapAllowed) {
     const userCount = await ctx.db.$count(users);
     if (userCount === 0) {
-      return redirectTo(withBasePath(BOOTSTRAP_PATH, app.basePath));
+      return redirectTo(withBasePath(BOOTSTRAP_PATH, app.config.basePath));
     }
   }
 
-  const redirectUri = oauthCallbackUrl(ctx.origin, app.basePath, providerKey);
+  const redirectUri = oauthCallbackUrl(
+    ctx.origin,
+    app.config.basePath,
+    providerKey,
+  );
 
   // A theme-owned "Continue with <provider>" link carries `?redirectTo=` so
   // the visitor lands back on the page they started from. Only stash it when
@@ -64,7 +69,7 @@ export async function handleOAuthStart(
     return redirectTo(url);
   } catch (error) {
     ctx.logger.error("oauth_start_failed", { error, provider: providerKey });
-    return loginError(app.basePath, "code_exchange_failed");
+    return loginError(app.config.basePath, "code_exchange_failed");
   }
 }
 
@@ -74,7 +79,8 @@ export async function handleOAuthCallback(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider) return loginError(app.basePath, "provider_not_configured");
+  if (!provider)
+    return loginError(app.config.basePath, "provider_not_configured");
 
   const url = new URL(ctx.request.url);
   const state = url.searchParams.get("state");
@@ -84,20 +90,24 @@ export async function handleOAuthCallback(
   // TTL; consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
     if (state) await consumeOAuthState(ctx.db, state);
-    return loginError(app.basePath, "state_invalid");
+    return loginError(app.config.basePath, "state_invalid");
   }
 
   const code = url.searchParams.get("code");
-  if (!code || !state) return loginError(app.basePath, "state_invalid");
+  if (!code || !state) return loginError(app.config.basePath, "state_invalid");
   if (code.length > MAX_CODE_LENGTH)
-    return loginError(app.basePath, "state_invalid");
+    return loginError(app.config.basePath, "state_invalid");
 
   const stored = await consumeOAuthState(ctx.db, state);
-  if (!stored) return loginError(app.basePath, "state_expired");
+  if (!stored) return loginError(app.config.basePath, "state_expired");
   if (stored.provider !== providerKey)
-    return loginError(app.basePath, "state_invalid");
+    return loginError(app.config.basePath, "state_invalid");
 
-  const redirectUri = oauthCallbackUrl(ctx.origin, app.basePath, providerKey);
+  const redirectUri = oauthCallbackUrl(
+    ctx.origin,
+    app.config.basePath,
+    providerKey,
+  );
 
   try {
     const profile = await exchangeAndFetchProfile({
@@ -129,7 +139,7 @@ export async function handleOAuthCallback(
     // (the browser sent its own location), so it's honoured verbatim.
     const destination = resolveSafeRedirect(
       stored.redirectTo,
-      withBasePath(ADMIN_PATH, app.basePath),
+      withBasePath(ADMIN_PATH, app.config.basePath),
     );
     return redirectTo(destination, {
       "set-cookie": cookieHeader,
@@ -140,10 +150,10 @@ export async function handleOAuthCallback(
         provider: providerKey,
         code: error.code,
       });
-      return loginError(app.basePath, error.code);
+      return loginError(app.config.basePath, error.code);
     }
     ctx.logger.error("oauth_callback_failed", { error, provider: providerKey });
-    return loginError(app.basePath, "code_exchange_failed");
+    return loginError(app.config.basePath, "code_exchange_failed");
   }
 }
 

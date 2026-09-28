@@ -68,7 +68,7 @@ const hierarchicalPagesPlugin = definePlugin("pages", (ctx) => {
 describe("resolvePublicRoute — hierarchical single", () => {
   test("top-level /<base>/leaf resolves the entry with no parent", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -90,7 +90,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
 
   test("nested /<base>/parent/leaf resolves the entry by walking the chain", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     const about = await h.factory.entry.create({
@@ -131,7 +131,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
 
   test("URL with mismatched ancestor returns 404", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     const about = await h.factory.entry.create({
@@ -161,7 +161,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
 
   test("buildEntryPermalink round-trips through the route map (closes permalink.ts:21-26 gap)", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     const about = await h.factory.entry.create({
@@ -195,7 +195,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
     const ctx = {
       db: h.db,
       plugins: h.app.plugins,
-      basePath: "",
+      config: h.app.config,
     };
     const url = await buildEntryPermalink(ctx, {
       type: "page",
@@ -212,7 +212,7 @@ describe("resolvePublicRoute — hierarchical single", () => {
 
   test("top-level URL with extra ancestor segments returns 404", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     // "about" is top-level (no parent). /page/foo/about should 404 —
@@ -235,7 +235,9 @@ describe("resolvePublicRoute — hierarchical single", () => {
 
 describe("resolvePublicRoute — single", () => {
   test("renders title + walked content for a published post", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -258,7 +260,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("expands a [year] shortcode in the entry title", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -279,7 +283,7 @@ describe("resolvePublicRoute — single", () => {
 
   test("a title shortcode reads the configured site settings", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, siteTitleShortcodePlugin],
+      config: { plugins: [blogPlugin, siteTitleShortcodePlugin] },
     });
     await h.factory.setting.create({
       group: "site",
@@ -304,7 +308,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("expands a title a resolve:single:data subscriber rewrote", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -329,7 +335,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("keeps an escaped shortcode in an untouched title literal", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -350,7 +358,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("draft with a matching slug returns 404 (status gate)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -369,7 +379,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("trashed post returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -387,7 +399,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a valid preview token reveals a draft at its URL", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const draft = await h.factory.entry.create({
       type: "post",
@@ -410,7 +424,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview token overlays the author's autosave onto a published entry", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
       type: "post",
@@ -468,7 +484,9 @@ describe("resolvePublicRoute — single", () => {
     // the title is edited with `saveAs: "live"` — a live-row write that never
     // touches the autosave row. The preview must show the *fresh* live title,
     // not the frozen snapshot, since the title is a live field, not a draft.
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
       type: "post",
@@ -536,8 +554,7 @@ describe("resolvePublicRoute — single", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: metaTheme,
+      config: { plugins: [blogPlugin], theme: metaTheme },
     });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
@@ -586,8 +603,7 @@ describe("resolvePublicRoute — single", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: reservedTheme,
+      config: { plugins: [blogPlugin], theme: reservedTheme },
     });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
@@ -635,8 +651,7 @@ describe("resolvePublicRoute — single", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: landingTheme,
+      config: { plugins: [blogPlugin], theme: landingTheme },
     });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
@@ -692,8 +707,7 @@ describe("resolvePublicRoute — single", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      theme: landingTheme,
+      config: { plugins: [blogPlugin], theme: landingTheme },
     });
     const author = await h.seedUser("admin");
     // The choice lives in the live row's meta (as the publish flow persists it).
@@ -715,7 +729,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview token for a different entry does not overlay an autosave", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const live = await h.factory.entry.create({
       type: "post",
@@ -790,7 +806,7 @@ describe("resolvePublicRoute — single", () => {
     test("an overlaid preview render is a preview", async () => {
       const observer = entityObserver();
       const h = await createDispatcherHarness({
-        plugins: [blogPlugin, observer.plugin],
+        config: { plugins: [blogPlugin, observer.plugin] },
       });
       const { author, live, token } = await publishedPost(h);
       await upsertAutosave(h.db, {
@@ -817,7 +833,7 @@ describe("resolvePublicRoute — single", () => {
     test("a render without a token is not a preview", async () => {
       const observer = entityObserver();
       const h = await createDispatcherHarness({
-        plugins: [blogPlugin, observer.plugin],
+        config: { plugins: [blogPlugin, observer.plugin] },
       });
       const { live } = await publishedPost(h);
 
@@ -831,7 +847,7 @@ describe("resolvePublicRoute — single", () => {
     test("a token with no autosave behind it is not a preview", async () => {
       const observer = entityObserver();
       const h = await createDispatcherHarness({
-        plugins: [blogPlugin, observer.plugin],
+        config: { plugins: [blogPlugin, observer.plugin] },
       });
       const { live, token } = await publishedPost(h);
 
@@ -846,7 +862,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("an invalid preview token still 404s the draft", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -864,7 +882,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview token does not reveal a different draft's URL", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const a = await h.factory.entry.create({
       type: "post",
@@ -895,7 +915,9 @@ describe("resolvePublicRoute — single", () => {
   });
 
   test("a preview token never reveals a trashed entry", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     const gone = await h.factory.entry.create({
       type: "post",
@@ -918,7 +940,7 @@ describe("resolvePublicRoute — single", () => {
 
   test("a preview token reveals a nested draft page under a published parent", async () => {
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalPagesPlugin],
+      config: { plugins: [hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     const parent = await h.factory.entry.create({
@@ -959,7 +981,9 @@ describe("resolvePublicRoute — single", () => {
 
 describe("resolvePublicRoute — archive", () => {
   test("lists published entries — newest first", async () => {
-    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [shopPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "product",
@@ -991,7 +1015,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("expands a shortcode in a listed entry's title", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1011,7 +1037,7 @@ describe("resolvePublicRoute — archive", () => {
 
   test("a listed entry's title shortcode reads the configured site settings", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, siteTitleShortcodePlugin],
+      config: { plugins: [blogPlugin, siteTitleShortcodePlugin] },
     });
     await h.factory.setting.create({
       group: "site",
@@ -1034,7 +1060,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("archive with no published entries renders the empty-state copy", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(new Request("https://cms.example/post"));
     expect(response.status).toBe(200);
     const body = await response.text();
@@ -1043,7 +1071,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("drafts do not appear in the archive", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -1061,7 +1091,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("page=2 returns the offset slice of entries", async () => {
-    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [shopPlugin] },
+    });
     const author = await h.seedUser("admin");
     // Seed 25 entries — perPage=20 means page 2 has 5 entries.
     for (let i = 1; i <= 25; i++) {
@@ -1089,7 +1121,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("page > totalPages returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [shopPlugin] },
+    });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "product",
@@ -1114,7 +1148,7 @@ describe("resolvePublicRoute — archive", () => {
       );
     });
     const h = await createDispatcherHarness({
-      plugins: [shopPlugin, hideOne],
+      config: { plugins: [shopPlugin, hideOne] },
     });
     const author = await h.seedUser("admin");
     // One more than a page holds, so hiding one leaves no second page.
@@ -1142,7 +1176,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("non-numeric :page param returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [shopPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/shop/page/abc"),
     );
@@ -1150,7 +1186,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("explicit /page/1 canonical-redirects (301) to the bare archive", async () => {
-    const h = await createDispatcherHarness({ plugins: [shopPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [shopPlugin] },
+    });
     const bare = await h.dispatch(new Request("https://cms.example/shop"));
     const paginated = await h.dispatch(
       new Request("https://cms.example/shop/page/1"),
@@ -1161,7 +1199,9 @@ describe("resolvePublicRoute — archive", () => {
   });
 
   test("empty archive on /page/1 redirects, not 404s (regression from #224)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/post/page/1"),
     );
@@ -1177,7 +1217,7 @@ describe("resolvePublicRoute — archive", () => {
         hasArchive: true,
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const response = await h.dispatch(new Request("https://cms.example/doc"));
     const body = await response.text();
     expect(body).toContain("<title>Docs</title>");
@@ -1186,7 +1226,9 @@ describe("resolvePublicRoute — archive", () => {
 
 describe("resolvePublicRoute — author archive", () => {
   test("/author/{slug} lists that author's published entries, newest first", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     const john = await h.factory.author.create({ name: "John", slug: "john" });
     await h.factory.entry.create({
@@ -1235,7 +1277,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("unknown author slug returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/authors/nobody"),
     );
@@ -1243,7 +1287,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("an author with no published entries renders the empty state (200)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await h.factory.author.create({ name: "Quiet", slug: "quiet" });
     const response = await h.dispatch(
       new Request("https://cms.example/authors/quiet"),
@@ -1255,7 +1301,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("drafts and other authors' posts are excluded", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     await h.factory.entry.create({
       type: "post",
@@ -1274,7 +1322,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("pagination: /author/{slug}/page/2 returns the offset slice", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     for (let i = 1; i <= 25; i++) {
       await h.factory.entry.create({
@@ -1299,7 +1349,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("out-of-range page returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     await h.factory.entry.create({
       type: "post",
@@ -1317,7 +1369,9 @@ describe("resolvePublicRoute — author archive", () => {
   });
 
   test("explicit /page/1 canonical-redirects (301) to the bare author archive", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await h.factory.author.create({ name: "Jane", slug: "jane" });
     const response = await h.dispatch(
       new Request("https://cms.example/authors/jane/page/1"),
@@ -1350,7 +1404,9 @@ describe("resolvePublicRoute — date archive", () => {
   }
 
   test("/YYYY lists the year's posts and excludes other years", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await seedDated(h, [
       "2026-03-10",
       "2026-11-02",
@@ -1367,7 +1423,9 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("/YYYY/MM narrows to the month; boundaries are half-open", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     // Month boundaries: Jul 1 in, Jun 30 out, Aug 1 out.
     await seedDated(h, [
       "2026-07-01",
@@ -1387,7 +1445,9 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("/YYYY/MM/DD narrows to the single day", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await seedDated(h, ["2026-07-21", "2026-07-20", "2026-07-22"]);
     const response = await h.dispatch(
       new Request("https://cms.example/2026/07/21"),
@@ -1400,14 +1460,18 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("an empty period renders the archive (200), not a 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(new Request("https://cms.example/1999"));
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("No entries yet.");
   });
 
   test("an impossible date returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     expect(
       (await h.dispatch(new Request("https://cms.example/2026/13"))).status,
     ).toBe(404);
@@ -1420,7 +1484,9 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("pagination: /YYYY/page/2 returns the offset slice", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const dates = Array.from(
       { length: 25 },
       (_, i) => `2026-01-${String(i + 1).padStart(2, "0")}`,
@@ -1438,7 +1504,9 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("out-of-range page returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     await seedDated(h, ["2026-05-05"]);
     const response = await h.dispatch(
       new Request("https://cms.example/2026/page/9"),
@@ -1447,7 +1515,9 @@ describe("resolvePublicRoute — date archive", () => {
   });
 
   test("explicit /page/1 canonical-redirects (301) to the bare period", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/2026/07/page/1"),
     );
@@ -1472,7 +1542,9 @@ const taxonomyPlugin = definePlugin("blog", (ctx) => {
 
 describe("resolvePublicRoute — taxonomy", () => {
   test("returns 404 when the term slug doesn't exist", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/category/missing"),
     );
@@ -1480,7 +1552,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("renders a 200 empty archive when the term exists but has no entries", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     await h.factory.category.create({ slug: "news", name: "News" });
     const response = await h.dispatch(
       new Request("https://cms.example/category/news"),
@@ -1492,7 +1566,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("expands a shortcode in a listed entry's title", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.category.create({
       slug: "news",
@@ -1518,7 +1594,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("lists published entries tagged with the term, newest first", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.category.create({
       slug: "news",
@@ -1564,7 +1642,9 @@ describe("resolvePublicRoute — taxonomy", () => {
         entryTypes: ["post", "doc"],
       });
     });
-    const h = await createDispatcherHarness({ plugins: [multiTypePlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [multiTypePlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.term.create({
       taxonomy: "topic",
@@ -1602,7 +1682,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("taxonomy page=2 returns the offset slice of tagged entries", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.category.create({
       slug: "news",
@@ -1634,7 +1716,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("taxonomy page > totalPages returns 404", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.category.create({
       slug: "news",
@@ -1658,7 +1742,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("empty term on /page/1 redirects, not 404s (regression from #224)", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     await h.factory.category.create({ slug: "empty", name: "Empty" });
     const response = await h.dispatch(
       new Request("https://cms.example/category/empty/page/1"),
@@ -1683,7 +1769,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalTaxPlugin],
+      config: { plugins: [hierarchicalTaxPlugin] },
     });
     const author = await h.seedUser("admin");
     const europe = await h.factory.term.create({
@@ -1727,7 +1813,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalTaxPlugin],
+      config: { plugins: [hierarchicalTaxPlugin] },
     });
     const europe = await h.factory.term.create({
       taxonomy: "region",
@@ -1744,7 +1830,7 @@ describe("resolvePublicRoute — taxonomy", () => {
     const ctx = {
       db: h.db,
       plugins: h.app.plugins,
-      basePath: "",
+      config: h.app.config,
     };
     const url = await buildTermArchiveUrl(ctx, {
       taxonomy: "region",
@@ -1769,7 +1855,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [hierarchicalTaxPlugin],
+      config: { plugins: [hierarchicalTaxPlugin] },
     });
     const author = await h.seedUser("admin");
     const europe = await h.factory.term.create({
@@ -1828,8 +1914,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       }
     });
     const h = await createDispatcherHarness({
-      plugins: [geo],
-      basePath: options.basePath,
+      config: { plugins: [geo], basePath: options.basePath },
     });
     const author = await h.seedUser("admin");
     const europe = await h.factory.term.create({
@@ -1922,7 +2007,9 @@ describe("resolvePublicRoute — taxonomy", () => {
   });
 
   test("draft entries tagged with the term are excluded", async () => {
-    const h = await createDispatcherHarness({ plugins: [taxonomyPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [taxonomyPlugin] },
+    });
     const author = await h.seedUser("admin");
     const term = await h.factory.category.create({
       slug: "news",
@@ -1949,7 +2036,9 @@ describe("resolvePublicRoute — taxonomy", () => {
 
 describe("resolvePublicRoute — search query redirect", () => {
   test("bare /search?q= 301s to the canonical /search/<q> path", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/search?q=hello%20world"),
     );
@@ -1958,7 +2047,9 @@ describe("resolvePublicRoute — search query redirect", () => {
   });
 
   test("bare /search with no query renders the search page (no redirect)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin] },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/search"),
     );
@@ -1969,7 +2060,7 @@ describe("resolvePublicRoute — search query redirect", () => {
 describe("resolvePublicRoute — front page", () => {
   test("lists posts but excludes hierarchical pages", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin, hierarchicalPagesPlugin],
+      config: { plugins: [blogPlugin, hierarchicalPagesPlugin] },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2023,7 +2114,7 @@ const archiveQueriesPlugin = definePlugin("archive-queries", (ctx) => {
 describe("resolvePublicRoute — each built-in archive lists its entry query", () => {
   async function seedArchive() {
     const h = await createDispatcherHarness({
-      plugins: [archiveQueriesPlugin],
+      config: { plugins: [archiveQueriesPlugin] },
     });
     const author = await h.factory.author.create({
       name: "Jane",
@@ -2104,7 +2195,7 @@ describe("resolvePublicRoute — each built-in archive lists its entry query", (
         rewrite: { isHierarchical: false },
       });
     });
-    const h = await createDispatcherHarness({ plugins: [flat] });
+    const h = await createDispatcherHarness({ config: { plugins: [flat] } });
     const author = await h.seedUser("admin");
     const parent = await h.factory.term.create({
       taxonomy: "section",
@@ -2133,8 +2224,8 @@ describe("resolvePublicRoute — each built-in archive lists its entry query", (
     ["an author page", "/authors/jane", '"users"'],
   ])("%s looks its subject up once", async (_kind, path, table) => {
     const traced = await createTracedContext({
-      plugins: [archiveQueriesPlugin],
       request: new Request(`https://cms.example${path}`),
+      config: { plugins: [archiveQueriesPlugin] },
     });
     const h = traced.harness;
     const author = await h.factory.author.create({
@@ -2198,7 +2289,7 @@ describe("resolvePublicRoute — resolved route", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [events, observer.plugin],
+      config: { plugins: [events, observer.plugin] },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/events/summer"),
@@ -2216,7 +2307,7 @@ describe("resolvePublicRoute — resolved route", () => {
   test("every other kind of public page carries the route it matched", async () => {
     const observer = routeObserver();
     const h = await createDispatcherHarness({
-      plugins: [shopPlugin, observer.plugin],
+      config: { plugins: [shopPlugin, observer.plugin] },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -2262,7 +2353,7 @@ describe("resolvePublicRoute — resolved route", () => {
         },
       });
     });
-    const h = await createDispatcherHarness({ plugins: [probe] });
+    const h = await createDispatcherHarness({ config: { plugins: [probe] } });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/probe/probe"),
     );

@@ -50,11 +50,11 @@ describe("createTestContext", () => {
     const ctx = createTestContext({
       db: await createTestDb(),
       hooks,
-      basePath: "/cms",
       request: new Request("https://example.test/hello"),
+      config: { basePath: "/cms" },
     });
 
-    expect(ctx.basePath).toBe("/cms");
+    expect(ctx.config.basePath).toBe("/cms");
     expect(ctx.request.url).toBe("https://example.test/hello");
     expect(await ctx.hooks.applyFilter("test:context", "hi")).toBe("HI");
   });

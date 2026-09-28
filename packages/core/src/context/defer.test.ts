@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Db, Logger } from "./app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { testConfig } from "../test/config.js";
 import { createAppContext } from "./app.js";
 
 // Stub Db typed as the default CoreSchema so AppContext doesn't
@@ -16,6 +17,7 @@ describe("AppContext.defer", () => {
       db: stubDb,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: new HookRegistry(),
       plugins: createPluginRegistry(),
       defer: (promise) => {
@@ -50,6 +52,7 @@ describe("AppContext.defer", () => {
       db: {} as Db,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: new HookRegistry(),
       plugins: createPluginRegistry(),
       logger: captureLogger,
@@ -86,6 +89,7 @@ describe("AppContext.defer", () => {
       db: {} as Db,
       env: {},
       request: new Request("https://x.example/"),
+      config: testConfig(),
       hooks: new HookRegistry(),
       plugins: createPluginRegistry(),
       logger: buggyLogger,
@@ -118,6 +122,7 @@ describe("AppContext.defer", () => {
         db: stubDb,
         env: {},
         request: new Request("https://x.example/"),
+        config: testConfig(),
         hooks: new HookRegistry(),
         plugins: createPluginRegistry(),
       });

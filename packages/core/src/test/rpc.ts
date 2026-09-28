@@ -6,7 +6,7 @@ import { coreBlocks, coreMarks, createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
-import type { Mailer } from "../auth/mailer/types.js";
+import type { PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
@@ -20,6 +20,7 @@ import type {
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
@@ -29,6 +30,7 @@ import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
 import { resolveAuthMethods } from "../runtime/app.js";
+import { testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
@@ -64,20 +66,10 @@ export interface BaseRpcHarnessOptions {
    */
   readonly authenticator?: RequestAuthenticator;
   /**
-   * Outbound email transport surfaced as `ctx.mailer`. Procedures that
-   * touch mail (auth.mailer.testSend, future invite-email, etc.)
-   * read from there; tests pass a capturing implementation here so
-   * they can assert what was sent.
+   * Config slots — `mailer`, `auth: { magicLink: { siteName } }` and the
+   * rest — resolved through `plumix()` into the context's `config`.
    */
-  readonly mailer?: Mailer;
-  /**
-   * Site name surfaced as `ctx.siteName` — used by email-composing
-   * procedures (email change, magic-link RPC paths) to brand the
-   * outgoing message. Mirrors the operator-set
-   * `auth.magicLink.siteName`. Default undefined; tests that
-   * exercise email composition pass a fixture name here.
-   */
-  readonly siteName?: string;
+  readonly config?: TestConfigInput;
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
@@ -135,8 +127,7 @@ function buildContext(
   request: Request,
   authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
-  mailer: Mailer | undefined,
-  siteName: string | undefined,
+  config: PlumixConfig,
 ): AppContext {
   return createAppContext({
     db,
@@ -149,8 +140,7 @@ function buildContext(
     logger: silentLogger,
     authMethods,
     authenticator,
-    mailer,
-    siteName,
+    config,
   });
 }
 
@@ -180,8 +170,7 @@ function assemble<TUser extends User | null>(
   user: TUser,
   authMethods: AuthMethodsSummary | undefined,
   authenticator: RequestAuthenticator | undefined,
-  mailer: Mailer | undefined,
-  siteName: string | undefined,
+  config: PlumixConfig,
 ): RpcHarnessBase<TUser> {
   const context = buildContext(
     db,
@@ -193,8 +182,7 @@ function assemble<TUser extends User | null>(
     request,
     authMethods,
     authenticator,
-    mailer,
-    siteName,
+    config,
   );
   const client = createRouterClient(appRouter, { context });
 
@@ -226,8 +214,7 @@ function assemble<TUser extends User | null>(
         targetUser,
         authMethods,
         authenticator,
-        mailer,
-        siteName,
+        config,
       );
     },
   };
@@ -247,6 +234,7 @@ export async function createRpcHarness(
   const hooks = options.hooks ?? new HookRegistryImpl();
   const plugins = options.plugins ?? createPluginRegistry();
   const env = options.env ?? {};
+  const config = testConfig(options.config);
   const authMethods = options.auth && resolveAuthMethods(options.auth);
   // Build the same default registries `buildApp` would so the RPC
   // harness exercises validation against the real core specs.
@@ -275,8 +263,7 @@ export async function createRpcHarness(
       user,
       authMethods,
       options.authenticator,
-      options.mailer,
-      options.siteName,
+      config,
     );
   }
 
@@ -292,7 +279,6 @@ export async function createRpcHarness(
     null,
     authMethods,
     options.authenticator,
-    options.mailer,
-    options.siteName,
+    config,
   );
 }

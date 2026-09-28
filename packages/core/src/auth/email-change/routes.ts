@@ -32,9 +32,9 @@ export async function handleEmailChangeVerify(
 ): Promise<Response> {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError(ctx.basePath, "missing_token");
+  if (!token) return loginError(ctx.config.basePath, "missing_token");
   if (token.length > MAX_TOKEN_LENGTH)
-    return loginError(ctx.basePath, "token_invalid");
+    return loginError(ctx.config.basePath, "token_invalid");
 
   let result: Awaited<ReturnType<typeof verifyEmailChange>>;
   try {
@@ -42,10 +42,10 @@ export async function handleEmailChangeVerify(
   } catch (error) {
     if (error instanceof EmailChangeError) {
       ctx.logger.warn("email_change_verify_rejected", { code: error.code });
-      return loginError(ctx.basePath, error.code);
+      return loginError(ctx.config.basePath, error.code);
     }
     ctx.logger.error("email_change_verify_failed", { error });
-    return loginError(ctx.basePath, "token_invalid");
+    return loginError(ctx.config.basePath, "token_invalid");
   }
 
   // The change is COMMITTED at this point — email + emailVerifiedAt
@@ -69,7 +69,7 @@ export async function handleEmailChangeVerify(
     ctx.logger.error("email_change_hook_failed", { error });
   }
   return redirectTo(
-    `${withBasePath(LOGIN_PATH, ctx.basePath)}?email_change_success=1`,
+    `${withBasePath(LOGIN_PATH, ctx.config.basePath)}?email_change_success=1`,
   );
 }
 

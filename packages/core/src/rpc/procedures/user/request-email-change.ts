@@ -48,8 +48,10 @@ export const requestEmailChangeProc = base
     // Email change reuses the magic-link mailer + siteName config —
     // operators that disable magic-link (no top-level mailer) also
     // disable email change. The cross-field check in `plumix()` pins
-    // these together; context surfaces both as `mailer` + `siteName`.
-    if (!context.mailer || !context.siteName) {
+    // these together; the context carries the mailer as a service and the
+    // site name in `config.auth.magicLink`.
+    const siteName = context.config.auth.magicLink?.siteName;
+    if (!context.mailer || !siteName) {
       throw errors.CONFLICT({ data: { reason: "mailer_not_configured" } });
     }
 
@@ -59,7 +61,7 @@ export const requestEmailChangeProc = base
         newEmail: input.newEmail,
         origin: context.origin,
         mailer: context.mailer,
-        siteName: context.siteName,
+        siteName,
         // Email body locale follows the recipient's persisted preference
         // (`user.meta.locale`), not the actor's. An admin in English
         // editing a German user's email still mails the German user

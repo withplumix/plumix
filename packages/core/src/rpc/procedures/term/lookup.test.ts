@@ -222,7 +222,7 @@ describe("termLookupAdapter", () => {
       leaves: number,
     ): Promise<{ readonly queries: number; readonly urls: (string | null)[] }> {
       const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-        plugins: [regionsPlugin],
+        config: { plugins: [regionsPlugin] },
       });
       const ids: string[] = [];
       for (let i = 0; i < leaves; i++) {
@@ -274,7 +274,7 @@ describe("termLookupAdapter", () => {
       readonly hrefs: (string | undefined)[];
     }> {
       const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-        plugins: [regionsPlugin],
+        config: { plugins: [regionsPlugin] },
       });
       const ids: string[] = [];
       for (let i = 0; i < leaves; i++) {

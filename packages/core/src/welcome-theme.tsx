@@ -193,7 +193,7 @@ export const welcomeTheme = defineTheme({
       defineTemplate({
         render: ({ ctx }) => (
           <WelcomeScreen
-            basePath={ctx.basePath}
+            basePath={ctx.config.basePath}
             strings={welcomeMessages(ctx.locale.code)}
           />
         ),

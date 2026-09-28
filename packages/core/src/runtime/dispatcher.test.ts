@@ -101,8 +101,8 @@ describe("dispatcher — REST API enablement gate", () => {
   test("api.enabled loads the REST handler once and delegates to it", async () => {
     const probe = coldInterfaceProbe();
     const h = await createDispatcherHarness({
-      api: { enabled: true },
       coldInterfaces: probe.coldInterfaces,
+      config: { api: { enabled: true } },
     });
 
     const response = await h.dispatch(
@@ -133,8 +133,8 @@ describe("dispatcher — MCP enablement gate", () => {
   test("mcp.enabled loads the MCP handler once and delegates to it", async () => {
     const probe = coldInterfaceProbe();
     const h = await createDispatcherHarness({
-      mcp: { enabled: true },
       coldInterfaces: probe.coldInterfaces,
+      config: { mcp: { enabled: true } },
     });
 
     const response = await h.dispatch(mcpRequest());
@@ -290,7 +290,7 @@ describe("dispatcher — routing", () => {
     );
     const h = await createDispatcherHarness({
       assets,
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+      config: { i18n: { defaultLocale: "en", locales: ["en", "ar"] } },
     });
     const admin = await h.factory.user.create({
       role: "admin",
@@ -313,7 +313,7 @@ describe("dispatcher — routing", () => {
     );
     const h = await createDispatcherHarness({
       assets,
-      i18n: { defaultLocale: "en", locales: ["en", "zh-TW"] },
+      config: { i18n: { defaultLocale: "en", locales: ["en", "zh-TW"] } },
     });
 
     const response = await h.dispatch(
@@ -382,10 +382,14 @@ describe("dispatcher — routing", () => {
     );
     const h = await createDispatcherHarness({
       assets,
-      authenticator: {
-        authenticate: () => {
-          authenticated = true;
-          return Promise.resolve(null);
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => {
+              authenticated = true;
+              return Promise.resolve(null);
+            },
+          },
         },
       },
     });
@@ -425,7 +429,9 @@ describe("dispatcher — routing", () => {
     const h = await createDispatcherHarness({
       db,
       assets,
-      authenticator: tenantHeaderAuthenticator(subscriber),
+      config: {
+        auth: { authenticator: tenantHeaderAuthenticator(subscriber) },
+      },
     });
 
     const response = await h.dispatch(
@@ -452,8 +458,10 @@ describe("dispatcher — routing", () => {
     const h = await createDispatcherHarness({
       db,
       assets,
-      i18n: { defaultLocale: "en", locales: ["en", "ar"] },
-      authenticator: tenantHeaderAuthenticator(admin),
+      config: {
+        i18n: { defaultLocale: "en", locales: ["en", "ar"] },
+        auth: { authenticator: tenantHeaderAuthenticator(admin) },
+      },
     });
 
     const response = await h.dispatch(
@@ -790,7 +798,7 @@ describe("dispatcher — error boundary", () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -826,7 +834,7 @@ describe("dispatcher — error boundary", () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     const response = await h.dispatch(
       new Request("https://cms.example/post/nope"),
     );
@@ -886,7 +894,7 @@ describe("dispatcher — user-dependent render caching", () => {
   });
 
   test("marks a signed-in visitor's render private, no-store with a Cookie Vary", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     await seedHelloWorldPost(h);
     const visitor = await h.seedUser("subscriber");
     const request = await h.authenticateRequest(
@@ -902,7 +910,7 @@ describe("dispatcher — user-dependent render caching", () => {
   });
 
   test("leaves an anonymous render untouched (no private/no-store)", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     await seedHelloWorldPost(h);
 
     const response = await h.dispatch(
@@ -929,7 +937,9 @@ describe("dispatcher — theme reads configured auth methods", () => {
     const theme = defineTheme({
       templates: [fallback(() => createElement(LoginControls))],
     });
-    const h = await createDispatcherHarness({ plugins: [blog], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog], theme: theme },
+    });
     await seedHelloWorldPost(h);
 
     const response = await h.dispatch(
@@ -948,11 +958,13 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({
-      plugins: [blog],
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [blog],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -984,7 +996,7 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
         isHierarchical: true,
       });
     });
-    const h = await createDispatcherHarness({ plugins: [pages] });
+    const h = await createDispatcherHarness({ config: { plugins: [pages] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/assets/chunk-abc.js"),
@@ -998,7 +1010,7 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/post/nope", {
@@ -1019,7 +1031,7 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
     const blog = definePlugin("test-blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/post/nope", {
@@ -1038,13 +1050,15 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
 
   test("a 500 for a client that doesn't accept HTML skips the themed error render", async () => {
     const h = await createDispatcherHarness({
-      theme: defineTheme({
-        templates: [
-          fallback(() => {
-            throw new Error("render kaboom");
-          }),
-        ],
-      }),
+      config: {
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("render kaboom");
+            }),
+          ],
+        }),
+      },
     });
 
     const response = await h.dispatch(
@@ -1156,7 +1170,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("pong", { status: 200 }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/ping", { method: "GET" }),
@@ -1174,7 +1188,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("ok"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/upload", { method: "POST" }),
@@ -1192,7 +1206,7 @@ describe("dispatcher — plugin raw routes", () => {
           new Response(c.user?.email ?? "", { status: 200 }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("author");
     const authed = await h.authenticateRequest(
       plumixRequest("/_plumix/media/upload", { method: "POST" }),
@@ -1214,7 +1228,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("ok"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("editor");
     const authed = await h.authenticateRequest(
       plumixRequest("/_plumix/menus/sync", { method: "POST" }),
@@ -1241,7 +1255,7 @@ describe("dispatcher — plugin raw routes", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [pooledEntryTypesPlugin, plugin],
+      config: { plugins: [pooledEntryTypesPlugin, plugin] },
     });
     const request = () =>
       plumixRequest("/_plumix/newsroom/sync", { method: "POST" });
@@ -1272,7 +1286,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("ok"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
     const user = await h.seedUser("admin");
     const authed = await h.authenticateRequest(
       plumixRequest("/_plumix/menus/sync", { method: "POST" }),
@@ -1293,7 +1307,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("ok"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     // Request without the custom CSRF header is rejected by the shared
     // /_plumix/* gate before the route even runs.
@@ -1319,7 +1333,7 @@ describe("dispatcher — plugin raw routes", () => {
         handler: () => new Response("ok"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/unknown", { method: "GET" }),
@@ -1343,7 +1357,9 @@ describe("dispatcher — form-post routes (#2018)", () => {
   });
 
   test("a form-post route accepts a POST with no CSRF header", async () => {
-    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [formPostPlugin] },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/forms/submit", {
@@ -1356,7 +1372,9 @@ describe("dispatcher — form-post routes (#2018)", () => {
   });
 
   test("a form-post route still rejects a cross-origin POST", async () => {
-    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [formPostPlugin] },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/forms/submit", {
@@ -1372,7 +1390,9 @@ describe("dispatcher — form-post routes (#2018)", () => {
   // With the header gone the Origin check is the only control left, so a
   // request that names no origin at all fails it rather than skipping it.
   test("a form-post route rejects a POST carrying neither Origin nor Referer", async () => {
-    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [formPostPlugin] },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/forms/submit", {
@@ -1398,7 +1418,7 @@ describe("dispatcher — form-post routes (#2018)", () => {
         handler: () => new Response("received"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/rpc/entry/list", {
@@ -1427,7 +1447,7 @@ describe("dispatcher — form-post routes (#2018)", () => {
         handler: () => new Response("received"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/forms/submit", {
@@ -1467,7 +1487,9 @@ describe("dispatcher — form-post routes (#2018)", () => {
   });
 
   test("the exempt POST reaches the handler with no session to read", async () => {
-    const h = await createDispatcherHarness({ plugins: [sessionEchoPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [sessionEchoPlugin] },
+    });
     const user = await h.seedUser();
 
     const response = await h.dispatch(
@@ -1488,7 +1510,9 @@ describe("dispatcher — form-post routes (#2018)", () => {
   });
 
   test("the same route keeps its session on a header-carrying POST", async () => {
-    const h = await createDispatcherHarness({ plugins: [sessionEchoPlugin] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [sessionEchoPlugin] },
+    });
     const user = await h.seedUser();
 
     const response = await h.dispatch(
@@ -1526,7 +1550,7 @@ describe("dispatcher — form-post routes (#2018)", () => {
         handler: () => new Response("purged"),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/forms/purge", {
@@ -1547,8 +1571,7 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
 
   test("a public route under the base path renders; the bare path 404s", async () => {
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      plugins: [blog],
+      config: { basePath: "/custom-directory", plugins: [blog] },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -1574,7 +1597,9 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
   });
 
   test("the front page is served at the bare base prefix", async () => {
-    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/custom-directory/"),
     );
@@ -1584,7 +1609,9 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
   test("an asset-shaped miss outside the base (/favicon.ico) gets the cacheable plain 404", async () => {
     // The browser's favicon probe targets the domain root, not the mount —
     // it must hit the same cacheable asset-404 path as in-base misses (#1514).
-    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/favicon.ico"),
@@ -1595,7 +1622,9 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
   });
 
   test("a non-asset miss outside the base stays uncached", async () => {
-    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/whatever"),
@@ -1606,7 +1635,9 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
   });
 
   test("admin/RPC surfaces stay reachable under the base prefix", async () => {
-    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
     const response = await h.dispatch(
       plumixRequest("/custom-directory/_plumix/rpc/entry/list", {
         method: "POST",
@@ -1623,8 +1654,8 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
       '<!doctype html><html lang="en"><head></head><body></body></html>',
     );
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
       assets,
+      config: { basePath: "/custom-directory" },
     });
 
     const response = await h.dispatch(
@@ -1651,8 +1682,8 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
       },
     };
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
       assets,
+      config: { basePath: "/custom-directory" },
     });
 
     const response = await h.dispatch(
@@ -1668,7 +1699,9 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
   });
 
   test("the session cookie is scoped to the base so it isn't sent to sibling apps", async () => {
-    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+    const h = await createDispatcherHarness({
+      config: { basePath: "/custom-directory" },
+    });
     const response = await h.dispatch(
       plumixRequest("/custom-directory/_plumix/auth/signout", {
         method: "POST",
@@ -1700,11 +1733,13 @@ describe("dispatcher — imageDelivery slot wiring", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [plugin],
-      imageDelivery: {
-        kind: "stub",
-        url: (src, opts) =>
-          opts?.width === undefined ? src : `${src}?w=${opts.width}`,
+      config: {
+        plugins: [plugin],
+        imageDelivery: {
+          kind: "stub",
+          url: (src, opts) =>
+            opts?.width === undefined ? src : `${src}?w=${opts.width}`,
+        },
       },
     });
 
@@ -1730,7 +1765,7 @@ describe("dispatcher — imageDelivery slot wiring", () => {
           }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/probe", { method: "GET" }),
@@ -1780,10 +1815,16 @@ describe("dispatcher — public read-through CDN", () => {
     return createDispatcherHarness({
       db,
       cdn,
-      authenticator: {
-        authenticate: (request) =>
-          Promise.resolve(carriesCookie(request) ? { user: signedIn } : null),
-        hasSession: carriesCookie,
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: (request) =>
+              Promise.resolve(
+                carriesCookie(request) ? { user: signedIn } : null,
+              ),
+            hasSession: carriesCookie,
+          },
+        },
       },
     });
   }
@@ -1794,7 +1835,10 @@ describe("dispatcher — public read-through CDN", () => {
 
   test("a cacheable public page leaves the origin carrying its freshness and tags", async () => {
     const { cdn } = cdnStub();
-    const h = await createDispatcherHarness({ plugins: [blog], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blog] },
+    });
     const author = await h.seedUser("admin");
     const entry = await h.factory.entry.create({
       type: "post",
@@ -1831,7 +1875,10 @@ describe("dispatcher — public read-through CDN", () => {
       });
       ctx.registerTermTaxonomy("tag", { label: "Tags" });
     });
-    const h = await createDispatcherHarness({ plugins: [site], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [site] },
+    });
     await h.factory.term.create({
       taxonomy: "tag",
       slug: "news",
@@ -1861,7 +1908,10 @@ describe("dispatcher — public read-through CDN", () => {
         isHierarchical: true,
       });
     });
-    const h = await createDispatcherHarness({ plugins: [site], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [site] },
+    });
     const admin = await h.seedUser("admin");
     const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
     await h.factory.entry.create({
@@ -2010,8 +2060,8 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
   test("a permalink embedding a referenced entry carries that entity's tag", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [featuringBlog],
       cdn,
+      config: { plugins: [featuringBlog] },
     });
     const author = await h.seedUser("admin");
     const featured = await h.factory.entry.create({
@@ -2051,8 +2101,8 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
   test("a permalink embedding nothing is tagged exactly as before", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [featuringBlog],
       cdn,
+      config: { plugins: [featuringBlog] },
     });
     const author = await h.seedUser("admin");
     const plain = await h.factory.entry.create({
@@ -2125,9 +2175,8 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   test("stores an opted-in custom archive's rendered response on a miss", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [cacheableSchools],
-      theme: customTheme,
       cdn,
+      config: { plugins: [cacheableSchools], theme: customTheme },
     });
 
     const response = await h.dispatch(
@@ -2142,9 +2191,8 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   test("stores it under the type tags the resolver contributed", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [cacheableSchools],
-      theme: customTheme,
       cdn,
+      config: { plugins: [cacheableSchools], theme: customTheme },
     });
 
     await h.dispatch(new Request("https://cms.example/schools/london"));
@@ -2158,9 +2206,8 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   test("bypasses a custom archive that did not opt into caching", async () => {
     const { cdn, match, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [uncachedSchools],
-      theme: customTheme,
       cdn,
+      config: { plugins: [uncachedSchools], theme: customTheme },
     });
 
     const response = await h.dispatch(
@@ -2190,9 +2237,8 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   test("tags a listed archive with the types its query can list", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [cacheableTalks],
-      theme: customTheme,
       cdn,
+      config: { plugins: [cacheableTalks], theme: customTheme },
     });
 
     await h.dispatch(new Request("https://cms.example/talks"));
@@ -2206,9 +2252,8 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   test("stores it under a tag that publishing one of those types purges", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
-      plugins: [cacheableTalks],
-      theme: customTheme,
       cdn,
+      config: { plugins: [cacheableTalks], theme: customTheme },
     });
 
     await h.dispatch(new Request("https://cms.example/talks"));
@@ -2263,7 +2308,10 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
 
   test("stores an opted-in plugin route's response on a miss", async () => {
     const { cdn, put } = cdnStub();
-    const h = await createDispatcherHarness({ plugins: [cards], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [cards] },
+    });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -2281,7 +2329,10 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
 
   test("serves the stored response on a subsequent request", async () => {
     const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
-    const h = await createDispatcherHarness({ plugins: [cards], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [cards] },
+    });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -2306,7 +2357,10 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
         handler: () => new Response("REBUILT", { status: 200 }),
       });
     });
-    const h = await createDispatcherHarness({ plugins: [anyMethod], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [anyMethod] },
+    });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "POST" }),
@@ -2319,7 +2373,7 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
   });
 
   test("an opted-in route runs live when the deploy bound no CDN", async () => {
-    const h = await createDispatcherHarness({ plugins: [cards] });
+    const h = await createDispatcherHarness({ config: { plugins: [cards] } });
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -2345,7 +2399,10 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
         },
       });
     });
-    const h = await createDispatcherHarness({ plugins: [taggedCards], cdn });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [taggedCards] },
+    });
 
     await h.dispatch(
       plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
@@ -2360,8 +2417,8 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
       new Response("CACHED", { status: 200 }),
     );
     const h = await createDispatcherHarness({
-      plugins: [uncachedCards],
       cdn,
+      config: { plugins: [uncachedCards] },
     });
 
     const response = await h.dispatch(
@@ -2409,17 +2466,19 @@ describe("dispatcher — telemetry consumers", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [recorder],
-      telemetry: {
-        consumers: [
-          {
-            id: "in-test",
-            onRequestEnd: (snapshot, ctx) => {
-              snapshots.push(snapshot);
-              seenCtx.push(ctx);
+      config: {
+        plugins: [recorder],
+        telemetry: {
+          consumers: [
+            {
+              id: "in-test",
+              onRequestEnd: (snapshot, ctx) => {
+                snapshots.push(snapshot);
+                seenCtx.push(ctx);
+              },
             },
-          },
-        ],
+          ],
+        },
       },
     });
 
@@ -2458,12 +2517,14 @@ describe("dispatcher — telemetry consumers", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({
-      plugins: [blog],
-      theme: defineTheme({ templates: [fallback(() => null)] }),
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [blog],
+        theme: defineTheme({ templates: [fallback(() => null)] }),
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const author = await h.seedUser("admin");
@@ -2503,12 +2564,14 @@ describe("dispatcher — telemetry consumers", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({
-      plugins: [blog],
-      theme: defineTheme({ templates: [fallback(() => null)] }),
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [blog],
+        theme: defineTheme({ templates: [fallback(() => null)] }),
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const author = await h.seedUser("admin");
@@ -2547,17 +2610,19 @@ describe("dispatcher — telemetry consumers", () => {
   test("a throwing render marks the failing phase spans as errors in the snapshot", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      theme: defineTheme({
-        templates: [
-          fallback(() => {
-            throw new Error("render kaboom");
-          }),
-        ],
-      }),
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("render kaboom");
+            }),
+          ],
+        }),
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -2583,11 +2648,13 @@ describe("dispatcher — telemetry consumers", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const h = await createDispatcherHarness({
-      plugins: [blog],
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [blog],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -2623,16 +2690,20 @@ describe("dispatcher — telemetry consumers", () => {
       );
     });
     const h = await createDispatcherHarness({
-      plugins: [probe],
-      theme: defineTheme({
-        templates: [
-          fallback(defineTemplate({ "probe-dep": ["a"], render: () => null })),
-        ],
-      }),
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [probe],
+        theme: defineTheme({
+          templates: [
+            fallback(
+              defineTemplate({ "probe-dep": ["a"], render: () => null }),
+            ),
+          ],
+        }),
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const author = await h.seedUser("admin");
@@ -2672,10 +2743,12 @@ describe("dispatcher — telemetry consumers", () => {
   test("session-cookie auth resolution appears as an auth span with the resolved user", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const user = await h.seedUser("admin");
@@ -2704,11 +2777,13 @@ describe("dispatcher — telemetry consumers", () => {
       ctx.addFilter("render:document", (manifest) => manifest);
     });
     const h = await createDispatcherHarness({
-      plugins: [decorator],
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [decorator],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -2742,10 +2817,12 @@ describe("dispatcher — telemetry consumers", () => {
     };
     const h = await createDispatcherHarness({
       cdn,
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -2798,10 +2875,12 @@ describe("dispatcher — telemetry consumers", () => {
   test("an admin RPC call produces an rpc procedure span in the snapshot", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const user = await h.seedUser("admin");
@@ -2835,16 +2914,18 @@ describe("dispatcher — telemetry consumers", () => {
     const exportDone = new Promise<void>((r) => (finishExport = r));
     let exported = false;
     const h = await createDispatcherHarness({
-      telemetry: {
-        consumers: [
-          {
-            id: "slow",
-            onRequestEnd: async () => {
-              await exportDone;
-              exported = true;
+      config: {
+        telemetry: {
+          consumers: [
+            {
+              id: "slow",
+              onRequestEnd: async () => {
+                await exportDone;
+                exported = true;
+              },
             },
-          },
-        ],
+          ],
+        },
       },
     });
 
@@ -2863,15 +2944,17 @@ describe("dispatcher — telemetry consumers", () => {
     const snapshots: TelemetrySnapshot[] = [];
     const { plugin, seen } = spanObserver();
     const h = await createDispatcherHarness({
-      plugins: [plugin],
-      telemetry: {
-        consumers: [
-          {
-            id: "opt-out",
-            sample: () => false,
-            onRequestEnd: (s) => void snapshots.push(s),
-          },
-        ],
+      config: {
+        plugins: [plugin],
+        telemetry: {
+          consumers: [
+            {
+              id: "opt-out",
+              sample: () => false,
+              onRequestEnd: (s) => void snapshots.push(s),
+            },
+          ],
+        },
       },
     });
 
@@ -2884,7 +2967,7 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("with no consumers registered the collector is the no-op", async () => {
     const { plugin, seen } = spanObserver();
-    const h = await createDispatcherHarness({ plugins: [plugin] });
+    const h = await createDispatcherHarness({ config: { plugins: [plugin] } });
 
     await h.dispatch(new Request("https://cms.example/"));
 
@@ -2902,8 +2985,10 @@ describe("dispatcher — telemetry consumers", () => {
       onRequestEnd: () => void received.push(id),
     });
     const h = await createDispatcherHarness({
-      telemetry: {
-        consumers: [consumer("yes", () => true), consumer("no", () => false)],
+      config: {
+        telemetry: {
+          consumers: [consumer("yes", () => true), consumer("no", () => false)],
+        },
       },
     });
 
@@ -2916,17 +3001,19 @@ describe("dispatcher — telemetry consumers", () => {
   test("a 500 request still delivers its snapshot, status and error included", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      theme: defineTheme({
-        templates: [
-          fallback(() => {
-            throw new Error("render kaboom");
-          }),
-        ],
-      }),
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("render kaboom");
+            }),
+          ],
+        }),
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -2948,7 +3035,9 @@ describe("dispatcher — telemetry consumers", () => {
     test("in dev the bar registers as a consumer: collection is active with no config consumers", async () => {
       process.env.PLUMIX_DEV = "1";
       const { plugin, seen } = spanObserver();
-      const h = await createDispatcherHarness({ plugins: [plugin] });
+      const h = await createDispatcherHarness({
+        config: { plugins: [plugin] },
+      });
 
       await h.dispatch(new Request("https://cms.example/"));
 
@@ -2960,8 +3049,7 @@ describe("dispatcher — telemetry consumers", () => {
       process.env.PLUMIX_DEV = "1";
       const { plugin, seen } = spanObserver();
       const h = await createDispatcherHarness({
-        plugins: [plugin],
-        dev: { bar: false },
+        config: { plugins: [plugin], dev: { bar: false } },
       });
 
       await h.dispatch(new Request("https://cms.example/"));
@@ -2978,13 +3066,15 @@ describe("dispatcher — telemetry consumers", () => {
       // up precisely, immune to whatever else the shared singleton holds.
       let requestId: string | undefined;
       const h = await createDispatcherHarness({
-        telemetry: {
-          consumers: [
-            {
-              id: "id-probe",
-              onRequestEnd: (s) => void (requestId = s.request.requestId),
-            },
-          ],
+        config: {
+          telemetry: {
+            consumers: [
+              {
+                id: "id-probe",
+                onRequestEnd: (s) => void (requestId = s.request.requestId),
+              },
+            ],
+          },
         },
       });
 
@@ -3012,14 +3102,16 @@ describe("dispatcher — telemetry consumers", () => {
       const seen: AppContext["dev"][] = [];
       let requestId: string | undefined;
       const h = await createDispatcherHarness({
-        telemetry: {
-          consumers: [
-            {
-              id: "dev-probe",
-              sample: (ctx) => (seen.push(ctx.dev), true),
-              onRequestEnd: (s) => void (requestId ??= s.request.requestId),
-            },
-          ],
+        config: {
+          telemetry: {
+            consumers: [
+              {
+                id: "dev-probe",
+                sample: (ctx) => (seen.push(ctx.dev), true),
+                onRequestEnd: (s) => void (requestId ??= s.request.requestId),
+              },
+            ],
+          },
         },
       });
 
@@ -3039,7 +3131,7 @@ describe("dispatcher — telemetry consumers", () => {
     test("`dev.history.maxEntries` bounds what the ring keeps", async () => {
       process.env.PLUMIX_DEV = "1";
       const h = await createDispatcherHarness({
-        dev: { history: { maxEntries: 2 } },
+        config: { dev: { history: { maxEntries: 2 } } },
       });
 
       for (const path of ["/a", "/b", "/c"]) {
@@ -3058,7 +3150,7 @@ describe("dispatcher — telemetry consumers", () => {
     test("`dev.history.maxStringLength` truncates what the ring stores", async () => {
       process.env.PLUMIX_DEV = "1";
       const h = await createDispatcherHarness({
-        dev: { history: { maxStringLength: 4 } },
+        config: { dev: { history: { maxStringLength: 4 } } },
       });
 
       await h.dispatch(new Request("https://cms.example/abcdefgh"));
@@ -3072,13 +3164,15 @@ describe("dispatcher — telemetry consumers", () => {
       delete process.env.PLUMIX_DEV;
       let requestId: string | undefined;
       const h = await createDispatcherHarness({
-        telemetry: {
-          consumers: [
-            {
-              id: "id-probe",
-              onRequestEnd: (s) => void (requestId = s.request.requestId),
-            },
-          ],
+        config: {
+          telemetry: {
+            consumers: [
+              {
+                id: "id-probe",
+                onRequestEnd: (s) => void (requestId = s.request.requestId),
+              },
+            ],
+          },
         },
       });
 
@@ -3129,11 +3223,13 @@ describe("dispatcher — ctx.fetch tracing", () => {
   }> {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      plugins: [plugin],
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [plugin],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     return { h, snapshots };
@@ -3225,9 +3321,11 @@ describe("dispatcher — ctx.fetch tracing", () => {
     const stub = (): Promise<Response> => Promise.resolve(new Response("pong"));
     vi.stubGlobal("fetch", stub);
     const h = await createDispatcherHarness({
-      plugins: [
-        outboundCaller((appCtx) => appCtx.fetch("https://api.example.com/")),
-      ],
+      config: {
+        plugins: [
+          outboundCaller((appCtx) => appCtx.fetch("https://api.example.com/")),
+        ],
+      },
     });
 
     await h.dispatch(new Request("https://cms.example/"));
@@ -3295,7 +3393,9 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
 
   test("the dev error page — stacks included — is withheld off-loopback", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
 
     const response = await h.dispatch(new Request("https://cms.example/"));
 
@@ -3313,7 +3413,9 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
 
   test('an `auth: "development"` route is served over loopback', async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ plugins: [devRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [devRoute] },
+    });
 
     const response = await h.dispatch(
       plumixRequest(`${DEV_ORIGIN}/_plumix/og/preview`),
@@ -3325,7 +3427,9 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
 
   test('an `auth: "development"` route 404s off-loopback, disclosing nothing', async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ plugins: [devRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [devRoute] },
+    });
 
     const response = await h.dispatch(
       plumixRequest("https://cms.example/_plumix/og/preview"),
@@ -3345,7 +3449,9 @@ describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
 
   test('an `auth: "development"` route 404s in production, loopback or not', async () => {
     vi.stubEnv("PLUMIX_DEV", "");
-    const h = await createDispatcherHarness({ plugins: [devRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [devRoute] },
+    });
 
     const response = await h.dispatch(
       plumixRequest(`${DEV_ORIGIN}/_plumix/og/preview`),
@@ -3373,7 +3479,9 @@ describe("dispatcher — dev error page", () => {
 
   test("dev gate on: a throwing template returns the standalone dev error page, not the themed 500", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     expect(response.status).toBe(500);
@@ -3400,7 +3508,7 @@ describe("dispatcher — dev error page", () => {
         }),
       ],
     });
-    const h = await createDispatcherHarness({ theme: brokenTheme });
+    const h = await createDispatcherHarness({ config: { theme: brokenTheme } });
     const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     expect(response.status).toBe(500);
@@ -3419,7 +3527,9 @@ describe("dispatcher — dev error page", () => {
         }),
       ],
     });
-    const h = await createDispatcherHarness({ theme: noSuchTableTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: noSuchTableTheme },
+    });
     const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
@@ -3430,7 +3540,9 @@ describe("dispatcher — dev error page", () => {
 
   test("an unrecognized error renders no hint card", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
@@ -3441,7 +3553,9 @@ describe("dispatcher — dev error page", () => {
 
   test("the dev page shows the request/route/database/timeline/application context", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
@@ -3464,7 +3578,9 @@ describe("dispatcher — dev error page", () => {
 
   test("dev gate off: a throwing template returns the existing themed 500, unchanged", async () => {
     vi.stubEnv("PLUMIX_DEV", "");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(new Request("https://cms.example/"));
 
     expect(response.status).toBe(500);
@@ -3479,7 +3595,9 @@ describe("dispatcher — dev error page", () => {
 
   test("a throwing plugin route lands on the dev page too, not an opaque JSON 500", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [throwingRoute] },
+    });
 
     const response = await h.dispatch(
       plumixRequest(`${DEV_ORIGIN}/_plumix/boom/card`, {
@@ -3498,7 +3616,9 @@ describe("dispatcher — dev error page", () => {
 
   test("a caller that did not ask for HTML gets the exception as JSON", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [throwingRoute] },
+    });
 
     // A bare `fetch` sends `*/*`. The `/_plumix/` surface is machine-facing, so
     // a document here would only fail to parse and bury the exception with it.
@@ -3514,7 +3634,9 @@ describe("dispatcher — dev error page", () => {
 
   test("dev gate off: the same plugin-route throw stays the opaque 500", async () => {
     vi.stubEnv("PLUMIX_DEV", "");
-    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [throwingRoute] },
+    });
 
     const response = await h.dispatch(
       plumixRequest("https://cms.example/_plumix/boom/card"),
@@ -3528,11 +3650,13 @@ describe("dispatcher — dev error page", () => {
     vi.stubEnv("PLUMIX_DEV", "");
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
-      theme: throwingTheme,
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        theme: throwingTheme,
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
 
@@ -3563,7 +3687,9 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
 
   test("dev gate on: a non-HTML 5xx returns JSON with error, message, and stack", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(jsonRequest());
 
     expect(response.status).toBe(500);
@@ -3586,7 +3712,9 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
         }),
       ],
     });
-    const h = await createDispatcherHarness({ theme: noSuchTableTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: noSuchTableTheme },
+    });
     const response = await h.dispatch(jsonRequest());
 
     const body = (await response.json()) as DevErrorJson;
@@ -3595,7 +3723,9 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
 
   test("an unrecognized error omits the hints field", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(jsonRequest());
 
     const body = (await response.json()) as DevErrorJson;
@@ -3604,7 +3734,9 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
 
   test("dev gate off: a non-HTML 5xx returns the plain-text response, unchanged", async () => {
     vi.stubEnv("PLUMIX_DEV", "");
-    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const h = await createDispatcherHarness({
+      config: { theme: throwingTheme },
+    });
     const response = await h.dispatch(jsonRequest());
 
     expect(response.status).toBe(500);

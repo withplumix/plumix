@@ -66,7 +66,7 @@ async function submit(ctx: AppContext, entry: Entry): Promise<void> {
     body: JSON.stringify({
       host: new URL(ctx.origin).host,
       key: settings.indexNowKey,
-      keyLocation: `${ctx.origin}${withBasePath(INDEXNOW_KEY_PATH, ctx.basePath)}`,
+      keyLocation: `${ctx.origin}${withBasePath(INDEXNOW_KEY_PATH, ctx.config.basePath)}`,
       urlList: [`${ctx.origin}${path}`],
     }),
   });

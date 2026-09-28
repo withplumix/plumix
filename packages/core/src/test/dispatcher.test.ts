@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { AppContext } from "../context/app.js";
 import type { ConnectedCdn } from "../runtime/slots.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
@@ -68,7 +69,9 @@ const cookieProbe = definePlugin("cookie-probe", (ctx) => {
 // request is only ever signed in through its session (#2343 hid behind this).
 describe("createDispatcherHarness sign-in", () => {
   test("`as` signs the request in through its session, not the request store", async () => {
-    const h = await createDispatcherHarness({ plugins: [identityProbe] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [identityProbe] },
+    });
     const admin = await h.seedUser("admin");
 
     const response = await h.fetch("/_plumix/identity-probe/identity", {
@@ -83,7 +86,9 @@ describe("createDispatcherHarness sign-in", () => {
   });
 
   test("authenticateRequest appends the session cookie, preserving cookies the request already carried", async () => {
-    const h = await createDispatcherHarness({ plugins: [cookieProbe] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [cookieProbe] },
+    });
     const admin = await h.seedUser("admin");
 
     const bare = new Request(
@@ -134,6 +139,29 @@ const slotsProbe = definePlugin("slots-probe", (ctx) => {
   });
 });
 
+describe("createDispatcherHarness config", () => {
+  test("a handler reads the app's resolved config as ctx.config", async () => {
+    const seen: AppContext[] = [];
+    const configProbe = definePlugin("config-probe", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/config",
+        handler: (_request, appCtx) => {
+          seen.push(appCtx);
+          return new Response(null, { status: 204 });
+        },
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [configProbe] },
+    });
+
+    await h.fetch("/config");
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.config).toBe(h.app.config);
+  });
+});
+
 const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", { label: "Posts", isPublic: true });
 });
@@ -141,11 +169,13 @@ const blog = definePlugin("blog", (ctx) => {
 describe("createDispatcherHarness slot binding", () => {
   test("image delivery reaches a request connected, as the handler binds it", async () => {
     const h = await createDispatcherHarness({
-      plugins: [slotsProbe],
-      imageDelivery: {
-        kind: "unbound",
-        url: (source) => source,
-        connect: () => ({ kind: "bound", url: (source) => source }),
+      config: {
+        plugins: [slotsProbe],
+        imageDelivery: {
+          kind: "unbound",
+          url: (source) => source,
+          connect: () => ({ kind: "bound", url: (source) => source }),
+        },
       },
     });
 
@@ -156,8 +186,8 @@ describe("createDispatcherHarness slot binding", () => {
 
   test("a kv store reaches a request as ctx.kv", async () => {
     const h = await createDispatcherHarness({
-      plugins: [slotsProbe],
       kv: memoryKv().connect(),
+      config: { plugins: [slotsProbe] },
     });
 
     const response = await h.fetch("/slots");
@@ -172,8 +202,8 @@ describe("createDispatcherHarness slot binding", () => {
       Promise.resolve(),
     );
     const h = await createDispatcherHarness({
-      plugins: [blog],
       cdn: { decorate: (response) => response, purgeTags },
+      config: { plugins: [blog] },
     });
     const admin = await h.seedUser("admin");
 

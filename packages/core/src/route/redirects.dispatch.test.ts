@@ -7,13 +7,15 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 describe("public redirect dispatch", () => {
   test("a plugin-registered redirect is served as a 308 with Location", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [
-        definePlugin("legacy", (ctx) => {
-          ctx.registerRedirects([
-            { from: "/old/guide", to: "/guides/start", status: 308 },
-          ]);
-        }),
-      ],
+      config: {
+        plugins: [
+          definePlugin("legacy", (ctx) => {
+            ctx.registerRedirects([
+              { from: "/old/guide", to: "/guides/start", status: 308 },
+            ]);
+          }),
+        ],
+      },
     });
     const response = await harness.fetch("/old/guide");
     response.assertStatus(308);
@@ -22,11 +24,13 @@ describe("public redirect dispatch", () => {
 
   test("a `gone` rule is served as a 410", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [
-        definePlugin("legacy", (ctx) => {
-          ctx.registerRedirects([{ from: "/legacy/*", gone: true }]);
-        }),
-      ],
+      config: {
+        plugins: [
+          definePlugin("legacy", (ctx) => {
+            ctx.registerRedirects([{ from: "/legacy/*", gone: true }]);
+          }),
+        ],
+      },
     });
     const response = await harness.fetch("/legacy/anything");
     response.assertStatus(410);
@@ -34,7 +38,9 @@ describe("public redirect dispatch", () => {
 
   test("a moved static asset redirects instead of 404ing", async () => {
     const harness = await createDispatcherHarness({
-      redirects: [{ from: "/img/old-logo.png", to: "/img/new-logo.png" }],
+      config: {
+        redirects: [{ from: "/img/old-logo.png", to: "/img/new-logo.png" }],
+      },
     });
     const response = await harness.fetch("/img/old-logo.png");
     response.assertStatus(301);
@@ -43,7 +49,9 @@ describe("public redirect dispatch", () => {
 
   test("a site `config.redirects` rule is served", async () => {
     const harness = await createDispatcherHarness({
-      redirects: [{ from: "/team/:slug", to: "/about/:slug", status: 301 }],
+      config: {
+        redirects: [{ from: "/team/:slug", to: "/about/:slug", status: 301 }],
+      },
     });
     const response = await harness.fetch("/team/ada");
     response.assertStatus(301);
@@ -52,9 +60,11 @@ describe("public redirect dispatch", () => {
 
   test("a theme-declared redirect is served", async () => {
     const harness = await createDispatcherHarness({
-      theme: {
-        ...defaultTestTheme,
-        redirects: [{ from: "/post/:slug", to: "/blog/:slug", status: 308 }],
+      config: {
+        theme: {
+          ...defaultTestTheme,
+          redirects: [{ from: "/post/:slug", to: "/blog/:slug", status: 308 }],
+        },
       },
     });
     const response = await harness.fetch("/post/hello");
@@ -67,8 +77,10 @@ describe("public redirect dispatch", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const harness = await createDispatcherHarness({
-      plugins: [blog],
-      redirects: [{ from: "/post/moved", to: "/post/kept", status: 301 }],
+      config: {
+        plugins: [blog],
+        redirects: [{ from: "/post/moved", to: "/post/kept", status: 301 }],
+      },
     });
     const author = await harness.seedUser("admin");
     for (const slug of ["moved", "kept"]) {
@@ -90,10 +102,12 @@ describe("public redirect dispatch", () => {
 
   test("config outranks a theme rule for the same path", async () => {
     const harness = await createDispatcherHarness({
-      redirects: [{ from: "/dup", to: "/from-config" }],
-      theme: {
-        ...defaultTestTheme,
-        redirects: [{ from: "/dup", to: "/from-theme" }],
+      config: {
+        redirects: [{ from: "/dup", to: "/from-config" }],
+        theme: {
+          ...defaultTestTheme,
+          redirects: [{ from: "/dup", to: "/from-theme" }],
+        },
       },
     });
     const response = await harness.fetch("/dup");

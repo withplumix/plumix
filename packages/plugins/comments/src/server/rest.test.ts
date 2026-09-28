@@ -17,7 +17,7 @@ import { loadThread } from "./load-thread.js";
 function restHarness(blog = testBlog): Promise<Harness> {
   return harnessWith(
     { entryTypes: ["post"] },
-    { blog, api: { enabled: true } },
+    { blog, config: { api: { enabled: true } } },
   );
 }
 
@@ -102,7 +102,7 @@ describe("comments REST resource", () => {
   test("returns nothing for a published revision row's id", async () => {
     const h = await harnessWith(
       { entryTypes: REVISION_TYPES_ENABLED },
-      { api: { enabled: true } },
+      { config: { api: { enabled: true } } },
     );
     const revision = await seedRevision(h, await seedPost(h));
     await commentFactory
@@ -208,7 +208,7 @@ describe("comments REST resource", () => {
   test("serves replies down to maxDepth and none below it", async () => {
     const h = await harnessWith(
       { entryTypes: ["post"], maxDepth: 1 },
-      { blog: testBlog, api: { enabled: true } },
+      { blog: testBlog, config: { api: { enabled: true } } },
     );
     const { id: entryId } = await seedPost(h);
     const f = commentFactory.transient({ db: h.db });
@@ -231,7 +231,7 @@ describe("comments REST resource", () => {
     const maxDepth = 2;
     const h = await harnessWith(
       { entryTypes: ["post"], maxDepth },
-      { blog: testBlog, api: { enabled: true } },
+      { blog: testBlog, config: { api: { enabled: true } } },
     );
     const { id: entryId } = await seedPost(h);
     const f = commentFactory.transient({ db: h.db });

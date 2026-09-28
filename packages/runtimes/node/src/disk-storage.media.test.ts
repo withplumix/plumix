@@ -23,7 +23,10 @@ afterEach(() => {
 
 test("an upload through the media plugin lands as a file and is served back with its type", async () => {
   const storage = diskStorage({ dir }).connect({});
-  const h = await createDispatcherHarness({ plugins: [media()], storage });
+  const h = await createDispatcherHarness({
+    storage,
+    config: { plugins: [media()] },
+  });
   const user = await h.seedUser("contributor");
   const rpc = async (procedure: string, input: Record<string, unknown>) => {
     const request = await h.authenticateRequest(

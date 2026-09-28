@@ -61,7 +61,7 @@ const PAGE_SEGMENT = ":page([1-9]\\d*)";
 
 /** Where the stylesheet answers for this deployment. */
 function stylesheetHref(ctx: AppContext): string {
-  return withBasePath(SITEMAP_STYLESHEET_PATH, ctx.basePath);
+  return withBasePath(SITEMAP_STYLESHEET_PATH, ctx.config.basePath);
 }
 
 function xmlResponse(body: string): Response {

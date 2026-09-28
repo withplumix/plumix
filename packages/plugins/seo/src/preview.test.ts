@@ -27,8 +27,7 @@ function createHarness(
   before: readonly AnyPluginDescriptor[] = [],
 ): Promise<DispatcherHarness> {
   return createDispatcherHarness({
-    plugins: [blogPlugin, ...before, seo()],
-    theme,
+    config: { plugins: [blogPlugin, ...before, seo()], theme: theme },
   });
 }
 
