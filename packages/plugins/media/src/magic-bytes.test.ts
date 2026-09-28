@@ -1,3 +1,4 @@
+import { fakeImage } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { looksLikeMime } from "./magic-bytes.js";
@@ -105,4 +106,10 @@ test("rejects buffers shorter than the signature", () => {
 test("svg detection tolerates BOM + whitespace", () => {
   const text = new TextEncoder().encode("﻿   \n<svg></svg>");
   expect(looksLikeMime(text, "image/svg+xml")).toBe(true);
+});
+
+test("a fakeImage upload passes as the PNG it claims to be", async () => {
+  const bytes = new Uint8Array(await fakeImage("cat.png").arrayBuffer());
+
+  expect(looksLikeMime(bytes, "image/png")).toBe(true);
 });

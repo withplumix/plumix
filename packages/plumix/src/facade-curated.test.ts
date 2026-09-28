@@ -21,7 +21,8 @@ interface Withholding {
 // by subpath; the guard loads both from the exports maps.
 type Curated =
   | {
-      readonly mirrors: string;
+      /** One source, or several a subpath gathers under one import. */
+      readonly mirrors: string | readonly string[];
       readonly withheld: readonly Withholding[];
     }
   | {
@@ -389,17 +390,6 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
     ],
   },
-  "./blocks/test": {
-    mirrors: "@plumix/blocks/test",
-    withheld: [
-      {
-        reason:
-          "`validateEntryContent` under a second name; it is published on " +
-          "`plumix/blocks` under its own",
-        names: ["validateContent"],
-      },
-    ],
-  },
   "./blocks/island-renderer": {
     mirrors: "@plumix/blocks/island-renderer",
     withheld: [],
@@ -463,14 +453,16 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
   "./storage/s3": { mirrors: "@plumix/core/storage/s3", withheld: [] },
   "./fields": { mirrors: "@plumix/core/fields", withheld: [] },
+  // The one test import: core's harnesses and factories, and blocks' render
+  // helpers beside them.
   "./test": {
-    mirrors: "@plumix/core/test",
+    mirrors: ["@plumix/core/test", "@plumix/blocks/test"],
     withheld: [
       {
         reason:
           "the prefix-parameterized RPC stub and its responder error, which " +
-          "a plugin reaches as `stubPluginRpc` and `PluginRpcError` through " +
-          "`plumix/admin/test`, served at its own namespace",
+          "a plugin reaches as `stubPluginRpc` and `PluginRpcError` on this " +
+          "subpath, served at its own namespace",
         names: ["stubRpcEndpoint", "RpcReplyError"],
       },
       {
@@ -479,13 +471,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "predate `createTestContext`, which a new test takes instead",
         names: ["createRequestMemo"],
       },
+      {
+        reason:
+          "`validateEntryContent` under a second name; it is published on " +
+          "`plumix/blocks` under its own",
+        names: ["validateContent"],
+      },
     ],
-  },
-  // The plugin-facing names for core's RPC stub: `PluginRpcError` is core's
-  // `RpcReplyError` itself, so a responder's throw is the class the stub maps.
-  "./admin/test": {
-    draws: "@plumix/core/test",
-    adds: ["stubPluginRpc", "PluginRpcError"],
   },
   "./test/conformance": {
     mirrors: "@plumix/core/test/conformance",
@@ -684,7 +676,12 @@ describe.each(Object.entries(CURATED))(
       return;
     }
 
-    const source = loaded(sources, entry.mirrors);
+    const mirrored =
+      typeof entry.mirrors === "string" ? [entry.mirrors] : entry.mirrors;
+    const mirrors = mirrored.join(" and ");
+    const source: Namespace = Object.fromEntries(
+      mirrored.flatMap((from) => Object.entries(loaded(sources, from))),
+    );
     const withheld = entry.withheld.flatMap((group) => group.names);
 
     test("publishes or withholds every value its source exports", () => {
@@ -696,7 +693,7 @@ describe.each(Object.entries(CURATED))(
           .map(
             (name) =>
               `${specifier} neither publishes nor withholds "${name}", ` +
-              `which ${entry.mirrors} exports — publish it, or withhold it ` +
+              `which ${mirrors} exports — publish it, or withhold it ` +
               `with a reason in ${subpath}'s row`,
           ),
       ).toEqual([]);
@@ -710,7 +707,7 @@ describe.each(Object.entries(CURATED))(
           .map(
             ({ name, owners: from }) =>
               `${specifier} publishes "${name}", which is ${from}'s, not ` +
-              `${entry.mirrors}'s — publish it from the subpath that owns ` +
+              `${mirrors}'s — publish it from the subpath that owns ` +
               `it`,
           ),
       ).toEqual([]);
@@ -734,7 +731,7 @@ describe.each(Object.entries(CURATED))(
           .filter((name) => !(name in source))
           .map(
             (name) =>
-              `${subpath} withholds "${name}", which ${entry.mirrors} no ` +
+              `${subpath} withholds "${name}", which ${mirrors} no ` +
               `longer exports — drop it from the row`,
           ),
       ).toEqual([]);

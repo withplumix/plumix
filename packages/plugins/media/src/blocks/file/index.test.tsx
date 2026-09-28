@@ -1,5 +1,5 @@
 import { blockTextRoster, extractBlockText } from "plumix/blocks";
-import { renderBlockSpecToHtml } from "plumix/blocks/test";
+import { renderBlockSpecToHtml } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { fileBlock } from "./index.js";

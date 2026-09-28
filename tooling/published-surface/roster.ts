@@ -662,18 +662,11 @@ export const ROSTER: Readonly<
           "run (runtime-cloudflare, runtime-node)",
         names: ["emitPlumixSources", "buildAppClientFirst", "BuildableApp"],
       },
-    ],
-    "./admin/test": [
       {
         reason:
-          "the plugin-admin RPC stub a plugin's own admin tests serve its " +
-          "procedures from",
-        names: [
-          "stubPluginRpc",
-          "PluginRpcStub",
-          "PluginRpcCall",
-          "PluginRpcError",
-        ],
+          "a plugin's whole vitest config: the Node and browser test tiers " +
+          "its test files pick by name (ADR 0021)",
+        names: ["defineTestConfig"],
       },
     ],
   },

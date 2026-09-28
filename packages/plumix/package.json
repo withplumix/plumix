@@ -120,10 +120,6 @@
       "types": "./dist/admin/ui.d.ts",
       "default": "./dist/admin/ui.js"
     },
-    "./admin/test": {
-      "types": "./dist/admin/test.d.ts",
-      "default": "./dist/admin/test.js"
-    },
     "./test/playwright": {
       "types": "./dist/test/playwright.d.ts",
       "default": "./dist/test/playwright.js"
@@ -139,10 +135,6 @@
     "./blocks/renderer": {
       "types": "./dist/blocks/renderer.d.ts",
       "default": "./dist/blocks/renderer.js"
-    },
-    "./blocks/test": {
-      "types": "./dist/blocks/test.d.ts",
-      "default": "./dist/blocks/test.js"
     },
     "./blocks/island-runtime": {
       "types": "./dist/blocks/island-runtime.d.ts",
@@ -186,6 +178,7 @@
     },
     "./test": {
       "types": "./dist/test/index.d.ts",
+      "browser": "./dist/test/browser.js",
       "default": "./dist/test/index.js"
     },
     "./editor-runtime": {
@@ -242,7 +235,9 @@
     "@playwright/test": "catalog:",
     "@tanstack/react-query": "catalog:tanstack",
     "@tanstack/react-router": "catalog:tanstack",
+    "@vitest/browser-playwright": "catalog:vitest",
     "drizzle-orm": "catalog:drizzle",
+    "playwright": "catalog:",
     "radix-ui": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
@@ -287,6 +282,12 @@
     },
     "vitest": {
       "optional": true
+    },
+    "@vitest/browser-playwright": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -304,9 +305,11 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
+    "@vitest/browser-playwright": "catalog:vitest",
     "@vitest/coverage-v8": "catalog:vitest",
     "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
+    "playwright": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
     "radix-ui": "catalog:",

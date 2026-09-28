@@ -1,0 +1,214 @@
+import { Suspense } from "react";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/editor/autosave.js";
+import { createQueryClient } from "@/providers/query-client.js";
+import { ORPCError } from "@orpc/client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { AppRouterClient } from "@plumix/core";
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
+
+import {
+  clearManifest,
+  seedManifest,
+} from "../../../../../../test/manifest.js";
+import { renderWithRouter } from "../../../../../../test/render-with-router.js";
+import { settleRpc, stubRpc } from "../../../../../../test/rpc.js";
+import { PlainFormRouteInner } from "./-plain-form-route.js";
+
+const author: EntryTypeManifestEntry = {
+  name: "author",
+  capabilityType: "author",
+  adminSlug: "authors",
+  label: "Author",
+  isPublic: false,
+  showUI: true,
+  showInSidebar: true,
+};
+
+const entry: Awaited<ReturnType<AppRouterClient["entry"]["get"]>> = {
+  id: 1,
+  type: "author",
+  parentId: null,
+  title: "Jane Doe",
+  slug: "jane-doe",
+  content: null,
+  excerpt: null,
+  status: "draft",
+  authorId: 1,
+  sortOrder: 0,
+  publishedAt: null,
+  createdAt: new Date("2026-05-20T00:00:00.000Z"),
+  updatedAt: new Date("2026-05-20T00:00:00.000Z"),
+  meta: { headline: "Staff writer" },
+  terms: {},
+};
+
+const headlineRejected = new ORPCError("CONFLICT", {
+  message: "meta_invalid_value",
+  data: {
+    reason: "meta_invalid_value",
+    errors: [{ path: "headline", message: "Headline is taken" }],
+  },
+});
+
+beforeEach(() => {
+  seedManifest({
+    entryTypes: [author],
+    entryMetaBoxes: [
+      {
+        id: "bio",
+        label: "Biography",
+        entryTypes: ["author"],
+        fields: [
+          {
+            key: "headline",
+            label: "Headline",
+            type: "string",
+            inputType: "text",
+          },
+        ],
+      },
+    ],
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+  clearManifest();
+  vi.unstubAllGlobals();
+});
+
+async function renderRoute(): Promise<void> {
+  await renderWithRouter(
+    <QueryClientProvider client={createQueryClient()}>
+      <Suspense>
+        <PlainFormRouteInner
+          entryType={author}
+          id={1}
+          supportsRevisions={false}
+          capabilities={[]}
+        />
+      </Suspense>
+    </QueryClientProvider>,
+  );
+  await screen.findByTestId("plain-form-layout");
+}
+
+describe("PlainFormRouteInner", () => {
+  test("a meta rejection marks the offending input", async () => {
+    stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => {
+        throw headlineRejected;
+      },
+    });
+    await renderRoute();
+
+    fireEvent.click(screen.getByTestId("plain-form-save-button"));
+
+    expect(
+      (await screen.findByTestId("meta-box-field-headline-error")).textContent,
+    ).toBe("Headline is taken");
+    expect(screen.getByTestId("plain-form-status-pill").dataset.status).toBe(
+      "error",
+    );
+  });
+
+  test("a later successful save removes the pinned error", async () => {
+    let rejectNext = true;
+    stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => {
+        if (rejectNext) {
+          rejectNext = false;
+          throw headlineRejected;
+        }
+        return entry;
+      },
+    });
+    await renderRoute();
+
+    fireEvent.click(screen.getByTestId("plain-form-save-button"));
+    await screen.findByTestId("meta-box-field-headline-error");
+    fireEvent.click(screen.getByTestId("plain-form-save-button"));
+
+    // The pin clears as the retry starts; the pill reaches `saved` once it
+    // lands.
+    await waitFor(() => {
+      expect(screen.getByTestId("plain-form-status-pill").dataset.status).toBe(
+        "saved",
+      );
+    });
+    expect(
+      screen.queryByTestId("meta-box-field-headline-error"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("an error without field paths only flags the save status", async () => {
+    stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => {
+        throw new Error("boom");
+      },
+    });
+    await renderRoute();
+
+    fireEvent.click(screen.getByTestId("plain-form-save-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("plain-form-status-pill").dataset.status).toBe(
+        "error",
+      );
+    });
+    expect(
+      screen.queryByTestId("meta-box-field-headline-error"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("an edit is sent once the autosave debounce is quiet, not before", async () => {
+    const rpc = stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => entry,
+    });
+    await renderRoute();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    fireEvent.change(screen.getByTestId("plain-form-title-input"), {
+      target: { value: "Jane Q. Doe" },
+    });
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS - 1));
+    expect(rpc.lastCallTo("entry/update")).toBeUndefined();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+
+    expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
+      title: "Jane Q. Doe",
+    });
+  });
+
+  test("leaving with an edit inside the debounce window still sends it", async () => {
+    const rpc = stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => entry,
+    });
+    await renderRoute();
+
+    fireEvent.change(screen.getByTestId("plain-form-title-input"), {
+      target: { value: "Jane Q. Doe" },
+    });
+    cleanup();
+    await settleRpc();
+
+    expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
+      title: "Jane Q. Doe",
+    });
+  });
+});

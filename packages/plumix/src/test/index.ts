@@ -59,3 +59,19 @@ export {
   spyAction,
   spyFilter,
 } from "@plumix/core/test";
+
+// Serving a plugin's own RPC procedures to its admin code under test.
+export { PluginRpcError, stubPluginRpc } from "./plugin-rpc.js";
+export type { PluginRpcCall, PluginRpcStub } from "./plugin-rpc.js";
+
+// Rendering a block, or a tree of them, to HTML.
+export {
+  EMPTY_CONTEXT,
+  mockRegistry,
+  renderBlockSpecToHtml,
+  renderBlockTreeToHtml,
+} from "@plumix/blocks/test";
+
+// Upload fakes: a real `File` for an upload field, a drop or a procedure.
+export { fakeFile, fakeImage } from "./fakes.js";
+export type { FakeFileOptions, FakeImageOptions } from "./fakes.js";

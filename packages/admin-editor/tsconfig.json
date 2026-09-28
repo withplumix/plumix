@@ -23,7 +23,6 @@
     "test",
     "vite.config.ts",
     "vitest.config.ts",
-    "vitest.setup.ts",
     "playwright.config.ts"
   ],
   "exclude": ["dist", "playground/dist", "node_modules"]

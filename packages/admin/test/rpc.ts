@@ -1,8 +1,11 @@
 import { act } from "@testing-library/react";
 
 import type { AppRouter } from "@plumix/core";
-import type { RpcStub as CoreRpcStub, RpcStubRoutes } from "@plumix/core/test";
-import { stubRpcEndpoint } from "@plumix/core/test";
+import type {
+  RpcStub as CoreRpcStub,
+  RpcStubRoutes,
+} from "@plumix/core/test/browser";
+import { stubRpcEndpoint } from "@plumix/core/test/browser";
 
 /**
  * Let anything already dispatched reach the stub. A query is several awaits

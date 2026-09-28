@@ -45,6 +45,7 @@ const TEST_SOURCE = [
 // `src/`, so `PRODUCTION_SOURCE` never reaches it and `TEST_SOURCE` only
 // catches the `*.spec.ts` files, not the support modules beside them.
 const E2E_SOURCE = ["**/e2e/**/*.ts", "**/e2e/**/*.tsx"];
+const VITEST_CONFIGS = ["**/vitest.config.ts", "**/vitest.*.config.ts"];
 
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
@@ -56,7 +57,16 @@ export const baseConfig = defineConfig(
   //   - `**/locales/*.d.mts`   — their generated type declarations
   // The compiled catalogs carry a `/*eslint-disable*/` header that otherwise
   // trips `reportUnusedDisableDirectives` once linted.
-  { ignores: ["**/*.config.*", "**/locales/*.mjs", "**/locales/*.d.mts"] },
+  // A vitest config is the exception, re-included for the test-tier rule below.
+  {
+    ignores: [
+      "**/*.config.*",
+      "!**/vitest.config.ts",
+      "!**/vitest.*.config.ts",
+      "**/locales/*.mjs",
+      "**/locales/*.d.mts",
+    ],
+  },
   {
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     plugins: {
@@ -186,6 +196,22 @@ export const baseConfig = defineConfig(
         projectService: true,
       },
     },
+  },
+  // The two test tiers (ADR 0021): a test runs in Node or in Chromium by its
+  // filename, and nothing swaps in a simulated DOM. Vitest configs sit outside
+  // every package's tsconfig, so they are linted for this rule alone, without
+  // type information.
+  {
+    files: TEST_SOURCE,
+    rules: { "plumix/test-tier": "error" },
+  },
+  {
+    files: VITEST_CONFIGS,
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      parserOptions: { projectService: false },
+    },
+    rules: { "plumix/test-tier": "error" },
   },
 );
 

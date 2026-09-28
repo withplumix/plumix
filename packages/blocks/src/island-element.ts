@@ -342,9 +342,9 @@ export class PlumixIslandElement extends HTMLElement {
 // by name.
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
-// Test-injectable dynamic import. jsdom can't resolve real module URLs
-// in unit tests; swapping this lets the retry-and-error paths be
-// exercised without spinning up a bundler.
+// Test-injectable dynamic import. A unit test has no real module URLs to
+// resolve; swapping this lets the retry-and-error paths be exercised
+// without spinning up a bundler.
 let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
   import(url);
 
@@ -407,8 +407,8 @@ function readRenderer(namespace: ModuleNamespace): RendererModule {
   return { mount: namespace.mount as RendererModule["mount"] };
 }
 
-// Test seam: jsdom can't import a real renderer chunk URL, so unit tests
-// inject the (statically imported) renderer module directly. Mirrors
+// Test seam: a unit test has no renderer chunk URL to import, so it injects
+// the (statically imported) renderer module directly. Mirrors
 // `setDynamicImport`.
 export function setRendererImport(
   fn: () => Promise<RendererModule>,

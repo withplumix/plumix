@@ -65,6 +65,10 @@
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"
     },
+    "./test/browser": {
+      "types": "./dist/test/browser.d.ts",
+      "default": "./dist/test/browser.js"
+    },
     "./test/playwright": {
       "types": "./dist/test/playwright/index.d.ts",
       "default": "./dist/test/playwright/index.js"
@@ -187,12 +191,13 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
+    "@vitest/browser-playwright": "catalog:vitest",
     "@vitest/coverage-v8": "catalog:vitest",
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-boundaries": "^7.2.0",
-    "jsdom": "catalog:",
+    "playwright": "catalog:",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:react",

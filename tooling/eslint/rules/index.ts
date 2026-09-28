@@ -14,6 +14,7 @@ import { noUnknownReturn } from "./no-unknown-return.js";
 import { noUnknownTypeAlias } from "./no-unknown-type-alias.js";
 import { noUnparsedPropertyTypeof } from "./no-unparsed-property-typeof.js";
 import { noUnsafeDictionary } from "./no-unsafe-dictionary.js";
+import { testTier } from "./test-tier.js";
 
 /**
  * First-party rules for the conventions this repo holds by discipline alone
@@ -42,5 +43,6 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-unknown-type-alias": noUnknownTypeAlias,
     "no-unparsed-property-typeof": noUnparsedPropertyTypeof,
     "no-unsafe-dictionary": noUnsafeDictionary,
+    "test-tier": testTier,
   },
 };

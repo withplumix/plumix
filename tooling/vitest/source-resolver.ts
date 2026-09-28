@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vitest/config";
 
@@ -21,6 +21,8 @@ const EMPTY_CATALOG = fileURLToPath(
 interface WorkspacePackage {
   readonly dir: string;
   readonly exports: Record<string, unknown>;
+  /** The `browser` field's bare-specifier remaps (`sanitize-html` → shim). */
+  readonly browser: Record<string, string>;
 }
 
 function loadWorkspacePackages(): Map<string, WorkspacePackage> {
@@ -36,21 +38,28 @@ function loadWorkspacePackages(): Map<string, WorkspacePackage> {
       const pkg = JSON.parse(readFileSync(manifest, "utf8")) as {
         name?: string;
         exports?: Record<string, unknown>;
+        browser?: Record<string, string>;
       };
       if (pkg.name && pkg.exports)
-        map.set(pkg.name, { dir, exports: pkg.exports });
+        map.set(pkg.name, {
+          dir,
+          exports: pkg.exports,
+          browser: pkg.browser ?? {},
+        });
     }
   }
   return map;
 }
 
 // The dist target an export condition points at (`./dist/plugin/manifest.js`).
-// Take the runtime condition; the `source` we want is derived from it.
-function distTarget(entry: unknown): string | null {
+// Take the runtime condition; the `source` we want is derived from it. The
+// browser tier takes a `browser` condition first, as a bundler for it would.
+function distTarget(entry: unknown, browser: boolean): string | null {
   if (typeof entry === "string") return entry;
   if (entry && typeof entry === "object") {
     const conditions = entry as Record<string, unknown>;
-    for (const key of ["import", "default", "node", "types"]) {
+    const keys = ["import", "default", "node", "types"];
+    for (const key of browser ? ["browser", ...keys] : keys) {
       const value = conditions[key];
       if (typeof value === "string") return value;
     }
@@ -108,6 +117,22 @@ function matchExport(
   return null;
 }
 
+// A bare import from inside a package whose `browser` field remaps it, as a
+// browser bundler applies the field. The remap names a `dist/` file, so it
+// goes through the same dist → src swap as an export.
+function browserRemap(
+  packages: ReadonlyMap<string, WorkspacePackage>,
+  source: string,
+  importer: string,
+): string | null {
+  for (const pkg of packages.values()) {
+    const target = pkg.browser[source];
+    if (target === undefined || !importer.startsWith(pkg.dir + sep)) continue;
+    return sourceCandidate(pkg.dir, target);
+  }
+  return null;
+}
+
 /**
  * Resolves `@plumix/*` / `plumix` workspace imports to their `src/` entry
  * during vitest, so unit tests exercise source and don't depend on a build.
@@ -128,14 +153,20 @@ export function plumixSourceResolver(): Plugin {
   return {
     name: "plumix:source-resolver",
     enforce: "pre",
-    resolveId(source) {
+    resolveId(source, importer, options) {
+      // The node tier transforms for SSR; the browser tier does not.
+      const browser = options.ssr !== true;
+      if (browser && importer !== undefined) {
+        const remapped = browserRemap(packages, source, importer);
+        if (remapped) return remapped;
+      }
       const split = splitSpecifier(source);
       if (!split) return null;
       const pkg = packages.get(split.name);
       if (!pkg) return null;
       const matched = matchExport(pkg.exports, split.subpath);
       if (!matched) return null;
-      let target = distTarget(matched.entry);
+      let target = distTarget(matched.entry, browser);
       if (!target) return null;
       if (matched.star !== undefined)
         target = target.replaceAll("*", matched.star);

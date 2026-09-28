@@ -198,10 +198,26 @@ comment.
 
 One vitest suite per package. Two layouts, in order of preference:
 
-1. **Colocate** — `src/foo.test.ts` next to `src/foo.ts`. Default for everything, including tests that use in-memory DBs or the harnesses from `@plumix/core/test` (they run inside the vitest worker).
+1. **Colocate** — `src/foo.test.ts` next to `src/foo.ts`. Default for everything, including tests that use in-memory DBs or the harnesses from `@plumix/core/test` (they run inside the vitest worker), and `src/foo.browser.test.tsx` for the browser tier.
 2. **Package-level `test/`** — only when colocation can't work: tests that spawn a real binary, run against built `dist/`, or exercise the package as an external consumer.
 
 E2E (Playwright) is separate, lives under each package's `e2e/`, runs via `pnpm test:e2e`.
+
+### Tiers
+
+A unit test runs in one of two tiers, and its filename picks the tier
+([ADR 0021](docs/adr/0021-tests-run-in-node-or-in-a-real-browser.md)). `*.test.ts(x)` runs in Node:
+server code, routes, RPC, hooks, pure logic, rendering to a string. `*.browser.test.ts(x)` runs in
+headless Chromium: anything that renders into a DOM or touches a browser API. Nothing simulates a
+DOM — no `test.environment`, no `@vitest-environment` docblock, no jsdom or happy-dom, no setup file
+stubbing a browser API. A test that needs both a DOM and a Node harness is two files. Run
+`pnpm exec playwright install chromium` once before the first `pnpm test:unit`.
+
+For a consumer package, `plumix/test` is the one test import in both tiers: harnesses, factories,
+`stubPluginRpc`, the block render helpers, and the `fakeFile`/`fakeImage` upload fakes. Its
+`browser` build exports the same names, and a Node-only one throws there with the fix. `plumix/test-tier` reports an environment
+setting, and a DOM import or DOM global read in a test not named `*.browser.test.*`; a `typeof`
+probe stays allowed.
 
 ### Selectors
 
@@ -245,10 +261,12 @@ before reaching for an override — often it is masking something:
 - **One outlier over a quiet field** → scope a per-test timeout and name the mechanism in a comment
   (#1522).
 
-Judge an override against the **distribution**, not the single worst test. `@plumix/admin-editor`
-keeps a package-wide `testTimeout: 15_000` because 22 of its tests peak above 1000ms and its worst
-three — 2386ms, 1591ms, 1509ms — come within 2.1–3.3x of the 5s default (#2184). That is a dense
-band, where scoping a timeout to the worst test only promotes the next one.
+Judge an override against the **distribution**, not the single worst test. Under jsdom,
+`@plumix/admin-editor` kept a package-wide `testTimeout: 15_000` because 22 of its tests peaked above
+1000ms and its worst three — 2386ms, 1591ms, 1509ms — came within 2.1–3.3x of the 5s default
+(#2184): a dense band, where scoping a timeout to the worst test only promotes the next one. In
+Chromium its worst test is 419ms across three runs beside another suite and none passes 1000ms, so
+the override is gone. A distribution moves with the environment; re-measure before keeping one.
 
 ### Coverage
 
