@@ -94,11 +94,11 @@ catalogs:
       version: 3.2.2
   drizzle:
     drizzle-kit:
-      specifier: ^0.31.10
-      version: 0.31.10
+      specifier: ^0.31.11
+      version: 0.31.11
     drizzle-orm:
-      specifier: ^0.45.2
-      version: 0.45.2
+      specifier: ^0.45.3
+      version: 0.45.3
     drizzle-valibot:
       specifier: ^0.4.2
       version: 0.4.2
@@ -1094,13 +1094,13 @@ importers:
         version: 1.7.1(valibot@1.4.2(typescript@6.0.3))
       drizzle-kit:
         specifier: catalog:drizzle
-        version: 0.31.10
+        version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       drizzle-valibot:
         specifier: catalog:drizzle
-        version: 0.4.2(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0))(valibot@1.4.2(typescript@6.0.3))
+        version: 0.4.2(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0))(valibot@1.4.2(typescript@6.0.3))
       fishery:
         specifier: 'catalog:'
         version: 2.4.0
@@ -1222,7 +1222,7 @@ importers:
         version: 1.1.0
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       valibot:
         specifier: 'catalog:'
         version: 1.4.2(typescript@6.0.3)
@@ -1350,7 +1350,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -1436,7 +1436,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -1652,7 +1652,7 @@ importers:
         version: 6.6.0(@babel/core@8.0.6)(@babel/types@8.0.6)
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       valibot:
         specifier: 'catalog:'
         version: 1.4.2(typescript@6.0.3)
@@ -2249,7 +2249,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -2465,10 +2465,10 @@ importers:
         version: 1.171.27
       drizzle-kit:
         specifier: catalog:drizzle
-        version: 0.31.10
+        version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -2568,7 +2568,7 @@ importers:
         version: 1.54.5(@types/node@24.13.6)(vite@8.2.2(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))(wrangler@4.129.1(@cloudflare/workers-types@5.20260907.1)(@types/node@24.13.6))
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -2675,7 +2675,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+        version: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       vite:
         specifier: catalog:vite
         version: 8.2.2(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)
@@ -7746,12 +7746,12 @@ packages:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
 
-  drizzle-kit@0.31.10:
-    resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
+  drizzle-kit@0.31.11:
+    resolution: {integrity: sha512-YCYqxTLIB2OCqf6w9/Vef13baBVbwQIPcbT4Y56AfO6B9ajZhDhD8Jkveg/hJvT/iuMloKD/IYYkyMMNhr7Kqg==}
     hasBin: true
 
-  drizzle-orm@0.45.2:
-    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
+  drizzle-orm@0.45.3:
+    resolution: {integrity: sha512-CAloER21cDdcgZ1OmjrZX82EeRNsdP+y0onX/eyoYDaYzki/adrAa91lzM5jWh7zZPK4qUbw/6LGv9J+A+uizA==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -7759,6 +7759,7 @@ packages:
       '@libsql/client': '>=0.10.0'
       '@libsql/client-wasm': '>=0.10.0'
       '@neondatabase/serverless': '>=0.10.0'
+      '@netlify/db': '>=0.4.0'
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
@@ -7794,6 +7795,8 @@ packages:
       '@libsql/client-wasm':
         optional: true
       '@neondatabase/serverless':
+        optional: true
+      '@netlify/db':
         optional: true
       '@op-engineering/op-sqlite':
         optional: true
@@ -15982,21 +15985,21 @@ snapshots:
 
   dotenv@16.0.3: {}
 
-  drizzle-kit@0.31.10:
+  drizzle-kit@0.31.11:
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5
       esbuild: 0.25.12
       tsx: 4.23.13
 
-  drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0):
+  drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0):
     optionalDependencies:
       '@cloudflare/workers-types': 5.20260907.1
       '@libsql/client': 0.18.0
 
-  drizzle-valibot@0.4.2(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0))(valibot@1.4.2(typescript@6.0.3)):
+  drizzle-valibot@0.4.2(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0))(valibot@1.4.2(typescript@6.0.3)):
     dependencies:
-      drizzle-orm: 0.45.2(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
+      drizzle-orm: 0.45.3(@cloudflare/workers-types@5.20260907.1)(@libsql/client@0.18.0)
       valibot: 1.4.2(typescript@6.0.3)
 
   dset@3.1.4: {}
