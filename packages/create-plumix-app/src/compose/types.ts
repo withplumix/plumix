@@ -1,3 +1,5 @@
+import type { PackageManager } from "../package-manager.js";
+
 /** Placeholder token in descriptor strings, replaced with the project name. */
 export const PROJECT_NAME_TOKEN = "__PROJECT_NAME__";
 /** Placeholder in config descriptor strings, replaced with the runtime's secrets file. */
@@ -42,6 +44,11 @@ export interface RuntimeDescriptor {
    * `react` — Cloudflare's `@cloudflare/workers-types`, say.
    */
   readonly types?: readonly string[];
+  /**
+   * The package manager a project on this runtime installs with, when the
+   * runtime needs one in particular. Absent means pnpm.
+   */
+  readonly packageManager?: PackageManager;
   /** Markdown for the README's Deploy section: how this runtime ships and runs. */
   readonly readme?: string;
   /** Whole files the runtime contributes, keyed by relative path. */

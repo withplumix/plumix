@@ -110,6 +110,19 @@ describe("loadRegistry", () => {
     expect(registry.runtimes[0]?.secretsFile).toBe(".env");
   });
 
+  it("reads the package manager a runtime declares", async () => {
+    writeRuntimePackage("bun", {
+      kind: "runtime",
+      id: "bun",
+      label: "Bun",
+      packageManager: "bun",
+    });
+
+    const registry = await loadRegistry(root);
+
+    expect(registry.runtimes[0]?.packageManager).toBe("bun");
+  });
+
   it("reads the ambient type packages and the README deploy section a runtime declares", async () => {
     writeRuntimePackage("node", {
       kind: "runtime",

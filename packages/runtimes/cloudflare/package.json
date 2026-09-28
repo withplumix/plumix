@@ -133,6 +133,7 @@
       }
     },
     "e2e": {
+      "start": "wrangler dev --local --config dist/*/wrangler.json --persist-to .wrangler/state --ip 127.0.0.1 --port $PORT",
       "wipe": [
         ".wrangler/state"
       ],

@@ -70,6 +70,15 @@ CLI already hands to the runtime. A runtime package proves itself with a
 playground of its own that runs the one shared runtime spec, `runtimeSpec`
 from `plumix/test/playwright`, rather than a copy of it.
 
+The scaffold smoke (`pnpm --filter create-plumix-app smoke:scaffold`) reads two
+more fields from that block. `start` is the shell command that serves the built
+output, with `PORT` set to an ephemeral port. `cli` is the command prefix that
+runs the `plumix` CLI, and defaults to the package's bin. After each combo
+builds, the smoke runs `migrate generate` and `migrate apply --local` through `cli`,
+starts `start`, and requests `/`, the admin shell and the `auth/session` RPC.
+It installs each combo with the `packageManager` the runtime's scaffold block
+declares, which defaults to pnpm.
+
 Each suite binds a distinct port so a parallel `turbo run test:e2e` doesn't
 collide: the plugin playgrounds, `apps/demo` and the runtime playgrounds take
 HTTP `30N0` with the matching workerd inspector port `93N0`, and the two admin
