@@ -1,0 +1,130 @@
+[
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/compile-overlay.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/editor.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/enhance.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/error-page.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/frames.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/index.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/island-overlay.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/overlay-shell.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/panel-primitives.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/terminal-forward.tsx"
+  },
+  {
+    "rule": "environment",
+    "from": "dev-client/index.ts",
+    "to": "dev/ui/tokens.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "i18n/index.ts",
+    "to": "auth/cookies.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "plugin/manifest.ts",
+    "to": "access/meta-key.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "plugin/manifest.ts",
+    "to": "entries/capabilities.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "plugin/manifest.ts",
+    "to": "route/render/rule-selectors.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "plugin/manifest.ts",
+    "to": "route/render/template-builders.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "rpc/validation.ts",
+    "to": "rpc/meta/field-messages.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "rpc/validation.ts",
+    "to": "rpc/validation.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "rpc/validation.ts",
+    "to": "rpc/vmessage.ts"
+  },
+  {
+    "rule": "environment",
+    "from": "support.ts",
+    "to": "rpc/procedures/entry/search-terms.ts"
+  },
+  {
+    "rule": "cycle",
+    "layer": "contracts",
+    "members": ["config.ts", "plugin"]
+  },
+  {
+    "rule": "cycle",
+    "layer": "contracts",
+    "members": ["template-deps.ts", "template.ts", "theme.ts"]
+  },
+  {
+    "rule": "cycle",
+    "layer": "capabilities",
+    "members": [
+      "access",
+      "cdn",
+      "entries",
+      "revisions",
+      "route",
+      "search",
+      "seo"
+    ]
+  },
+  {
+    "rule": "cycle",
+    "layer": "top",
+    "members": ["context", "runtime"]
+  }
+]
