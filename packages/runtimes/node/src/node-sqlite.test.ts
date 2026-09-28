@@ -16,6 +16,7 @@ import {
   DEV_ORIGIN,
   generatePasskeyKeyPair,
 } from "plumix/test";
+import { describeDatabaseContract } from "plumix/test/conformance";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { nodeSqlite } from "./node-sqlite.js";
@@ -43,6 +44,10 @@ function connect(path: string) {
 function open(path: string) {
   return connect(path).db;
 }
+
+describeDatabaseContract({
+  connect: () => ({ adapter: nodeSqlite({ path: join(dir, "site.sqlite") }) }),
+});
 
 describe("nodeSqlite", () => {
   test("a freshly opened file runs WAL, a 5 s busy timeout, NORMAL sync and foreign keys", () => {

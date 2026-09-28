@@ -106,7 +106,7 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
    });
    ```
 
-4. **Prove the slots.** Run the conformance suites against whatever kv, storage, cdn and assets implementations you ship beside the adapter. [Proving a slot](#proving-a-slot) below has the shape.
+4. **Prove the slots.** Run the conformance suites against whatever kv, storage, cdn, assets and database implementations you ship beside the adapter. [Proving a slot](#proving-a-slot) below has the shape.
 
 </Steps>
 
@@ -420,6 +420,8 @@ describeKvContract({
 ```
 
 `describeObjectStorageContract`, `describeCdnContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
+
+`describeDatabaseContract` takes a factory returning the `database:` adapter and the env it connects against, bound to an empty database. It applies core's schema itself and holds the adapter to what core's queries assume of every driver: snake_case columns, `returning`, joins and relational queries, a `rowsAffected` that leaves out rows a trigger wrote, a raw `sql` Date bound as epoch milliseconds and a boolean as `1`/`0`, foreign-key cascades, and a generated migration set that keeps the change-feed triggers. libsql, `nodeSqlite` and D1 are its first callers.
 
 An absent port member is a supported provider, not a gap the suite reports — but declare it: a vendor that cannot invalidate by tag omits `purgeTags` and leaves the suite's option of the same name off. The suite asserts the two agree in both directions, so a member you drop while still declaring it fails rather than passing quietly. Publish such a provider and recommend a short `ttl` beside it — [CDN Caching](/deployment/cdn/#providers-without-tag-purge) says why freshness is then the site's only control.
 

@@ -25,7 +25,9 @@ const compiled = new WeakMap<SchemaModule, Promise<string[]>>();
 // drizzle-kit's `api` surface is loosely typed (`SQLiteSchema` is opaque);
 // we treat it as a black-box snapshot blob and only read its `id` field.
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
-async function compileSchemaSql(schemaModule: SchemaModule): Promise<string[]> {
+export async function compileSchemaSql(
+  schemaModule: SchemaModule,
+): Promise<string[]> {
   // Empty ↔ current snapshot diff yields the full create-from-scratch SQL.
   // `casing: "snake_case"` matches drizzle.config.ts so column names line up.
   const empty = await generateSQLiteDrizzleJson({}, undefined, "snake_case");
