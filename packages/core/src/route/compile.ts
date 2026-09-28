@@ -7,6 +7,7 @@ import type {
 import type { RegistrationKind } from "./errors.js";
 import type { RouteIntent, RouteRule } from "./intent.js";
 import { RouteCompileError } from "./errors.js";
+import { matchRoute } from "./match.js";
 
 const AUTO_ROUTE_PRIORITY = 50;
 export const DEFAULT_REWRITE_RULE_PRIORITY = 10;
@@ -464,6 +465,7 @@ function assertUniquePatterns(rules: readonly CompiledRule[]): void {
 // reserves on purpose: date archives (`/2026`) and root pagination (`/page/2`).
 const SAMPLE_SEGMENT = "sample";
 const SAMPLE_PAGE = "2";
+const SAMPLE_ORIGIN = "https://sample.invalid";
 const CAPTURE_RE = /:(\w+)(?:\([^()]*\))?\+?/g;
 
 function samplePathFor(rawPattern: string): string {
@@ -485,10 +487,15 @@ function assertAutoUrlsResolveToThemselves(
 ): void {
   for (const rule of sorted) {
     if (rule.onFrameworkCapture === undefined) continue;
-    const pathname = samplePathFor(rule.rawPattern);
-    const winner = sorted.find((candidate) =>
-      candidate.pattern.test({ pathname }),
+    const match = matchRoute(
+      new URL(samplePathFor(rule.rawPattern), SAMPLE_ORIGIN),
+      sorted,
     );
+    // The first rule with the pattern, not a map keyed on it: a duplicate
+    // pattern is still in `sorted` here, and the earlier one is what matched.
+    const winner =
+      match &&
+      sorted.find((candidate) => candidate.rawPattern === match.pattern);
     if (winner?.registeredBy === null) {
       throw rule.onFrameworkCapture(winner.rawPattern);
     }
