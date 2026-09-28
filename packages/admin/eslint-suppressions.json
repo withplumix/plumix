@@ -1,0 +1,146 @@
+{
+  "src/components/data-table/data-table.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/editor/document-settings.tsx": {
+    "shadcn/no-restyle": {
+      "count": 7
+    }
+  },
+  "src/components/editor/plain-form-layout.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/form/edit-skeleton.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/form/multi-select.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "src/components/form/search-input.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/meta-box/meta-box-field.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 1
+    },
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/meta-box/meta-box.tsx": {
+    "shadcn/no-restyle": {
+      "count": 6
+    }
+  },
+  "src/components/profile/api-tokens-card.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 1
+    },
+    "shadcn/no-restyle": {
+      "count": 12
+    }
+  },
+  "src/components/profile/language-card.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/profile/passkeys-card.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "src/components/profile/sessions-card.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/profile/user-email-field.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
+  "src/components/shell/command-palette.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/components/shell/user-menu.tsx": {
+    "shadcn/no-restyle": {
+      "count": 9
+    }
+  },
+  "src/editor/PreviewButton.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/editor/revisions/RevisionsSheet.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "src/routes/_authenticated/auth/device.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "src/routes/_authenticated/entries/$slug/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "src/routes/_authenticated/field-values/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "src/routes/_authenticated/settings/-settings-group-card.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/routes/_authenticated/settings/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "src/routes/_authenticated/terms/$name/$id/edit.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
+    }
+  },
+  "src/routes/_authenticated/terms/$name/index.tsx": {
+    "shadcn/no-restyle": {
+      "count": 1
+    }
+  },
+  "src/routes/_authenticated/users/$id/edit.tsx": {
+    "shadcn/no-restyle": {
+      "count": 6
+    }
+  },
+  "src/routes/_authenticated/users/create.tsx": {
+    "shadcn/no-restyle": {
+      "count": 4
+    }
+  },
+  "src/routes/_authenticated/users/index.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 1
+    },
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  }
+}

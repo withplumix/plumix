@@ -273,7 +273,17 @@ Wired in every test-having package (`pnpm exec vitest run --coverage`). Tracked,
 
 ### shadcn
 
-`packages/admin/src/components/ui/*` is vendored from shadcn. Wrap or extend — never edit in place.
+The primitives in `packages/admin-ui/src` that admin-ui's `eslint.config.ts` ignores by name are
+vendored from shadcn. Wrap or extend — never edit in place; the few deliberate divergences carry a
+comment saying why. Update them with `pnpm dlx shadcn@latest add <names> --overwrite` from
+`packages/admin-ui`, then rewrite the imports it emits (`"cn"`, `"src//x"`) to `./utils.js` /
+`./x.js`, revert the dependencies it adds, and restore each divergence the overwrite dropped.
+
+Code that composes those primitives is checked by `@shadcn/lint` (the React config): no raw palette
+colours, no classes Tailwind cannot generate, no restyling a primitive beyond layout, no arbitrary
+values. The last two predate their violations, which each package's `eslint-suppressions.json`
+carries. A new violation fails lint; after fixing an old one, run
+`pnpm exec eslint --prune-suppressions` in that package.
 
 ## Commits, branches, PRs
 

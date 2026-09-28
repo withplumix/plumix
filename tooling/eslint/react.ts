@@ -1,3 +1,4 @@
+import { plugin as shadcn } from "@shadcn/lint";
 import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
@@ -56,6 +57,29 @@ export const reactConfig = defineConfig(
         NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
       "plumix/no-hand-rolled-destructive-tint": "error",
+    },
+  },
+  // Design-system rules for code composing `@plumix/admin-ui`. The primitives
+  // themselves are exempt because admin-ui's own config ignores them.
+  // `no-restyle` and `no-arbitrary-values` predate their existing violations,
+  // which each package's `eslint-suppressions.json` carries until fixed.
+  // `plumix-*` classes are the styling hooks public markup exposes to themes,
+  // and `hljs` is highlight.js's, so neither is a Tailwind utility.
+  {
+    files: ["src/**/*.tsx"],
+    ignores: ["**/*.test.tsx"],
+    plugins: { shadcn },
+    settings: {
+      shadcn: {
+        ui: ["@plumix/admin-ui", "plumix/admin/ui"],
+        ignoreImports: ["/icons$"],
+      },
+    },
+    rules: {
+      "shadcn/no-raw-colors": "error",
+      "shadcn/no-unknown-classes": ["error", { allow: ["plumix-*", "hljs"] }],
+      "shadcn/no-restyle": ["error", { allow: ["layout"] }],
+      "shadcn/no-arbitrary-values": "error",
     },
   },
 );
