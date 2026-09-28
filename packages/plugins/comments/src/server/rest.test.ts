@@ -26,6 +26,7 @@ interface PublicComment {
   readonly parentId: number | null;
   readonly authorName: string;
   readonly bodyHtml: string;
+  readonly createdAt: string;
 }
 
 interface Envelope {
@@ -64,6 +65,21 @@ describe("comments REST resource", () => {
     expect(reply?.parentId).toBe(root.id);
     expect(reply?.bodyHtml).toContain("reply");
     expect(body.meta).toMatchObject({ page: 1, per_page: 20 });
+  });
+
+  test("serves a comment's createdAt as an ISO-8601 string", async () => {
+    const h = await restHarness();
+    const { id: entryId } = await seedPost(h);
+    const comment = await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId, status: "approved" });
+
+    const res = await h.dispatch(new Request(commentsUrl(entryId)));
+
+    const body = (await res.json()) as Envelope;
+    const served = body.data[0]?.createdAt ?? "";
+    expect(served).toBe(comment.createdAt.toISOString());
+    expect(new Date(served).getTime()).toBe(comment.createdAt.getTime());
   });
 
   test("returns nothing for an entry whose type gates anonymous readers", async () => {
@@ -321,5 +337,39 @@ describe("comments REST resource", () => {
 
     const doc = (await res.json()) as { paths: Record<string, unknown> };
     expect(doc.paths).toHaveProperty("/{type}/{id}/comments");
+  });
+
+  test("the spec documents a comment's createdAt as a date-time string", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(
+      new Request("https://cms.example/_plumix/api/v1/openapi.json"),
+    );
+
+    interface Schema {
+      readonly properties?: Record<string, Schema>;
+      readonly items?: Schema;
+    }
+    const doc = (await res.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            responses?: Record<
+              string,
+              { content?: Record<string, { schema?: Schema }> }
+            >;
+          };
+        }
+      >;
+    };
+    const envelope =
+      doc.paths["/{type}/{id}/comments"]?.get?.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema;
+    expect(envelope?.properties?.data?.items?.properties?.createdAt).toEqual({
+      type: "string",
+      format: "date-time",
+    });
   });
 });

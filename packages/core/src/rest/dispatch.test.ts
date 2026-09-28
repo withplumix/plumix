@@ -2,11 +2,12 @@ import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
-import type { JsonObject } from "../json.js";
+import type { JsonObject, JsonValue } from "../json.js";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "../test/dispatcher.js";
+import { isJsonObject } from "../json.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import {
@@ -106,6 +107,16 @@ function apiGet(path: string): Request {
   return new Request(`https://cms.example${path}`);
 }
 
+// Every `properties` map in a JSON Schema document, however deeply nested.
+function schemaPropertyMaps(node: JsonValue | undefined): JsonObject[] {
+  if (Array.isArray(node)) return node.flatMap(schemaPropertyMaps);
+  if (node === undefined || !isJsonObject(node)) return [];
+  const { properties } = node;
+  const own =
+    properties !== undefined && isJsonObject(properties) ? [properties] : [];
+  return [...own, ...Object.values(node).flatMap(schemaPropertyMaps)];
+}
+
 function bearerGet(path: string, secret: string): Request {
   return new Request(`https://cms.example${path}`, {
     headers: { authorization: `Bearer ${secret}` },
@@ -195,6 +206,22 @@ describe("REST API — entries get", () => {
     expect(body.id).toBe(entry.id);
     expect(body.title).toBe("Live");
     expect(body).not.toHaveProperty("data");
+  });
+
+  test("serves the entry's timestamps as ISO-8601 strings", async () => {
+    const h = await restHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "published",
+      authorId: author.id,
+    });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${entry.id}`));
+
+    const body = (await res.json()) as JsonObject;
+    expect(body.createdAt).toBe(entry.createdAt.toISOString());
+    expect(body.updatedAt).toBe(entry.updatedAt.toISOString());
   });
 
   // Settling stored meta writes, and a write — with the CDN purge behind it —
@@ -678,6 +705,36 @@ describe("REST API — OpenAPI spec", () => {
     expect(json).toContain('"terms"');
     // ...and the collection responses are a union of the entry and term shapes.
     expect(json).toMatch(/"(anyOf|oneOf)"/);
+  });
+
+  test("the entry schema documents its timestamps as date-time strings", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+    const doc = (await res.json()) as JsonObject;
+
+    const entry = schemaPropertyMaps(doc).find(
+      (props) => "publishedAt" in props,
+    );
+    const dateTime = { type: "string", format: "date-time" };
+    expect(entry?.createdAt).toEqual(dateTime);
+    expect(entry?.updatedAt).toEqual(dateTime);
+    expect(entry?.publishedAt).toEqual({
+      anyOf: [dateTime, { type: "null" }],
+    });
+  });
+
+  test("no timestamp field in the spec is an empty schema", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+    const doc = (await res.json()) as JsonObject;
+
+    const timestamps = schemaPropertyMaps(doc).flatMap((props) =>
+      Object.entries(props).filter(([key]) => key.endsWith("At")),
+    );
+    expect(timestamps.length).toBeGreaterThan(0);
+    for (const [, schema] of timestamps) expect(schema).not.toEqual({});
   });
 
   test("typed errors are documented with their status codes", async () => {
