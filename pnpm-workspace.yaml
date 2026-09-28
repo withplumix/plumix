@@ -25,7 +25,7 @@ catalog:
   "@types/node": ^24.13.4
   cmdk: ^1.1.1
   esbuild: ^0.28.2
-  eslint: ^10.9.1
+  eslint: ^10.11.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
   jsonc-parser: ^3.3.1
@@ -54,8 +54,8 @@ catalogs:
     "@dnd-kit/sortable": ^10.0.0
     "@dnd-kit/utilities": ^3.2.2
   drizzle:
-    drizzle-kit: ^0.31.10
-    drizzle-orm: ^0.45.2
+    drizzle-kit: ^0.31.11
+    drizzle-orm: ^0.45.3
     drizzle-valibot: ^0.4.2
   lingui:
     "@lingui/babel-plugin-lingui-macro": ^6.6.0
@@ -65,12 +65,12 @@ catalogs:
     "@lingui/react": ^6.6.0
     "@lingui/vite-plugin": ^6.6.0
   orpc:
-    "@orpc/client": ^1.15.0
-    "@orpc/openapi": ^1.15.0
-    "@orpc/server": ^1.15.0
-    "@orpc/standard-server-fetch": ^1.15.0
-    "@orpc/tanstack-query": ^1.15.0
-    "@orpc/valibot": ^1.15.0
+    "@orpc/client": ^1.15.3
+    "@orpc/openapi": ^1.15.3
+    "@orpc/server": ^1.15.3
+    "@orpc/standard-server-fetch": ^1.15.3
+    "@orpc/tanstack-query": ^1.15.3
+    "@orpc/valibot": ^1.15.3
   oslojs:
     "@oslojs/crypto": ^1.0.1
     "@oslojs/encoding": ^1.1.0
@@ -88,18 +88,18 @@ catalogs:
     "@tailwindcss/vite": ^4.3.3
     tailwindcss: ^4.3.3
   tanstack:
-    "@tanstack/history": ^1.162.1
-    "@tanstack/react-query": ^5.102.8
-    "@tanstack/react-query-devtools": ^5.102.8
-    "@tanstack/react-router": ^1.170.32
-    "@tanstack/react-router-devtools": ^1.167.1
+    "@tanstack/history": ^1.162.4
+    "@tanstack/react-query": ^5.103.2
+    "@tanstack/react-query-devtools": ^5.103.2
+    "@tanstack/react-router": ^1.170.38
+    "@tanstack/react-router-devtools": ^1.167.2
     "@tanstack/react-table": ^9.2.4
-    "@tanstack/router-core": ^1.171.27
-    "@tanstack/router-plugin": ^1.168.35
+    "@tanstack/router-core": ^1.171.32
+    "@tanstack/router-plugin": ^1.168.40
   testing-library:
     "@testing-library/jest-dom": ^7.0.1
     "@testing-library/react": ^16.3.3
-    "@testing-library/user-event": ^14.6.6
+    "@testing-library/user-event": ^14.6.7
   tiptap:
     "@tiptap/core": ^3.31.3
     # Explicit extension set for the rich-text rail instead of starter-kit,
@@ -121,10 +121,10 @@ catalogs:
     "@tiptap/react": ^3.31.3
   vite:
     "@vitejs/plugin-react": ^6.1.1
-    vite: ^8.2.2
+    vite: ^8.3.0
   vitest:
-    "@vitest/coverage-v8": ^4.1.11
-    vitest: ^4.1.11
+    "@vitest/coverage-v8": ^5.0.1
+    vitest: ^5.0.1
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"

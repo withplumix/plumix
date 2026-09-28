@@ -38,17 +38,17 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.2",
-    "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@commitlint/config-pnpm-scopes": "^21.2.2",
-    "@commitlint/types": "^21.2.0",
+    "@commitlint/types": "^21.2.3",
     "@plumix/prettier-config": "workspace:*",
     "@types/node": "catalog:",
     "knip": "^6.32.2",
     "pkg-pr-new": "^0.0.75",
     "prettier": "catalog:",
     "sherif": "^1.13.0",
-    "turbo": "^2.10.12"
+    "turbo": "^2.11.2"
   },
   "pnpm": {
     "overrides": {

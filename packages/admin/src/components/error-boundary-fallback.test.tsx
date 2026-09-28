@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-function renderFallback(error: Error): void {
+function renderFallback(error: unknown): void {
   renderWithI18n(<ErrorBoundaryFallback error={error} reset={vi.fn()} />);
 }
 
@@ -29,5 +29,13 @@ describe("ErrorBoundaryFallback", () => {
     );
     await userEvent.click(toggle);
     expect(screen.queryByTestId("error-boundary-message")).toBeNull();
+  });
+
+  test("shows a thrown non-Error value as the message", async () => {
+    renderFallback("plain-string-throw");
+    await userEvent.click(screen.getByTestId("error-boundary-toggle"));
+    expect(screen.getByTestId("error-boundary-message").textContent).toContain(
+      "plain-string-throw",
+    );
   });
 });

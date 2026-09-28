@@ -1,3 +1,4 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Trans } from "@lingui/react";
@@ -12,19 +13,14 @@ import {
 } from "@plumix/admin-ui/empty";
 import { TriangleAlert } from "@plumix/admin-ui/icons";
 
-interface ErrorBoundaryFallbackProps {
-  readonly error: Error;
-  readonly reset: () => void;
-}
-
 /** Translated fallback for TanStack Router's `defaultErrorComponent` slot. */
 export function ErrorBoundaryFallback({
   error,
-}: ErrorBoundaryFallbackProps): ReactNode {
+}: ErrorComponentProps): ReactNode {
   const [show, setShow] = useState(false);
   // Shown verbatim: a client exception has no descriptor to map to, so its
   // text is the only diagnostic, kept behind a toggle under a localized heading.
-  const detail = error.message;
+  const detail = error instanceof Error ? error.message : String(error);
   return (
     <div className="mx-auto my-12 flex max-w-2xl flex-col gap-4">
       <Empty>
