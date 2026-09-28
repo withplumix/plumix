@@ -212,7 +212,7 @@ export const fixerFor = (
   };
 };
 
-export interface WaivedGate {
+interface WaivedGate {
   readonly command: string;
   readonly reason: string;
 }
