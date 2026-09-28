@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Probe } from "./preflight.js";
-import { problemsBeforeARun, sandboxImageName } from "./preflight.js";
+import { checkTheMachine, sandboxImageName } from "./preflight.js";
 
 const IMAGE = "sandcastle:t3code-7e461cfe";
 const GOOD_ENV = "CLAUDE_CODE_OAUTH_TOKEN=tok\nGH_TOKEN=ghp\n";
@@ -21,12 +21,15 @@ const probe = (
 });
 
 const healthy = {
-  [`docker image inspect ${IMAGE}`]: { exitCode: 0 },
+  [`docker image inspect ${IMAGE}`]: {
+    exitCode: 0,
+    stdout: "sha256:15d4f126cc91\n",
+  },
   "gh auth status": { exitCode: 0 },
 };
 
 const check = (p: Probe, env: string | null = GOOD_ENV) =>
-  problemsBeforeARun(p, { repoRoot: "/w/t3code-7e461cfe", envFile: env });
+  checkTheMachine(p, { repoRoot: "/w/t3code-7e461cfe", envFile: env }).problems;
 
 describe("sandboxImageName", () => {
   test("is the checkout's directory name, the way sandcastle names it", () => {
@@ -37,34 +40,29 @@ describe("sandboxImageName", () => {
 });
 
 describe("problemsBeforeARun", () => {
-  test("a healthy machine has nothing to report", () => {
-    expect(check(probe(healthy))).toEqual([]);
+  test("a healthy machine has nothing to report and pins the image by its id", () => {
+    expect(
+      checkTheMachine(probe(healthy), {
+        repoRoot: "/w/t3code-7e461cfe",
+        envFile: GOOD_ENV,
+      }),
+    ).toEqual({ problems: [], image: "sha256:15d4f126cc91" });
   });
 
-  test("an image docker lists but cannot find by its tag is tagged again", () => {
-    const ran: string[] = [];
-    let tagged = false;
-    const p: Probe = {
-      run: (command, args) => {
-        const line = [command, ...args].join(" ");
-        ran.push(line);
-        if (line.startsWith(`docker image inspect ${IMAGE}`))
-          return { exitCode: tagged ? 0 : 1, stdout: "" };
-        if (line.startsWith("docker image ls"))
-          return {
-            exitCode: 0,
-            stdout: `${IMAGE} 15d4f126cc91\nother:x abc\n`,
-          };
-        if (line.startsWith("docker tag")) {
-          tagged = true;
-          return { exitCode: 0, stdout: "" };
-        }
-        return { exitCode: 0, stdout: "" };
-      },
-    };
+  test("an image docker lists but cannot resolve by its tag is pinned by its id", () => {
+    const machine = checkTheMachine(
+      probe({
+        ...healthy,
+        [`docker image inspect ${IMAGE}`]: { exitCode: 1 },
+        "docker image ls": {
+          exitCode: 0,
+          stdout: `${IMAGE} sha256:15d4f126cc91\nother:x sha256:abc\n`,
+        },
+      }),
+      { repoRoot: "/w/t3code-7e461cfe", envFile: GOOD_ENV },
+    );
 
-    expect(check(p)).toEqual([]);
-    expect(ran).toContain(`docker tag 15d4f126cc91 ${IMAGE}`);
+    expect(machine).toEqual({ problems: [], image: "sha256:15d4f126cc91" });
   });
 
   test("a missing image says how to build it", () => {

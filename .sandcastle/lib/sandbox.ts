@@ -49,12 +49,19 @@ const asOneCommandBecauseHooksAtTheSameHookPointRunConcurrently = (
   steps: readonly string[],
 ) => steps.join(" && ");
 
+let pinnedImage: string | undefined;
+
+export const pinSandboxImage = (image: string): void => {
+  pinnedImage = image;
+};
+
 const plumixContainer = () => {
   for (const { hostPath } of CACHE_MOUNTS)
     mkdirSync(hostPath, { recursive: true });
   return docker({
     mounts: CACHE_MOUNTS,
     env: ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES,
+    imageName: pinnedImage,
   });
 };
 

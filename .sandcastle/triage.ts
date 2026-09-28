@@ -15,9 +15,13 @@ import {
 import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
 import { looksLikeTheRunBeingOver } from "./lib/outage.js";
-import { refuseToStartOnABrokenMachine } from "./lib/preflight.js";
+import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import { REPO_ROOT } from "./lib/repo.js";
-import { closePlumixSandbox, createReadOnlySandbox } from "./lib/sandbox.js";
+import {
+  closePlumixSandbox,
+  createReadOnlySandbox,
+  pinSandboxImage,
+} from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
   awaitingAnAnswer,
@@ -103,7 +107,9 @@ const { onlyIssue, limit, queueDepth, lanes, budgetMs, dryRun, models } =
   readOptions(process.argv.slice(2));
 const endOfBudget = Date.now() + budgetMs;
 
-if (refuseToStartOnABrokenMachine(REPO_ROOT, say)) process.exit(1);
+const sandboxImage = sandboxImageOrRefuse(REPO_ROOT, say);
+if (!sandboxImage) process.exit(1);
+pinSandboxImage(sandboxImage);
 
 syncRepoToMain();
 

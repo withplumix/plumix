@@ -14,10 +14,11 @@ import {
   waitForMerge,
 } from "./lib/github.js";
 import { say } from "./lib/log.js";
-import { refuseToStartOnABrokenMachine } from "./lib/preflight.js";
+import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import { idsInJobUrl, repairPullRequest } from "./lib/repair.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import { runShipLoop } from "./lib/run.js";
+import { pinSandboxImage } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
@@ -69,7 +70,9 @@ say(
   `Ship run — budget ${asDuration(budgetMs)}, ${laneCount} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
 );
 
-if (refuseToStartOnABrokenMachine(REPO_ROOT, say)) process.exit(1);
+const sandboxImage = sandboxImageOrRefuse(REPO_ROOT, say);
+if (!sandboxImage) process.exit(1);
+pinSandboxImage(sandboxImage);
 
 syncRepoToMain();
 

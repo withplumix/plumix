@@ -19,30 +19,42 @@ export const sandboxImageName = (repoDir: string): string => {
   return `sandcastle:${sanitized || "local"}`;
 };
 
-const imageProblem = (probe: Probe, image: string): string | null => {
-  const resolvesByTag = () =>
-    probe.run("docker", ["image", "inspect", image, "--format", "{{.Id}}"])
-      .exitCode === 0;
-  if (resolvesByTag()) return null;
+const resolveImage = (
+  probe: Probe,
+  image: string,
+): { id: string } | { problem: string } => {
+  const byTag = probe.run("docker", [
+    "image",
+    "inspect",
+    image,
+    "--format",
+    "{{.Id}}",
+  ]);
+  if (byTag.exitCode === 0 && byTag.stdout.trim()) {
+    return { id: byTag.stdout.trim() };
+  }
 
   const listed = probe.run("docker", [
     "image",
     "ls",
+    "--no-trunc",
     "--format",
     "{{.Repository}}:{{.Tag}} {{.ID}}",
   ]);
   if (listed.exitCode !== 0) {
-    return "docker is not answering — start Docker Desktop and try again";
+    return {
+      problem: "docker is not answering — start Docker Desktop and try again",
+    };
   }
   const id = listed.stdout
     .split("\n")
     .map((line) => line.trim().split(/\s+/))
     .find(([tag]) => tag === image)?.[1];
-  if (id) {
-    probe.run("docker", ["tag", id, image]);
-    if (resolvesByTag()) return null;
-  }
-  return `no sandbox image ${image} — run \`npx sandcastle docker build-image --dockerfile .sandcastle/Dockerfile\` from the repo root`;
+  return id
+    ? { id }
+    : {
+        problem: `no sandbox image ${image} — run \`npx sandcastle docker build-image --dockerfile .sandcastle/Dockerfile\` from the repo root`,
+      };
 };
 
 const envValues = (envFile: string): Map<string, string> =>
@@ -78,18 +90,18 @@ const credentialProblems = (envFile: string | null): readonly string[] => {
   return problems;
 };
 
-export const problemsBeforeARun = (
+export const checkTheMachine = (
   probe: Probe,
   { repoRoot, envFile }: { repoRoot: string; envFile: string | null },
-): readonly string[] => {
+): { problems: readonly string[]; image?: string } => {
   const problems: string[] = [];
-  const image = imageProblem(probe, sandboxImageName(repoRoot));
-  if (image) problems.push(image);
+  const image = resolveImage(probe, sandboxImageName(repoRoot));
+  if ("problem" in image) problems.push(image.problem);
   if (probe.run("gh", ["auth", "status"]).exitCode !== 0) {
     problems.push("gh on this machine is not logged in — run `gh auth login`");
   }
   problems.push(...credentialProblems(envFile));
-  return problems;
+  return "id" in image ? { problems, image: image.id } : { problems };
 };
 
 const hostProbe: Probe = {
@@ -99,17 +111,17 @@ const hostProbe: Probe = {
   },
 };
 
-export const refuseToStartOnABrokenMachine = (
+export const sandboxImageOrRefuse = (
   repoRoot: string,
   say: (line: string) => void,
-): boolean => {
+): string | null => {
   const envPath = join(repoRoot, ".sandcastle", ".env");
-  const problems = problemsBeforeARun(hostProbe, {
+  const { problems, image } = checkTheMachine(hostProbe, {
     repoRoot,
     envFile: existsSync(envPath) ? readFileSync(envPath, "utf8") : null,
   });
-  if (problems.length === 0) return false;
+  if (problems.length === 0 && image) return image;
   say("Not starting — this machine cannot run a sandbox yet:");
   for (const problem of problems) say(`  - ${problem}`);
-  return true;
+  return null;
 };
