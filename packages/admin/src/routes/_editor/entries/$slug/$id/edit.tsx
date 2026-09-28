@@ -1,14 +1,9 @@
-import type { SaveQueue } from "@/editor/save-queue.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
-import {
-  AUTOSAVE_DEBOUNCE_MS,
-  classifyAutosaveError,
-} from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
@@ -21,9 +16,9 @@ import {
 import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { createSaveQueue } from "@/editor/save-queue.js";
 import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
+import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
   accessPoliciesForType,
@@ -271,12 +266,50 @@ interface EntryEditorProps {
   readonly onReseed: () => void;
 }
 
-// Persistence lives inline in the component (not a custom hook) so the React
-// Compiler can optimize it.
+// Content + excerpt + meta + template + access, as one autosave-row write.
+interface ContentSnapshot {
+  readonly blocks: EntryContent["blocks"];
+  readonly serializedBlocks: string;
+  readonly excerpt: string;
+  readonly meta: ResolvedMeta;
+  readonly template: string | null;
+  readonly access: string | null;
+}
+
+// Title + slug + parent + terms, written to the live row (`saveAs: "live"`).
+interface StructuralSnapshot {
+  readonly title: string;
+  readonly slug: string;
+  readonly parentId: number | null;
+  readonly terms: Readonly<Record<string, readonly string[]>>;
+}
+
+// What changed between the last-saved structural fields and `next`. A blank
+// title or slug is never sent: the author is mid-edit, not clearing it.
+function structuralChanges(
+  saved: StructuralSnapshot,
+  next: StructuralSnapshot,
+): {
+  readonly title: boolean;
+  readonly slug: boolean;
+  readonly parentId: boolean;
+  readonly taxonomies: readonly string[];
+} {
+  return {
+    title: next.title.length > 0 && next.title !== saved.title,
+    slug: next.slug.length > 0 && next.slug !== saved.slug,
+    parentId: next.parentId !== saved.parentId,
+    taxonomies: Object.keys(next.terms).filter(
+      (tax) =>
+        JSON.stringify(next.terms[tax]) !==
+        JSON.stringify(saved.terms[tax] ?? []),
+    ),
+  };
+}
 
 // Content + excerpt + meta ride one debounced autosave-row write; slug + parent
-// ride a second debouncer that writes the live row (`saveAs: "live"`). Both
-// share one optimistic-concurrency token, refreshed on a stale conflict.
+// ride a second group that writes the live row. `useEntryAutosave` runs both
+// behind one optimistic-concurrency token.
 function EntryEditor({
   capabilities,
   entryType,
@@ -301,17 +334,6 @@ function EntryEditor({
   // server-rendered shell, not the block store the bridge pushes — refresh.
   const [previewRefreshToken, setPreviewRefreshToken] = useState(0);
 
-  const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
-  // Serializes the two autosave debouncers' writes so they can't overlap and
-  // clobber the shared optimistic token — a live write must not bump
-  // `liveUpdatedAtRef` while a draft write reading the old value is still in
-  // flight (that raced them into `409` conflicts and dropped edits).
-  const saveQueueRef = useRef<SaveQueue | null>(null);
-  saveQueueRef.current ??= createSaveQueue();
-  const saveQueue = saveQueueRef.current;
-  // Latches once an autosave genuinely fails so the author is told exactly once
-  // (not on every debounce tick); cleared on the next successful save.
-  const autosaveFailedRef = useRef(false);
   // Path-addressed meta rejections from the last failed autosave —
   // rendered inline on the document panel's metabox inputs.
   const [metaFieldErrors, setMetaFieldErrors] = useState<
@@ -321,12 +343,8 @@ function EntryEditor({
     ? entry.content
     : defineEntryContent([]);
   const contentRef = useRef<EntryContent>(seedContent);
-  const lastSavedContentRef = useRef<string>(
-    JSON.stringify(seedContent.blocks),
-  );
   const [excerpt, setExcerpt] = useState<string>(entry.excerpt ?? "");
   const excerptRef = useRef(excerpt);
-  const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
   const metaBoxes = useMemo(
     () =>
       entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
@@ -339,37 +357,28 @@ function EntryEditor({
     [metaBoxes, entry.meta],
   );
   const metaRef = useRef<Record<string, unknown>>(seededMeta);
-  // The last meta bag we successfully sent, kept as an object so autosave can
-  // diff against it and send only the changed keys (never re-sending untouched
-  // foreign keys like `featuredImage`, which would fail write-time validation).
-  const lastSavedMetaRef = useRef<Record<string, unknown>>(seededMeta);
   // Named-template pick — a reserved meta key, but sent as the dedicated
   // `template` field (the meta bag sanitizer rejects reserved keys). `null`
-  // = theme default. Rides the same autosave debouncer as content/meta.
+  // = theme default. Rides the same autosave group as content/meta.
   const rawTemplate = entry.meta[NAMED_TEMPLATE_META_KEY];
   const initialTemplate = typeof rawTemplate === "string" ? rawTemplate : null;
   const [templateValue, setTemplateValue] = useState<string | null>(
     initialTemplate,
   );
   const templateRef = useRef<string | null>(initialTemplate);
-  const lastSavedTemplateRef = useRef<string | null>(initialTemplate);
   // Per-entry visibility pick — same reserved-key / dedicated-field mechanics as
   // the template choice, sent as the `access` update field. `null` = the entry
-  // type's default policy. Rides the same autosave debouncer.
+  // type's default policy. Rides the same autosave group.
   const rawAccess = entry.meta[ACCESS_POLICY_META_KEY];
   const initialAccess = typeof rawAccess === "string" ? rawAccess : null;
   const [accessValue, setAccessValue] = useState<string | null>(initialAccess);
   const accessRef = useRef<string | null>(initialAccess);
-  const lastSavedAccessRef = useRef<string | null>(initialAccess);
   const [titleValue, setTitleValue] = useState<string>(entry.title);
   const [slugValue, setSlugValue] = useState<string>(entry.slug);
   const [parentValue, setParentValue] = useState<number | null>(entry.parentId);
   const titleRef = useRef(titleValue);
   const slugRef = useRef(slugValue);
   const parentRef = useRef(parentValue);
-  const lastSavedTitleRef = useRef<string>(entry.title);
-  const lastSavedSlugRef = useRef<string>(entry.slug);
-  const lastSavedParentRef = useRef<number | null>(entry.parentId);
   // Taxonomies registered against this entry type that the user can assign to
   // (the editor picker writes assignments, so `:assign` — not just `:read` — is
   // the gate; an unassignable taxonomy would only fail the save). Selections are
@@ -388,10 +397,6 @@ function EntryEditor({
     ),
   );
   const termsRef = useRef<Record<string, string[]>>(termSelections);
-  // Last-saved selection per taxonomy, so the debouncer can send ONLY the
-  // taxonomies that changed (the patch replaces per-taxonomy; sending unchanged
-  // ones would needlessly delete+reinsert their rows).
-  const lastSavedTermsRef = useRef<Record<string, string[]>>(termSelections);
   useEffect(() => {
     excerptRef.current = excerpt;
     titleRef.current = titleValue;
@@ -401,31 +406,6 @@ function EntryEditor({
     templateRef.current = templateValue;
     accessRef.current = accessValue;
   });
-
-  // Surface a genuine autosave failure so a rejected save (e.g. content
-  // referencing an unknown block) isn't silently swallowed and lost; a
-  // recoverable stale-token conflict just re-anchors and stays quiet.
-  // Returns `true` when the error was a recoverable stale-token conflict (token
-  // re-anchored, edit intact) so the caller can retry the pending write; `false`
-  // when the write genuinely failed and the author was told.
-  const handleAutosaveError = useCallback(
-    async (err: unknown): Promise<boolean> => {
-      const outcome = await classifyAutosaveError(err, queryClient, id);
-      if (outcome.kind === "recovered") {
-        if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
-        return true;
-      }
-      // Meta constraint rejections carry field paths — pin them onto
-      // the document panel's inputs alongside the one-time toast.
-      setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
-      if (!autosaveFailedRef.current) {
-        autosaveFailedRef.current = true;
-        toastError(renderLabel(M.autosaveFailed));
-      }
-      return false;
-    },
-    [queryClient, id, renderLabel],
-  );
 
   // Coalesce the preview reload: a content + structural save landing together
   // (or a burst of meta edits) triggers a single canvas reload shortly after
@@ -438,233 +418,236 @@ function EntryEditor({
       ),
     [],
   );
-  /* eslint-disable react-hooks/refs -- callbacks fire post-keystroke, not during render */
-  const contentDebouncer = useMemo(() => {
-    const save = async (attempt = 0): Promise<void> => {
-      const blocks = contentRef.current.blocks;
-      const serializedBlocks = JSON.stringify(blocks);
-      const contentChanged = serializedBlocks !== lastSavedContentRef.current;
-      const nextExcerpt = excerptRef.current;
-      const excerptChanged = nextExcerpt !== lastSavedExcerptRef.current;
-      // Snapshot the bag we diff/send so a keystroke landing mid-write doesn't
-      // get marked saved before it's persisted.
-      const metaSnapshot = metaRef.current;
-      const metaPatch = diffMetaBag(lastSavedMetaRef.current, metaSnapshot);
-      const metaChanged = Object.keys(metaPatch).length > 0;
-      const nextTemplate = templateRef.current;
-      const templateChanged = nextTemplate !== lastSavedTemplateRef.current;
-      const nextAccess = accessRef.current;
-      const accessChanged = nextAccess !== lastSavedAccessRef.current;
-      if (
-        !contentChanged &&
-        !excerptChanged &&
-        !metaChanged &&
-        !templateChanged &&
-        !accessChanged
-      )
-        return;
-      try {
-        // Read the token and re-anchor it inside the serialized task, so the
-        // next queued write sees the post-write value rather than a stale one.
-        const updated = await saveQueue.run(async () => {
-          const res = await orpc.entry.update.call({
-            id,
+  useEffect(() => () => refreshPreview.cancel(), [refreshPreview]);
+
+  const autosave = useEntryAutosave({
+    id,
+    entryType: entry.type,
+    liveUpdatedAt: entry.updatedAt,
+    // Surface a genuine autosave failure so a rejected save (e.g. content
+    // referencing an unknown block) isn't silently swallowed and lost. Meta
+    // constraint rejections carry field paths — pin them onto the document
+    // panel's inputs alongside the toast.
+    onError: (err) => {
+      setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
+      toastError(renderLabel(M.autosaveFailed));
+    },
+    groups: {
+      content: {
+        initial: {
+          blocks: seedContent.blocks,
+          serializedBlocks: JSON.stringify(seedContent.blocks),
+          excerpt: entry.excerpt ?? "",
+          meta: seededMeta,
+          template: initialTemplate,
+          access: initialAccess,
+        },
+        snapshot: (): ContentSnapshot => {
+          const blocks = contentRef.current.blocks;
+          return {
+            blocks,
+            serializedBlocks: JSON.stringify(blocks),
+            excerpt: excerptRef.current,
+            meta: metaRef.current,
+            template: templateRef.current,
+            access: accessRef.current,
+          };
+        },
+        diff: (saved: ContentSnapshot, next: ContentSnapshot) => {
+          const contentChanged =
+            next.serializedBlocks !== saved.serializedBlocks;
+          const excerptChanged = next.excerpt !== saved.excerpt;
+          const metaPatch = diffMetaBag(saved.meta, next.meta);
+          const metaChanged = Object.keys(metaPatch).length > 0;
+          const templateChanged = next.template !== saved.template;
+          const accessChanged = next.access !== saved.access;
+          if (
+            !contentChanged &&
+            !excerptChanged &&
+            !metaChanged &&
+            !templateChanged &&
+            !accessChanged
+          )
+            return null;
+          return {
             ...(contentChanged
-              ? { content: { version: "plumix.v2", blocks } }
+              ? { content: { version: "plumix.v2", blocks: next.blocks } }
               : {}),
             ...(excerptChanged
-              ? { excerpt: nextExcerpt.length === 0 ? null : nextExcerpt }
+              ? { excerpt: next.excerpt.length === 0 ? null : next.excerpt }
               : {}),
             ...(metaChanged ? { meta: metaPatch } : {}),
-            ...(templateChanged ? { template: nextTemplate } : {}),
-            ...(accessChanged ? { access: nextAccess } : {}),
-            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-          });
-          if (res.type === entry.type) liveUpdatedAtRef.current = res.updatedAt;
-          return res;
-        });
-        if (updated.type !== entry.type) {
-          // The write landed on the per-user autosave row — a pending draft
-          // now exists. Surface it so the draft actions wake without a reload.
-          setHasLocalDraft(true);
-        }
-        if (contentChanged) lastSavedContentRef.current = serializedBlocks;
-        if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
-        if (metaChanged) lastSavedMetaRef.current = metaSnapshot;
-        if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
-        if (accessChanged) lastSavedAccessRef.current = nextAccess;
-        autosaveFailedRef.current = false;
-        setMetaFieldErrors(null);
-        // Excerpt / meta / template render into the shell — reload to show
-        // them (block content is already live over the bridge). An access
-        // change doesn't alter this render, so it needn't trigger a reload.
-        if (excerptChanged || metaChanged || templateChanged) {
-          refreshPreview.call();
-        }
-      } catch (err) {
-        const recovered = await handleAutosaveError(err);
-        // A recovered stale-token conflict re-anchored the token but didn't
-        // persist this edit — retry once with the fresh token so the pending
-        // change isn't silently dropped if the author stops editing.
-        if (recovered && attempt === 0) await save(1);
-      }
-    };
-    return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
-  }, [id, entry.type, handleAutosaveError, saveQueue, refreshPreview]);
-  const structuralDebouncer = useMemo(() => {
-    const save = async (attempt = 0): Promise<void> => {
-      const nextTitle = titleRef.current.trim();
-      const nextSlug = slugRef.current.trim();
-      const nextParent = parentRef.current;
-      const nextTerms = termsRef.current;
-      const savedTerms = lastSavedTermsRef.current;
-      const changedTaxonomies = Object.keys(nextTerms).filter(
-        (tax) =>
-          JSON.stringify(nextTerms[tax]) !==
-          JSON.stringify(savedTerms[tax] ?? []),
-      );
-      const titleChanged =
-        nextTitle.length > 0 && nextTitle !== lastSavedTitleRef.current;
-      const slugChanged =
-        nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
-      const parentChanged = nextParent !== lastSavedParentRef.current;
-      const termsChanged = changedTaxonomies.length > 0;
-      if (!titleChanged && !slugChanged && !parentChanged && !termsChanged) {
-        return;
-      }
-      const termsPatch = Object.fromEntries(
-        changedTaxonomies.map((tax) => [
-          tax,
-          (nextTerms[tax] ?? []).map(Number),
-        ]),
-      );
-      try {
-        const updated = await saveQueue.run(async () => {
-          const res = await orpc.entry.update.call({
-            id,
-            ...(titleChanged ? { title: nextTitle } : {}),
-            ...(slugChanged ? { slug: nextSlug } : {}),
-            ...(parentChanged ? { parentId: nextParent } : {}),
+            ...(templateChanged ? { template: next.template } : {}),
+            ...(accessChanged ? { access: next.access } : {}),
+          };
+        },
+        commit: (_saved: ContentSnapshot, next: ContentSnapshot) => next,
+        onSaved: (patch, response) => {
+          if (response.type !== entry.type) {
+            // The write landed on the per-user autosave row — a pending draft
+            // now exists. Surface it so the draft actions wake without a reload.
+            setHasLocalDraft(true);
+          }
+          setMetaFieldErrors(null);
+          // Excerpt / meta / template render into the shell — reload to show
+          // them (block content is already live over the bridge). An access
+          // change doesn't alter this render, so it needn't trigger a reload.
+          if (
+            patch.excerpt !== undefined ||
+            patch.meta !== undefined ||
+            patch.template !== undefined
+          ) {
+            refreshPreview.call();
+          }
+        },
+      },
+      structural: {
+        initial: {
+          title: entry.title,
+          slug: entry.slug,
+          parentId: entry.parentId,
+          terms: termSelections,
+        },
+        snapshot: (): StructuralSnapshot => ({
+          title: titleRef.current.trim(),
+          slug: slugRef.current.trim(),
+          parentId: parentRef.current,
+          terms: termsRef.current,
+        }),
+        diff: (saved: StructuralSnapshot, next: StructuralSnapshot) => {
+          const changed = structuralChanges(saved, next);
+          const termsChanged = changed.taxonomies.length > 0;
+          if (
+            !changed.title &&
+            !changed.slug &&
+            !changed.parentId &&
+            !termsChanged
+          ) {
+            return null;
+          }
+          const termsPatch = Object.fromEntries(
+            changed.taxonomies.map((tax) => [
+              tax,
+              (next.terms[tax] ?? []).map(Number),
+            ]),
+          );
+          return {
+            ...(changed.title ? { title: next.title } : {}),
+            ...(changed.slug ? { slug: next.slug } : {}),
+            ...(changed.parentId ? { parentId: next.parentId } : {}),
             ...(termsChanged ? { terms: termsPatch } : {}),
             saveAs: "live",
-            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-          });
-          liveUpdatedAtRef.current = res.updatedAt;
-          return res;
-        });
-        if (titleChanged) lastSavedTitleRef.current = updated.title;
-        if (slugChanged) lastSavedSlugRef.current = updated.slug;
-        if (parentChanged) lastSavedParentRef.current = updated.parentId;
-        if (termsChanged) {
-          lastSavedTermsRef.current = {
-            ...savedTerms,
-            ...Object.fromEntries(
-              changedTaxonomies.map((tax) => [tax, nextTerms[tax] ?? []]),
-            ),
           };
-        }
-        autosaveFailedRef.current = false;
+        },
+        commit: (
+          saved: StructuralSnapshot,
+          next: StructuralSnapshot,
+          response,
+        ): StructuralSnapshot => {
+          const changed = structuralChanges(saved, next);
+          return {
+            title: changed.title ? response.title : saved.title,
+            slug: changed.slug ? response.slug : saved.slug,
+            parentId: changed.parentId ? response.parentId : saved.parentId,
+            terms: {
+              ...saved.terms,
+              ...Object.fromEntries(
+                changed.taxonomies.map((tax) => [tax, next.terms[tax] ?? []]),
+              ),
+            },
+          };
+        },
         // The title / parent / terms render into the theme shell; the slug
         // only affects the permalink (the canvas loads a token URL), so a
         // slug-only save doesn't need a reload.
-        if (titleChanged || parentChanged || termsChanged) {
-          refreshPreview.call();
-        }
-      } catch (err) {
-        const recovered = await handleAutosaveError(err);
-        if (recovered && attempt === 0) await save(1);
-      }
-    };
-    return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
-  }, [id, handleAutosaveError, saveQueue, refreshPreview]);
-  /* eslint-enable react-hooks/refs */
-  useEffect(
-    () => () => {
-      void contentDebouncer.flush();
-      void structuralDebouncer.flush();
-      refreshPreview.cancel();
+        onSaved: (patch) => {
+          if (
+            patch.title !== undefined ||
+            patch.parentId !== undefined ||
+            patch.terms !== undefined
+          ) {
+            refreshPreview.call();
+          }
+        },
+      },
     },
-    [contentDebouncer, structuralDebouncer, refreshPreview],
-  );
+  });
 
   const handleChange = useCallback(
     (content: EntryContent): void => {
       contentRef.current = content;
-      contentDebouncer.call();
+      autosave.schedule.content();
     },
-    [contentDebouncer],
+    [autosave],
   );
   const handleTitleChange = useCallback(
     (next: string): void => {
       setTitleValue(next);
-      structuralDebouncer.call();
+      autosave.schedule.structural();
     },
-    [structuralDebouncer, setTitleValue],
+    [autosave, setTitleValue],
   );
   const handleSlugChange = useCallback(
     (next: string): void => {
       setSlugValue(next);
-      structuralDebouncer.call();
+      autosave.schedule.structural();
     },
-    [structuralDebouncer, setSlugValue],
+    [autosave, setSlugValue],
   );
   const handleParentChange = useCallback(
     (next: number | null): void => {
       setParentValue(next);
-      structuralDebouncer.call();
+      autosave.schedule.structural();
     },
-    [structuralDebouncer, setParentValue],
+    [autosave, setParentValue],
   );
   const handleTermsChange = useCallback(
     (taxonomy: string, next: readonly string[]): void => {
       setTermSelections((prev) => ({ ...prev, [taxonomy]: [...next] }));
-      structuralDebouncer.call();
+      autosave.schedule.structural();
     },
-    [structuralDebouncer, setTermSelections],
+    [autosave, setTermSelections],
   );
   const handleExcerptChange = useCallback(
     (next: string): void => {
       setExcerpt(next);
-      contentDebouncer.call();
+      autosave.schedule.content();
     },
-    [contentDebouncer, setExcerpt],
+    [autosave, setExcerpt],
   );
   const handleMetaChange = useCallback(
     (next: ResolvedMeta): void => {
       metaRef.current = next;
-      // Skip scheduling a write when nothing the editor owns actually changed.
-      if (Object.keys(diffMetaBag(lastSavedMetaRef.current, next)).length === 0)
-        return;
-      contentDebouncer.call();
+      autosave.schedule.content();
     },
-    [contentDebouncer],
+    [autosave],
   );
   const handleTemplateChange = useCallback(
     (next: string | null): void => {
       templateRef.current = next;
       setTemplateValue(next);
-      contentDebouncer.call();
+      autosave.schedule.content();
     },
-    [contentDebouncer, setTemplateValue],
+    [autosave, setTemplateValue],
   );
   const handleAccessChange = useCallback(
     (next: string | null): void => {
       accessRef.current = next;
       setAccessValue(next);
-      contentDebouncer.call();
+      autosave.schedule.content();
     },
-    [contentDebouncer, setAccessValue],
+    [autosave, setAccessValue],
   );
   const handleBack = useCallback(async (): Promise<void> => {
     // Flush pending autosaves before leaving so edits made within the debounce
     // window aren't dropped when the route unmounts.
-    await Promise.all([contentDebouncer.flush(), structuralDebouncer.flush()]);
+    await autosave.flush();
     await navigate({
       to: "/entries/$slug",
       params: { slug },
       search: ENTRIES_LIST_DEFAULT_SEARCH,
     });
-  }, [contentDebouncer, structuralDebouncer, navigate, slug]);
+  }, [autosave, navigate, slug]);
 
   // `EditorRoute` renders `?revision=<id>` as the read-only `RevisionPreview`,
   // so previewing a revision is a search-param navigation. Mirrors the
@@ -878,20 +861,19 @@ function EntryEditor({
     },
     [renderLabel],
   );
+  // Publishing flushes pending edits first and waits its turn in the save queue,
+  // so it neither publishes without the last edit nor races an autosave for the
+  // token.
   const publish = useMutation({
-    mutationFn: async () => {
-      const updated = await orpc.entry.update.call({
-        id,
-        status: "published",
-        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-      });
-      liveUpdatedAtRef.current = updated.updatedAt;
-      return updated;
-    },
+    mutationFn: () =>
+      autosave.runExclusive((expectedLiveUpdatedAt) =>
+        orpc.entry.update.call({
+          id,
+          status: "published",
+          expectedLiveUpdatedAt,
+        }),
+      ),
     onSuccess: () => {
-      // A successful manual save persisted the content, so re-arm the autosave
-      // failure latch — otherwise a later genuine autosave failure stays quiet.
-      autosaveFailedRef.current = false;
       // The promoted bag passed the strict gate, so clear any field pins a
       // prior failed publish left behind.
       setMetaFieldErrors(null);
@@ -902,17 +884,14 @@ function EntryEditor({
   });
   const publishDraft = useMutation({
     mutationFn: () =>
-      orpc.entry.publish.call({
-        id,
-        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-      }),
-    onSuccess: async (updated) => {
-      autosaveFailedRef.current = false;
+      autosave.runExclusive((expectedLiveUpdatedAt) =>
+        orpc.entry.publish.call({ id, expectedLiveUpdatedAt }),
+      ),
+    onSuccess: async () => {
       // The promoted bag passed the strict gate, so clear any field pins a
       // prior failed publish left behind.
       setMetaFieldErrors(null);
       toastSuccess(renderLabel(M.published));
-      liveUpdatedAtRef.current = updated.updatedAt;
       setHasLocalDraft(false);
       await invalidateEntry();
     },
@@ -926,18 +905,14 @@ function EntryEditor({
       await invalidateEntry();
       // Drop any pending write so the unmount flush can't re-save the
       // discarded edits, then remount to reseed the canvas from the live row.
-      contentDebouncer.cancel();
-      structuralDebouncer.cancel();
+      autosave.cancel();
       onReseed();
     },
     onError: () => toastError(renderLabel(M.discardFailed)),
   });
 
   const handlePublish = useCallback(() => publish.mutate(), [publish]);
-  const handleSaveDraft = useCallback(
-    () => void contentDebouncer.flush(),
-    [contentDebouncer],
-  );
+  const handleSaveDraft = useCallback(() => void autosave.flush(), [autosave]);
   const handlePublishDraft = useCallback(
     () => publishDraft.mutate(),
     [publishDraft],
@@ -947,10 +922,9 @@ function EntryEditor({
     [discardDraft],
   );
   const handleUseMine = useCallback(() => {
-    if (liveAnchorAfterResolve)
-      liveUpdatedAtRef.current = liveAnchorAfterResolve;
+    if (liveAnchorAfterResolve) autosave.anchor(liveAnchorAfterResolve);
     setStaleResolved(true);
-  }, [liveAnchorAfterResolve]);
+  }, [autosave, liveAnchorAfterResolve]);
   const handleUseTheirs = useCallback(() => {
     discardDraft.mutate(undefined, {
       onSuccess: () => setStaleResolved(true),

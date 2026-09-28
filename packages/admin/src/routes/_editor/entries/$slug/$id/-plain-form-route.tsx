@@ -1,26 +1,21 @@
-import type { SaveQueue } from "@/editor/save-queue.js";
+import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
-import { classifyAutosaveError } from "@/editor/autosave.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { createSaveQueue } from "@/editor/save-queue.js";
 import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
+import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
 import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import type { ResolvedMeta } from "@plumix/core";
@@ -33,6 +28,13 @@ const M = {
     message: "Couldn't save.",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// The fields the plain form writes: title and status always, meta as a patch.
+interface PlainFormSnapshot {
+  readonly title: string;
+  readonly status: PostEditorValues["status"];
+  readonly meta: ResolvedMeta;
+}
 
 interface PlainFormRouteInnerProps {
   readonly entryType: EntryTypeManifestEntry;
@@ -52,19 +54,17 @@ export function PlainFormRouteInner({
     orpc.entry.get.queryOptions({ input: { id } }),
   );
   const queryClient = useQueryClient();
-  const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
-  // Serializes writes so concurrent autosaves/submits can't race the shared
-  // optimistic token into `409` conflicts and drop edits.
-  const saveQueueRef = useRef<SaveQueue | null>(null);
-  saveQueueRef.current ??= createSaveQueue();
-  const saveQueue = saveQueueRef.current;
   const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
   // Defaults for display: the form and diff baseline share this value — see
   // `seedEntryMetaForm`.
   const seededMeta = seedEntryMetaForm(metaBoxes, entry.meta);
-  // Last meta bag we persisted — autosave diffs against it and sends only the
-  // changed keys, so untouched foreign keys aren't re-validated on every write.
-  const lastSavedMetaRef = useRef<Record<string, unknown>>(seededMeta);
+  const initialSnapshot: PlainFormSnapshot = {
+    title: entry.title,
+    status: entry.status,
+    meta: seededMeta,
+  };
+  const valuesRef = useRef<PlainFormSnapshot>(initialSnapshot);
+  const [isSaving, setIsSaving] = useState(false);
   const [serverError, setServerError] = useState<MessageDescriptor | null>(
     null,
   );
@@ -72,58 +72,48 @@ export function PlainFormRouteInner({
     readonly MetaFieldServerError[] | null
   >(null);
 
-  const updateMutation = useMutation({
-    mutationFn: async (values: {
-      title: string;
-      status: string;
-      meta: ResolvedMeta;
-    }) => {
-      // Send only the changed meta keys so untouched foreign keys aren't
-      // re-validated (an unregistered one would fail the whole write).
-      const metaPatch = diffMetaBag(lastSavedMetaRef.current, values.meta);
-      // Read the token and re-anchor it inside the serialized task so each
-      // queued write sees the post-write value, never a stale one.
-      const writeOnce = () =>
-        saveQueue.run(async () => {
-          const res = await orpc.entry.update.call({
-            id,
-            title: values.title,
-            status: values.status as never,
-            ...(Object.keys(metaPatch).length > 0 ? { meta: metaPatch } : {}),
-            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-          });
-          liveUpdatedAtRef.current = res.updatedAt;
-          return res;
-        });
-      const commit = async () => {
-        const res = await writeOnce();
-        lastSavedMetaRef.current = values.meta;
-        return res;
-      };
-      try {
-        return await commit();
-      } catch (err) {
-        // A recoverable stale-token conflict re-anchors and retries once, so a
-        // benign concurrency bump doesn't surface as a save failure or drop the
-        // edit.
-        const outcome = await classifyAutosaveError(err, queryClient, id);
-        if (outcome.kind !== "recovered") throw err;
-        if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
-        return await commit();
-      }
-    },
-    onSuccess: async () => {
-      setServerError(null);
-      setServerFieldErrors(null);
-      await queryClient.invalidateQueries({
-        queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
-      });
-    },
+  const autosave = useEntryAutosave({
+    id,
+    entryType: entry.type,
+    liveUpdatedAt: entry.updatedAt,
     onError: (err) => {
       setServerError(describeRpcError(err, {}, M.saveFailed));
       setServerFieldErrors(extractMetaFieldErrors(err) ?? null);
     },
+    onSavingChange: setIsSaving,
+    groups: {
+      form: {
+        initial: initialSnapshot,
+        snapshot: () => valuesRef.current,
+        // Send only the changed meta keys so untouched foreign keys aren't
+        // re-validated (an unregistered one would fail the whole write).
+        diff: (saved: PlainFormSnapshot, next: PlainFormSnapshot) => {
+          const metaPatch = diffMetaBag(saved.meta, next.meta);
+          return {
+            title: next.title,
+            status: next.status,
+            ...(Object.keys(metaPatch).length > 0 ? { meta: metaPatch } : {}),
+          };
+        },
+        commit: (_saved: PlainFormSnapshot, next: PlainFormSnapshot) => next,
+        onSaved: () => {
+          setServerError(null);
+          setServerFieldErrors(null);
+          void queryClient.invalidateQueries({
+            queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+          });
+        },
+      },
+    },
   });
+  const handleValuesChange = (values: PostEditorValues): void => {
+    valuesRef.current = {
+      title: values.title,
+      status: values.status,
+      meta: values.meta,
+    };
+    autosave.schedule.form();
+  };
 
   // Bound to the `/edit` route for search-schema inference: this component is
   // the non-editor branch of that route, so its `revision` search param is the
@@ -163,9 +153,7 @@ export function PlainFormRouteInner({
       ? renderLabel(entryTypeLabel(entryType, "editItem"))
       : entry.title;
   const renderedError =
-    updateMutation.isPending || serverError === null
-      ? null
-      : renderLabel(serverError);
+    isSaving || serverError === null ? null : renderLabel(serverError);
 
   return (
     <PlainFormLayout
@@ -173,10 +161,10 @@ export function PlainFormRouteInner({
       initialValues={initialValues}
       metaBoxes={metaBoxes}
       headline={headline}
-      isSubmitting={updateMutation.isPending}
+      isSubmitting={isSaving}
       serverError={renderedError}
       serverFieldErrors={serverFieldErrors}
-      autosaveMs={500}
+      onValuesChange={handleValuesChange}
       revisionsTrigger={revisionsTrigger}
       previewLinkAction={
         entryType.isPublic ? (
@@ -185,13 +173,10 @@ export function PlainFormRouteInner({
           />
         ) : undefined
       }
-      onSubmit={(values) =>
-        updateMutation.mutate({
-          title: values.title,
-          status: values.status,
-          meta: values.meta,
-        })
-      }
+      onSubmit={(values) => {
+        handleValuesChange(values);
+        void autosave.flush();
+      }}
     />
   );
 }

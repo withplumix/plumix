@@ -12,6 +12,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useForm, useWatch } from "react-hook-form";
+import * as v from "valibot";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
@@ -69,11 +70,8 @@ interface PlainFormLayoutProps {
   // Optional "Copy preview link" action slot — route layer wires the
   // entry.createPreviewLink RPC and passes the button here.
   readonly previewLinkAction?: ReactNode;
-  // Debounce window for autosave. When > 0, value edits trigger
-  // `onSubmit` after the window elapses with no new edits. 0 (default)
-  // disables autosave entirely so the layout keeps its explicit-save
-  // behaviour for callers that don't want it.
-  readonly autosaveMs?: number;
+  // Every edit that leaves the form valid, so the route can autosave it.
+  readonly onValuesChange?: (values: PostEditorValues) => void;
 }
 
 const LABEL: Readonly<Record<SaveStatus, MessageDescriptor>> = {
@@ -101,7 +99,7 @@ export function PlainFormLayout({
   onSubmit,
   revisionsTrigger,
   previewLinkAction,
-  autosaveMs = 0,
+  onValuesChange,
 }: PlainFormLayoutProps): ReactElement {
   const renderLabel = useLabel();
   const form = useForm({
@@ -115,22 +113,15 @@ export function PlainFormLayout({
   const saveStatus = resolveStatus(isSubmitting, serverError);
   const watched = useWatch({ control: form.control });
   const isDirty = form.formState.isDirty;
-  const onSubmitRef = useRef(onSubmit);
+  const onValuesChangeRef = useRef(onValuesChange);
   useEffect(() => {
-    onSubmitRef.current = onSubmit;
+    onValuesChangeRef.current = onValuesChange;
   });
   useEffect(() => {
-    if (autosaveMs <= 0) return;
     if (!isDirty) return;
-    // Skip while a save is already in flight — the timer's keystroke
-    // dep makes it re-arm as soon as `isSubmitting` flips back to
-    // false, so a single coalesced save runs per quiet window.
-    if (isSubmitting) return;
-    const timer = setTimeout(() => {
-      void form.handleSubmit((values) => onSubmitRef.current(values))();
-    }, autosaveMs);
-    return () => clearTimeout(timer);
-  }, [watched, autosaveMs, isDirty, isSubmitting, form]);
+    const parsed = v.safeParse(postEditorSchema, form.getValues());
+    if (parsed.success) onValuesChangeRef.current?.(parsed.output);
+  }, [watched, isDirty, form]);
   return (
     <Form {...form}>
       <form
