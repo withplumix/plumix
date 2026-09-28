@@ -76,18 +76,17 @@ export default async function globalSetup(): Promise<void> {
   });
   // Distinct days, oldest first, so the keyset page order is the seed
   // order and the first root seeded is the one past the first page.
-  const roots = [];
-  for (let day = 1; day <= LOAD_MORE_ROOTS; day++) {
-    roots.push(
-      await seed.create({
-        entryId: loadMore.id,
-        status: "approved",
-        bodyMd: `older root ${String(day)}`,
-        createdAt: new Date(Date.UTC(2026, 0, day)),
-      }),
-    );
+  const seedRoot = (day: number) =>
+    seed.create({
+      entryId: loadMore.id,
+      status: "approved",
+      bodyMd: `older root ${String(day)}`,
+      createdAt: new Date(Date.UTC(2026, 0, day)),
+    });
+  const oldestRoot = await seedRoot(1);
+  for (let day = 2; day <= LOAD_MORE_ROOTS; day++) {
+    await seedRoot(day);
   }
-  const [oldestRoot] = roots;
 
   const bulkEntry = await factories.entry.create({
     type: "post",
@@ -110,7 +109,7 @@ export default async function globalSetup(): Promise<void> {
       bulkEntryId: bulkEntry.id,
       bulkIds: [first.id, second.id],
       loadMoreSlug: LOAD_MORE_SLUG,
-      oldestRootId: oldestRoot?.id,
+      oldestRootId: oldestRoot.id,
     }),
     "utf8",
   );
