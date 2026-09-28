@@ -1720,4 +1720,19 @@ describe("MetaBoxField — adornments", () => {
       container.querySelector("[data-slot=input-group]"),
     ).not.toBeInTheDocument();
   });
+
+  test.each(["date", "datetime", "time"])(
+    "%s: ignores prepend and append it carries at runtime",
+    (inputType) => {
+      const { container } = renderWithI18n(
+        <Harness
+          fieldDef={field({ inputType, prepend: "$", append: "kg" })}
+          initial=""
+        />,
+      );
+      expect(
+        container.querySelector("[data-slot=input-group]"),
+      ).not.toBeInTheDocument();
+    },
+  );
 });

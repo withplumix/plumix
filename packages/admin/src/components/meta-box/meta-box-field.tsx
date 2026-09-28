@@ -771,9 +771,8 @@ function renderDateTimeField(ctx: NativeInputContext): ReactNode {
   // contract.
   const htmlType =
     field.inputType === "datetime" ? "datetime-local" : field.inputType;
-  const Control = ctx.adorned ? InputGroupInput : Input;
   return (
-    <Control
+    <Input
       {...nativeCommonProps(ctx)}
       type={htmlType}
       value={
