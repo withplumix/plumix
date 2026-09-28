@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { SQL } from "drizzle-orm";
 import type {
   DatabaseAdapter,
@@ -5,10 +8,13 @@ import type {
   RequestScopedDbArgs,
 } from "plumix";
 import type { AppContext } from "plumix/plugin";
+import type { PlatformProxy } from "wrangler";
 import { sql } from "drizzle-orm";
 import { requestStore } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { describeDatabaseContract } from "plumix/test/conformance";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { getPlatformProxy } from "wrangler";
 
 import { d1 } from "./d1.js";
 
@@ -66,6 +72,61 @@ function callScoped(
   return result;
 }
 
+// One local D1 through miniflare for the whole file: booting it costs about
+// two seconds, so each case wipes it instead of starting another.
+let dir: string;
+let proxy: PlatformProxy<{ DB: D1Database }>;
+
+beforeAll(async () => {
+  dir = mkdtempSync(join(tmpdir(), "plumix-d1-"));
+  const configPath = join(dir, "wrangler.json");
+  writeFileSync(
+    configPath,
+    JSON.stringify({
+      name: "plumix-d1-conformance",
+      compatibility_date: "2026-04-01",
+      d1_databases: [
+        {
+          binding: "DB",
+          database_name: "conformance",
+          database_id: "00000000-0000-0000-0000-000000000000",
+        },
+      ],
+    }),
+  );
+  proxy = await getPlatformProxy({ configPath, persist: false });
+});
+
+afterAll(async () => {
+  await proxy.dispose();
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// Triggers first, so no drop fires one; foreign keys deferred to the batch's
+// commit, by which point every table they point between is gone. D1's own
+// `_cf_` tables refuse a drop.
+async function wipe(binding: D1Database): Promise<void> {
+  const { results } = await binding
+    .prepare(
+      "SELECT type, name FROM sqlite_master WHERE type IN ('trigger', 'table') AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY type = 'table'",
+    )
+    .all<{ type: "trigger" | "table"; name: string }>();
+  if (results.length === 0) return;
+  await binding.batch([
+    binding.prepare("PRAGMA defer_foreign_keys = on"),
+    ...results.map(({ type, name }) =>
+      binding.prepare(`DROP ${type.toUpperCase()} "${name}"`),
+    ),
+  ]);
+}
+
+describeDatabaseContract({
+  connect: async () => {
+    await wipe(proxy.env.DB);
+    return { adapter: d1({ binding: "DB" }), env: { DB: proxy.env.DB } };
+  },
+});
+
 describe("d1() adapter — session config", () => {
   test("session undefined → no connectRequest hook (defers to connect)", () => {
     const adapter = d1({ binding: "DB" });
@@ -98,16 +159,18 @@ async function sampledContext(): Promise<AppContext> {
 }
 
 function resultBinding(results: unknown[] = []): D1Database {
+  const result = () => ({ results, success: true, meta: { changes: 0 } });
   const stmt = {
     bind: () => stmt,
-    run: () =>
-      Promise.resolve({ results, success: true, meta: { changes: 0 } }),
-    all: () =>
-      Promise.resolve({ results, success: true, meta: { changes: 0 } }),
+    run: () => Promise.resolve(result()),
+    all: () => Promise.resolve(result()),
     first: () => Promise.resolve(null),
     raw: () => Promise.resolve([]),
   };
-  return { prepare: () => stmt } as unknown as D1Database;
+  return {
+    prepare: () => stmt,
+    batch: (stmts: unknown[]) => Promise.resolve(stmts.map(result)),
+  } as unknown as D1Database;
 }
 
 describe("d1() adapter — query span tracing", () => {

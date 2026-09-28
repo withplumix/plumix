@@ -3,13 +3,13 @@ export class D1Error extends Error {
     D1Error.prototype.name = "D1Error";
   }
 
-  readonly code: "binding_missing";
-  readonly binding: string;
+  readonly code: "binding_missing" | "batch_incomplete";
+  readonly binding: string | undefined;
 
   private constructor(
-    code: "binding_missing",
+    code: "binding_missing" | "batch_incomplete",
     message: string,
-    binding: string,
+    binding: string | undefined,
   ) {
     super(message);
     this.code = code;
@@ -21,6 +21,15 @@ export class D1Error extends Error {
       "binding_missing",
       `@plumix/runtime-cloudflare: D1 binding "${ctx.binding}" missing from env`,
       ctx.binding,
+    );
+  }
+
+  static batchIncomplete(ctx: { expected: number; received: number }): D1Error {
+    return new D1Error(
+      "batch_incomplete",
+      `@plumix/runtime-cloudflare: a D1 batch of ${String(ctx.expected)} ` +
+        `statements answered with ${String(ctx.received)} results`,
+      undefined,
     );
   }
 }

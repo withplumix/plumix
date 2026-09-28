@@ -2,6 +2,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { sql } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
+import { describeDatabaseContract } from "../test/conformance/database.js";
 import { libsql } from "./libsql.js";
 
 const connect = (adapter: ReturnType<typeof libsql>): LibSQLDatabase =>
@@ -93,4 +94,8 @@ describe("libsql() adapter", () => {
     const rows = await lib.all<{ first_name: string }>(sql`select * from t`);
     expect(rows).toEqual([{ first_name: "ada" }]);
   });
+});
+
+describeDatabaseContract({
+  connect: () => ({ adapter: libsql({ url: ":memory:" }) }),
 });

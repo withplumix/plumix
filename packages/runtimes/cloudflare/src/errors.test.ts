@@ -24,6 +24,16 @@ describe("D1Error.bindingMissing", () => {
   });
 });
 
+describe("D1Error.batchIncomplete", () => {
+  test("class identity and code, no binding context", () => {
+    const err = D1Error.batchIncomplete({ expected: 2, received: 1 });
+    expect(err).toBeInstanceOf(D1Error);
+    expect(err.code).toBe("batch_incomplete");
+    expect(err.binding).toBeUndefined();
+    expect(err.message).toContain("batch of 2 statements answered with 1");
+  });
+});
+
 describe("R2Error.envNotObject", () => {
   test("class identity and code, no binding context", () => {
     const err = R2Error.envNotObject();

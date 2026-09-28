@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { isSecureRequest, readSessionCookie } from "plumix/auth";
 import { responseAllowsSharedStorage } from "plumix/runtime";
 
+import { d1Client } from "./d1-client.js";
 import {
   buildBookmarkCookie,
   DEFAULT_BOOKMARK_COOKIE,
@@ -56,7 +57,7 @@ export function d1(config: D1Config): D1DatabaseAdapter {
     config,
     requiredBindings: [config.binding],
     connect: (env, _request, schema) => {
-      const binding = traceD1Client(getBinding(env, config.binding));
+      const binding = traceD1Client(d1Client(getBinding(env, config.binding)));
       const db = drizzle(binding, { schema, casing: "snake_case" });
       return { db };
     },
@@ -100,7 +101,8 @@ function connectRequestScoped(
   // Safety: `D1DatabaseSession` carries `prepare` and `batch` with the same
   // signatures `D1Database` declares, and those are the only members drizzle
   // and the tracer call — `dump`/`exec`/`withSession` are never reached.
-  const sessionAsBinding = traceD1Client(session as unknown as D1Database);
+  const sessionBinding = session as unknown as D1Database;
+  const sessionAsBinding = traceD1Client(d1Client(sessionBinding));
   const db = drizzle(sessionAsBinding, {
     schema: args.schema,
     casing: "snake_case",

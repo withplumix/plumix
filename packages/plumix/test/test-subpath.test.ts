@@ -29,6 +29,7 @@ import {
 import {
   describeAssetsContract,
   describeCdnContract,
+  describeDatabaseContract,
   describeKvContract,
   describeObjectStorageContract,
 } from "plumix/test/conformance";
@@ -83,6 +84,7 @@ describe("plumix/test/conformance subpath", () => {
       describeKvContract,
       describeObjectStorageContract,
       describeCdnContract,
+      describeDatabaseContract,
       describeAssetsContract,
     ]) {
       expect(suite).toBeTypeOf("function");
