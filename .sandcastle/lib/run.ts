@@ -2,6 +2,7 @@ import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
 import type { ShipOutcome } from "./ticket.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
+import { slotsFor } from "./slots.js";
 
 export interface ShipPorts {
   readonly nextTicket: () => Ticket | undefined;
@@ -23,6 +24,7 @@ export interface ShipPorts {
     refusal: MergeOutcome,
   ) => Promise<boolean>;
   readonly requeue: (pullRequest: QueuedPullRequest) => void;
+  readonly inFlightFromEarlierRuns: () => readonly Queued[];
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly say: (line: string) => void;
 }
@@ -44,7 +46,7 @@ const failedOnItsOwnChecks = (refusal: MergeOutcome): boolean =>
   !refusal.fromTheMergeGroup &&
   !refusal.conflicted;
 
-interface Queued {
+export interface Queued {
   readonly ticket: Ticket;
   readonly pullRequest: QueuedPullRequest;
 }
@@ -71,6 +73,7 @@ export const runShipLoop = async (
   const parked: { ticket: Ticket; reason: string }[] = [];
   let outage: string | undefined;
   let failuresInARow = 0;
+  const sandboxes = slotsFor(lanes);
   let stoppedBecause: string | undefined;
 
   const noteFailure = (reason: string): void => {
@@ -109,7 +112,9 @@ export const runShipLoop = async (
       ports.say(
         `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
       );
-      const repaired = await ports.repair(ticket, pullRequest, outcome);
+      const repaired = await sandboxes.run(() =>
+        ports.repair(ticket, pullRequest, outcome),
+      );
       if (repaired.status === "declined") {
         return { status: "failed", reason: repaired.reason, failingChecks: [] };
       }
@@ -140,6 +145,28 @@ export const runShipLoop = async (
     return true;
   };
 
+  const startConfirming = (queued: Queued): void => {
+    const confirmation = confirmRepairingWhatIsRefused(queued).then(
+      (value): PromiseSettledResult<MergeOutcome> => ({
+        status: "fulfilled",
+        value,
+      }),
+      (reason: unknown): PromiseSettledResult<MergeOutcome> => ({
+        status: "rejected",
+        reason,
+      }),
+    );
+    trackUntilSettled(confirmation);
+    confirming.push({ ...queued, outcome: confirmation });
+  };
+
+  for (const queued of ports.inFlightFromEarlierRuns()) {
+    ports.say(
+      `  #${queued.ticket.number} picked up from an earlier run: ${queued.pullRequest.url}`,
+    );
+    startConfirming(queued);
+  }
+
   await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
@@ -149,7 +176,7 @@ export const runShipLoop = async (
     inLane: async (ticket) => {
       let outcome: ShipOutcome;
       try {
-        const shipping = ports.ship(ticket);
+        const shipping = sandboxes.run(() => ports.ship(ticket));
         trackUntilSettled(shipping);
         outcome = await shipping;
       } catch (error) {
@@ -173,23 +200,8 @@ export const runShipLoop = async (
 
       failuresInARow = 0;
 
-      const { pullRequest } = outcome;
-      ports.say(`  #${ticket.number} queued ${pullRequest.url}`);
-      const confirmation = confirmRepairingWhatIsRefused({
-        ticket,
-        pullRequest,
-      }).then(
-        (value): PromiseSettledResult<MergeOutcome> => ({
-          status: "fulfilled",
-          value,
-        }),
-        (reason: unknown): PromiseSettledResult<MergeOutcome> => ({
-          status: "rejected",
-          reason,
-        }),
-      );
-      trackUntilSettled(confirmation);
-      confirming.push({ ticket, pullRequest, outcome: confirmation });
+      ports.say(`  #${ticket.number} queued ${outcome.pullRequest.url}`);
+      startConfirming({ ticket, pullRequest: outcome.pullRequest });
     },
   });
 

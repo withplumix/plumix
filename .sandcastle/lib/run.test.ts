@@ -30,6 +30,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     confirm: async () => merged,
     repair: async () => ({ status: "repaired" }) as const,
     rerunFailedChecks: async () => true,
+    inFlightFromEarlierRuns: () => [],
     requeue: () => {},
     ticketClosed: () => true,
     say: () => {},
@@ -537,6 +538,64 @@ describe("runShipLoop", () => {
     expect(parked).toEqual([]);
     expect(released).toEqual([1]);
     expect(report.outage).toContain("session limit");
+  });
+
+  test("a repair takes one of the lanes' slots, so ships and repairs never exceed the lanes", async () => {
+    let busy = 0;
+    let busiest = 0;
+    const occupy = async () => {
+      busy += 1;
+      busiest = Math.max(busiest, busy);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      busy -= 1;
+    };
+    let confirms = 0;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1), ticket(2), ticket(3)]),
+      ship: async (t) => {
+        await occupy();
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+      confirm: async (pr) =>
+        pr.number === 101 && ++confirms === 1 ? ciRed : merged,
+      rerunFailedChecks: async () => false,
+      repair: async () => {
+        await occupy();
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(busiest).toBeLessThanOrEqual(2);
+  });
+
+  test("a pull request an earlier run left in flight is confirmed, and repaired, by this run", async () => {
+    const repaired: number[] = [];
+    let confirms = 0;
+    const { ports: p } = ports({
+      nextTicket: () => undefined,
+      inFlightFromEarlierRuns: () => [
+        {
+          ticket: ticket(7),
+          pullRequest: { number: 107, url: "pr/7" },
+        },
+      ],
+      confirm: async () => (++confirms === 1 ? ciRed : merged),
+      rerunFailedChecks: async () => false,
+      repair: async (_ticket, pr) => {
+        repaired.push(pr.number);
+        return { status: "repaired" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(repaired).toEqual([107]);
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([7]);
   });
 
   test("a budget that has run out hands out no work at all", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Gate } from "./gates.js";
-import { gateBehindCheck, runGates } from "./gates.js";
+import { gateBehindCheck, GATES, runGates } from "./gates.js";
 
 const sandboxWhereTheseCommandsFail = (failing: readonly string[]) => ({
   exec: async (command: string) => ({
@@ -133,4 +133,15 @@ describe("a gate that fails once", () => {
 
     expect(failures.map(({ name }) => name)).toEqual(["lint"]);
   });
+});
+
+describe("package-scoped gates", () => {
+  test.each(["lint", "typecheck", "test", "e2e", "publint", "attw"])(
+    "%s runs only the packages the branch changed and the packages that depend on them",
+    (name) => {
+      const gate = GATES.find((candidate) => candidate.name === name);
+
+      expect(gate?.command).toContain("--filter=...[origin/main]");
+    },
+  );
 });
