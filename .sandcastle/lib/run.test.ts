@@ -481,6 +481,41 @@ describe("runShipLoop", () => {
     expect(seen).toEqual(["repair"]);
   });
 
+  test("a lane with nothing to take at the start waits for the lanes still shipping", async () => {
+    let merged1 = false;
+    const handedOut = new Set<number>();
+    let shipping = 0;
+    let busiest = 0;
+    const { ports: p } = ports({
+      nextTicket: () => {
+        const takeable = merged1 ? [1, 2, 3] : [1];
+        const next = takeable.find((n) => !handedOut.has(n));
+        if (next === undefined) return undefined;
+        handedOut.add(next);
+        return ticket(next);
+      },
+      ship: async (t) => {
+        shipping += 1;
+        busiest = Math.max(busiest, shipping);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        shipping -= 1;
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+      confirm: async (pr) => {
+        if (pr.number === 101) merged1 = true;
+        return merged;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(report.merged).toHaveLength(3);
+    expect(busiest).toBe(2);
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 
