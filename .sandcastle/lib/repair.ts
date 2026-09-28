@@ -17,6 +17,7 @@ import {
 } from "./github.js";
 import { say } from "./log.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
+import { untilTheRunCompletes } from "./run-completion.js";
 import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
@@ -115,6 +116,24 @@ const failedStepsOf = (jobId: string): readonly string[] =>
     ]),
   ) as readonly string[];
 
+const runStatus = (runId: string): string => {
+  try {
+    return gh([
+      "run",
+      "view",
+      runId,
+      "-R",
+      REPO_SLUG,
+      "--json",
+      "status",
+      "--jq",
+      ".status",
+    ]).trim();
+  } catch {
+    return "";
+  }
+};
+
 const failedLogTail = (jobId: string): string => {
   try {
     return gh([
@@ -166,6 +185,21 @@ export const repairPullRequest = async (
   git(["fetch", "-q", "origin", "main", branch]);
   clearLeftoverWorktree(branch);
   git(["branch", "-f", branch, `origin/${branch}`]);
+
+  const runsStillGoing = [
+    ...new Set(
+      refusal.failingChecks.flatMap(({ url }) => idsInJobUrl(url)?.runId ?? []),
+    ),
+  ];
+  for (const runId of runsStillGoing) {
+    const completed = await untilTheRunCompletes(
+      () => runStatus(runId),
+      () => new Promise((resolve) => setTimeout(resolve, 30_000)),
+      { attempts: 60 },
+    );
+    if (!completed)
+      say(`  CI run ${runId} is still going; reading what it has`);
+  }
 
   const sandbox = await createPlumixSandbox(branch);
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
