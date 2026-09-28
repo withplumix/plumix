@@ -2,6 +2,8 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import type { RequestTrustOptions, TrustedRequest } from "plumix/runtime";
+import { trustRequest } from "plumix/runtime";
 
 import { BridgeError } from "../errors.js";
 
@@ -12,14 +14,7 @@ export type RequestHandler = (
   meta: { readonly clientAddress?: string },
 ) => Promise<Response>;
 
-export interface BridgeOptions {
-  /**
-   * Read scheme, host and client address from `x-forwarded-proto`,
-   * `x-forwarded-host` and the rightmost `x-forwarded-for` entry — what a
-   * TLS-terminating proxy in front of the process appends. Off by default, so
-   * a visitor reaching the process directly cannot forge them.
-   */
-  readonly trustProxy?: boolean;
+export interface BridgeOptions extends RequestTrustOptions {
   /**
    * Bytes a request body may carry, 1 GiB by default. Enforced as the body
    * streams, so an oversized upload fails when the handler consumes it rather
@@ -33,57 +28,11 @@ export type RequestListener = (
   res: ServerResponse,
 ) => void;
 
-// An empty header reads as absent, so a blank `Host` still yields a URL.
-function header(req: IncomingMessage, name: string): string | undefined {
-  const value = req.headers[name];
-  const first = Array.isArray(value) ? value[0] : value;
-  return first === "" ? undefined : first;
-}
-
-function forwarded(
-  req: IncomingMessage,
-  options: BridgeOptions,
-  name: string,
-): string | undefined {
-  return options.trustProxy === true ? header(req, name) : undefined;
-}
-
 function splitTarget(target: string): [pathname: string, search: string] {
   const query = target.indexOf("?");
   return query === -1
     ? [target, ""]
     : [target.slice(0, query), target.slice(query)];
-}
-
-/** The URL the handler sees: forwarded values only when the proxy is trusted. */
-export function requestUrl(req: IncomingMessage, options: BridgeOptions): URL {
-  const scheme =
-    forwarded(req, options, "x-forwarded-proto") ??
-    ("encrypted" in req.socket ? "https" : "http");
-  const host =
-    forwarded(req, options, "x-forwarded-host") ??
-    header(req, "host") ??
-    `localhost:${req.socket.localPort}`;
-  const [pathname, search] = splitTarget(req.url ?? "/");
-  // Throws on a path fetch could not route; the listener answers 400.
-  decodeURI(pathname);
-  // Assigned rather than resolved against the origin: a protocol-relative
-  // target would otherwise replace the host the request was for.
-  const url = new URL(`${scheme}://${host}`);
-  url.pathname = pathname;
-  url.search = search;
-  return url;
-}
-
-export function clientAddress(
-  req: IncomingMessage,
-  options: BridgeOptions,
-): string | undefined {
-  const last = forwarded(req, options, "x-forwarded-for")
-    ?.split(",")
-    .at(-1)
-    ?.trim();
-  return last === undefined || last === "" ? req.socket.remoteAddress : last;
 }
 
 function requestHeaders(req: IncomingMessage): Headers {
@@ -95,6 +44,36 @@ function requestHeaders(req: IncomingMessage): Headers {
     }
   }
   return headers;
+}
+
+/**
+ * The URL and client address the shared trust rules decide for a request.
+ * Throws on a path fetch could not route, and on a `Host` a URL cannot carry;
+ * the listener answers 400.
+ */
+export function trustedRequest(
+  req: IncomingMessage,
+  options: BridgeOptions,
+  headers: Headers = requestHeaders(req),
+): TrustedRequest {
+  const [pathname, search] = splitTarget(req.url ?? "/");
+  decodeURI(pathname);
+  // Assigned rather than resolved against an origin: a protocol-relative
+  // target would otherwise replace the host the request was for.
+  const target = new URL("http://localhost");
+  target.pathname = pathname;
+  target.search = search;
+  return trustRequest(
+    new Request(target, { headers }),
+    {
+      // `node:http` serves plain HTTP, in dev and in the built entry alike; a
+      // TLS-terminating proxy in front is what `trustProxy` is for.
+      scheme: "http",
+      port: req.socket.localPort ?? 0,
+      remoteAddress: req.socket.remoteAddress,
+    },
+    options,
+  );
 }
 
 /**
@@ -166,20 +145,22 @@ function toRequest(
   req: IncomingMessage,
   res: ServerResponse,
   options: BridgeOptions,
-): Request {
+): { readonly request: Request; readonly clientAddress?: string } {
   const method = req.method ?? "GET";
   const bodiless = method === "GET" || method === "HEAD";
+  const headers = requestHeaders(req);
+  const { url, clientAddress } = trustedRequest(req, options, headers);
   // `duplex` is what lets a streamed body through; the DOM lib omits it.
   const init: RequestInit & { readonly duplex: "half" } = {
     method,
-    headers: requestHeaders(req),
+    headers,
     body: bodiless
       ? null
       : requestBody(req, res, options.bodySizeLimit ?? DEFAULT_BODY_SIZE_LIMIT),
     duplex: "half",
     signal: abortOnDisconnect(req, res),
   };
-  return new Request(requestUrl(req, options), init);
+  return { request: new Request(url, init), clientAddress };
 }
 
 function responseHeaders(
@@ -224,18 +205,17 @@ export function createRequestListener(
 ): RequestListener {
   return (req, res) => {
     let request: Request;
+    let address: string | undefined;
     try {
       // Node parses more than fetch routes: a path `decodeURI` rejects, a
       // `Host` the URL parser refuses, a method `Request` forbids (TRACE).
-      request = toRequest(req, res, options);
+      ({ request, clientAddress: address } = toRequest(req, res, options));
     } catch {
       plain(res, 400, "Bad Request");
       return;
     }
     Promise.resolve()
-      .then(() =>
-        handle(request, { clientAddress: clientAddress(req, options) }),
-      )
+      .then(() => handle(request, { clientAddress: address }))
       .then((response) => writeResponse(response, req, res))
       .catch(() => {
         // Mid-body there is nothing left to say — the client went away or

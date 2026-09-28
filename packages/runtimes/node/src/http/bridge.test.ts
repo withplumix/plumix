@@ -396,23 +396,6 @@ describe("request bridge", () => {
     expect(sockets).toHaveLength(1);
   });
 
-  test("an empty trailing x-forwarded-for entry falls back to the socket address", async () => {
-    let address: string | undefined;
-    const { origin } = await serve(
-      (_request, meta) => {
-        address = meta.clientAddress;
-        return Promise.resolve(new Response(""));
-      },
-      { trustProxy: true },
-    );
-
-    await fetch(`${origin}/`, {
-      headers: { "x-forwarded-for": "203.0.113.9, " },
-    });
-
-    expect(address).toBe("127.0.0.1");
-  });
-
   test("HEAD cancels the body the handler produced", async () => {
     let cancelled = false;
     const { origin } = await serve(() =>

@@ -7,6 +7,3 @@
  * `admin-not-available`.
  */
 export const ASSETS_DIR_ENV = "PLUMIX_ASSETS_DIR";
-
-/** One deadline for a shutdown: in-flight responses first, deferred work in what remains. */
-export const DRAIN_DEADLINE_MS = 10_000;

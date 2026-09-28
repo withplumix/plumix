@@ -3,6 +3,7 @@ import { availableParallelism } from "node:os";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AssetsBinding, ImageDelivery } from "plumix";
+import type { TrustedRequest } from "plumix/runtime";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
 import { normalizeBasePath, withBasePath } from "plumix/support";
 
@@ -16,7 +17,7 @@ import {
   parseImageParams,
   sourceKey,
 } from "../images.js";
-import { clientAddress, requestUrl, writeResponse } from "./bridge.js";
+import { trustedRequest, writeResponse } from "./bridge.js";
 
 export interface ImageLayerOptions extends Pick<BridgeOptions, "trustProxy"> {
   /**
@@ -398,7 +399,10 @@ function serveWith(
     );
   }
 
-  async function handle(req: IncomingMessage, url: URL): Promise<Response> {
+  async function handle(
+    req: IncomingMessage,
+    { url, clientAddress }: TrustedRequest,
+  ): Promise<Response> {
     const params = parseImageParams(slot.config, url.searchParams);
     // The roster is checked ahead of the cache: what the config refuses now
     // is refused whether or not an earlier config rendered it.
@@ -437,7 +441,7 @@ function serveWith(
         source,
         key,
         url,
-        clientAddress: clientAddress(req, options),
+        clientAddress,
       });
       return respond(rendered, etag, req.method);
     } catch (error) {
@@ -457,18 +461,18 @@ function serveWith(
       next();
       return;
     }
-    let url: URL;
+    let trusted: TrustedRequest;
     try {
-      url = requestUrl(req, options);
+      trusted = trustedRequest(req, options);
     } catch {
       next();
       return;
     }
-    if (url.pathname !== route) {
+    if (trusted.url.pathname !== route) {
       next();
       return;
     }
-    void handle(req, url)
+    void handle(req, trusted)
       .then((response) => writeResponse(response, req, res))
       .catch(() => res.destroy());
   };

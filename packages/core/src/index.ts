@@ -59,6 +59,7 @@ export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
+export { DRAIN_DEADLINE_MS } from "./runtime/drain.js";
 export { createPlumixHandler } from "./runtime/handler.js";
 export type { PlumixHandlerOptions } from "./runtime/handler.js";
 // `notFound` is already the template-rule builder's name on this surface, so
@@ -76,6 +77,14 @@ export type {
   MemoryObjectStorage,
   MemoryStorageConfig,
 } from "./runtime/memory-storage.js";
+export { resolveAssetPath } from "./runtime/asset-path.js";
+export type { AssetPath } from "./runtime/asset-path.js";
+export { trustRequest } from "./runtime/request-trust.js";
+export type {
+  Connection,
+  RequestTrustOptions,
+  TrustedRequest,
+} from "./runtime/request-trust.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
 export { declaredSchedules, scheduledTasksFor } from "./runtime/schedules.js";
 export type { CronSchedule } from "./runtime/cron.js";
