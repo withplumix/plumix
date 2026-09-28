@@ -1,10 +1,21 @@
 import * as path from "node:path";
+import { ESLint } from "eslint";
 import { describe, expect, test } from "vitest";
+
+import { baseConfig } from "@plumix/eslint-config/base";
 
 import type { Layer } from "../layers.js";
 import type { ImportEdge } from "./test/import-graph.js";
+import { layerDirection } from "../eslint.config.js";
 import baseline from "../layers.baseline.json" with { type: "json" };
-import { CLIENT_SUBPATHS, environmentOf, layerOf, LAYERS } from "../layers.js";
+import {
+  CLIENT_SUBPATHS,
+  environmentOf,
+  FOLDERS,
+  layerOf,
+  LAYERS,
+  TOP_FILES,
+} from "../layers.js";
 import packageJson from "../package.json" with { type: "json" };
 import {
   chainTo,
@@ -286,5 +297,168 @@ describe("core keeps its layer table, less the baselined violations", () => {
     expect(found.map(({ violation }) => keyOf(violation))).not.toContain(
       "environment: support.ts → context/stores.ts",
     );
+  });
+});
+
+// Parse as core's own config does, minus the project service: a probe exists
+// only as text, and direction needs no type information.
+const PARSER = baseConfig.find((block) => block.languageOptions?.parser)
+  ?.languageOptions?.parser;
+
+function directionLinter(config = layerDirection()): ESLint {
+  return new ESLint({
+    cwd: path.dirname(SRC),
+    overrideConfigFile: true,
+    overrideConfig: [
+      { files: ["**/*.ts", "**/*.tsx"], languageOptions: { parser: PARSER } },
+      ...config,
+    ],
+  });
+}
+
+const DIRECTION = directionLinter();
+
+// The plugin names both files' categories, which here are their layers.
+const DENIED =
+  /^Dependencies to file of category "(\w+)" are not allowed in file of category "(\w+)"/;
+
+/**
+ * What linting `code` as the file at `file` reports: `line: from → to` for a
+ * direction error, the rule and its message for anything else.
+ */
+async function lintAs(
+  file: string,
+  code: string,
+  linter = DIRECTION,
+): Promise<readonly string[]> {
+  const [result] = await linter.lintText(code, {
+    filePath: path.join(SRC, file),
+  });
+  return (result?.messages ?? []).map((message) => {
+    const [, to, from] = DENIED.exec(message.message) ?? [];
+    return message.ruleId === "boundaries/dependencies" && to !== undefined
+      ? `${message.line}: ${from} → ${to}`
+      : `${message.line}: ${message.ruleId ?? "fatal"}: ${message.message}`;
+  });
+}
+
+describe("lint holds each file to its own layer or a lower one", () => {
+  test("a capability importing a surface is an error", async () => {
+    expect(
+      await lintAs("entries/probe.ts", 'import { x } from "../rpc/base.js";'),
+    ).toEqual(["1: capabilities → surfaces"]);
+  });
+
+  test("an erased import still counts", async () => {
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        'import type { X } from "../rpc/base.js";',
+      ),
+    ).toEqual(["1: capabilities → surfaces"]);
+  });
+
+  test("nothing below the composition root imports it", async () => {
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        'import { x } from "../context/app.js";',
+      ),
+    ).toEqual(["1: capabilities → top"]);
+  });
+
+  // `context/app.ts` is `top` though its folder is `contracts`, so a sibling
+  // may not reach it either.
+  test("a top file is classified before its folder", async () => {
+    expect(
+      await lintAs("context/probe.ts", 'import { x } from "./app.js";'),
+    ).toEqual(["1: contracts → top"]);
+  });
+
+  test("top may import any layer", async () => {
+    expect(
+      await lintAs("context/app.ts", 'import { x } from "../rpc/base.js";'),
+    ).toEqual([]);
+  });
+
+  test("a re-export and a dynamic import count", async () => {
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        [
+          'export { x } from "../rpc/base.js";',
+          'export const load = () => import("../rpc/base.js");',
+        ].join("\n"),
+      ),
+    ).toEqual(["1: capabilities → surfaces", "2: capabilities → surfaces"]);
+  });
+
+  test("a `.js` specifier resolves to its `.tsx` source", async () => {
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        'import { x } from "../dev/ui/error-page.js";',
+      ),
+    ).toEqual(["1: capabilities → surfaces"]);
+  });
+
+  test("a test file and the test harness are not held to it", async () => {
+    const upward = 'import { x } from "../context/app.js";';
+    expect(await lintAs("entries/probe.test.ts", upward)).toEqual([]);
+    expect(await lintAs("entries/probe.test.tsx", upward)).toEqual([]);
+    expect(await lintAs("test/probe.ts", upward)).toEqual([]);
+  });
+
+  test("its own layer and the ones below are allowed", async () => {
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        [
+          'import { x } from "./query.js";',
+          'import { y } from "../db/index.js";',
+          'import { z } from "../support.js";',
+          'import { w } from "../json.js";',
+        ].join("\n"),
+      ),
+    ).toEqual([]);
+  });
+
+  test("moving a folder in the table moves what lint reports", async () => {
+    const moved = directionLinter(
+      layerDirection({
+        folders: {
+          ...FOLDERS,
+          "entries/": { layer: "surfaces", environment: "server-only" },
+        },
+        topFiles: TOP_FILES,
+      }),
+    );
+    expect(
+      await lintAs(
+        "entries/probe.ts",
+        'import { x } from "../rpc/base.js";',
+        moved,
+      ),
+    ).toEqual([]);
+  });
+
+  // The plugin picks the first descriptor that matches and the table the
+  // deepest folder, so the generated order is the thing that could drift.
+  // A probe importing the root entry names the layer lint put the file in.
+  test("lint puts every production file in the table's layer", async () => {
+    const disagreeing: string[] = [];
+    for (const file of PRODUCTION_FILES) {
+      const root = path.posix.relative(path.posix.dirname(file), "index.js");
+      const layer = layerOf(file);
+      const expected = layer === "top" ? [] : [`1: ${layer} → top`];
+      const reported = await lintAs(
+        file,
+        `import { x } from "${root.startsWith(".") ? root : `./${root}`}";`,
+      );
+      if (reported.join() !== expected.join()) {
+        disagreeing.push(`${file}: ${reported.join() || "top"}`);
+      }
+    }
+    expect(disagreeing).toEqual([]);
   });
 });

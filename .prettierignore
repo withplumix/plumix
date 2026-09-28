@@ -12,3 +12,7 @@ packages/create-plumix-app/base
 # pnpm owns this file's formatting; a `prettier --write` would fight the
 # next `pnpm install`.
 pnpm-lock.yaml
+
+# ESLint owns this file's formatting: `--prune-suppressions` rewrites it
+# without a trailing newline, which a `prettier --write` would fight.
+packages/core/eslint-suppressions.json
