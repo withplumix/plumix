@@ -516,6 +516,29 @@ describe("runShipLoop", () => {
     expect(busiest).toBe(2);
   });
 
+  test("the run ending during a repair releases the ticket and keeps the pull request", async () => {
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ciRed,
+      rerunFailedChecks: async () => false,
+      repair: async () => {
+        throw new Error(
+          "claude-code exited with code 1: You've hit your session limit · resets 5:30pm (UTC)",
+        );
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(released).toEqual([1]);
+    expect(report.outage).toContain("session limit");
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 
