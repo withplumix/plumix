@@ -365,6 +365,45 @@ describe("runShipLoop", () => {
     expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
   });
 
+  test("a ticket a merge unblocks is taken by a lane that had nothing to do", async () => {
+    const shipped: number[] = [];
+    let secondIsUnblocked = false;
+    const { ports: p } = ports({
+      nextTicket: (() => {
+        let handedOutFirst = false;
+        let handedOutSecond = false;
+        return () => {
+          if (!handedOutFirst) {
+            handedOutFirst = true;
+            return ticket(1);
+          }
+          if (secondIsUnblocked && !handedOutSecond) {
+            handedOutSecond = true;
+            return ticket(2);
+          }
+          return undefined;
+        };
+      })(),
+      ship: async (t) => {
+        shipped.push(t.number);
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+      confirm: async (pr) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (pr.number === 101) secondIsUnblocked = true;
+        return merged;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(shipped).toEqual([1, 2]);
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
+  });
+
   test("a budget that has run out hands out no work at all", async () => {
     const { ports: p } = ports();
 
