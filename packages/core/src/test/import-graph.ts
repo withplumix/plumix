@@ -5,8 +5,9 @@ import ts from "typescript";
 /**
  * Static reading of core's own import graph, for the suites that assert a
  * property of the graph rather than of a running program: what a cold start
- * pays for (`runtime/cold-path.test.ts`) and which direction the dev debug
- * layers may import in (`dev/debug-layers.test.ts`).
+ * pays for (`runtime/cold-path.test.ts`), which direction the dev debug
+ * layers may import in (`dev/debug-layers.test.ts`), and whether core keeps
+ * its layer table (`layers.test.ts`).
  *
  * Deliberately a source-text walk rather than a bundler or a loaded module.
  * Core ships as unbundled `tsc` output, so the only thing keeping a graph out
@@ -105,14 +106,34 @@ export function resolveWithinCore(
   return undefined;
 }
 
+type EdgeKind = "static" | "dynamic" | "typeOnly";
+
+export interface ImportEdge {
+  readonly to: string;
+  readonly kind: EdgeKind;
+}
+
+/** The edges out of `file` that land back inside core, resolved to files. */
+export function edgesOf(file: string): readonly ImportEdge[] {
+  const imports = importsOf(file);
+  const kinds = ["static", "dynamic", "typeOnly"] as const;
+  return kinds.flatMap((kind) =>
+    imports[kind].flatMap((specifier) => {
+      const to = resolveWithinCore(file, specifier);
+      return to === undefined ? [] : [{ to, kind }];
+    }),
+  );
+}
+
 /**
- * Maps each statically reachable file to the one that imported it, so a
- * failure can name the chain instead of only the destination. Breadth-first,
- * so that chain is the shortest one — the longest is rarely the one worth
- * deleting.
+ * Maps each file reachable from `entries` through `next` to the one that
+ * reached it, so a failure can name the chain instead of only the
+ * destination. Breadth-first, so that chain is the shortest one — the longest
+ * is rarely the one worth deleting.
  */
-export function staticClosureOf(
+export function closureOf(
   entries: readonly string[],
+  next: (file: string) => readonly string[],
 ): ReadonlyMap<string, string | undefined> {
   const importedBy = new Map<string, string | undefined>(
     entries.map((entry) => [entry, undefined]),
@@ -120,15 +141,84 @@ export function staticClosureOf(
   const queue = [...entries];
   let file: string | undefined;
   while ((file = queue.shift()) !== undefined) {
-    for (const specifier of importsOf(file).static) {
-      const resolved = resolveWithinCore(file, specifier);
-      if (resolved !== undefined && !importedBy.has(resolved)) {
-        importedBy.set(resolved, file);
-        queue.push(resolved);
+    for (const reached of next(file)) {
+      if (!importedBy.has(reached)) {
+        importedBy.set(reached, file);
+        queue.push(reached);
       }
     }
   }
   return importedBy;
+}
+
+/** The chain `closure` reached `file` by, entry first; undefined if it didn't. */
+export function chainTo(
+  closure: ReadonlyMap<string, string | undefined>,
+  file: string,
+): readonly string[] | undefined {
+  if (!closure.has(file)) return undefined;
+  const chain: string[] = [];
+  let step: string | undefined = file;
+  while (step !== undefined) {
+    chain.unshift(step);
+    step = closure.get(step);
+  }
+  return chain;
+}
+
+/** {@link closureOf} over static edges: what loading `entries` links. */
+export function staticClosureOf(
+  entries: readonly string[],
+): ReadonlyMap<string, string | undefined> {
+  return closureOf(entries, (file) =>
+    edgesOf(file)
+      .filter((edge) => edge.kind === "static")
+      .map((edge) => edge.to),
+  );
+}
+
+/**
+ * The groups of `nodes` that all reach each other through `next` — each one a
+ * cycle, or several sharing members. Groups of one are left out: a node
+ * reaching itself is not a cycle between two of them. Tarjan's algorithm.
+ */
+export function cyclesAmong(
+  nodes: readonly string[],
+  next: (node: string) => readonly string[],
+): readonly (readonly string[])[] {
+  const index = new Map<string, number>();
+  const low = new Map<string, number>();
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+  const cycles: string[][] = [];
+
+  function visit(node: string): void {
+    index.set(node, index.size);
+    low.set(node, index.get(node) ?? 0);
+    stack.push(node);
+    onStack.add(node);
+    for (const reached of next(node)) {
+      if (!index.has(reached)) {
+        visit(reached);
+        low.set(node, Math.min(low.get(node) ?? 0, low.get(reached) ?? 0));
+      } else if (onStack.has(reached)) {
+        low.set(node, Math.min(low.get(node) ?? 0, index.get(reached) ?? 0));
+      }
+    }
+    if (low.get(node) !== index.get(node)) return;
+    const group: string[] = [];
+    let member: string | undefined;
+    do {
+      member = stack.pop();
+      if (member === undefined) break;
+      onStack.delete(member);
+      group.push(member);
+    } while (member !== node);
+    if (group.length > 1) cycles.push(group.sort());
+  }
+
+  for (const node of nodes) if (!index.has(node)) visit(node);
+  return cycles;
 }
 
 /** Every `.ts`/`.tsx` under `dir`, absolute and recursive, tests included. */
