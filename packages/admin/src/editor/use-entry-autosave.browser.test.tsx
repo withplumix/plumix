@@ -5,7 +5,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { AppRouterClient } from "@plumix/core";
-import { RpcReplyError } from "@plumix/core/test";
+import { RpcReplyError } from "@plumix/core/test/browser";
 
 import type { AutosaveGroup } from "./use-entry-autosave.js";
 import { settleRpc, stubRpc } from "../../test/rpc.js";
