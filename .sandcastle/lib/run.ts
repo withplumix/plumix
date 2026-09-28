@@ -126,7 +126,15 @@ export const runShipLoop = async (
   }[] = [];
 
   const unsettled = new Set<Promise<unknown>>();
-  const untilAConfirmationSettles = async (): Promise<boolean> => {
+  const trackUntilSettled = (work: Promise<unknown>): void => {
+    const settled = work.then(
+      () => undefined,
+      () => undefined,
+    );
+    unsettled.add(settled);
+    void settled.then(() => unsettled.delete(settled));
+  };
+  const untilShippingOrConfirmingSettles = async (): Promise<boolean> => {
     if (unsettled.size === 0) return false;
     await Promise.race(unsettled);
     return true;
@@ -135,13 +143,15 @@ export const runShipLoop = async (
   await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
-    waitForMoreWork: untilAConfirmationSettles,
+    waitForMoreWork: untilShippingOrConfirmingSettles,
     stopDispatchingWhen: () =>
       outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {
       let outcome: ShipOutcome;
       try {
-        outcome = await ports.ship(ticket);
+        const shipping = ports.ship(ticket);
+        trackUntilSettled(shipping);
+        outcome = await shipping;
       } catch (error) {
         const reason = asReason(error);
         ports.releaseClaim(ticket);
@@ -178,8 +188,7 @@ export const runShipLoop = async (
           reason,
         }),
       );
-      unsettled.add(confirmation);
-      void confirmation.then(() => unsettled.delete(confirmation));
+      trackUntilSettled(confirmation);
       confirming.push({ ticket, pullRequest, outcome: confirmation });
     },
   });
