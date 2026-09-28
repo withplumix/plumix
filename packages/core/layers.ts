@@ -26,7 +26,7 @@ export type Layer = (typeof LAYERS)[number];
  */
 export type Environment = "client-safe" | "server-only";
 
-interface Placement {
+export interface Placement {
   readonly layer: Layer;
   readonly environment: Environment;
 }
