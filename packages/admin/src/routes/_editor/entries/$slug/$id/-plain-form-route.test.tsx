@@ -1,8 +1,15 @@
 import { Suspense } from "react";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/editor/autosave.js";
 import { createQueryClient } from "@/providers/query-client.js";
 import { ORPCError } from "@orpc/client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { AppRouterClient } from "@plumix/core";
@@ -13,7 +20,7 @@ import {
   seedManifest,
 } from "../../../../../../test/manifest.js";
 import { renderWithRouter } from "../../../../../../test/render-with-router.js";
-import { stubRpc } from "../../../../../../test/rpc.js";
+import { settleRpc, stubRpc } from "../../../../../../test/rpc.js";
 import { PlainFormRouteInner } from "./-plain-form-route.js";
 
 const author: EntryTypeManifestEntry = {
@@ -74,6 +81,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   clearManifest();
   vi.unstubAllGlobals();
@@ -162,5 +170,43 @@ describe("PlainFormRouteInner", () => {
     expect(
       screen.queryByTestId("meta-box-field-headline-error"),
     ).not.toBeInTheDocument();
+  });
+
+  test("an edit is sent once the autosave debounce is quiet, not before", async () => {
+    const rpc = stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => entry,
+    });
+    await renderRoute();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    fireEvent.change(screen.getByTestId("plain-form-title-input"), {
+      target: { value: "Jane Q. Doe" },
+    });
+    await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS - 1));
+    expect(rpc.lastCallTo("entry/update")).toBeUndefined();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+
+    expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
+      title: "Jane Q. Doe",
+    });
+  });
+
+  test("leaving with an edit inside the debounce window still sends it", async () => {
+    const rpc = stubRpc({
+      "entry/get": () => entry,
+      "entry/update": () => entry,
+    });
+    await renderRoute();
+
+    fireEvent.change(screen.getByTestId("plain-form-title-input"), {
+      target: { value: "Jane Q. Doe" },
+    });
+    cleanup();
+    await settleRpc();
+
+    expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
+      title: "Jane Q. Doe",
+    });
   });
 });

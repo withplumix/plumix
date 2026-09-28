@@ -1,6 +1,6 @@
 import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -55,8 +55,9 @@ describe("PlainFormLayout", () => {
     expect(screen.getByTestId("custom-revisions-trigger")).toBeInTheDocument();
   });
 
-  test("autosave debounces field edits and fires onSubmit", async () => {
+  test("reports each edit through onValuesChange without submitting", () => {
     const onSubmit = vi.fn();
+    const onValuesChange = vi.fn();
     renderWithI18n(
       wrap(
         <PlainFormLayout
@@ -66,21 +67,17 @@ describe("PlainFormLayout", () => {
           isSubmitting={false}
           serverError={null}
           onSubmit={onSubmit}
-          autosaveMs={20}
+          onValuesChange={onValuesChange}
         />,
       ),
     );
     const input = screen.getByTestId("plain-form-title-input");
     fireEvent.change(input, { target: { value: "Hello world" } });
-    await waitFor(
-      () => {
-        expect(onSubmit).toHaveBeenCalledTimes(1);
-      },
-      { timeout: 1000 },
+
+    expect(onValuesChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: "Hello world" }),
     );
-    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
-      title: "Hello world",
-    });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   describe("server field errors", () => {

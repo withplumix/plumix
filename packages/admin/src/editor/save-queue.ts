@@ -15,8 +15,8 @@ export interface SaveQueue {
  * live write bumps the token while a draft write is mid-flight, so the draft
  * write lands stale and the server rejects it with a `409` conflict. Funnelling
  * both debouncers' writes through one queue means each task reads the token
- * only after the previous write has already re-anchored it. (Explicit actions
- * like publish/discard run their own mutations outside this queue.)
+ * only after the previous write has already re-anchored it. Publish joins the
+ * same queue through `useEntryAutosave`'s `runExclusive`.
  */
 export function createSaveQueue(): SaveQueue {
   // Always-resolving barrier the next task awaits, so at most one runs at once.

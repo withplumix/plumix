@@ -36,6 +36,7 @@ import {
   mockRpc,
   mockRpcWithCapture,
   rpcErrorBody,
+  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 // The minted preview URL every editing-mode spec needs in the loader; without
@@ -919,6 +920,53 @@ test.describe("editor publishing & autosave", () => {
     expect(lastInput.content).toBeUndefined();
     expect(lastInput.expectedLiveUpdatedAt).toBe(T0.toISOString());
     await expect(page.getByTestId("toast-success")).toBeVisible();
+  });
+
+  test("Publish sends a pending edit first and publishes on the token it returned", async ({
+    page,
+  }) => {
+    const T1 = new Date("2026-05-20T00:00:01Z");
+    const T2 = new Date("2026-05-20T00:00:02Z");
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/list": [],
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+    const updates: Record<string, unknown>[] = [];
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      const input = (
+        route.request().postDataJSON() as { json: Record<string, unknown> }
+      ).json;
+      updates.push(input);
+      const body =
+        input.status === "published"
+          ? { ...editorEntry({ status: "published" }), updatedAt: T2 }
+          : { ...editorEntry(), slug: "custom-slug", updatedAt: T1 };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(body),
+      });
+    });
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+
+    // Publish inside the autosave debounce window, before the slug edit has
+    // been sent on its own.
+    await page.getByTestId("entry-slug-input").fill("custom-slug");
+    await page.getByTestId("plumix-rails-toggle").click();
+    await page.getByTestId("plumix-editor-publish-button").click();
+
+    await expect.poll(() => updates.length).toBe(2);
+    expect(updates[0]).toMatchObject({
+      slug: "custom-slug",
+      expectedLiveUpdatedAt: T0.toISOString(),
+    });
+    expect(updates[1]).toMatchObject({
+      status: "published",
+      expectedLiveUpdatedAt: T1.toISOString(),
+    });
   });
 
   test("a failed publish surfaces an error toast instead of failing silently", async ({
