@@ -3,6 +3,7 @@ export interface LaneWork<T, R> {
   readonly nextItem: () => T | undefined;
   readonly inLane: (item: T, lane: number) => Promise<R>;
   readonly stopDispatchingWhen: (settled: readonly R[]) => boolean;
+  readonly waitForMoreWork?: () => Promise<boolean>;
 }
 
 export const drainAcrossLanes = async <T, R>({
@@ -10,6 +11,7 @@ export const drainAcrossLanes = async <T, R>({
   nextItem,
   inLane,
   stopDispatchingWhen,
+  waitForMoreWork = async () => false,
 }: LaneWork<T, R>): Promise<readonly R[]> => {
   const settled: R[] = [];
 
@@ -18,7 +20,10 @@ export const drainAcrossLanes = async <T, R>({
   ): Promise<void> => {
     while (!stopDispatchingWhen(settled)) {
       const item = nextItem();
-      if (item === undefined) return;
+      if (item === undefined) {
+        if (await waitForMoreWork()) continue;
+        return;
+      }
       settled.push(await inLane(item, lane));
     }
   };

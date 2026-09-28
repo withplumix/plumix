@@ -145,4 +145,42 @@ describe("a pull source that grows while lanes are draining", () => {
 
     expect(seen).toEqual([1, 2, 3]);
   });
+
+  test("a lane with nothing to take waits for more work instead of quitting", async () => {
+    const waiting: number[] = [];
+    let released = false;
+    const seen: number[] = [];
+
+    await drainAcrossLanes({
+      nextItem: () => waiting.shift(),
+      lanes: 1,
+      inLane: async (item: number) => void seen.push(item),
+      stopDispatchingWhen: neverEnough,
+      waitForMoreWork: async () => {
+        if (released) return false;
+        released = true;
+        waiting.push(42);
+        return true;
+      },
+    });
+
+    expect(seen).toEqual([42]);
+  });
+
+  test("a lane quits once there is nothing more to wait for", async () => {
+    let waits = 0;
+
+    await drainAcrossLanes({
+      nextItem: () => undefined,
+      lanes: 2,
+      inLane: async () => {},
+      stopDispatchingWhen: neverEnough,
+      waitForMoreWork: async () => {
+        waits += 1;
+        return false;
+      },
+    });
+
+    expect(waits).toBe(2);
+  });
 });

@@ -104,9 +104,17 @@ export const runShipLoop = async (
     readonly outcome: Promise<PromiseSettledResult<MergeOutcome>>;
   }[] = [];
 
+  const unsettled = new Set<Promise<unknown>>();
+  const untilAConfirmationSettles = async (): Promise<boolean> => {
+    if (unsettled.size === 0) return false;
+    await Promise.race(unsettled);
+    return true;
+  };
+
   await drainAcrossLanes<Ticket, void>({
     lanes,
     nextItem: ports.nextTicket,
+    waitForMoreWork: untilAConfirmationSettles,
     stopDispatchingWhen: () =>
       outage !== undefined || stoppedBecause !== undefined || !withinBudget(),
     inLane: async (ticket) => {
@@ -136,14 +144,22 @@ export const runShipLoop = async (
 
       const { pullRequest } = outcome;
       ports.say(`  #${ticket.number} queued ${pullRequest.url}`);
-      confirming.push({
+      const confirmation = confirmRepairingWhatIsRefused({
         ticket,
         pullRequest,
-        outcome: confirmRepairingWhatIsRefused({ ticket, pullRequest }).then(
-          (value) => ({ status: "fulfilled", value }),
-          (reason: unknown) => ({ status: "rejected", reason }),
-        ),
-      });
+      }).then(
+        (value): PromiseSettledResult<MergeOutcome> => ({
+          status: "fulfilled",
+          value,
+        }),
+        (reason: unknown): PromiseSettledResult<MergeOutcome> => ({
+          status: "rejected",
+          reason,
+        }),
+      );
+      unsettled.add(confirmation);
+      void confirmation.then(() => unsettled.delete(confirmation));
+      confirming.push({ ticket, pullRequest, outcome: confirmation });
     },
   });
 
