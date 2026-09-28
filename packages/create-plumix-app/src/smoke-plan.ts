@@ -151,8 +151,11 @@ export function planBoot(
   if (start === undefined) {
     throw ScaffoldError.smokeStartMissing({ packageName });
   }
+  // `--local` as post-scaffold passes it: Cloudflare hands it to wrangler, so
+  // the migrations land in the local D1 the started server reads rather than on
+  // whichever target wrangler defaults to; a SQLite runtime has only one.
   return {
-    migrate: [`${cli} migrate generate`, `${cli} migrate apply`],
+    migrate: [`${cli} migrate generate`, `${cli} migrate apply --local`],
     start,
   };
 }

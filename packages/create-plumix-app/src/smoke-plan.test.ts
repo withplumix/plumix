@@ -117,7 +117,7 @@ describe("planBoot", () => {
     ).toEqual({
       migrate: [
         "bun --bun node_modules/plumix/bin/plumix.mjs migrate generate",
-        "bun --bun node_modules/plumix/bin/plumix.mjs migrate apply",
+        "bun --bun node_modules/plumix/bin/plumix.mjs migrate apply --local",
       ],
       start: "bun dist/server/worker.js",
     });
@@ -127,7 +127,15 @@ describe("planBoot", () => {
     expect(
       planBoot("@plumix/runtime-node", { start: "node dist/server/worker.js" })
         .migrate,
-    ).toEqual(["plumix migrate generate", "plumix migrate apply"]);
+    ).toEqual(["plumix migrate generate", "plumix migrate apply --local"]);
+  });
+
+  it("applies migrations to the local database the started server reads, never a remote one", () => {
+    const { migrate } = planBoot("@plumix/runtime-cloudflare", {
+      start: "wrangler dev --local",
+    });
+
+    expect(migrate.at(-1)).toBe("plumix migrate apply --local");
   });
 
   it("refuses a runtime that declares no start command, rather than skip its boot", () => {

@@ -74,7 +74,7 @@ The scaffold smoke (`pnpm --filter create-plumix-app smoke:scaffold`) reads two
 more fields from that block. `start` is the shell command that serves the built
 output, with `PORT` set to an ephemeral port. `cli` is the command prefix that
 runs the `plumix` CLI, and defaults to the package's bin. After each combo
-builds, the smoke runs `migrate generate` and `migrate apply` through `cli`,
+builds, the smoke runs `migrate generate` and `migrate apply --local` through `cli`,
 starts `start`, and requests `/`, the admin shell and the `auth/session` RPC.
 It installs each combo with the `packageManager` the runtime's scaffold block
 declares, which defaults to pnpm.
