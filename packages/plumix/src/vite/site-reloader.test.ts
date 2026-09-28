@@ -1,7 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { RequestListener } from "../http/bridge.js";
-import type { LoadedSite } from "./site-reloader.js";
+import type { DevListener, LoadedSite } from "./site-reloader.js";
 import { createSiteReloader } from "./site-reloader.js";
 
 function deferred<T>() {
@@ -14,14 +13,13 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-const listener = (): RequestListener => () => undefined;
+const listener = (): DevListener => () => undefined;
 const fail = listener;
 
 function site() {
   return {
     listener: listener(),
     scheduler: {
-      start: () => Promise.resolve(),
       stop: vi.fn(() => Promise.resolve(true)),
     },
     dispose: vi.fn(() => Promise.resolve({ abandoned: 0 })),

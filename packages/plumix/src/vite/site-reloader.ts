@@ -1,11 +1,16 @@
-import type { RequestListener } from "../http/bridge.js";
-import type { Scheduler } from "../scheduler.js";
-import type { NodeSite } from "../site.js";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+import type { DisposeResult } from "@plumix/core";
+
+/** The dev server's last middleware, as the site answers through it. */
+export type DevListener = (req: IncomingMessage, res: ServerResponse) => void;
 
 export interface LoadedSite {
-  readonly listener: RequestListener;
-  readonly scheduler?: Scheduler;
-  readonly dispose?: NodeSite["dispose"];
+  readonly listener: DevListener;
+  /** What fires the site's scheduled tasks, stopped before a reload. */
+  readonly scheduler?: { readonly stop: () => Promise<boolean> };
+  /** Releases what the site's handler holds, once a reload replaces it. */
+  readonly dispose?: () => Promise<DisposeResult>;
 }
 
 export interface SiteReloader {
@@ -16,8 +21,8 @@ export interface SiteReloader {
    */
   readonly current: (
     build: () => Promise<LoadedSite>,
-    fail: (error: unknown) => RequestListener,
-  ) => Promise<RequestListener>;
+    fail: (error: unknown) => DevListener,
+  ) => Promise<DevListener>;
   readonly invalidate: () => void;
 }
 
@@ -26,18 +31,18 @@ export interface SiteReloader {
  * restart, so that each reload replaces the app the previous one served.
  */
 export function createSiteReloader(): SiteReloader {
-  let listener: Promise<RequestListener> | undefined;
+  let listener: Promise<DevListener> | undefined;
   let live: LoadedSite | undefined;
   // Counts loads, so one that a newer load overtook can tell it lost.
   let generation = 0;
   // What a load that lost answers its requests with, so none of them bind
   // the site it tore down rather than the one the newest load owns.
-  let latest: Promise<RequestListener> | undefined;
+  let latest: Promise<DevListener> | undefined;
 
   async function load(
     build: () => Promise<LoadedSite>,
-    fail: (error: unknown) => RequestListener,
-  ): Promise<RequestListener> {
+    fail: (error: unknown) => DevListener,
+  ): Promise<DevListener> {
     const mine = ++generation;
     // Before the build, not after it: a build that fails takes the catch
     // below, and a scheduler left running there would keep firing against

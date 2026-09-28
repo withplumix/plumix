@@ -1,7 +1,7 @@
 import { EvaluatedModules } from "vite/module-runner";
 import { describe, expect, test } from "vitest";
 
-import { invalidateFile, parseDevArgs } from "./dev.js";
+import { invalidateFile, parseDevArgs } from "./dev-command.js";
 
 describe("parseDevArgs", () => {
   test("extracts --port in both forms", () => {
