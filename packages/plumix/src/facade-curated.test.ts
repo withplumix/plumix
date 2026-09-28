@@ -467,11 +467,24 @@ const CURATED: Readonly<Record<string, Curated>> = {
     withheld: [
       {
         reason:
+          "the prefix-parameterized RPC stub and its responder error, which " +
+          "a plugin reaches as `stubPluginRpc` and `PluginRpcError` through " +
+          "`plumix/admin/test`, served at its own namespace",
+        names: ["stubRpcEndpoint", "RpcReplyError"],
+      },
+      {
+        reason:
           "the request memo for hand-rolled `AppContext` stand-ins that " +
           "predate `createTestContext`, which a new test takes instead",
         names: ["createRequestMemo"],
       },
     ],
+  },
+  // The plugin-facing names for core's RPC stub: `PluginRpcError` is core's
+  // `RpcReplyError` itself, so a responder's throw is the class the stub maps.
+  "./admin/test": {
+    draws: "@plumix/core/test",
+    adds: ["stubPluginRpc", "PluginRpcError"],
   },
   "./test/conformance": {
     mirrors: "@plumix/core/test/conformance",

@@ -5,6 +5,8 @@ import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouterClient } from "@plumix/core";
+
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { stubRpc } from "../../../test/rpc.js";
 import { PasskeysCard } from "./passkeys-card.js";
@@ -15,14 +17,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function passkey(id: string): Record<string, unknown> {
+type Passkey = Awaited<
+  ReturnType<AppRouterClient["auth"]["credentials"]["list"]>
+>[number];
+
+function passkey(id: string): Passkey {
   return {
     id,
     name: `Key ${id}`,
     isBackedUp: false,
     transports: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    lastUsedAt: "2026-01-02T00:00:00.000Z",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    lastUsedAt: new Date("2026-01-02T00:00:00.000Z"),
   };
 }
 

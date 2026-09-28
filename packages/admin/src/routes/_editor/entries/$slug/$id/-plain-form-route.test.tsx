@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouterClient } from "@plumix/core";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 
 import {
@@ -25,7 +26,7 @@ const author: EntryTypeManifestEntry = {
   showInSidebar: true,
 };
 
-const entry = {
+const entry: Awaited<ReturnType<AppRouterClient["entry"]["get"]>> = {
   id: 1,
   type: "author",
   parentId: null,
@@ -34,8 +35,13 @@ const entry = {
   content: null,
   excerpt: null,
   status: "draft",
-  updatedAt: "2026-05-20T00:00:00.000Z",
+  authorId: 1,
+  sortOrder: 0,
+  publishedAt: null,
+  createdAt: new Date("2026-05-20T00:00:00.000Z"),
+  updatedAt: new Date("2026-05-20T00:00:00.000Z"),
   meta: { headline: "Staff writer" },
+  terms: {},
 };
 
 const headlineRejected = new ORPCError("CONFLICT", {

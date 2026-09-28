@@ -1,6 +1,14 @@
 import { ORPCError } from "@orpc/client";
 import * as v from "valibot";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  test,
+  vi,
+} from "vitest";
 
 import { base } from "@plumix/core";
 
@@ -337,5 +345,27 @@ describe("stubPluginRpc", () => {
     // the malformed-response path, so an undefined `data` is what proves the
     // body was a genuine envelope.
     expect((error as { data?: unknown }).data).toBeUndefined();
+  });
+
+  test("given the plugin's router type, the route map is checked against it", () => {
+    const stub = stubPluginRpc<MenuRouter>("menu", {
+      sync: (input) => {
+        expectTypeOf(input).toEqualTypeOf<{ since: Date }>();
+        return { at: input.since };
+      },
+      "locations/list": () => [{ id: "primary" }],
+      // @ts-expect-error -- the menu router has no `rename` procedure
+      rename: () => ({}),
+    });
+
+    stubPluginRpc<MenuRouter>("menu", {
+      // @ts-expect-error -- `delete` answers `{ id: number }`, not a string id
+      delete: () => ({ id: "1" }),
+    });
+
+    expectTypeOf(stub.lastCallTo("sync")).toEqualTypeOf<
+      | { readonly procedure: "sync"; readonly input: { since: Date } }
+      | undefined
+    >();
   });
 });
