@@ -19,6 +19,19 @@ const curated = new Map(
   ]),
 );
 
+// Kept out of `test/facade-entries.ts`: the unit-tier façade tests import that
+// module eagerly, and a `typescript` import there would load the compiler into
+// every one of them.
+function parseTsconfig(): ts.ParsedCommandLine {
+  const config = ts.getParsedCommandLineOfConfigFile(
+    resolve(packageDir, "tsconfig.json"),
+    {},
+    { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
+  );
+  if (config === undefined) throw new Error("tsconfig.json did not parse");
+  return config;
+}
+
 // The types that have no role subpath, so the root is their only home. Every
 // other type core's barrel exports sits on the root and on exactly one other
 // subpath.
@@ -161,12 +174,7 @@ describe("types", () => {
   // CPU-bound, so it stretches with whatever runs beside it: ~1.1s alone, 6.6s
   // when turbo runs `test:unit` alongside `test:build` in a full `pnpm test`.
   beforeAll(() => {
-    const config = ts.getParsedCommandLineOfConfigFile(
-      resolve(packageDir, "tsconfig.json"),
-      {},
-      { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
-    );
-    if (config === undefined) throw new Error("tsconfig.json did not parse");
+    const config = parseTsconfig();
     const program = ts.createProgram([...curated.values()], config.options);
     const checker = program.getTypeChecker();
 
@@ -282,12 +290,7 @@ export const block = defineBlock({
 `;
 
   test("a loader reads ctx as the request's AppContext", () => {
-    const config = ts.getParsedCommandLineOfConfigFile(
-      resolve(packageDir, "tsconfig.json"),
-      {},
-      { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => undefined },
-    );
-    if (config === undefined) throw new Error("tsconfig.json did not parse");
+    const config = parseTsconfig();
     const host = ts.createCompilerHost(config.options);
     const getSourceFile = host.getSourceFile.bind(host);
     const fileExists = host.fileExists.bind(host);
