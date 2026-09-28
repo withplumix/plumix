@@ -18,11 +18,6 @@ describe("isBlockedInDemo", () => {
     // User management — can't invite/create real users.
     "/_plumix/rpc/user/invite",
     "/_plumix/rpc/user/delete",
-    // Media writes to the shared storage bucket — abuse / destruction vector.
-    "/_plumix/media/upload/abc123",
-    "/_plumix/rpc/media/createUploadUrl",
-    "/_plumix/rpc/media/confirm",
-    "/_plumix/rpc/media/delete",
   ])("blocks %s", (pathname) => {
     expect(isBlockedInDemo(pathname)).toBe(true);
   });
@@ -35,9 +30,9 @@ describe("isBlockedInDemo", () => {
     "/_plumix/rpc/term/update",
     "/_plumix/rpc/settings/upsert",
     "/_plumix/rpc/search/query",
-    // Media picker reads + DB-only metadata edits (selecting/labelling images).
-    "/_plumix/rpc/media/list",
-    "/_plumix/rpc/media/update",
+    // A demo has no storage slot, so media procedures touch only the
+    // per-session database.
+    "/_plumix/rpc/media/delete",
     // The admin shell and public site.
     "/_plumix/admin/entries",
     "/",

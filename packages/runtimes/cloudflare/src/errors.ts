@@ -187,9 +187,12 @@ export class DemoError extends Error {
     DemoError.prototype.name = "DemoError";
   }
 
-  readonly code: "binding_missing";
+  readonly code: "binding_missing" | "storage_not_supported";
 
-  private constructor(code: "binding_missing", message: string) {
+  private constructor(
+    code: "binding_missing" | "storage_not_supported",
+    message: string,
+  ) {
     super(message);
     this.code = code;
   }
@@ -198,6 +201,14 @@ export class DemoError extends Error {
     return new DemoError(
       "binding_missing",
       `@plumix/runtime-cloudflare: demo Durable Object binding "${ctx.binding}" missing from env`,
+    );
+  }
+
+  static storageNotSupported(): DemoError {
+    return new DemoError(
+      "storage_not_supported",
+      "@plumix/runtime-cloudflare: a demo shares one storage bucket across every session, " +
+        "so it must run without `storage:`",
     );
   }
 }

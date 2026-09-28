@@ -17,9 +17,9 @@ const readEnv = (env: unknown, name: string): string =>
   (env as Record<string, string | undefined>)[name] ?? "";
 
 export default plumix({
-  // Two slots are absent on purpose. There is no `storage:` because the
-  // sandbox blocks every media write — the bucket would be shared across
-  // sessions, unlike the database — so nothing would ever be put in one.
+  // Two slots are absent on purpose. There is no `storage:` because the demo
+  // runtime refuses one at boot — the bucket would be shared across sessions,
+  // unlike the database — so media acts on the per-session database alone.
   // Without a storage adapter a media row's storage key is the URL it serves
   // from, which is what makes the seeded stock photos real library rows.
   // There is no `cdn:` because a per-session sandbox is unshareable at the

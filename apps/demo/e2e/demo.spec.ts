@@ -179,3 +179,53 @@ test("a post renders the cover its featured role resolves to", async ({
     new RegExp(`cover-${SHOWCASE_SLUG}`),
   );
 });
+
+// A demo runs without `storage:`, so the picker offers no upload gesture — the
+// library it opens is the per-session database's rows and nothing else.
+test("the Featured-image picker offers no upload in the demo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("try-editor").click();
+  await page.waitForURL(/\/_plumix\/admin/);
+
+  await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
+  await page.getByTestId("plumix-tab-page").click();
+  await page.getByTestId("meta-box-field-featuredImage-input-open").click();
+
+  const modal = page.getByTestId("meta-box-field-featuredImage-input-modal");
+  await expect(modal.getByTestId("media-library-grid")).toBeVisible();
+  await expect(modal.getByTestId("media-library-upload")).toHaveCount(0);
+  await expect(modal.getByTestId("media-library-dropzone")).toHaveCount(0);
+});
+
+// Without a storage slot `media.delete` removes only the session's own row, so
+// the demo serves it rather than refusing it.
+test("deleting a media item from the library removes its card", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("try-editor").click();
+  await page.waitForURL(/\/_plumix\/admin/);
+
+  await page.goto("pages/media");
+  const card = page
+    .locator(
+      "[data-testid='media-library-grid'] > [data-testid^='media-card-']",
+    )
+    .first();
+  await expect(card).toBeVisible();
+  const cardTestId = await card.getAttribute("data-testid");
+  if (cardTestId === null) throw new Error("the media card has no testid");
+
+  await card.click();
+  await expect(page.getByTestId("media-detail-drawer")).toBeVisible();
+  const deleted = page.waitForResponse((r) =>
+    r.url().endsWith("/media/delete"),
+  );
+  await page.getByTestId("media-detail-delete").click();
+  await page.getByTestId("confirm-dialog-confirm").click();
+  expect((await deleted).status()).toBe(200);
+
+  await expect(page.getByTestId(cardTestId)).toHaveCount(0);
+});

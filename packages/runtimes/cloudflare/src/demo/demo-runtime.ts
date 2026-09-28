@@ -2,6 +2,7 @@ import type { PlumixEnv, RuntimeAdapter } from "plumix";
 import { resolveEnvInput } from "plumix";
 
 import type { TurnstileConfig } from "./turnstile.js";
+import { DemoError } from "../errors.js";
 import { isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
@@ -50,6 +51,9 @@ export function demoRuntime(
       return inner.generateEntry(options);
     },
     createHandler(app) {
+      // Sessions each get their own database but would all write to one
+      // bucket, so one visitor's uploads and deletes would reach every other.
+      if (app.config.storage) throw DemoError.storageNotSupported();
       const handler = inner.createHandler(app);
       // Seed the shared showcase DO once per isolate, lazily on first
       // cookieless request that needs it.
