@@ -235,14 +235,14 @@ export const repairPullRequest = async (
       name: "install",
       command: "pnpm install --frozen-lockfile && pnpm build",
     };
-    const gateBlocked = await gatesUntilGreen(
+    const gates = await gatesUntilGreen(
       sandbox,
       [install, ...GATES, CHANGESET_GATE],
       journal,
       fixer,
       "repair",
     );
-    if (gateBlocked) return declined(gateBlocked);
+    if (gates.blocked) return declined(gates.blocked);
 
     pushBranch(branch, sandbox.worktreePath);
     resolveReviewThreads((refusal.reviewThreads ?? []).map(({ id }) => id));

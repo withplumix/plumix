@@ -212,37 +212,57 @@ export const fixerFor = (
   };
 };
 
+interface WaivedGate {
+  readonly command: string;
+  readonly reason: string;
+}
+
+export interface GateOutcome {
+  readonly blocked: string | null;
+  readonly waived: readonly WaivedGate[];
+}
+
 export const gatesUntilGreen = async (
   sandbox: Executor,
   gates: readonly Gate[],
-  journal: Journal,
+  journal: Pick<Journal, "record">,
   fixer: Fixer,
   label: string,
-): Promise<string | null> => {
+): Promise<GateOutcome> => {
   let fixRoundsUsed = 0;
+  const waived: WaivedGate[] = [];
   for (let round = 1; ; round += 1) {
     say(`\n--- gate (${label}, round ${round}) ---`);
-    const { failures } = await runGates(sandbox, gates, {
-      stopAtFirstFailure: true,
-      retryAFailureOnce: true,
-      onResult: (result) =>
-        journal.record({
-          phase: `gate:${result.name}#${label}.${round}`,
-          kind: "gate",
-          startedAt: result.startedAt,
-          durationMs: result.durationMs,
-          outcome: result.outcome,
-          detail: result.skippedBecause,
-          command: result.command,
-          exitCode: result.exitCode,
-        }),
-    });
+    const { failures } = await runGates(
+      sandbox,
+      gates.filter(({ command }) =>
+        waived.every((gate) => gate.command !== command),
+      ),
+      {
+        stopAtFirstFailure: true,
+        retryAFailureOnce: true,
+        onResult: (result) =>
+          journal.record({
+            phase: `gate:${result.name}#${label}.${round}`,
+            kind: "gate",
+            startedAt: result.startedAt,
+            durationMs: result.durationMs,
+            outcome: result.outcome,
+            detail: result.skippedBecause,
+            command: result.command,
+            exitCode: result.exitCode,
+          }),
+      },
+    );
     const [failure] = failures;
-    if (!failure) return null;
+    if (!failure) return { blocked: null, waived };
 
     fixRoundsUsed += 1;
     if (fixRoundsUsed > MAX_GATE_FIX_ROUNDS) {
-      return `still failing \`${failure.command}\` after ${MAX_GATE_FIX_ROUNDS} fix rounds`;
+      return {
+        blocked: `still failing \`${failure.command}\` after ${MAX_GATE_FIX_ROUNDS} fix rounds`,
+        waived,
+      };
     }
     say(`--- fix gate failure (${fixRoundsUsed}/${MAX_GATE_FIX_ROUNDS}) ---`);
     const declined = await fixer.apply(
@@ -250,10 +270,23 @@ export const gatesUntilGreen = async (
       asGateFailureBrief(failure),
     );
     if (declined) {
-      return `\`${failure.command}\` still fails and the fixer changed nothing:\n\n${declined}`;
+      say(`--- waived \`${failure.command}\`: CI decides ---`);
+      waived.push({ command: failure.command, reason: declined });
     }
   }
 };
+
+export const asWaivedGatesNote = (waived: readonly WaivedGate[]): string =>
+  waived.length === 0
+    ? ""
+    : `\n\n---\n\n### Local gates the fixer did not attribute to this branch\n\n${waived
+        .map(
+          ({ command, reason }) =>
+            `<details><summary><code>${command}</code></summary>\n\n${reason}\n\n</details>`,
+        )
+        .join(
+          "\n\n",
+        )}\n\nCI runs them again; a real failure there goes through repair.`;
 
 export const shipTicket = async (
   ticket: Ticket,
@@ -341,14 +374,14 @@ export const shipTicket = async (
       }
     }
 
-    const gateBlocked = await gatesUntilGreen(
+    const gates = await gatesUntilGreen(
       sandbox,
       [...GATES, CHANGESET_GATE],
       journal,
       fixer,
       "final",
     );
-    if (gateBlocked) return { status: "blocked", reason: gateBlocked };
+    if (gates.blocked) return { status: "blocked", reason: gates.blocked };
 
     say("\n--- land ---");
     pushBranch(branch, sandbox.worktreePath);
@@ -364,7 +397,7 @@ export const shipTicket = async (
     const pullRequest = openPullRequest(
       branch,
       pullRequestCopy.title,
-      pullRequestCopy.body + advisoryNote,
+      pullRequestCopy.body + advisoryNote + asWaivedGatesNote(gates.waived),
     );
 
     queueForMerge(pullRequest.number);
