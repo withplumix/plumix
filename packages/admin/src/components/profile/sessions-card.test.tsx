@@ -5,6 +5,8 @@ import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouterClient } from "@plumix/core";
+
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { stubRpc } from "../../../test/rpc.js";
 import { SessionsCard } from "./sessions-card.js";
@@ -15,21 +17,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const SESSIONS = [
+const SESSIONS: Awaited<
+  ReturnType<AppRouterClient["auth"]["sessions"]["list"]>
+> = [
   {
     id: "current",
     ipAddress: null,
     userAgent: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "2026-02-01T00:00:00.000Z",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    expiresAt: new Date("2026-02-01T00:00:00.000Z"),
     current: true,
   },
   {
     id: "other",
     ipAddress: null,
     userAgent: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "2026-02-01T00:00:00.000Z",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    expiresAt: new Date("2026-02-01T00:00:00.000Z"),
     current: false,
   },
 ];

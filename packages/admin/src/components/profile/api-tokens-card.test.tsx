@@ -5,6 +5,8 @@ import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouterClient } from "@plumix/core";
+
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { stubRpc } from "../../../test/rpc.js";
 import { AdminApiTokensCard, SelfApiTokensCard } from "./api-tokens-card.js";
@@ -15,13 +17,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const TOKEN = {
-  id: "tok_1",
-  name: "CI deploy key",
-  prefix: "pmx_abc",
-  scopes: null,
-  expiresAt: null,
-  lastUsedAt: null,
+const ADMIN_TOKENS: Awaited<
+  ReturnType<AppRouterClient["auth"]["apiTokens"]["adminList"]>
+> = {
+  items: [
+    {
+      id: "tok_1",
+      name: "CI deploy key",
+      prefix: "pmx_abc",
+      scopes: null,
+      expiresAt: null,
+      lastUsedAt: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      revokedAt: null,
+      user: { id: 2, email: "editor@example.test", name: null },
+    },
+  ],
+  total: 1,
+  limit: 50,
+  offset: 0,
 };
 
 describe("ApiTokensCard", () => {
@@ -53,7 +67,7 @@ describe("ApiTokensCard", () => {
   test("shows the localized retry copy when revoking fails for no known reason", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     stubRpc({
-      "auth/apiTokens/adminList": () => ({ items: [TOKEN] }),
+      "auth/apiTokens/adminList": () => ADMIN_TOKENS,
       "auth/apiTokens/adminRevoke": () => {
         throw new ORPCError("FORBIDDEN");
       },
