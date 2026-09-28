@@ -84,7 +84,7 @@ const recipes = definePlugin("recipes", (ctx) => {
 });
 
 test("a published recipe is listed on its archive", async () => {
-  const h = await createDispatcherHarness({ plugins: [recipes] });
+  const h = await createDispatcherHarness({ config: { plugins: [recipes] } });
   const author = await h.factory.author.create();
   await h.factory.entry.create({
     type: "recipe",
