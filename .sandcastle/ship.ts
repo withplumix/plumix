@@ -1,19 +1,19 @@
-import type { QueuedPullRequest, Ticket } from "./lib/github.js";
+import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import {
-  branchOfPullRequest,
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
   parentsWithEveryChildClosed,
   parkTicket,
   queueForMerge,
-  rebaseOntoMain,
   releaseClaim,
   syncRepoToMain,
+  textsThatClaimAdrNumbers,
   ticketByNumber,
   waitForMerge,
 } from "./lib/github.js";
 import { say } from "./lib/log.js";
+import { repairPullRequest } from "./lib/repair.js";
 import { runShipLoop } from "./lib/run.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
@@ -25,7 +25,7 @@ const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
 
 interface ShipOptions {
-  readonly onlyTicket?: number;
+  readonly onlyTickets: readonly number[];
   readonly lanes: number;
   readonly budgetMs: number;
 }
@@ -38,9 +38,8 @@ const flag = (argv: readonly string[], name: string): string | undefined =>
     .join("=");
 
 const readOptions = (argv: readonly string[]): ShipOptions => {
-  const onlyTicket = argv.find((arg) => /^\d+$/.test(arg));
   return {
-    onlyTicket: onlyTicket ? Number(onlyTicket) : undefined,
+    onlyTickets: argv.filter((arg) => /^\d+$/.test(arg)).map(Number),
     lanes: Number(flag(argv, "lanes") ?? DEFAULT_LANES),
     budgetMs: Number(flag(argv, "hours") ?? DEFAULT_BUDGET_HOURS) * 3_600_000,
   };
@@ -53,10 +52,15 @@ const asDuration = (ms: number): string => {
     : `${minutes}m`;
 };
 
-const { onlyTicket, lanes, budgetMs } = readOptions(process.argv.slice(2));
+const { onlyTickets, lanes, budgetMs } = readOptions(process.argv.slice(2));
+const namedTickets = [...onlyTickets];
 const endOfBudget = Date.now() + budgetMs;
 const claimed = new Set<number>();
-const laneCount = Math.max(1, onlyTicket ? 1 : lanes);
+const adrsHeldThisRun = new Set<number>();
+const laneCount = Math.max(
+  1,
+  onlyTickets.length ? Math.min(lanes, onlyTickets.length) : lanes,
+);
 
 say(
   `Ship run — budget ${asDuration(budgetMs)}, ${laneCount} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
@@ -67,16 +71,24 @@ syncRepoToMain();
 const report = await runShipLoop(
   {
     nextTicket: () => {
-      const candidate = onlyTicket
-        ? ticketByNumber(onlyTicket)
-        : firstUnblockedUnassignedTicket(claimed);
+      const named = namedTickets.shift();
+      const candidate =
+        named !== undefined
+          ? ticketByNumber(named)
+          : onlyTickets.length
+            ? undefined
+            : firstUnblockedUnassignedTicket(claimed);
       if (!candidate || claimed.has(candidate.number)) return undefined;
       claimed.add(candidate.number);
       return candidate;
     },
     ship: (ticket) => {
       const journal = new Journal(import.meta.dirname);
-      return shipTicket(ticket, journal).then(
+      const nextAdr = nextFreeAdr(
+        textsThatClaimAdrNumbers().flatMap(adrNumbersIn),
+        adrsHeldThisRun,
+      );
+      return shipTicket(ticket, journal, nextAdr).then(
         (outcome) => {
           journal.finish(outcome.status === "queued" ? "shipped" : "failed");
           return outcome;
@@ -90,8 +102,19 @@ const report = await runShipLoop(
     park: ({ number }, reason, pullRequestUrl) =>
       parkTicket(number, reason, pullRequestUrl),
     releaseClaim: ({ number }) => releaseClaim(number),
-    rebaseOntoMain: async ({ number }) =>
-      rebaseOntoMain(branchOfPullRequest(number)),
+    repair: (ticket, pullRequest, refusal) => {
+      const journal = new Journal(import.meta.dirname);
+      return repairPullRequest(ticket, pullRequest, refusal, journal).then(
+        (outcome) => {
+          journal.finish(outcome.status === "repaired" ? "shipped" : "failed");
+          return outcome;
+        },
+        (error: unknown) => {
+          journal.finish("failed", String(error));
+          throw error;
+        },
+      );
+    },
     requeue: ({ number }) => queueForMerge(number),
     confirm: (pullRequest) =>
       waitForMerge(pullRequest.number, {

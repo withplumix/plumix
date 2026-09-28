@@ -19,6 +19,7 @@ describe("looksLikeTheRunBeingOver", () => {
     "quota exceeded for this organisation",
     "401 Unauthorized",
     "OAuth token has expired",
+    "Command `gh issue view 2609` exited with code 4: To get started with GitHub CLI, please run:  gh auth login",
   ])("stops the run on %s", (reason) => {
     expect(looksLikeTheRunBeingOver(reason)).toBe(true);
   });

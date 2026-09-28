@@ -263,7 +263,16 @@ jobs:
       # with the capture on a turbo cache hit, which is exactly when nothing
       # that could move a pixel changed.
       - name: Assert the committed images are the ones the capture produces
+        id: screenshot-diff
         run: git diff --exit-code -- apps/docs/src/assets/screenshots
+
+      - name: Upload the recaptured screenshots
+        if: failure() && steps.screenshot-diff.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-screenshots
+          path: apps/docs/src/assets/screenshots
+          retention-days: 7
 
       # `playwright-report/` is the HTML report; `test-results/` carries the
       # per-test artifacts that matter for diagnosing CI-only flakes —

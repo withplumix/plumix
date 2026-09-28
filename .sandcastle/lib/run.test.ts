@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import type { MergeOutcome, Ticket } from "./github.js";
 import type { ShipPorts } from "./run.js";
-import { runShipLoop } from "./run.js";
+import { drainingFrom } from "./lanes.js";
+import { REPAIRS_A_PULL_REQUEST_GETS, runShipLoop } from "./run.js";
 
 const ticket = (number: number): Ticket => ({ number, title: `t${number}` });
 
@@ -10,7 +11,7 @@ const merged: MergeOutcome = { status: "merged" };
 const ciRed: MergeOutcome = {
   status: "failed",
   reason: "failing checks: Test",
-  failingChecks: ["Test"],
+  failingChecks: [{ name: "Test" }],
 };
 
 const ports = (over: Partial<ShipPorts> = {}) => {
@@ -27,7 +28,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     park: (t, reason) => void parked.push({ number: t.number, reason }),
     releaseClaim: (t) => void released.push(t.number),
     confirm: async () => merged,
-    rebaseOntoMain: async () => "rebased" as const,
+    repair: async () => ({ status: "repaired" }) as const,
     requeue: () => {},
     ticketClosed: () => true,
     say: () => {},
@@ -221,7 +222,7 @@ describe("runShipLoop", () => {
     expect(attempted).toEqual([1, 2, 3, 4, 5]);
   });
 
-  test("a pull request that fails once is rebased and given a second chance", async () => {
+  test("a pull request that is refused is repaired, requeued and merges", async () => {
     const seen: string[] = [];
     let attempts = 0;
     const { ports: p, parked } = ports({
@@ -229,47 +230,139 @@ describe("runShipLoop", () => {
         attempts += 1;
         return attempts <= 3 ? ciRed : merged;
       },
-      rebaseOntoMain: async () => {
-        seen.push("rebased");
-        return "rebased" as const;
+      repair: async () => {
+        seen.push("repaired");
+        return { status: "repaired" } as const;
       },
       requeue: () => void seen.push("requeued"),
     });
 
     const report = await runShipLoop(p, allLanes);
 
-    expect(seen.filter((s) => s === "rebased")).toHaveLength(3);
+    expect(seen.filter((s) => s === "repaired")).toHaveLength(3);
+    expect(seen.filter((s) => s === "requeued")).toHaveLength(3);
     expect(report.merged).toHaveLength(3);
     expect(parked).toEqual([]);
   });
 
-  test("a pull request that fails twice is parked, not rebased for ever", async () => {
-    let rebases = 0;
-    const { ports: p, parked } = ports({
-      confirm: async () => ciRed,
-      rebaseOntoMain: async () => {
-        rebases += 1;
-        return "rebased" as const;
+  test("the repair is handed what the queue refused, so the fixer sees what CI saw", async () => {
+    const handed: MergeOutcome[] = [];
+    let attempts = 0;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++attempts === 1 ? ciRed : merged),
+      repair: async (_ticket, _pr, refusal) => {
+        handed.push(refusal);
+        return { status: "repaired" } as const;
       },
     });
 
     await runShipLoop(p, allLanes);
 
-    expect(rebases).toBe(3);
-    expect(parked).toHaveLength(3);
-    expect(parked[0]?.reason).toContain("failing checks");
+    expect(handed).toEqual([ciRed]);
   });
 
-  test("a rebase that conflicts parks at once, saying so", async () => {
+  test("a pull request still refused after every repair is parked with the last refusal", async () => {
+    let repairs = 0;
     const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
       confirm: async () => ciRed,
-      rebaseOntoMain: async () => "conflicted" as const,
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" } as const;
+      },
     });
 
     await runShipLoop(p, allLanes);
 
-    expect(parked).toHaveLength(3);
-    expect(parked[0]?.reason).toContain("conflicts with main");
+    expect(repairs).toBe(REPAIRS_A_PULL_REQUEST_GETS);
+    expect(parked).toHaveLength(1);
+    expect(parked[0]?.reason).toContain("failing checks");
+  });
+
+  test("a repair the fixer declines parks at once, with the fixer's reason", async () => {
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ciRed,
+      repair: async () => {
+        repairs += 1;
+        return {
+          status: "declined",
+          reason:
+            "code scanning flags a build-time path; a person must dismiss it",
+        } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(1);
+    expect(parked[0]?.reason).toContain("a person must dismiss it");
+  });
+
+  test("a repair that throws parks the ticket rather than losing the pull request", async () => {
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ciRed,
+      repair: async () => {
+        throw new Error("docker: no space left on device");
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked).toHaveLength(1);
+    expect(parked[0]?.reason).toContain("no space left");
+  });
+
+  test("a refusal only a person can answer parks at once, without a repair", async () => {
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ({
+        status: "failed",
+        reason: "nasyrov requested changes",
+        failingChecks: [],
+        needsAPerson: true,
+      }),
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(0);
+    expect(parked[0]?.reason).toContain("nasyrov requested changes");
+  });
+
+  test("a queued pull request is confirmed while its lane moves on, not after the whole drain", async () => {
+    let confirmingTheFirst = false;
+    let sawItWhileShippingTheSecond = false;
+    const { ports: p } = ports({
+      nextTicket: drainingFrom([ticket(1), ticket(2)]),
+      confirm: async (pr) => {
+        if (pr.number === 101) confirmingTheFirst = true;
+        return merged;
+      },
+      ship: async (t) => {
+        if (t.number === 2) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          sawItWhileShippingTheSecond = confirmingTheFirst;
+        }
+        return {
+          status: "queued",
+          pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+        };
+      },
+    });
+
+    const report = await runShipLoop(p, { lanes: 1, withinBudget: () => true });
+
+    expect(sawItWhileShippingTheSecond).toBe(true);
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
   });
 
   test("a budget that has run out hands out no work at all", async () => {

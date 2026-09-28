@@ -1,6 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
 
+import type {
+  FailingCheck,
+  MergeOutcome,
+  PullRequestSnapshot,
+} from "./verdict.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -10,6 +14,7 @@ import {
   TRIAGE_LABEL,
   WONTFIX_LABEL,
 } from "./repo.js";
+import { judgeQueuedPullRequest } from "./verdict.js";
 
 export interface Ticket {
   readonly number: number;
@@ -25,13 +30,7 @@ export interface QueuedPullRequest {
   readonly url: string;
 }
 
-export type MergeOutcome =
-  | { readonly status: "merged" }
-  | {
-      readonly status: "failed";
-      readonly reason: string;
-      readonly failingChecks: readonly string[];
-    };
+export type { MergeOutcome } from "./verdict.js";
 
 const gh = (args: readonly string[]): string =>
   execFileSync("gh", [...args], {
@@ -261,35 +260,175 @@ export const queueForMerge = (pullRequest: number): void => {
   ]);
 };
 
-interface PullRequestState {
-  readonly state: string;
-  readonly mergeStateStatus: string;
-  readonly statusCheckRollup: readonly {
-    readonly name?: string;
-    readonly conclusion?: string;
-    readonly status?: string;
-  }[];
-}
-
-const pullRequestState = (pullRequest: number): PullRequestState =>
-  ghJson([
+const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
+  const viewed = ghJson<{
+    state: string;
+    mergeStateStatus: string;
+    statusCheckRollup: PullRequestSnapshot["statusCheckRollup"];
+    autoMergeRequest: unknown;
+    headRefName: string;
+  }>([
     "pr",
     "view",
     String(pullRequest),
     "-R",
     REPO_SLUG,
     "--json",
-    "state,mergeStateStatus,statusCheckRollup",
+    "state,mergeStateStatus,statusCheckRollup,autoMergeRequest,headRefName",
+  ]);
+  const [owner, name] = REPO_SLUG.split("/");
+  const held = ghJson<HeldBy>([
+    "api",
+    "graphql",
+    "-f",
+    `query=${HELD_BY_QUERY}`,
+    "-F",
+    `owner=${owner}`,
+    "-F",
+    `name=${name}`,
+    "-F",
+    `number=${pullRequest}`,
+    "--jq",
+    ".data.repository.pullRequest",
+  ]);
+  return {
+    state: viewed.state,
+    mergeStateStatus: viewed.mergeStateStatus,
+    statusCheckRollup: viewed.statusCheckRollup,
+    isInMergeQueue: held.isInMergeQueue,
+    autoMergeEnabled: viewed.autoMergeRequest !== null,
+    openCodeScanningAlerts: openCodeScanningAlerts(pullRequest),
+    unresolvedReviewThreads: held.reviewThreads.nodes.flatMap(
+      ({ id, isResolved, path, line, comments }) => {
+        const [first] = comments.nodes;
+        if (isResolved || !first || first.author?.login === CODE_SCANNING_LOGIN)
+          return [];
+        return [
+          {
+            id,
+            author: first.author?.login ?? "ghost",
+            byABot: first.author?.__typename === "Bot",
+            location: `${path}${line ? `:${line}` : ""}`,
+            body: first.body,
+            url: first.url,
+          },
+        ];
+      },
+    ),
+    changesRequestedBy: held.latestReviews.nodes
+      .filter(
+        ({ state, author }) =>
+          state === "CHANGES_REQUESTED" && author?.__typename !== "Bot",
+      )
+      .map(({ author }) => author?.login ?? "ghost"),
+  };
+};
+
+const CODE_SCANNING_LOGIN = "github-advanced-security";
+
+interface Author {
+  readonly login: string;
+  readonly __typename: string;
+}
+
+interface HeldBy {
+  readonly isInMergeQueue: boolean;
+  readonly reviewThreads: {
+    readonly nodes: readonly {
+      readonly id: string;
+      readonly isResolved: boolean;
+      readonly path: string;
+      readonly line: number | null;
+      readonly comments: {
+        readonly nodes: readonly {
+          readonly author: Author | null;
+          readonly body: string;
+          readonly url: string;
+        }[];
+      };
+    }[];
+  };
+  readonly latestReviews: {
+    readonly nodes: readonly {
+      readonly state: string;
+      readonly author: Author | null;
+    }[];
+  };
+}
+
+const HELD_BY_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      isInMergeQueue
+      reviewThreads(first: 100) {
+        nodes {
+          id isResolved path line
+          comments(first: 1) { nodes { author { login __typename } body url } }
+        }
+      }
+      latestReviews(first: 50) { nodes { state author { login __typename } } }
+    }
+  }
+}`;
+
+export const resolveReviewThreads = (threadIds: readonly string[]): void => {
+  for (const threadId of threadIds) {
+    gh([
+      "api",
+      "graphql",
+      "-f",
+      "query=mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { id } } }",
+      "-F",
+      `id=${threadId}`,
+    ]);
+  }
+};
+
+const openCodeScanningAlerts = (pullRequest: number): readonly string[] =>
+  ghJson<readonly string[]>([
+    "api",
+    `repos/${REPO_SLUG}/code-scanning/alerts?ref=refs/pull/${pullRequest}/head&state=open&per_page=50`,
+    "--jq",
+    '[.[] | "\\(.rule.description) at \\(.most_recent_instance.location.path):\\(.most_recent_instance.location.start_line)"]',
   ]);
 
-const failedCheckNames = ({
-  statusCheckRollup,
-}: PullRequestState): readonly string[] =>
-  statusCheckRollup
-    .filter(({ conclusion }) => conclusion === "FAILURE")
-    .map(({ name }) => name ?? "unnamed");
+const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
+  const runs = ghJson<
+    readonly { databaseId: number; headBranch: string; conclusion: string }[]
+  >([
+    "run",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--event",
+    "merge_group",
+    "--limit",
+    "50",
+    "--json",
+    "databaseId,headBranch,conclusion",
+  ]);
+  const refused = runs.find(
+    ({ headBranch, conclusion }) =>
+      headBranch.startsWith(`gh-readonly-queue/main/pr-${pullRequest}-`) &&
+      conclusion === "failure",
+  );
+  if (!refused) return [];
+  return ghJson<readonly FailingCheck[]>([
+    "run",
+    "view",
+    String(refused.databaseId),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "jobs",
+    "--jq",
+    '[.jobs[] | select(.conclusion == "failure") | {name, url}]',
+  ]);
+};
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT = 2;
 
 export const waitForMerge = async (
   pullRequest: number,
@@ -304,36 +443,31 @@ export const waitForMerge = async (
   },
 ): Promise<MergeOutcome> => {
   const deadline = Date.now() + giveUpAfterMs;
+  let outOfTheQueueSightings = 0;
 
   while (Date.now() < deadline) {
-    const state = pullRequestState(pullRequest);
-    onPoll?.(`${state.state}/${state.mergeStateStatus}`);
+    const snapshot = snapshotOf(pullRequest);
+    onPoll?.(`${snapshot.state}/${snapshot.mergeStateStatus}`);
+    const verdict = judgeQueuedPullRequest(snapshot);
 
-    if (state.state === "MERGED") return { status: "merged" };
-    if (state.state === "CLOSED") {
-      return {
-        status: "failed",
-        reason: "pull request was closed without merging",
-        failingChecks: [],
-      };
-    }
-
-    if (state.mergeStateStatus === "DIRTY") {
-      return {
-        status: "failed",
-        reason:
-          "the branch conflicts with main, so the queue will never take it",
-        failingChecks: [],
-      };
-    }
-
-    const failures = failedCheckNames(state);
-    if (failures.length > 0) {
-      return {
-        status: "failed",
-        reason: `failing checks: ${failures.join(", ")}`,
-        failingChecks: failures,
-      };
+    if (verdict.status === "merged" || verdict.status === "failed")
+      return verdict;
+    if (verdict.status === "left-the-queue") {
+      outOfTheQueueSightings += 1;
+      if (outOfTheQueueSightings >= SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT) {
+        const failingChecks = checksTheQueueFailed(pullRequest);
+        return {
+          status: "failed",
+          reason: `the merge queue dropped it${
+            failingChecks.length
+              ? `, failing ${failingChecks.map(({ name }) => name).join(", ")} on the merge group`
+              : ""
+          }`,
+          failingChecks,
+        };
+      }
+    } else {
+      outOfTheQueueSightings = 0;
     }
     await sleep(pollEveryMs);
   }
@@ -509,35 +643,6 @@ export const blockIssueOn = (
   ]);
 };
 
-export const rebaseOntoMain = (branch: string): "rebased" | "conflicted" => {
-  const scratch = join(
-    REPO_ROOT,
-    ".sandcastle",
-    "worktrees",
-    `rebase-${branch.replace(/[^\w-]+/g, "-")}`,
-  );
-  git(["fetch", "-q", "origin", "main", branch]);
-  git(["worktree", "add", "--detach", "-f", scratch, `origin/${branch}`]);
-  try {
-    git(["rebase", "origin/main"], scratch);
-    git(["push", "--force-with-lease", "origin", `HEAD:${branch}`], scratch);
-    return "rebased";
-  } catch {
-    try {
-      git(["rebase", "--abort"], scratch);
-    } catch {
-      /* nothing to abort */
-    }
-    return "conflicted";
-  } finally {
-    try {
-      git(["worktree", "remove", "--force", scratch]);
-    } catch {
-      /* already gone */
-    }
-  }
-};
-
 export const branchOfPullRequest = (pullRequest: number): string =>
   ghJson<{ headRefName: string }>([
     "pr",
@@ -548,3 +653,38 @@ export const branchOfPullRequest = (pullRequest: number): string =>
     "--json",
     "headRefName",
   ]).headRefName;
+
+export const textsThatClaimAdrNumbers = (): readonly string[] => {
+  const onMain = git(["ls-tree", "--name-only", "origin/main", "docs/adr/"]);
+  const inOpenPullRequests = ghJson<readonly string[]>([
+    "pr",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--state",
+    "open",
+    "--limit",
+    "100",
+    "--json",
+    "files",
+    "--jq",
+    "[.[].files[].path]",
+  ]);
+  const inOpenIssues = ghJson<readonly string[]>([
+    "issue",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--state",
+    "open",
+    "--search",
+    "ADR",
+    "--limit",
+    "200",
+    "--json",
+    "body,comments",
+    "--jq",
+    "[.[] | .body, .comments[].body]",
+  ]);
+  return [onMain, ...inOpenPullRequests, ...inOpenIssues];
+};

@@ -42,7 +42,7 @@ Bare `pnpm --filter @plumix/core typecheck` works locally with a warm tree but f
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 
-**Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm test` must be clean (`format` checks; `format:fix` writes), and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, knip, i18n, publint, and attw.
+**Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm knip && pnpm test` must be clean (`format` checks; `format:fix` writes), and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, i18n, publint, and attw.
 
 ## Architecture
 
