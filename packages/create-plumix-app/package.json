@@ -49,6 +49,7 @@
     "prepack": "tsc -p tsconfig.build.json && node scripts/build-snapshot.mjs",
     "publint": "publint",
     "smoke:scaffold": "node scripts/smoke.mjs",
+    "test:build": "vitest run --config vitest.build.config.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
