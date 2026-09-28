@@ -1,6 +1,7 @@
 import type { KnipConfig } from "knip";
 
 import type { SharedAdminRuntimeSpecifier } from "./packages/core/src/admin/runtime.ts";
+import corePackage from "./packages/core/package.json" with { type: "json" };
 import {
   adminRuntimeShimSlug,
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
@@ -12,6 +13,17 @@ import {
 const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
   (spec) =>
     `src/admin/${adminRuntimeShimSlug(spec as SharedAdminRuntimeSpecifier)}.ts`,
+);
+
+// Core's `exports` targets, as the `src/` modules they are built from. Knip
+// maps `dist` back through the tsconfig's rootDir, which is widened to the
+// package root so the layer table typechecks, so it can't follow the map to
+// `src/` on its own.
+const coreExportEntries = Object.values(corePackage.exports).flatMap(
+  ({ default: target }) => {
+    const built = /^\.\/dist\/(.+)\.js$/.exec(target);
+    return built === null ? [] : [`src/${built[1]}.{ts,tsx}`];
+  },
 );
 
 // A first-party plugin's `i18n:compile` is `plumix i18n compile`, which
@@ -323,7 +335,7 @@ const config: KnipConfig = {
     // pipeline and the self-referencing `./locales/*` subpath — knip
     // can't see either consumer.
     "packages/core": {
-      entry: ["lingui.config.ts", "locales/*.mjs"],
+      entry: ["lingui.config.ts", "locales/*.mjs", ...coreExportEntries],
     },
     // The blocks catalog is hand-authored (its descriptors are object
     // literals no macro pass sees); its config drives `lingui compile`, and the

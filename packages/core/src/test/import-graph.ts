@@ -106,7 +106,7 @@ export function resolveWithinCore(
   return undefined;
 }
 
-export type EdgeKind = "static" | "dynamic" | "typeOnly";
+type EdgeKind = "static" | "dynamic" | "typeOnly";
 
 export interface ImportEdge {
   readonly to: string;
