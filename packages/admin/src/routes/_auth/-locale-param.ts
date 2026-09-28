@@ -36,7 +36,7 @@ export function buildLocaleSwitchUrl(
 }
 
 /** `secure` defaults to the current scheme; tests pass `false` to
- *  bypass HTTPS-only enforcement in jsdom. */
+ *  bypass HTTPS-only enforcement on their plain-http origin. */
 export function writeLocaleCookie(
   code: string,
   options: { readonly secure?: boolean } = {},

@@ -7,8 +7,8 @@ import {
 // (no worker, no orpc). The host page mounts PlumixEditor pointed at a
 // same-origin canvas.html, so the postMessage bridge — and therefore real
 // block geometry, selection overlays, the floating toolbar, and drag — all
-// run in a real browser, covering exactly what the jsdom + mock-RPC admin
-// suite structurally cannot. Built then previewed for CI determinism.
+// run in a real browser, covering exactly what the mock-RPC unit suite,
+// with no canvas behind its iframe, structurally cannot. Built then previewed for CI determinism.
 // `port` below takes the *base*; definePlumixE2EConfig applies
 // PLUMIX_E2E_PORT_OFFSET itself. The preview command and base URL are built
 // here, out of the helper's reach, so they resolve the same base explicitly.

@@ -12,7 +12,7 @@ const ONE_YEAR_SECONDS = 31_536_000;
 
 /** `code` is written raw — caller is the validation seam (only
  *  registry-matched codes should reach here). `Secure` is appended only
- *  over HTTPS; jsdom tests pass `false` to bypass. `basePath` scopes the
+ *  over HTTPS; tests on a plain-http origin pass `false` to bypass. `basePath` scopes the
  *  cookie under a subdirectory mount so the browser actually sends it back
  *  (and it matches the session cookie's scope); `""` keeps `Path=/_plumix/`. */
 export function buildLocaleCookie(

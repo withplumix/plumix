@@ -1,0 +1,447 @@
+import { useEffect } from "react";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+import type { IslandRoot } from "./island-renderer.js";
+import { mount } from "./island-renderer.js";
+
+describe("island renderer mount()", () => {
+  let active: IslandRoot | null = null;
+
+  afterEach(async () => {
+    // Unmount + drain a macrotask so React 19's scheduler tears the root
+    // down before the next test (mirrors the island-element suite).
+    active?.unmount();
+    active = null;
+    document.body.innerHTML = "";
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  test("renders the component into the element with the given props", async () => {
+    const Component = (props: Readonly<Record<string, unknown>>) => (
+      <span>{String(props.label)}</span>
+    );
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el);
+    active.render(Component, { label: "hi" }, {});
+
+    await vi.waitFor(() => expect(el.textContent).toBe("hi"));
+  });
+
+  test("wraps named slot HTML in a StaticHtml element on the matching prop", async () => {
+    const seen: Readonly<Record<string, unknown>>[] = [];
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      seen.push(props);
+      return <div>{props.children as never}</div>;
+    };
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el);
+    active.render(
+      Component,
+      { label: "x" },
+      {
+        children: "<strong>kid</strong>",
+      },
+    );
+
+    // A component may render more than once; waiting for an exact render
+    // count only passes when the poll samples at that instant. `seen[0]` is
+    // fixed once written, so polling it is stable.
+    // Scalar prop passes through untouched.
+    await vi.waitFor(() => expect(seen[0]?.label).toBe("x"));
+    // The slot prop is now a React element (the StaticHtml bridge).
+    const children = seen[0]?.children as { $$typeof?: symbol } | undefined;
+    expect(typeof children?.$$typeof).toBe("symbol");
+    // …and its HTML commits into a <plumix-static-slot> wrapper.
+    await vi.waitFor(() =>
+      expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
+        "<strong>kid</strong>",
+      ),
+    );
+  });
+
+  test("dev: a component throw dispatches plumix:island-error with the component stack", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events: CustomEvent[] = [];
+    const listener = (event: Event): void => {
+      events.push(event as CustomEvent);
+    };
+    window.addEventListener("plumix:island-error", listener);
+    // React logs the uncaught error to the console; silence it for the run.
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const Boom = (): never => {
+      throw new Error("render boom");
+    };
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el);
+    active.render(Boom, {}, {});
+
+    // `events` is one entry per failed hydration, so an exact-length wait was
+    // never the race `seen` had — but polling for `length === 1` reports a
+    // duplicate as a timeout, where asserting after the wait reports the count.
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
+    const detail = events[0]?.detail as {
+      error?: unknown;
+      componentStack?: string;
+      element?: HTMLElement;
+    };
+    expect((detail.error as Error).message).toBe("render boom");
+    expect(detail.componentStack).toContain("Boom");
+    expect(detail.element).toBe(el);
+
+    window.removeEventListener("plumix:island-error", listener);
+    errorSpy.mockRestore();
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("prod: a component throw does not dispatch plumix:island-error", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    delete process.env.PLUMIX_DEV;
+    const events: Event[] = [];
+    const listener = (event: Event): void => {
+      events.push(event);
+    };
+    window.addEventListener("plumix:island-error", listener);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // React's default root handler reports the uncaught throw to `window`;
+    // swallow it so it doesn't surface as an unhandled error in the run — and
+    // count it, since it is the proof React got as far as throwing.
+    let uncaught = 0;
+    const swallow = (event: Event): void => {
+      uncaught += 1;
+      event.preventDefault();
+    };
+    window.addEventListener("error", swallow);
+
+    const Boom = (): never => {
+      throw new Error("render boom");
+    };
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el);
+    active.render(Boom, {}, {});
+
+    await vi.waitFor(() => expect(uncaught).toBe(1));
+    expect(events).toHaveLength(0);
+
+    window.removeEventListener("plumix:island-error", listener);
+    window.removeEventListener("error", swallow);
+    errorSpy.mockRestore();
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  const mismatchCleanups: (() => void)[] = [];
+  afterEach(() => {
+    for (const off of mismatchCleanups) off();
+    mismatchCleanups.length = 0;
+  });
+
+  // A window listener for the hydration-mismatch diagnostic, auto-removed each
+  // test. Returns the captured events so a case can assert count + detail.
+  function listenForMismatch(): CustomEvent[] {
+    const events: CustomEvent[] = [];
+    const listener = (event: Event): void => {
+      events.push(event as CustomEvent);
+    };
+    window.addEventListener("plumix:island-hydration-mismatch", listener);
+    mismatchCleanups.push(() =>
+      window.removeEventListener("plumix:island-hydration-mismatch", listener),
+    );
+    return events;
+  }
+
+  test("dev: a hydrating island with matching server HTML adopts it, emitting no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Passive effects flush after the commit, so counting one is the only
+    // observable proof that hydration finished when the client render matches
+    // the server HTML byte-for-byte.
+    let commits = 0;
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span>{String(props.label)}</span>;
+    };
+    const el = document.createElement("div");
+    // The server render the island hydrates against.
+    el.innerHTML = "<span>hi</span>";
+    document.body.appendChild(el);
+    const serverSpan = el.firstElementChild;
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, { label: "hi" }, {});
+
+    await vi.waitFor(() => expect(commits).toBe(1));
+    // Adopted, not re-rendered over: the server's own node survives.
+    expect(el.firstElementChild).toBe(serverSpan);
+    expect(el.textContent).toBe("hi");
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a server/client mismatch dispatches the diagnostic with the component stack and does not throw", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Server said SERVER, client renders CLIENT — a text-only divergence, the
+    // most common non-determinism bug (e.g. a rendered `Date.now()`).
+    const Component = () => <span>CLIENT</span>;
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
+    const detail = events[0]?.detail as {
+      element?: HTMLElement;
+      componentStack?: string;
+      server?: string;
+      client?: string;
+    };
+    expect(detail.element).toBe(el);
+    expect(detail.componentStack).toContain("Component");
+    // Both renders are captured: the server markup as it was before hydration,
+    // and the client markup React re-rendered on recovery (#1668).
+    expect(detail.server).toBe("<span>SERVER</span>");
+    expect(detail.client).toBe("<span>CLIENT</span>");
+    // React recovered by client-rendering the subtree — the page did not crash.
+    expect(el.textContent).toBe("CLIENT");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a later props change re-renders without re-hydrating", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    let commits = 0;
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span>{String(props.label)}</span>;
+    };
+    const el = document.createElement("div");
+    el.innerHTML = "<span>A</span>";
+    document.body.appendChild(el);
+    const serverSpan = el.firstElementChild;
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, { label: "A" }, {}); // first render hydrates
+    // The props change must follow the hydration commit. An update that lands
+    // first makes React abandon hydration for client rendering and report a
+    // recoverable error, which surfaces below as a phantom mismatch.
+    await vi.waitFor(() => expect(commits).toBe(1));
+    expect(el.firstElementChild).toBe(serverSpan);
+
+    active.render(Component, { label: "B" }, {}); // props change re-renders
+    await vi.waitFor(() => expect(el.textContent).toBe("B"));
+    // A re-render never reconciles against the server DOM, so nothing can
+    // register as a mismatch on a later `props` change.
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("prod: a hydrating island mounts with createRoot and runs no diagnostic path", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    delete process.env.PLUMIX_DEV;
+    const events = listenForMismatch();
+
+    // The same divergence that fires the diagnostic in dev; under createRoot
+    // React silently replaces the server DOM and no mismatch signal exists.
+    const Component = () => <span>CLIENT</span>;
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(el.textContent).toBe("CLIENT"));
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a client-only island mounts with createRoot and emits no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Client-only ships no server output, so there is nothing to hydrate — it
+    // mounts fresh with createRoot even in dev and is never a mismatch source.
+    const Component = () => <span>fresh</span>;
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: false });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(el.textContent).toBe("fresh"));
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: an island with bridged slot children hydrates a live root with no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Bridged slot HTML rides through <StaticHtml> as `dangerouslySetInnerHTML`,
+    // which React never routes through the `onRecoverableError` diagnostic — so
+    // a slot can never manufacture false mismatch noise, and the diagnostic only
+    // ever reflects the component's own render.
+    let commits = 0;
+    const Card = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return (
+        <div className="card">
+          <span>{String(props.label)}</span>
+          {props.children as never}
+        </div>
+      );
+    };
+    const el = document.createElement("div");
+    el.innerHTML =
+      '<div class="card"><span>A</span><plumix-static-slot data-plumix-slot="children"><strong>kid</strong></plumix-static-slot></div>';
+    document.body.appendChild(el);
+    const serverSlot = el.querySelector("plumix-static-slot");
+
+    active = mount(el, { hydrate: true });
+    active.render(Card, { label: "A" }, { children: "<strong>kid</strong>" });
+
+    await vi.waitFor(() => expect(commits).toBe(1));
+    // The slot node itself is adopted, not recreated — proof the bridged HTML
+    // rode through hydration rather than being re-rendered over it.
+    expect(el.querySelector("plumix-static-slot")).toBe(serverSlot);
+    expect(events).toHaveLength(0);
+    expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
+      "<strong>kid</strong>",
+    );
+
+    // Proof of life: a re-render flips the chrome (so the root is genuinely
+    // live, not adopted-and-inert) while the bridged slot content stays put.
+    active.render(Card, { label: "B" }, { children: "<strong>kid</strong>" });
+    await vi.waitFor(() =>
+      expect(el.querySelector(".card > span")?.textContent).toBe("B"),
+    );
+    expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
+      "<strong>kid</strong>",
+    );
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a parent's own divergence flags only its render, never the nested island in its slot", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // The parent's own text diverges (server "SERVER" vs client "CLIENT"), so
+    // the diagnostic fires exactly once — proof the root hydrated. Its slot
+    // carries a nested <plumix-island>'s SSR markup, opaque to hydration through
+    // the StaticHtml bridge: it appears byte-identical in both captured renders,
+    // so a parent's settling never surfaces as a separate child mismatch. (The
+    // top-down `ssr` gate that keeps the child from hydrating before the parent
+    // settles lives in `island-element` and is covered by its suite.)
+    const childMarkup =
+      '<plumix-island ssr="" client="load"><span>child</span></plumix-island>';
+    const Wrapper = (props: Readonly<Record<string, unknown>>) => (
+      <section>
+        <span>{String(props.label)}</span>
+        {props.children as never}
+      </section>
+    );
+    const el = document.createElement("div");
+    el.innerHTML = `<section><span>SERVER</span><plumix-static-slot data-plumix-slot="children">${childMarkup}</plumix-static-slot></section>`;
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Wrapper, { label: "CLIENT" }, { children: childMarkup });
+
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
+    const detail = events[0]?.detail as { server?: string; client?: string };
+    // The single mismatch is the parent's text; the nested island markup rode
+    // through untouched on both sides of the captured diff.
+    expect(detail.server).toContain("<span>child</span>");
+    expect(detail.client).toContain("<span>child</span>");
+    expect(el.querySelector("plumix-island span")?.textContent).toBe("child");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: suppressHydrationWarning on a diverging node suppresses the mismatch signal", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // The same text-only divergence that fires the diagnostic elsewhere, but
+    // the author marked the diverging node with React's
+    // `suppressHydrationWarning` — the documented escape hatch for intentional
+    // divergence. No signal fires and React keeps the server text for that
+    // subtree.
+    let commits = 0;
+    const Component = () => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span suppressHydrationWarning>CLIENT</span>;
+    };
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(commits).toBe(1));
+    expect(events).toHaveLength(0);
+    // Suppressed divergence keeps the server render for that node.
+    expect(el.textContent).toBe("SERVER");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("unmount() tears down the rendered tree", async () => {
+    const Component = (props: Readonly<Record<string, unknown>>) => (
+      <span>{String(props.label)}</span>
+    );
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    const root = mount(el);
+    root.render(Component, { label: "bye" }, {});
+    await vi.waitFor(() => expect(el.textContent).toBe("bye"));
+
+    root.unmount();
+    await vi.waitFor(() => expect(el.textContent).toBe(""));
+  });
+});

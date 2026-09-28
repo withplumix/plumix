@@ -5,8 +5,8 @@
   "type": "module",
   "exports": {
     "./base": "./base.ts",
-    "./jsdom-radix": "./jsdom-radix.ts",
-    "./source-resolver": "./source-resolver.ts"
+    "./source-resolver": "./source-resolver.ts",
+    "./tiers": "./tiers.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules",
@@ -17,6 +17,8 @@
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/browser-playwright": "catalog:vitest",
+    "playwright": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"

@@ -1,0 +1,177 @@
+---
+title: Testing a Plugin
+description: The two test tiers a plugin's vitest suite runs in — server tests in Node, DOM tests in real Chromium — and the one plumix/test import that serves both, with the RPC stub and upload fakes an admin test needs.
+tier: P1
+sidebar:
+  order: 110
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A plugin's tests come in two tiers, and a test's filename picks its tier. `*.test.ts` runs in Node, where the server harness and its in-memory database live. `*.browser.test.tsx` runs in headless Chromium, where your admin components render into a real DOM. Neither tier simulates a browser, and both import from one place, `plumix/test`.
+
+## Overview
+
+The Node tier is for everything that runs on the server: routes, RPC procedures, hooks, schema, and rendering a template or a block to a string. `createDispatcherHarness` from `plumix/test` boots a real app around your plugin against an in-memory database, and the factories seed it.
+
+The browser tier is for everything that needs a page. That covers a component that renders, a hook that reads `window`, a drop zone, and an upload. `fetch`, `FormData`, `File` and `Blob` all come from that one page. So a `File` your test sends through `stubPluginRpc` reaches the responder as a `File`, with its name, type and bytes intact.
+
+`plumix/test` resolves to a different build in each tier, and both export the same names. In a browser test, a harness that needs Node — the dispatcher and RPC harnesses, the test databases, the WebAuthn fixtures — throws as soon as it is called, and the error names the export and says the test belongs in a `*.test.ts` file.
+
+## Quickstart
+
+Install vitest, the Playwright provider for its browser mode, and Playwright itself, then download Chromium once:
+
+```sh
+pnpm add -D vitest @vitest/browser-playwright playwright
+pnpm exec playwright install chromium
+```
+
+The whole vitest config is one call. `defineTestConfig` sets up both tiers:
+
+```ts
+// vitest.config.ts
+import { defineTestConfig } from "plumix/vite";
+
+export default defineTestConfig();
+```
+
+Run `pnpm exec vitest run`. The output labels each file with the tier it ran in, `node` or `browser (chromium)`.
+
+## Configuring the tiers
+
+`defineTestConfig` takes overrides and merges them over both tiers, because each tier extends the config around it. A setup file, an alias or a `define` reaches both:
+
+```ts
+// vitest.config.ts
+import { defineTestConfig } from "plumix/vite";
+
+export default defineTestConfig({
+  test: {
+    setupFiles: ["./test/setup.ts"],
+    exclude: ["fixtures/**"],
+  },
+});
+```
+
+Narrow with `exclude`, never with `include`. Vitest concatenates your `include` onto each tier's own, so a glob you add there feeds the same files to both tiers. The tiers already reach every `*.test.ts(x)` in the package, wherever it sits.
+
+The browser tier runs at a 1440×900 viewport, and it compiles with the same defines the `plumix` Vite plugin gives a production client build. Code that reads `process.env.PLUMIX_DEV` sees the empty string it sees when it ships, not a `process` that does not exist.
+
+<Aside type="caution">
+  Keep server tests in the Node tier. A browser's `fetch` applies the
+  forbidden-header rules, so a request you build there never carries the
+  `Origin` or `Cookie` headers that the dispatcher's CSRF and session checks
+  read.
+</Aside>
+
+## A server test
+
+A server test boots your plugin in the dispatcher harness, seeds through the factories, and asserts on what a request answers:
+
+```ts
+// src/recipes.test.ts
+import { definePlugin } from "plumix/plugin";
+import { createDispatcherHarness } from "plumix/test";
+import { expect, test } from "vitest";
+
+const recipes = definePlugin("recipes", (ctx) => {
+  ctx.registerEntryType("recipe", {
+    label: "Recipes",
+    isPublic: true,
+    hasArchive: "recipes",
+  });
+});
+
+test("a published recipe is listed on its archive", async () => {
+  const h = await createDispatcherHarness({ config: { plugins: [recipes] } });
+  const author = await h.factory.author.create();
+  await h.factory.entry.create({
+    type: "recipe",
+    slug: "caponata",
+    title: "Caponata",
+    status: "published",
+    authorId: author.id,
+  });
+
+  const res = await h.fetch("/recipes");
+
+  res.assertStatus(200);
+  expect(await res.text()).toContain("Caponata");
+});
+```
+
+## An admin test with an upload
+
+An admin test renders your component, and it serves your RPC procedures with `stubPluginRpc`, which answers at the `fetch` boundary through oRPC's own handler. Pass it the router type your server module hands `ctx.registerRpcRouter`, imported with `import type` so the server code never loads in the browser. The route map is then checked against it.
+
+`fakeFile` and `fakeImage` build the upload. `fakeFile(name, { content, size, type, lastModified })` returns a real `File`, typed from its extension unless you say otherwise. `fakeImage(name, { width, height })` returns a valid PNG of that size, which a browser decodes and a magic-byte check accepts.
+
+This file renders a component and sends a `File` through a stubbed procedure, side by side:
+
+```tsx no-typecheck
+// src/admin/PhotoField.browser.test.tsx
+import { render, screen } from "@testing-library/react";
+import { createPluginRpcClient } from "plumix/admin";
+import { fakeFile, fakeImage, stubPluginRpc } from "plumix/test";
+import { expect, test } from "vitest";
+
+import type { RecipesRouter } from "../server/router.js";
+import { PhotoField } from "./PhotoField.js";
+
+test("the field renders", async () => {
+  render(<PhotoField />);
+
+  expect(await screen.findByTestId("photo-field")).toBeDefined();
+});
+
+test("an uploaded file reaches the procedure whole", async () => {
+  let received: File | undefined;
+  stubPluginRpc<RecipesRouter>("recipes", {
+    "photos/upload": ({ file }) => {
+      received = file;
+      return { size: file.size };
+    },
+  });
+  const rpc = createPluginRpcClient<RecipesRouter>("recipes");
+
+  await rpc.photos.upload({ file: fakeFile("a.txt", { content: "hello" }) });
+
+  expect(received).toBeInstanceOf(File);
+  expect(received?.name).toBe("a.txt");
+  expect(received?.type).toBe("text/plain");
+  expect(await received?.text()).toBe("hello");
+});
+
+test("a photo decodes at the size it was made", async () => {
+  const bitmap = await createImageBitmap(
+    fakeImage("dish.png", { width: 37, height: 21 }),
+  );
+
+  expect([bitmap.width, bitmap.height]).toEqual([37, 21]);
+});
+```
+
+A responder that throws `PluginRpcError` answers with that code, status and `data`, so a test can drive the failure copy your component shows. A procedure the route map does not name answers 404. That way a test cannot pass on a call it never declared.
+
+The fakes work in the Node tier too, where a server test hands `fakeImage` to the code that checks an upload's bytes:
+
+```ts
+// src/upload-check.test.ts
+import { fakeImage } from "plumix/test";
+import { expect, test } from "vitest";
+
+test("a PNG upload starts with the PNG signature", async () => {
+  const bytes = new Uint8Array(await fakeImage("dish.png").arrayBuffer());
+
+  expect([...bytes.slice(1, 4)]).toEqual([0x50, 0x4e, 0x47]);
+});
+```
+
+## Related
+
+[Overview](/plugins/overview/) covers installing a plugin and the registration context your plugin's `setup` receives. [Project Structure](/getting-started/project-structure/) lists every `plumix` subpath, `plumix/test` and `plumix/vite` among them. [Content Modelling](/content-modelling/overview/) covers writing the descriptor these tests boot.
+
+## Next steps
+
+Write the server tests first. They cover what your plugin registers and what its procedures answer. Then add a browser test for each admin surface that renders. For end-to-end tests of a plugin's admin pages against a running site, `plumix/test/playwright` provides `definePlumixE2EConfig` and a `test` with Plumix fixtures, as described in [Project Structure](/getting-started/project-structure/).

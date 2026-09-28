@@ -8,7 +8,7 @@ import {
   renderBlockTree,
 } from "plumix/blocks";
 import { PlumixProvider } from "plumix/blocks/renderer";
-import { renderBlockSpecToHtml } from "plumix/blocks/test";
+import { renderBlockSpecToHtml } from "plumix/test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 

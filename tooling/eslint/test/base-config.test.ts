@@ -341,6 +341,57 @@ describe("plumix/no-module-mocking", () => {
   });
 });
 
+describe("plumix/test-tier", () => {
+  const tierReports = (fixture: string) =>
+    messagesMatching(
+      fixture,
+      (ruleId) => ruleId === "plumix/test-tier",
+      (message) => ({ line: message.line, message: message.message }),
+    );
+
+  it("rejects an environment docblock, naming both tiers", async () => {
+    const reports = await tierReports("src/test-tier.docblock.test.ts");
+    expect(reports.map(({ line }) => line)).toEqual([1]);
+    expect(reports[0]?.message).toMatch(/\*\.browser\.test\.ts\(x\)/);
+  });
+
+  it("rejects a vitest config that sets test.environment", async () => {
+    await expect(tierReports("vitest.config.ts")).resolves.toMatchObject([
+      { line: 5 },
+    ]);
+  });
+
+  it("stays silent on a vitest config that picks no environment", async () => {
+    await expect(tierReports("vitest.build.config.ts")).resolves.toEqual([]);
+  });
+
+  it("rejects DOM imports and DOM globals in a Node-tier test", async () => {
+    const reports = await tierReports("src/test-tier.violations.test.tsx");
+    expect(reports.map(({ line }) => line)).toEqual([
+      1, 2, 3, 4, 6, 14, 15, 16, 17, 18, 19,
+    ]);
+    expect(reports[0]?.message).toContain(
+      "test-tier.violations.browser.test.tsx",
+    );
+  });
+
+  it("stays silent on a typeof probe and a local that shadows a global", async () => {
+    await expect(tierReports("src/test-tier.allowed.test.ts")).resolves.toEqual(
+      [],
+    );
+  });
+
+  it("stays silent on DOM imports and globals in a browser test", async () => {
+    await expect(
+      tierReports("src/test-tier.allowed.browser.test.tsx"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent on a helper beside the tests", async () => {
+    await expect(tierReports("src/test/dom-helper.ts")).resolves.toEqual([]);
+  });
+});
+
 describe("the earned-types rules from the strict preset", () => {
   it("rejects deprecated APIs and types that were declared rather than earned", async () => {
     await expect(

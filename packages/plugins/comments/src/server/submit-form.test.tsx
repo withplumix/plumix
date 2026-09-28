@@ -11,29 +11,53 @@ import {
   seedPost,
 } from "../test/harness.js";
 
+const ENTITIES: Readonly<Record<string, string>> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#x27;": "'",
+};
+
+function decode(text: string): string {
+  return text.replace(/&(?:amp|lt|gt|quot|#x27);/g, (entity) => {
+    return ENTITIES[entity] ?? entity;
+  });
+}
+
+function attributes(tag: string): Map<string, string> {
+  return new Map(
+    [...tag.matchAll(/\s([\w-]+)="([^"]*)"/g)].map(
+      ([, name = "", value = ""]) => [name, decode(value)],
+    ),
+  );
+}
+
 /**
  * What a browser serialises when the visitor presses the submit button:
  * every named control in the rendered markup, carrying either what they
- * typed or the value the server put there.
+ * typed or the value the server put there. Read off React's static markup,
+ * whose attribute quoting and escaping are fixed, so the test stays in the
+ * Node tier beside the dispatcher it posts to.
  */
 function serializeForm(
   html: string,
   typed: Readonly<Record<string, string>> = {},
 ): URLSearchParams {
-  const root = document.createElement("div");
-  root.innerHTML = html;
-  const form = root.querySelector("form");
-  expect(form).not.toBeNull();
+  const form = /<form\b[\s\S]*?<\/form>/.exec(html)?.[0];
+  expect(form).toBeDefined();
   const body = new URLSearchParams();
-  for (const control of form?.querySelectorAll("input, textarea") ?? []) {
-    const name = control.getAttribute("name");
-    if (name === null) continue;
+  const controls = (form ?? "").matchAll(
+    /<input\b[^>]*>|<textarea\b([^>]*)>([\s\S]*?)<\/textarea>/g,
+  );
+  for (const [tag, textareaAttributes, content] of controls) {
     // A `<textarea>` carries its default as its content rather than as a
     // `value` attribute, which is the one place the two controls differ.
+    const attrs = attributes(textareaAttributes ?? tag);
+    const name = attrs.get("name");
+    if (name === undefined) continue;
     const rendered =
-      control.tagName === "TEXTAREA"
-        ? control.textContent
-        : control.getAttribute("value");
+      content === undefined ? attrs.get("value") : decode(content);
     body.set(name, typed[name] ?? rendered ?? "");
   }
   return body;

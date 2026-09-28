@@ -1,3 +1,4 @@
+import { fakeImage } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { readImageDimensions } from "./image-dimensions.js";
@@ -17,6 +18,16 @@ describe("readImageDimensions — PNG", () => {
     expect(readImageDimensions(PNG_800x600, "image/png")).toEqual({
       width: 800,
       height: 600,
+    });
+  });
+
+  test("reads a fakeImage upload at the size it was made", async () => {
+    const image = fakeImage("cat.png", { width: 37, height: 21 });
+    const bytes = new Uint8Array(await image.arrayBuffer());
+
+    expect(readImageDimensions(bytes, "image/png")).toEqual({
+      width: 37,
+      height: 21,
     });
   });
 });

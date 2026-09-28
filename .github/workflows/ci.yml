@@ -152,6 +152,34 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+
+      # `*.browser.test.ts(x)` suites run in headless Chromium (ADR 0021).
+      # Cached and installed exactly as the e2e job does, keyed on the same
+      # resolved Playwright version, so the two jobs share one cache entry.
+      - name: Resolve Playwright version
+        id: playwright-version
+        shell: bash
+        run: |
+          version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $NF}')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: packages/admin
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit — browsers already there)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: packages/admin
+        run: pnpm exec playwright install-deps chromium
+
       - run: pnpm test:unit
 
   test-build:

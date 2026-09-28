@@ -747,7 +747,7 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("layer-group-heading")).toBeVisible();
   });
 
-  // The cheatsheet's own chord is the one binding a jsdom test can only fake:
+  // The cheatsheet's own chord is the one binding a unit test can only fake:
   // "?" is a shifted key whose `key` value the browser derives from the layout.
   test("? opens the shortcut cheatsheet, Escape closes it", async ({
     page,
