@@ -6,12 +6,14 @@ import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
 import type { MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
+import { rebaseOntoLatestMain } from "./freshen.js";
 import { CHANGESET_GATE, GATES } from "./gates.js";
 import {
   branchOfPullRequest,
   clearLeftoverWorktree,
   pushBranch,
   resolveReviewThreads,
+  syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
@@ -246,6 +248,12 @@ export const repairPullRequest = async (
     );
     if (gates.blocked) return declined(gates.blocked);
 
+    const onMain = await rebaseOntoLatestMain(sandbox, syncRepoToMain);
+    if (onMain === "kept") {
+      say(
+        "  the latest main conflicts, so the branch is pushed as it was gated",
+      );
+    }
     pushBranch(branch, sandbox.worktreePath);
     resolveReviewThreads((refusal.reviewThreads ?? []).map(({ id }) => id));
     return { status: "repaired" };

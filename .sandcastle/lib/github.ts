@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
 
+import type { Queued } from "./run.js";
 import type {
   FailingCheck,
   MergeOutcome,
   PullRequestSnapshot,
 } from "./verdict.js";
+import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -710,3 +712,56 @@ export const rerunFailedJobs = (runIds: readonly string[]): boolean =>
       return false;
     }
   }).length > 0;
+
+export const loopPullRequestsInFlight = (): readonly Queued[] => {
+  const pullRequests = ghJson<
+    readonly { number: number; url: string; headRefName: string }[]
+  >([
+    "pr",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--state",
+    "open",
+    "--author",
+    "@me",
+    "--limit",
+    "100",
+    "--json",
+    "number,url,headRefName",
+  ]);
+  const ticketNumbers = [
+    ...new Set(
+      pullRequests.flatMap(
+        ({ headRefName }) => ticketOfLoopBranch(headRefName) ?? [],
+      ),
+    ),
+  ];
+  const issues = ticketNumbers.map((number) =>
+    ghJson<{
+      number: number;
+      title: string;
+      state: string;
+      labels: { name: string }[];
+      assignees: { login: string }[];
+    }>([
+      "issue",
+      "view",
+      String(number),
+      "-R",
+      REPO_SLUG,
+      "--json",
+      "number,title,state,labels,assignees",
+    ]),
+  );
+  const loopUser = gh(["api", "user", "--jq", ".login"]).trim();
+  return stillInTheLoopsHands(
+    pullRequests,
+    issues.map(({ labels, assignees, ...issue }) => ({
+      ...issue,
+      labels: labels.map(({ name }) => name),
+      assignees: assignees.map(({ login }) => login),
+    })),
+    loopUser,
+  );
+};

@@ -3,6 +3,7 @@ import {
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
+  loopPullRequestsInFlight,
   parentsWithEveryChildClosed,
   parkTicket,
   queueForMerge,
@@ -132,6 +133,11 @@ const report = await runShipLoop(
           ),
         ),
       ]),
+    inFlightFromEarlierRuns: () => {
+      const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
+      for (const { ticket } of inFlight) claimed.add(ticket.number);
+      return inFlight;
+    },
     requeue: ({ number }) => {
       try {
         queueForMerge(number);

@@ -54,6 +54,8 @@ const changesSomethingConsumersInstall = (
       !A_TEST_RATHER_THAN_THE_THING_TESTED.test(path),
   );
 
+const WHAT_THE_BRANCH_CHANGED = "--filter=...[origin/main]";
+
 export const GATES: readonly Gate[] = [
   { name: "check-no-major", command: "pnpm check-no-major" },
   { name: "i18n-ratchet", command: "pnpm i18n:ratchet:check" },
@@ -64,14 +66,29 @@ export const GATES: readonly Gate[] = [
   { name: "format", command: "pnpm format" },
   { name: "i18n", command: "pnpm i18n:check" },
   { name: "knip", command: "pnpm knip" },
-  { name: "publint", command: "pnpm publint" },
-  { name: "attw", command: "pnpm attw" },
-  { name: "lint", command: "pnpm lint" },
-  { name: "typecheck", command: "pnpm typecheck" },
-  { name: "test", command: "pnpm test" },
+  {
+    name: "publint",
+    command: `pnpm exec turbo run publint ${WHAT_THE_BRANCH_CHANGED}`,
+  },
+  {
+    name: "attw",
+    command: `pnpm exec turbo run attw ${WHAT_THE_BRANCH_CHANGED}`,
+  },
+  {
+    name: "lint",
+    command: `pnpm exec turbo run lint --continue ${WHAT_THE_BRANCH_CHANGED} -- --cache --cache-location .cache/.eslintcache`,
+  },
+  {
+    name: "typecheck",
+    command: `pnpm exec turbo run typecheck ${WHAT_THE_BRANCH_CHANGED}`,
+  },
+  {
+    name: "test",
+    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${WHAT_THE_BRANCH_CHANGED}`,
+  },
   {
     name: "e2e",
-    command: "pnpm test:e2e",
+    command: `pnpm exec turbo run test:e2e ${WHAT_THE_BRANCH_CHANGED}`,
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
     requires:
       "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",

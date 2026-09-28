@@ -12,6 +12,7 @@ import {
   startClock,
   taggedBlock,
 } from "./agent.js";
+import { rebaseOntoLatestMain } from "./freshen.js";
 import { CHANGESET_GATE, GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
@@ -19,6 +20,7 @@ import {
   pushBranch,
   queueForMerge,
   resetBranchToMain,
+  syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
 import { MERGE_BASE } from "./repo.js";
@@ -384,6 +386,12 @@ export const shipTicket = async (
     if (gates.blocked) return { status: "blocked", reason: gates.blocked };
 
     say("\n--- land ---");
+    const onMain = await rebaseOntoLatestMain(sandbox, syncRepoToMain);
+    if (onMain === "kept") {
+      say(
+        "  the latest main conflicts, so the branch is pushed as it was gated",
+      );
+    }
     pushBranch(branch, sandbox.worktreePath);
     const advisoryNote =
       advisory.length === 0
