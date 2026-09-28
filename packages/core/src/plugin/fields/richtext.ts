@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { MetaFieldConditionRule } from "./condition.js";
 import type {
@@ -79,7 +80,7 @@ export class RichtextFieldBuilder<
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): RichtextFieldBuilder<K> {
+  capability(capability: Capability): RichtextFieldBuilder<K> {
     return this.#fork({ capability });
   }
 

@@ -2,6 +2,7 @@ import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+import type { Capability } from "../../auth/contract/capability.js";
 import type { AppContext } from "../../context/app.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { MetaFieldValues } from "../../plugin/fields/condition.js";
@@ -253,7 +254,7 @@ export async function sanitizeMetaInput(
 export interface MetaPatchTarget {
   readonly stored: JsonObject;
   readonly fields: readonly MetaBoxField[];
-  readonly auth: { can(capability: string): boolean };
+  readonly auth: { can(capability: Capability): boolean };
 }
 
 /**

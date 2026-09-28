@@ -5,9 +5,9 @@ import type {
   TermGetInput,
   TermListInput,
 } from "../rpc/procedures/term/schemas.js";
+import { spellTermCapability } from "../auth/contract/capability.js";
 import { and, asc, eq, isNull, like } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
 import { resolveTermMeta } from "../rpc/procedures/term/meta.js";
 import { TermReadError } from "./errors.js";
 
@@ -23,7 +23,7 @@ export async function listTerms(
   if (!ctx.plugins.termTaxonomies.has(input.taxonomy)) {
     throw TermReadError.taxonomyNotFound(input.taxonomy);
   }
-  const readCap = taxonomyCapability(input.taxonomy, "read");
+  const readCap = spellTermCapability(input.taxonomy, "read");
   if (!ctx.auth.can(readCap)) throw TermReadError.forbidden(readCap);
 
   const conditions = [eq(terms.taxonomy, input.taxonomy)];
@@ -70,7 +70,7 @@ export async function findReadableTerm(
     where: eq(terms.id, input.id),
   });
   if (!row) throw TermReadError.termNotFound(input.id);
-  if (!ctx.auth.can(taxonomyCapability(row.taxonomy, "read"))) {
+  if (!ctx.auth.can(spellTermCapability(row.taxonomy, "read"))) {
     throw TermReadError.termNotFound(input.id);
   }
   return row;

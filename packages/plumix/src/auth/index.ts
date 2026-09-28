@@ -55,6 +55,7 @@ export type {
   BootstrappedUser,
   BootstrapVia,
   BuiltinSegment,
+  Capability,
   CapabilityResolver,
   ChallengeOptions,
   CoreCapability,

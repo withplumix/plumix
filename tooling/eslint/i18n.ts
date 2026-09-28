@@ -337,6 +337,12 @@ export const i18nStrictOverrides: Linter.Config = {
           "v.integer",
           "v.minValue",
           "v.maxValue",
+          // Capability names by resource and action — the action is an
+          // identifier the helper spells into a capability, never copy.
+          "entryCapability",
+          "termCapability",
+          "entryTypeCapability",
+          "termTaxonomyCapability",
           // Route definition
           "createFileRoute",
           "createRootRouteWithContext",

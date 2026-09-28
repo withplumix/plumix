@@ -5,6 +5,9 @@ import {
   anonymousPolicy,
   authenticatedPolicy,
 } from "../../../access/policy.js";
+import { entryCapability } from "../../../auth/contract/capability.js";
+import { definePlugin } from "../../../plugin/define.js";
+import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
@@ -126,6 +129,32 @@ describe("entry.update", () => {
       title: "renamed",
     });
     expect(updated.title).toBe("renamed");
+  });
+
+  test("meta: a field gated by a reference is gated under the namespace its type pools into", async () => {
+    const desk = definePlugin("desk", (ctx) => {
+      ctx.registerEntryMetaBox("desk", {
+        label: "Desk",
+        entryTypes: ["news"],
+        fields: [text("desk").capability(entryCapability("news", "publish"))],
+      });
+    });
+    const plugins = await pooledEntryTypeRegistry(desk);
+    const editDesk = async (authAs: "contributor" | "author") => {
+      const h = await createRpcHarness({ authAs, plugins });
+      const row = await h.factory.draft.create({
+        authorId: h.user.id,
+        type: "news",
+        slug: "news-desk",
+      });
+      return h.client.entry.update({ id: row.id, meta: { desk: "city" } });
+    };
+
+    await expect(editDesk("contributor")).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
+    });
+    expect((await editDesk("author")).meta.desk).toBe("city");
   });
 
   test("contributor edits their own draft of a pooled type via entry:post:edit_own, not another's", async () => {

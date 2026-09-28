@@ -5,7 +5,10 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import { and, eq, inArray, isNotNull, or, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryTypeNames } from "../plugin/registry.js";
-import { entryCapability, entryCapabilityNamespace } from "./capabilities.js";
+import {
+  entryCapabilityNamespace,
+  namespacedEntryCapability,
+} from "./capabilities.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
 
@@ -25,11 +28,11 @@ export interface EntryRow {
  */
 export function canReadEntry(ctx: EntryViewer, entry: EntryRow): boolean {
   const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
-  if (!ctx.auth.can(entryCapability(namespace, "read"))) return false;
+  if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return false;
   if (entry.status === "published") return true;
   if (!canReadUnpublished(ctx, entry.type)) return false;
   return (
-    ctx.auth.can(entryCapability(namespace, "edit_any")) ||
+    ctx.auth.can(namespacedEntryCapability(namespace, "edit_any")) ||
     entry.authorId === ctx.user?.id
   );
 }
@@ -41,8 +44,9 @@ export function canReadEntry(ctx: EntryViewer, entry: EntryRow): boolean {
 export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
   return (
-    ctx.auth.can(entryCapability(namespace, "edit_any")) ||
-    (ctx.user !== null && ctx.auth.can(entryCapability(namespace, "edit_own")))
+    ctx.auth.can(namespacedEntryCapability(namespace, "edit_any")) ||
+    (ctx.user !== null &&
+      ctx.auth.can(namespacedEntryCapability(namespace, "edit_own")))
   );
 }
 
@@ -53,7 +57,7 @@ export function canReadUnpublished(ctx: EntryViewer, type: string): boolean {
  */
 export function readableEntryRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
-  if (!ctx.auth.can(entryCapability(namespace, "read"))) return null;
+  if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return null;
   return referenceableEntryRows(ctx, type);
 }
 
@@ -85,9 +89,9 @@ export function referenceableEntryRows(ctx: EntryViewer, type: string): SQL {
  */
 function earnedUnpublishedRows(ctx: EntryViewer, type: string): SQL | null {
   const namespace = entryCapabilityNamespace(ctx.plugins, type);
-  if (!ctx.auth.can(entryCapability(namespace, "read"))) return null;
+  if (!ctx.auth.can(namespacedEntryCapability(namespace, "read"))) return null;
   const ofType = eq(entries.type, type);
-  if (ctx.auth.can(entryCapability(namespace, "edit_any"))) {
+  if (ctx.auth.can(namespacedEntryCapability(namespace, "edit_any"))) {
     return sql`(${ofType})`;
   }
   if (!canReadUnpublished(ctx, type) || ctx.user === null) return null;

@@ -1,8 +1,8 @@
+import { spellTermCapability } from "../../../auth/contract/capability.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { taxonomyCapability } from "./helpers.js";
 import { termDeleteInputSchema } from "./schemas.js";
 
 export const del = base
@@ -16,7 +16,7 @@ export const del = base
       throw errors.NOT_FOUND({ data: { kind: "term", id: input.id } });
     }
 
-    const deleteCap = taxonomyCapability(existing.taxonomy, "delete");
+    const deleteCap = spellTermCapability(existing.taxonomy, "delete");
     if (!context.auth.can(deleteCap)) {
       throw errors.FORBIDDEN({ data: { capability: deleteCap } });
     }

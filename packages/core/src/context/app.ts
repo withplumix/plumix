@@ -10,9 +10,9 @@ import { createBlockRegistry } from "@plumix/blocks";
 
 import type { Access } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { Capability } from "../auth/contract/capability.js";
 import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
-import type { CapabilityResolver, KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
@@ -39,6 +39,7 @@ import type {
   TelemetryConsumer,
 } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
+import { resolveCapability } from "../auth/contract/capability.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
@@ -112,10 +113,9 @@ export interface Logger {
 }
 
 export interface AuthNamespace {
-  // Literal union gives autocomplete for known capabilities (core + derived
-  // `${type}:${action}` shapes); `string & {}` keeps arbitrary plugin-defined
-  // capability strings accepted at runtime without a cast.
-  can(capability: KnownCapability | (string & {})): boolean;
+  // A reference is resolved against this request's registry before the check,
+  // so a pooled type's reference meets the namespace its role grants live in.
+  can(capability: Capability): boolean;
 }
 
 /**
@@ -482,26 +482,29 @@ function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
 }
 
 function makeAuthCan(
-  resolver: CapabilityResolver,
+  plugins: PluginRegistry,
   user: AuthenticatedUser | null,
   tokenScopes: readonly string[] | null,
-): (capability: string) => boolean {
+): (capability: Capability) => boolean {
   if (user === null) return () => false;
+  const resolver = getCapabilityResolver(plugins);
   if (tokenScopes === null) {
-    return (capability) => resolver.hasCapability(user.role, capability);
+    return (capability) =>
+      resolver.hasCapability(user.role, resolveCapability(plugins, capability));
   }
   // Pre-build the Set so each can() call is O(1) instead of O(scopes).
   // Token-authed requests are the hot path; the Set is per-request,
   // tiny, and sees ≥1 lookups per request typically.
   const scopeSet = new Set(tokenScopes);
-  return (capability) =>
-    scopeSet.has(capability) && resolver.hasCapability(user.role, capability);
+  return (capability) => {
+    const name = resolveCapability(plugins, capability);
+    return scopeSet.has(name) && resolver.hasCapability(user.role, name);
+  };
 }
 
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
 ): AppContext<TSchema> {
-  const resolver = getCapabilityResolver(args.plugins);
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
   const i18n = args.i18n ?? DEFAULT_I18N;
@@ -522,7 +525,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     logger: args.logger ?? consoleLogger,
     memo: createRequestMemo(),
     auth: {
-      can: makeAuthCan(resolver, user, tokenScopes),
+      can: makeAuthCan(args.plugins, user, tokenScopes),
     },
     defer: wrapDefer(args.logger ?? consoleLogger, args.defer),
     // I/O slots wrapped once here so every consumer gets spans; the getters
@@ -639,13 +642,12 @@ export function withUser<TSchema extends Record<string, unknown>>(
   user: AuthenticatedUser,
   tokenScopes: readonly string[] | null = null,
 ): AuthenticatedAppContext<TSchema> {
-  const resolver = getCapabilityResolver(ctx.plugins);
   return {
     ...ctx,
     user,
     tokenScopes,
     auth: {
-      can: makeAuthCan(resolver, user, tokenScopes),
+      can: makeAuthCan(ctx.plugins, user, tokenScopes),
     },
     locale: resolveLocale({ request: ctx.request, user, i18n: ctx.i18n }),
   };

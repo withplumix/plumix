@@ -21,9 +21,10 @@ import type {
 
 import type { AccessPolicy } from "../access/policy.js";
 import type {
+  Capability,
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
-} from "../auth/rbac.js";
+} from "../auth/contract/capability.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/query.js";
@@ -385,7 +386,7 @@ export interface MetaBoxBaseOptions {
   readonly label: Label;
   readonly description?: Label;
   readonly priority?: number;
-  readonly capability?: string;
+  readonly capability?: Capability;
   readonly fields: readonly MetaBoxFieldInput[];
 }
 
@@ -721,7 +722,7 @@ export interface AdminPageOptions {
     /** Synonyms the command palette matches in addition to `label`. */
     readonly keywords?: readonly Label[];
   };
-  readonly capability?: string;
+  readonly capability?: Capability;
   readonly component: PluginComponentRef;
 }
 
@@ -734,7 +735,7 @@ export interface DashboardWidgetOptions {
   readonly id: string;
   readonly title: Label;
   /** Hidden unless the viewer holds this capability (when set). */
-  readonly capability?: string;
+  readonly capability?: Capability;
   /** Export name in the plugin's admin chunk, resolved at render. */
   readonly component: PluginComponentRef;
   /** Lower sorts first on the dashboard; unset sorts last. */
@@ -778,7 +779,10 @@ export type PluginRouteMethod =
  * container on `0.0.0.0` or a forwarded codespace port all walk straight past.
  */
 export type PluginRouteAuth =
-  "public" | "authenticated" | "development" | { readonly capability: string };
+  | "public"
+  | "authenticated"
+  | "development"
+  | { readonly capability: Capability };
 
 export interface RegisteredRawRoute {
   readonly pluginId: string;

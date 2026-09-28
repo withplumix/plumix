@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { MetaFieldCondition } from "./condition.js";
@@ -27,7 +28,7 @@ export interface UniversalFieldState {
   readonly description?: Label;
   readonly required?: true;
   readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
+  readonly capability?: Capability;
   readonly showInApi?: true;
   readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;

@@ -30,6 +30,7 @@ import {
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
 import { Plus } from "@plumix/admin-ui/icons";
+import { termTaxonomyCapability } from "@plumix/core/manifest";
 
 type Term = WithResolvedMeta<StoredTerm>;
 
@@ -89,7 +90,12 @@ export const Route = createFileRoute("/_authenticated/terms/$name/")({
     }
     // Server's `term.list` requires `${name}:read`. Check here too so
     // users land on a friendly redirect rather than a 403 from the RPC.
-    if (!hasCap(context.user.capabilities, `term:${taxonomy.name}:read`)) {
+    if (
+      !hasCap(
+        context.user.capabilities,
+        termTaxonomyCapability(taxonomy, "read"),
+      )
+    ) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
@@ -185,7 +191,10 @@ function TaxonomyListRoute(): ReactNode {
   // Heuristic "next page exists": full page came back.
   const canNext = (rawRows?.length ?? 0) === pageSize;
 
-  const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
+  const canEdit = hasCap(
+    user.capabilities,
+    termTaxonomyCapability(taxonomy, "edit"),
+  );
 
   const columns = useMemo<DataTableColumnDef<TermRow>[]>(() => {
     return [

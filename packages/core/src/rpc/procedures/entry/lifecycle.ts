@@ -14,10 +14,7 @@ import {
   loadAuthoredEntries,
   loadAuthoredEntry,
 } from "../../../entries/authored.js";
-import {
-  entryCapability,
-  entryCapabilityNamespace,
-} from "../../../entries/capabilities.js";
+import { assertCanDeleteEntry } from "../../../entries/editability.js";
 import {
   pruneOldRevisions,
   snapshotAsRevision,
@@ -170,14 +167,13 @@ export async function fireEntryRevisionRestored(
 
 /**
  * Shared prelude for the trash-lifecycle procedures (trash / restore /
- * deletePermanent): load-or-404, then gate on the `delete` capability
- * plus author-or-`edit_any`. Deliberately distinct from the edit gate in
- * `update.ts` (`(author AND edit_own) OR edit_any`, no `delete` cap) —
- * don't unify them.
+ * deletePermanent): load-or-404, then gate on `canDeleteEntry` — the
+ * `delete` capability plus author-or-`edit_any`. Deliberately distinct from
+ * the edit gate (`canEditEntry`) — don't unify them.
  */
 interface DeletableGuards {
   readonly notFound: (id: number) => never;
-  readonly forbidden: (capability: string) => never;
+  readonly errors: GatedLookupErrors;
 }
 
 // The trash-lifecycle procedures (single + bulk) all translate a missing
@@ -190,26 +186,17 @@ export function entryDeletableGuards(
     notFound: (id) => {
       throw errors.NOT_FOUND({ data: { kind: "entry", id } });
     },
-    forbidden: (capability) => {
-      throw errors.FORBIDDEN({ data: { capability } });
-    },
+    errors,
   };
 }
 
-// Pure (no query) gate: `delete` cap plus author-or-`edit_any`. Shared by
-// the single-row and batched loaders.
+// Pure (no query) gate, shared by the single-row and batched loaders.
 function assertDeletable(
   ctx: AuthenticatedAppContext,
   entry: Entry,
   guards: DeletableGuards,
 ): void {
-  const namespace = entryCapabilityNamespace(ctx.plugins, entry.type);
-  const deleteCapability = entryCapability(namespace, "delete");
-  if (!ctx.auth.can(deleteCapability)) guards.forbidden(deleteCapability);
-  if (entry.authorId !== ctx.user.id) {
-    const editAnyCapability = entryCapability(namespace, "edit_any");
-    if (!ctx.auth.can(editAnyCapability)) guards.forbidden(editAnyCapability);
-  }
+  assertCanDeleteEntry(ctx, entry, guards.errors);
 }
 
 export async function loadDeletableEntry(

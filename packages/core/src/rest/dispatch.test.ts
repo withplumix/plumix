@@ -7,6 +7,7 @@ import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "../test/dispatcher.js";
+import { entryCapability } from "../auth/contract/capability.js";
 import { isJsonObject } from "../json.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -15,6 +16,7 @@ import {
   photoLookupAdapter,
   photoUrl,
 } from "../test/photo-lookup.js";
+import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 
 const blog = definePlugin("test-blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -541,6 +543,32 @@ describe("REST API — plugin resource seam", () => {
     const ok = await h.dispatch(
       bearerGet("/_plumix/api/v1/system/diag/privileged", secret),
     );
+    expect(ok.status).toBe(200);
+  });
+});
+
+describe("REST API — plugin resource capability references", () => {
+  const newsApi = definePlugin("news-api", (ctx) => {
+    ctx.registerRestResource({
+      path: "/system/news/privileged",
+      auth: { capability: entryCapability("news", "edit_any") },
+      output: OK_OUTPUT,
+      handler: () => ({ ok: true }),
+    });
+  });
+
+  test("gates a reference on the namespace its type pools into", async () => {
+    const h = await restHarness({ plugins: [pooledEntryTypesPlugin, newsApi] });
+    const path = "/_plumix/api/v1/system/news/privileged";
+    const narrow = await mintPat(h, { scopes: ["entry:post:read"] });
+    const pooled = await mintPat(h, { scopes: ["entry:post:edit_any"] });
+
+    const forbidden = await h.dispatch(bearerGet(path, narrow.secret));
+    expect(forbidden.status).toBe(403);
+    expect(JSON.stringify(await forbidden.json())).toContain(
+      '"capability":"entry:post:edit_any"',
+    );
+    const ok = await h.dispatch(bearerGet(path, pooled.secret));
     expect(ok.status).toBe(200);
   });
 });

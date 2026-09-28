@@ -1,9 +1,9 @@
 import type { ResolvedMeta } from "../../meta/core.js";
+import { spellTermCapability } from "../../../auth/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { taxonomyCapability } from "./helpers.js";
 import {
   assertTermMetaCapabilities,
   loadTermMeta,
@@ -29,7 +29,7 @@ export const create = base
       });
     }
 
-    const editCap = taxonomyCapability(filtered.taxonomy, "edit");
+    const editCap = spellTermCapability(filtered.taxonomy, "edit");
     if (!context.auth.can(editCap)) {
       throw errors.FORBIDDEN({ data: { capability: editCap } });
     }

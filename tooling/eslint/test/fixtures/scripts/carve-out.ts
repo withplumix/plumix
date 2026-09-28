@@ -15,3 +15,5 @@ export function send(message: object): void {
 export function seedBag(bag: Record<string, unknown>): string {
   return String(bag.id);
 }
+
+export const spelledInScript = "entry:post:edit_any";

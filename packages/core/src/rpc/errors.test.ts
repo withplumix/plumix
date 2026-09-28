@@ -72,7 +72,7 @@ describe("RPC_ERRORS subsets", () => {
       Pick<RpcErrors, "CONFLICT">
     >();
     expectTypeOf<
-      Parameters<typeof assertMetaCapabilities>[3]
+      Parameters<typeof assertMetaCapabilities>[4]
     >().toEqualTypeOf<Forbidden>();
     expectTypeOf<
       Parameters<typeof assertEntryMetaCapabilities>[4]

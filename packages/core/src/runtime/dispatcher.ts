@@ -16,6 +16,7 @@ import {
   authenticateTraced,
   requestHasSession,
 } from "../auth/authenticator.js";
+import { resolveCapability } from "../auth/contract/capability.js";
 import {
   hasCsrfHeader,
   hasMatchingOrigin,
@@ -938,7 +939,13 @@ async function runPluginRawRoute(
   // intersection check and let a token with `scopes: ["entry:post:read"]`
   // hit a plugin route gated on `entry:post:edit_any`.
   if (!authedCtx.auth.can(capability)) {
-    return jsonResponse({ error: "forbidden", capability }, { status: 403 });
+    return jsonResponse(
+      {
+        error: "forbidden",
+        capability: resolveCapability(authedCtx.plugins, capability),
+      },
+      { status: 403 },
+    );
   }
   return route.handler(authedCtx.request, authedCtx);
 }

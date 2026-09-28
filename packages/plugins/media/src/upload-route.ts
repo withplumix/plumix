@@ -1,9 +1,9 @@
 import type { AppContext } from "plumix/plugin";
 import { and, eq } from "plumix/db";
-import { canEditEntry } from "plumix/plugin";
 import { entries } from "plumix/schema";
 
 import { parseMediaMeta } from "./meta.js";
+import { canFinishUpload } from "./upload-gate.js";
 
 const MEDIA_ENTRY_TYPE = "media";
 
@@ -55,7 +55,7 @@ export async function handleWorkerUpload(
   if (!row) return jsonError(404, "not_found");
   if (row.status !== "draft") return jsonError(409, "not_a_draft");
 
-  if (!canEditEntry(ctx, row)) return jsonError(403, "forbidden");
+  if (!canFinishUpload(ctx, row)) return jsonError(403, "forbidden");
 
   const meta = parseMediaMeta(row.meta);
   if (!meta) return jsonError(409, "media_meta_invalid");

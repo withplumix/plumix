@@ -164,17 +164,19 @@ The entry editor's rail is the exception. It is too narrow to divide, so it acce
 
 ```ts
 import { number, text } from "plumix/fields";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, entryCapability } from "plumix/plugin";
+
+const editAny = entryCapability("recipe", "edit_any");
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
     ctx.registerEntryMetaBox("recipe-costing", {
       label: "Costing",
       entryTypes: ["recipe"],
-      capability: "entry:recipe:edit_any",
+      capability: editAny,
       fields: [
-        number("unitCost").min(0).capability("entry:recipe:edit_any"),
-        text("supplier").capability("entry:recipe:edit_any"),
+        number("unitCost").min(0).capability(editAny),
+        text("supplier").capability(editAny),
       ],
     });
   },

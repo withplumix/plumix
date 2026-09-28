@@ -1,6 +1,11 @@
 import type { JsonObject } from "plumix/support";
 import { and, count, eq, inArray, sql } from "plumix/db";
-import { authenticated, base, requireCapability } from "plumix/plugin";
+import {
+  authenticated,
+  base,
+  requireCapability,
+  termCapability,
+} from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
 import { slugify } from "plumix/support";
 import * as v from "valibot";
@@ -86,9 +91,9 @@ const locationIdSchema = v.pipe(
 );
 
 // Capability used for every mutating menu RPC. `registerTermTaxonomy`
-// auto-derives `term:menu:manage` at the editor tier; reusing it here
+// auto-derives the taxonomy's `manage` at the editor tier; reusing it here
 // keeps the gate consistent with WP-style "manage taxonomy" semantics.
-const MENU_MANAGE_CAPABILITY = "term:menu:manage";
+export const MENU_MANAGE_CAPABILITY = termCapability("menu", "manage");
 
 interface MenuListItem {
   readonly id: number;

@@ -6,6 +6,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestErrors } from "./errors.js";
+import { resolveCapability } from "../auth/contract/capability.js";
 import { base } from "./base.js";
 
 // Enforce the declarative route-auth model before a plugin handler runs:
@@ -22,7 +23,9 @@ function enforceRestAuth(
     return;
   }
   if (!context.auth.can(auth.capability)) {
-    throw errors.FORBIDDEN({ data: { capability: auth.capability } });
+    throw errors.FORBIDDEN({
+      data: { capability: resolveCapability(context.plugins, auth.capability) },
+    });
   }
 }
 

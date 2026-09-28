@@ -1,12 +1,13 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
 import type { ResolvedMeta } from "../../meta/core.js";
+import { spellTermCapability } from "../../../auth/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
 import { stripUndefined } from "../entry/helpers.js";
-import { parentWouldCreateCycle, taxonomyCapability } from "./helpers.js";
+import { parentWouldCreateCycle } from "./helpers.js";
 import {
   assertTermMetaCapabilities,
   loadTermMeta,
@@ -33,7 +34,7 @@ export const update = base
       throw errors.NOT_FOUND({ data: { kind: "term", id: filtered.id } });
     }
 
-    const editCap = taxonomyCapability(existing.taxonomy, "edit");
+    const editCap = spellTermCapability(existing.taxonomy, "edit");
     if (!context.auth.can(editCap)) {
       throw errors.FORBIDDEN({ data: { capability: editCap } });
     }

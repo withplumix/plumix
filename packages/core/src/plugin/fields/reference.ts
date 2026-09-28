@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { EntryStatus } from "../../db/schema/entries.js";
 import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
@@ -286,7 +287,7 @@ export class ReferenceFieldBuilder<
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
   capability(
-    capability: string,
+    capability: Capability,
   ): ReferenceFieldBuilder<Kind, K, Multiple, Required, Returns> {
     return this.#fork({ capability });
   }

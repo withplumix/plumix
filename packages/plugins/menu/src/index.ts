@@ -11,7 +11,7 @@ import {
 } from "plumix/plugin";
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
-import { createMenuRouter } from "./rpc.js";
+import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
 import { getMenusForLocations } from "./server/getMenuForLocation.js";
 import { declareLocations } from "./server/locations.js";
 
@@ -219,7 +219,7 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
       ctx.registerAdminPage({
         path: "/menus",
         title: MENU_LABELS.plural,
-        capability: "term:menu:manage",
+        capability: MENU_MANAGE_CAPABILITY,
         nav: {
           group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
           label: MENU_LABELS.plural,

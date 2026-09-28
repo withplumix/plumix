@@ -19,6 +19,7 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
 import type { CdnStore, ConnectedCdn } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
+import { entryCapability } from "../auth/contract/capability.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
@@ -33,6 +34,7 @@ import {
 } from "../test/dispatcher.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
@@ -1227,6 +1229,37 @@ describe("dispatcher — plugin raw routes", () => {
     };
     expect(body.error).toBe("forbidden");
     expect(body.capability).toBe("menu:manage");
+  });
+
+  test("capability gate resolves a reference to the namespace its type pools into", async () => {
+    const plugin = definePlugin("newsroom", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/sync",
+        auth: { capability: entryCapability("news", "edit_any") },
+        handler: () => new Response("ok"),
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [pooledEntryTypesPlugin, plugin],
+    });
+    const request = () =>
+      plumixRequest("/_plumix/newsroom/sync", { method: "POST" });
+    const author = await h.seedUser("author");
+    const editor = await h.seedUser("editor");
+
+    const denied = await h.dispatch(
+      await h.authenticateRequest(request(), author.id),
+    );
+    expect(denied.status).toBe(403);
+    expect(await denied.json()).toEqual({
+      error: "forbidden",
+      capability: "entry:post:edit_any",
+    });
+    const allowed = await h.dispatch(
+      await h.authenticateRequest(request(), editor.id),
+    );
+    expect(allowed.status).toBe(200);
   });
 
   test("capability gate dispatches when the role meets the minimum", async () => {

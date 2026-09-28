@@ -9,6 +9,7 @@ import { noModuleMocking } from "./no-module-mocking.js";
 import { noNonTestidQueries } from "./no-non-testid-queries.js";
 import { noReflectApply } from "./no-reflect-apply.js";
 import { noReflectGet } from "./no-reflect-get.js";
+import { noSpelledCapability } from "./no-spelled-capability.js";
 import { noUnknownReturn } from "./no-unknown-return.js";
 import { noUnknownTypeAlias } from "./no-unknown-type-alias.js";
 import { noUnparsedPropertyTypeof } from "./no-unparsed-property-typeof.js";
@@ -36,6 +37,7 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-non-testid-queries": noNonTestidQueries,
     "no-reflect-apply": noReflectApply,
     "no-reflect-get": noReflectGet,
+    "no-spelled-capability": noSpelledCapability,
     "no-unknown-return": noUnknownReturn,
     "no-unknown-type-alias": noUnknownTypeAlias,
     "no-unparsed-property-typeof": noUnparsedPropertyTypeof,

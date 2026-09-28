@@ -10,6 +10,10 @@
 import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 
+import type {
+  Capability,
+  CapabilityNamespaces,
+} from "../auth/contract/capability.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n } from "../i18n/locale-registry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
@@ -59,10 +63,14 @@ import type {
   RegisteredUserMetaBox,
   TaxonomyMenuIcon,
 } from "./registry.js";
-import { entryCapability } from "../entries/capabilities.js";
+import {
+  resolveCapability,
+  spellTermCapability,
+} from "../auth/contract/capability.js";
+import { namespacedEntryCapability } from "../entries/capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
-import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
+import { projectMetaBoxField } from "./fields/project-field.js";
 import { resolveImageRoleIndex } from "./image-roles.js";
 import {
   byPriorityThen,
@@ -165,13 +173,13 @@ export function buildManifest(
     toTermTaxonomyEntry,
   );
   const entryMetaBoxes = Array.from(registry.entryMetaBoxes.values())
-    .map(toEntryMetaBoxEntry)
+    .map((box) => toEntryMetaBoxEntry(box, registry))
     .sort(byPriorityThen((b) => b.id));
   const termMetaBoxes = Array.from(registry.termMetaBoxes.values())
-    .map(toTermMetaBoxEntry)
+    .map((box) => toTermMetaBoxEntry(box, registry))
     .sort(byPriorityThen((b) => b.id));
   const userMetaBoxes = Array.from(registry.userMetaBoxes.values())
-    .map(toUserMetaBoxEntry)
+    .map((box) => toUserMetaBoxEntry(box, registry))
     .sort(byPriorityThen((b) => b.id));
   assertMetaBoxScopesExist(
     entryMetaBoxes,
@@ -202,7 +210,7 @@ export function buildManifest(
   assertUniqueFieldKeysPerScope(userMetaBoxes, getUserScope, "user");
   resolveImageRoleIndex(registry);
   const settingsGroups = Array.from(registry.settingsGroups.values())
-    .map(toSettingsGroupEntry)
+    .map((group) => toSettingsGroupEntry(group, registry))
     .sort(byPriorityThen((g) => g.name));
   const settingsPages = Array.from(registry.settingsPages.values())
     .map(toSettingsPageEntry)
@@ -215,7 +223,7 @@ export function buildManifest(
     configuredSlots,
   );
   const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
-    .map(toDashboardWidgetEntry)
+    .map((widget) => toDashboardWidgetEntry(widget, registry))
     .sort(byPriorityThen((w) => w.id));
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
@@ -456,7 +464,7 @@ function addEntryNavItems(
       label: entry.labels?.plural ?? entry.label,
       order: entry.priority,
       coreIcon: resolveEntryMenuIcon(entry.menuIcon),
-      capability: entryCapability(entry, "edit_own"),
+      capability: namespacedEntryCapability(entry, "edit_own"),
       ...(entry.keywords ? { keywords: entry.keywords } : {}),
     });
   }
@@ -472,7 +480,7 @@ function addTaxonomyNavItems(
       to: `/terms/${tax.name}`,
       label: tax.label,
       coreIcon: resolveTaxonomyMenuIcon(tax.menuIcon, tax.isHierarchical),
-      capability: `term:${tax.name}:read`,
+      capability: spellTermCapability(tax.name, "read"),
       ...(tax.keywords ? { keywords: tax.keywords } : {}),
     });
   }
@@ -511,7 +519,7 @@ function addAdminPageNavItems(
       icon: page.nav.icon,
       coreIcon: page.nav.icon ? undefined : "puzzle",
       component: page.component,
-      capability: page.capability,
+      capability: shippedCapability(registry, page.capability),
       ...(page.nav.keywords ? { keywords: page.nav.keywords } : {}),
     });
   }
@@ -850,10 +858,22 @@ function resolveTaxonomyMenuIcon(
   return isHierarchical === true ? "folder" : "tag";
 }
 
+// Whatever leaves the server is a string: the admin compares capabilities
+// against the session's granted list, so a reference is spelled here.
+function shippedCapability(
+  registry: CapabilityNamespaces,
+  capability: Capability | undefined,
+): string | undefined {
+  return capability === undefined
+    ? undefined
+    : resolveCapability(registry, capability);
+}
+
 function toEntryMetaBoxFieldEntry(
   field: MetaBoxField,
+  registry: CapabilityNamespaces,
 ): EntryMetaBoxFieldManifestEntry {
-  const { span: _span, ...entry } = toMetaBoxFieldEntry(field);
+  const { span: _span, ...entry } = projectMetaBoxField(field, registry);
   return entry;
 }
 
@@ -865,6 +885,7 @@ function toEntryMetaBoxFieldEntry(
 // width, and shipping a hint the renderer ignores just bloats the wire.
 function toEntryMetaBoxEntry(
   box: RegisteredEntryMetaBox,
+  registry: CapabilityNamespaces,
 ): EntryMetaBoxManifestEntry {
   const {
     id,
@@ -886,8 +907,8 @@ function toEntryMetaBoxEntry(
     location,
     priority,
     entryTypes,
-    capability,
-    fields: fields.map(toEntryMetaBoxFieldEntry),
+    capability: shippedCapability(registry, capability),
+    fields: fields.map((field) => toEntryMetaBoxFieldEntry(field, registry)),
   };
 }
 
@@ -895,6 +916,7 @@ function toEntryMetaBoxEntry(
 // edit form — no `location` hint applies.
 function toTermMetaBoxEntry(
   box: RegisteredTermMetaBox,
+  registry: CapabilityNamespaces,
 ): TermMetaBoxManifestEntry {
   const {
     id,
@@ -911,14 +933,15 @@ function toTermMetaBoxEntry(
     description,
     priority,
     termTaxonomies,
-    capability,
-    fields: fields.map(toMetaBoxFieldEntry),
+    capability: shippedCapability(registry, capability),
+    fields: fields.map((field) => projectMetaBoxField(field, registry)),
   };
 }
 
 // User meta boxes are stacked like term boxes — no scope / location.
 function toUserMetaBoxEntry(
   box: RegisteredUserMetaBox,
+  registry: CapabilityNamespaces,
 ): UserMetaBoxManifestEntry {
   const { id, label, description, priority, capability, fields } = box;
   return {
@@ -926,17 +949,18 @@ function toUserMetaBoxEntry(
     label,
     description,
     priority,
-    capability,
-    fields: fields.map(toMetaBoxFieldEntry),
+    capability: shippedCapability(registry, capability),
+    fields: fields.map((field) => projectMetaBoxField(field, registry)),
   };
 }
 
 // Allowlist for settings group entries — same rationale as the other
 // `to*Entry` projections. `registeredBy` is server-only debug metadata.
-// Fields ship through `toMetaBoxFieldEntry` — same projection as every
+// Fields ship through `projectMetaBoxField` — same projection as every
 // other meta surface.
 function toSettingsGroupEntry(
   group: RegisteredSettingsGroup,
+  registry: CapabilityNamespaces,
 ): SettingsGroupManifestEntry {
   const { name, label, description, priority, capability, fields } = group;
   return {
@@ -944,8 +968,8 @@ function toSettingsGroupEntry(
     label,
     description,
     priority,
-    capability,
-    fields: fields.map(toMetaBoxFieldEntry),
+    capability: shippedCapability(registry, capability),
+    fields: fields.map((field) => projectMetaBoxField(field, registry)),
   };
 }
 
@@ -965,9 +989,16 @@ function toFieldTypeEntry(
 
 function toDashboardWidgetEntry(
   widget: RegisteredDashboardWidget,
+  registry: CapabilityNamespaces,
 ): DashboardWidgetManifestEntry {
   const { id, title, capability, component, priority } = widget;
-  return { id, title, capability, component, priority };
+  return {
+    id,
+    title,
+    capability: shippedCapability(registry, capability),
+    component,
+    priority,
+  };
 }
 
 function toBlockEntry(spec: BlockSpec): BlockManifestEntry {

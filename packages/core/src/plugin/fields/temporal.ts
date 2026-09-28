@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { MetaFieldConditionRule } from "./condition.js";
@@ -107,7 +108,7 @@ export class TemporalFieldBuilder<
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): TemporalFieldBuilder<Input, K, V, S> {
+  capability(capability: Capability): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ capability });
   }
 

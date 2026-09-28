@@ -2,6 +2,7 @@ import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, like, sql } from "plumix/db";
+import { entryCapability, resolveCapability } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { escapeLikePattern, withBasePath } from "plumix/support";
 import * as v from "valibot";
@@ -10,7 +11,7 @@ import { mediaAcceptSchema } from "./accept.js";
 import { parseMediaMeta } from "./meta.js";
 
 export const MEDIA_ENTRY_TYPE = "media";
-const MEDIA_READ_CAPABILITY = "entry:media:read";
+export const MEDIA_READ_CAPABILITY = entryCapability(MEDIA_ENTRY_TYPE, "read");
 
 export const DEFAULT_PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 100;
@@ -96,7 +97,9 @@ export async function listMedia(
   input: MediaListInput,
 ): Promise<MediaListResult> {
   if (!ctx.auth.can(MEDIA_READ_CAPABILITY)) {
-    throw MediaReadError.forbidden(MEDIA_READ_CAPABILITY);
+    throw MediaReadError.forbidden(
+      resolveCapability(ctx.plugins, MEDIA_READ_CAPABILITY),
+    );
   }
 
   const rows = await queryMediaRows(ctx, {
@@ -165,7 +168,9 @@ export async function getMedia(
   input: { readonly id: number },
 ): Promise<MediaItem> {
   if (!ctx.auth.can(MEDIA_READ_CAPABILITY)) {
-    throw MediaReadError.forbidden(MEDIA_READ_CAPABILITY);
+    throw MediaReadError.forbidden(
+      resolveCapability(ctx.plugins, MEDIA_READ_CAPABILITY),
+    );
   }
 
   const row = await ctx.db.query.entries.findFirst({

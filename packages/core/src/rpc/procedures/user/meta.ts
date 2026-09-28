@@ -1,3 +1,4 @@
+import type { Capability } from "../../../auth/contract/capability.js";
 import type { AppContext } from "../../../context/app.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
@@ -63,10 +64,11 @@ export async function validateUserMetaReferences(
 export function assertUserMetaCapabilities(
   registry: PluginRegistry,
   patch: MetaPatch,
-  auth: { can(capability: string): boolean },
+  auth: { can(capability: Capability): boolean },
   errors: CapabilityErrors,
 ): void {
   assertMetaCapabilities(
+    registry,
     patch,
     (key) => findUserMetaField(registry, key),
     auth,

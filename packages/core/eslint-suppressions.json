@@ -426,7 +426,7 @@
   },
   "src/plugin/registry.ts": {
     "boundaries/dependencies": {
-      "count": 9
+      "count": 8
     }
   },
   "src/rest/base.ts": {
@@ -656,7 +656,7 @@
   },
   "src/search/terms-handler.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 2
     }
   },
   "src/search/users-handler.ts": {
@@ -721,7 +721,7 @@
   },
   "src/terms/read-service.ts": {
     "boundaries/dependencies": {
-      "count": 5
+      "count": 4
     }
   },
   "src/theme.ts": {

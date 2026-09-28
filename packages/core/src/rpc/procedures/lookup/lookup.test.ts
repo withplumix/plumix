@@ -1,12 +1,17 @@
 import { describe, expect, test } from "vitest";
 
+import { entryCapability } from "../../../auth/contract/capability.js";
+import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import {
   adminUser,
   entryFactory,
   userFactory,
 } from "../../../test/factories.js";
+import { photoLookupAdapter } from "../../../test/photo-lookup.js";
+import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { expectError } from "../../../test/spies.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
 function registryWithCoreAdapters() {
@@ -116,5 +121,29 @@ describe("lookup capability gating", () => {
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const result = await h.client.lookup.list({ kind: "user", limit: 1 });
     expect(result.items).toBeDefined();
+  });
+});
+
+describe("lookup capability references", () => {
+  const newsPhotos = definePlugin("news-photos", (ctx) => {
+    ctx.registerLookupAdapter({
+      kind: "photo",
+      adapter: photoLookupAdapter,
+      capability: entryCapability("news", "edit_any"),
+    });
+  });
+
+  test("gates on the namespace the referenced type pools into", async () => {
+    const plugins = await pooledEntryTypeRegistry(newsPhotos);
+    const editor = await createRpcHarness({ authAs: "editor", plugins });
+    const author = await createRpcHarness({ authAs: "author", plugins });
+
+    expect((await editor.client.lookup.list({ kind: "photo" })).items).toEqual(
+      [],
+    );
+    await expectError(author.client.lookup.list({ kind: "photo" }), {
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:edit_any" },
+    });
   });
 });

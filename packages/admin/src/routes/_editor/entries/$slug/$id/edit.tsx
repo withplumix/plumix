@@ -67,6 +67,7 @@ import {
 import {
   ACCESS_POLICY_META_KEY,
   NAMED_TEMPLATE_META_KEY,
+  termTaxonomyCapability,
 } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -377,7 +378,9 @@ function EntryEditor({
   const taxonomies = useMemo(() => {
     const allowed = new Set(entryType?.termTaxonomies ?? []);
     return visibleTermTaxonomies(capabilities).filter(
-      (t) => allowed.has(t.name) && capabilitySet.has(`term:${t.name}:assign`),
+      (t) =>
+        allowed.has(t.name) &&
+        capabilitySet.has(termTaxonomyCapability(t, "assign")),
     );
   }, [entryType, capabilities, capabilitySet]);
   const [termSelections, setTermSelections] = useState<

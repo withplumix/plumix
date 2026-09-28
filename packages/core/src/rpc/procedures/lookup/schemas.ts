@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { AppContext } from "../../../context/app.js";
 import type { RegisteredLookupAdapter } from "../../../plugin/lookup.js";
 import type { GatedLookupErrors } from "../../errors.js";
+import { resolveCapability } from "../../../auth/contract/capability.js";
 
 // `kind` matches the discriminator a reference field carries on its
 // `referenceTarget.kind`. Valid kinds are checked against the
@@ -63,7 +64,9 @@ export function requireAdapter(
   // public — make that an explicit decision per kind.
   const { capability } = registered;
   if (capability !== null && !context.auth.can(capability)) {
-    throw errors.FORBIDDEN({ data: { capability } });
+    throw errors.FORBIDDEN({
+      data: { capability: resolveCapability(context.plugins, capability) },
+    });
   }
   return registered;
 }

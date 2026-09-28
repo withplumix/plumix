@@ -1,3 +1,4 @@
+import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { MetaFieldConditionRule } from "./condition.js";
@@ -128,7 +129,7 @@ export class GroupFieldBuilder<
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): GroupFieldBuilder<F, K, V, S> {
+  capability(capability: Capability): GroupFieldBuilder<F, K, V, S> {
     return this.#fork({ capability });
   }
 

@@ -11,7 +11,7 @@ import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
 import { mediaBlocks } from "./media-blocks.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
-import { purgeVariants } from "./read-service.js";
+import { MEDIA_READ_CAPABILITY, purgeVariants } from "./read-service.js";
 import { createMediaRouter } from "./rpc.js";
 import { handleMediaServe } from "./serve-route.js";
 import { handleWorkerUpload } from "./upload-route.js";
@@ -174,6 +174,9 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
         isPublic: false,
         hasArchive: false,
         menuIcon: "image",
+        // An owner deletes their own upload on `delete`, which a contributor
+        // holds here; someone else's still takes `edit_any` on top.
+        capabilities: { delete: "contributor" },
       });
 
       ctx.registerRpcRouter(
@@ -200,7 +203,7 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
       ctx.registerLookupAdapter({
         kind: "media",
         adapter: mediaLookupAdapter,
-        capability: "entry:media:read",
+        capability: MEDIA_READ_CAPABILITY,
       });
 
       // Worker-routed upload fallback. `media.createUploadUrl` returns
@@ -229,7 +232,7 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
       ctx.registerAdminPage({
         path: "/media",
         title: MEDIA_LIBRARY_LABEL,
-        capability: "entry:media:read",
+        capability: MEDIA_READ_CAPABILITY,
         nav: {
           // Own group between Entries (priority 100) and Taxonomies
           // (priority 200). Media isn't a content surface like Posts/

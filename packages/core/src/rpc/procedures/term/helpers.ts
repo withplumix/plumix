@@ -3,10 +3,6 @@ import type { Term } from "../../../db/schema/terms.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 
-export function taxonomyCapability(taxonomy: string, action: string): string {
-  return `term:${taxonomy}:${action}`;
-}
-
 /**
  * Follow the parent chain from `candidateParentId` toward the root.
  * Returns true iff `selfId` appears in the chain — i.e., setting

@@ -17,6 +17,10 @@ import type {
 } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 
+import type {
+  PostCapabilityAction,
+  TermTaxonomyCapabilityAction,
+} from "../auth/contract/capability.js";
 import type { PlumixConfig } from "../config.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
@@ -30,6 +34,10 @@ import type {
   TaxonomyMenuIcon,
   TermTaxonomyLabels,
 } from "./registry.js";
+import {
+  spellEntryCapability,
+  spellTermCapability,
+} from "../auth/contract/capability.js";
 
 // Wire shape intentionally equals DashboardWidgetOptions (minus
 // registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
@@ -455,6 +463,26 @@ export type BuiltManifest = {
 
 /** Script tag id that carries the JSON-encoded manifest in the admin HTML. */
 export const MANIFEST_SCRIPT_ID = "plumix-manifest";
+
+/**
+ * The capability the admin compares for an entry type's action — spelled from
+ * the manifest entry's resolved namespace, so a pooled type is gated where its
+ * grants live.
+ */
+export function entryTypeCapability(
+  entryType: Pick<EntryTypeManifestEntry, "capabilityType">,
+  action: PostCapabilityAction,
+): string {
+  return spellEntryCapability(entryType.capabilityType, action);
+}
+
+/** The capability the admin compares for a taxonomy's action. */
+export function termTaxonomyCapability(
+  taxonomy: Pick<TermTaxonomyManifestEntry, "name">,
+  action: TermTaxonomyCapabilityAction,
+): string {
+  return spellTermCapability(taxonomy.name, action);
+}
 
 export function emptyManifest(): PlumixManifest {
   return {

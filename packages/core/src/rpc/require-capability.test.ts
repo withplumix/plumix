@@ -2,6 +2,8 @@ import { createRouterClient } from "@orpc/server";
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
+import { entryCapability } from "../auth/contract/capability.js";
+import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { expectError } from "../test/spies.js";
 import { authenticated } from "./authenticated.js";
@@ -56,6 +58,30 @@ describe("requireCapability middleware", () => {
     await expectError(client.probe({ n: "not-a-number" } as never), {
       code: "FORBIDDEN",
       data: { capability: "settings:manage" },
+    });
+  });
+
+  test("gates a reference under the namespace its type pools into", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: await pooledEntryTypeRegistry(),
+    });
+    const router = {
+      create: base
+        .use(authenticated)
+        .use(requireCapability(entryCapability("news", "create")))
+        .handler(() => "ok" as const),
+      publish: base
+        .use(authenticated)
+        .use(requireCapability(entryCapability("news", "publish")))
+        .handler(() => "ok" as const),
+    };
+    const client = createRouterClient(router, { context: h.context });
+
+    expect(await client.create()).toBe("ok");
+    await expectError(client.publish(), {
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
     });
   });
 });
