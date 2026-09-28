@@ -313,6 +313,12 @@ async function scaffoldAndInstall(workDir, npmEnv) {
   // This rehearsal is Cloudflare-specific end to end (D1, miniflare, wrangler
   // below) — pin the runtime explicitly rather than ride the scaffolder's
   // default, which is free to change independently of this script.
+  //
+  // The scaffolder's own install and migrations are off for the same reason:
+  // it picks its package manager from `npm_config_user_agent`, which
+  // `pnpm smoke` leaks through `npx`, so left on it ran `pnpm install` and
+  // this script's `npm install` then crashed on pnpm's symlinked tree. The
+  // steps below own install and migrations; git is noise here.
   await run(
     "npx",
     [
@@ -321,6 +327,9 @@ async function scaffoldAndInstall(workDir, npmEnv) {
       appDir,
       "--runtime",
       "cloudflare",
+      "--no-install",
+      "--no-db",
+      "--no-git",
     ],
     { cwd: scaffoldParent, env: npmEnv },
   );
@@ -328,15 +337,11 @@ async function scaffoldAndInstall(workDir, npmEnv) {
   // `npm install` (not pnpm) so package build scripts — notably workerd's
   // binary download that miniflare needs — run without an interactive
   // `pnpm approve-builds`, and node_modules stays flat (real dirs, not a
-  // virtual-store symlink). `--force` (not `--legacy-peer-deps`, which would
-  // skip peer installation and drop `react`, a required peer of the admin/
-  // blocks packages that core's SSR imports) still auto-installs peers but
-  // pushes past one upstream optional-peer conflict: the latest wrangler moved
-  // its optional `@cloudflare/workers-types` peer to v5 while the template
-  // pins v4 — a types-only mismatch. If `--force` ever produced a genuinely
-  // broken runtime tree, the 200 assertions below would catch it.
+  // virtual-store symlink). No `--force`: a user's plain `npm install` fails
+  // on a peer conflict, so the rehearsal must too, with npm's ERESOLVE report
+  // rather than whatever `--force` makes of an unsatisfiable peer.
   log("installing the scaffolded app (real registry install)…");
-  await run("npm", ["install", "--no-audit", "--no-fund", "--force"], {
+  await run("npm", ["install", "--no-audit", "--no-fund"], {
     cwd: appDir,
     env: npmEnv,
   });
