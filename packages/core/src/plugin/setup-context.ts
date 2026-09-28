@@ -1,12 +1,10 @@
+import type { DerivedCapability } from "../auth/rbac.js";
 import type {
   BlockPattern,
   BlockSpec,
   MarkSpec,
   ShortcodeSpec,
-} from "@plumix/blocks";
-import { isReservedBlockName } from "@plumix/blocks";
-
-import type { DerivedCapability } from "../auth/rbac.js";
+} from "../blocks/index.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
@@ -65,6 +63,7 @@ import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
+import { isReservedBlockName } from "../blocks/index.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
@@ -381,7 +380,7 @@ export interface PluginSetupContextBase {
    * Plugin-contributed blocks merge into the per-app block registry at
    * `buildApp` time with deterministic precedence theme > plugin > core.
    * Specs using the `core/` namespace are rejected — that namespace is
-   * reserved for `@plumix/blocks`'s built-in primitives.
+   * reserved for the built-in primitives in `blocks/`.
    */
   registerBlock(spec: BlockSpec): void;
 

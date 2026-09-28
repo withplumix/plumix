@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ThemeTokens } from "@plumix/core/blocks";
 
 import { StyleControl } from "./style-control.js";
 import { StyleFieldsProvider } from "./style-fields-context.js";

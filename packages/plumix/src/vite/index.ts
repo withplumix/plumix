@@ -315,7 +315,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id === SERIALIZE_RESOLVED_ID) {
         // Re-export `IslandShim` (the SSR island runtime) resolved from the
         // project root, where `plumix` is always a dependency — so a "use
-        // client" island in any package (core `@plumix/blocks` included)
+        // client" island in any package (core's `blocks/` included)
         // gets a working import the SSR shim injected via
         // SERIALIZE_VIRTUAL_ID.
         return `export { IslandShim } from "plumix/blocks";`;

@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ThemeTokens } from "@plumix/core/blocks";
 
 import { StyleFieldsProvider } from "./style-fields-context.js";
 import { useStyleField } from "./use-style-field.js";

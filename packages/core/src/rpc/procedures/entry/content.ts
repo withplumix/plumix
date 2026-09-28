@@ -1,8 +1,7 @@
-import type { BlockRegistry } from "@plumix/blocks";
-import { isEntryContent, validateEntryContent } from "@plumix/blocks";
-
+import type { BlockRegistry } from "../../../blocks/index.js";
 import type { EntryContent } from "../../../db/schema/entries.js";
 import type { BlockContentErrors, ConflictErrors } from "../../errors.js";
+import { isEntryContent, validateEntryContent } from "../../../blocks/index.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
 
 // valibot can't measure the post-serialize size of a structural payload,

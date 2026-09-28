@@ -60,7 +60,6 @@
     "@dnd-kit/sortable": "catalog:dnd-kit",
     "@dnd-kit/utilities": "catalog:dnd-kit",
     "@plumix/admin-ui": "workspace:*",
-    "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tiptap/core": "catalog:tiptap",
     "@tiptap/extension-blockquote": "catalog:tiptap",

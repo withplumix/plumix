@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 
 import { JsonInspector, JsonSourceDialog } from "./json-inspector.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";

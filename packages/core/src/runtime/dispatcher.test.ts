@@ -1,9 +1,6 @@
 import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { defineBlock } from "@plumix/blocks";
-import { useAuthMethods } from "@plumix/blocks/renderer";
-
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
@@ -21,6 +18,8 @@ import type { CdnStore, ConnectedCdn } from "./slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { entryCapability } from "../auth/contract/capability.js";
 import { readSessionCookie } from "../auth/cookies.js";
+import { defineBlock } from "../blocks/index.js";
+import { useAuthMethods } from "../blocks/renderer/index.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";

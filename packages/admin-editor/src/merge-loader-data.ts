@@ -1,5 +1,5 @@
-import type { ResolvedBlockLoaders } from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+import type { ResolvedBlockLoaders } from "@plumix/core/blocks";
+import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 
 /**
  * Overlay a scoped refresh's node-keyed loader map onto the canvas's existing

@@ -5,8 +5,8 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import { EditorCommandPalette } from "./editor-command-palette.js";
 import { EditorConfigProvider } from "./editor-config-context.js";

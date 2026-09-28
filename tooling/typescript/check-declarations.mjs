@@ -14,7 +14,6 @@ import { fileURLToPath } from "node:url";
 
 const INTERNAL_PACKAGES = [
   "@plumix/core",
-  "@plumix/blocks",
   "@plumix/admin",
   "@plumix/admin-editor",
   "@plumix/admin-ui",

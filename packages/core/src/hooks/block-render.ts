@@ -11,7 +11,7 @@
 
 import type { ReactNode } from "react";
 
-import type { BlockContext, BlockNode, BlockSpec } from "@plumix/blocks";
+import type { BlockContext, BlockNode, BlockSpec } from "../blocks/index.js";
 
 export interface BlockRenderHookContext {
   readonly node: BlockNode;

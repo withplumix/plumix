@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 
 import { createClipboardOps } from "./clipboard-ops.js";
 import { parseClipboardBlocks } from "./clipboard.js";

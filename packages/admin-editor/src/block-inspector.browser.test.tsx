@@ -5,9 +5,9 @@ import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode, BlockRegistry, JsonValue } from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockRegistry, JsonValue } from "@plumix/core/blocks";
+import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { BlockInspector } from "./block-inspector.js";

@@ -18,7 +18,7 @@ import {
   UndoRedo,
 } from "@tiptap/extensions";
 
-import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
+import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/core/blocks";
 
 /**
  * Which marks / block nodes an editor instance admits. Mirrors the meta
@@ -59,7 +59,7 @@ export function allowsNode(
  * Tiptap extensions for the rich-text rail. We import the exact set the body
  * uses instead of `@tiptap/starter-kit`: StarterKit bundles ~16 extensions but
  * we activated only these — the rest were either marks we replace with
- * `@plumix/blocks`' shared marks (bold/italic/…) or nodes that are standalone
+ * the core block marks (bold/italic/…) or nodes that are standalone
  * blocks (code, separator). `configure({ bold: false })` would disable but
  * still bundle them, so the explicit list is what actually drops them from the
  * editor chunk.

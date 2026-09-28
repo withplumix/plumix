@@ -1,10 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { createBlockRegistry } from "@plumix/blocks";
-import { PlumixProvider } from "@plumix/blocks/renderer";
-
 import type { AuthNamespace } from "../context/app.js";
+import { createBlockRegistry } from "../blocks/index.js";
+import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { PlumixAdminBar } from "./component.js";

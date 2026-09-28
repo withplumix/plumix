@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 
-import { useQueriedEntry, useUser } from "@plumix/blocks/renderer";
-
 import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
+import { useQueriedEntry, useUser } from "../blocks/renderer/index.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
 import { barDirection, barMessages, resolveBarLocale } from "./i18n.js";

@@ -1,4 +1,4 @@
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
+import type { BlockNode, BlockSpec } from "@plumix/core/blocks";
 
 // A loader-backed block so the inspector's scoped-refresh control (#1120) has
 // something to act on. The loader is a server function — it never runs in this

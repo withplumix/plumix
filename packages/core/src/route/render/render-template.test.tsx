@@ -1,12 +1,11 @@
 import { createElement, useId } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { defineBlock } from "@plumix/blocks";
-import { BlockRenderer } from "@plumix/blocks/renderer";
-
 import type { User } from "../../db/schema/users.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedEntry } from "./resolved-entry.js";
+import { defineBlock } from "../../blocks/index.js";
+import { BlockRenderer } from "../../blocks/renderer/index.js";
 import { getContext } from "../../context/stores.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";

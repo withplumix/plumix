@@ -389,7 +389,7 @@ throat-clearing before the first useful sentence. Word choice is the writer's.
 
 **Every example imports from `plumix` or one of its subpaths. Never from `@plumix/core/...`.**
 
-The façade is the stable half. `@plumix/core`, `@plumix/blocks` and the three `admin*` packages all
+The façade is the stable half. `@plumix/core` and the three `admin*` packages all
 publish to npm, but consumers are meant to reach them only through `plumix` — and **nothing in the
 package metadata says so**. Any page that documents a deep import is writing against the unstable
 half.

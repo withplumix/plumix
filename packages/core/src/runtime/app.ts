@@ -1,25 +1,16 @@
 import type { RPCHandler } from "@orpc/server/fetch";
 
-import type {
-  BlockRegistry,
-  HtmlAllowlist,
-  MarkSpec,
-  ShortcodeRegistry,
-} from "@plumix/blocks";
-import {
-  buildHtmlAllowlist,
-  commitBlockVariations,
-  coreBlocks,
-  coreMarks,
-  coreShortcodes,
-  createBlockRegistry,
-} from "@plumix/blocks";
-
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
+import type {
+  BlockRegistry,
+  HtmlAllowlist,
+  MarkSpec,
+  ShortcodeRegistry,
+} from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { McpHandler } from "../mcp/dispatch.js";
@@ -46,6 +37,14 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
+import {
+  buildHtmlAllowlist,
+  commitBlockVariations,
+  coreBlocks,
+  coreMarks,
+  coreShortcodes,
+  createBlockRegistry,
+} from "../blocks/index.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
@@ -210,13 +209,13 @@ export interface PlumixApp {
    */
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   /**
-   * Merged block registry, built once at boot: `@plumix/blocks` core specs +
+   * Merged block registry, built once at boot: `blocks/` core specs +
    * plugin contributions (`ctx.registerBlock(s)`) + theme blocks (the
    * `defineTheme` `blocks` field), aggregated by `collectContributedBlocks`.
    */
   readonly blocks: BlockRegistry;
   /**
-   * Aggregated mark catalogue: the 13 core marks from `@plumix/blocks` +
+   * Aggregated mark catalogue: the 13 core marks from `blocks/` +
    * plugin contributions from `ctx.registerMark`. Surfaces in the manifest
    * + admin bubble menu; the rendering path uses the hardcoded
    * `renderInline` walker, not a per-spec component dispatch.
@@ -401,7 +400,7 @@ export async function buildApp(
     config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
-  // Aggregate `@plumix/blocks` core specs + plugin + theme contributions into
+  // Aggregate `blocks/` core specs + plugin + theme contributions into
   // the per-app registry. `collectContributedBlocks` is the single source the
   // admin manifest also reads; `createBlockRegistry`'s last-write-wins semantics
   // give the precedence core < plugin < theme (the most site-specific layer wins).

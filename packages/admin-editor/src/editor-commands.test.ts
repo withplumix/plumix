@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockSpec } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import type { EditorCommand, EditorCommandContext } from "./editor-commands.js";
 import {

@@ -1,8 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { MarkSpec } from "@plumix/blocks";
-import { defineBlock } from "@plumix/blocks";
-
+import type { MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type {
   ConfiguredSlots,
@@ -16,6 +14,7 @@ import {
   redirectToLogin,
 } from "../access/policy.js";
 import { entryCapability } from "../auth/contract/capability.js";
+import { defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { registerCoreSettings } from "../settings-core.js";

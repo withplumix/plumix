@@ -86,12 +86,12 @@ Four more are client entry points, each bundled as its own chunk so the browser 
 
 Every example on this site imports from `plumix` or one of its subpaths. That is the rule, stated once here and assumed everywhere else.
 
-The `plumix` package is a façade over several published packages. `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages are all on npm and all resolvable, and none of their package metadata says you should not import them. Reach for one anyway and you are writing against the half that moves without warning. `plumix` re-exports a curated surface, and a rename behind it is only a breaking change if it crosses the façade.
+The `plumix` package is a façade over several published packages. `@plumix/core` and the three `@plumix/admin*` packages are all on npm and all resolvable, and none of their package metadata says you should not import them. Reach for one anyway and you are writing against the half that moves without warning. `plumix` re-exports a curated surface, and a rename behind it is only a breaking change if it crosses the façade.
 
 ```ts no-typecheck
 // Wrong. Resolves, compiles, and breaks on a minor version.
-import { defineBlock } from "@plumix/blocks";
 import { definePlugin } from "@plumix/core";
+import { defineBlock } from "@plumix/core/blocks";
 ```
 
 ```ts
@@ -99,7 +99,7 @@ import { defineBlock } from "plumix/blocks";
 import { definePlugin } from "plumix/plugin";
 ```
 
-The rule is about the packages the façade covers, which are `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages. Anything you install yourself you import by its own name.
+The rule is about the packages the façade covers, which are `@plumix/core` and the three `@plumix/admin*` packages. Anything you install yourself you import by its own name.
 
 `@plumix/runtime-cloudflare` is the one you meet immediately. It is a direct dependency of your project and a direct import, because a runtime is a thing you choose, and `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there. The plugin packages work the same way. `@plumix/plugin-blog`, `@plumix/plugin-pages`, `@plumix/plugin-menu`, `@plumix/plugin-comments`, `@plumix/plugin-media`, `@plumix/plugin-audit-log` and `@plumix/plugin-og` are each imported by name, and a plugin may publish subpaths of its own, such as `@plumix/plugin-media/fields` and `@plumix/plugin-og/takumi`.
 

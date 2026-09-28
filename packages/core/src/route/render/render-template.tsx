@@ -11,14 +11,7 @@ import type {
   ResolvedBlockLoaders,
   ThemeBreakpoints,
   ThemeTokens,
-} from "@plumix/blocks";
-import {
-  BlockLoaderError,
-  HtmlAllowlistProvider,
-  resolveBlockLoaders,
-} from "@plumix/blocks";
-import { PlumixProvider } from "@plumix/blocks/renderer";
-
+} from "../../blocks/index.js";
 import type { AppContext } from "../../context/app.js";
 import type { SettingsBag } from "../../db/schema/settings.js";
 import type { TransformOpts } from "../../runtime/slots.js";
@@ -39,6 +32,12 @@ import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
+import {
+  BlockLoaderError,
+  HtmlAllowlistProvider,
+  resolveBlockLoaders,
+} from "../../blocks/index.js";
+import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
 import {
   TEMPLATE_PANEL_ID,

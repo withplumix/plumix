@@ -7,8 +7,8 @@ import type {
   EntryContent,
   ThemeBreakpoints,
   ThemeTokens,
-} from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks";
+import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +22,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@plumix/admin-ui/tabs";
-import { defineEntryContent } from "@plumix/blocks";
+import { defineEntryContent } from "@plumix/core/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
 import type { ResolvePluginFieldType } from "./block-input-control.js";

@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
+import type { BlockRect, SlotRect } from "@plumix/core/blocks/renderer";
 
 import type { Geometry } from "./canvas-geometry.js";
 import { CANVAS_HEIGHT } from "./canvas-geometry.js";

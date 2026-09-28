@@ -98,8 +98,8 @@ export function findUseClientIslands(
 export const ORIG_QUERY = "?plumix-orig";
 
 // Virtual module the SSR shim pulls `IslandShim` from. A `"use client"`
-// island in `@plumix/blocks` itself can't import the public `plumix/blocks`
-// specifier — that package re-exports `@plumix/blocks`, so a dependency on it
+// island in core's `blocks/` itself can't import the public `plumix/blocks`
+// specifier — that package re-exports `@plumix/core/blocks`, so a dependency on it
 // would be a cycle, and pnpm's strict layout makes `plumix/blocks`
 // unresolvable from the island's own location. The plugin's `load` re-exports
 // `IslandShim` from `plumix/blocks` resolved at the project root (where
@@ -142,9 +142,9 @@ export function transformUseClientModule(
     `import { createElement as __c } from "react";`,
     // `IslandShim` owns the island boundary decision, prop split,
     // serialization, and the `<plumix-island>` shape — real, tested code
-    // rather than a generated string (see @plumix/blocks/island-shim).
+    // rather than a generated string (see @plumix/core/blocks/island-shim).
     // Sourced from the virtual module (not `plumix/blocks` directly) so a
-    // core island in `@plumix/blocks` resolves it too — see
+    // core island in `@plumix/core/blocks` resolves it too — see
     // SERIALIZE_VIRTUAL_ID.
     `import { IslandShim as __IslandShim } from ${JSON.stringify(SERIALIZE_VIRTUAL_ID)};`,
     `import * as __orig from ${origUrl};`,

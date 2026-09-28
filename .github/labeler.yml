@@ -8,7 +8,7 @@
 
 "pkg: blocks":
   - changed-files:
-      - any-glob-to-any-file: "packages/blocks/**"
+      - any-glob-to-any-file: "packages/core/src/blocks/**"
 
 "pkg: plumix":
   - changed-files:

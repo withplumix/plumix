@@ -8,19 +8,17 @@
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
 import type {
+  PostCapabilityAction,
+  TermTaxonomyCapabilityAction,
+} from "../auth/contract/capability.js";
+import type {
   BlockNode,
   BlockVariation,
   PatternPreview,
   PatternTarget,
   ThemeBreakpoints,
   ThemeTokens,
-} from "@plumix/blocks";
-import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-
-import type {
-  PostCapabilityAction,
-  TermTaxonomyCapabilityAction,
-} from "../auth/contract/capability.js";
+} from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
@@ -38,6 +36,7 @@ import {
   spellEntryCapability,
   spellTermCapability,
 } from "../auth/contract/capability.js";
+import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 
 // Wire shape intentionally equals DashboardWidgetOptions (minus
 // registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options

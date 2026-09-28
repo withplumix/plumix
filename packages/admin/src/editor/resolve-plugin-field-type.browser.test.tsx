@@ -5,7 +5,7 @@ import {
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { BlockInput } from "@plumix/blocks";
+import type { BlockInput } from "@plumix/core/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { resolvePluginFieldType } from "./resolve-plugin-field-type.js";

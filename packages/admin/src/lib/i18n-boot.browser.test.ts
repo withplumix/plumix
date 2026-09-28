@@ -72,7 +72,7 @@ describe("bootI18n", () => {
     await bootI18n({
       ...SHIPPED,
       blocks: {
-        "../../../blocks/locales/de.mjs": () =>
+        "../../../core/locales/blocks-de.mjs": () =>
           Promise.resolve({
             messages: {
               "blocks.appender.addBlock": ["Block hinzufügen"],

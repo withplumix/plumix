@@ -60,7 +60,7 @@ export {
   mockRegistry,
   renderBlockSpecToHtml,
   renderBlockTreeToHtml,
-} from "@plumix/blocks/test";
+} from "@plumix/core/blocks/test";
 
 function nodeOnly(name: string): (...args: readonly unknown[]) => never {
   return () => {

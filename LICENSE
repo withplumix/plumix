@@ -55,7 +55,7 @@ directory rather than per-file headers, which would break that workflow.
 
 
 --------------------------------------------------------------------------------
-Astro — packages/blocks
+Astro — packages/core
 --------------------------------------------------------------------------------
 
 Copyright (c) 2021 Fred K. Schott
@@ -63,13 +63,14 @@ MIT License — https://github.com/withastro/astro
 
 The island runtime is derived from Astro's:
 
-  src/serialize.ts                    port of Astro's prop serializer; the
+  src/blocks/serialize.ts             port of Astro's prop serializer; the
                                       PROP_TYPE codes and payload shape match
                                       byte-for-byte so the SSR/client wire
                                       format stays compatible
-  src/island-element.ts               port of `astro-island.ts`
-  src/static-html.tsx                 port of `StaticHtml`
-  src/island-strategies/visible.ts    adapted from `client:visible`
+  src/blocks/island-element.ts        port of `astro-island.ts`
+  src/blocks/static-html.tsx          port of `StaticHtml`
+  src/blocks/island-strategies/visible.ts
+                                      adapted from `client:visible`
 
 Plumix diverges from all four.
 

@@ -1,8 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
 
-import type { StyleFields, ThemeTokens } from "@plumix/blocks";
-import { createStyleFields } from "@plumix/blocks";
+import type { StyleFields, ThemeTokens } from "@plumix/core/blocks";
+import { createStyleFields } from "@plumix/core/blocks";
 
 import { EditorError } from "./errors.js";
 

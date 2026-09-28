@@ -1,8 +1,7 @@
 import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { defineBlock } from "@plumix/blocks";
-
+import { defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { base } from "../rpc/base.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";

@@ -260,7 +260,7 @@ describe("types", () => {
   });
 });
 
-// `@plumix/blocks` sits below core and cannot name `AppContext`, so the
+// Core's `blocks/` sits below `context/` and cannot name `AppContext`, so the
 // `plumix/blocks` façade fills the loader-context seam. The fixture is what a
 // plugin file writes: nothing but the façade and `AppContext`'s own home, read
 // through the published declarations a plugin build resolves.

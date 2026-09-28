@@ -2,7 +2,7 @@ import type { ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
-import { Link } from "@plumix/blocks/renderer";
+import { Link } from "@plumix/core/blocks/renderer";
 
 import { readingTime } from "../reading-time";
 

@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BlockInput, JsonValue } from "@plumix/blocks";
+import type { BlockInput, JsonValue } from "@plumix/core/blocks";
 
 import { BlockInputControl } from "./block-input-control.js";
 

@@ -4,7 +4,7 @@ import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 import { SidebarProvider, useSidebar } from "@plumix/admin-ui/sidebar";
 
 import { EditorHeader } from "./editor-header.js";

@@ -1,7 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
 
-import { expandShortcodes, isEntryContent } from "@plumix/blocks";
-
 import type { AppContext } from "../../context/app.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
@@ -13,6 +11,7 @@ import type {
   ResolvedEntry,
   ResolvedTerm,
 } from "./resolved-entry.js";
+import { expandShortcodes, isEntryContent } from "../../blocks/index.js";
 import { userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";

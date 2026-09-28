@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
 import { cn } from "@plumix/admin-ui/utils";
-import { isAllowedHtmlAttr } from "@plumix/blocks";
+import { isAllowedHtmlAttr } from "@plumix/core/blocks";
 
 // Common allowlisted attributes offered as suggestions. The field still accepts
 // any name `isAllowedHtmlAttr` permits (e.g. an arbitrary `data-*`/`aria-*`).

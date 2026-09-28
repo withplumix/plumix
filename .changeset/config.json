@@ -12,7 +12,6 @@
     [
       "plumix",
       "@plumix/core",
-      "@plumix/blocks",
       "@plumix/admin",
       "@plumix/admin-editor",
       "@plumix/admin-ui"

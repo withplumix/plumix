@@ -1,4 +1,4 @@
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 import type {
   BlockRect,
   CanvasConfig,
@@ -6,14 +6,14 @@ import type {
   HandshakeMessage,
   SerializedLoaderData,
   SlotRect,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 import {
   createHandshake,
   EDITOR_BRIDGE_CHANNEL,
   encode,
   isHandshakeFrame,
   parseEnvelope,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 
 export interface RuntimeConnection {
   readonly reportSelect: (id: string, additive?: boolean) => void;

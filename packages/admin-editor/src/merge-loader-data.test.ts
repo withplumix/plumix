@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { ResolvedBlockLoaders } from "@plumix/blocks";
+import type { ResolvedBlockLoaders } from "@plumix/core/blocks";
 
 import { mergeLoaderData } from "./merge-loader-data.js";
 

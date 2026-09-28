@@ -3,8 +3,9 @@
  *
  * The render-time component primitives (`Image`, `Link`) and provider/hooks
  * that plugins and themes use inside block and template render. Re-exports the
- * curated public API from the workspace-internal `@plumix/blocks` package;
- * `@plumix/blocks` is never a direct dependency in a consumer's `package.json`.
+ * curated public API from the workspace-internal `@plumix/core/blocks/renderer`
+ * subpath; `@plumix/core` is never a direct dependency in a consumer's
+ * `package.json`.
  */
 
 export {
@@ -29,7 +30,7 @@ export {
   useTokens,
   useUser,
   VISUALLY_HIDDEN_STYLE,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 export type {
   AuthUser,
   BuildImageAttrsInput,
@@ -44,4 +45,4 @@ export type {
   RendererQueriedEntry,
   RendererUser,
   UseAuthResult,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";

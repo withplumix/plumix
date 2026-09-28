@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { ShortcodeSpec } from "@plumix/blocks";
-
+import type { ShortcodeSpec } from "../blocks/index.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
 function spec(name: string, output: string): ShortcodeSpec {

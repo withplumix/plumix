@@ -31,8 +31,8 @@ import type {
 } from "plumix/theme";
 import { forArchiveType, forEntryType, forTermTaxonomy } from "plumix/theme";
 
-import type { BlockPattern } from "@plumix/blocks";
-import { block } from "@plumix/blocks";
+import type { BlockPattern } from "@plumix/core/blocks";
+import { block } from "@plumix/core/blocks";
 
 interface GuardArchiveData extends CustomArchiveData {
   readonly kind: "custom";

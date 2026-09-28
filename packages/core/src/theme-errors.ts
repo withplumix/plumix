@@ -34,7 +34,7 @@ export class ThemeRegistrationError extends Error {
     return new ThemeRegistrationError(
       "reserved_block_namespace",
       `Theme block "${name}" uses the reserved \`core/\` namespace, which is ` +
-        `owned by \`@plumix/blocks\`' built-in primitives. A theme block that ` +
+        `owned by plumix's built-in block primitives. A theme block that ` +
         `shadows a core name silently replaces it for the whole site — rename ` +
         `it under the theme's own namespace.`,
     );

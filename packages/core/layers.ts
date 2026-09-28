@@ -47,8 +47,10 @@ const server = (layer: Layer): Placement => ({
  * starts with that prefix. The deepest matching folder decides.
  */
 export const FOLDERS: Readonly<Record<string, Placement>> = {
+  "blocks/": client("foundation"),
   "i18n/": client("foundation"),
   json: client("foundation"),
+  "csrf-header": client("foundation"),
   "base-path": client("foundation"),
   slugify: client("foundation"),
   "escape-html": client("foundation"),
@@ -126,6 +128,11 @@ export const CLIENT_SUBPATHS: readonly string[] = [
   "./validation",
   "./support",
   "./dev-client",
+  "./blocks",
+  "./blocks/renderer",
+  "./blocks/island-events",
+  "./blocks/island-runtime",
+  "./blocks/island-renderer",
 ];
 
 const TOP = server("top");

@@ -1,5 +1,5 @@
-import type { BlockNode } from "@plumix/blocks";
-import { isBlockNodeArray } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
+import { isBlockNodeArray } from "@plumix/core/blocks";
 
 // Envelope written to the system clipboard for block copy/paste. The `kind`
 // discriminator lets paste tell our payload apart from arbitrary clipboard

@@ -29,8 +29,8 @@ test(
   "the islands element chunk stays under 3 KB gz (React lives in the lazy renderer chunk)",
   async () => {
     const require = createRequire(import.meta.url);
-    const runtime = require.resolve("@plumix/blocks/island-runtime");
-    const renderer = require.resolve("@plumix/blocks/island-renderer");
+    const runtime = require.resolve("@plumix/core/blocks/island-runtime");
+    const renderer = require.resolve("@plumix/core/blocks/island-renderer");
 
     const dir = mkdtempSync(join(tmpdir(), "plumix-islands-size-"));
     // Absolute-path imports so module resolution for React et al. happens

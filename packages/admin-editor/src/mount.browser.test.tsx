@@ -2,15 +2,15 @@ import { act } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { EntryContent, ShortcodeSpec } from "@plumix/blocks";
+import type { EntryContent, ShortcodeSpec } from "@plumix/core/blocks";
 import {
   BASELINE_HTML_ALLOWLIST,
   coreBlocks,
   coreShortcodes,
   createBlockRegistry,
   defineShortcode,
-} from "@plumix/blocks";
-import { BlockRenderer, PlumixProvider } from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks";
+import { BlockRenderer, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import { mountEditorRuntime } from "./mount.js";
 

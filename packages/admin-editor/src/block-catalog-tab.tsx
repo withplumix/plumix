@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { useLingui } from "@lingui/react";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 import { Search } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { resolveLabel } from "@plumix/core/i18n";

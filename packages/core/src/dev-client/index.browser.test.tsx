@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { installDevClient } from "./index.js";
 
 // The island error dialog mounts under this custom-element host (owned by
-// `@plumix/blocks`). Its presence in the DOM is the proof that core installed
+// `blocks/`). Its presence in the DOM is the proof that core installed
 // the blocks-side overlay through the event seam.
 const OVERLAY_HOST = "plumix-dev-error-overlay";
 

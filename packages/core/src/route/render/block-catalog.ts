@@ -1,17 +1,18 @@
 // Block render strings resolve through `BlockContext.t` against one compiled
-// catalog per request locale: the blocks package's own (core-block and
+// catalog per request locale: core's blocks catalog (core-block and
 // renderer strings) under every installed plugin's. Plugin catalogs reach the
 // Worker through `virtual:plumix/plugin-catalogs`, which the Vite plugin
 // generates from each plugin's `i18n` slot — there's no fs at request time.
 // Unit tests resolve these static imports to empty catalogs, so an unwired
 // locale renders the descriptors' English source.
 
-import type { CompiledCatalog } from "@plumix/blocks";
-import { messages as arMessages } from "@plumix/blocks/locales/ar";
-import { messages as deMessages } from "@plumix/blocks/locales/de";
-import { messages as enMessages } from "@plumix/blocks/locales/en";
-import { messages as ukMessages } from "@plumix/blocks/locales/uk";
-import { messages as zhCnMessages } from "@plumix/blocks/locales/zh-CN";
+import { messages as arMessages } from "@plumix/core/locales/blocks-ar";
+import { messages as deMessages } from "@plumix/core/locales/blocks-de";
+import { messages as enMessages } from "@plumix/core/locales/blocks-en";
+import { messages as ukMessages } from "@plumix/core/locales/blocks-uk";
+import { messages as zhCnMessages } from "@plumix/core/locales/blocks-zh-CN";
+
+import type { CompiledCatalog } from "../../blocks/index.js";
 
 const BLOCKS_CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   en: enMessages,

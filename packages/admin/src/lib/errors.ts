@@ -72,7 +72,7 @@ export class AdminPluginRegistryError extends Error {
       "ssr_walked_admin_spec",
       "Admin-only plugin block spec rendered on the SSR walker path. " +
         "registries.ts contributions are admin-only; the runtime walker " +
-        "must source `component` from `@plumix/blocks` directly.",
+        "must source `component` from `@plumix/core/blocks` directly.",
       {},
     );
   }

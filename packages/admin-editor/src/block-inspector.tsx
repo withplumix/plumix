@@ -2,8 +2,8 @@ import type { ReactElement } from "react";
 import { useCallback } from "react";
 import { Trans } from "@lingui/react";
 
-import type { JsonValue } from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+import type { JsonValue } from "@plumix/core/blocks";
+import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
 import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";

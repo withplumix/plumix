@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 
-import { coreBlocks, defineBlock } from "@plumix/blocks";
+import { coreBlocks, defineBlock } from "@plumix/core/blocks";
 
 import {
   _resetPluginRegistry,

@@ -1,16 +1,14 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-import type {
-  BlockRegistry,
-  MarkSpec,
-  ShortcodeRegistry,
-} from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
-
 import type { Access } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Capability } from "../auth/contract/capability.js";
 import type { Mailer } from "../auth/mailer/types.js";
+import type {
+  BlockRegistry,
+  MarkSpec,
+  ShortcodeRegistry,
+} from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
@@ -37,6 +35,7 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveCapability } from "../auth/contract/capability.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
+import { createBlockRegistry } from "../blocks/index.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";

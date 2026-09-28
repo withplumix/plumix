@@ -3,8 +3,8 @@ import { useState } from "react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { BlockRegistry } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockRegistry } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import type { EditorConfig } from "./editor-config-context.js";
 import {

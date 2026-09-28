@@ -33,7 +33,7 @@ const RENDER_AND_ADMIN_PATHS = [
   "packages/admin",
   "packages/admin-editor",
   "packages/admin-ui",
-  "packages/blocks",
+  "packages/core/src/blocks",
   "packages/core/src/route",
   "apps/",
 ];

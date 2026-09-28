@@ -1,5 +1,5 @@
-import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type { JsonObject } from "@plumix/core";
+import type { ThemeBreakpoints, ThemeTokens } from "@plumix/core/blocks";
 import type {
   AccessPolicyChoice,
   AdminNavGroup,
@@ -17,7 +17,7 @@ import type {
   TermTaxonomyManifestEntry,
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
-import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
+import { DEFAULT_BREAKPOINTS } from "@plumix/core/blocks";
 import {
   byPriorityThen,
   configuredSlotsOf,
