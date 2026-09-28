@@ -1,117 +1,18 @@
 import { join } from "node:path";
-import type { CommandDefinition, PlumixConfig } from "plumix";
-import type { PlumixHandler } from "plumix/runtime";
-import type { Logger, Plugin } from "vite";
-import type { EvaluatedModules, ModuleRunner } from "vite/module-runner";
-import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix/runtime";
+import type { CommandDefinition } from "plumix";
+import type { DevEntry } from "plumix/vite";
 
-import type { RequestListener } from "../http/bridge.js";
+import type { RequestHandler } from "../http/bridge.js";
 import type { NodeSite } from "../site.js";
-import type { LoadedSite } from "./site-reloader.js";
 import { isNodeRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createImageLayer } from "../http/images.js";
 import { createDotenvLoader } from "./dotenv.js";
-import { createSiteReloader } from "./site-reloader.js";
-import { ENTRY_FILE, serverEnvironment, serverExternals } from "./vite.js";
+import { nodeServerEnvironment } from "./vite.js";
 
-interface DevArgs {
-  readonly port?: number;
-  /** A name or address to bind, or `true` for every interface. */
-  readonly host?: string | true;
-}
-
-export function parseDevArgs(argv: readonly string[]): DevArgs {
-  const args: { port?: number; host?: string | true } = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i];
-    if (token === "--port") {
-      const raw = argv[i + 1];
-      if (raw === undefined) {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --port requires a value (e.g. --port 3030)",
-        );
-      }
-      args.port = parsePort(raw);
-      i += 1;
-      continue;
-    }
-    if (token?.startsWith("--port=")) {
-      args.port = parsePort(token.slice("--port=".length));
-      continue;
-    }
-    if (token === "--host") {
-      const raw = argv[i + 1];
-      if (raw === undefined || raw.startsWith("--")) {
-        args.host = true;
-        continue;
-      }
-      args.host = raw;
-      i += 1;
-      continue;
-    }
-    if (token?.startsWith("--host=")) {
-      const raw = token.slice("--host=".length);
-      // An empty name would bind every interface, silently.
-      if (raw === "") {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --host= requires a value (e.g. --host=0.0.0.0, or --host for every interface)",
-        );
-      }
-      args.host = raw;
-      continue;
-    }
-  }
-  return args;
-}
-
-function parsePort(raw: string): number {
-  const port = Number(raw);
-  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-    throw new Error(
-      `plumix dev: --port value "${raw}" must be a number between 1 and 65535`,
-    );
-  }
-  return port;
-}
-
-/**
- * Drop a changed file and everything that imports it from the runner's cache,
- * so the next import through the runner re-evaluates that chain up to the
- * entry. The module graph Vite invalidates on its own only governs what the
- * server *transforms*; what the runner has already *evaluated* is this cache,
- * and a module left in it keeps serving the old code. Returns whether the
- * runner had evaluated the file at all.
- */
-export function invalidateFile(
-  modules: EvaluatedModules,
-  file: string,
-): boolean {
-  const seen = new Set<string>();
-  function walk(id: string): void {
-    if (seen.has(id)) return;
-    seen.add(id);
-    const node = modules.getModuleById(id);
-    if (!node) return;
-    modules.invalidateModule(node);
-    for (const importer of node.importers) walk(importer);
-  }
-  const changed = modules.getModulesByFile(file);
-  if (!changed) return false;
-  for (const node of changed) walk(node.id);
-  return true;
-}
-
-interface DevEntry extends Partial<Pick<NodeSite, "startCron" | "dispose">> {
-  readonly default: PlumixHandler;
-}
-
-const SERVER_ENVIRONMENT = "server";
+type NodeDevEntry = DevEntry & Partial<Pick<NodeSite, "startCron" | "dispose">>;
 
 export const devCommand: CommandDefinition = {
   describe: "Start the dev server (vite). Accepts --port and --host.",
@@ -120,195 +21,52 @@ export const devCommand: CommandDefinition = {
   // instead of aborting the terminal before the server is up.
   deferApp: true,
   async run(ctx) {
-    const { port, host } = parseDevArgs(ctx.argv);
-    const vite = await import("vite");
-    const { emitPlumixSources, plumix } = await import("plumix/vite");
-    const entryPath = join(ctx.cwd, ENTRY_FILE);
+    const { runDevCommand } = await import("plumix/vite");
     const loadDotenv = createDotenvLoader();
-    const reloader = createSiteReloader();
 
-    async function loadSite(
-      runner: ModuleRunner,
-      publicDir: string,
-    ): Promise<LoadedSite> {
-      const config = (
-        await runner.import<{ default: PlumixConfig }>(ctx.configPath)
-      ).default;
-      const entry = await runner.import<DevEntry>(entryPath);
-      const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
-        ? config.runtime.config
-        : {};
-      // Points at the staged public dir so admin deep links resolve to the
-      // shell Vite also serves.
-      const env = { ...process.env, [ASSETS_DIR_ENV]: publicDir };
-      const bridge = createRequestListener(
-        async (request, meta) =>
-          entry.default.fetch(request, {
-            env,
-            clientAddress: meta.clientAddress,
-          }),
-        { trustProxy, bodySizeLimit },
-      );
-      // As in the built entry: a same-origin image source is a public file
-      // Vite would serve, else the site, as an anonymous GET.
-      const images = createImageLayer(config.imageDelivery, {
-        assets: createAssetsLayer({ root: publicDir }),
-        trustProxy,
-        basePath: config.basePath,
-        fetch: (request, meta) =>
-          entry.default.fetch(request, {
-            env,
-            clientAddress: meta.clientAddress,
-          }),
-      });
-      // Dev is one process, so serialising the loop is guard enough; the
-      // lease is sized in minutes and would outlive a process that restarts
-      // every few seconds, leaving cron looking dead for the session. The
-      // claim row still stops a reload replaying a minute.
-      const scheduler =
-        isNodeRuntime(config.runtime) && config.runtime.config.cron !== false
-          ? await entry.startCron?.({ lease: false })
-          : undefined;
-      return {
-        listener: (req, res) => images.serve(req, res, () => bridge(req, res)),
-        scheduler,
-        dispose: entry.dispose,
-      };
-    }
-
-    // Requests waiting on a load that threw get the page a failed `buildApp`
-    // renders.
-    function bootFailure(error: unknown, logger: Logger): RequestListener {
-      logger.error(String(error), {
-        error: error instanceof Error ? error : undefined,
-      });
-      return createRequestListener(() =>
-        Promise.resolve(renderDevBootErrorResponse(error)),
-      );
-    }
-
-    const nodeDev: Plugin = {
-      name: "plumix-node:dev",
-      // Runs at start and again on each restart Vite makes for a `.env` or
-      // config edit, so everything the dev server derives from the project
-      // sees the same environment: the file first, then a fresh config
-      // evaluation for the emitted sources and the staged admin manifest —
-      // the CLI's own evaluation, which the plugin would otherwise reuse,
-      // predates the file.
-      async config() {
-        loadDotenv(join(ctx.cwd, ".env"));
-        const { runtime } = await emitPlumixSources(ctx.cwd, ctx.configPath, {
-          fresh: true,
-        });
-        const build = isNodeRuntime(runtime)
-          ? (runtime.config.build ?? {})
+    await runDevCommand<NodeDevEntry>(ctx, {
+      environment: nodeServerEnvironment,
+      loadEnv: (cwd) => loadDotenv(join(cwd, ".env")),
+      stagedFiles: (root) => createAssetsLayer({ root }).serve,
+      async site({ config, entry, publicDir }) {
+        const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
+          ? config.runtime.config
           : {};
-        return {
-          environments: {
-            [SERVER_ENVIRONMENT]: {
-              ...serverEnvironment(build),
-              // The runner evaluates ESM only, and `react` and friends ship
-              // CommonJS; with everything inlined they have to be pre-bundled,
-              // discovered from the entry as the Cloudflare plugin does for
-              // its worker. A dependency first seen after start re-bundles
-              // without failing the request that found it — the runner has no
-              // page to reload. What the build leaves external stays out.
-              optimizeDeps: {
-                noDiscovery: false,
-                ignoreOutdatedRequests: true,
-                entries: vite.normalizePath(entryPath),
-                exclude: serverExternals(build),
-              },
-              dev: {
-                // HMR stays off in the runner: invalidation is explicit, in
-                // `hotUpdate`, rather than left to the runner's own client.
-                createEnvironment: (name, config) =>
-                  vite.createRunnableDevEnvironment(name, config, {
-                    hot: false,
-                  }),
-              },
-            },
-          },
-        };
-      },
-      configureServer(server) {
-        const environment = server.environments[SERVER_ENVIRONMENT];
-        if (!environment || !vite.isRunnableDevEnvironment(environment)) {
-          // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-          throw new Error(
-            `plumix dev: the "${SERVER_ENVIRONMENT}" environment is not runnable`,
-          );
-        }
-        const { runner } = environment;
-        // A restart hands over a new runner; nothing imported through the old
-        // one may answer again.
-        reloader.invalidate();
-
-        // Ahead of everything Vite serves: a request from a host that is not
-        // loopback gets no module source, no admin shell and no site.
-        // `PLUMIX_DEV_ALLOW_REMOTE` is the documented opt-out.
-        server.middlewares.use((req, res, next) => {
-          if (isTrustedDevHost(req.headers.host)) {
-            next();
-            return;
-          }
-          res.statusCode = 403;
-          res.setHeader("content-type", "text/plain; charset=utf-8");
-          res.end(
-            "plumix dev answers loopback requests only; set PLUMIX_DEV_ALLOW_REMOTE=1 to open it up.\n",
-          );
-        });
-
-        // The staged tree, served from disk rather than through vite. Vite
-        // answers publicDir from a listing taken once at `createServer` and
-        // repaired by watcher events, and the admin shell is staged after that
-        // listing — so under load a chunk can be missing from the set for the
-        // life of the server. Vite then calls `next()`, and the dispatcher,
-        // seeing an asset-shaped path at the root base, 404s it without ever
-        // reading the disk (#2225).
-        server.middlewares.use(
-          createAssetsLayer({ root: server.config.publicDir }).serve,
-        );
-
-        // Returned, so it lands after Vite's own middlewares: module serving,
-        // HMR and the staged admin shell answer first.
-        return () => {
-          const build = () => loadSite(runner, server.config.publicDir);
-          const fail = (error: unknown) =>
-            bootFailure(error, server.config.logger);
-          server.middlewares.use((req, res) => {
-            void reloader
-              .current(build, fail)
-              .then((bridge) => bridge(req, res));
+        // Points at the staged public dir so admin deep links resolve to the
+        // shell Vite also serves.
+        const env = { ...process.env, [ASSETS_DIR_ENV]: publicDir };
+        const fetch: RequestHandler = async (request, meta) =>
+          entry.default.fetch(request, {
+            env,
+            clientAddress: meta.clientAddress,
           });
+        const bridge = createRequestListener(fetch, {
+          trustProxy,
+          bodySizeLimit,
+        });
+        // As in the built entry: a same-origin image source is a public file
+        // Vite would serve, else the site, as an anonymous GET.
+        const images = createImageLayer(config.imageDelivery, {
+          assets: createAssetsLayer({ root: publicDir }),
+          trustProxy,
+          basePath: config.basePath,
+          fetch,
+        });
+        // Dev is one process, so serialising the loop is guard enough; the
+        // lease is sized in minutes and would outlive a process that restarts
+        // every few seconds, leaving cron looking dead for the session. The
+        // claim row still stops a reload replaying a minute.
+        const scheduler =
+          isNodeRuntime(config.runtime) && config.runtime.config.cron !== false
+            ? await entry.startCron?.({ lease: false })
+            : undefined;
+        return {
+          listener: (req, res) =>
+            images.serve(req, res, () => bridge(req, res)),
+          scheduler,
+          dispose: entry.dispose,
         };
       },
-      hotUpdate({ file }) {
-        const environment = this.environment;
-        if (
-          environment.name !== SERVER_ENVIRONMENT ||
-          !vite.isRunnableDevEnvironment(environment)
-        ) {
-          return;
-        }
-        if (invalidateFile(environment.runner.evaluatedModules, file)) {
-          reloader.invalidate();
-        }
-      },
-    };
-
-    const server = await vite.createServer({
-      configFile: false,
-      root: ctx.cwd,
-      // No `index.html` fallback: the entry answers every request Vite does not.
-      appType: "custom",
-      plugins: [nodeDev, plumix({ configFile: ctx.configPath })],
-      // `strictPort` when --port is explicit: an e2e harness points playwright
-      // at the requested port and needs a fail-fast, not vite's silent
-      // fallback to the next free one.
-      server: { port, strictPort: port !== undefined, host },
     });
-    await server.listen();
-    server.printUrls();
   },
 };

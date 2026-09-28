@@ -664,6 +664,23 @@ export const ROSTER: Readonly<
       },
       {
         reason:
+          "the shared bodies of a self-hosted runtime's `build` and `dev` " +
+          "commands, which the runtime supplies only its configuration to " +
+          "(runtime-node)",
+        names: [
+          "serverEnvironment",
+          "ServerEnvironmentOptions",
+          "runBuildCommand",
+          "BuildCommandOptions",
+          "runDevCommand",
+          "DevCommandOptions",
+          "DevEntry",
+          "DevListener",
+          "LoadedSite",
+        ],
+      },
+      {
+        reason:
           "a plugin's whole vitest config: the Node and browser test tiers " +
           "its test files pick by name (ADR 0021)",
         names: ["defineTestConfig"],
