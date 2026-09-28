@@ -110,7 +110,8 @@ function listDrift(
  */
 export function rosterDrift(packageDir: string): string[] {
   const modules = componentModules(packageDir);
-  const exportKeys = Object.keys(readManifest(packageDir).exports ?? {})
+  const { exports } = readManifest(packageDir);
+  const exportKeys = Object.keys(exports ?? {})
     .filter((key) => key !== ".")
     .map((key) => key.slice(2));
   const barrel = readFileSync(barrelPath(packageDir), "utf8");
@@ -126,8 +127,7 @@ export function rosterDrift(packageDir: string): string[] {
   if (drift.length > 0) return drift;
   // Same members, so what is left is order, targets or hand-edited lines.
   const exportsMatch =
-    JSON.stringify(readManifest(packageDir).exports) ===
-    JSON.stringify(expectedExports(modules));
+    JSON.stringify(exports) === JSON.stringify(expectedExports(modules));
   return [
     ...(exportsMatch
       ? []
