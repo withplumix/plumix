@@ -7,13 +7,16 @@ import {
   parkTicket,
   queueForMerge,
   releaseClaim,
+  rerunFailedJobs,
   syncRepoToMain,
   textsThatClaimAdrNumbers,
   ticketByNumber,
   waitForMerge,
 } from "./lib/github.js";
 import { say } from "./lib/log.js";
-import { repairPullRequest } from "./lib/repair.js";
+import { refuseToStartOnABrokenMachine } from "./lib/preflight.js";
+import { idsInJobUrl, repairPullRequest } from "./lib/repair.js";
+import { REPO_ROOT } from "./lib/repo.js";
 import { runShipLoop } from "./lib/run.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
@@ -66,6 +69,8 @@ say(
   `Ship run — budget ${asDuration(budgetMs)}, ${laneCount} lane(s), ends ${new Date(endOfBudget).toLocaleTimeString()}`,
 );
 
+if (refuseToStartOnABrokenMachine(REPO_ROOT, say)) process.exit(1);
+
 syncRepoToMain();
 
 const report = await runShipLoop(
@@ -115,7 +120,22 @@ const report = await runShipLoop(
         },
       );
     },
-    requeue: ({ number }) => queueForMerge(number),
+    rerunFailedChecks: async (_pullRequest, refusal) =>
+      refusal.status === "failed" &&
+      rerunFailedJobs([
+        ...new Set(
+          refusal.failingChecks.flatMap(
+            ({ url }) => idsInJobUrl(url)?.runId ?? [],
+          ),
+        ),
+      ]),
+    requeue: ({ number }) => {
+      try {
+        queueForMerge(number);
+      } catch (error) {
+        say(`  #${number} requeue: ${String(error).split("\n")[0]}`);
+      }
+    },
     confirm: (pullRequest) =>
       waitForMerge(pullRequest.number, {
         pollEveryMs: MERGE_POLL_INTERVAL_MS,

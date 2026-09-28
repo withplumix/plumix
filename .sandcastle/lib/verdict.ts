@@ -10,6 +10,7 @@ export type MergeOutcome =
       readonly reason: string;
       readonly failingChecks: readonly FailingCheck[];
       readonly conflicted?: boolean;
+      readonly fromTheMergeGroup?: boolean;
       readonly codeScanningAlerts?: readonly string[];
       readonly reviewThreads?: readonly ReviewThread[];
       readonly needsAPerson?: boolean;

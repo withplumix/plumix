@@ -15,6 +15,8 @@ import {
 import { drainAcrossLanes, drainingFrom } from "./lib/lanes.js";
 import { say } from "./lib/log.js";
 import { looksLikeTheRunBeingOver } from "./lib/outage.js";
+import { refuseToStartOnABrokenMachine } from "./lib/preflight.js";
+import { REPO_ROOT } from "./lib/repo.js";
 import { closePlumixSandbox, createReadOnlySandbox } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
 import {
@@ -101,6 +103,8 @@ const { onlyIssue, limit, queueDepth, lanes, budgetMs, dryRun, models } =
   readOptions(process.argv.slice(2));
 const endOfBudget = Date.now() + budgetMs;
 
+if (refuseToStartOnABrokenMachine(REPO_ROOT, say)) process.exit(1);
+
 syncRepoToMain();
 
 const candidates = listTriageCandidates();
@@ -144,7 +148,12 @@ const sandboxes = await Promise.all(
     resetBranchToMain(branch);
     return createReadOnlySandbox(branch);
   }),
-);
+).catch((error: unknown) => {
+  say(
+    `Not starting — no sandbox could be created: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  process.exit(1);
+});
 
 const promotedSoFar = (settled: readonly TriageResult[]): number =>
   settled.filter(({ outcome }) => outcome.status === "promoted").length;
