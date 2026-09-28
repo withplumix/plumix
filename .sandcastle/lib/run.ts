@@ -200,7 +200,16 @@ export const runShipLoop = async (
     const settledConfirmation = await outcome;
 
     if (settledConfirmation.status === "rejected") {
-      const reason = `the run could not confirm ${pullRequest.url}: ${asReason(settledConfirmation.reason)}`;
+      const thrown = asReason(settledConfirmation.reason);
+      if (looksLikeTheRunBeingOver(thrown)) {
+        outage ??= thrown;
+        ports.releaseClaim(ticket);
+        ports.say(
+          `  #${ticket.number} left as it was, ${pullRequest.url} still open — ${thrown}`,
+        );
+        continue;
+      }
+      const reason = `the run could not confirm ${pullRequest.url}: ${thrown}`;
       ports.park(ticket, reason, pullRequest.url);
       parked.push({ ticket, reason });
       continue;
