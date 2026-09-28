@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { CHANGESET_GATE, GATES } from "./gates.js";
 import { workersALaneOversubscribes } from "./sandbox.js";
 import {
+  gatesUntilGreen,
   readDeclinedTag,
   readFindingsTag,
   readPullRequestTag,
@@ -174,5 +175,80 @@ describe("workersALaneOversubscribes", () => {
     expect(workersALaneOversubscribes(4)).toBe(
       workersALaneOversubscribes(2) * 2,
     );
+  });
+});
+
+describe("gatesUntilGreen", () => {
+  const gates = [
+    { name: "typecheck", command: "typecheck" },
+    { name: "e2e", command: "e2e" },
+    { name: "test", command: "test" },
+  ];
+  const journal = { record: () => {} };
+  const sandbox = (
+    fails: (command: string) => boolean,
+    ran: string[] = [],
+  ) => ({
+    exec: async (command: string) => {
+      ran.push(command);
+      return {
+        exitCode: fails(command) ? 1 : 0,
+        stdout: "",
+        stderr: `${command} failed`,
+        durationMs: 0,
+      };
+    },
+  });
+
+  test("a gate the fixer says the branch did not break is waived, and the gates after it still run", async () => {
+    const ran: string[] = [];
+    const outcome = await gatesUntilGreen(
+      sandbox((command) => command === "e2e", ran),
+      gates,
+      journal,
+      { apply: async () => "a startup race in plumix dev that main has too" },
+      "final",
+    );
+
+    expect(outcome).toEqual({
+      blocked: null,
+      waived: [
+        {
+          command: "e2e",
+          reason: "a startup race in plumix dev that main has too",
+        },
+      ],
+    });
+    expect(ran).toContain("test");
+  });
+
+  test("a gate the fixer fixes is not waived", async () => {
+    let fixed = false;
+    const outcome = await gatesUntilGreen(
+      sandbox((command) => command === "e2e" && !fixed),
+      gates,
+      journal,
+      {
+        apply: async () => {
+          fixed = true;
+          return null;
+        },
+      },
+      "final",
+    );
+
+    expect(outcome).toEqual({ blocked: null, waived: [] });
+  });
+
+  test("a gate still failing after every fix round blocks the ticket", async () => {
+    const outcome = await gatesUntilGreen(
+      sandbox((command) => command === "typecheck"),
+      gates,
+      journal,
+      { apply: async () => null },
+      "final",
+    );
+
+    expect(outcome.blocked).toMatch(/still failing `typecheck`/);
   });
 });
