@@ -15,6 +15,7 @@ import {
   WONTFIX_LABEL,
 } from "./repo.js";
 import { judgeQueuedPullRequest } from "./verdict.js";
+import { leftoverSandboxWorktree } from "./worktrees.js";
 
 export interface Ticket {
   readonly number: number;
@@ -484,8 +485,18 @@ export const syncRepoToMain = (): void => {
   git(["fetch", "-p", "origin", "main"]);
 };
 
+export const clearLeftoverWorktree = (branch: string): void => {
+  const leftover = leftoverSandboxWorktree(
+    git(["worktree", "list", "--porcelain"]),
+    REPO_ROOT,
+    branch,
+  );
+  if (leftover) git(["worktree", "remove", "--force", leftover]);
+};
+
 export const resetBranchToMain = (branch: string): void => {
   git(["fetch", "-q", "origin", "main"]);
+  clearLeftoverWorktree(branch);
   git(["branch", "-f", branch, "origin/main"]);
 };
 

@@ -9,6 +9,7 @@ import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
 import { CHANGESET_GATE, GATES } from "./gates.js";
 import {
   branchOfPullRequest,
+  clearLeftoverWorktree,
   pushBranch,
   resolveReviewThreads,
 } from "./github.js";
@@ -161,6 +162,7 @@ export const repairPullRequest = async (
   const branch = branchOfPullRequest(pullRequest.number);
   journal.setTicket(ticket, branch);
   git(["fetch", "-q", "origin", "main", branch]);
+  clearLeftoverWorktree(branch);
   git(["branch", "-f", branch, `origin/${branch}`]);
 
   const sandbox = await createPlumixSandbox(branch);
