@@ -11,7 +11,9 @@ type ScaffoldErrorCode =
   | "unknown_plugin"
   | "unknown_auth_method"
   | "wrangler_file_missing"
-  | "snapshot_missing";
+  | "snapshot_missing"
+  | "smoke_package_manager_unsupported"
+  | "smoke_start_missing";
 
 /**
  * A scaffolder failure. The interface callers depend on is the human-readable
@@ -146,6 +148,22 @@ export class ScaffoldError extends Error {
       "snapshot_missing",
       `Could not read or parse the bundled registry snapshot at ${ctx.path}. This is a packaging bug — please report it.`,
       { cause: ctx.cause },
+    );
+  }
+
+  static smokePackageManagerUnsupported(ctx: {
+    packageManager: string;
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "smoke_package_manager_unsupported",
+      `The scaffold smoke cannot redirect ${ctx.packageManager} at the packed tarballs: only pnpm and bun are wired.`,
+    );
+  }
+
+  static smokeStartMissing(ctx: { packageName: string }): ScaffoldError {
+    return new ScaffoldError(
+      "smoke_start_missing",
+      `${ctx.packageName} declares no "plumix.e2e.start" — the scaffold smoke boots every runtime's built server, so it needs the command that serves the build.`,
     );
   }
 }

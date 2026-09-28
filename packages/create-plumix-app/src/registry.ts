@@ -7,6 +7,7 @@ import type {
   RawAuthMethod,
   RuntimeDescriptor,
 } from "./compose/types.js";
+import type { PackageManager } from "./package-manager.js";
 import { ScaffoldError } from "./errors.js";
 
 /** The raw `plumix.scaffold` block as authored in a package's package.json. */
@@ -26,6 +27,8 @@ interface RawScaffoldMeta extends Contribution {
   readonly gitignore?: readonly string[];
   /** Runtime only: ambient type packages the project's tsconfig lists. */
   readonly types?: readonly string[];
+  /** Runtime only: the package manager a project on this runtime installs with. */
+  readonly packageManager?: PackageManager;
   /** Runtime only: path to the markdown that becomes the README's Deploy section. */
   readonly readme?: string;
   /** dest path in the scaffolded project → source path in this package. */
@@ -152,6 +155,7 @@ async function toRuntimeDescriptor(
     secretsFile: meta.secretsFile ?? DEFAULT_SECRETS_FILE,
     gitignore: meta.gitignore,
     types: meta.types,
+    packageManager: meta.packageManager,
     readme: meta.readme
       ? await readContributed(pkgDir, meta.readme, rel)
       : undefined,

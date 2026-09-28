@@ -1,4 +1,5 @@
-// Scaffolds representative projects and proves they typecheck and build.
+// Scaffolds representative projects and proves they typecheck, build and
+// serve: each built server is started and requested before the next combo.
 //
 // The base skeleton lives inside this package rather than as a workspace
 // package, so nothing else ever compiles it. This is what catches a core,
@@ -8,7 +9,8 @@
 // that is what a real user gets — but installing those would test the last
 // release rather than this commit. So every publishable package is packed and
 // resolution is redirected at the tarballs via pnpm overrides, which apply
-// transitively across the whole plumix graph.
+// transitively across the whole plumix graph. Each combo installs with its
+// runtime's declared package manager, pnpm unless it names another.
 //
 // Packing rather than linking is deliberate: a linked package's own
 // dependencies stay in the monorepo and don't resolve from the generated
@@ -18,11 +20,12 @@
 //
 // The sibling `.github/scripts/smoke.mjs` answers a different question — do
 // the real published tarballs work end to end — by publishing to a throwaway
-// Verdaccio and booting the app. It is slower and gates releases. This is the
-// fast per-commit canary.
+// Verdaccio and booting `plumix dev` on Cloudflare. It is slower and gates
+// releases. This is the fast per-commit canary.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync, spawn } from "node:child_process";
 import {
+  createWriteStream,
   existsSync,
   mkdtempSync,
   readdirSync,
@@ -30,12 +33,21 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse as parseJsonc } from "jsonc-parser";
 
 const REPO = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const CLI = join(REPO, "packages/create-plumix-app/dist/index.js");
+
+const { loadRegistry } = await import(
+  join(REPO, "packages/create-plumix-app/dist/registry.js")
+);
+const { planBoot, planInstall, planSmokeCombos } = await import(
+  join(REPO, "packages/create-plumix-app/dist/smoke-plan.js")
+);
 
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, stdio: "inherit", encoding: "utf8" });
@@ -65,31 +77,38 @@ function packPlumixPackages(destination) {
   return tarballs;
 }
 
-function redirectToTarballs(appDir, tarballs) {
+function redirectToTarballs(appDir, patch) {
   const manifestPath = join(appDir, "package.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  manifest.pnpm = {
-    ...manifest.pnpm,
-    overrides: Object.fromEntries(
-      [...tarballs].map(([name, tgz]) => [name, `file:${tgz}`]),
-    ),
-  };
+  for (const [key, value] of Object.entries(patch)) {
+    manifest[key] = { ...manifest[key], ...value };
+  }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
 
 /**
- * Anything reached from the registry resolves as `plumix@0.1.2_…`; ours resolve
- * through `@file+`. Scan the whole store rather than the declared deps — most
- * of the graph arrives transitively, so checking direct deps alone would miss
- * a leak, and an empty list would pass while verifying nothing.
+ * Anything reached from the registry resolves as `plumix@0.1.2_…` in pnpm's
+ * store and as `plumix@0.1.2` in Bun's lockfile; ours resolve through the
+ * tarball. Scan everything installed rather than the declared deps — most of
+ * the graph arrives transitively, so checking direct deps alone would miss a
+ * leak, and an empty list would pass while verifying nothing.
  */
-function assertNothingFromRegistry(appDir) {
-  const store = readdirSync(join(appDir, "node_modules", ".pnpm"));
-  const plumix = store.filter((entry) => /^(plumix@|@plumix\+)/.test(entry));
+function assertNothingFromRegistry(appDir, packageManager) {
+  const resolved =
+    packageManager === "bun"
+      ? Object.values(
+          parseJsonc(readFileSync(join(appDir, "bun.lock"), "utf8")).packages,
+        ).map(([resolution]) => resolution)
+      : readdirSync(join(appDir, "node_modules", ".pnpm"));
+  const plumix = resolved.filter((entry) =>
+    /^(plumix@|@plumix[+/])/.test(entry),
+  );
   if (plumix.length === 0) {
     throw new Error(`No plumix packages in ${appDir} — nothing was verified.`);
   }
-  const leaked = plumix.filter((entry) => !entry.includes("@file+"));
+  const leaked = plumix.filter(
+    (entry) => !(entry.includes("@file+") || entry.includes(".tgz")),
+  );
   if (leaked.length > 0) {
     throw new Error(
       `Resolved from the registry rather than this commit: ${leaked.join(", ")}. ` +
@@ -197,11 +216,138 @@ function assertCatalogsStaged(appDir, excluded) {
   }
 }
 
-function smoke(combo, tarballs) {
+/**
+ * The runtime package the project installed, found the way the Playwright
+ * helper finds it: the dependency carrying a runtime scaffold block. Read from
+ * the installed tarball, so the published manifest is what declares the boot.
+ */
+function installedRuntime(appDir) {
+  const { dependencies } = JSON.parse(
+    readFileSync(join(appDir, "package.json"), "utf8"),
+  );
+  for (const name of Object.keys(dependencies)) {
+    const manifestPath = join(appDir, "node_modules", name, "package.json");
+    if (!existsSync(manifestPath)) continue;
+    const { plumix } = JSON.parse(readFileSync(manifestPath, "utf8"));
+    if (plumix?.scaffold?.kind === "runtime") {
+      return { name, e2e: plumix.e2e ?? {} };
+    }
+  }
+  throw new Error(`No runtime package among the dependencies of ${appDir}.`);
+}
+
+function freePort() {
+  return new Promise((done, fail) => {
+    const server = createServer();
+    server.once("error", fail);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      server.close(() => done(port));
+    });
+  });
+}
+
+// Detached, so the negative pid reaches everything the shell started —
+// wrangler's workerd above all.
+function stop(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch {
+    // Already gone.
+  }
+}
+
+/**
+ * The three requests a working site answers: the public front page, the
+ * admin shell, and the whoami RPC the admin boots from. The first is polled
+ * until the server is up; a server that exits first fails at once.
+ */
+async function assertServes(base, child) {
+  const exited = new Promise((_, fail) =>
+    child.once("exit", (code, signal) =>
+      fail(
+        new Error(`The server exited (${signal ?? code}) before it served.`),
+      ),
+    ),
+  );
+  exited.catch(() => {});
+  const deadline = Date.now() + 90_000;
+  let last = "no attempt";
+  for (;;) {
+    const attempt = await Promise.race([
+      fetch(`${base}/`).then(
+        (res) => (res.status === 200 ? null : `status ${res.status}`),
+        (err) => err.message,
+      ),
+      exited,
+    ]);
+    if (attempt === null) break;
+    last = attempt;
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Timed out waiting for ${base}/ to answer 200; last: ${last}`,
+      );
+    }
+    await new Promise((wait) => setTimeout(wait, 500));
+  }
+
+  const admin = await fetch(`${base}/_plumix/admin/`);
+  if (admin.status !== 200) {
+    throw new Error(`${base}/_plumix/admin/ answered ${admin.status}.`);
+  }
+  const session = await fetch(`${base}/_plumix/rpc/auth/session`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-plumix-request": "1" },
+    body: JSON.stringify({ json: {} }),
+  });
+  if (session.status !== 200) {
+    throw new Error(
+      `${base}/_plumix/rpc/auth/session answered ${session.status}: ${await session.text()}`,
+    );
+  }
+}
+
+async function boot(appDir) {
+  const runtime = installedRuntime(appDir);
+  const plan = planBoot(runtime.name, runtime.e2e);
+  // The project's bins first, so `plumix`, `wrangler` and whatever they spawn
+  // resolve from what this combo installed.
+  const bin = join(appDir, "node_modules", ".bin");
+  const env = { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` };
+  for (const command of plan.migrate) {
+    execSync(command, { cwd: appDir, env, stdio: "inherit" });
+  }
+
+  const port = await freePort();
+  const logFile = join(appDir, "server.log");
+  const log = createWriteStream(logFile);
+  const child = spawn(plan.start, {
+    cwd: appDir,
+    env: { ...env, PORT: String(port) },
+    shell: true,
+    detached: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.pipe(log);
+  child.stderr.pipe(log);
+  try {
+    await assertServes(`http://127.0.0.1:${port}`, child);
+  } catch (err) {
+    // The temp dir goes with the combo, so surface the server's output now.
+    console.error(readFileSync(logFile, "utf8").slice(-4000));
+    throw err;
+  } finally {
+    stop(child);
+  }
+}
+
+async function smoke(combo, tarballs) {
   const dir = mkdtempSync(join(tmpdir(), `plumix-smoke-${combo.name}-`));
   const app = join(dir, "app");
+  const pm = combo.packageManager;
   try {
-    console.log(`\n=== ${combo.name} ===`);
+    console.log(`\n=== ${combo.name} (${pm}) ===`);
     run("node", [
       CLI,
       app,
@@ -213,14 +359,17 @@ function smoke(combo, tarballs) {
 
     if (combo.secondLocale) enableSecondLocale(app);
     if (combo.typescript7) useTypeScript7(app);
-    redirectToTarballs(app, tarballs);
-    run("pnpm", ["install", "--ignore-workspace", "--silent"], app);
-    assertNothingFromRegistry(app);
+    const install = planInstall(pm, tarballs);
+    redirectToTarballs(app, install.manifest);
+    const [installer, ...installArgs] = install.command;
+    run(installer, installArgs, app);
+    assertNothingFromRegistry(app, pm);
     if (combo.typescript7) assertTypeScript7(app);
 
-    run("pnpm", ["run", "typecheck"], app);
-    run("pnpm", ["run", "build"], app);
+    run(pm, ["run", "typecheck"], app);
+    run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
+    await boot(app);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -230,66 +379,11 @@ function smoke(combo, tarballs) {
 const packs = mkdtempSync(join(tmpdir(), "plumix-smoke-packs-"));
 try {
   const tarballs = packPlumixPackages(packs);
-  const { loadRegistry } = await import(
-    join(REPO, "packages/create-plumix-app/dist/registry.js")
-  );
-  const { availableAuthMethods } = await import(
-    join(REPO, "packages/create-plumix-app/dist/auth-methods.js")
-  );
   // From the registry, so a new runtime or plugin joins the matrix on its own.
-  const registry = await loadRegistry(REPO);
-  // Every runtime times the two shapes. `-y` on every combo: without it the
-  // remaining prompts drop the CLI into the wizard on a terminal. A plugin
-  // requiring a capability the runtime lacks is left out, as the scaffolder
-  // would refuse it by name; today every first-party plugin is offered on
-  // every runtime, and `excluded` is what says so.
-  const combos = registry.runtimes.flatMap((runtime) => {
-    const { id } = runtime;
-    const supported = (plugin) =>
-      (plugin.requires ?? []).every(
-        (capability) => runtime.capabilities?.[capability],
-      );
-    const excluded = registry.plugins
-      .filter((plugin) => !supported(plugin))
-      .map((plugin) => plugin.id);
-    const selected = registry.plugins
-      .filter(supported)
-      .map((plugin) => plugin.id);
-    const authIds = availableAuthMethods(runtime).map((method) => method.id);
-    return [
-      // `--plugins=` for none: a bare `-y` takes the recommended plugins.
-      { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },
-      {
-        name: `${id}-all-plugins`,
-        args: ["-y", "--runtime", id, "-p", selected.join(",")],
-        secondLocale: true,
-        excluded,
-      },
-      // Each auth method is a config fragment written as text, so only a
-      // generated project that typechecks and builds proves it still fits.
-      {
-        name: `${id}-all-auth`,
-        args: [
-          "-y",
-          "--runtime",
-          id,
-          "--plugins=",
-          "--auth",
-          authIds.join(","),
-        ],
-      },
-      // Every plugin, so the published declarations of the whole graph and
-      // the islands `plumix/vite` scans all meet the native compiler.
-      {
-        name: `${id}-typescript-7`,
-        args: ["-y", "--runtime", id, "-p", selected.join(",")],
-        typescript7: true,
-      },
-    ];
-  });
-  for (const combo of combos) smoke(combo, tarballs);
+  const combos = planSmokeCombos(await loadRegistry(REPO));
+  for (const combo of combos) await smoke(combo, tarballs);
   console.log(
-    `\nSmoke check passed: ${combos.length} generated projects typecheck and build.`,
+    `\nSmoke check passed: ${combos.length} generated projects typecheck, build and serve.`,
   );
 } finally {
   rmSync(packs, { recursive: true, force: true });

@@ -89,6 +89,7 @@
       }
     },
     "e2e": {
+      "start": "node dist/server/worker.js",
       "wipe": [
         "data"
       ],
