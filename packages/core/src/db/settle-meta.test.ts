@@ -45,7 +45,9 @@ const plugin = definePlugin("test-settle-meta", (ctx) => {
 
 describe("settleMeta", () => {
   test("a bag written through drizzle reads back as its declared types", async () => {
-    const { harness, ctx } = await createTracedContext({ plugins: [plugin] });
+    const { harness, ctx } = await createTracedContext({
+      config: { plugins: [plugin] },
+    });
     const author = await harness.factory.user.create();
     const post = await harness.factory.entry.create({
       authorId: author.id,
@@ -70,7 +72,9 @@ describe("settleMeta", () => {
   });
 
   test("settles term and user meta and a settings group", async () => {
-    const { ctx } = await createTracedContext({ plugins: [plugin] });
+    const { ctx } = await createTracedContext({
+      config: { plugins: [plugin] },
+    });
 
     expect(settleMeta(ctx, { taxonomy: "topic" }, { weight: "3" })).toEqual({
       weight: 3,
@@ -84,7 +88,9 @@ describe("settleMeta", () => {
   });
 
   test("leaves a value no declared type accepts, and a key no field owns", async () => {
-    const { ctx } = await createTracedContext({ plugins: [plugin] });
+    const { ctx } = await createTracedContext({
+      config: { plugins: [plugin] },
+    });
 
     expect(
       settleMeta(ctx, { entryType: "post" }, { rating: "nope", ghost: 1 }),
@@ -92,7 +98,9 @@ describe("settleMeta", () => {
   });
 
   test("settles repeater rows and groups at every level", async () => {
-    const { ctx } = await createTracedContext({ plugins: [plugin] });
+    const { ctx } = await createTracedContext({
+      config: { plugins: [plugin] },
+    });
 
     expect(
       settleMeta(
@@ -110,7 +118,9 @@ describe("settleMeta", () => {
   });
 
   test("an entity with no registered fields passes the bag through", async () => {
-    const { ctx } = await createTracedContext({ plugins: [plugin] });
+    const { ctx } = await createTracedContext({
+      config: { plugins: [plugin] },
+    });
 
     expect(settleMeta(ctx, { entryType: "page" }, { featured: 1 })).toEqual({
       featured: 1,

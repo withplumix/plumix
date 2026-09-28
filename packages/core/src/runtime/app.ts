@@ -152,13 +152,6 @@ export interface PlumixApp {
    */
   readonly origin: EnvInput<string>;
   /**
-   * Normalized subdirectory prefix from `config.basePath` (`""` for a root
-   * deployment). Hoisted alongside `origin` so the dispatcher and runtime
-   * adapters thread it onto each per-request `AppContext` without reaching
-   * into `config`.
-   */
-  readonly basePath: string;
-  /**
    * `config.dev`, resolved once — every per-request `ctx.dev` is this
    * instance, so the bar, the history read routes and the two dev MCP tools
    * share one request-history ring the app configured rather than a module
@@ -483,7 +476,6 @@ export async function buildApp(
     loadRestHandler,
     loadMcpHandler,
     origin: passkey.origin,
-    basePath: config.basePath,
     dev,
     passkey,
     sessionPolicy,

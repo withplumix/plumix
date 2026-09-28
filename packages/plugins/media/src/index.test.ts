@@ -242,8 +242,8 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
   test("happy path: returns a presigned URL and creates a draft entry", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
-      plugins: [media()],
       storage,
+      config: { plugins: [media()] },
     });
     const user = await h.seedUser("contributor");
 
@@ -264,7 +264,10 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
 
   test("rejects unsupported mime types with UNSUPPORTED_MEDIA_TYPE (415)", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     const { status, error } = await rpcDispatch<unknown>(
       h,
@@ -285,8 +288,8 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
   test("rejects oversize uploads with PAYLOAD_TOO_LARGE (413)", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
-      plugins: [media({ maxUploadSize: 4 })],
       storage,
+      config: { plugins: [media({ maxUploadSize: 4 })] },
     });
     const user = await h.seedUser("contributor");
     const { status, error } = await rpcDispatch<unknown>(
@@ -323,7 +326,10 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
 
   test("rejects users below the create capability with FORBIDDEN", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("subscriber");
     const { status } = await rpcDispatch(
       h,
@@ -336,7 +342,10 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
 
   test("rejects anonymous callers with UNAUTHORIZED", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const { status } = await rpcDispatch(
       h,
       "media/createUploadUrl",
@@ -350,7 +359,10 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
 describe("@plumix/plugin-media — media.confirm", () => {
   test("flips the draft to published once a valid upload landed", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -385,7 +397,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
 
   test("captures intrinsic dimensions from the uploaded image", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -416,7 +431,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
 
   test("rejects + deletes the object when bytes don't match the claimed mime", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -452,7 +470,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
     // loser sees `already_confirmed`, not a silent stomp of
     // `publishedAt` or a duplicate publish.
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -490,7 +511,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
 
   test("returns CONFLICT when the upload didn't actually land in storage", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -518,7 +542,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
     // the actually-stored object isn't oversized — otherwise an
     // attacker who got a presigned URL could PUT arbitrary size.
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -544,7 +571,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
 
   test("returns FORBIDDEN for a different user's draft", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const other = await h.seedUser("contributor");
 
@@ -572,7 +602,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
     // draft. Even editor-tier users get 403 when they didn't author
     // the draft.
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const editor = await h.seedUser("editor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -593,7 +626,10 @@ describe("@plumix/plugin-media — media.confirm", () => {
 
   test("returns NOT_FOUND for a non-existent id", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("editor");
     const { status } = await rpcDispatch<ConfirmOutput>(
       h,
@@ -652,7 +688,10 @@ async function seedPublishedMedia(
 describe("@plumix/plugin-media — media.list", () => {
   test("surfaces captured dimensions on each item", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -688,7 +727,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("returns published media for any reader; thumbnail url is the storage url when no imageDelivery", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const reader = await h.seedUser("subscriber");
     await seedPublishedMedia(h, storage, owner.id, "alpha.png");
@@ -735,9 +777,8 @@ describe("@plumix/plugin-media — media.list", () => {
     for (const { imageDelivery, transformed } of cases) {
       const storage = memoryStorage().connect({});
       const h = await createDispatcherHarness({
-        plugins: [media()],
         storage,
-        imageDelivery,
+        config: { plugins: [media()], imageDelivery: imageDelivery },
       });
       const owner = await h.seedUser("contributor");
       await seedPublishedMedia(h, storage, owner.id, "alpha.png");
@@ -768,13 +809,15 @@ describe("@plumix/plugin-media — media.list", () => {
       const purge = vi.fn((_source: string) => Promise.resolve());
       const storage = memoryStorage().connect({});
       const h = await createDispatcherHarness({
-        plugins: [media()],
         storage,
-        imageDelivery: {
-          kind: "in-process",
-          acceptsRelativeSources: true,
-          url: (source) => source,
-          purge,
+        config: {
+          plugins: [media()],
+          imageDelivery: {
+            kind: "in-process",
+            acceptsRelativeSources: true,
+            url: (source) => source,
+            purge,
+          },
         },
       });
       const owner = await h.seedUser("editor");
@@ -799,7 +842,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("rejects readers without entry:media:read", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     // The default `subscriber` has read; explicitly drop the reader to
     // a role that can't even see the entry type. A user not in any
     // role wouldn't authenticate at all, so we just test the cap path
@@ -817,7 +863,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("search filters by filename, case-insensitively", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     await seedPublishedMedia(h, storage, user.id, "Sunset-Beach.png");
     await seedPublishedMedia(h, storage, user.id, "invoice.png");
@@ -834,7 +883,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("search also matches alt text", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, user.id, "img-001.png");
     await seedPublishedMedia(h, storage, user.id, "img-002.png");
@@ -857,7 +909,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("search escapes LIKE wildcards — a literal % matches only itself", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     await seedPublishedMedia(h, storage, user.id, "discount-50%.png");
     await seedPublishedMedia(h, storage, user.id, "discount-flat.png");
@@ -874,7 +929,10 @@ describe("@plumix/plugin-media — media.list", () => {
 
   test("hasMore flag fires when there are more rows than the page", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("contributor");
     for (let i = 0; i < 3; i++) {
       await seedPublishedMedia(h, storage, user.id, `n${String(i)}.png`);
@@ -932,7 +990,7 @@ async function seedMediaRow(
 
 describe("@plumix/plugin-media — lookup.list browse", () => {
   test("returns the ids media.list returns for the same search, in the same order", async () => {
-    const h = await createDispatcherHarness({ plugins: [media()] });
+    const h = await createDispatcherHarness({ config: { plugins: [media()] } });
     const user = await h.seedUser("editor");
     // Published order is the reverse of updated order, so the two lists
     // agree only when they sort on the same column.
@@ -971,7 +1029,7 @@ describe("@plumix/plugin-media — lookup.list browse", () => {
   });
 
   test("matches alt text as well as the title", async () => {
-    const h = await createDispatcherHarness({ plugins: [media()] });
+    const h = await createDispatcherHarness({ config: { plugins: [media()] } });
     const user = await h.seedUser("editor");
     const byAlt = await seedMediaRow(h, user.id, {
       title: "IMG_0042.png",
@@ -991,7 +1049,9 @@ describe("@plumix/plugin-media — lookup.list browse", () => {
   test.each(["%", "_"])(
     "treats a %s in the query as a literal character",
     async (wildcard) => {
-      const h = await createDispatcherHarness({ plugins: [media()] });
+      const h = await createDispatcherHarness({
+        config: { plugins: [media()] },
+      });
       const user = await h.seedUser("editor");
       const literal = await seedMediaRow(h, user.id, {
         title: `discount-50${wildcard}.png`,
@@ -1012,7 +1072,10 @@ describe("@plumix/plugin-media — lookup.list browse", () => {
 describe("@plumix/plugin-media — media.delete", () => {
   test("removes the row + the storage object for the owner", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "kill.png");
     expect(await storage.head(seeded.storageKey)).not.toBeNull();
@@ -1030,7 +1093,10 @@ describe("@plumix/plugin-media — media.delete", () => {
 
   test("returns FORBIDDEN for a non-owner without entry:media:delete", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const other = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
@@ -1048,7 +1114,10 @@ describe("@plumix/plugin-media — media.delete", () => {
 
   test("editor (entry:media:delete cap) can remove other users' media", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const editor = await h.seedUser("editor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "y.png");
@@ -1065,7 +1134,10 @@ describe("@plumix/plugin-media — media.delete", () => {
 
   test("a token without the delete scope cannot delete its own asset", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "own.png");
     const token = await mintToken(h, owner.id, [
@@ -1087,7 +1159,10 @@ describe("@plumix/plugin-media — media.delete", () => {
 
   test("returns NOT_FOUND for a non-existent id", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const user = await h.seedUser("editor");
     const { status } = await rpcDispatch(
       h,
@@ -1102,7 +1177,10 @@ describe("@plumix/plugin-media — media.delete", () => {
 describe("@plumix/plugin-media — media.update", () => {
   test("editing alt preserves the captured dimensions", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
@@ -1146,7 +1224,10 @@ describe("@plumix/plugin-media — media.update", () => {
 
   test("owner can set alt text on their own media", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
 
@@ -1181,7 +1262,10 @@ describe("@plumix/plugin-media — media.update", () => {
   // the gate answering, so it lands before the meta parse would.
   test("returns FORBIDDEN for an owner who holds no edit capability", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("subscriber");
     const row = await h.factory.entry.create({
       type: "media",
@@ -1202,7 +1286,10 @@ describe("@plumix/plugin-media — media.update", () => {
 
   test("a non-owner holding edit_any can set alt text", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const editor = await h.seedUser("editor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "theirs.png");
@@ -1219,7 +1306,10 @@ describe("@plumix/plugin-media — media.update", () => {
 
   test("returns FORBIDDEN for a non-owner without edit_any", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const other = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
@@ -1241,8 +1331,8 @@ describe("@plumix/plugin-media — media.update", () => {
       stub as { presignPut: (...args: unknown[]) => Promise<unknown> }
     ).presignPut = () => Promise.reject(new Error("simulated_presign_fail"));
     const h = await createDispatcherHarness({
-      plugins: [media()],
       storage: stub,
+      config: { plugins: [media()] },
     });
     const user = await h.seedUser("contributor");
 
@@ -1288,8 +1378,8 @@ async function setupBindingOnlyHarness(): Promise<{
   const stub = memoryStorage().connect({});
   delete (stub as { presignPut?: unknown }).presignPut;
   const h = await createDispatcherHarness({
-    plugins: [media()],
     storage: stub,
+    config: { plugins: [media()] },
   });
   return { h, stub };
 }
@@ -1642,7 +1732,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
   // bytes (the bytes exist in R2 between PUT and confirm).
   test("GET /_plumix/media/serve/<id> returns published media bytes with security headers", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "serve.png");
 
@@ -1661,7 +1754,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
 
   test("draft entries return 404 — only published is reachable", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     // Create a draft via createUploadUrl, PUT bytes, but DON'T confirm.
     // The bytes exist in storage at meta.storageKey, but the entry
@@ -1686,7 +1782,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
 
   test("non-existent id returns 404", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const response = await h.dispatch(
       plumixRequest("/_plumix/media/serve/999999"),
     );
@@ -1695,7 +1794,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
 
   test("malformed id returns 400 (rejects scientific notation, leading zeros, traversal attempts)", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     for (const idStr of ["1e3", "abc", "0", "01", "..%2Fetc", "1/extra"]) {
       const response = await h.dispatch(
         plumixRequest(`/_plumix/media/serve/${encodeURIComponent(idStr)}`),
@@ -1710,7 +1812,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
     // the serve route adds Content-Disposition: attachment to force
     // download instead of inline render — same-origin defense.
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -1741,7 +1846,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
     // A browser that has cached under several tags sends them all, and a
     // proxy may weaken any of them.
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "etag.png");
     const path = `/_plumix/media/serve/${String(seeded.id)}`;
@@ -1773,7 +1881,10 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
 
   test("anonymous GET works — published media is publicly embeddable", async () => {
     const storage = memoryStorage().connect({});
-    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
     const owner = await h.seedUser("contributor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "pub.png");
     const response = await h.dispatch(

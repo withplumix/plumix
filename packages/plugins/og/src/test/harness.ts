@@ -280,31 +280,33 @@ export async function createHarness(
     ...rest
   } = options;
   const harness = await createDispatcherHarness({
-    // The head this suite asserts is written by `@plumix/plugin-seo`, which
-    // also owns the `og:image` chain this plugin contributes one link of.
-    plugins: [
-      testBlog,
-      seo(),
-      ...before,
-      og({ renderer: createFakeRenderer().renderer, ...rest }),
-    ],
     storage: storage === null ? undefined : (storage ?? bucket()),
     cdn,
     assets,
-    basePath,
-    i18n,
     logger,
-    imageDelivery,
-    telemetry,
-    ...(cards === undefined && tokens === undefined
-      ? {}
-      : {
-          theme: defineTheme({
-            templates: [fallback(() => null)],
-            ogCards: cards,
-            tokens,
+    config: {
+      ...(cards === undefined && tokens === undefined
+        ? {}
+        : {
+            theme: defineTheme({
+              templates: [fallback(() => null)],
+              ogCards: cards,
+              tokens,
+            }),
           }),
-        }),
+      // The head this suite asserts is written by `@plumix/plugin-seo`, which
+      // also owns the `og:image` chain this plugin contributes one link of.
+      plugins: [
+        testBlog,
+        seo(),
+        ...before,
+        og({ renderer: createFakeRenderer().renderer, ...rest }),
+      ],
+      basePath,
+      i18n,
+      imageDelivery,
+      telemetry,
+    },
   });
   if (withSiteTitle) {
     await harness.factory.setting.create({

@@ -29,7 +29,9 @@ const imageTheme = defineTheme({
 });
 
 test("<Image> builds a responsive srcset from the configured imageDelivery", async () => {
-  const h = await createDispatcherHarness({ theme: imageTheme, imageDelivery });
+  const h = await createDispatcherHarness({
+    config: { theme: imageTheme, imageDelivery: imageDelivery },
+  });
   const response = await h.dispatch(new Request("https://cms.example/"));
   const body = await response.text();
 
@@ -65,9 +67,11 @@ const remoteTheme = defineTheme({
 
 test("<Image> optimizes allowlisted remote hosts and passes through the rest", async () => {
   const h = await createDispatcherHarness({
-    theme: remoteTheme,
-    imageDelivery,
-    images: { remotePatterns: [{ hostname: "cdn.example.com" }] },
+    config: {
+      theme: remoteTheme,
+      imageDelivery,
+      images: { remotePatterns: [{ hostname: "cdn.example.com" }] },
+    },
   });
   const body = await (
     await h.dispatch(new Request("https://cms.example/"))
@@ -102,8 +106,7 @@ const priorityTheme = defineTheme({
 
 test("priority <Image> hoists a single preload link into <head>", async () => {
   const h = await createDispatcherHarness({
-    theme: priorityTheme,
-    imageDelivery,
+    config: { theme: priorityTheme, imageDelivery: imageDelivery },
   });
   const body = await (
     await h.dispatch(new Request("https://cms.example/"))

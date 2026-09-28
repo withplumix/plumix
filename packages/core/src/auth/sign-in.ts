@@ -39,7 +39,7 @@ export async function mintSessionAndCookie(
     sameSite: "Lax",
     // Scope the session to the subdirectory so it isn't sent to a sibling
     // app on the same host (`""` → `/`, the host-wide default).
-    path: withBasePath("/", app.basePath),
+    path: withBasePath("/", app.config.basePath),
   });
   return { token, cookieHeader };
 }

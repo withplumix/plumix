@@ -181,7 +181,11 @@ function asAnonymous(ctx: AppContext): AppContext {
     user: null,
     tokenScopes: null,
     auth: { can: () => false },
-    locale: resolveLocale({ request: ctx.request, user: null, i18n: ctx.i18n }),
+    locale: resolveLocale({
+      request: ctx.request,
+      user: null,
+      i18n: ctx.config.i18n,
+    }),
     access: null,
   };
 }
@@ -196,7 +200,7 @@ function gateAllowsRender(gate: Gate): boolean {
 }
 
 interface GateResponseArgs {
-  readonly ctx: Pick<AppContext, "basePath">;
+  readonly ctx: Pick<AppContext, "config">;
   /** The current (base-stripped) request URL — the `returnTo` destination. */
   readonly url: URL;
   readonly loginPath: string;
@@ -223,7 +227,7 @@ export function gateToResponse(
       // caching intermediary must never store it and bounce a signed-in user
       // to login. A bare 302 isn't cacheable by default — this is belt-and-suspenders.
       return redirectTo(
-        loginRedirect(args.loginPath, args.url, args.ctx.basePath),
+        loginRedirect(args.loginPath, args.url, args.ctx.config.basePath),
         { "cache-control": "private, no-store", vary: "cookie" },
       );
     case "challenge":

@@ -5,9 +5,11 @@ import type {
   Db,
   Logger,
 } from "../context/app.js";
+import type { TestConfigInput } from "./config.js";
 import { createAppContext } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { testConfig } from "./config.js";
 
 /**
  * Any drizzle database a test hands the factory — the core schema, or a
@@ -18,9 +20,11 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 type TestContextDb = Db<Record<string, unknown>>;
 
 export interface CreateTestContextOptions extends Partial<
-  Omit<CreateAppContextArgs<CoreSchema>, "db">
+  Omit<CreateAppContextArgs<CoreSchema>, "db" | "config">
 > {
   readonly db: TestContextDb;
+  /** Config slots, resolved through `plumix()` into the context's `config`. */
+  readonly config?: TestConfigInput;
 }
 
 const noop = (): void => undefined;
@@ -47,9 +51,10 @@ export const silentLogger: Logger = {
 export function createTestContext(
   options: CreateTestContextOptions,
 ): AppContext {
-  const { db, ...overrides } = options;
+  const { db, config, ...overrides } = options;
   return createAppContext({
     ...overrides,
+    config: testConfig(config),
     // Defaulted with `??` rather than by spread order: an explicitly-passed
     // `undefined` would otherwise overwrite the default and blow up inside
     // `createAppContext`, which has no fallback for these four.

@@ -62,10 +62,10 @@ export async function handleFeed(
 
   const channel: FeedChannel = {
     title: nonEmpty(site.title) ?? ctx.origin,
-    link: `${ctx.origin}${withBasePath("/", ctx.basePath)}`,
+    link: `${ctx.origin}${withBasePath("/", ctx.config.basePath)}`,
     // The feed's self URL is this request's path, base prefix re-added for
     // the externally-visible URL.
-    feedUrl: `${ctx.origin}${withBasePath(pathname, ctx.basePath)}`,
+    feedUrl: `${ctx.origin}${withBasePath(pathname, ctx.config.basePath)}`,
     description: nonEmpty(site.tagline) ?? "",
     updated: items[0]?.updated ?? new Date().toISOString(),
   };

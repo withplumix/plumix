@@ -14,7 +14,7 @@ let runSchedule: SearchHarness["runSchedule"];
 
 beforeEach(async () => {
   ({ h, admin, palette, runSchedule } = await createSearchHarness({
-    plugins: [contentPlugin, search()],
+    config: { plugins: [contentPlugin, search()] },
   }));
 });
 

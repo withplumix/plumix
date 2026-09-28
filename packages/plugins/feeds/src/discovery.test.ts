@@ -28,8 +28,7 @@ async function seeded(
   options: { readonly basePath?: string } = {},
 ): Promise<DispatcherHarness> {
   const h = await createDispatcherHarness({
-    ...options,
-    plugins: [host, feeds()],
+    config: { ...options, plugins: [host, feeds()] },
   });
   const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
   await h.factory.entry.create({

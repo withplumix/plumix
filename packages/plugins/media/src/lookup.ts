@@ -165,7 +165,7 @@ export const mediaLookupAdapter = {
               ctx.storage,
               meta.storageKey,
               row.id,
-              ctx.basePath,
+              ctx.config.basePath,
             )
           : meta.storageKey;
         return {

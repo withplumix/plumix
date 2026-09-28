@@ -11,7 +11,7 @@ import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { exposesHierarchicalUrls } from "./compile.js";
 
-type PermalinkContext = Pick<AppContext, "db" | "plugins" | "basePath">;
+type PermalinkContext = Pick<AppContext, "db" | "plugins" | "config">;
 
 interface EntryPermalinkSource {
   readonly type: string;
@@ -126,7 +126,7 @@ export async function buildTermArchiveUrls(
  * can avoid the per-entry CTE.
  */
 export function buildEntryPermalinkSync(
-  ctx: Pick<AppContext, "plugins" | "basePath">,
+  ctx: Pick<AppContext, "plugins" | "config">,
   entry: EntryPermalinkSource,
 ): string | null {
   const entryType = ctx.plugins.entryTypes.get(entry.type);
@@ -135,7 +135,7 @@ export function buildEntryPermalinkSync(
     return null;
   return withBasePath(
     joinSegments([entryTypeBaseSlug(entryType), entry.slug]),
-    ctx.basePath,
+    ctx.config.basePath,
   );
 }
 
@@ -145,7 +145,7 @@ export function buildEntryPermalinkSync(
  * callers (e.g. `resolveEntryList`) attach a `url` without a per-term CTE.
  */
 export function buildTermArchiveUrlSync(
-  ctx: Pick<AppContext, "plugins" | "basePath">,
+  ctx: Pick<AppContext, "plugins" | "config">,
   term: {
     readonly taxonomy: string;
     readonly slug: string;
@@ -157,7 +157,7 @@ export function buildTermArchiveUrlSync(
   if (shouldNestUnderTermParent(taxonomy, term.parentId ?? null)) return null;
   return withBasePath(
     joinSegments([termTaxonomyBaseSlug(taxonomy), term.slug]),
-    ctx.basePath,
+    ctx.config.basePath,
   );
 }
 
@@ -187,14 +187,14 @@ function nestedEntry(
 }
 
 function nestedEntryPermalink(
-  ctx: Pick<AppContext, "basePath">,
+  ctx: Pick<AppContext, "config">,
   entryType: RegisteredEntryType,
   ancestors: readonly string[],
   slug: string,
 ): string {
   return withBasePath(
     joinSegments([entryTypeBaseSlug(entryType), ...ancestors, slug]),
-    ctx.basePath,
+    ctx.config.basePath,
   );
 }
 
@@ -215,14 +215,14 @@ function nestedTerm(
 }
 
 function nestedTermArchiveUrl(
-  ctx: Pick<AppContext, "basePath">,
+  ctx: Pick<AppContext, "config">,
   taxonomy: RegisteredTermTaxonomy,
   ancestors: readonly string[],
   slug: string,
 ): string {
   return withBasePath(
     joinSegments([termTaxonomyBaseSlug(taxonomy), ...ancestors, slug]),
-    ctx.basePath,
+    ctx.config.basePath,
   );
 }
 

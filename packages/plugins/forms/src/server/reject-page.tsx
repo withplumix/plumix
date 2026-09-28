@@ -49,7 +49,7 @@ export function rejectPage(
             // Projected, not passed: `FormWire` is what a renderer takes,
             // and it is the shape the secret cannot travel on.
             form={toFormWire(form)}
-            action={withBasePath(SUBMIT_PATH, ctx.basePath)}
+            action={withBasePath(SUBMIT_PATH, ctx.config.basePath)}
             idBase={`plumix-form-${form.slug}`}
             errors={rejected.errors}
             answers={rejected.values}

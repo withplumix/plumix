@@ -153,7 +153,7 @@ function previewFigure(
   const href = escapeAttr(
     withBasePath(
       `${PREVIEW_URL_PREFIX}/${String(index)}.${extension}`,
-      ctx.basePath,
+      ctx.config.basePath,
     ),
   );
   return `<figure>

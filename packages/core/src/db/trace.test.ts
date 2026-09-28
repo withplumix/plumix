@@ -15,7 +15,10 @@ beforeAll(async () => {
 
 // A consumer without `sample` votes yes, so the context carries a live collector.
 const sampledContext = (): AppContext =>
-  createTestContext({ db, telemetry: { consumers: [{ id: "test" }] } });
+  createTestContext({
+    db,
+    config: { telemetry: { consumers: [{ id: "test" }] } },
+  });
 
 describe("traceDbQuerySync", () => {
   test("names the span by kind and carries sql, params and row count", () => {

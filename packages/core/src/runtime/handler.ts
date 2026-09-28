@@ -343,6 +343,7 @@ export function requestContextArgs({
     db,
     env,
     request,
+    config: app.config,
     clientAddress,
     hooks: app.hooks,
     plugins: app.plugins,
@@ -359,17 +360,11 @@ export function requestContextArgs({
     cdn: slots.cdn,
     kv: slots.kv,
     imageDelivery: slots.imageDelivery,
-    imageRemotePatterns: app.config.images?.remotePatterns,
     dev: app.dev,
-    telemetry: app.config.telemetry,
-    mailer: app.config.mailer,
-    i18n: app.config.i18n,
     authMethods: app.authMethods,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
     origin: app.origin,
-    basePath: app.basePath,
-    siteName: app.config.auth.magicLink?.siteName,
     appContextExtensions: app.appContextExtensions,
   };
 }
@@ -416,7 +411,9 @@ function connectImageDelivery(
 ): PlumixApp["config"]["imageDelivery"] {
   const slot = app.config.imageDelivery;
   if (!slot) return undefined;
-  return slot.connect ? slot.connect(env, { basePath: app.basePath }) : slot;
+  return slot.connect
+    ? slot.connect(env, { basePath: app.config.basePath })
+    : slot;
 }
 
 // One error lists every missing binding, which beats a 500 surfacing from the

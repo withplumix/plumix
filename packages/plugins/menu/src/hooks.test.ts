@@ -3,7 +3,6 @@ import type { AppContext, PluginRegistry } from "plumix/plugin";
 import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {
-  createAppContext,
   createPluginRegistry,
   HookRegistry,
   installPlugins,
@@ -11,6 +10,7 @@ import {
 } from "plumix/plugin";
 import {
   adminUser,
+  createTestContext,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -51,7 +51,7 @@ async function setup(): Promise<Bundle> {
   const user = await adminUser
     .transient({ db })
     .create({ email: "hooks@example.test" });
-  const ctx = createAppContext({
+  const ctx = createTestContext({
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),

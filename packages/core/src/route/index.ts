@@ -42,7 +42,7 @@ export interface ContentRoute {
   readonly render: (ctx: AppContext) => Promise<Response>;
 }
 
-type RoutingContext = Pick<AppContext, "request" | "origin" | "basePath">;
+type RoutingContext = Pick<AppContext, "request" | "origin" | "config">;
 
 /**
  * Route a public request through the route unit's stages, in their fixed

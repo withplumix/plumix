@@ -49,7 +49,7 @@ function ctxFor(
     plugins: bundle.registry,
     hooks: bundle.hooks,
     request: new Request("https://test.example/"),
-    basePath: "",
+    config: { basePath: "" },
   });
 }
 
@@ -412,7 +412,7 @@ describe("getMenuByName", () => {
         plugins: ctx.plugins,
         hooks: ctx.hooks,
         request: new Request(url),
-        basePath: "",
+        config: { basePath: "" },
       });
       local.resolvedEntity = resolved;
       return local;
@@ -959,7 +959,7 @@ describe("entry item labels at public render", () => {
     readonly queries: number;
   }> {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [menuTestHost],
+      config: { plugins: [menuTestHost] },
     });
     const f = harness.factory;
     const author = await f.user.create({});

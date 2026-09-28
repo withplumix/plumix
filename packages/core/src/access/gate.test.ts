@@ -9,6 +9,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
+import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import {
@@ -250,7 +251,7 @@ describe("policyForMatch", () => {
 describe("gateToResponse", () => {
   const url = new URL("https://site.test/members/secret?x=1");
   const login = "/_plumix/admin/login";
-  const root = { basePath: "" };
+  const root = { config: testConfig() };
 
   it("lets an allow gate proceed (no short-circuit response)", () => {
     expect(
@@ -277,7 +278,11 @@ describe("gateToResponse", () => {
     const response = must(
       gateToResponse(
         { type: "redirect" },
-        { ctx: { basePath: "/blog" }, url, loginPath: "/login" },
+        {
+          ctx: { config: testConfig({ basePath: "/blog" }) },
+          url,
+          loginPath: "/login",
+        },
       ),
     );
     expect(response.headers.get("location")).toBe(

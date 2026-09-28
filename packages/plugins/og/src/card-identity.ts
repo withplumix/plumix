@@ -97,9 +97,9 @@ export async function resolveCardIdentity(
  * so the default locale is the honest one to render every card in.
  */
 function pinLocale(ctx: AppContext): AppContext {
-  return ctx.locale.code === ctx.i18n.defaultLocale.code
+  return ctx.locale.code === ctx.config.i18n.defaultLocale.code
     ? ctx
-    : { ...ctx, locale: ctx.i18n.defaultLocale };
+    : { ...ctx, locale: ctx.config.i18n.defaultLocale };
 }
 
 interface CardDigestParts {

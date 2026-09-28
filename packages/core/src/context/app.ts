@@ -5,18 +5,17 @@ import type {
   MarkSpec,
   ShortcodeRegistry,
 } from "@plumix/blocks";
-import type { RemotePattern } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { Access } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { Capability } from "../auth/contract/capability.js";
-import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
+import type { PlumixConfig } from "../config.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
-import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
+import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
@@ -33,18 +32,13 @@ import type {
   ImageDelivery,
 } from "../runtime/slots.js";
 import type { RequestMemo } from "./memo.js";
-import type {
-  TelemetryCollector,
-  TelemetryConfig,
-  TelemetryConsumer,
-} from "./telemetry.js";
+import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveCapability } from "../auth/contract/capability.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
-import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
@@ -70,10 +64,6 @@ const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
   passkey: false,
   magicLink: false,
   oauth: Object.freeze([]),
-});
-const DEFAULT_I18N: ResolvedI18n = resolveLocales({
-  defaultLocale: "en",
-  locales: ["en"],
 });
 
 // Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
@@ -160,6 +150,15 @@ export interface AppContextBase<
   readonly db: Db<TSchema>;
   readonly env: PlumixEnv;
   readonly request: Request;
+  /**
+   * The app's resolved config — the same object as `app.config`. A value the
+   * operator wrote in `plumix.config.ts` is read here (`ctx.config.basePath`,
+   * `ctx.config.i18n`) and never copied onto the context, so a new slot reaches
+   * every handler without threading (ADR 0011). A slot that binds to the
+   * platform is also connected as a service (`ctx.storage`). Never serialize
+   * it whole: it carries auth providers and mailer secrets.
+   */
+  readonly config: PlumixConfig;
   readonly user: AuthenticatedUser | null;
   /**
    * Per-request capability whitelist when the active authenticator
@@ -295,8 +294,6 @@ export interface AppContextBase<
    * plugin, themes) read this; core procedures don't use it today.
    */
   readonly imageDelivery?: ImageDelivery;
-  /** Remote-host allowlist for `<Image>` optimization (from `config.images.remotePatterns`). */
-  readonly imageRemotePatterns?: readonly RemotePattern[];
   /**
    * Configured outbound email transport. Present when the operator
    * passed `mailer:` at the top of `plumix({...})`. Magic-link reads
@@ -315,29 +312,12 @@ export interface AppContextBase<
    */
   readonly origin: string;
   /**
-   * Normalized subdirectory prefix the site is served under (`""` for a root
-   * deployment, `/custom-directory` otherwise). Sourced from `config.basePath`.
-   * The dispatcher strips it from the inbound path before routing; outbound URL
-   * builders (canonical, sitemap, feeds, permalinks, cookie `Path`) prepend it
-   * via `withBasePath` so links resolve under the subdirectory.
-   */
-  readonly basePath: string;
-  /**
    * The app's resolved dev config — the bar, the panel set and the
    * request-history ring — or undefined outside the dev gate. Handed down
    * rather than imported so every reader shares the instance the app built
    * (#2442). The raw input is `config.dev`.
    */
   readonly dev?: DevRuntime;
-  /**
-   * Operator-set site name from `auth.magicLink.siteName`, used as
-   * the human-friendly label in mailer subjects ("Confirm your email
-   * for {siteName}"). Undefined when magic-link isn't configured —
-   * RPC procedures that compose user-facing mail should refuse with
-   * a config-missing reason in that case.
-   */
-  readonly siteName?: string;
-  readonly i18n: ResolvedI18n;
   readonly locale: ResolvedLocale;
   /**
    * Response headers writable from inside an RPC procedure. Populated by
@@ -403,6 +383,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly db: Db<TSchema>;
   readonly env: PlumixEnv;
   readonly request: Request;
+  readonly config: PlumixConfig;
   /** See {@link AppContextBase.clientAddress}; the runtime supplies it. */
   readonly clientAddress?: string;
   readonly hooks: HookExecutor;
@@ -419,11 +400,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: EnvInput<string>;
-  readonly basePath?: string;
   readonly dev?: DevRuntime;
-  /** App-config telemetry slot — registered consumers vote per request. */
-  readonly telemetry?: TelemetryConfig;
-  readonly siteName?: string;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
   readonly assets?: AssetsBinding;
@@ -431,11 +408,6 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly cdn?: ConnectedCdn;
   readonly kv?: ConnectedKv;
   readonly imageDelivery?: ImageDelivery;
-  readonly imageRemotePatterns?: readonly RemotePattern[];
-  /** Literal transport, or an `(env) => Mailer` resolver (resolved per-request
-   *  from `env`, memoized) for secrets that only exist at request time. */
-  readonly mailer?: MailerInput;
-  readonly i18n?: ResolvedI18n;
   readonly authMethods?: AuthMethodsSummary;
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
@@ -507,13 +479,17 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
 ): AppContext<TSchema> {
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
-  const i18n = args.i18n ?? DEFAULT_I18N;
-  const locale = resolveLocale({ request: args.request, user, i18n });
-  const mailer = resolveMailer(args.mailer, args.env);
+  const locale = resolveLocale({
+    request: args.request,
+    user,
+    i18n: args.config.i18n,
+  });
+  const mailer = resolveMailer(args.config.mailer, args.env);
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
     request: args.request,
+    config: args.config,
     clientAddress: normalizeClientAddress(args.clientAddress),
     user,
     tokenScopes,
@@ -535,9 +511,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     cdn: args.cdn && traceCdn(args.cdn, () => base.telemetry),
     kv: args.kv && traceKv(args.kv, () => base.telemetry),
     imageDelivery: args.imageDelivery,
-    imageRemotePatterns: args.imageRemotePatterns,
     mailer: mailer && traceMailer(mailer, () => base.telemetry),
-    i18n,
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
@@ -556,7 +530,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       args.origin !== undefined
         ? resolveEnvInput(args.origin, args.env)
         : new URL(args.request.url).origin,
-    basePath: args.basePath ?? "",
     dev: args.dev,
     // Provisional no-op — swapped for the real collector below iff a consumer
     // votes to sample this request. Consumers see the assembled context when
@@ -565,7 +538,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // Reads `base.telemetry` per call, so the post-vote collector swap below
     // is observed without rebinding.
     fetch: createTracedFetch(() => base.telemetry),
-    siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base — the seam between an open
   // `Record`-of-unknown registry and the `AppContextExtensions` declaration-
@@ -597,7 +569,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
     args.dev,
-    args.telemetry,
+    args.config.telemetry,
   );
   if (sampled.length > 0) {
     // The context is frozen-by-type, not by object — createAppContext owns
@@ -625,7 +597,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
 function sampleTelemetryConsumers(
   ctx: AppContext,
   dev: DevRuntime | undefined,
-  config: TelemetryConfig | undefined,
+  config: PlumixConfig["telemetry"],
 ): readonly TelemetryConsumer[] {
   const consumers: TelemetryConsumer[] = [];
   if (process.env.PLUMIX_DEV && dev !== undefined) {
@@ -649,7 +621,11 @@ export function withUser<TSchema extends Record<string, unknown>>(
     auth: {
       can: makeAuthCan(ctx.plugins, user, tokenScopes),
     },
-    locale: resolveLocale({ request: ctx.request, user, i18n: ctx.i18n }),
+    locale: resolveLocale({
+      request: ctx.request,
+      user,
+      i18n: ctx.config.i18n,
+    }),
   };
 }
 

@@ -66,7 +66,7 @@ const termArt = definePlugin("term-art", (ctx) => {
 });
 
 async function harness(): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [blog] });
+  return createDispatcherHarness({ config: { plugins: [blog] } });
 }
 
 function contextFor(h: DispatcherHarness): AppContext {
@@ -114,7 +114,9 @@ describe("resolveListingPage", () => {
         return archive.kind === "date" ? query.none() : query;
       });
     });
-    const h = await createDispatcherHarness({ plugins: [blog, recording] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog, recording] },
+    });
     await seedPost(h);
 
     const page = await resolveListingPage(contextFor(h), {
@@ -275,7 +277,7 @@ describe("resolveListingPage", () => {
   ] as const)(
     "the %s page, by id, loads its subject once",
     async (kind, table) => {
-      const traced = await createTracedContext({ plugins: [blog] });
+      const traced = await createTracedContext({ config: { plugins: [blog] } });
       const author = await traced.harness.factory.author.create({ slug: "jo" });
       const term = await traced.harness.factory.term.create({
         taxonomy: "category",
@@ -318,7 +320,9 @@ describe("resolveListingPage", () => {
         isHierarchical: true,
       });
     });
-    const traced = await createTracedContext({ plugins: [regions] });
+    const traced = await createTracedContext({
+      config: { plugins: [regions] },
+    });
     const { factory } = traced.harness;
     const author = await factory.author.create();
     const europe = await factory.term.create({
@@ -409,7 +413,7 @@ describe("resolveListingPage", () => {
 
   test("an author archive resolves its subject's images without a second hydration", async () => {
     const traced = await createTracedContext({
-      plugins: [blog, photoProfilePlugin],
+      config: { plugins: [blog, photoProfilePlugin] },
     });
     const { harness } = traced;
     const photo = await harness.factory.entry.create({
@@ -444,7 +448,9 @@ describe("resolveListingPage", () => {
   });
 
   test("a term archive carries the term's images by role", async () => {
-    const h = await createDispatcherHarness({ plugins: [blog, termArt] });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog, termArt] },
+    });
     const photoId = await seedPost(h, { title: "Banner" });
     const term = await h.factory.term.create({
       taxonomy: "category",

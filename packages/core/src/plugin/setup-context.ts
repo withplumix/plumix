@@ -353,7 +353,7 @@ export interface PluginSetupContextBase {
    * even with `cacheable`.
    *
    * `ctx.request` has had any `basePath` stripped, so build outbound URLs from
-   * `ctx.origin` + `ctx.basePath`, never from `request.url`.
+   * `ctx.origin` + `ctx.config.basePath`, never from `request.url`.
    */
   registerPublicRoute(options: PublicRouteOptions): void;
 

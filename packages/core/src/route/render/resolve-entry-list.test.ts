@@ -208,7 +208,7 @@ describe("resolveEntryList reference meta resolution", () => {
 
   test("templates receive hydrated reference meta, batched across the archive", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [refsPlugin],
+      config: { plugins: [refsPlugin] },
     });
     const author = await harness.factory.user.create({});
     const targets = await Promise.all(
@@ -266,7 +266,7 @@ describe("resolveEntryList reference meta resolution", () => {
 describe("whereMeta against a real row", () => {
   test("matches the stored value the read bag decoded away", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const subject = await harness.factory.entry.create({
@@ -323,7 +323,7 @@ describe("whereMeta against a real row", () => {
   // the rule did not.
   test("a boolean reads alike from both bags, so whereMeta agrees with the decoded value", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const seed = (meta: JsonObject) =>
@@ -379,7 +379,7 @@ describe("whereMeta against a real row", () => {
   // off the authenticated read instead; rendering reads the row as it is.
   test("rendering an unsettled row leaves it as stored", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const token = await harness.factory.entry.create({
@@ -404,7 +404,7 @@ describe("whereMeta against a real row", () => {
   // comparison could not match.
   test("a string and a number read alike from both bags, so whereMeta agrees with the decoded value", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const seed = (meta: JsonObject) =>
@@ -464,7 +464,7 @@ describe("whereMeta against a real row", () => {
 describe("term meta on the render path", () => {
   test("a term's meta is decoded and reference-hydrated, beside the raw storedMeta", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const curator = await harness.factory.entry.create({
@@ -508,7 +508,7 @@ describe("term meta on the render path", () => {
 
   test("a `.default()` key absent from storage reads back the declared default", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const row = await harness.factory.entry.create({
@@ -536,7 +536,7 @@ describe("term meta on the render path", () => {
 
   test("a term on two entries decodes per attachment, in one batched reference query", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [dossierPlugin],
+      config: { plugins: [dossierPlugin] },
     });
     const author = await harness.factory.user.create({});
     const curator = await harness.factory.entry.create({
@@ -627,7 +627,9 @@ function photoPlugin(tagged: boolean) {
 
 describe("resolveEntryList role images", () => {
   async function seedListing(role: boolean) {
-    const traced = await createTracedContext({ plugins: [photoPlugin(role)] });
+    const traced = await createTracedContext({
+      config: { plugins: [photoPlugin(role)] },
+    });
     const { harness } = traced;
     const author = await harness.factory.user.create({});
     const photo = await harness.factory.entry.create({
@@ -679,7 +681,7 @@ describe("resolveEntryList role images", () => {
 
   test("resolves every author's role images in one batch", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      plugins: [photoProfilePlugin],
+      config: { plugins: [photoProfilePlugin] },
     });
     const seed = await harness.factory.user.create({});
     const photo = await harness.factory.entry.create({
@@ -716,7 +718,7 @@ describe("resolveEntryList role images", () => {
 
   test("reads null for a payload the adapter refuses", async () => {
     const { harness, ctx, run } = await createTracedContext({
-      plugins: [photoPlugin(true)],
+      config: { plugins: [photoPlugin(true)] },
     });
     const author = await harness.factory.user.create({});
     const broken = await harness.factory.entry.create({

@@ -42,14 +42,14 @@ export function registerCoreAdminBarContributors(hooks: HookRegistry): void {
 
 function siteContributor(
   nodes: readonly AdminBarNode[],
-  ctx: BarRenderContext,
+  bar: BarRenderContext,
 ): readonly AdminBarNode[] {
-  const fallback = barMessages(ctx.locale).siteFallback;
+  const fallback = barMessages(bar.locale).siteFallback;
   return [
     ...nodes,
     {
       id: "site",
-      title: ctx.siteName || fallback,
+      title: bar.siteName || fallback,
       href: "/_plumix/admin",
       group: "root",
       position: SITE_POSITION,

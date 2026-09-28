@@ -19,8 +19,7 @@ describe("user.requestEmailChange", () => {
     const mailer = makeMailer();
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer,
-      siteName: "Test",
+      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
     });
     const spy = h.spyAction("user:email_change_requested");
 
@@ -43,8 +42,7 @@ describe("user.requestEmailChange", () => {
     const mailer = makeMailer();
     const h = await createRpcHarness({
       authAs: "admin",
-      mailer,
-      siteName: "Test",
+      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
     });
     const target = await h.factory.user.create({
       email: "victim@example.test",
@@ -68,8 +66,10 @@ describe("user.requestEmailChange", () => {
   test("editor (no user:edit cap) cannot request change for another user", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer: makeMailer(),
-      siteName: "Test",
+      config: {
+        mailer: makeMailer(),
+        auth: { magicLink: { siteName: "Test" } },
+      },
     });
     const target = await h.factory.user.create({});
 
@@ -87,8 +87,10 @@ describe("user.requestEmailChange", () => {
   test("CONFLICT/email_taken when another user has the target email", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer: makeMailer(),
-      siteName: "Test",
+      config: {
+        mailer: makeMailer(),
+        auth: { magicLink: { siteName: "Test" } },
+      },
     });
     await h.factory.user.create({ email: "taken@example.test" });
 
@@ -122,8 +124,10 @@ describe("user.cancelEmailChange", () => {
   test("self cancels their own pending change", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer: makeMailer(),
-      siteName: "Test",
+      config: {
+        mailer: makeMailer(),
+        auth: { magicLink: { siteName: "Test" } },
+      },
     });
     await h.client.user.requestEmailChange({
       id: h.user.id,
@@ -158,8 +162,10 @@ describe("user.pendingEmailChange", () => {
   test("returns the pending newEmail + expiresAt", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer: makeMailer(),
-      siteName: "Test",
+      config: {
+        mailer: makeMailer(),
+        auth: { magicLink: { siteName: "Test" } },
+      },
     });
     await h.client.user.requestEmailChange({
       id: h.user.id,
@@ -174,8 +180,10 @@ describe("user.pendingEmailChange", () => {
   test("returns null for an expired pending row (UI doesn't show stale state)", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
-      mailer: makeMailer(),
-      siteName: "Test",
+      config: {
+        mailer: makeMailer(),
+        auth: { magicLink: { siteName: "Test" } },
+      },
     });
     await h.client.user.requestEmailChange({
       id: h.user.id,
@@ -194,8 +202,7 @@ describe("GET /_plumix/auth/verify-email", () => {
   test("happy path: redirects to login?email_change_success=1 + commits + emits hook", async () => {
     const mailer = makeMailer();
     const h = await createDispatcherHarness({
-      mailer,
-      magicLink: { siteName: "Test" },
+      config: { mailer: mailer, auth: { magicLink: { siteName: "Test" } } },
     });
     const seeded = await h.factory.user.create({
       email: "alice@old.example",

@@ -15,7 +15,10 @@ import { defineTheme } from "../theme.js";
 function mcpHarness(
   options: Parameters<typeof createDispatcherHarness>[0] = {},
 ): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ mcp: { enabled: true }, ...options });
+  return createDispatcherHarness({
+    ...options,
+    config: { mcp: { enabled: true }, ...options.config },
+  });
 }
 
 const blog = definePlugin("test-blog", (ctx) => {
@@ -138,7 +141,7 @@ function parseToolResult<T>(json: JsonRpcEnvelope<ToolCallResult>): T {
 
 describe("MCP endpoint — tools/list", () => {
   test("a PAT-authenticated client sees schema_describe with JSON Schema + readOnlyHint", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { res, json } = await callMcp<{ tools: ToolDescriptor[] }>(
@@ -161,7 +164,7 @@ describe("MCP endpoint — tools/list", () => {
 
 describe("MCP endpoint — schema_describe", () => {
   test("with no argument it lists entry types and taxonomies", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 2, "schema_describe", {});
@@ -183,7 +186,7 @@ describe("MCP endpoint — schema_describe", () => {
   });
 
   test("with a type it returns that type's statuses, supports, and taxonomies", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 3, "schema_describe", {
@@ -202,7 +205,7 @@ describe("MCP endpoint — schema_describe", () => {
   });
 
   test("an unknown type comes back as an MCP error envelope, not a crash", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(h, secret, 4, "schema_describe", {
@@ -220,7 +223,7 @@ describe("MCP endpoint — transport guards", () => {
   test.each(["GET", "DELETE"])(
     "%s is rejected with 405 (the endpoint is POST-only)",
     async (method) => {
-      const h = await mcpHarness({ plugins: [blog] });
+      const h = await mcpHarness({ config: { plugins: [blog] } });
       const secret = await mintPat(h);
 
       const res = await h.dispatch(mcpRequest({}, { secret, method }));
@@ -231,7 +234,7 @@ describe("MCP endpoint — transport guards", () => {
   );
 
   test("a request without a bearer token is rejected with 401", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
@@ -241,7 +244,7 @@ describe("MCP endpoint — transport guards", () => {
   });
 
   test("an invalid bearer token is rejected with 401", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -254,7 +257,7 @@ describe("MCP endpoint — transport guards", () => {
   });
 
   test("a session-cookie request is rejected — MCP authenticates by bearer PAT only", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const user = await h.factory.user.create({ role: "editor" });
     const cookieReq = await h.authenticateRequest(
       mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
@@ -275,7 +278,7 @@ describe("MCP endpoint — dev trust", () => {
 
   test("a loopback request with no token reaches the tool registry", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -295,7 +298,7 @@ describe("MCP endpoint — dev trust", () => {
 
   test("a loopback Origin is allowed on the frictionless path", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -312,7 +315,7 @@ describe("MCP endpoint — dev trust", () => {
 
   test("a cross-origin request is rejected even in dev", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -329,7 +332,7 @@ describe("MCP endpoint — dev trust", () => {
 
   test("a non-loopback bind falls back to token auth (no token → 401)", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -344,7 +347,7 @@ describe("MCP endpoint — dev trust", () => {
   test("dev auto-enables the endpoint with no config flag", async () => {
     // No `mcp: { enabled: true }` — the dev signal alone mounts the endpoint.
     vi.stubEnv("PLUMIX_DEV", "1");
-    const h = await createDispatcherHarness({ plugins: [blog] });
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -357,7 +360,7 @@ describe("MCP endpoint — dev trust", () => {
   });
 
   test("production (dev trust off) still requires a token over loopback", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest(
@@ -377,7 +380,7 @@ interface ContentRow {
 
 describe("MCP endpoint — content_list", () => {
   test("returns the entries the caller may see", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "pub" });
     await h.factory.draft.create({ authorId: author.id, slug: "draft" });
@@ -392,7 +395,7 @@ describe("MCP endpoint — content_list", () => {
   });
 
   test("a read-scoped token cannot see drafts (capability clamp)", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "pub" });
     await h.factory.draft.create({ authorId: author.id, slug: "secret" });
@@ -410,7 +413,7 @@ describe("MCP endpoint — content_list", () => {
   });
 
   test("content_list appears in tools/list with a projected JSON Schema", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { json } = await callMcp<{
@@ -425,7 +428,7 @@ describe("MCP endpoint — content_list", () => {
 
 describe("MCP endpoint — content_get", () => {
   test("returns a single entry by type + id", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });
     const entry = await h.factory.published.create({
       authorId: author.id,
@@ -442,7 +445,7 @@ describe("MCP endpoint — content_get", () => {
   });
 
   test("a missing entry comes back as a not_found envelope", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h, { role: "editor" });
 
     const { json } = await callTool(h, secret, 1, "content_get", {
@@ -455,7 +458,7 @@ describe("MCP endpoint — content_get", () => {
   });
 
   test("a type that doesn't match the entry is hidden as not_found", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });
     const entry = await h.factory.published.create({
       authorId: author.id,
@@ -475,7 +478,7 @@ describe("MCP endpoint — content_get", () => {
 
 describe("MCP endpoint — term tools", () => {
   test("term_list returns terms in a taxonomy", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     await h.factory.category.create({ name: "News", slug: "news" });
     const secret = await mintPat(h, { role: "editor" });
 
@@ -488,7 +491,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_list maps a forbidden read to an envelope", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h, {
       role: "editor",
       scopes: ["entry:post:read"],
@@ -503,7 +506,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_get returns a term by taxonomy + id", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const term = await h.factory.category.create({
       name: "News",
       slug: "news",
@@ -519,7 +522,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("term_get hides a taxonomy mismatch as not_found", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const term = await h.factory.category.create({
       name: "News",
       slug: "news",
@@ -536,7 +539,7 @@ describe("MCP endpoint — term tools", () => {
   });
 
   test("taxonomy_list enumerates registered taxonomies", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h, { role: "editor" });
 
     const { json } = await callTool(h, secret, 1, "taxonomy_list", {});
@@ -553,11 +556,13 @@ describe("MCP endpoint — telemetry", () => {
   test("a tools/call produces an mcp span plus the bearer auth span in the snapshot", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const h = await mcpHarness({
-      plugins: [blog],
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
+      config: {
+        plugins: [blog],
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
       },
     });
     const secret = await mintPat(h);
@@ -616,7 +621,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
   test("telemetry_requests_list returns recent requests newest-first with id/method/path/status/duration", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     await h.dispatch(new Request("https://cms.example/first"));
@@ -643,7 +648,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 
   test("telemetry_request_get returns the span tree for a known id, records omitted by default", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const rows = await seedAndList(h, secret, "https://cms.example/");
@@ -663,7 +668,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 
   test("include: ['records'] adds the records payload that is otherwise omitted", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const rows = await seedAndList(h, secret, "https://cms.example/");
@@ -680,7 +685,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 
   test("an unknown id comes back as a not_found envelope, not a crash", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { res, json } = await callTool(
@@ -698,14 +703,16 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
 
   test("a failing 5xx request's captured error is readable on its span", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: defineTheme({
-        templates: [
-          fallback(() => {
-            throw new Error("render kaboom");
-          }),
-        ],
-      }),
+      config: {
+        plugins: [blog],
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("render kaboom");
+            }),
+          ],
+        }),
+      },
     });
     const secret = await mintPat(h);
 
@@ -733,7 +740,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 
   test("the tracing tools are advertised in tools/list under the dev gate", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
@@ -751,7 +758,9 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   // must not silently turn the capture behind them off too — the developer who
   // sets `dev.bar: false` is typically the one driving the site over MCP.
   test("requests are captured with the debug bar off, and the trace still resolves", async () => {
-    const h = await mcpHarness({ plugins: [blog], dev: { bar: false } });
+    const h = await mcpHarness({
+      config: { plugins: [blog], dev: { bar: false } },
+    });
     const secret = await mintPat(h);
 
     const rows = await seedAndList(
@@ -780,8 +789,7 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   // mid-request reader of `ctx.telemetry` — a plugin's own tool here — a no-op.
   test("the collector is still active on the endpoint the writer keeps out of the ring", async () => {
     const h = await mcpHarness({
-      plugins: [blog, spanProbe],
-      dev: { bar: false },
+      config: { plugins: [blog, spanProbe], dev: { bar: false } },
     });
     const secret = await mintPat(h);
 
@@ -828,8 +836,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
 
   test("returns server failures newest-first, each tagged source=server with message/stack/path/timestamp/requestId", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("boom"),
+      config: { plugins: [blog], theme: throwingTheme("boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "first" });
@@ -865,8 +872,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
 
   test("an entry's requestId resolves in telemetry_request_get to the same request's trace", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("pivot me"),
+      config: { plugins: [blog], theme: throwingTheme("pivot me") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "broken" });
@@ -893,7 +899,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
   });
 
   test("a successful request contributes nothing — the tool returns a list, not an error", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "healthy" });
     const secret = await mintPat(h);
@@ -921,9 +927,11 @@ describe("MCP endpoint — error_list (dev gate)", () => {
   // carries the same exposure to the overlay being switched off.
   test("server failures are listed with the debug bar off", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      dev: { bar: false },
-      theme: throwingTheme("bar-off boom"),
+      config: {
+        plugins: [blog],
+        dev: { bar: false },
+        theme: throwingTheme("bar-off boom"),
+      },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({
@@ -950,7 +958,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
   });
 
   test("error_list is advertised in tools/list under the dev gate", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
@@ -999,8 +1007,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
 
   test("merges client entries from the dev endpoint with server entries, each client entry source=client with level/message/stack/label and no requestId", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("server boom"),
+      config: { plugins: [blog], theme: throwingTheme("server boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "srv" });
@@ -1055,7 +1062,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
   });
 
   test("a captured hydration error is readable through error_list and names the offending component", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     stubClientErrorEndpoint(() =>
@@ -1085,8 +1092,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
 
   test("client entries lead the stream, ahead of the server projection", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("later server boom"),
+      config: { plugins: [blog], theme: throwingTheme("later server boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "lead" });
@@ -1120,8 +1126,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
 
   test("when the client endpoint is unavailable, error_list still returns the server entries (degrades, does not fail)", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("degrade boom"),
+      config: { plugins: [blog], theme: throwingTheme("degrade boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "degrade" });
@@ -1149,8 +1154,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
 
   test("a non-200 from the client endpoint degrades to server-only, not an error", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("status boom"),
+      config: { plugins: [blog], theme: throwingTheme("status boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "status" });
@@ -1172,7 +1176,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
   });
 
   test("a malformed row is dropped and a valid one survives; a missing stack defaults to empty", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     stubClientErrorEndpoint(() =>
@@ -1197,8 +1201,7 @@ describe("MCP endpoint — error_list client merge (dev gate)", () => {
 
   test("a non-array errors body degrades to server-only, not an error", async () => {
     const h = await mcpHarness({
-      plugins: [blog],
-      theme: throwingTheme("shape boom"),
+      config: { plugins: [blog], theme: throwingTheme("shape boom") },
     });
     const author = await h.factory.user.create({ role: "editor" });
     await h.factory.published.create({ authorId: author.id, slug: "shape" });
@@ -1234,7 +1237,7 @@ describe("MCP endpoint — telemetry tracing tools absent in production", () => 
   afterEach(() => void vi.unstubAllEnvs());
 
   test("without the dev gate the tracing and error tools are not registered", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
@@ -1254,7 +1257,7 @@ describe("MCP endpoint — telemetry tracing tools absent in production", () => 
 
 describe("MCP endpoint — freshness", () => {
   test("a tools/list answer declares no-store", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const res = await h.dispatch(
@@ -1266,7 +1269,7 @@ describe("MCP endpoint — freshness", () => {
   });
 
   test("a wrong-method refusal declares no-store", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
     const secret = await mintPat(h);
 
     const res = await h.dispatch(mcpRequest({}, { secret, method: "GET" }));
@@ -1276,7 +1279,7 @@ describe("MCP endpoint — freshness", () => {
   });
 
   test("a missing token declares no-store", async () => {
-    const h = await mcpHarness({ plugins: [blog] });
+    const h = await mcpHarness({ config: { plugins: [blog] } });
 
     const res = await h.dispatch(
       mcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list" }),

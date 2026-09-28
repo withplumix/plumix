@@ -55,8 +55,7 @@ describe("dev error page plugin panel", () => {
   test("a plugin panel renders as a section on the dev 500 page", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
-      plugins: [demoPlugin],
-      theme: boomTheme,
+      config: { plugins: [demoPlugin], theme: boomTheme },
     });
 
     const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
@@ -75,7 +74,7 @@ describe("dev error page plugin panel", () => {
 
   test("no panel section renders when no plugin contributes one", async () => {
     process.env.PLUMIX_DEV = "1";
-    const h = await createDispatcherHarness({ theme: boomTheme });
+    const h = await createDispatcherHarness({ config: { theme: boomTheme } });
 
     const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
     const html = await res.text();

@@ -140,12 +140,15 @@ export interface SitemapScope {
  * re-added only on the `<loc>` the index publishes.
  */
 function subSitemapPath(ctx: AppContext, scope: string, page: number): string {
-  return withBasePath(`/sitemap-${scope}-${String(page)}.xml`, ctx.basePath);
+  return withBasePath(
+    `/sitemap-${scope}-${String(page)}.xml`,
+    ctx.config.basePath,
+  );
 }
 
 /** The absolute index URL, for a caller that publishes it — `robots.txt`, `llms.txt`. */
 export function sitemapIndexUrl(ctx: AppContext): string {
-  return `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.basePath)}`;
+  return `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.config.basePath)}`;
 }
 
 function offsetFor(page: number): number {

@@ -566,9 +566,13 @@ describe("passkey signout", () => {
 
   test("surfaces signOutUrl from a custom authenticator", async () => {
     const h = await createDispatcherHarness({
-      authenticator: {
-        authenticate: () => Promise.resolve(null),
-        signOutUrl: () => "https://idp.example/logout",
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.resolve(null),
+            signOutUrl: () => "https://idp.example/logout",
+          },
+        },
       },
     });
     const response = await h.dispatch(
@@ -596,9 +600,13 @@ describe("passkey signout", () => {
     "drops unsafe signOutUrl values (%s) and surfaces null instead",
     async (_name, badUrl) => {
       const h = await createDispatcherHarness({
-        authenticator: {
-          authenticate: () => Promise.resolve(null),
-          signOutUrl: () => badUrl,
+        config: {
+          auth: {
+            authenticator: {
+              authenticate: () => Promise.resolve(null),
+              signOutUrl: () => badUrl,
+            },
+          },
         },
       });
       const response = await h.dispatch(
@@ -611,9 +619,13 @@ describe("passkey signout", () => {
 
   test("accepts a same-origin path as signOutUrl", async () => {
     const h = await createDispatcherHarness({
-      authenticator: {
-        authenticate: () => Promise.resolve(null),
-        signOutUrl: () => "/_plumix/admin/login",
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.resolve(null),
+            signOutUrl: () => "/_plumix/admin/login",
+          },
+        },
       },
     });
     const response = await h.dispatch(

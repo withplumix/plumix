@@ -397,7 +397,7 @@ export interface ImageDelivery {
    */
   purge?(sourceUrl: string): Promise<void>;
   /**
-   * `ctx.basePath` is the site's resolved base path, so an implementation
+   * The connect context carries the site's resolved `basePath`, so an implementation
    * whose `url()` points back at its own route (Node's `/_plumix/image`) can
    * prefix it the way every other outbound URL does. Off-origin delivery
    * (Cloudflare's) has no use for it. Optional so a slot constructed and

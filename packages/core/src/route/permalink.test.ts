@@ -8,6 +8,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
+import { testConfig } from "../test/config.js";
 import { adminUser, createTestDb, factoriesFor } from "../test/index.js";
 import { compileRouteMap } from "./compile.js";
 import { matchRoute } from "./match.js";
@@ -33,8 +34,8 @@ function ctxFor(
   db: Awaited<ReturnType<typeof createTestDb>>,
   registry: PluginRegistry,
   basePath = "",
-): Pick<AppContext, "db" | "plugins" | "basePath"> {
-  return { db, plugins: registry, basePath };
+): Pick<AppContext, "db" | "plugins" | "config"> {
+  return { db, plugins: registry, config: testConfig({ basePath }) };
 }
 
 describe("buildEntryPermalink", () => {

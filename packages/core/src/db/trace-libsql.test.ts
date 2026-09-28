@@ -21,7 +21,7 @@ describe("traceSqlClient", () => {
   } {
     const ctx = createTestContext({
       db,
-      telemetry: { consumers: [{ id: "test" }] },
+      config: { telemetry: { consumers: [{ id: "test" }] } },
     });
     return { telemetry: ctx.telemetry, ctx };
   }

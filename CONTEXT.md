@@ -293,7 +293,7 @@ The platform-neutral object a runtime adapter produces — a `fetch`, optionally
 What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
 
 **Config slot**:
-A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot.
+A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot. Read at runtime as `ctx.config.<slot>`. A slot that binds to the platform is also connected as a service on the context (`ctx.storage`).
 
 **Infrastructure slot**:
 A config slot that holds an adapter the admin could offer an action for: `storage`, `imageDelivery`, `kv`, `cdn`, `mailer`. Not a capability: it says what the deployment can do, not what a user may. See ADR 0014.

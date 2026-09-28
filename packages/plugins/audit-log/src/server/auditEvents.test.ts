@@ -56,7 +56,7 @@ describe("registerAuditEvents — through a procedure", () => {
       query: () => Promise.resolve({ rows: [], nextCursor: null }),
     };
     const h = await createDispatcherHarness({
-      plugins: [auditLog({ storage })],
+      config: { plugins: [auditLog({ storage })] },
     });
     const admin = await h.factory.user.create({ role: "admin" });
     const request = await h.authenticateRequest(

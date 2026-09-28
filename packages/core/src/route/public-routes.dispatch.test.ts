@@ -29,7 +29,7 @@ function owner(path: string, body = "owned", pluginId = "feeds") {
 describe("public route dispatch", () => {
   test("a registered root path is served by its plugin", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
+      config: { plugins: [owner("/feed")] },
     });
     const response = await harness.fetch("/feed");
     response.assertStatus(200);
@@ -44,7 +44,9 @@ describe("public route dispatch", () => {
           new Response(`${params.scope}/${params.page}`, { status: 200 }),
       });
     });
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
     const response = await harness.fetch("/sitemap-post-2.xml");
     expect(await response.text()).toBe("post/2");
   });
@@ -58,7 +60,7 @@ describe("public route dispatch", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const harness = await createDispatcherHarness({
-      plugins: [blog, owner(path)],
+      config: { plugins: [blog, owner(path)] },
     });
     const response = await harness.fetch(path);
     expect(await response.text()).toBe("owned");
@@ -66,8 +68,10 @@ describe("public route dispatch", () => {
 
   test("matches ahead of the redirect table", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
-      redirects: [{ from: "/feed", to: "/elsewhere", status: 301 }],
+      config: {
+        plugins: [owner("/feed")],
+        redirects: [{ from: "/feed", to: "/elsewhere", status: 301 }],
+      },
     });
     const response = await harness.fetch("/feed");
     response.assertStatus(200);
@@ -78,7 +82,7 @@ describe("public route dispatch", () => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     });
     const harness = await createDispatcherHarness({
-      plugins: [blog, owner("/post/hello")],
+      config: { plugins: [blog, owner("/post/hello")] },
     });
     const author = await harness.seedUser("admin");
     await harness.factory.entry.create({
@@ -96,7 +100,7 @@ describe("public route dispatch", () => {
 
   test("a content-plausible extension routes; an asset extension still 404s early", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/ads.txt")],
+      config: { plugins: [owner("/ads.txt")] },
     });
     (await harness.fetch("/ads.txt")).assertStatus(200);
     const missing = await harness.fetch("/logo.png");
@@ -106,7 +110,7 @@ describe("public route dispatch", () => {
 
   test("only GET and HEAD reach a public route", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
+      config: { plugins: [owner("/feed")] },
     });
     const response = await harness.fetch("/feed", { method: "POST" });
     response.assertStatus(405);
@@ -125,14 +129,18 @@ describe("public route dispatch", () => {
         });
       },
     });
-    const harness = await createDispatcherHarness({ plugins: [feeds] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [feeds] },
+    });
     expect(await (await harness.fetch("/feed")).text()).toBe("owned");
   });
 
   test("one path claimed by two plugins throws at boot", async () => {
     await expect(
       createDispatcherHarness({
-        plugins: [owner("/feed"), owner("/feed", "shadowed", "seo")],
+        config: {
+          plugins: [owner("/feed"), owner("/feed", "shadowed", "seo")],
+        },
       }),
     ).rejects.toThrow(
       /Plugin "seo" registers public route "\/feed" already registered by "feeds"/,
@@ -174,8 +182,8 @@ describe("public route dispatch — CDN", () => {
   test("an opted-in route stores its response under the tags it declared", async () => {
     const { cdn, put } = cdnStub();
     const harness = await createDispatcherHarness({
-      plugins: [sitemap],
       cdn,
+      config: { plugins: [sitemap] },
     });
 
     (await harness.fetch("/sitemap.xml")).assertStatus(200);
@@ -188,8 +196,8 @@ describe("public route dispatch — CDN", () => {
   test("a subsequent request is served from the stored entry", async () => {
     const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
     const harness = await createDispatcherHarness({
-      plugins: [sitemap],
       cdn,
+      config: { plugins: [sitemap] },
     });
 
     const response = await harness.fetch("/sitemap.xml");
@@ -203,8 +211,8 @@ describe("public route dispatch — CDN", () => {
       new Response("CACHED", { status: 200 }),
     );
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
       cdn,
+      config: { plugins: [owner("/feed")] },
     });
 
     const response = await harness.fetch("/feed");
@@ -236,7 +244,9 @@ describe("public route dispatch — access policy", () => {
 
   test("an anonymous reader who fails a redirect gate is sent to sign-in", async () => {
     const { plugin, handler } = policied(authenticatedPolicy);
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
 
     const response = await harness.fetch("/feed");
 
@@ -250,7 +260,9 @@ describe("public route dispatch — access policy", () => {
 
   test("a reader who fails a hard challenge gets the challenge response", async () => {
     const { plugin, handler } = policied(rolePolicy("editor"));
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
     const reader = await harness.seedUser("subscriber");
 
     const response = await harness.fetch("/feed", { as: reader });
@@ -262,7 +274,9 @@ describe("public route dispatch — access policy", () => {
 
   test("a reader who passes the gate reaches the handler as themselves", async () => {
     const { plugin } = policied(rolePolicy("editor"));
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
     const editor = await harness.seedUser("editor");
 
     const response = await harness.fetch("/feed", { as: editor });
@@ -281,7 +295,10 @@ describe("public route dispatch — access policy", () => {
     const { plugin, handler } = policied(rolePolicy("editor"), {
       cacheable: true,
     });
-    const harness = await createDispatcherHarness({ plugins: [plugin], cdn });
+    const harness = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [plugin] },
+    });
     const editor = await harness.seedUser("editor");
 
     (await harness.fetch("/feed", { as: editor })).assertStatus(200);
@@ -295,7 +312,9 @@ describe("public route dispatch — access policy", () => {
 
   test("a reader-specific response forbids downstream caches from storing it", async () => {
     const { plugin } = policied(rolePolicy("editor"));
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
     const editor = await harness.seedUser("editor");
 
     const response = await harness.fetch("/feed", { as: editor });
@@ -308,7 +327,9 @@ describe("public route dispatch — access policy", () => {
     const { plugin } = policied(
       definePolicy({ resolve: () => grant("anonymous") }),
     );
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
 
     const response = await harness.fetch("/feed");
 
@@ -320,7 +341,9 @@ describe("public route dispatch — access policy", () => {
     const { plugin } = policied(
       definePolicy({ resolve: () => challenge("subscribe", { soft: true }) }),
     );
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
 
     const response = await harness.fetch("/feed");
 
@@ -338,7 +361,9 @@ describe("public route dispatch — access policy", () => {
         handler: () => new Response("gone", { status: 404 }),
       });
     });
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
 
     const response = await harness.fetch("/feed");
 
@@ -354,7 +379,9 @@ describe("public route dispatch — access policy", () => {
           Response.json({ userId: appCtx.user?.id ?? null }),
       });
     });
-    const harness = await createDispatcherHarness({ plugins: [plugin] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
     const admin = await harness.seedUser("admin");
 
     const response = await harness.fetch("/feed", { as: admin });

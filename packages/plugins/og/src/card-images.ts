@@ -168,7 +168,7 @@ const MEDIA_ID = /^[1-9]\d{0,14}$/;
 function mediaId(src: string, ctx: AppContext): number | null {
   const url = URL.parse(src, ctx.origin);
   if (url === null || url.origin !== URL.parse(ctx.origin)?.origin) return null;
-  const prefix = `${ctx.basePath}${MEDIA_SERVE_PATH}`;
+  const prefix = `${ctx.config.basePath}${MEDIA_SERVE_PATH}`;
   if (!url.pathname.startsWith(prefix)) return null;
   const id = url.pathname.slice(prefix.length);
   return MEDIA_ID.test(id) ? Number.parseInt(id, 10) : null;

@@ -392,11 +392,13 @@ describe("theme:ready — theme-declared data reaching a request", () => {
 
   test("a route serves the field the theme declared, once per boot", async () => {
     const h = await createDispatcherHarness({
-      plugins: [cardsPlugin()],
-      theme: defineTheme({
-        templates: [fallback(() => null)],
-        testCards: ["home", "post"],
-      }),
+      config: {
+        plugins: [cardsPlugin()],
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          testCards: ["home", "post"],
+        }),
+      },
     });
     const get = () =>
       h.dispatch(plumixRequest("/_plumix/cards/list", { method: "GET" }));

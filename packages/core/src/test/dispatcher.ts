@@ -1,23 +1,4 @@
-import type { RemotePattern } from "@plumix/blocks/renderer";
-
-import type { RequestAuthenticator } from "../auth/authenticator.js";
-import type {
-  BootstrapVia,
-  PlumixMagicLinkConfig,
-  PlumixSelfSignupConfig,
-} from "../auth/config.js";
-import type { Mailer } from "../auth/mailer/types.js";
-import type { OAuthProviderClient } from "../auth/oauth/types.js";
-import type { SessionPolicy } from "../auth/sessions.js";
-import type {
-  AnyPluginDescriptor,
-  ApiConfig,
-  DevInput,
-  InterfaceToggle,
-  PlumixConfigInput,
-} from "../config.js";
 import type { AppContext, Db, DeferFn, Logger } from "../context/app.js";
-import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type {
   ActionArgs,
@@ -26,8 +7,6 @@ import type {
   FilterName,
   FilterRest,
 } from "../hooks/types.js";
-import type { I18nInput } from "../i18n/locale-registry.js";
-import type { RedirectRule } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { PlumixApp } from "../runtime/app.js";
@@ -38,40 +17,26 @@ import type {
   ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
-  ImageDelivery,
 } from "../runtime/slots.js";
-import type { ThemeDescriptor } from "../theme.js";
+import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
-import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { createSession } from "../auth/sessions.js";
-import { plumix } from "../config.js";
 import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { bindSlots, requestContextArgs } from "../runtime/handler.js";
+import { testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
-import { defaultTestTheme } from "./default-theme.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { appendCookie, buildRequest, TestResponse } from "./request.js";
 import { spyAction, spyFilter } from "./spies.js";
-
-const stubAdapter = {
-  name: "test",
-  createHandler: () => ({ fetch: () => new Response("stub", { status: 500 }) }),
-  generateEntry: () => "",
-};
-
-const stubDatabase = {
-  kind: "test",
-  connect: () => ({ db: {} }),
-};
 
 export interface CreateDispatcherHarnessOptions {
   /** A supplied db arrives with its schema already applied; the default gets core's. */
@@ -97,17 +62,11 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly assets?: AssetsBinding;
   /**
-   * Plugins to install into the test app. Use when exercising public
-   * routes, manifest projection, or plugin-registered hooks.
+   * The app's config slots, as `plumix.config.ts` would write them — plugins,
+   * `basePath`, `mailer`, `auth: { magicLink }` and the rest. Resolved through
+   * `plumix()`, so the harness app runs the config a deployment would.
    */
-  readonly plugins?: readonly AnyPluginDescriptor[];
-  /** Site-level `config.redirects` for exercising the public redirect stage. */
-  readonly redirects?: readonly RedirectRule[];
-  /**
-   * On-the-fly image delivery slot. Stub it in tests that need
-   * `ctx.imageDelivery` populated (e.g. media plugin route handlers).
-   */
-  readonly imageDelivery?: ImageDelivery;
+  readonly config?: TestConfigInput;
   /**
    * Connected object storage. Stub it in tests that need `ctx.storage`
    * populated (e.g. media plugin upload route). Pass the result of
@@ -125,52 +84,6 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly kv?: ConnectedKv;
   /**
-   * Configured OAuth providers for tests exercising the start/callback
-   * routes. Pass `{ github: github({ clientId, clientSecret }), google:
-   * google(...) }`. Passkey-only deployments leave undefined.
-   */
-  readonly oauth?: Readonly<Record<string, OAuthProviderClient>>;
-  /**
-   * Magic-link config for tests exercising the request/verify routes.
-   * Pair with `mailer` at the top level (the request route requires
-   * both — same cross-field invariant `plumix()` enforces).
-   */
-  readonly magicLink?: PlumixMagicLinkConfig;
-  /**
-   * Top-level outbound email transport. Tests that exercise magic-link
-   * pass a capturing `Mailer` here so they can assert what was sent.
-   */
-  readonly mailer?: Mailer;
-  /**
-   * Override the default session-cookie authenticator. Tests for
-   * external-SSO flows (cfAccess, custom guards) pass an instance
-   * here; the dispatcher and RPC middleware both delegate to it.
-   */
-  readonly authenticator?: RequestAuthenticator;
-  /** Operator `auth.sessions` policy; omitted, the harness app runs the default. */
-  readonly sessions?: SessionPolicy;
-  /**
-   * Bootstrap-rail policy for tests exercising fresh-deploy signup
-   * paths. `"first-method-wins"` opts the harness app into letting the
-   * first OAuth/magic-link signup mint the admin (instead of the
-   * default passkey-only rail).
-   */
-  readonly bootstrapVia?: BootstrapVia;
-  /**
-   * Open self-signup for tests exercising public registration. When set,
-   * the harness app provisions first-time verified emails at
-   * `selfSignup.defaultRole` regardless of `allowed_domains`.
-   */
-  readonly selfSignup?: PlumixSelfSignupConfig;
-  readonly theme?: ThemeDescriptor;
-  readonly i18n?: I18nInput;
-  /**
-   * Serve the harness app under a subdirectory. Tests that exercise the
-   * inbound strip / outbound prefixing pass e.g. `"/custom-directory"`; the
-   * default `""` mirrors a root deployment.
-   */
-  readonly basePath?: string;
-  /**
    * Substitute the app's lazily-loaded cold-interface handlers — the only
    * things the dispatcher reads from the app that aren't already config, and
    * so the seam for observing whether it reached for one at all.
@@ -178,25 +91,6 @@ export interface CreateDispatcherHarnessOptions {
   readonly coldInterfaces?: Partial<
     Pick<PlumixApp, "loadMcpHandler" | "loadRestHandler">
   >;
-  /** Mount the MCP endpoint. Default-off mirrors production. */
-  readonly mcp?: InterfaceToggle;
-  /** Mount the REST API. Default-off mirrors production. */
-  readonly api?: ApiConfig;
-  /** Dev config (`bar`, `panels`); set to exercise panel gating. */
-  readonly dev?: DevInput;
-  /**
-   * Telemetry consumers — the config seam telemetry tests assert through.
-   * Register an in-test consumer, dispatch, then `drainDeferred()` to
-   * receive the snapshot.
-   */
-  readonly telemetry?: TelemetryConfig;
-  /** `<Image>` remote-host allowlist; tests exercising remote optimization set it. */
-  readonly images?: { readonly remotePatterns?: readonly RemotePattern[] };
-  /**
-   * Block-system config. Tests exercising the operator's
-   * `blocks.htmlAllowlist` reaching the renderer set it here.
-   */
-  readonly blocks?: PlumixConfigInput["blocks"];
   /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
@@ -320,38 +214,11 @@ export async function createDispatcherHarness(
   const db = options.db ?? (await createTestDb());
   const env = options.env ?? {};
   const { cdn } = options;
-  const config = plumix({
-    runtime: stubAdapter,
-    database: stubDatabase,
-    auth: auth({
-      passkey: {
-        rpName: "Plumix Test",
-        rpId: "cms.example",
-        origin: "https://cms.example",
-      },
-      oauth: options.oauth ? { providers: options.oauth } : undefined,
-      magicLink: options.magicLink,
-      authenticator: options.authenticator,
-      sessions: options.sessions,
-      bootstrapVia: options.bootstrapVia,
-      selfSignup: options.selfSignup,
-    }),
+  const config = testConfig({
+    ...options.config,
     // Declared as well as bound: core subscribes its entry-mutation purges only
     // where the config names a cdn, so a stub bound alone would never see one.
     cdn: cdn === undefined ? undefined : { kind: "test", connect: () => cdn },
-    plugins: options.plugins,
-    redirects: options.redirects,
-    imageDelivery: options.imageDelivery,
-    mailer: options.mailer,
-    i18n: options.i18n,
-    basePath: options.basePath,
-    mcp: options.mcp,
-    api: options.api,
-    dev: options.dev,
-    telemetry: options.telemetry,
-    images: options.images,
-    blocks: options.blocks,
-    theme: options.theme ?? defaultTestTheme,
   });
   const built = await buildApp(config, {
     assetManifest: options.assetManifest,

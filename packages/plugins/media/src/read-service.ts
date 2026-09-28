@@ -189,7 +189,12 @@ async function buildMediaItem(
   meta: NonNullable<ReturnType<typeof parseMediaMeta>>,
 ): Promise<MediaItem> {
   const url = ctx.storage
-    ? await resolveMediaUrl(ctx.storage, meta.storageKey, row.id, ctx.basePath)
+    ? await resolveMediaUrl(
+        ctx.storage,
+        meta.storageKey,
+        row.id,
+        ctx.config.basePath,
+      )
     : meta.storageKey;
   // `publishedAt` is the "uploaded on" source of truth; fall back to createdAt.
   const uploadedAt = (row.publishedAt ?? row.createdAt).toISOString();
@@ -252,7 +257,7 @@ export async function purgeVariants(
     ctx.storage,
     meta.storageKey,
     row.id,
-    ctx.basePath,
+    ctx.config.basePath,
   );
   try {
     await ctx.imageDelivery.purge(url);

@@ -7,6 +7,7 @@ import {
   toRegisteredEntryType,
   toRegisteredTermTaxonomy,
 } from "../../plugin/registry.js";
+import { testConfig } from "../../test/config.js";
 import { collectDevErrorContext } from "./context.js";
 
 function ctxWith(
@@ -29,8 +30,10 @@ function ctxWith(
     resolvedEntity: null,
     resolvedTemplate: null,
     origin: "https://cms.example",
-    basePath: "",
-    siteName: "Demo",
+    config: testConfig({
+      mailer: { send: () => Promise.resolve() },
+      auth: { magicLink: { siteName: "Demo" } },
+    }),
     locale: { code: "en", label: "English", direction: "ltr", enabled: true },
     plugins,
     telemetry: createTelemetryCollector(),

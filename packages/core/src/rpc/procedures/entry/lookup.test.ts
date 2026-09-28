@@ -631,7 +631,7 @@ describe("entryLookupAdapter", () => {
       children: number,
     ): Promise<{ readonly queries: number; readonly urls: (string | null)[] }> {
       const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-        plugins: [pagesPlugin],
+        config: { plugins: [pagesPlugin] },
       });
       const author = await harness.factory.user.create();
       const ids: string[] = [];
@@ -687,7 +687,7 @@ describe("entryLookupAdapter", () => {
       readonly hrefs: (string | undefined)[];
     }> {
       const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-        plugins: [pagesPlugin],
+        config: { plugins: [pagesPlugin] },
       });
       const author = await harness.factory.user.create();
       const ids: string[] = [];

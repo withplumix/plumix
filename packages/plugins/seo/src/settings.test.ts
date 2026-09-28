@@ -9,7 +9,9 @@ import { seo } from "./index.js";
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
 function createHarness(): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins: [seo()], theme });
+  return createDispatcherHarness({
+    config: { plugins: [seo()], theme: theme },
+  });
 }
 
 /** The `seo` group as the admin's settings card loads it. */

@@ -272,9 +272,9 @@ function stripBasePathOrReject(
   app: PlumixApp,
   ctx: AppContext,
 ): AppContext | Response {
-  if (app.basePath === "") return ctx;
+  if (app.config.basePath === "") return ctx;
   const rawUrl = new URL(ctx.request.url);
-  const stripped = stripBasePath(rawUrl.pathname, app.basePath);
+  const stripped = stripBasePath(rawUrl.pathname, app.config.basePath);
   if (stripped === null) {
     // Asset-shaped misses (chiefly the browser's root favicon probe, which
     // targets the domain root, not the mount) get the cacheable 404 (#1514).
@@ -969,7 +969,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
     // request — its bucket paths omit the prefix, so the (already base-stripped)
     // request fell through to the worker. Serve it from the binding here. At
     // the root the platform had its chance, so a miss is a genuine 404.
-    if (ctx.basePath !== "") {
+    if (ctx.config.basePath !== "") {
       return ctx.assets.fetch(
         new Request(new URL(ctx.request.url), ctx.request),
       );
@@ -1001,12 +1001,12 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   // whose every RPC call would 403. Anonymous visitors fall through to the
   // SPA, which owns the login screen.
   if (auth?.user && !canAccessAdmin(auth.user.role)) {
-    return redirect(withBasePath("/", ctx.basePath), 302);
+    return redirect(withBasePath("/", ctx.config.basePath), 302);
   }
   const locale = resolveLocale({
     request: ctx.request,
     user: auth?.user ?? null,
-    i18n: ctx.i18n,
+    i18n: ctx.config.i18n,
   });
 
   // Rewrite invalidates upstream body-shape headers: encoding stops applying
@@ -1025,7 +1025,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   // router's basepath, and the RPC URL) to wherever the admin is mounted, so
   // the same precompiled admin serves correctly at the root or under any
   // subdirectory without a rebuild.
-  const baseHref = withBasePath(`${ADMIN_PREFIX}/`, ctx.basePath);
+  const baseHref = withBasePath(`${ADMIN_PREFIX}/`, ctx.config.basePath);
   const html = await upstream.text();
   const shell = injectAdminBaseHref(
     rewriteAdminShellLangDir(html, locale),

@@ -66,7 +66,9 @@ function get(
 
 describe("oauth start route", () => {
   test("redirects to bootstrap when no users exist", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/github/start"),
     );
@@ -76,8 +78,10 @@ describe("oauth start route", () => {
 
   test("under a basePath the redirect_uri and post-auth redirects carry the prefix", async () => {
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      oauth: TEST_OAUTH,
+      config: {
+        basePath: "/custom-directory",
+        auth: { oauth: { providers: TEST_OAUTH } },
+      },
     });
     await h.seedUser("admin");
 
@@ -98,8 +102,12 @@ describe("oauth start route", () => {
 
   test("bootstrapVia=first-method-wins lets the OAuth flow start with zero users", async () => {
     const h = await createDispatcherHarness({
-      oauth: TEST_OAUTH,
-      bootstrapVia: "first-method-wins",
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          bootstrapVia: "first-method-wins",
+        },
+      },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/github/start"),
@@ -110,7 +118,9 @@ describe("oauth start route", () => {
   });
 
   test("redirects to provider authorize URL with PKCE + state", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     const response = await h.dispatch(
@@ -139,13 +149,19 @@ describe("oauth start route", () => {
 
   test("resolves an (env) => client config from the request env at authorize", async () => {
     const h = await createDispatcherHarness({
-      oauth: {
-        github: github((env) => ({
-          clientId: (env as { GH_ID?: string }).GH_ID ?? "",
-          clientSecret: (env as { GH_SECRET?: string }).GH_SECRET ?? "",
-        })),
-      },
       env: { GH_ID: "gh-from-env", GH_SECRET: "secret-from-env" },
+      config: {
+        auth: {
+          oauth: {
+            providers: {
+              github: github((env) => ({
+                clientId: (env as { GH_ID?: string }).GH_ID ?? "",
+                clientSecret: (env as { GH_SECRET?: string }).GH_SECRET ?? "",
+              })),
+            },
+          },
+        },
+      },
     });
     await h.seedUser("admin");
 
@@ -172,7 +188,9 @@ describe("oauth start route", () => {
   });
 
   test("carries a safe redirectTo through the state payload", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     const response = await h.dispatch(
@@ -190,7 +208,9 @@ describe("oauth start route", () => {
   });
 
   test("drops an unsafe redirectTo at start (not stored)", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     await h.dispatch(
@@ -209,7 +229,9 @@ describe("oauth start route", () => {
     // `/%09/evil.com` decodes to `/<TAB>/evil.com`; the browser's URL parser
     // strips the TAB, reconstructing `//evil.com`. The validator must reject
     // it before it reaches the state row.
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     await h.dispatch(
@@ -225,7 +247,9 @@ describe("oauth start route", () => {
   });
 
   test("returns 405 on POST", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/github/start", {
         method: "POST",
@@ -236,7 +260,9 @@ describe("oauth start route", () => {
   });
 
   test("redirects to login with provider_not_configured for an unknown key", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/twitter/start"),
     );
@@ -247,7 +273,9 @@ describe("oauth start route", () => {
   });
 
   test("returns 404 on a malformed provider key (uppercase / specials)", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/Bad-Key!/start"),
     );
@@ -259,7 +287,9 @@ describe("oauth start route", () => {
     // a direct `providers[key]` lookup would walk the prototype chain
     // and return `Object`. `Object.hasOwn` keeps the lookup confined to
     // the operator's config map.
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/oauth/constructor/start"),
@@ -287,7 +317,9 @@ describe("oauth callback route", () => {
   }
 
   test("rejects callback when state is missing", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await get(
       h,
       "/_plumix/auth/oauth/github/callback?code=abc",
@@ -299,7 +331,9 @@ describe("oauth callback route", () => {
   });
 
   test("rejects callback when state is unknown", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await get(
       h,
       "/_plumix/auth/oauth/github/callback?code=abc&state=nope",
@@ -311,7 +345,9 @@ describe("oauth callback route", () => {
   });
 
   test("rejects callback when state was issued for a different provider", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const state = await seedState(h, "google", "verifier");
     const response = await get(
       h,
@@ -324,7 +360,9 @@ describe("oauth callback route", () => {
   });
 
   test("forwards a provider error param to the login page", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     const response = await get(
       h,
       "/_plumix/auth/oauth/github/callback?error=access_denied",
@@ -336,7 +374,9 @@ describe("oauth callback route", () => {
   });
 
   test("token exchange uses HTTP Basic Authorization for client credentials (RFC 6749 / Copenhagen Book)", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     await h.factory.allowedDomain.create({
       domain: "example.com",
@@ -397,7 +437,9 @@ describe("oauth callback route", () => {
   });
 
   test("happy path — links to existing user, mints session, sets cookie, redirects to admin", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     // Email forced so the verified-email link path is exercised.
     const seeded = await h.factory.user.create({
       role: "editor",
@@ -453,7 +495,9 @@ describe("oauth callback route", () => {
   });
 
   test("returns the visitor to a safe redirectTo carried in state", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.factory.user.create({
       role: "subscriber",
       email: "alice@example.com",
@@ -488,7 +532,9 @@ describe("oauth callback route", () => {
   });
 
   test("falls back to admin when the stored redirectTo is unsafe", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.factory.user.create({
       role: "subscriber",
       email: "alice@example.com",
@@ -524,7 +570,9 @@ describe("oauth callback route", () => {
   });
 
   test("domain-gated signup creates a user with the domain's default role", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     await h.factory.allowedDomain.create({
       domain: "example.com",
@@ -571,8 +619,12 @@ describe("oauth callback route", () => {
 
   test("self-signup provisions an unlisted email at the default role", async () => {
     const h = await createDispatcherHarness({
-      oauth: TEST_OAUTH,
-      selfSignup: { defaultRole: "subscriber" },
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          selfSignup: { defaultRole: "subscriber" },
+        },
+      },
     });
     await h.seedUser("admin");
     // No allowed_domains row — domain-gated signup would reject, but open
@@ -609,7 +661,9 @@ describe("oauth callback route", () => {
   });
 
   test("unknown domain redirects to login with domain_not_allowed", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     const state = await seedState(h, "google", "v-3");
@@ -648,7 +702,9 @@ describe("oauth callback route", () => {
   test("worked theme wiring: start → callback returns the visitor to redirectTo", async () => {
     // Mirrors a theme "Continue with GitHub" link carrying ?redirectTo; the
     // whole round-trip lands the visitor back on the page, signed in.
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.factory.user.create({
       role: "subscriber",
       email: "reader@example.com",
@@ -692,7 +748,9 @@ describe("oauth callback route", () => {
   });
 
   test("token exchange failure redirects to login with code_exchange_failed", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
 
     const state = await seedState(h, "github", "v-x");
@@ -715,7 +773,9 @@ describe("oauth callback route", () => {
   });
 
   test("github email fallback — provisions a user from /user/emails when /user.email is null", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     await h.factory.allowedDomain.create({
       domain: "example.com",
@@ -759,7 +819,9 @@ describe("oauth callback route", () => {
   });
 
   test("github email fallback rejects when the primary is unverified", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     await h.factory.allowedDomain.create({
       domain: "example.com",
@@ -796,7 +858,9 @@ describe("oauth callback route", () => {
   });
 
   test("malformed userinfo body (missing fields) rejects with email_missing", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     const state = await seedState(h, "google", "v-malformed");
 
@@ -819,7 +883,9 @@ describe("oauth callback route", () => {
   });
 
   test("oversized code is rejected before any provider call", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     const state = await seedState(h, "github", "v-oversize");
     const huge = "x".repeat(8192);
@@ -839,7 +905,9 @@ describe("oauth callback route", () => {
   });
 
   test("provider-error callback consumes the state row", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     const state = await seedState(h, "github", "v-canceled");
 
@@ -866,7 +934,9 @@ describe("oauth callback route", () => {
   });
 
   test("state is consumed even when the provider call fails (no replay)", async () => {
-    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    const h = await createDispatcherHarness({
+      config: { auth: { oauth: { providers: TEST_OAUTH } } },
+    });
     await h.seedUser("admin");
     const state = await seedState(h, "github", "v-y");
 

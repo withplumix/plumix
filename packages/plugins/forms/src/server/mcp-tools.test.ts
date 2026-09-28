@@ -47,8 +47,10 @@ async function setup(
   config: Omit<FormsConfig, "forms"> = {},
 ): Promise<Harness> {
   const harness = await createDispatcherHarness({
-    plugins: [forms({ ...config, forms: [contact, newsletter] })],
-    mcp: { enabled: true },
+    config: {
+      plugins: [forms({ ...config, forms: [contact, newsletter] })],
+      mcp: { enabled: true },
+    },
   });
   await applyFormsSchema(harness.db);
   return harness;

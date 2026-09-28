@@ -170,15 +170,17 @@ describe("the bundled engine", () => {
 
   test("is what a plugin with no renderer configured serves through", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [
-        definePlugin("test_blog", {
-          setup: (ctx) => {
-            ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-          },
-        }),
-        og(),
-      ],
       storage: memoryStorage().connect({}),
+      config: {
+        plugins: [
+          definePlugin("test_blog", {
+            setup: (ctx) => {
+              ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+            },
+          }),
+          og(),
+        ],
+      },
     });
     const author = await harness.factory.user.create({});
     const entry = await harness.factory.entry.create({

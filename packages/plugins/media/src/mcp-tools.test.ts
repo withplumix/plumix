@@ -9,9 +9,8 @@ type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
 async function setup(): Promise<Harness> {
   const storage = memoryStorage().connect({});
   return createDispatcherHarness({
-    plugins: [media()],
     storage,
-    mcp: { enabled: true },
+    config: { plugins: [media()], mcp: { enabled: true } },
   });
 }
 

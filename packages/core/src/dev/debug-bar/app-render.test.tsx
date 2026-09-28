@@ -24,7 +24,9 @@ describe("debug bar App panel + Request auth (end to end)", () => {
 
   test("shows installed plugins, registered content types, and anonymous auth", async () => {
     process.env.PLUMIX_DEV = "1";
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
 
     const res = await h.dispatch(new Request(`${DEV_ORIGIN}/nope`));
     const html = await res.text();

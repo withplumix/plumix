@@ -55,8 +55,10 @@ async function harness(withPlugin: boolean): Promise<void> {
     rpc,
     runSchedule: index,
   } = await createSearchHarness({
-    plugins: withPlugin ? [contentPlugin, search()] : [contentPlugin],
-    theme,
+    config: {
+      plugins: withPlugin ? [contentPlugin, search()] : [contentPlugin],
+      theme,
+    },
   }));
 }
 

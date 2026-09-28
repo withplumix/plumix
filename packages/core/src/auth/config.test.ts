@@ -1,7 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { PlumixAuthInput } from "./config.js";
+import type { PlumixAuthConfig, PlumixAuthInput } from "./config.js";
 import { auth, PlumixConfigError } from "./config.js";
+import { github } from "./oauth/providers/github.js";
 
 const validPasskey = {
   rpName: "Plumix",
@@ -20,6 +21,39 @@ function rejected(input: PlumixAuthInput): PlumixConfigError {
 }
 
 describe("auth()", () => {
+  test("hands every option on as the object the operator wrote", () => {
+    // `Required` makes a newly declared option a compile error here until it
+    // is set, so the identity check covers it without anyone remembering to.
+    const input: Required<PlumixAuthInput> = {
+      passkey: validPasskey,
+      sessions: {
+        maxAgeSeconds: 60,
+        absoluteMaxAgeSeconds: 120,
+        refreshThreshold: 0.5,
+      },
+      oauth: {
+        providers: { github: github({ clientId: "id", clientSecret: "s" }) },
+      },
+      magicLink: { siteName: "Plumix" },
+      authenticator: { authenticate: () => Promise.resolve(null) },
+      bootstrapVia: "first-method-wins",
+      selfSignup: { defaultRole: "subscriber" },
+      loginPath: "/login",
+    };
+    const config = auth(input);
+    expect(config.kind).toBe("plumix");
+    for (const key of Object.keys(input) as (keyof PlumixAuthInput)[]) {
+      expect(config[key], key).toBe(input[key]);
+    }
+  });
+
+  test("PlumixAuthConfig is the input plus its kind", () => {
+    expectTypeOf<
+      Omit<PlumixAuthConfig, "kind">
+    >().toEqualTypeOf<PlumixAuthInput>();
+    expectTypeOf<PlumixAuthConfig["kind"]>().toEqualTypeOf<"plumix">();
+  });
+
   test("accepts a minimal valid config", () => {
     const config = auth({ passkey: validPasskey });
     expect(config.kind).toBe("plumix");

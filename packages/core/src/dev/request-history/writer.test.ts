@@ -77,7 +77,7 @@ describe("debugHistoryConsumer", () => {
     const store = createDebugHistoryStore();
     void debugHistoryConsumer(store).onRequestEnd?.(
       envelope({ url }),
-      ctxWith({ request: new Request(url), basePath }),
+      ctxWith({ request: new Request(url), config: { basePath: basePath } }),
     );
     return store.find("req-42") !== undefined;
   }

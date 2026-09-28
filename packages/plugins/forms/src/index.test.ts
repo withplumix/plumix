@@ -108,7 +108,7 @@ describe("forms registration", () => {
 
     await expect(
       createDispatcherHarness({
-        plugins: [forms({ forms: [contact] }), collidingPlugin],
+        config: { plugins: [forms({ forms: [contact] }), collidingPlugin] },
       }),
     ).rejects.toThrow(/"contact".*config.*newsletter/s);
   });

@@ -57,8 +57,10 @@ describe("magic-link request route", () => {
   test("returns 200 with generic message and sends mail when user exists", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "alice@example.com",
@@ -83,9 +85,11 @@ describe("magic-link request route", () => {
   test("the verify link in the email carries the configured basePath", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        basePath: "/custom-directory",
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "alice@example.com",
@@ -106,8 +110,10 @@ describe("magic-link request route", () => {
   test("folds a safe redirectTo into the emailed verify link", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "alice@example.com",
@@ -127,8 +133,10 @@ describe("magic-link request route", () => {
   test("omits an unsafe redirectTo from the emailed verify link", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "alice@example.com",
@@ -150,8 +158,10 @@ describe("magic-link request route", () => {
     // the endpoints theme-callable, not just admin-callable.
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "alice@example.com",
@@ -180,8 +190,10 @@ describe("magic-link request route", () => {
   test("returns the same shape when user does not exist (no enumeration)", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
 
     const response = await h.dispatch(
@@ -199,8 +211,10 @@ describe("magic-link request route", () => {
   test("rejects malformed input with 400", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
 
     const response = await h.dispatch(
@@ -214,8 +228,10 @@ describe("magic-link request route", () => {
   test("rejects missing CSRF header", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
 
     const response = await h.dispatch(
@@ -236,9 +252,11 @@ async function sessionFromVerify(
 ): Promise<Session | undefined> {
   const { mailer } = captureMailer();
   const h = await createDispatcherHarness({
-    magicLink: { siteName: "Plumix Test" },
-    mailer,
     ...options,
+    config: {
+      mailer,
+      auth: { magicLink: { siteName: "Plumix Test" } },
+    },
   });
   const user = await h.factory.user.create({ email: "alice@example.com" });
   const { token } = await h.factory.authToken.create({
@@ -258,8 +276,10 @@ describe("magic-link verify route", () => {
   test("missing token redirects with magic_link_error=missing_token", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const response = await h.dispatch(
       getRequest("/_plumix/auth/magic-link/verify"),
@@ -273,8 +293,10 @@ describe("magic-link verify route", () => {
   test("happy path mints session, sets cookie, redirects to admin", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -322,9 +344,11 @@ describe("magic-link verify route", () => {
   test("under a basePath the post-verify redirect and cookie are base-scoped", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        basePath: "/custom-directory",
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -354,8 +378,10 @@ describe("magic-link verify route", () => {
   test("honours a safe redirectTo on the verify link", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -381,8 +407,10 @@ describe("magic-link verify route", () => {
   test("falls back to admin when the verify redirectTo is unsafe", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -410,8 +438,10 @@ describe("magic-link verify route", () => {
     // clicks the emailed link and lands back on that page, signed in.
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({
       email: "reader@example.com",
@@ -443,8 +473,10 @@ describe("magic-link verify route", () => {
   test("rejects an unknown token with token_invalid", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
 
     const response = await h.dispatch(
@@ -459,8 +491,10 @@ describe("magic-link verify route", () => {
   test("rejects an expired token with token_expired", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({ role: "editor" });
     const token = (
@@ -482,8 +516,10 @@ describe("magic-link verify route", () => {
   test("rejects when the linked user is disabled", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       role: "editor",
@@ -504,8 +540,10 @@ describe("magic-link verify route", () => {
   test("oversized token is rejected as token_invalid", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const huge = "x".repeat(512);
 
@@ -520,8 +558,10 @@ describe("magic-link verify route", () => {
   test("replay of a single-use token fails on second use", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -555,8 +595,10 @@ describe("magic-link verify route", () => {
     // create a new session when the user signs in" rule.
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
@@ -594,8 +636,10 @@ describe("magic-link verify route", () => {
   test("end-to-end signup: request → verify provisions user with the domain's role", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({ role: "admin" });
     await h.factory.allowedDomain.create({
@@ -642,9 +686,13 @@ describe("magic-link verify route", () => {
   test("end-to-end self-signup: unlisted email registers as the default role", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
-      selfSignup: { defaultRole: "subscriber" },
+      config: {
+        mailer,
+        auth: {
+          magicLink: { siteName: "Plumix Test" },
+          selfSignup: { defaultRole: "subscriber" },
+        },
+      },
     });
     // One user exists (bootstrap satisfied); no allowed_domains row for
     // this address — only open self-signup lets it through.
@@ -678,8 +726,10 @@ describe("magic-link verify route", () => {
   test("without self-signup an unlisted email is refused (no leak, no token)", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({ role: "admin" });
 
@@ -698,8 +748,10 @@ describe("magic-link verify route", () => {
   test("signup verify rejects with domain_not_allowed if admin disables the domain mid-flight", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     await h.factory.user.create({ role: "admin" });
     const allowed = await h.factory.allowedDomain.create({
@@ -739,8 +791,10 @@ describe("magic-link verify route", () => {
   test("returns 405 on POST", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/auth/magic-link/verify", {
@@ -758,8 +812,10 @@ describe("magic-link verify route", () => {
     // covered above; this test is the explicit "unknown error" symbol.
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({
-      magicLink: { siteName: "Plumix Test" },
-      mailer,
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+      },
     });
     const verifySpy = vi
       .spyOn(console, "info")

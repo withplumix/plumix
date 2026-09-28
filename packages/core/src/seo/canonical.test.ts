@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import type { PublicRouteTable } from "../route/public-routes.js";
 import { compilePublicRoutes } from "../route/public-routes.js";
+import { testConfig } from "../test/config.js";
 import { canonicalRedirectTarget, canonicalUrl } from "./canonical.js";
 
 const NO_PUBLIC_ROUTES = compilePublicRoutes([]);
@@ -20,11 +21,11 @@ function publicRoutes(...paths: readonly string[]): PublicRouteTable {
 function ctxFor(
   url: string,
   basePath = "",
-): Pick<AppContext, "request" | "origin" | "basePath"> {
+): Pick<AppContext, "request" | "origin" | "config"> {
   return {
     request: new Request(url),
     origin: "https://cms.example",
-    basePath,
+    config: testConfig({ basePath }),
   };
 }
 

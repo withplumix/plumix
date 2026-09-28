@@ -5,6 +5,7 @@ import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type { RegisteredScheduledTask } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
 import { createAppContext } from "../context/app.js";
+import { testConfig } from "../test/config.js";
 import { createTestContext, silentLogger } from "../test/context.js";
 import { createDeferQueue } from "../test/defer.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -210,11 +211,13 @@ describe("runScheduledTasks", () => {
       plugins: harness.app.plugins,
       defer,
       logger: { debug: silent, info: silent, warn: silent, error: silent },
-      telemetry: {
-        consumers: [
-          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
-        ],
-      },
+      config: testConfig({
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
+      }),
     });
     const tasks: RegisteredScheduledTask[] = [
       {

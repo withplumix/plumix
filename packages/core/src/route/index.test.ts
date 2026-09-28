@@ -33,8 +33,10 @@ function route(
 describe("routePublicRequest — stage order", () => {
   test("a public route answers ahead of a redirect for the same path", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
-      redirects: [{ from: "/feed", to: "/elsewhere", status: 301 }],
+      config: {
+        plugins: [owner("/feed")],
+        redirects: [{ from: "/feed", to: "/elsewhere", status: 301 }],
+      },
     });
     const outcome = route(harness, "/feed");
     expect(outcome.kind).toBe("public-route");
@@ -44,7 +46,7 @@ describe("routePublicRequest — stage order", () => {
 
   test("a redirect on an asset-shaped path answers ahead of the asset 404", async () => {
     const harness = await createDispatcherHarness({
-      redirects: [{ from: "/old.png", to: "/new.png" }],
+      config: { redirects: [{ from: "/old.png", to: "/new.png" }] },
     });
     const outcome = route(harness, "/old.png");
     expect(outcome.kind).toBe("response");
@@ -66,8 +68,10 @@ describe("routePublicRequest — stage order", () => {
 
   test("a redirect answers ahead of a content route at the same path", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [blog],
-      redirects: [{ from: "/post/moved", to: "/post/kept", status: 301 }],
+      config: {
+        plugins: [blog],
+        redirects: [{ from: "/post/moved", to: "/post/kept", status: 301 }],
+      },
     });
     const outcome = route(harness, "/post/moved");
     expect(outcome.kind).toBe("response");
@@ -76,7 +80,9 @@ describe("routePublicRequest — stage order", () => {
   });
 
   test("a non-canonical URL 301s ahead of the content route it would match", async () => {
-    const harness = await createDispatcherHarness({ plugins: [blog] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [blog] },
+    });
     const outcome = route(harness, "/post/hello/?ref=x");
     expect(outcome.kind).toBe("response");
     if (outcome.kind !== "response") return;
@@ -87,7 +93,9 @@ describe("routePublicRequest — stage order", () => {
   });
 
   test("a canonical content URL reaches the route map", async () => {
-    const harness = await createDispatcherHarness({ plugins: [blog] });
+    const harness = await createDispatcherHarness({
+      config: { plugins: [blog] },
+    });
     const outcome = route(harness, "/post/hello");
     expect(outcome.kind).toBe("content");
     if (outcome.kind !== "content") return;
@@ -102,7 +110,7 @@ describe("routePublicRequest — stage order", () => {
 
   test("a method other than GET or HEAD is refused before any stage runs", async () => {
     const harness = await createDispatcherHarness({
-      plugins: [owner("/feed")],
+      config: { plugins: [owner("/feed")] },
     });
     const outcome = route(harness, "/feed", "POST");
     expect(outcome.kind).toBe("response");

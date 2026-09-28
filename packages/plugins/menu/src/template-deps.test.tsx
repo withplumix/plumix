@@ -218,11 +218,13 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       ],
     });
     const h = await createDispatcherHarness({
-      plugins: [
-        blogPlugin,
-        menu({ locations: { primary: { label: "Primary" } } }),
-      ],
-      theme,
+      config: {
+        plugins: [
+          blogPlugin,
+          menu({ locations: { primary: { label: "Primary" } } }),
+        ],
+        theme,
+      },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({

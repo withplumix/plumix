@@ -292,7 +292,7 @@ describe("createAuditExtension — through an authenticated procedure", () => {
       },
     });
     const h = await createDispatcherHarness({
-      plugins: [auditLog({ storage }), probe],
+      config: { plugins: [auditLog({ storage }), probe] },
     });
     const admin = await h.factory.user.create({ role: "admin" });
     const request = await h.authenticateRequest(

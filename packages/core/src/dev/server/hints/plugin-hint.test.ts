@@ -47,8 +47,7 @@ describe("dev error page plugin hint", () => {
   test("a plugin hint renders in the how-to-fix card, above core's", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({
-      plugins: [demoPlugin],
-      theme: boomTheme,
+      config: { plugins: [demoPlugin], theme: boomTheme },
     });
 
     const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));

@@ -41,7 +41,9 @@ function createHarness(
   plugins: readonly PluginDescriptor[] = [blogPlugin, seo()],
   themeOverride: ThemeDescriptor = theme,
 ): Promise<DispatcherHarness> {
-  return createDispatcherHarness({ plugins, theme: themeOverride });
+  return createDispatcherHarness({
+    config: { plugins: plugins, theme: themeOverride },
+  });
 }
 
 async function seedPost(

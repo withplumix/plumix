@@ -70,9 +70,8 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "storage",
   "imageDelivery",
   "mailer",
-  "i18n",
+  "config",
   "origin",
-  "siteName",
   "resolvedEntity",
 ]);
 

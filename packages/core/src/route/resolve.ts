@@ -136,7 +136,7 @@ async function resolveSearch(
     const q = new URL(ctx.request.url).searchParams.get("q")?.trim();
     if (q) {
       return permanentRedirect(
-        withBasePath(`/search/${encodeURIComponent(q)}`, ctx.basePath),
+        withBasePath(`/search/${encodeURIComponent(q)}`, ctx.config.basePath),
       );
     }
   }
@@ -203,7 +203,7 @@ async function resolveTaxonomy(
     const request = new URL(ctx.request.url);
     const canonical =
       params.page === undefined ? url : `${url}/page/${params.page}`;
-    if (withBasePath(request.pathname, ctx.basePath) !== canonical) {
+    if (withBasePath(request.pathname, ctx.config.basePath) !== canonical) {
       return permanentRedirect(`${ctx.origin}${canonical}${request.search}`);
     }
   }

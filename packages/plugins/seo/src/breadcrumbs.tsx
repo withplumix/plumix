@@ -23,7 +23,7 @@ export interface BreadcrumbItem {
 const HOME = "Home";
 
 function absolute(ctx: AppContext, path: string): string {
-  return `${ctx.origin}${withBasePath(path, ctx.basePath)}`;
+  return `${ctx.origin}${withBasePath(path, ctx.config.basePath)}`;
 }
 
 /**

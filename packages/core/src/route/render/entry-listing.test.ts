@@ -21,7 +21,7 @@ let ctx: AppContext;
 let authorId: number;
 
 beforeEach(async () => {
-  h = await createDispatcherHarness({ plugins: [blog] });
+  h = await createDispatcherHarness({ config: { plugins: [blog] } });
   ctx = createTestContext({
     db: h.db,
     hooks: h.app.hooks,
@@ -176,7 +176,7 @@ describe("listEntryPage paging", () => {
     // cold context, because a warm request memo would answer for an author the
     // earlier read had already batched and undercount the later one.
     const cost = async (perPage: number): Promise<number> => {
-      const traced = await createTracedContext({ plugins: [blog] });
+      const traced = await createTracedContext({ config: { plugins: [blog] } });
       // Two authors, so the larger page's author batch covers more than one
       // and a per-row lookup would show up as a bigger number here.
       for (const role of ["admin", "editor", "admin"] as const) {

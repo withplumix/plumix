@@ -103,7 +103,7 @@ describe("moderator notification", () => {
       plugins: [comments({ notifyEmail: "mod@example.test" })],
     });
     const send = vi.fn(() => Promise.resolve());
-    const ctx = createTestContext({ db, hooks, mailer: { send } });
+    const ctx = createTestContext({ db, hooks, config: { mailer: { send } } });
 
     await hooks.doAction("comment:created", comment, ctx);
 

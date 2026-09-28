@@ -37,7 +37,7 @@ const plugin = definePlugin("test-sweep", (ctx) => {
 
 async function seeded() {
   const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-    plugins: [plugin, manySettings],
+    config: { plugins: [plugin, manySettings] },
   });
   const author = await harness.factory.user.create({
     meta: { newsletter: "true" },

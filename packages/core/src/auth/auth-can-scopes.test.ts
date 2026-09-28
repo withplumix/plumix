@@ -5,6 +5,7 @@ import type { createTestDb } from "../test/harness.js";
 import { createAppContext, withUser } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { testConfig } from "../test/config.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { entryCapability, termCapability } from "./contract/capability.js";
 
@@ -25,6 +26,7 @@ function buildCtx(args: {
     db,
     env: {},
     request: new Request("https://cms.example/"),
+    config: testConfig(),
     hooks,
     plugins,
   });
@@ -77,6 +79,7 @@ describe("auth.can — tokenScopes narrowing", () => {
       db,
       env: {},
       request: new Request("https://cms.example/"),
+      config: testConfig(),
       hooks,
       plugins,
     });

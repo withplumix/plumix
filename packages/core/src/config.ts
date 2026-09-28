@@ -205,33 +205,20 @@ export interface PlumixConfigInput {
   readonly vite?: ViteUserConfig;
 }
 
-export interface PlumixConfig {
-  readonly runtime: RuntimeAdapter;
-  readonly database: AnyDatabaseAdapter;
-  readonly auth: PlumixAuthConfig;
-  readonly storage?: ObjectStorage;
-  readonly imageDelivery?: ImageDelivery;
-  readonly kv?: KV;
-  readonly cdn?: CdnProvider;
-  readonly mailer?: MailerInput;
+// The slots `plumix()` resolves. Every other slot reaches `PlumixConfig` as
+// the operator wrote it, so a new pass-through slot is declared only on the
+// input.
+interface ResolvedSlots {
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
   readonly redirects: readonly RedirectRule[];
   /** Normalized subdirectory prefix (`""` for a root deployment). */
   readonly basePath: string;
-  readonly mcp?: InterfaceToggle;
-  readonly api?: ApiConfig;
-  readonly dev?: DevInput;
-  readonly telemetry?: TelemetryConfig;
-  readonly blocks?: {
-    readonly htmlAllowlist?: HtmlAllowlistOverride;
-  };
-  readonly images?: {
-    readonly remotePatterns?: readonly RemotePattern[];
-  };
-  readonly vite?: ViteUserConfig;
 }
+
+export interface PlumixConfig
+  extends Omit<PlumixConfigInput, keyof ResolvedSlots>, ResolvedSlots {}
 
 export function plumix(config: PlumixConfigInput): PlumixConfig {
   // Cross-field invariant: features that require email (magic-link
@@ -241,14 +228,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     throw ConfigError.magicLinkRequiresMailer();
   }
   return {
-    runtime: config.runtime,
-    database: config.database,
-    auth: config.auth,
-    storage: config.storage,
-    imageDelivery: config.imageDelivery,
-    kv: config.kv,
-    cdn: config.cdn,
-    mailer: config.mailer,
+    ...config,
     theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],
     redirects: config.redirects ?? [],
@@ -256,13 +236,6 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),
     basePath: normalizeBasePath(config.basePath),
-    mcp: config.mcp,
-    api: config.api,
-    dev: config.dev,
-    telemetry: config.telemetry,
-    blocks: config.blocks,
-    images: config.images,
-    vite: config.vite,
   };
 }
 

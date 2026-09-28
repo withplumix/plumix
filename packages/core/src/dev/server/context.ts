@@ -23,9 +23,8 @@ export type DevErrorContextSource = Pick<
   | "resolvedEntity"
   | "resolvedTemplate"
   | "telemetry"
-  | "siteName"
   | "origin"
-  | "basePath"
+  | "config"
   | "locale"
   | "cdn"
   | "storage"
@@ -153,9 +152,9 @@ const listKeys = (map: ReadonlyMap<string, unknown>): string =>
 
 function collectAppFacts(ctx: DevErrorContextSource): DevErrorFact[] {
   return [
-    { label: "Site name", value: ctx.siteName ?? "—" },
+    { label: "Site name", value: ctx.config.auth.magicLink?.siteName ?? "—" },
     { label: "Origin", value: ctx.origin },
-    { label: "Base path", value: ctx.basePath || "/" },
+    { label: "Base path", value: ctx.config.basePath || "/" },
     { label: "Locale", value: `${ctx.locale.code} (${ctx.locale.direction})` },
     {
       label: "Slots",

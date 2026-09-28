@@ -374,7 +374,7 @@ describe("runSearch", () => {
         ctx: tracedCtx,
         run,
         dbQueryCount,
-      } = await createTracedContext({ plugins: [pagesPlugin] });
+      } = await createTracedContext({ config: { plugins: [pagesPlugin] } });
       await applySearchSchema(harness.db);
       const author = await harness.factory.user.create();
       for (let i = 0; i < children; i++) {

@@ -62,8 +62,7 @@ const eventsTheme = defineTheme({
 describe("custom archive types (registerArchiveType)", () => {
   test("a plugin route dispatches to its resolver and templates the data", async () => {
     const h = await createDispatcherHarness({
-      plugins: [eventsPlugin],
-      theme: eventsTheme,
+      config: { plugins: [eventsPlugin], theme: eventsTheme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/events/summer"),
@@ -81,8 +80,7 @@ describe("custom archive types (registerArchiveType)", () => {
     // The payload carries a `year` field; the page must not be `noindex`-ed as
     // if it were a search page, nor pick up any other date-archive treatment.
     const h = await createDispatcherHarness({
-      plugins: [eventsPlugin],
-      theme: eventsTheme,
+      config: { plugins: [eventsPlugin], theme: eventsTheme },
     });
     const body = await (
       await h.dispatch(new Request("https://cms.example/events/summer"))
@@ -93,8 +91,7 @@ describe("custom archive types (registerArchiveType)", () => {
 
   test("the resolver returning null is a 404", async () => {
     const h = await createDispatcherHarness({
-      plugins: [eventsPlugin],
-      theme: eventsTheme,
+      config: { plugins: [eventsPlugin], theme: eventsTheme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/events/missing"),
@@ -104,8 +101,7 @@ describe("custom archive types (registerArchiveType)", () => {
 
   test("the paginated route dispatches with the page param", async () => {
     const h = await createDispatcherHarness({
-      plugins: [eventsPlugin],
-      theme: eventsTheme,
+      config: { plugins: [eventsPlugin], theme: eventsTheme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/events/summer/page/2"),
@@ -126,7 +122,7 @@ describe("custom archive types (registerArchiveType)", () => {
       });
     });
     await expect(
-      createDispatcherHarness({ plugins: [dupePlugin] }),
+      createDispatcherHarness({ config: { plugins: [dupePlugin] } }),
     ).rejects.toThrow();
   });
 });
@@ -171,8 +167,7 @@ const talksTheme = defineTheme({
 
 async function talksHarness(): Promise<DispatcherHarness> {
   const h = await createDispatcherHarness({
-    plugins: [talksPlugin],
-    theme: talksTheme,
+    config: { plugins: [talksPlugin], theme: talksTheme },
   });
   const author = await h.seedUser("admin");
   for (const title of ["Alpha", "Bravo", "Charlie"]) {
@@ -272,8 +267,7 @@ const roomsTheme = defineTheme({
 describe("a listed archive's resolver", () => {
   async function roomsHarness(): Promise<DispatcherHarness> {
     const h = await createDispatcherHarness({
-      plugins: [roomsPlugin],
-      theme: roomsTheme,
+      config: { plugins: [roomsPlugin], theme: roomsTheme },
     });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -324,8 +318,7 @@ describe("a listed archive's resolver", () => {
       });
     });
     const h = await createDispatcherHarness({
-      plugins: [lost],
-      theme: roomsTheme,
+      config: { plugins: [lost], theme: roomsTheme },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/tracks/no-such-track"),

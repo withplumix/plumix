@@ -31,12 +31,15 @@ export interface ResolveReturnUrlOptions {
  */
 export function resolveReturnUrl(
   request: Request,
-  ctx: { readonly origin: string; readonly basePath: string },
+  ctx: {
+    readonly origin: string;
+    readonly config: { readonly basePath: string };
+  },
   { returnTo, endpoint }: ResolveReturnUrlOptions,
 ): string {
   const here = new URL(request.url);
   const configured = URL.parse(ctx.origin)?.origin;
-  const endpointPath = withBasePath(endpoint, ctx.basePath);
+  const endpointPath = withBasePath(endpoint, ctx.config.basePath);
   for (const candidate of [returnTo, request.headers.get("referer")]) {
     const url = URL.parse(candidate ?? "", here);
     if (url === null || url.pathname === endpointPath) continue;
@@ -47,5 +50,5 @@ export function resolveReturnUrl(
     if (url.origin === here.origin || url.origin === configured)
       return url.href;
   }
-  return withBasePath("/", ctx.basePath);
+  return withBasePath("/", ctx.config.basePath);
 }

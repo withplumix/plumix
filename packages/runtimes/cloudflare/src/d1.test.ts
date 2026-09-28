@@ -93,7 +93,7 @@ describe("d1() adapter — session config", () => {
 async function sampledContext(): Promise<AppContext> {
   return createTestContext({
     db: await createTestDb(),
-    telemetry: { consumers: [{ id: "test" }] },
+    config: { telemetry: { consumers: [{ id: "test" }] } },
   });
 }
 

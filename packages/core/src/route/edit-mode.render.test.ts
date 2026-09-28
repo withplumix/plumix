@@ -16,7 +16,9 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 const URL = "https://cms.example/post/hello";
 
 async function seed() {
-  const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+  const h = await createDispatcherHarness({
+    config: { plugins: [blogPlugin] },
+  });
   const editor = await h.seedUser("editor");
   await h.factory.entry.create({
     type: "post",
@@ -118,8 +120,7 @@ describe("edit gate with a custom (non-cookie) authenticator", () => {
     if (declaresHasSession) guard.hasSession = hasCustomCookie;
 
     const h = await createDispatcherHarness({
-      plugins: [blogPlugin],
-      authenticator: guard,
+      config: { plugins: [blogPlugin], auth: { authenticator: guard } },
     });
     holder.user = await h.seedUser("editor");
     await h.factory.entry.create({
