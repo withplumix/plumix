@@ -45,7 +45,7 @@ export function PreviewBanner({
     <div
       data-testid="revision-preview-banner"
       role="status"
-      className="flex shrink-0 flex-wrap items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+      className="border-warning/30 bg-warning/10 text-warning-foreground flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2 text-sm"
     >
       <span className="font-medium">
         <Trans
