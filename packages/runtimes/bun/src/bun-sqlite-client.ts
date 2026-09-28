@@ -31,7 +31,7 @@ export interface BunSqliteClient {
 
 export type BunSqliteDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = BaseSQLiteDatabase<"sync", BunSqlite.Changes, TSchema>;
+> = BaseSQLiteDatabase<"sync", void, TSchema>;
 
 // `bun:sqlite` is a specifier only Bun resolves, so a static import would stop
 // a config naming `bunSqlite()` from loading under Node at all — before the
@@ -142,7 +142,7 @@ export function drizzleBunSqlite<TSchema extends Record<string, unknown>>(
     dialect,
     relational,
   );
-  return new BaseSQLiteDatabase<"sync", BunSqlite.Changes, TSchema>(
+  return new BaseSQLiteDatabase<"sync", void, TSchema>(
     "sync",
     dialect,
     session,

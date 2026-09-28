@@ -30,7 +30,9 @@ export function databaseFile(config: BunSqliteConfig, root: string): string {
 }
 
 function projectRoot(env: PlumixEnv): string {
-  const root = env[PROJECT_ROOT_ENV];
+  const root = (env as { readonly [PROJECT_ROOT_ENV]?: unknown })[
+    PROJECT_ROOT_ENV
+  ];
   return typeof root === "string" && root !== "" ? root : process.cwd();
 }
 

@@ -9,7 +9,7 @@ import type {
   PlumixConfig,
   RuntimeAdapter,
 } from "@plumix/core";
-import { CliError } from "@plumix/core/cli";
+import { CliError, isCliError } from "@plumix/core/cli";
 
 import type { CommandGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
@@ -273,6 +273,8 @@ async function loadRuntimeCommands(
       migrate: mod.migrate ?? {},
     };
   } catch (cause) {
+    // A commands module that refuses to load says why in its own terms.
+    if (isCliError(cause)) throw cause;
     throw CliError.runtimeCommandsLoadFailed({
       commandsModule: adapter.commandsModule,
       cause,

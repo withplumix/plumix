@@ -5,6 +5,7 @@ type CliErrorCode =
   | "unknown_subcommand"
   | "runtime_commands_not_found"
   | "runtime_commands_load_failed"
+  | "bun_required"
   | "migrate_generate_no_drizzle_kit"
   | "migrate_generate_failed"
   | "migrate_generate_journal_unreadable"
@@ -218,6 +219,15 @@ export class CliError extends Error {
       `Failed to load runtime commands from "${ctx.commandsModule}"`,
       "Check the runtime adapter's commands module for import errors.",
       ctx.cause,
+    );
+  }
+
+  static bunRequired(): CliError {
+    return new CliError(
+      "bun_required",
+      "The Bun runtime's commands run on Bun, and this process is not Bun",
+      "Run the command through Bun: `bun --bun plumix <command>`.",
+      undefined,
     );
   }
 
