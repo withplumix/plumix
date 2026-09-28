@@ -22,6 +22,7 @@ import {
   closureOf,
   cyclesAmong,
   edgesOf,
+  importsOf,
   sourceFilesUnder,
 } from "./test/import-graph.js";
 
@@ -297,6 +298,29 @@ describe("core keeps its layer table, less the baselined violations", () => {
     expect(found.map(({ violation }) => keyOf(violation))).not.toContain(
       "environment: support.ts → context/stores.ts",
     );
+  });
+});
+
+// `plumix/runtime` hands these to every self-hosted runtime, and they sit on
+// the request path, so they hold to what a Worker offers: Web APIs, no Node
+// builtin anywhere in what they load.
+describe("the self-hosted request rules stay Worker-compatible", () => {
+  const RULES = [
+    "runtime/request-trust.ts",
+    "runtime/asset-path.ts",
+    "runtime/drain.ts",
+  ];
+
+  test("nothing they load names a node: module", () => {
+    const closure = closureOf(RULES, (file) => runtimeImports(GRAPH, file));
+    const builtins = [...closure.keys()].flatMap((file) => {
+      const { static: statics, dynamic } = importsOf(path.join(SRC, file));
+      return [...statics, ...dynamic]
+        .filter((specifier) => specifier.startsWith("node:"))
+        .map((specifier) => `${file} → ${specifier}`);
+    });
+    expect(RULES.every((file) => GRAPH.has(file))).toBe(true);
+    expect(builtins).toEqual([]);
   });
 });
 

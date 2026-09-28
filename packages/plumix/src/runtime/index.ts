@@ -1,6 +1,7 @@
 // What a runtime adapter composes a Plumix app from: the app and its request
 // handler, scheduled tasks, query tracing, the in-memory stores a test or a
-// local run stands in with, and the dev boot page.
+// local run stands in with, the dev boot page, and the request rules every
+// self-hosted runtime applies alike.
 export {
   buildApp,
   connectScheduledDb,
@@ -8,11 +9,13 @@ export {
   createScheduledRunGuard,
   CronSyntaxError,
   declaredSchedules,
+  DRAIN_DEADLINE_MS,
   isTrustedDevHost,
   memoryKv,
   memoryStorage,
   parseCron,
   renderDevBootErrorResponse,
+  resolveAssetPath,
   responseAllowsSharedStorage,
   runScheduledTasks,
   scheduledLeaseScope,
@@ -20,11 +23,14 @@ export {
   traceDbBatch,
   traceDbQuery,
   traceDbQuerySync,
+  trustRequest,
 } from "@plumix/core";
 
 export type {
+  AssetPath,
   AssetsBinding,
   BindingName,
+  Connection,
   CdnProvider,
   CdnStore,
   ConnectedCdn,
@@ -64,6 +70,7 @@ export type {
   PutOptions,
   RequestScopedDb,
   RequestScopedDbArgs,
+  RequestTrustOptions,
   RuntimeAdapter,
   ScheduledEvent,
   ScheduledRunGuard,
@@ -73,5 +80,6 @@ export type {
   SchemaModule,
   TracedQuery,
   TransformOpts,
+  TrustedRequest,
   UrlOptions,
 } from "@plumix/core";

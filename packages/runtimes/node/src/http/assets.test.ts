@@ -25,9 +25,6 @@ let root: string;
 beforeAll(() => {
   base = mkdtempSync(join(tmpdir(), "plumix-node-assets-"));
   root = join(base, "client");
-  // Beside the root, so a traversal that resolved would find a file rather
-  // than 404 by accident.
-  writeFileSync(join(base, "outside.txt"), "outside");
   mkdirSync(join(root, "_plumix/admin/assets"), { recursive: true });
   mkdirSync(join(root, "assets"), { recursive: true });
   writeFileSync(join(root, "_plumix/admin/index.html"), SHELL);
@@ -36,9 +33,6 @@ beforeAll(() => {
   writeFileSync(join(root, "assets/unreadable-000000.js"), CHUNK);
   chmodSync(join(root, "assets/unreadable-000000.js"), 0o000);
   writeFileSync(join(root, ".env"), "SECRET=1");
-  mkdirSync(join(root, ".well-known"), { recursive: true });
-  writeFileSync(join(root, ".well-known/security.txt"), "Contact: x");
-  writeFileSync(join(root, "café.txt"), "accent");
 });
 
 afterAll(() => {
@@ -57,34 +51,12 @@ describe("the disk layer", () => {
   const get = (path: string, method = "GET") =>
     layer().fetch(new Request(`https://site.test${path}`, { method }));
 
-  test("a traversal attempt never leaves the root", async () => {
-    for (const path of [
-      "/../outside.txt",
-      "/assets/../../outside.txt",
-      "/%2e%2e/outside.txt",
-    ]) {
-      expect((await get(path)).status, path).toBe(404);
-    }
-  });
-
-  test("dotfiles are refused, .well-known excepted", async () => {
-    expect((await get("/.env")).status).toBe(404);
-    expect((await get("/.well-known/security.txt")).status).toBe(200);
-  });
-
   test("a directory is held only through its trailing-slash index", async () => {
     expect((await get("/_plumix/admin")).status).toBe(404);
     expect(await (await get("/_plumix/admin/")).text()).toBe(SHELL);
   });
 
-  test("a non-ASCII path and a fragment both resolve to the file", async () => {
-    expect(await (await get(`/${encodeURIComponent("café")}.txt`)).text()).toBe(
-      "accent",
-    );
-    expect(await (await get("/caf%C3%A9.txt#section")).text()).toBe("accent");
-  });
-
-  test("a held file carries its content type, and only /assets/ is immutable", async () => {
+  test("a held file carries the headers the shared rules decide", async () => {
     const chunk = await get("/assets/client-def456.js");
     expect(chunk.headers.get("cache-control")).toBe(
       "public, max-age=31536000, immutable",

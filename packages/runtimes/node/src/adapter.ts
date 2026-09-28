@@ -5,10 +5,10 @@ import type {
   PlumixHandler,
   RuntimeAdapter,
 } from "plumix/runtime";
-import { createPlumixHandler } from "plumix/runtime";
+import { createPlumixHandler, DRAIN_DEADLINE_MS } from "plumix/runtime";
 
 import { generateEntry } from "./entry-codegen.js";
-import { ASSETS_DIR_ENV, DRAIN_DEADLINE_MS } from "./entry-constants.js";
+import { ASSETS_DIR_ENV } from "./entry-constants.js";
 import { createAssetsLayer } from "./http/assets.js";
 
 export interface NodeConfig {
