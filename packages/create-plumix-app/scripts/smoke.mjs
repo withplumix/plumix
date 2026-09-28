@@ -273,7 +273,6 @@ async function assertServes(base, child) {
   );
   exited.catch(() => {});
   const deadline = Date.now() + 90_000;
-  let last = "no attempt";
   for (;;) {
     const attempt = await Promise.race([
       fetch(`${base}/`).then(
@@ -283,10 +282,9 @@ async function assertServes(base, child) {
       exited,
     ]);
     if (attempt === null) break;
-    last = attempt;
     if (Date.now() > deadline) {
       throw new Error(
-        `Timed out waiting for ${base}/ to answer 200; last: ${last}`,
+        `Timed out waiting for ${base}/ to answer 200; last: ${attempt}`,
       );
     }
     await new Promise((wait) => setTimeout(wait, 500));
