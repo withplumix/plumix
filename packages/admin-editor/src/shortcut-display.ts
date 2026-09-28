@@ -1,4 +1,4 @@
-import { coreMarks } from "@plumix/blocks";
+import { coreMarks } from "@plumix/core/blocks";
 
 import type { Chord, Gesture } from "./shortcuts.js";
 

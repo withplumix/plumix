@@ -1,6 +1,6 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
 import type { Label } from "@plumix/core/i18n";
 
 import type { EditorDevice, EditorStoreApi } from "./store.js";

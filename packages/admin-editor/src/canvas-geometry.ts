@@ -1,4 +1,4 @@
-import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
+import type { BlockRect, SlotRect } from "@plumix/core/blocks/renderer";
 
 import type { FrameOffset, OverlayBox } from "./overlay.js";
 

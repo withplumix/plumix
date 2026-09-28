@@ -37,7 +37,7 @@ import {
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { cn } from "@plumix/admin-ui/utils";
-import { HEADING_LEVELS } from "@plumix/blocks";
+import { HEADING_LEVELS } from "@plumix/core/blocks";
 
 import type { RichTextExtensionOptions } from "./rich-text-extensions.js";
 import {

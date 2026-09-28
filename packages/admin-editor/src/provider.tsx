@@ -2,8 +2,8 @@ import type { ReactElement, ReactNode, RefObject } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 
-import type { BlockNode, ThemeBreakpoints } from "@plumix/blocks";
-import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+import type { BlockNode, ThemeBreakpoints } from "@plumix/core/blocks";
+import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 
 import type { CameraStore, CameraStoreApi } from "./camera-store.js";
 import type { EditorDevice, EditorStore, EditorStoreApi } from "./store.js";

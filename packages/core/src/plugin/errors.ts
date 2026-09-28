@@ -596,7 +596,7 @@ export class PluginContextError extends Error {
     return new PluginContextError(
       "block_name_reserved_namespace",
       `Plugin "${ctx.pluginId}" registers block "${ctx.name}" in the reserved ` +
-        `\`core/\` namespace, which is owned by \`@plumix/blocks\`' built-in ` +
+        `\`core/\` namespace, which is owned by plumix's built-in block ` +
         `primitives — register it under the \`${ctx.pluginId}/\` namespace instead.`,
       ctx,
     );

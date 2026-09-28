@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useId } from "react";
 import { Trans } from "@lingui/react";
 
-import type { TokenCategory } from "@plumix/blocks";
+import type { TokenCategory } from "@plumix/core/blocks";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
 import {

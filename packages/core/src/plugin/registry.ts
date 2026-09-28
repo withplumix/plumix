@@ -12,19 +12,18 @@ import type {
   RouterClient,
 } from "@orpc/server";
 
-import type {
-  BlockPattern,
-  BlockSpec,
-  MarkSpec,
-  ShortcodeSpec,
-} from "@plumix/blocks";
-
 import type { AccessPolicy } from "../access/policy.js";
 import type {
   Capability,
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
 } from "../auth/contract/capability.js";
+import type {
+  BlockPattern,
+  BlockSpec,
+  MarkSpec,
+  ShortcodeSpec,
+} from "../blocks/index.js";
 import type { AppContext } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/query.js";

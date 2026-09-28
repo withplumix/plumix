@@ -7,7 +7,7 @@ import type {
   BlockInputOption,
   JsonObject,
   JsonValue,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import {

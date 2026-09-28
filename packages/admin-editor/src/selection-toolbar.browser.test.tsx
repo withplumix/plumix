@@ -4,7 +4,7 @@ import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";

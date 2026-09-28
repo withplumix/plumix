@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
-import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
+import type { BlockNode } from "@plumix/core/blocks";
+import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
 import { connectCanvas } from "./connect-canvas.js";
 import { createEditorStore } from "./store.js";

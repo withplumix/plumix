@@ -1,4 +1,3 @@
-import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   collectNamedTemplates,
   ConfiguredSlots,
@@ -7,6 +6,11 @@ import type {
   ResolvedI18n,
   ThemeDescriptor,
 } from "@plumix/core";
+import type {
+  BlockSpec,
+  ThemeBreakpoints,
+  ThemeTokens,
+} from "@plumix/core/blocks";
 import { buildManifest, HookRegistry, installPlugins } from "@plumix/core";
 
 import { isAdminBundledPlugin } from "./plugin-catalog-resolve.js";

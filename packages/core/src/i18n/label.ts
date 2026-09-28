@@ -9,7 +9,7 @@ export type Label = string | MessageDescriptor;
 /** Flatten `Label` → string via Lingui's resolver. */
 export function resolveLabel(label: Label, instance: I18n): string {
   if (typeof label === "string") return label;
-  // Descriptors whose id isn't in the active catalog (e.g. `@plumix/blocks`
+  // Descriptors whose id isn't in the active catalog (e.g. `blocks/`
   // field labels, not yet extracted into the admin catalog) would make Lingui
   // log an "uncompiled message" warning on every render. The authored source
   // message is the documented fallback, so return it directly rather than

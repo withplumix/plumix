@@ -19,7 +19,7 @@ declare module "plumix" {
 ```
 
 This is enforced by lint (`no-restricted-syntax`): augmenting `@plumix/core`,
-`@plumix/blocks`, `plumix/plugin`, or any other subpath is an error.
+`@plumix/core/blocks`, `plumix/plugin`, or any other subpath is an error.
 
 ### Why one specifier
 

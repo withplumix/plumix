@@ -1,0 +1,239 @@
+/**
+ * Public API of `@plumix/core/blocks`.
+ *
+ * Re-exported from `plumix/blocks` (see `packages/plumix/src/blocks/`).
+ * Consumers should import from `plumix/blocks`, not from this subpath
+ * directly — `@plumix/core` is workspace-internal.
+ */
+
+// ─── Serialized-data types ──────────────────────────────────────────────────
+export type { JsonObject, JsonValue } from "../json.js";
+export { isJsonArray, isJsonObject } from "../json.js";
+
+// ─── Block registry primitives ──────────────────────────────────────────────
+export {
+  createBlockRegistry,
+  CORE_BLOCK_NAMESPACE,
+  defineBlock,
+  isReservedBlockName,
+} from "./block-registry.js";
+export type {
+  BlockInput,
+  BlockInputOption,
+  BlockRegistry,
+  BlockShortcutMode,
+  BlockSpec,
+  BlockTextInput,
+  BlockTransformFrom,
+  BlockTransformTo,
+  BlockTransforms,
+  BlockVariation,
+} from "./block-registry.js";
+
+// ─── Walker + render contract ───────────────────────────────────────────────
+export {
+  createMessageResolver,
+  DEFAULT_BLOCK_CONTEXT,
+  isBlockNodeArray,
+  renderBlockTree,
+} from "./render-block-tree.js";
+export { resolveMessage } from "./i18n-label.js";
+export type { CompiledCatalog, MessageValues } from "./i18n-label.js";
+export { editAppender } from "./edit-appender.js";
+export { freshBlockId, rewriteBlockNodeIds } from "./rewrite-node-ids.js";
+export { countProse } from "./count-prose.js";
+export type { ProseCount } from "./count-prose.js";
+export {
+  blockTextRoster,
+  blockTextVersion,
+  extractBlockText,
+} from "./block-text.js";
+export type { BlockTextRoster } from "./block-text.js";
+export type { HydratedEntry, SiteSettings } from "./context-bags.js";
+export type {
+  BlockContext,
+  BlockNode,
+  BlockNodeComponent,
+  BlockNodeRenderProps,
+  BlockRenderFilters,
+  BlockRenderHooks,
+  MaterializedAttrs,
+  RenderBlockTreeOptions,
+} from "./render-block-tree.js";
+
+// ─── Request-gate constants ─────────────────────────────────────────────────
+export { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../csrf-header.js";
+
+// ─── Entry-content envelope ─────────────────────────────────────────────────
+export { defineEntryContent, isEntryContent } from "./entry-content.js";
+export type { EntryContent } from "./entry-content.js";
+
+// ─── Per-block SSR loaders ──────────────────────────────────────────────────
+export {
+  BlockLoaderError,
+  collectLoaderEntries,
+  resolveBlockLoaders,
+} from "./loaders.js";
+export type {
+  BlockLoaderArgs,
+  BlockLoaderContext,
+  BlockLoaderContextRegistry,
+  BlockLoaderFn,
+  BlockLoaderRecord,
+  LoaderEntry,
+  LoaderErrorEvent,
+  LoaderResults,
+  ResolveBlockLoadersOptions,
+  ResolvedBlockLoaderData,
+  ResolvedBlockLoaders,
+  ResolvedLoaders,
+} from "./loaders.js";
+
+// ─── Transforms + insertable expansion ─────────────────────────────────────
+export { resolveBlockTransforms } from "./transforms.js";
+export type { ResolvedTransformTarget } from "./transforms.js";
+export {
+  expandBlockVariations,
+  resolveVariationPreview,
+} from "./expand-block-variations.js";
+export type {
+  InsertableBlockEntry,
+  VariationPreviewSource,
+} from "./expand-block-variations.js";
+export type { BlockVariationExample } from "./block-registry.js";
+
+// ─── Pattern primitives ─────────────────────────────────────────────────────
+export { block, definePattern } from "./pattern-registry.js";
+export type {
+  BlockPattern,
+  BlockTypeRegistry,
+  PatternCategoryRegistry,
+  PatternPreview,
+  PatternTarget,
+} from "./pattern-registry.js";
+export { resolveActiveVariation } from "./resolve-active-variation.js";
+export type { BlockVariationIsActive } from "./block-registry.js";
+export { commitBlockVariations } from "./commit-block-variations.js";
+export { BlockVariationError } from "./variation-errors.js";
+export { resolveBlockScopeVariations } from "./block-scope-variations.js";
+export type { BlockVariationScope } from "./block-registry.js";
+
+// ─── Validation ─────────────────────────────────────────────────────────────
+export { validateEntryContent } from "./validate-content.js";
+export type { BlockContentValidationResult } from "./validate-content.js";
+export { BlockContentValidationError } from "./validation-errors.js";
+export type {
+  BlockContentValidationCode,
+  BlockContentValidationIssue,
+} from "./validation-errors.js";
+
+// ─── Style emission + theme tokens ──────────────────────────────────────────
+// The token↔CSS-var codec (`tokenIdToCssVar`, `tokenIdFromCssVar`,
+// `tokenCssVar`, `tokenCategoryForProperty`, `normalizeStyleValue`) is
+// package-internal — it stays behind `createStyleField`/`createStyleFields`,
+// the SSR `emitBlockStyleCss` and `emitThemeTokenCss`, so no consumer parses or
+// builds a `var()` string. `emitThemeTokenCss` writes the other side of that
+// codec — the custom properties those references resolve against — for a
+// surface rendering away from the page, where the theme's own CSS never loads.
+export {
+  DEFAULT_BREAKPOINTS,
+  emitBlockStyleCss,
+  emitThemeTokenCss,
+  resolveThemeTokens,
+  VIEWPORT_MAX_PX,
+} from "./styles/style-emitter.js";
+export type {
+  ResponsiveStyleBucket,
+  ResponsiveStyleSlot,
+  ThemeBreakpoints,
+  VisibilityFlags,
+} from "./styles/style-emitter.js";
+export { createStyleFields } from "./styles/style-field.js";
+export type {
+  StyleField,
+  StyleFields,
+  StyleSelection,
+  StyleTokenOption,
+} from "./styles/style-field.js";
+export { sanitizeCssValue } from "./styles/sanitize-css.js";
+export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
+export { parseRenderEnv } from "./render-env.js";
+export type { RenderEnv } from "./render-env.js";
+export { findBlockNode } from "./find-block-node.js";
+export type {
+  KnownTokenCategory,
+  ResolvedThemeTokens,
+  ResolvedTokenGroup,
+  ThemeTokenEntry,
+  ThemeTokenGroup,
+  ThemeTokens,
+  TokenCategory,
+} from "./styles/types.js";
+
+// ─── HTML sanitisation ──────────────────────────────────────────────────────
+export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
+export { ROOT_TAGS, resolveRootTag } from "./html/root-tag.js";
+export type { RootTag } from "./html/root-tag.js";
+export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
+export type { HtmlAllowlist } from "./html/sanitize.js";
+export { buildHtmlAllowlist } from "./html/build-allowlist.js";
+export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
+export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
+
+// ─── Headings ─────────────────────────────────────────────────────────────
+export { HEADING_LEVELS, HEADING_TAGS } from "./headings.js";
+export type { HeadingLevel } from "./headings.js";
+
+// ─── Unknown-node Tiptap fallback ──────────────────────────────────────────
+export { unknownBlockSchema } from "./unknown-node.js";
+
+// ─── Core blocks ────────────────────────────────────────────────────────────
+export { coreBlocks } from "./core-blocks.js";
+export { buttonBlock } from "./button/index.js";
+export { codeBlock } from "./code/index.js";
+export { columnBlock } from "./column/index.js";
+export { columnsBlock } from "./columns/index.js";
+export { detailsBlock } from "./details/index.js";
+export { embedBlock } from "./embed/index.js";
+export { groupBlock } from "./group/index.js";
+export { htmlBlock } from "./html/index.js";
+export { richTextBlock } from "./rich-text/index.js";
+export { sectionBlock } from "./section/index.js";
+export { separatorBlock } from "./separator/index.js";
+export {
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
+} from "./table/index.js";
+export { videoBlock } from "./video/index.js";
+
+// ─── Inline marks ───────────────────────────────────────────────────────────
+export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";
+export type { MarkSpec } from "./marks/types.js";
+
+// ─── Shortcodes ─────────────────────────────────────────────────────────────
+// `expandShortcodes` is the single integration point a future
+// `@plumix/plugin-seo` reuses to expand macros in meta descriptions.
+export { coreShortcodes } from "./shortcodes/core/index.js";
+export { expandShortcodes } from "./shortcodes/expand.js";
+export { defineShortcode } from "./shortcodes/types.js";
+export type {
+  ShortcodeContext,
+  ShortcodeRegistry,
+  ShortcodeRenderProps,
+  ShortcodeSpec,
+} from "./shortcodes/types.js";
+
+// ─── Islands authoring ──────────────────────────────────────────────────────
+export type {
+  IslandProps,
+  PlumixPrefetch,
+  PlumixStrategy,
+} from "./island-props.js";
+// Re-exported for the SSR shim the Vite plugin emits for `"use client"`
+// modules; not intended for direct theme/block-author consumption.
+export { serializeProps } from "./serialize.js";
+export { InsideIslandContext, IslandShim } from "./island-shim.js";
+export type { IslandShimProps } from "./island-shim.js";

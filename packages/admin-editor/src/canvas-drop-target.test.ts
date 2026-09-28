@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
-import type { SlotRect } from "@plumix/blocks/renderer";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockSpec } from "@plumix/core/blocks";
+import type { SlotRect } from "@plumix/core/blocks/renderer";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import {
   reorderIndex,

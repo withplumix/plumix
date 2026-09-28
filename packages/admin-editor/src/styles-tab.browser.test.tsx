@@ -5,8 +5,8 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode, ThemeTokens } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockNode, ThemeTokens } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { EditorConfigProvider } from "./editor-config-context.js";

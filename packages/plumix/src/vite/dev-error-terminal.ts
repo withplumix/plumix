@@ -16,7 +16,7 @@ import { createClientErrorRing } from "./client-error-ring.js";
 // server; the collapse state lives on the forwarder instance the middleware keeps
 // for the dev session. Nothing here ships to production — the whole path is gated
 // on `process.env.PLUMIX_DEV` at the call site and tree-shakes out. The wire
-// contract (`ForwardedLog`) is shared from `@plumix/blocks` so client and server
+// contract (`ForwardedLog`) is shared from `@plumix/core` so client and server
 // agree on the shape.
 
 export interface TerminalForwardDeps {

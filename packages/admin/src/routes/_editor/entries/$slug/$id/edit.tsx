@@ -50,15 +50,15 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { PublishActions } from "@plumix/admin-editor";
-import type { EntryContent } from "@plumix/blocks";
 import type { ResolvedMeta } from "@plumix/core";
+import type { EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
 import {
   createBlockRegistry,
   defineEntryContent,
   isEntryContent,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import {
   ACCESS_POLICY_META_KEY,
   NAMED_TEMPLATE_META_KEY,

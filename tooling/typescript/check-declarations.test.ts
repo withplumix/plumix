@@ -28,13 +28,13 @@ describe("findInternalSpecifiers", () => {
   test("reports import, re-export and triple-slash reference forms", () => {
     const source = [
       '/// <reference types="@plumix/admin-ui" />',
-      'import type { BlockSpec } from "@plumix/blocks";',
+      'import type { BlockSpec } from "@plumix/core/blocks";',
       'export * from "@plumix/admin-editor";',
       "export { getRuntime } from '@plumix/admin';",
     ].join("\n");
     expect(findInternalSpecifiers(source)).toEqual([
       "@plumix/admin-ui",
-      "@plumix/blocks",
+      "@plumix/core/blocks",
       "@plumix/admin-editor",
       "@plumix/admin",
     ]);
@@ -92,12 +92,12 @@ describe("checkDeclarations", () => {
     const dir = dist({
       "index.d.ts": 'export declare const a: import("plumix").A;',
       "blocks/file/index.d.ts":
-        'export declare const b: import("@plumix/blocks").BlockSpec;',
-      "blocks/file/index.js": 'import("@plumix/blocks");',
+        'export declare const b: import("@plumix/core/blocks").BlockSpec;',
+      "blocks/file/index.js": 'import("@plumix/core/blocks");',
       "rpc.d.ts": 'type C = typeof import("@plumix/core/schema");',
     });
     expect(checkDeclarations(dir)).toEqual([
-      { file: "blocks/file/index.d.ts", specifiers: ["@plumix/blocks"] },
+      { file: "blocks/file/index.d.ts", specifiers: ["@plumix/core/blocks"] },
       { file: "rpc.d.ts", specifiers: ["@plumix/core/schema"] },
     ]);
   });

@@ -5,12 +5,12 @@ import type {
   InsertableBlockEntry,
   JsonObject,
   JsonValue,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import {
   expandBlockVariations,
   isBlockNodeArray,
   rewriteBlockNodeIds,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
 /** The conventional slot a block variation seeds its `innerBlocks` into. */

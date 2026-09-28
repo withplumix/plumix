@@ -1,5 +1,4 @@
-import type { ShortcodeSpec } from "@plumix/blocks";
-
+import type { ShortcodeSpec } from "../blocks/index.js";
 import type { SchemaModule } from "../runtime/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type {

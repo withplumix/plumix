@@ -334,13 +334,6 @@ const config: KnipConfig = {
     "packages/core": {
       entry: ["lingui.config.ts", "locales/*.mjs", ...coreExportEntries],
     },
-    // The blocks catalog is hand-authored (its descriptors are object
-    // literals no macro pass sees); its config drives `lingui compile`, and the
-    // compiled catalogs load through core's `./locales/*` import and admin's
-    // i18n-boot glob — knip can see neither consumer.
-    "packages/blocks": {
-      entry: ["lingui.config.ts", "locales/*.mjs"],
-    },
     // The editor's lingui config + compiled catalogs are loaded by the CLI
     // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
     // see either consumer.

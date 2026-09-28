@@ -1,4 +1,4 @@
-import type { ThemeTokens } from "@plumix/blocks";
+import type { ThemeTokens } from "@plumix/core/blocks";
 
 // Editorial defaults: warm paper/ink with a single accent, a serif display
 // face over a sans body. These emit `--plumix-<group>-<slug>` CSS variables

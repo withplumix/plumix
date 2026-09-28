@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/blocks";
+import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/core/blocks";
 import {
   columnBlock,
   columnsBlock,
@@ -11,7 +11,7 @@ import {
   tableCellBlock,
   tableHeaderCellBlock,
   tableHeaderRowBlock,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 import {
   createNodeFromEntry,

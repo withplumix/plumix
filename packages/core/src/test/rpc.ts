@@ -1,11 +1,9 @@
 import type { RouterClient } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 
-import type { BlockRegistry, MarkSpec } from "@plumix/blocks";
-import { coreBlocks, coreMarks, createBlockRegistry } from "@plumix/blocks";
-
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
+import type { BlockRegistry, MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
@@ -25,6 +23,7 @@ import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
+import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
 import { createAppContext, withUser } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";

@@ -64,7 +64,6 @@
     "@playwright/test": "catalog:",
     "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
-    "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",

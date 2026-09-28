@@ -1,7 +1,7 @@
 import type { Pagination as PaginationData } from "plumix/theme";
 import type { ReactNode } from "react";
 
-import { Link } from "@plumix/blocks/renderer";
+import { Link } from "@plumix/core/blocks/renderer";
 
 export interface PaginationInfo {
   // Root-relative request pathname (the base prefix is stripped upstream).

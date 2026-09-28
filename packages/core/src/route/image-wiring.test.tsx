@@ -1,8 +1,7 @@
 import { expect, test } from "vitest";
 
-import { Image } from "@plumix/blocks/renderer";
-
 import type { ImageDelivery } from "../runtime/slots.js";
+import { Image } from "../blocks/renderer/index.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";

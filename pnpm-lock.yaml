@@ -332,9 +332,9 @@ importers:
 
   apps/demo:
     dependencies:
-      '@plumix/blocks':
+      '@plumix/core':
         specifier: workspace:*
-        version: link:../../packages/blocks
+        version: link:../../packages/core
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../../packages/plugins/blog
@@ -609,9 +609,6 @@ importers:
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
-      '@plumix/blocks':
-        specifier: workspace:*
-        version: link:../blocks
       '@plumix/core':
         specifier: workspace:*
         version: link:../core
@@ -759,9 +756,6 @@ importers:
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
-      '@plumix/blocks':
-        specifier: workspace:*
-        version: link:../blocks
       '@plumix/core':
         specifier: workspace:*
         version: link:../core
@@ -981,85 +975,6 @@ importers:
         specifier: catalog:vitest
         version: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/coverage-v8@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
-  packages/blocks:
-    dependencies:
-      '@tiptap/core':
-        specifier: catalog:tiptap
-        version: 3.31.3(@tiptap/pm@3.31.3)
-      dompurify:
-        specifier: ^3.4.14
-        version: 3.4.14
-      highlight.js:
-        specifier: ^11.12.0
-        version: 11.12.0
-      sanitize-html:
-        specifier: ^2.17.7
-        version: 2.17.7
-    devDependencies:
-      '@arethetypeswrong/cli':
-        specifier: 'catalog:'
-        version: 0.18.5
-      '@plumix/eslint-config':
-        specifier: workspace:*
-        version: link:../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../tooling/lingui
-      '@plumix/prettier-config':
-        specifier: workspace:*
-        version: link:../../tooling/prettier
-      '@plumix/typescript-config':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@plumix/vitest-config':
-        specifier: workspace:*
-        version: link:../../tooling/vitest
-      '@testing-library/react':
-        specifier: catalog:testing-library
-        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.19.0
-      '@types/react':
-        specifier: catalog:react
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: catalog:react
-        version: 19.2.5(@types/react@19.2.18)
-      '@types/sanitize-html':
-        specifier: ^2.16.1
-        version: 2.16.1
-      '@vitest/browser-playwright':
-        specifier: catalog:vitest
-        version: 5.0.2(playwright@1.62.1)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.2)
-      '@vitest/coverage-v8':
-        specifier: catalog:vitest
-        version: 5.0.2(@vitest/browser@5.0.2)(vitest@5.0.2)
-      eslint:
-        specifier: 'catalog:'
-        version: 10.11.0(jiti@2.7.0)
-      playwright:
-        specifier: 'catalog:'
-        version: 1.62.1
-      prettier:
-        specifier: 'catalog:'
-        version: 3.9.6
-      publint:
-        specifier: 'catalog:'
-        version: 0.3.24
-      react:
-        specifier: catalog:react
-        version: 19.2.8
-      react-dom:
-        specifier: catalog:react
-        version: 19.2.8(react@19.2.8)
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: catalog:vitest
-        version: 5.0.2(@types/node@24.19.0)(@vitest/browser-playwright@5.0.2)(@vitest/coverage-v8@5.0.2)(@vitest/ui@5.0.2)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
-
   packages/core:
     dependencies:
       '@libsql/client':
@@ -1095,15 +1010,18 @@ importers:
       '@oslojs/webauthn':
         specifier: catalog:oslojs
         version: 1.0.0
-      '@plumix/blocks':
-        specifier: workspace:*
-        version: link:../blocks
       '@sindresorhus/slugify':
         specifier: ^3.0.0
         version: 3.0.0
+      '@tiptap/core':
+        specifier: catalog:tiptap
+        version: 3.31.3(@tiptap/pm@3.31.3)
       '@valibot/to-json-schema':
         specifier: ^1.7.1
         version: 1.7.1(valibot@1.4.2(typescript@6.0.3))
+      dompurify:
+        specifier: ^3.4.14
+        version: 3.4.14
       drizzle-kit:
         specifier: catalog:drizzle
         version: 0.31.11
@@ -1116,6 +1034,12 @@ importers:
       fishery:
         specifier: 'catalog:'
         version: 2.4.0
+      highlight.js:
+        specifier: ^11.12.0
+        version: 11.12.0
+      sanitize-html:
+        specifier: ^2.17.7
+        version: 2.17.7
       valibot:
         specifier: 'catalog:'
         version: 1.4.2(typescript@6.0.3)
@@ -1144,6 +1068,9 @@ importers:
       '@plumix/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest
+      '@testing-library/react':
+        specifier: catalog:testing-library
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0
@@ -1153,6 +1080,9 @@ importers:
       '@types/react-dom':
         specifier: catalog:react
         version: 19.2.5(@types/react@19.2.18)
+      '@types/sanitize-html':
+        specifier: ^2.16.1
+        version: 2.16.1
       '@vitest/browser-playwright':
         specifier: catalog:vitest
         version: 5.0.2(playwright@1.62.1)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.2)
@@ -2487,9 +2417,6 @@ importers:
       '@plumix/admin-ui':
         specifier: workspace:*
         version: link:../admin-ui
-      '@plumix/blocks':
-        specifier: workspace:*
-        version: link:../blocks
       '@plumix/core':
         specifier: workspace:*
         version: link:../core

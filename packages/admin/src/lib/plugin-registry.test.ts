@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 
-import type { BlockSpec } from "@plumix/blocks";
+import type { BlockSpec } from "@plumix/core/blocks";
 
 import {
   _resetPluginRegistry,

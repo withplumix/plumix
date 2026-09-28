@@ -1,11 +1,10 @@
+import type { JsonObject } from "../../../json.js";
 import {
   findBlockNode,
   isEntryContent,
   resolveBlockLoaders,
   serializeLoaderData,
-} from "@plumix/blocks";
-
-import type { JsonObject } from "../../../json.js";
+} from "../../../blocks/index.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { canReadEntry } from "../../../entries/visibility.js";
 import { getAutosave } from "../../../revisions/repository.js";

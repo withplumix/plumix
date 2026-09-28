@@ -238,7 +238,7 @@ describe("transformUseClientModule", () => {
   });
 
   test("imports IslandShim from the virtual module, not plumix/blocks directly", () => {
-    // A "use client" island in `@plumix/blocks` itself can't resolve the
+    // A "use client" island in core's `blocks/` itself can't resolve the
     // public `plumix/blocks` specifier (cycle + pnpm strictness), so the
     // shim sources `IslandShim` from the virtual module the plugin resolves
     // at the project root.

@@ -19,7 +19,14 @@
     "cms",
     "framework"
   ],
-  "sideEffects": false,
+  "//sideEffects": "Everything is pure except the island runtime, which calls registerIslandElement() at module load and is imported purely for that side effect (import \"@plumix/core/blocks/island-runtime\"). Marking the rest side-effect-free lets bundlers drop unused barrel re-exports — notably the Tiptap mark/node schemas (unknownBlockSchema, coreMarkExtensions) so ProseMirror tree-shakes out of consumers that only use coreBlocks/render.",
+  "sideEffects": [
+    "**/blocks/island-runtime.js"
+  ],
+  "//browser": "Browser-only sanitizer swap. The editor + islands run in the DOM, where sanitize-html's bundled HTML parser + entity tables + postcss (~230 KB) are redundant; bundlers building for the browser remap it to the DOMPurify shim (~45 KB, native DOMParser). The worker/SSR build is DOM-less and keeps the real sanitize-html.",
+  "browser": {
+    "sanitize-html": "./dist/blocks/html/dompurify-shim.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -32,6 +39,30 @@
     "./auth": {
       "types": "./dist/auth/config.d.ts",
       "default": "./dist/auth/config.js"
+    },
+    "./blocks": {
+      "types": "./dist/blocks/index.d.ts",
+      "default": "./dist/blocks/index.js"
+    },
+    "./blocks/renderer": {
+      "types": "./dist/blocks/renderer/index.d.ts",
+      "default": "./dist/blocks/renderer/index.js"
+    },
+    "./blocks/test": {
+      "types": "./dist/blocks/test/index.d.ts",
+      "default": "./dist/blocks/test/index.js"
+    },
+    "./blocks/island-events": {
+      "types": "./dist/blocks/island-events.d.ts",
+      "default": "./dist/blocks/island-events.js"
+    },
+    "./blocks/island-runtime": {
+      "types": "./dist/blocks/island-runtime.d.ts",
+      "default": "./dist/blocks/island-runtime.js"
+    },
+    "./blocks/island-renderer": {
+      "types": "./dist/blocks/island-renderer.d.ts",
+      "default": "./dist/blocks/island-renderer.js"
     },
     "./cli": {
       "types": "./dist/cli/index.d.ts",
@@ -135,7 +166,7 @@
     "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
-    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome",
+    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome --src src/blocks",
     "i18n:compile": "node bin/plumix-compile-catalogs.mjs --dts",
     "lint": "eslint",
     "publint": "publint",
@@ -154,18 +185,23 @@
     "@oslojs/crypto": "catalog:oslojs",
     "@oslojs/encoding": "catalog:oslojs",
     "@oslojs/webauthn": "catalog:oslojs",
-    "@plumix/blocks": "workspace:*",
     "@sindresorhus/slugify": "^3.0.0",
+    "@tiptap/core": "catalog:tiptap",
     "@valibot/to-json-schema": "^1.7.1",
+    "dompurify": "^3.4.14",
     "drizzle-kit": "catalog:drizzle",
     "drizzle-orm": "catalog:drizzle",
     "drizzle-valibot": "catalog:drizzle",
     "fishery": "catalog:",
+    "highlight.js": "^11.12.0",
+    "sanitize-html": "^2.17.7",
     "valibot": "catalog:"
   },
   "peerDependencies": {
     "@playwright/test": "catalog:",
     "esbuild": "catalog:",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
     "vitest": "catalog:vitest"
   },
   "peerDependenciesMeta": {
@@ -188,9 +224,11 @@
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
+    "@testing-library/react": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
+    "@types/sanitize-html": "^2.16.1",
     "@vitest/browser-playwright": "catalog:vitest",
     "@vitest/coverage-v8": "catalog:vitest",
     "esbuild": "catalog:",

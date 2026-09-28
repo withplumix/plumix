@@ -1,4 +1,4 @@
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 
 import type { InserterPattern } from "../src/block-catalog.js";
 import { FEED_SEED } from "./feed-block.js";

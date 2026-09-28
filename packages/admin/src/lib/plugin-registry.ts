@@ -2,7 +2,7 @@ import type { Mark, Node } from "@tiptap/core";
 import type { ComponentType } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import type { BlockSpec, JsonObject } from "@plumix/blocks";
+import type { BlockSpec, JsonObject } from "@plumix/core/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { CANONICAL_INPUT_TYPES, LEGACY_INPUT_TYPES } from "@plumix/core/fields";
 

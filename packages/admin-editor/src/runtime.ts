@@ -3,12 +3,12 @@ import type {
   BlockSpec,
   ShortcodeRegistry,
   ShortcodeSpec,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import {
   coreBlocks,
   coreShortcodes,
   createBlockRegistry,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 import { resolveHostOrigin } from "./host-origin.js";
 import { mountEditorRuntime } from "./mount.js";

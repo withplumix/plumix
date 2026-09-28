@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { StyleTokenOption, TokenCategory } from "@plumix/blocks";
+import type { StyleTokenOption, TokenCategory } from "@plumix/core/blocks";
 
 import { useStyleFields } from "./style-fields-context.js";
 

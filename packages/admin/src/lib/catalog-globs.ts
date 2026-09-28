@@ -24,9 +24,9 @@ export const EDITOR_CATALOGS = import.meta.glob<{ messages: Messages }>(
   "../../../admin-editor/locales/*.mjs",
 );
 
-// The blocks package's catalog: core-block metadata the inserter and inspector
-// show, and the render strings the editor canvas resolves from the merged
-// catalog the host pushes to it.
+// Core's blocks catalog: core-block metadata the inserter and inspector show,
+// and the render strings the editor canvas resolves from the merged catalog
+// the host pushes to it.
 export const BLOCKS_CATALOGS = import.meta.glob<{ messages: Messages }>(
-  "../../../blocks/locales/*.mjs",
+  "../../../core/locales/blocks-*.mjs",
 );

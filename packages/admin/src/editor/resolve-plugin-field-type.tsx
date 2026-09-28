@@ -2,7 +2,7 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { getPluginFieldType } from "@/lib/plugin-registry.js";
 
 import type { PluginFieldControl } from "@plumix/admin-editor";
-import type { BlockInput } from "@plumix/blocks";
+import type { BlockInput } from "@plumix/core/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 type PluginFieldComponent = NonNullable<ReturnType<typeof getPluginFieldType>>;

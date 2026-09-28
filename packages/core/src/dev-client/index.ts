@@ -1,15 +1,14 @@
 /**
  * Browser-safe entry point that installs plumix's dev-only client error
  * surfaces from ONE place — the plumix client bootstrap — inverting the old
- * arrangement where `@plumix/blocks`'s island runtime installed the overlays
- * itself.
+ * arrangement where the blocks island runtime installed the overlays itself.
  *
- * `@plumix/blocks` now only hydrates islands and dispatches `plumix:island-*`
+ * `blocks/` now only hydrates islands and dispatches `plumix:island-*`
  * events; this module is the single listener/installer. It imports ONLY the
  * browser-safe `core/dev/ui` implementations — never core server internals — so
  * the `@plumix/core/dev-client` subpath carries no `node:async_hooks` into the
- * client bundle. The island event contract it reads still lives in
- * `@plumix/blocks` (`@plumix/blocks/island-events`), consumed core → blocks.
+ * client bundle. The island event contract it reads lives in
+ * `blocks/island-events.ts`, consumed dev-client → blocks.
  *
  * Everything is gated so it tree-shakes out of production: the caller wraps the
  * dynamic import in `import.meta.hot` (undefined in a build), and the island

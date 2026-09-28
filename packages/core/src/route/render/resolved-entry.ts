@@ -1,5 +1,4 @@
-import type { EntryContent } from "@plumix/blocks";
-
+import type { EntryContent } from "../../blocks/index.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
 import type { RoleImages } from "../../images/role-images.js";

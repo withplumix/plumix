@@ -295,7 +295,7 @@ The consequence is that a newly installed admin-facing plugin appears after a bu
 
 ## Two version tracks
 
-The platform releases in lockstep. `plumix` and the five packages behind it, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
+The platform releases in lockstep. `plumix` and the four packages behind it, `@plumix/core`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
 
 The eleven plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
 

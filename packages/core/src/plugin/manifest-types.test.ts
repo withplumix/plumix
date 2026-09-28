@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-
+import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 import {
   emptyManifest,
   entryTypeCapability,

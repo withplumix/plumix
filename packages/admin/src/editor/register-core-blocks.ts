@@ -1,4 +1,4 @@
-import { coreBlocks } from "@plumix/blocks";
+import { coreBlocks } from "@plumix/core/blocks";
 
 import {
   getRegisteredBlocks,

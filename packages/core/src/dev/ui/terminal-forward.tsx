@@ -11,8 +11,7 @@
 // working. On by default, tunable via the level, and — like the overlay — pulled
 // in only under the dev gate, so it tree-shakes out of production island bundles.
 
-import { deriveLabel, detailOf } from "@plumix/blocks/island-events";
-
+import { deriveLabel, detailOf } from "../../blocks/island-events.js";
 import { DEV_ERROR_TERMINAL_ENDPOINT } from "./frames.js";
 
 /**

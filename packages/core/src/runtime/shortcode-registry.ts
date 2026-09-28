@@ -1,4 +1,4 @@
-import type { ShortcodeRegistry, ShortcodeSpec } from "@plumix/blocks";
+import type { ShortcodeRegistry, ShortcodeSpec } from "../blocks/index.js";
 
 /**
  * Merge the three shortcode sources into the registry `expandShortcodes`

@@ -1,7 +1,7 @@
 import type { ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 
-import { Image } from "@plumix/blocks/renderer";
+import { Image } from "@plumix/core/blocks/renderer";
 
 interface FeaturedImageProps {
   readonly entry: ResolvedEntry;

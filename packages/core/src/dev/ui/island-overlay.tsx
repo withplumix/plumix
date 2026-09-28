@@ -19,13 +19,12 @@ import type { Root } from "react-dom/client";
 import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
-import { deriveLabel, detailOf } from "@plumix/blocks/island-events";
-
 import type {
   DevErrorFrame,
   DevErrorHydrationDiff,
   DevErrorInfo,
 } from "./contract.js";
+import { deriveLabel, detailOf } from "../../blocks/island-events.js";
 import { enhanceDevError } from "./enhance.js";
 import { DevErrorBody } from "./error-page.js";
 import { DEV_ERROR_STACK_ENDPOINT } from "./frames.js";

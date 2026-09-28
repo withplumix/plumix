@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { createElement, useId } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { TokenCategory, VisibilityFlags } from "@plumix/blocks";
+import type { TokenCategory, VisibilityFlags } from "@plumix/core/blocks";
 import {
   Accordion,
   AccordionContent,
@@ -37,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@plumix/admin-ui/tooltip";
-import { resolveRootTag, ROOT_TAGS } from "@plumix/blocks";
+import { resolveRootTag, ROOT_TAGS } from "@plumix/core/blocks";
 
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";

@@ -78,12 +78,12 @@ export async function bootI18n(
   );
   const editorMessages = await loadSourceFallbackCatalog(
     catalogs.editor,
-    "../../../admin-editor/locales",
+    "../../../admin-editor/locales/",
     locale,
   );
   const blocksMessages = await loadSourceFallbackCatalog(
     catalogs.blocks,
-    "../../../blocks/locales",
+    "../../../core/locales/blocks-",
     locale,
   );
   // Blocks lowest, then editor + workspace plugins, admin chrome last so admin
@@ -126,11 +126,12 @@ export async function bootI18n(
 // uncompiled locale should still read English rather than the raw ids.
 async function loadSourceFallbackCatalog(
   catalogs: CatalogMap,
-  dir: string,
+  prefix: string,
   locale: string,
 ): Promise<Messages> {
   const loader =
-    catalogs[`${dir}/${locale}.mjs`] ?? catalogs[`${dir}/${SOURCE_LOCALE}.mjs`];
+    catalogs[`${prefix}${locale}.mjs`] ??
+    catalogs[`${prefix}${SOURCE_LOCALE}.mjs`];
   if (!loader) return {};
   return (await loader()).messages;
 }

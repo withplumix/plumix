@@ -2,8 +2,8 @@
  * Public `plumix/blocks` surface.
  *
  * Re-exports the curated public API from the workspace-internal
- * `@plumix/blocks` package. Consumers (plugins, themes, the user's app)
- * import from `plumix/blocks`; `@plumix/blocks` is never a direct
+ * `@plumix/core/blocks` subpath. Consumers (plugins, themes, the user's app)
+ * import from `plumix/blocks`; `@plumix/core` is never a direct
  * dependency in their `package.json`.
  *
  * The block *value* API (`defineBlock`, `renderBlockTree`, …) is imported
@@ -15,12 +15,12 @@
 
 import type { AppContext } from "@plumix/core";
 
-// Core depends on `@plumix/blocks`, so the blocks package cannot name the
-// context its loaders receive. This façade depends on both, so it fills the
-// seam here, and the augmentation ships in this entry's `.d.ts` to every
+// `blocks/` sits in core's foundation layer, below `context/`, so it cannot
+// name the context its loaders receive. This façade reaches both, so it fills
+// the seam here, and the augmentation ships in this entry's `.d.ts` to every
 // program that imports a loader type from `plumix/blocks`.
 // eslint-disable-next-line no-restricted-syntax -- the façade filling a seam it owns, not a consumer registry augmentation (consumers augment only "plumix")
-declare module "@plumix/blocks" {
+declare module "@plumix/core/blocks" {
   interface BlockLoaderContextRegistry {
     readonly ctx: AppContext;
   }
@@ -52,12 +52,12 @@ export {
   // `"use client"` modules. Not intended for direct consumption.
   serializeProps,
   IslandShim,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 export type {
   IslandProps,
   PlumixPrefetch,
   PlumixStrategy,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 export type {
   BlockContext,
   BlockInput,
@@ -82,7 +82,7 @@ export type {
   RenderBlockTreeOptions,
   ResolvedTransformTarget,
   ShortcodeSpec,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 // The theme's design vocabulary, for a theme typing its own token module and
 // for `emitThemeTokenCss`.
@@ -94,4 +94,4 @@ export type {
   ThemeTokenGroup,
   ThemeTokens,
   TokenCategory,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";

@@ -1,8 +1,7 @@
-import type { HtmlAllowlistOverride } from "@plumix/blocks";
-import type { RemotePattern } from "@plumix/blocks/renderer";
-
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { MailerInput } from "./auth/mailer/resolve.js";
+import type { HtmlAllowlistOverride } from "./blocks/index.js";
+import type { RemotePattern } from "./blocks/renderer/index.js";
 import type { TelemetryConfig } from "./context/telemetry.js";
 import type { DebugBarInput } from "./dev/debug-bar/config.js";
 import type { DebugPanelsInput } from "./dev/debug-panels/config.js";

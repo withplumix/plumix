@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { defineBlock, defineShortcode } from "@plumix/blocks";
+import { defineBlock, defineShortcode } from "@plumix/core/blocks";
 
 import { buildEditorRegistry, buildEditorShortcodes } from "./runtime.js";
 

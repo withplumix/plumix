@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@plumix/blocks": "workspace:*",
+    "@plumix/core": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
     "@plumix/plugin-comments": "workspace:*",
     "@plumix/plugin-feeds": "workspace:*",

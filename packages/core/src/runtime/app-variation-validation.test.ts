@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { defineBlock } from "@plumix/blocks";
-
 import { auth } from "../auth/config.js";
+import { defineBlock } from "../blocks/index.js";
 import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";

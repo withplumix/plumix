@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useLingui } from "@lingui/react";
 
-import type { BlockRegistry } from "@plumix/blocks";
+import type { BlockRegistry } from "@plumix/core/blocks";
 
 import type { Geometry, SlotDrop } from "./canvas-geometry.js";
 import type { FrameOffset } from "./overlay.js";

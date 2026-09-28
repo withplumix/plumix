@@ -6,8 +6,8 @@ import type {
   BlockRegistry,
   RenderEnv,
   ShortcodeRegistry,
-} from "@plumix/blocks";
-import { isEntryContent, parseRenderEnv } from "@plumix/blocks";
+} from "@plumix/core/blocks";
+import { isEntryContent, parseRenderEnv } from "@plumix/core/blocks";
 
 import { EditorCanvas } from "./editor-canvas.js";
 

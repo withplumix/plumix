@@ -70,7 +70,7 @@ export {
   mockRegistry,
   renderBlockSpecToHtml,
   renderBlockTreeToHtml,
-} from "@plumix/blocks/test";
+} from "@plumix/core/blocks/test";
 
 // Upload fakes: a real `File` for an upload field, a drop or a procedure.
 export { fakeFile, fakeImage } from "./fakes.js";

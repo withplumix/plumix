@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
-import { Link } from "@plumix/blocks/renderer";
-
+import { Link } from "../blocks/renderer/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

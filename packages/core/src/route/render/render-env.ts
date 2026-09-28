@@ -1,5 +1,4 @@
-import type { HtmlAllowlist } from "@plumix/blocks";
-
+import type { HtmlAllowlist } from "../../blocks/index.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { DocumentManifest, ThemeDescriptor } from "../../theme.js";
 import type { AssetManifest } from "./asset-manifest.js";

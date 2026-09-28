@@ -15,7 +15,6 @@ export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 // own (the umbrella rule).
 const INTERNAL = new Set([
   "@plumix/core",
-  "@plumix/blocks",
   "@plumix/admin",
   "@plumix/admin-editor",
   "@plumix/admin-ui",

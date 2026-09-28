@@ -1,0 +1,404 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-03\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (render-time descriptors are object literals, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/blocks/edit-appender.ts
+msgid "blocks.appender.addBlock"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "blocks.embed.load"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "blocks.embed.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "blocks.embed.titleFallback"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/button/index.tsx
+msgid "block.core.button.input.href.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/button/index.tsx
+msgid "block.core.button.input.label.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/button/index.tsx
+msgid "block.core.button.input.openInNewTab.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/button/index.tsx
+msgid "block.core.button.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/code/index.tsx
+msgid "block.core.code.input.language.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/code/index.tsx
+msgid "block.core.code.input.text.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/code/index.tsx
+msgid "block.core.code.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/column/index.tsx
+msgid "block.core.column.input.content.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/column/index.tsx
+msgid "block.core.column.input.width.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/column/index.tsx
+msgid "block.core.column.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.columns.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.reverseWhenStacked.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.stackAt.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.stackAt.option.mobile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.stackAt.option.never"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.input.stackAt.option.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/columns/index.tsx
+msgid "block.core.columns.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/details/index.tsx
+msgid "block.core.details.input.content.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/details/index.tsx
+msgid "block.core.details.input.open.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/details/index.tsx
+msgid "block.core.details.input.summary.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/details/index.tsx
+msgid "block.core.details.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.input.caption.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.input.title.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.input.url.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.keyword.iframe"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.keyword.media"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.keyword.video"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.keyword.vimeo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.keyword.youtube"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/embed/index.tsx
+msgid "block.core.embed.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/group/index.tsx
+msgid "block.core.group.input.content.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/group/index.tsx
+msgid "block.core.group.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.input.html.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.keyword.embed-code"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.keyword.markup"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.keyword.raw"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/html/index.tsx
+msgid "block.core.html.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/rich-text/index.tsx
+msgid "block.core.rich-text.input.body.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/rich-text/index.tsx
+msgid "block.core.rich-text.keyword.body"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/rich-text/index.tsx
+msgid "block.core.rich-text.keyword.paragraph"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/rich-text/index.tsx
+msgid "block.core.rich-text.keyword.text"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/rich-text/index.tsx
+msgid "block.core.rich-text.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/section/index.tsx
+msgid "block.core.section.input.content.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/section/index.tsx
+msgid "block.core.section.input.maxWidth.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/section/index.tsx
+msgid "block.core.section.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/separator/index.tsx
+msgid "block.core.separator.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-body-row.input.cells.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-body-row.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-cell.input.text.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-cell.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-header-cell.input.text.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-header-cell.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-header-row.input.cells.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table-header-row.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.align.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.align.option.center"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.align.option.left"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.align.option.right"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.align.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.input.rows.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/table/index.tsx
+msgid "block.core.table.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.autoplay.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.controls.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.loop.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.muted.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.playsinline.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.poster.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.input.src.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.keyword.clip"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.keyword.media"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.keyword.movie"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/video/index.tsx
+msgid "block.core.video.title"
+msgstr ""

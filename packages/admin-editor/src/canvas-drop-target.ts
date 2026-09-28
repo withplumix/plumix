@@ -1,5 +1,5 @@
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
-import type { SlotRect } from "@plumix/blocks/renderer";
+import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
+import type { SlotRect } from "@plumix/core/blocks/renderer";
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { SlotDrop } from "./canvas-geometry.js";

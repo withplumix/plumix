@@ -7,13 +7,15 @@
 // plugin; the runtime reads `collectContributedBlocks` and `deriveAdminSlug`.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
-import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
-import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-
 import type {
   Capability,
   CapabilityNamespaces,
 } from "../auth/contract/capability.js";
+import type {
+  BlockSpec,
+  ThemeBreakpoints,
+  ThemeTokens,
+} from "../blocks/index.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n } from "../i18n/locale-registry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
@@ -67,6 +69,7 @@ import {
   resolveCapability,
   spellTermCapability,
 } from "../auth/contract/capability.js";
+import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 import { namespacedEntryCapability } from "../entries/capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";

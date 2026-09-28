@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { coreBlocks, createBlockRegistry } from "@plumix/blocks";
+import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
 
 import { EditorCanvas } from "../src/editor-canvas.js";
 import { feedSpec } from "./feed-block.js";

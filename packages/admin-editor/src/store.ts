@@ -10,12 +10,12 @@ import type {
   ResponsiveStyleSlot,
   ThemeBreakpoints,
   VisibilityFlags,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import {
   DEFAULT_BREAKPOINTS,
   freshBlockId,
   isBlockNodeArray,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";

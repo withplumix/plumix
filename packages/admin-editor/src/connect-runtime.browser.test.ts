@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/core/blocks";
 import type {
   CanvasConfig,
   SerializedLoaderData,
-} from "@plumix/blocks/renderer";
-import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
+import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
 import { connectRuntime } from "./connect-runtime.js";
 

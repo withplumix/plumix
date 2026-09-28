@@ -1,4 +1,4 @@
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
 
 import type { EditorStoreApi } from "./store.js";
 import { collectBlocks } from "./block-tree-ops.js";

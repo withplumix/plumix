@@ -7,15 +7,15 @@
 // `admin-bar-` prefix keeps this surface's catalog distinct from a
 // later debug-bar catalog in the same flat locales/ dir.
 
-import type { CompiledCatalog } from "@plumix/blocks";
-import { resolveMessage } from "@plumix/blocks";
 import { messages as arMessages } from "@plumix/core/locales/admin-bar-ar";
 import { messages as deMessages } from "@plumix/core/locales/admin-bar-de";
 import { messages as enMessages } from "@plumix/core/locales/admin-bar-en";
 import { messages as ukMessages } from "@plumix/core/locales/admin-bar-uk";
 import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
 
+import type { CompiledCatalog } from "../blocks/index.js";
 import type { ResolvedMeta } from "../rpc/meta/core.js";
+import { resolveMessage } from "../blocks/index.js";
 
 export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
 

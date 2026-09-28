@@ -14,10 +14,10 @@
  * browsers; Origin/Referer check covers older clients without SameSite support.
  */
 
-// Defined in `@plumix/blocks` rather than here, so the islands that send the
-// header can name it without pulling core into a browser bundle. Re-exported
-// so this module stays the one place server code reads it from.
-import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "@plumix/blocks";
+// Declared in the foundation layer so the islands that send the header can
+// name it without pulling the gate's server code into a browser bundle.
+// Re-exported so this module stays the one place server code reads it from.
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../csrf-header.js";
 
 export { CSRF_HEADER_NAME, CSRF_HEADER_VALUE };
 

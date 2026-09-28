@@ -6,13 +6,14 @@
 // source, so an untranslated locale renders English until a translator fills
 // its `.po`. The `welcome-` prefix keeps this surface distinct in the flat dir.
 
-import type { CompiledCatalog } from "@plumix/blocks";
-import { resolveMessage } from "@plumix/blocks";
 import { messages as arMessages } from "@plumix/core/locales/welcome-ar";
 import { messages as deMessages } from "@plumix/core/locales/welcome-de";
 import { messages as enMessages } from "@plumix/core/locales/welcome-en";
 import { messages as ukMessages } from "@plumix/core/locales/welcome-uk";
 import { messages as zhCnMessages } from "@plumix/core/locales/welcome-zh-CN";
+
+import type { CompiledCatalog } from "../blocks/index.js";
+import { resolveMessage } from "../blocks/index.js";
 
 const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
   en: enMessages,

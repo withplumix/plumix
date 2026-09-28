@@ -7,7 +7,7 @@
   description: "packages/admin"
 - name: "pkg: blocks"
   color: "1d76db"
-  description: "packages/blocks"
+  description: "packages/core/src/blocks"
 - name: "pkg: plumix"
   color: "1d76db"
   description: "packages/plumix"

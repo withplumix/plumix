@@ -1,9 +1,0 @@
-{
-  "extends": "@plumix/typescript-config/library.json",
-  "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "types": ["node"]
-  },
-  "include": ["src"]
-}

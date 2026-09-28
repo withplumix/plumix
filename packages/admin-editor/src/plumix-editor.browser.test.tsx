@@ -5,8 +5,8 @@ import { I18nProvider } from "@lingui/react";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { EntryContent } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { EntryContent } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import { PlumixEditor, TreeChangeEmitter } from "./plumix-editor.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";

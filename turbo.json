@@ -148,7 +148,7 @@
       "dependsOn": ["^topo"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"]
     },
-    "@plumix/blocks#test:unit": {
+    "@plumix/core#test:unit": {
       // The block-text corpus test asserts against the demo site's seeded
       // content, which lives downstream of this package — `^topo` never reaches
       // it, so without the input turbo replays a green for the seed edit that

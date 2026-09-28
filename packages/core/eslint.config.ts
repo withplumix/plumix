@@ -7,6 +7,7 @@ import boundaries from "eslint-plugin-boundaries";
 import { defineConfig } from "eslint/config";
 
 import { baseConfig, capabilityDefiners } from "@plumix/eslint-config/base";
+import { reactConfig } from "@plumix/eslint-config/react";
 
 import type { Placement } from "./layers.js";
 import { FOLDERS, LAYERS, TOP_FILES } from "./layers.js";
@@ -98,6 +99,12 @@ export function layerDirection(
 
 export default defineConfig(
   baseConfig,
+  // `blocks/` came from a package linted as React code, and keeps those rules
+  // without widening them to the rest of core.
+  reactConfig.map((config) => ({
+    ...config,
+    files: ["src/blocks/**/*.{ts,tsx}"],
+  })),
   layerDirection(),
   // The capability vocabulary — core's baked-in `entry:post:*` set and the
   // spellers every reference resolves through.

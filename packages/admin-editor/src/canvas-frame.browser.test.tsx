@@ -11,9 +11,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BlockNode, BlockSpec } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
-import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
+import type { BlockNode, BlockSpec } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
+import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorConfigProvider } from "./editor-config-context.js";

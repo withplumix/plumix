@@ -5,12 +5,12 @@ import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { createRoot } from "react-dom/client";
 
-import type { BlockSpec } from "@plumix/blocks";
+import type { BlockSpec } from "@plumix/core/blocks";
 import {
   coreBlocks,
   createBlockRegistry,
   defineEntryContent,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 import { PlumixEditor } from "../src/plumix-editor.js";
 import { feedSpec } from "./feed-block.js";

@@ -17,12 +17,12 @@ import type {
   SiteSettings,
   ThemeBreakpoints,
   ThemeTokens,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 import type {
   BlockRect,
   CanvasConfig,
   SlotRect,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 import {
   BASELINE_HTML_ALLOWLIST,
   createMessageResolver,
@@ -30,8 +30,8 @@ import {
   editAppender,
   HtmlAllowlistProvider,
   parseLoaderData,
-} from "@plumix/blocks";
-import { BlockTree, PlumixProvider } from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks";
+import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";

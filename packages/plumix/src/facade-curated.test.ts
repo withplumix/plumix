@@ -282,7 +282,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks": {
-    mirrors: "@plumix/blocks",
+    mirrors: "@plumix/core/blocks",
     withheld: [
       {
         reason: "the JSON narrowings, published on `plumix/support`",
@@ -367,7 +367,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks/renderer": {
-    mirrors: "@plumix/blocks/renderer",
+    mirrors: "@plumix/core/blocks/renderer",
     withheld: [
       {
         reason:
@@ -391,7 +391,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
     ],
   },
   "./blocks/island-renderer": {
-    mirrors: "@plumix/blocks/island-renderer",
+    mirrors: "@plumix/core/blocks/island-renderer",
     withheld: [],
   },
   // Whole by value, not by `export *`: `Db` is typed over every key of core's
@@ -456,7 +456,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
   // The one test import: core's harnesses and factories, and blocks' render
   // helpers beside them.
   "./test": {
-    mirrors: ["@plumix/core/test", "@plumix/blocks/test"],
+    mirrors: ["@plumix/core/test", "@plumix/core/blocks/test"],
     withheld: [
       {
         reason:
@@ -554,11 +554,11 @@ const PASSTHROUGH: Readonly<Record<string, string>> = {
 
 // Named, so a subpath is never skipped without a reason.
 const UNLOADABLE: Unloadable = {
-  "@plumix/blocks/island-runtime":
+  "@plumix/core/blocks/island-runtime":
     "registers the `<plumix-island>` custom element as it evaluates, and " +
     "the unit tier runs in Node with no `HTMLElement` to extend",
   "plumix/blocks/island-runtime":
-    "imports `@plumix/blocks/island-runtime` for its side effect and " +
+    "imports `@plumix/core/blocks/island-runtime` for its side effect and " +
     "publishes nothing",
 };
 

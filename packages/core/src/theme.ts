@@ -5,9 +5,7 @@ import type {
   ShortcodeSpec,
   ThemeBreakpoints,
   ThemeTokens,
-} from "@plumix/blocks";
-import { isReservedBlockName } from "@plumix/blocks";
-
+} from "./blocks/index.js";
 import type { RedirectRule } from "./route/redirects.js";
 import type {
   ArchiveData,
@@ -21,6 +19,7 @@ import type {
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
+import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 

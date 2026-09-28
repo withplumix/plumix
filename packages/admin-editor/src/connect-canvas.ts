@@ -5,14 +5,14 @@ import type {
   HostMessage,
   SerializedLoaderData,
   SlotRect,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 import {
   createHandshake,
   EDITOR_BRIDGE_CHANNEL,
   encode,
   isHandshakeFrame,
   parseEnvelope,
-} from "@plumix/blocks/renderer";
+} from "@plumix/core/blocks/renderer";
 
 import type { EditorStoreApi } from "./store.js";
 

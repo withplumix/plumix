@@ -1,9 +1,9 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { BlockNode, ThemeTokens } from "@plumix/blocks";
-import { coreBlocks, createBlockRegistry } from "@plumix/blocks";
-import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
+import type { BlockNode, ThemeTokens } from "@plumix/core/blocks";
+import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
+import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
 import { EditorCanvas } from "./editor-canvas.js";
 

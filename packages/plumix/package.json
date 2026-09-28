@@ -217,7 +217,6 @@
     "@plumix/admin": "workspace:*",
     "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
-    "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tailwindcss/node": "catalog:tailwind",
     "@tailwindcss/oxide": "catalog:tailwind",

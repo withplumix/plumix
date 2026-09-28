@@ -1,9 +1,9 @@
-import type { BlockNode, JsonValue } from "@plumix/blocks";
+import type { BlockNode, JsonValue } from "@plumix/core/blocks";
 import {
   freshBlockId,
   isBlockNodeArray,
   rewriteBlockNodeIds,
-} from "@plumix/blocks";
+} from "@plumix/core/blocks";
 
 /** Find a block by id anywhere in the tree, descending into slot attrs. */
 export function findBlock(

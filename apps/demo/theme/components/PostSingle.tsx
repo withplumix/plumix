@@ -1,7 +1,7 @@
 import type { ResolvedEntry } from "plumix/theme";
 import type { ReactNode } from "react";
 
-import { BlockRenderer, Link } from "@plumix/blocks/renderer";
+import { BlockRenderer, Link } from "@plumix/core/blocks/renderer";
 
 import { FeaturedImage } from "./FeaturedImage";
 import { PostMeta } from "./PostMeta";

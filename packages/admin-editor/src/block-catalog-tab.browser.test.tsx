@@ -4,8 +4,8 @@ import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BlockPattern } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import type { BlockPattern } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { EditorConfigProvider } from "./editor-config-context.js";

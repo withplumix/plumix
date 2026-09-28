@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
 
-import type { BlockRegistry, ThemeTokens } from "@plumix/blocks";
+import type { BlockRegistry, ThemeTokens } from "@plumix/core/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { EditorError } from "./errors.js";
