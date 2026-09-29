@@ -144,4 +144,13 @@ describe("package-scoped gates", () => {
       expect(gate?.command).toContain("--filter=...[origin/main]");
     },
   );
+
+  test.each(["lint", "typecheck", "test", "e2e", "publint", "attw"])(
+    "%s prints only the tasks that failed, so the output the fixer is handed ends with the failure",
+    (name) => {
+      const gate = GATES.find((candidate) => candidate.name === name);
+
+      expect(gate?.command).toContain("--output-logs=errors-only");
+    },
+  );
 });

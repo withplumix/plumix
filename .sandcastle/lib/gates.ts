@@ -54,7 +54,7 @@ const changesSomethingConsumersInstall = (
       !A_TEST_RATHER_THAN_THE_THING_TESTED.test(path),
   );
 
-const WHAT_THE_BRANCH_CHANGED = "--filter=...[origin/main]";
+const TURBO_GATE_FLAGS = "--filter=...[origin/main] --output-logs=errors-only";
 
 export const GATES: readonly Gate[] = [
   { name: "check-no-major", command: "pnpm check-no-major" },
@@ -68,27 +68,27 @@ export const GATES: readonly Gate[] = [
   { name: "knip", command: "pnpm knip" },
   {
     name: "publint",
-    command: `pnpm exec turbo run publint ${WHAT_THE_BRANCH_CHANGED}`,
+    command: `pnpm exec turbo run publint ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "attw",
-    command: `pnpm exec turbo run attw ${WHAT_THE_BRANCH_CHANGED}`,
+    command: `pnpm exec turbo run attw ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "lint",
-    command: `pnpm exec turbo run lint --continue ${WHAT_THE_BRANCH_CHANGED} -- --cache --cache-location .cache/.eslintcache`,
+    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
   },
   {
     name: "typecheck",
-    command: `pnpm exec turbo run typecheck ${WHAT_THE_BRANCH_CHANGED}`,
+    command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "test",
-    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${WHAT_THE_BRANCH_CHANGED}`,
+    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
-    command: `pnpm exec turbo run test:e2e ${WHAT_THE_BRANCH_CHANGED}`,
+    command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
     requires:
       "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
