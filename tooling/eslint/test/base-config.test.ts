@@ -471,6 +471,32 @@ describe("the existing restricted-syntax selectors", () => {
   });
 });
 
+describe("shadcn/no-inline-styles", () => {
+  const withReact = new ESLint({
+    cwd: fixturesDir,
+    overrideConfigFile: true,
+    overrideConfig: [...baseConfig, ...reactConfig],
+  });
+  const inlineStyleLines = async (fixture: string) => {
+    const [result] = await withReact.lintFiles([fixture]);
+    return (result?.messages ?? [])
+      .filter((message) => message.ruleId === "shadcn/no-inline-styles")
+      .map((message) => message.line);
+  };
+
+  it("rejects a static inline style and permits a custom property", async () => {
+    await expect(inlineStyleLines("src/inline-style.tsx")).resolves.toEqual([
+      1,
+    ]);
+  });
+
+  it("stays silent on a block renderer's author-set styles", async () => {
+    await expect(
+      inlineStyleLines("src/blocks/inline-style.tsx"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("plumix/no-forged-app", () => {
   it("rejects a test asserting an untyped or partial value into AppContext or PlumixApp, however the record is spelled", async () => {
     await expect(plumixReports("src/forged-app.test.ts")).resolves.toEqual([

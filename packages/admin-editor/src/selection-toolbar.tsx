@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
@@ -26,6 +26,7 @@ import {
   canUngroupBlock,
   findParentId,
 } from "./block-tree-ops.js";
+import { px } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 const TOOLBAR_GAP = 4;
@@ -68,16 +69,15 @@ export function SelectionToolbar({
     <TooltipProvider delayDuration={300}>
       <div
         data-testid="plumix-selection-toolbar"
-        className="bg-background flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm"
-        style={{
-          position: "absolute",
-          left: Math.max(0, box.left),
-          top: Math.max(0, box.top - 36 - TOOLBAR_GAP),
-          // The enclosing clip layer is pointer-events:none (so overlays don't
-          // eat canvas clicks); the toolbar opts back in so its buttons work.
-          pointerEvents: "auto",
-          zIndex: 30,
-        }}
+        // The enclosing clip layer is pointer-events:none (so overlays don't
+        // eat canvas clicks); the toolbar opts back in so its buttons work.
+        className="plumix-canvas-overlay bg-background pointer-events-auto z-30 flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm"
+        style={
+          {
+            "--box-left": px(Math.max(0, box.left)),
+            "--box-top": px(Math.max(0, box.top - 36 - TOOLBAR_GAP)),
+          } as CSSProperties
+        }
       >
         <Tooltip>
           <TooltipTrigger asChild>

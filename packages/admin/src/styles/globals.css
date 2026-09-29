@@ -63,6 +63,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* The editor canvas's selection, hover and drop outlines. Blue in both
+     themes, so they read against whatever the previewed page paints. */
+  --canvas-selection: oklch(0.546 0.215 262.881);
 }
 
 .dark {
@@ -144,6 +147,56 @@
       var(--muted-foreground) 55%,
       transparent
     );
+  }
+}
+
+/* The editor canvas places its overlays at rects measured off the preview
+   iframe. Those rects are physical, so they stay `left`/`top` under RTL,
+   where a logical `start` would mirror them off the block they outline. The
+   properties do not inherit: an overlay nested in another sizes itself or
+   falls back to auto, never to its parent's box. */
+@property --box-left {
+  syntax: "*";
+  inherits: false;
+}
+@property --box-top {
+  syntax: "*";
+  inherits: false;
+}
+@property --box-width {
+  syntax: "*";
+  inherits: false;
+}
+@property --box-height {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --sortable-transform {
+  syntax: "*";
+  inherits: false;
+}
+@property --sortable-transition {
+  syntax: "*";
+  inherits: false;
+}
+
+@layer components {
+  .plumix-canvas-overlay {
+    position: absolute;
+    left: var(--box-left);
+    top: var(--box-top);
+    width: var(--box-width);
+    height: var(--box-height);
+  }
+
+  /* dnd-kit hands a sortable row its transform and transition as per-render
+     strings. The transition is a shorthand of property, duration and easing,
+     which no utility sets whole. A row can hold a sortable list of its own (a
+     repeater inside a repeater), so its two properties do not inherit either. */
+  .plumix-sortable {
+    transform: var(--sortable-transform);
+    transition: var(--sortable-transition);
   }
 }
 

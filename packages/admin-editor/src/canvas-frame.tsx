@@ -1,4 +1,8 @@
-import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  CSSProperties,
+  ReactElement,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useLingui } from "@lingui/react";
 
@@ -15,6 +19,7 @@ import { BlockCatalog } from "./block-catalog-tab.js";
 import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
 import { CANVAS_HEIGHT } from "./canvas-geometry.js";
+import { stageTransform } from "./canvas-view.js";
 import {
   clipboardOpFromEvent,
   createClipboardOps,
@@ -23,7 +28,7 @@ import {
 import { connectCanvas } from "./connect-canvas.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { deviceLabel } from "./editor-toolbar.js";
-import { overlayBox } from "./overlay.js";
+import { overlayBox, px } from "./overlay.js";
 import {
   useCameraStore,
   useCameraStoreApi,
@@ -58,9 +63,9 @@ interface CanvasFrameProps {
   readonly previewRefreshToken?: number;
 }
 
-const SELECTED_OUTLINE = "#2563eb";
-const MEMBER_OUTLINE = "rgba(37,99,235,0.5)";
-const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
+const SELECTED_OUTLINE = "outline-canvas-selection";
+const MEMBER_OUTLINE = "outline-canvas-selection/50";
+const HOVER_OUTLINE = "outline-canvas-selection/40";
 
 /**
  * Host-side canvas: loads the real route in an iframe, drives it via the
@@ -221,7 +226,7 @@ export function CanvasFrame({
 
   const overlay = (
     id: string | null,
-    color: string,
+    outline: string,
     testId: string,
   ): ReactElement | null => {
     if (!id || !geometry.frame || !container) return null;
@@ -232,16 +237,15 @@ export function CanvasFrame({
       <div
         key={testId}
         data-testid={testId}
-        style={{
-          position: "absolute",
-          left: box.left,
-          top: box.top,
-          width: box.width,
-          height: box.height,
-          outline: `2px solid ${color}`,
-          pointerEvents: "none",
-          zIndex: 10,
-        }}
+        className={`plumix-canvas-overlay pointer-events-none z-10 outline-2 ${outline}`}
+        style={
+          {
+            "--box-left": px(box.left),
+            "--box-top": px(box.top),
+            "--box-width": px(box.width),
+            "--box-height": px(box.height),
+          } as CSSProperties
+        }
       />
     );
   };
@@ -281,15 +285,10 @@ export function CanvasFrame({
       // A Figma-style pannable stage: the device frame floats in this surface
       // and is panned/zoomed via a transform (no scrollbars). `overflow:hidden`
       // clips the off-stage frame; `touch-action:none` lets us own wheel/touch
-      // gestures. `var(--muted)` reads as canvas, not a void.
-      style={{
-        position: "relative",
-        flex: 1,
-        overflow: "hidden",
-        touchAction: "none",
-        background: "var(--muted)",
-        cursor: panReady ? "grab" : "default",
-      }}
+      // gestures. `bg-muted` reads as canvas, not a void.
+      className={`bg-muted relative flex-1 touch-none overflow-hidden ${
+        panReady ? "cursor-grab" : "cursor-default"
+      }`}
     >
       {/* The stage: positioned at the container origin and moved as a whole by
           `translate(pan) scale(zoom)`. The iframe sits at natural size; the
@@ -297,42 +296,36 @@ export function CanvasFrame({
           re-reading the iframe's live on-screen rect. */}
       <div
         ref={stageRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: frameWidth,
-          height: contentHeight ?? CANVAS_HEIGHT,
-          // Committed transform. During a gesture the live transform is written
-          // imperatively (applyLive) and re-asserted after any incidental render
-          // by the layout effect below, so this stale value never paints.
-          transform: `translate(${String(panX)}px, ${String(panY)}px) scale(${String(zoom)})`,
-          transformOrigin: "top left",
-        }}
+        data-testid="plumix-canvas-stage"
+        className="plumix-canvas-overlay origin-top-left transform-(--stage-transform)"
+        style={
+          {
+            "--box-left": px(0),
+            "--box-top": px(0),
+            "--box-width": px(frameWidth),
+            "--box-height": px(contentHeight ?? CANVAS_HEIGHT),
+            // Committed transform. During a gesture the live transform is
+            // written imperatively (applyLive) and re-asserted after any
+            // incidental render by the layout effect below, so this stale
+            // value never paints.
+            "--stage-transform": stageTransform({ panX, panY, zoom }),
+          } as CSSProperties
+        }
       >
         {!readOnly && (
-          <CanvasHandle
-            device={device}
-            frameWidth={frameWidth}
-            onPointerDown={onHandlePointerDown}
-          />
+          <CanvasHandle device={device} onPointerDown={onHandlePointerDown} />
         )}
         <iframe
           ref={iframeRef}
           src={previewUrl}
           title="plumix-editor-canvas"
           onLoad={measureContent}
-          style={{
-            display: "block",
-            width: frameWidth,
-            height: contentHeight ?? CANVAS_HEIGHT,
-            border: 0,
-            // Click-through while a block drag or a space-pan is active so the
-            // host receives the pointer events. Single declarative owner — no
-            // imperative toggling that could desync across the two gestures.
-            pointerEvents:
-              dragSpec || movingId || panReady ? "none" : undefined,
-          }}
+          // Click-through while a block drag or a space-pan is active so the
+          // host receives the pointer events. Single declarative owner — no
+          // imperative toggling that could desync across the two gestures.
+          className={`block size-full border-0 ${
+            dragSpec || movingId || panReady ? "pointer-events-none" : ""
+          }`}
         />
       </div>
       {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
@@ -344,16 +337,15 @@ export function CanvasFrame({
       {!readOnly && container && !gesturing && (
         <div
           data-testid="plumix-overlay-clip"
-          style={{
-            position: "fixed",
-            left: container.left,
-            top: container.top,
-            width: container.width,
-            height: container.height,
-            overflow: "hidden",
-            pointerEvents: "none",
-            zIndex: 10,
-          }}
+          className="plumix-canvas-overlay pointer-events-none fixed z-10 overflow-hidden"
+          style={
+            {
+              "--box-left": px(container.left),
+              "--box-top": px(container.top),
+              "--box-width": px(container.width),
+              "--box-height": px(container.height),
+            } as CSSProperties
+          }
         >
           {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
           {[...selectedIds]
@@ -366,32 +358,28 @@ export function CanvasFrame({
           {dropSlot && (
             <div
               data-testid="plumix-slot-drop-indicator"
-              style={{
-                position: "absolute",
-                left: dropSlot.box.left - container.left,
-                top: dropSlot.box.top - container.top,
-                width: dropSlot.box.width,
-                height: dropSlot.box.height,
-                outline: `2px dashed ${SELECTED_OUTLINE}`,
-                background: "rgba(37,99,235,0.08)",
-                pointerEvents: "none",
-                zIndex: 20,
-              }}
+              className={`plumix-canvas-overlay bg-canvas-selection/8 pointer-events-none z-20 outline-2 outline-dashed ${SELECTED_OUTLINE}`}
+              style={
+                {
+                  "--box-left": px(dropSlot.box.left - container.left),
+                  "--box-top": px(dropSlot.box.top - container.top),
+                  "--box-width": px(dropSlot.box.width),
+                  "--box-height": px(dropSlot.box.height),
+                } as CSSProperties
+              }
             />
           )}
           {dropY !== null && geometry.frame && (
             <div
               data-testid="plumix-drop-indicator"
-              style={{
-                position: "absolute",
-                left: geometry.frame.left - container.left,
-                top: dropY - container.top,
-                width: frameWidth * zoom,
-                height: 2,
-                background: SELECTED_OUTLINE,
-                pointerEvents: "none",
-                zIndex: 20,
-              }}
+              className="plumix-canvas-overlay bg-canvas-selection pointer-events-none z-20 h-0.5"
+              style={
+                {
+                  "--box-left": px(geometry.frame.left - container.left),
+                  "--box-top": px(dropY - container.top),
+                  "--box-width": px(frameWidth * zoom),
+                } as CSSProperties
+              }
             />
           )}
         </div>
@@ -407,16 +395,19 @@ export function CanvasFrame({
             if (!next) setPendingAdd(null);
           }}
         >
-          <PopoverAnchor
-            style={{
-              position: "fixed",
-              left: pendingAnchor?.left ?? 0,
-              top: pendingAnchor?.top ?? 0,
-              width: pendingAnchor?.width ?? 0,
-              height: pendingAnchor?.height ?? 0,
-              pointerEvents: "none",
-            }}
-          />
+          <PopoverAnchor asChild>
+            <div
+              className="plumix-canvas-overlay pointer-events-none fixed"
+              style={
+                {
+                  "--box-left": px(pendingAnchor?.left ?? 0),
+                  "--box-top": px(pendingAnchor?.top ?? 0),
+                  "--box-width": px(pendingAnchor?.width ?? 0),
+                  "--box-height": px(pendingAnchor?.height ?? 0),
+                } as CSSProperties
+              }
+            />
+          </PopoverAnchor>
           <PopoverContent
             data-testid="plumix-inserter-popover"
             align="start"
@@ -444,20 +435,7 @@ export function CanvasFrame({
         <div
           role="status"
           data-testid="plumix-add-rejection"
-          style={{
-            position: "absolute",
-            left: "50%",
-            bottom: 16,
-            transform: "translateX(-50%)",
-            zIndex: 30,
-            padding: "0.5rem 0.75rem",
-            borderRadius: 8,
-            fontSize: "0.8125rem",
-            color: "var(--destructive-foreground, #fff)",
-            background: "var(--destructive, #dc2626)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            pointerEvents: "none",
-          }}
+          className="bg-destructive pointer-events-none absolute inset-x-0 bottom-4 z-30 mx-auto w-fit rounded-md px-3 py-2 text-xs text-white shadow-md"
         >
           {rejection}
         </div>
@@ -466,19 +444,14 @@ export function CanvasFrame({
   );
 }
 
-// The strip lives inside the stage (so it pans/zooms with the frame), offset up
-// by its own height plus a gap to clear the frame's top edge.
-const HANDLE_HEIGHT = 32;
-const HANDLE_GAP = 8;
-
-/** The draggable device-label strip that rides just above the device frame. */
+/** The draggable device-label strip that rides just above the device frame.
+ *  It lives inside the stage, so it pans and zooms with the frame, and sits
+ *  its own height plus a gap above the frame's top edge. */
 function CanvasHandle({
   device,
-  frameWidth,
   onPointerDown,
 }: {
   readonly device: EditorDevice;
-  readonly frameWidth: number;
   readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
 }): ReactElement {
   const { i18n } = useLingui();
@@ -490,15 +463,7 @@ function CanvasHandle({
         id: "editor.canvas.pan",
         message: "Drag to move the canvas",
       })}
-      className="bg-background text-foreground flex cursor-grab items-center px-4 text-sm font-medium select-none active:cursor-grabbing"
-      style={{
-        position: "absolute",
-        left: 0,
-        top: -(HANDLE_HEIGHT + HANDLE_GAP),
-        width: frameWidth,
-        height: HANDLE_HEIGHT,
-        touchAction: "none",
-      }}
+      className="bg-background text-foreground absolute inset-x-0 -top-10 flex h-8 cursor-grab touch-none items-center px-4 text-sm font-medium select-none active:cursor-grabbing"
     >
       {deviceLabel(i18n, device)}
     </div>

@@ -1,5 +1,5 @@
 import type { MessageDescriptor } from "@lingui/core";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { cn } from "@/lib/utils.js";
@@ -160,12 +160,11 @@ export function MultiSelect({
                       )}
                     />
                     <span
+                      className="ps-(--indent)"
                       style={
-                        opt.depth && opt.depth > 0
-                          ? {
-                              paddingInlineStart: `${String(opt.depth * 12)}px`,
-                            }
-                          : undefined
+                        {
+                          "--indent": `${String((opt.depth ?? 0) * 12)}px`,
+                        } as CSSProperties
                       }
                     >
                       {opt.label}

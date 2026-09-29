@@ -21,6 +21,11 @@ export interface View {
   readonly panY: number;
 }
 
+/** The stage's CSS transform for a view: the pan in screen pixels, then the
+ *  zoom about the stage's top-left. */
+export const stageTransform = ({ panX, panY, zoom }: View): string =>
+  `translate(${String(panX)}px, ${String(panY)}px) scale(${String(zoom)})`;
+
 export const clampZoom = (z: number): number =>
   Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 

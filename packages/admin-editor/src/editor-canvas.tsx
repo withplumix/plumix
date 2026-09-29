@@ -359,6 +359,7 @@ export function EditorCanvas({
           onMouseOut={handleMouseOut}
         >
           {/* X-ray outline rule; the data-plumix-xray attribute above gates it. */}
+          {/* eslint-disable-next-line shadcn/no-inline-styles -- the canvas mounts in the theme page's preview iframe, where the editor bootstrap injects a script and no admin stylesheet */}
           <style>{XRAY_STYLE}</style>
           {/* BlockTree (not BlockRenderer) so the canvas doesn't re-emit the
               SSR content-root boundary it was mounted into — just the
@@ -366,6 +367,7 @@ export function EditorCanvas({
           {tree.length === 0 ? (
             // Empty document: the same in-canvas appender an empty slot shows,
             // flowing in content rather than as a host overlay.
+            // eslint-disable-next-line shadcn/no-inline-styles -- renders in the theme page's preview iframe, which no admin stylesheet reaches
             <div style={{ padding: "2rem" }}>
               {editAppender(
                 config

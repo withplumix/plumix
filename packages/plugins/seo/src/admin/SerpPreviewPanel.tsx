@@ -1,5 +1,5 @@
 import type { MessageDescriptor } from "plumix/i18n";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
@@ -192,8 +192,8 @@ function LengthMeter({
       </div>
       <div className="bg-muted h-1 overflow-hidden rounded">
         <div
-          className={`h-full ${over ? "bg-destructive" : "bg-primary"}`}
-          style={{ width: `${String(filled)}%` }}
+          className={`h-full w-(--filled) ${over ? "bg-destructive" : "bg-primary"}`}
+          style={{ "--filled": `${String(filled)}%` } as CSSProperties}
         />
       </div>
       <span

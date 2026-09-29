@@ -1,6 +1,6 @@
 import type { PluginRpcOutputs } from "plumix/admin";
 import type { MessageDescriptor } from "plumix/i18n";
-import type { DragEvent, ReactNode } from "react";
+import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -968,8 +968,8 @@ function UploadProgressBar({
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-sm bg-white/10">
         <div
-          className="bg-primary transition-width h-full duration-200 ease-in-out"
-          style={{ width: `${String(pct)}%` }}
+          className="bg-primary transition-width h-full w-(--progress) duration-200 ease-in-out"
+          style={{ "--progress": `${String(pct)}%` } as CSSProperties}
         />
       </div>
     </div>

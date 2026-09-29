@@ -691,20 +691,18 @@ function SortableTreeRow({
   const id = item.id ?? item.key;
   const isBroken = item.state === "broken";
   const isUnauthorized = item.state === "unauthorized";
-  const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    // `paddingInlineStart` flips with `<html dir>` so the tree indent
-    // reads correctly in RTL admin (Arabic indent reverses).
-    paddingInlineStart: `${String(depth * INDENTATION_WIDTH)}px`,
-    opacity: isUnauthorized ? 0.5 : undefined,
-  };
   const displayLabel = item.title ?? item.resolvedLabel;
   const reorderTitle = item.title ?? i18n._(M.reorderFallbackTitle);
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={
+        {
+          "--sortable-transform": CSS.Transform.toString(transform),
+          "--sortable-transition": transition,
+          "--indent": `${String(depth * INDENTATION_WIDTH)}px`,
+        } as CSSProperties
+      }
       data-testid={`menu-item-row-${String(id)}`}
       data-depth={String(depth)}
       data-selected={selected ? "true" : "false"}
@@ -712,9 +710,11 @@ function SortableTreeRow({
       onClick={() => {
         dispatch({ type: "selectItem", key: item.key });
       }}
-      className={`border-border bg-card flex items-center gap-2 rounded-md border px-3 py-2 ${
+      // `ps-*` flips with `<html dir>` so the tree indent reads correctly in
+      // RTL admin (Arabic indent reverses).
+      className={`plumix-sortable border-border bg-card flex items-center gap-2 rounded-md border px-3 py-2 ps-(--indent) ${
         selected ? "outline-primary outline-2 outline-offset-1" : ""
-      }`}
+      } ${isUnauthorized ? "opacity-50" : ""}`}
     >
       <button
         type="button"

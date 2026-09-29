@@ -98,6 +98,15 @@ export const reactConfig = defineConfig(
       ],
       "shadcn/no-restyle": ["error", { allow: ["layout", "max-h-*", "h-*"] }],
       "shadcn/no-arbitrary-values": "error",
+      "shadcn/no-inline-styles": "error",
+    },
+  },
+  // Block renderers apply the styles an author set in the editor, and inline
+  // styles are how those reach the rendered markup.
+  {
+    files: ["src/blocks/**/*.tsx"],
+    rules: {
+      "shadcn/no-inline-styles": "off",
     },
   },
 );

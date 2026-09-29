@@ -73,16 +73,20 @@ function TreeProbe(): ReactElement {
 }
 
 describe("CanvasFrame", () => {
-  test("renders the iframe at the device width", () => {
+  // The iframe fills the stage, and the admin stylesheet sizes the stage from
+  // `--box-width`; this tier loads no CSS, so the property is what shows.
+  test("sizes the stage around the iframe at the device width", () => {
     const { container } = render(
       <Wrapper>
         <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
-    const iframe = container.querySelector("iframe");
-    expect(iframe).not.toBeNull();
-    expect(iframe?.style.width).toBe("1280px"); // desktop default
+    const stage = container.querySelector<HTMLElement>(
+      '[data-testid="plumix-canvas-stage"]',
+    );
+    expect(stage?.querySelector("iframe")).not.toBeNull();
+    expect(stage?.style.getPropertyValue("--box-width")).toBe("1280px"); // desktop default
   });
 
   test("reloads the iframe when previewRefreshToken changes, and only then", () => {
@@ -209,7 +213,7 @@ describe("CanvasFrame", () => {
       }, [camera, editor]);
       return null;
     }
-    render(
+    const { getByTestId } = render(
       <Wrapper>
         <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
         <Capture />
@@ -221,6 +225,7 @@ describe("CanvasFrame", () => {
       rects: [{ id: "h1", x: 0, y: 4000, width: 100, height: 40 }],
     });
     const zoom = cameraApi?.getState().zoom ?? 0;
+    const viewport = getByTestId("plumix-canvas-frame").getBoundingClientRect();
 
     // What a palette go-to command does.
     act(() => {
@@ -228,8 +233,8 @@ describe("CanvasFrame", () => {
     });
 
     // The block's center (y = 4020) is pulled to the middle of the viewport,
-    // which this bare render leaves zero-sized; the zoom is left alone.
-    expect(cameraApi?.getState().panY).toBe(-4020 * zoom);
+    // whatever height this unstyled render gives it; the zoom is left alone.
+    expect(cameraApi?.getState().panY).toBe(viewport.height / 2 - 4020 * zoom);
     expect(cameraApi?.getState().zoom).toBe(zoom);
   });
 
@@ -273,7 +278,7 @@ describe("CanvasFrame", () => {
         '[data-testid="plumix-canvas-frame"]',
       );
       const stage = canvas?.firstElementChild as HTMLElement;
-      const before = stage.style.transform;
+      const before = stage.style.getPropertyValue("--stage-transform");
 
       renders = 0;
       // A trackpad pan = a burst of wheel events.
@@ -290,7 +295,9 @@ describe("CanvasFrame", () => {
       });
 
       // The transform moved live (imperative DOM write)...
-      expect(stage.style.transform).not.toBe(before);
+      expect(stage.style.getPropertyValue("--stage-transform")).not.toBe(
+        before,
+      );
       // ...but the whole burst caused at most one render (the gesture-start
       // flag), not one per event — and nothing committed to the store yet.
       expect(renders).toBeLessThanOrEqual(1);

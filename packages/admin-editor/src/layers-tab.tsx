@@ -1,5 +1,5 @@
 import type { DragEndEvent } from "@dnd-kit/core";
-import type { KeyboardEvent, ReactElement } from "react";
+import type { CSSProperties, KeyboardEvent, ReactElement } from "react";
 import { useMemo, useState } from "react";
 import {
   closestCenter,
@@ -210,12 +210,14 @@ function LayerRow({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        paddingInlineStart: item.depth * INDENT_WIDTH,
-      }}
-      className="group flex items-center gap-1"
+      style={
+        {
+          "--sortable-transform": CSS.Transform.toString(transform),
+          "--sortable-transition": transition,
+          "--indent": `${String(item.depth * INDENT_WIDTH)}px`,
+        } as CSSProperties
+      }
+      className="plumix-sortable group flex items-center gap-1 ps-(--indent)"
     >
       {editing ? (
         <input
