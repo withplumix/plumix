@@ -154,7 +154,7 @@ export const recipes = definePlugin("recipes", {
 
 ### plumix/cli
 
-What a runtime adapter needs to contribute CLI commands: `CommandDefinition`, the `CliError` the command dispatcher understands, and the `spawnInherit` / `spawnCapturingStderr` helpers a command shells out through. Narrow on purpose. Loading core's full runtime costs about 500ms of module evaluation, and a command author should not pay that before the CLI has parsed a flag.
+What a runtime adapter needs to contribute CLI commands: `CommandDefinition`, the `CliError` the command dispatcher understands (an adapter subclasses it to declare its own error codes), the `spawnInherit` / `spawnCapturingStderr` helpers a command shells out through, and `parsePortFlag`, which reads a `--port`-style flag's value or throws a `CliError`. Narrow on purpose. Loading core's full runtime costs about 500ms of module evaluation, and a command author should not pay that before the CLI has parsed a flag.
 
 ```ts
 import type { CommandDefinition } from "plumix/cli";

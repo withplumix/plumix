@@ -1,4 +1,5 @@
 import type { CommandDefinition } from "plumix";
+import { parsePortFlag } from "plumix/cli";
 
 import { createCloudflareVite } from "./vite.js";
 
@@ -12,35 +13,21 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token === "--port") {
-      const raw = argv[i + 1];
-      if (raw === undefined) {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --port requires a value (e.g. --port 3030)",
-        );
-      }
-      args.port = parsePort("--port", raw);
+      args.port = parsePortFlag("--port", argv[i + 1]);
       i += 1;
       continue;
     }
     if (token?.startsWith("--port=")) {
-      args.port = parsePort("--port", token.slice("--port=".length));
+      args.port = parsePortFlag("--port", token.slice("--port=".length));
       continue;
     }
     if (token === "--inspector-port") {
-      const raw = argv[i + 1];
-      if (raw === undefined) {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --inspector-port requires a value (e.g. --inspector-port 9320)",
-        );
-      }
-      args.inspectorPort = parsePort("--inspector-port", raw);
+      args.inspectorPort = parsePortFlag("--inspector-port", argv[i + 1]);
       i += 1;
       continue;
     }
     if (token?.startsWith("--inspector-port=")) {
-      args.inspectorPort = parsePort(
+      args.inspectorPort = parsePortFlag(
         "--inspector-port",
         token.slice("--inspector-port=".length),
       );
@@ -48,17 +35,6 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
     }
   }
   return args;
-}
-
-function parsePort(flag: string, raw: string): number {
-  const port = Number(raw);
-  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-    throw new Error(
-      `plumix dev: ${flag} value "${raw}" must be a number between 1 and 65535`,
-    );
-  }
-  return port;
 }
 
 export const devCommand: CommandDefinition = {

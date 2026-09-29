@@ -5,13 +5,13 @@ import { pathToFileURL } from "node:url";
 
 import type { CommandContext, CommandDefinition } from "@plumix/core";
 import {
-  CliError,
   collectRawSqlMigrations,
   generateSchemaSource,
   planRawSqlMigrations,
   spawnCapturingStderr,
 } from "@plumix/core/cli";
 
+import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 
 const SCHEMA_OUT = ".plumix/schema.ts";
@@ -32,7 +32,7 @@ export const migrateCommand: CommandDefinition = {
         return;
       }
     }
-    throw CliError.unknownSubcommand({
+    throw PlumixCliError.unknownSubcommand({
       command: "migrate",
       subcommand: sub,
       supported: ["generate", ...Object.keys(ctx.runtimeMigrate)],
@@ -46,7 +46,7 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
 
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(cwd);
   if (bin === null) {
-    throw CliError.migrateGenerateNoDrizzleKit();
+    throw PlumixCliError.migrateGenerateNoDrizzleKit();
   }
 
   report.info("Running drizzle-kit generate…");
@@ -79,7 +79,7 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   );
   // A successful generate — including one that finds nothing to do —
   // writes nothing here, so anything at all means it bailed.
-  if (stderr.trim() !== "") throw CliError.migrateGenerateFailed();
+  if (stderr.trim() !== "") throw PlumixCliError.migrateGenerateFailed();
   report.success(`Migrations emitted in ${MIGRATIONS_OUT}/`);
 
   for (const tag of emitRawSqlMigrations(
@@ -126,7 +126,10 @@ function readJournal(journalPath: string): MigrationJournal {
   try {
     return JSON.parse(readFileSync(journalPath, "utf8")) as MigrationJournal;
   } catch (cause) {
-    throw CliError.migrateGenerateJournalUnreadable({ journalPath, cause });
+    throw PlumixCliError.migrateGenerateJournalUnreadable({
+      journalPath,
+      cause,
+    });
   }
 }
 

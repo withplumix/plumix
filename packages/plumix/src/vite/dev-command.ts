@@ -19,6 +19,8 @@ import { isTrustedDevHost, renderDevBootErrorResponse } from "@plumix/core";
 
 import type { ServerEnvironmentOptions } from "./server-environment.js";
 import type { DevListener, LoadedSite } from "./site-reloader.js";
+import { PlumixCliError } from "../cli/errors.js";
+import { parsePortFlag } from "../cli/port-flag.js";
 import { emitPlumixSources, plumix } from "./index.js";
 import { serverEnvironment, serverExternals } from "./server-environment.js";
 import { createSiteReloader } from "./site-reloader.js";
@@ -34,19 +36,12 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token === "--port") {
-      const raw = argv[i + 1];
-      if (raw === undefined) {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --port requires a value (e.g. --port 3030)",
-        );
-      }
-      args.port = parsePort(raw);
+      args.port = parsePortFlag("--port", argv[i + 1]);
       i += 1;
       continue;
     }
     if (token?.startsWith("--port=")) {
-      args.port = parsePort(token.slice("--port=".length));
+      args.port = parsePortFlag("--port", token.slice("--port=".length));
       continue;
     }
     if (token === "--host") {
@@ -61,29 +56,12 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
     }
     if (token?.startsWith("--host=")) {
       const raw = token.slice("--host=".length);
-      // An empty name would bind every interface, silently.
-      if (raw === "") {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          "plumix dev: --host= requires a value (e.g. --host=0.0.0.0, or --host for every interface)",
-        );
-      }
+      if (raw === "") throw PlumixCliError.devHostEmpty();
       args.host = raw;
       continue;
     }
   }
   return args;
-}
-
-function parsePort(raw: string): number {
-  const port = Number(raw);
-  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-    throw new Error(
-      `plumix dev: --port value "${raw}" must be a number between 1 and 65535`,
-    );
-  }
-  return port;
 }
 
 /**
@@ -241,10 +219,9 @@ export async function runDevCommand<Entry extends DevEntry>(
     configureServer(server: ViteDevServer) {
       const environment = server.environments[SERVER_ENVIRONMENT];
       if (!environment || !isRunnableDevEnvironment(environment)) {
-        // eslint-disable-next-line no-restricted-syntax -- DevCommandError factory to land in a follow-up CLI-errors slice
-        throw new Error(
-          `plumix dev: the "${SERVER_ENVIRONMENT}" environment is not runnable`,
-        );
+        throw PlumixCliError.devEnvironmentNotRunnable({
+          environment: SERVER_ENVIRONMENT,
+        });
       }
       const { runner } = environment;
       // A restart hands over a new runner; nothing imported through the old

@@ -4,8 +4,8 @@ import type {
   MetaSweep,
   PlumixHandler,
 } from "@plumix/core";
-import { CliError } from "@plumix/core/cli";
 
+import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 
 export const metaCommand: CommandDefinition = {
@@ -14,7 +14,7 @@ export const metaCommand: CommandDefinition = {
   async run(ctx) {
     const sub = ctx.argv[0] ?? "report";
     if (sub !== "report" && sub !== "settle") {
-      throw CliError.unknownSubcommand({
+      throw PlumixCliError.unknownSubcommand({
         command: "meta",
         subcommand: sub,
         supported: ["report", "settle"],
@@ -44,7 +44,7 @@ async function sweep(
 
   const handler: PlumixHandler = ctx.app.config.runtime.createHandler(ctx.app);
   if (handler.run === undefined) {
-    throw CliError.metaDatabaseUnreachable({
+    throw PlumixCliError.metaDatabaseUnreachable({
       detail: "this runtime's handler can't run work outside a request",
       cause: undefined,
     });
@@ -70,7 +70,10 @@ async function sweep(
     );
   } catch (cause) {
     if (phase.started) throw cause;
-    throw CliError.metaDatabaseUnreachable({ detail: messageOf(cause), cause });
+    throw PlumixCliError.metaDatabaseUnreachable({
+      detail: messageOf(cause),
+      cause,
+    });
   } finally {
     // Deferred work — the CDN purges a settle enqueued — is still running
     // until `dispose()` returns.

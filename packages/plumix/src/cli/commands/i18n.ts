@@ -14,9 +14,10 @@ import type {
   CommandDefinition,
   JsonObject,
 } from "@plumix/core";
-import { CliError, spawnInherit } from "@plumix/core/cli";
+import { spawnInherit } from "@plumix/core/cli";
 import { compileCatalogs } from "@plumix/core/i18n-compile";
 
+import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 
 const SUPPORTED = ["extract", "compile", "init", "verify"] as const;
@@ -27,7 +28,7 @@ export const i18nCommand: CommandDefinition = {
   async run(ctx) {
     const sub = ctx.argv[0];
     if (sub === undefined) {
-      throw CliError.unknownSubcommand({
+      throw PlumixCliError.unknownSubcommand({
         command: "i18n",
         subcommand: "(missing)",
         supported: [...SUPPORTED],
@@ -42,7 +43,7 @@ export const i18nCommand: CommandDefinition = {
       return;
     }
     if (sub !== "extract" && sub !== "compile") {
-      throw CliError.unknownSubcommand({
+      throw PlumixCliError.unknownSubcommand({
         command: "i18n",
         subcommand: sub,
         supported: [...SUPPORTED],
@@ -65,11 +66,11 @@ export const i18nCommand: CommandDefinition = {
       !rest.includes("--check") &&
       hasHandAuthoredCatalog(resolve(ctx.cwd, "locales"))
     ) {
-      throw CliError.i18nExtractHandAuthored();
+      throw PlumixCliError.i18nExtractHandAuthored();
     }
     const bin = i18nDeps.resolveLinguiCliBin(ctx.cwd);
     if (bin === null) {
-      throw CliError.unknownSubcommand({
+      throw PlumixCliError.unknownSubcommand({
         command: "i18n",
         subcommand: `${sub} (@lingui/cli not found)`,
         supported: [...SUPPORTED],
@@ -86,7 +87,7 @@ export const i18nCommand: CommandDefinition = {
         args: rest.filter((arg) => arg !== "--dts"),
         dts: rest.includes("--dts"),
       });
-      if (!result.ok) throw CliError.i18nCompileFailed(result);
+      if (!result.ok) throw PlumixCliError.i18nCompileFailed(result);
       return;
     }
     // Mirror migrate.ts: spawn `process.execPath` with a resolved bin
@@ -161,14 +162,14 @@ function readRequiredPackageJson(
     raw = readFileSync(pkgPath, "utf8");
   } catch (cause) {
     if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
-      throw CliError.i18nInitNoPackageJson({ cwd });
+      throw PlumixCliError.i18nInitNoPackageJson({ cwd });
     }
     throw cause;
   }
   try {
     return JSON.parse(raw) as PackageJsonShape;
   } catch (cause) {
-    throw CliError.i18nInitInvalidPackageJson({ cwd, cause });
+    throw PlumixCliError.i18nInitInvalidPackageJson({ cwd, cause });
   }
 }
 
@@ -251,7 +252,7 @@ async function runExtractCheck(
       if (!afterIds.has(id)) removed.add(id);
     }
     if (introduced.size > 0 || removed.size > 0) {
-      throw CliError.i18nCheckDrift({
+      throw PlumixCliError.i18nCheckDrift({
         ids: [
           ...[...introduced].sort().map((id) => `+ ${id}`),
           ...[...removed].sort().map((id) => `- ${id}`),
@@ -296,7 +297,7 @@ function runVerify(ctx: CommandContext): void {
   }
   const drift = computeIdDrift(sourceIds, catalogIds);
   if (drift.missingInCatalog.length > 0 || drift.orphanedInCatalog.length > 0) {
-    throw CliError.i18nVerifyDrift(drift);
+    throw PlumixCliError.i18nVerifyDrift(drift);
   }
 }
 
@@ -307,7 +308,7 @@ function verifySrcDirs(ctx: CommandContext): readonly string[] {
     if (rest[i] === "--src") {
       const dir = rest[i + 1];
       if (dir === undefined || dir.startsWith("--")) {
-        throw CliError.unknownSubcommand({
+        throw PlumixCliError.unknownSubcommand({
           command: "i18n",
           subcommand: "verify --src (missing directory)",
           supported: [...SUPPORTED],

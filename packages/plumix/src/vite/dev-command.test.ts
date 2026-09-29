@@ -1,7 +1,18 @@
 import { EvaluatedModules } from "vite/module-runner";
 import { describe, expect, test } from "vitest";
 
+import { isCliError } from "@plumix/core/cli";
+
 import { invalidateFile, parseDevArgs } from "./dev-command.js";
+
+function codeThrownBy(run: () => unknown): string | false {
+  try {
+    run();
+  } catch (error) {
+    return isCliError(error) && error.code;
+  }
+  throw new Error("expected a throw");
+}
 
 describe("parseDevArgs", () => {
   test("extracts --port in both forms", () => {
@@ -14,17 +25,25 @@ describe("parseDevArgs", () => {
     expect(parseDevArgs(["--verbose"])).toEqual({});
   });
 
-  test("rejects a --port that is not a port", () => {
-    expect(() => parseDevArgs(["--port", "abc"])).toThrow(
-      /--port.*must be a number/i,
+  test("rejects a --port that is not a port, in both forms", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--port", "abc"]))).toBe(
+      "port_flag_out_of_range",
     );
-    expect(() => parseDevArgs(["--port="])).toThrow(
-      /--port.*must be a number/i,
+    expect(codeThrownBy(() => parseDevArgs(["--port", "70000"]))).toBe(
+      "port_flag_out_of_range",
     );
-    expect(() => parseDevArgs(["--port", "70000"])).toThrow(
-      /--port.*must be a number/i,
+    expect(codeThrownBy(() => parseDevArgs(["--port=abc"]))).toBe(
+      "port_flag_out_of_range",
     );
-    expect(() => parseDevArgs(["--port"])).toThrow(/--port.*requires a value/i);
+    expect(codeThrownBy(() => parseDevArgs(["--port="]))).toBe(
+      "port_flag_out_of_range",
+    );
+  });
+
+  test("rejects a --port given no value", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--port"]))).toBe(
+      "port_flag_missing_value",
+    );
   });
 
   test("extracts --host with a value in both forms", () => {
@@ -33,8 +52,8 @@ describe("parseDevArgs", () => {
   });
 
   test("rejects an empty --host=, which would bind every interface silently", () => {
-    expect(() => parseDevArgs(["--host="])).toThrow(
-      /--host=.*requires a value/i,
+    expect(codeThrownBy(() => parseDevArgs(["--host="]))).toBe(
+      "dev_host_empty",
     );
   });
 
