@@ -76,7 +76,8 @@ export interface PlumixE2EConfigOptions {
   readonly webServerCommand?: string;
   /**
    * Optional. When set, the webServer readiness check waits for the
-   * TCP port to open instead of polling `baseURL` for a 2xx/3xx
+   * TCP port to open instead of polling a URL (a request the Plumix
+   * handler answers for a `playground`, else `baseURL`) for a 2xx/3xx
    * response. Use this when the dev server starts but `/` returns
    * 404 (e.g. a public-route example whose front page isn't wired) —
    * waiting on the URL would otherwise time out forever. Pass the same
@@ -102,6 +103,7 @@ export interface PlumixE2EConfigOptions {
 }
 
 const ADMIN_BASE = "/_plumix/admin";
+const READINESS_PATH = "/_plumix/auth/magic-link/verify";
 const PORT_OFFSET_ENV = "PLUMIX_E2E_PORT_OFFSET";
 const DEFAULT_PORT = 5173;
 
@@ -225,8 +227,8 @@ export function definePlumixE2EConfig(
   }
 
   const port = resolveE2EPort(options.port ?? DEFAULT_PORT);
-  const baseURL =
-    options.baseURL ?? `http://localhost:${String(port)}${ADMIN_BASE}/`;
+  const origin = `http://localhost:${String(port)}`;
+  const baseURL = options.baseURL ?? `${origin}${ADMIN_BASE}/`;
   const isPlayground = options.playground !== undefined;
   const seedAdmin = isPlayground && options.seedAdminSession !== false;
   // `applyMigrations: false` is how a playground says it has no D1 to
@@ -288,7 +290,20 @@ export function definePlumixE2EConfig(
       command: webServerCommand,
       ...(options.webServerPort !== undefined
         ? { port: resolveE2EPort(options.webServerPort) }
-        : { url: baseURL }),
+        : {
+            // The admin shell is a static file `plumix dev` serves before any
+            // server code has loaded, so a suite polling it starts while the
+            // first request through the Plumix handler still has Vite's whole
+            // server-side dependency pre-bundle ahead of it — longer than a
+            // spec's 5s wait on a busy runner (#2756). Readiness is a GET the
+            // handler answers instead: Playwright only probes with a bare GET
+            // and counts 200-403 as up, which rules out the session RPC (405
+            // to anything but POST). The magic-link verify always 302s to the
+            // login page, configured or not, from the lazily loaded auth
+            // routes, and a plugin cannot shadow the path. A custom command
+            // may not run the Plumix handler at all, so it keeps `baseURL`.
+            url: isPlayground ? `${origin}${READINESS_PATH}` : baseURL,
+          }),
       // Never adopt whatever already answers on the port. Playwright
       // does not check that the responder is this suite's build, and
       // reuse skips the whole command above — the state wipe, the
