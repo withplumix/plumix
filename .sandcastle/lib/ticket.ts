@@ -185,7 +185,7 @@ export const reviewAll = async (
   return reviews.flat();
 };
 
-export interface Declined {
+interface Declined {
   readonly reason: string;
   readonly notThisBranch: boolean;
 }
