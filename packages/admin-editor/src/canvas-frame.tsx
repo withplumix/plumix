@@ -411,7 +411,8 @@ export function CanvasFrame({
           <PopoverContent
             data-testid="plumix-inserter-popover"
             align="start"
-            className="w-72 p-0"
+            variant="flush"
+            className="w-72"
           >
             {/* Radix's viewport (height:100%) won't clamp to a max-height on
                 the Root, so cap the viewport directly — it then scrolls while

@@ -253,7 +253,7 @@ export function CommandPalette({
         <DialogDescription>{renderLabel(M.description)}</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="overflow-hidden p-0"
+        variant="flush"
         closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
       >
         <Command

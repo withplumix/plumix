@@ -424,10 +424,10 @@ function ApiTokensCardView({
                   <TableCell>
                     <ScopeBadges scopes={token.scopes} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell variant="muted">
                     <RelativeOrNever when={token.lastUsedAt} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell variant="muted">
                     <RelativeOrNever when={token.expiresAt} />
                   </TableCell>
                   <TableCell className="text-end">
@@ -635,10 +635,7 @@ function CreateTokenForm({
                       disabled={pending}
                       data-testid="api-tokens-create-scope-inherit-radio"
                     />
-                    <UILabel
-                      htmlFor="api-token-scope-inherit"
-                      className="font-normal"
-                    >
+                    <UILabel htmlFor="api-token-scope-inherit" variant="choice">
                       <Trans
                         id="apiTokens.create.scope.inherit"
                         message="Inherit all your permissions"
@@ -654,7 +651,7 @@ function CreateTokenForm({
                     />
                     <UILabel
                       htmlFor="api-token-scope-restrict"
-                      className="font-normal"
+                      variant="choice"
                     >
                       <Trans
                         id="apiTokens.create.scope.restrict"
@@ -687,7 +684,7 @@ function CreateTokenForm({
                     placeholder={label(M.capabilitiesPlaceholder)}
                     disabled={pending}
                     data-testid="api-tokens-create-scopes-textarea"
-                    className="font-mono"
+                    variant="code"
                     {...field}
                   />
                 </FormControl>
@@ -789,7 +786,7 @@ function SecretShownDialog({
             value={secret ?? ""}
             onFocus={(e) => e.currentTarget.select()}
             data-testid="api-tokens-secret-input"
-            className="bg-muted text-muted-foreground font-mono"
+            variant="generated"
           />
           <Button
             type="button"

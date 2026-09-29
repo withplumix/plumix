@@ -296,7 +296,7 @@ function AddDeclaration({
             <ChevronsUpDown className="opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-0" align="start">
+        <PopoverContent variant="flush" className="w-56" align="start">
           <Command>
             <CommandInput
               value={query}

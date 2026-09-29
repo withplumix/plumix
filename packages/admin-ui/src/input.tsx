@@ -18,6 +18,10 @@ const inputVariants = cva(
         // the pointer or the focus reaches it.
         inline:
           "hover:bg-accent focus-visible:bg-background border-transparent bg-transparent",
+        // A value the server generated for the reader to copy, like a token
+        // or an invite link.
+        generated:
+          "border-input bg-muted text-muted-foreground font-mono shadow-xs",
       },
     },
     defaultVariants: {

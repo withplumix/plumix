@@ -307,7 +307,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
               <Field className="gap-2">
                 <FieldLabel
                   htmlFor={`passkey-name-${cred.id}`}
-                  className="text-muted-foreground text-xs"
+                  variant="caption"
                 >
                   <Trans
                     id="profile.passkeys.rename.label"

@@ -107,7 +107,6 @@ export function PreviewButton({
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5"
             data-testid="editor-preview"
             onClick={openPreview}
             disabled={pending}

@@ -100,29 +100,28 @@ export function MetaBoxAccordionItem({
   const visibleFields = useVisibleFields(box.fields, { name: basePath });
   return (
     <AccordionItem value={box.id} data-testid={`meta-box-${box.id}`}>
-      <AccordionTrigger
-        className="px-4 py-3 text-sm font-semibold"
-        data-testid={`meta-box-heading-${box.id}`}
-      >
-        {renderLabel(box.label)}
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
-        {box.description ? (
-          <p className="text-muted-foreground mb-3 text-sm">
-            {renderLabel(box.description)}
-          </p>
-        ) : null}
-        <div className="flex flex-col gap-4">
-          {visibleFields.map((field) => (
-            <MetaBoxField
-              key={field.key}
-              field={field}
-              name={`${basePath}.${field.key}`}
-              disabled={disabled}
-            />
-          ))}
-        </div>
-      </AccordionContent>
+      <div className="px-4">
+        <AccordionTrigger data-testid={`meta-box-heading-${box.id}`}>
+          <span className="font-semibold">{renderLabel(box.label)}</span>
+        </AccordionTrigger>
+        <AccordionContent>
+          {box.description ? (
+            <p className="text-muted-foreground mb-3 text-sm">
+              {renderLabel(box.description)}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-4">
+            {visibleFields.map((field) => (
+              <MetaBoxField
+                key={field.key}
+                field={field}
+                name={`${basePath}.${field.key}`}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        </AccordionContent>
+      </div>
     </AccordionItem>
   );
 }

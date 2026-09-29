@@ -1,6 +1,8 @@
 "use client";
 
+import type { VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { cva } from "class-variance-authority";
 
 import { cn } from "./utils.js";
 
@@ -78,14 +80,33 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+const tableCellVariants = cva(
+  "p-2 align-middle whitespace-nowrap data-[align=end]:text-end [&:has([role=checkbox])]:w-8 [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]",
+  {
+    variants: {
+      variant: {
+        default: "",
+        // Secondary detail beside a row's main columns, like a timestamp,
+        // or the note standing in for rows that are not there.
+        muted: "text-muted-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+function TableCell({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"td"> & VariantProps<typeof tableCellVariants>) {
   return (
     <td
       data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap data-[align=end]:text-end [&:has([role=checkbox])]:w-8 [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className,
-      )}
+      data-variant={variant}
+      className={cn(tableCellVariants({ variant }), className)}
       {...props}
     />
   );

@@ -300,11 +300,7 @@ function buildColumns({
                 </span>
               )}
               {isSelf ? (
-                <Badge
-                  variant="outline"
-                  className="text-xs"
-                  data-testid="users-list-row-you"
-                >
+                <Badge variant="outline" data-testid="users-list-row-you">
                   <Trans id="users.list.row.you" message="You" />
                 </Badge>
               ) : null}
@@ -318,7 +314,7 @@ function buildColumns({
       accessorKey: "role",
       header: label(M.columnRole),
       cell: ({ row }) => (
-        <Badge variant={ROLE_VARIANT[row.original.role]} className="capitalize">
+        <Badge variant={ROLE_VARIANT[row.original.role]}>
           {label(ROLE_LABEL[row.original.role])}
         </Badge>
       ),
@@ -415,7 +411,7 @@ function RoleFilter({
 
 function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
   return (
-    <Empty data-testid="users-list-empty-state" className="border">
+    <Empty data-testid="users-list-empty-state" variant="outline">
       <EmptyHeader>
         <EmptyTitle>
           <Trans

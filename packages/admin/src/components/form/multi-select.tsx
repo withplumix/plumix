@@ -112,18 +112,17 @@ export function MultiSelect({
         <Button
           id={id}
           type="button"
-          variant="outline"
+          variant="trigger"
           size="sm"
           role="combobox"
           aria-expanded={open}
           aria-label={ariaLabel}
           disabled={disabled}
           data-testid={testId}
-          className={cn(
-            "justify-between gap-2 font-normal",
-            value.length === 0 && "text-muted-foreground",
-            className,
-          )}
+          data-placeholder={value.length === 0 ? "" : undefined}
+          // The trigger variant fills its row; a filter toolbar sizes this
+          // one to its label, and a stacked field still stretches it.
+          className={cn("w-auto", className)}
         >
           <span className="truncate">{triggerLabel}</span>
           {value.length > 1 ? (
@@ -134,7 +133,7 @@ export function MultiSelect({
           <ChevronsUpDown className="ms-auto opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
+      <PopoverContent variant="flush" className="w-64" align="start">
         <Command>
           <CommandInput placeholder={resolvedSearchPlaceholder} />
           <CommandList>

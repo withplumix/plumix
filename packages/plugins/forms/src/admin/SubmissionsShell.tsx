@@ -312,13 +312,14 @@ export function SubmissionsShell(): ReactNode {
                   <TableCell
                     key={column.key}
                     data-testid={`forms-cell-${String(row.id)}-${column.key}`}
-                    className="max-w-64 truncate"
                   >
-                    {answerText(
-                      row.answers[column.key],
-                      row.labels[column.key],
-                      words,
-                    )}
+                    <div className="max-w-64 truncate">
+                      {answerText(
+                        row.answers[column.key],
+                        row.labels[column.key],
+                        words,
+                      )}
+                    </div>
                   </TableCell>
                 ))}
                 <TableCell className="whitespace-nowrap">

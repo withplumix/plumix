@@ -154,7 +154,8 @@ export function DataTable<TData extends RowData>({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="text-muted-foreground h-32 text-center"
+                variant="muted"
+                className="h-32 text-center"
               >
                 {emptyState ?? (
                   <Trans id="dataTable.emptyState" message="No results." />

@@ -320,7 +320,9 @@ function ReportRow({ count }: { readonly count: SweepKey }): ReactNode {
       <TableCell>
         {scope === undefined ? label(M.noScope) : label(scope)}
       </TableCell>
-      <TableCell className="font-mono">{count.key}</TableCell>
+      <TableCell>
+        <span className="font-mono">{count.key}</span>
+      </TableCell>
       <TableCell className="text-end">
         {formatNumber(count.settleable)}
       </TableCell>

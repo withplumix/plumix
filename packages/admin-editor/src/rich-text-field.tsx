@@ -328,8 +328,7 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="size-8 p-0"
+          size="icon-sm"
           data-testid={`${testId}-clear`}
           disabled={controlDisabled}
           onClick={() =>
@@ -456,9 +455,9 @@ export function LinkPopover({
           <Link2 />
         </Toggle>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="start">
+      <PopoverContent variant="flush" className="w-72" align="start">
         <form
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 p-2"
           data-testid={`${testId}-link-form`}
           onSubmit={(e) => {
             e.preventDefault();

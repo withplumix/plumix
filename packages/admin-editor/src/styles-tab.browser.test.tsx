@@ -462,7 +462,7 @@ describe("StylesTab", () => {
     );
   });
 
-  test("the text controls fit the rail (tightened padding) and carry tooltips", () => {
+  test("the text controls wrap in a narrow rail and carry tooltips", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
     const controls = [
       "style-mark-bold",
@@ -474,10 +474,11 @@ describe("StylesTab", () => {
       "style-align-right",
     ];
 
+    // Seven controls at the toggle's own padding outgrow the rail, so the two
+    // groups wrap onto a second line rather than overflow it.
+    expect(getByTestId("style-text-controls").className).toContain("flex-wrap");
     for (const id of controls) {
-      const button = getByTestId(id);
-      expect(button.className).toContain("px-2");
-      expect(button.getAttribute("aria-label")).toBeTruthy();
+      expect(getByTestId(id).getAttribute("aria-label")).toBeTruthy();
     }
 
     // Focusing a control opens its tooltip; Radix points the trigger's

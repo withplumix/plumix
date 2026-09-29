@@ -209,41 +209,43 @@ export function UserEmailField({
       */}
       {pending ? (
         <Alert data-testid="user-edit-email-pending">
-          <AlertDescription className="flex flex-wrap items-center gap-2">
-            <span>
-              <Trans
-                id="userEdit.email.pending"
-                message="Pending change to <code>{newEmail}</code> — expires {expiresAt}"
-                values={{
-                  newEmail: bdiPendingNewEmail,
-                  expiresAt: formatRelative(toDate(pending.expiresAt)),
-                }}
-                components={{ code: <code className="font-mono" /> }}
-                comment="newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'"
-              />
-            </span>
-            {canEdit ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => cancel.mutate()}
-                disabled={cancel.isPending}
-                data-testid="user-edit-email-cancel-pending"
-              >
-                {cancel.isPending ? (
-                  <Trans
-                    id="userEdit.email.cancelPending.pending"
-                    message="Cancelling…"
-                  />
-                ) : (
-                  <Trans
-                    id="userEdit.email.cancelPending.idle"
-                    message="Cancel"
-                  />
-                )}
-              </Button>
-            ) : null}
+          <AlertDescription>
+            <div className="flex flex-wrap items-center gap-2">
+              <span>
+                <Trans
+                  id="userEdit.email.pending"
+                  message="Pending change to <code>{newEmail}</code> — expires {expiresAt}"
+                  values={{
+                    newEmail: bdiPendingNewEmail,
+                    expiresAt: formatRelative(toDate(pending.expiresAt)),
+                  }}
+                  components={{ code: <code className="font-mono" /> }}
+                  comment="newEmail: the new address awaiting confirmation; expiresAt: pre-formatted relative-time like 'in 2 hours'"
+                />
+              </span>
+              {canEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => cancel.mutate()}
+                  disabled={cancel.isPending}
+                  data-testid="user-edit-email-cancel-pending"
+                >
+                  {cancel.isPending ? (
+                    <Trans
+                      id="userEdit.email.cancelPending.pending"
+                      message="Cancelling…"
+                    />
+                  ) : (
+                    <Trans
+                      id="userEdit.email.cancelPending.idle"
+                      message="Cancel"
+                    />
+                  )}
+                </Button>
+              ) : null}
+            </div>
           </AlertDescription>
         </Alert>
       ) : success ? (
@@ -314,7 +316,7 @@ function ChangeEmailDialog({
             })}
           >
             <div className="flex flex-col gap-2">
-              <UILabel className="text-muted-foreground text-xs">
+              <UILabel variant="caption">
                 <Trans
                   id="userEdit.email.dialog.currentLabel"
                   message="Current email"

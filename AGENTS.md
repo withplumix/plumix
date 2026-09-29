@@ -283,9 +283,7 @@ hand — never `--overwrite`.
 
 Code that composes those primitives is checked by `@shadcn/lint` (the React config): no raw palette
 colours, no classes Tailwind cannot generate, no restyling a primitive beyond layout, no arbitrary
-values. The last two predate their violations, which each package's `eslint-suppressions.json`
-carries. A new violation fails lint; after fixing an old one, run
-`pnpm exec eslint --prune-suppressions` in that package.
+values.
 
 ## Commits, branches, PRs
 

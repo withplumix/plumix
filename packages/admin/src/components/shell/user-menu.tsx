@@ -12,7 +12,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@plumix/admin-ui/dropdown-menu";
@@ -56,14 +55,10 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton
-          size="lg"
-          data-testid="user-menu-trigger"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-        >
+        <SidebarMenuButton size="lg" data-testid="user-menu-trigger">
           <Avatar className="size-8">
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
-              {initials}
+            <AvatarFallback>
+              <span className="text-xs font-semibold">{initials}</span>
             </AvatarFallback>
           </Avatar>
           <div className="grid flex-1 text-start text-sm leading-tight">
@@ -76,27 +71,25 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+        className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
         side={isMobile ? "bottom" : "right"}
         align="end"
         sideOffset={4}
       >
-        <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-            <div
-              aria-hidden
-              className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 items-center justify-center rounded-md text-xs font-semibold"
-            >
-              {initials}
-            </div>
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate font-medium">{displayName}</span>
-              <span className="text-muted-foreground truncate text-xs">
-                {user.email}
-              </span>
-            </div>
+        <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
+          <div
+            aria-hidden
+            className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 items-center justify-center rounded-md text-xs font-semibold"
+          >
+            {initials}
           </div>
-        </DropdownMenuLabel>
+          <div className="grid flex-1 text-start text-sm leading-tight">
+            <span className="truncate font-medium">{displayName}</span>
+            <span className="text-muted-foreground truncate text-xs">
+              {user.email}
+            </span>
+          </div>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>

@@ -774,9 +774,9 @@ function DeleteCard({ target }: { target: User }): ReactNode {
   }
 
   return (
-    <Card className="border-destructive">
+    <Card variant="destructive">
       <CardHeader>
-        <CardTitle className="text-destructive">
+        <CardTitle>
           <Trans
             id="userEdit.delete.confirm.title"
             message="Confirm delete: {email}"

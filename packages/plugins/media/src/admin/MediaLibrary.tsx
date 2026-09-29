@@ -825,11 +825,10 @@ function ErrorBanner({
       <span>{message}</span>
       <Button
         type="button"
-        variant="link"
-        size="sm"
+        variant="destructive-ghost"
+        size="xs"
         data-testid={`${testIdRoot}-dismiss`}
         onClick={onDismiss}
-        className="text-destructive h-auto p-0 text-xs"
       >
         <Trans id="plugin.media.banner.dismiss" message="Dismiss" />
       </Button>
@@ -1062,9 +1061,9 @@ function MediaSkeletonGrid(): ReactNode {
           aria-hidden="true"
           className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3"
         >
-          <Skeleton className="aspect-square w-full rounded-sm" />
-          <Skeleton className="h-3.5 w-7/10 rounded-sm" />
-          <Skeleton className="h-3 w-2/5 rounded-sm" />
+          <Skeleton className="aspect-square w-full" />
+          <Skeleton className="h-3.5 w-7/10" />
+          <Skeleton className="h-3 w-2/5" />
         </div>
       ))}
     </div>
@@ -1169,9 +1168,10 @@ function MediaDetailDrawer({
           onClick={onClose}
           aria-label={i18n._(M.closeDetailsAria)}
           data-testid="media-detail-close"
-          className="text-base leading-none"
         >
-          ×
+          <span aria-hidden="true" className="text-base leading-none">
+            ×
+          </span>
         </Button>
       </div>
 
@@ -1252,7 +1252,7 @@ function MediaDetailDrawer({
               size="xs"
               onClick={() => void copy()}
               data-testid="media-detail-copy"
-              className="flex-shrink-0 text-xs"
+              className="flex-shrink-0"
             >
               {copied ? (
                 <Trans id="plugin.media.detail.copied" message="Copied" />
