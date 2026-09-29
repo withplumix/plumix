@@ -1,23 +1,27 @@
-// Shadcn-generated hook — ships as part of `shadcn add sidebar`. Kept
-// verbatim so future `shadcn diff` upgrades don't merge-conflict.
 import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
+const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
-    undefined,
+function subscribe(onChange: () => void): () => void {
+  const mql = window.matchMedia(MOBILE_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}
+
+function isMobileViewport(): boolean {
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+// No viewport to measure on the server, so it renders the desktop layout.
+function isMobileOnServer(): boolean {
+  return false;
+}
+
+export function useIsMobile(): boolean {
+  return React.useSyncExternalStore(
+    subscribe,
+    isMobileViewport,
+    isMobileOnServer,
   );
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-    mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return !!isMobile;
 }

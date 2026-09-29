@@ -554,6 +554,11 @@ msgid "editor.tab.blocks"
 msgstr "Blocks"
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.rail.left.title"
+msgstr "Blocks and layers"
+
+#. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcut.mark.bold"
 msgstr "Bold"
@@ -587,6 +592,13 @@ msgstr "Click"
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.group.clipboard"
 msgstr "Clipboard"
+
+#. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+#: src/json-inspector.tsx
+#: src/shortcuts-dialog.tsx
+msgid "editor.dialog.close"
+msgstr "Close"
 
 #. js-lingui-explicit-id
 #: src/layers-tab.tsx
@@ -694,6 +706,11 @@ msgid "editor.selection.duplicate"
 msgstr "Duplicate"
 
 #. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.rail.right.description"
+msgstr "Edit the selected block, its styles and the page."
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.scope"
 msgstr "Editing"
@@ -782,6 +799,16 @@ msgstr "Inline code"
 #: src/editor-command-palette.tsx
 msgid "editor.palette.group.insert"
 msgstr "Insert a block"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.rail.left.description"
+msgstr "Insert blocks and arrange the page's layers."
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+msgid "editor.rail.right.title"
+msgstr "Inspector"
 
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx

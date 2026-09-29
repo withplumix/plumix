@@ -13,6 +13,7 @@ import {
 } from "@plumix/admin-ui/pagination";
 
 const M = {
+  nav: defineMessage({ id: "listPagination.nav", message: "Pagination" }),
   prevAria: defineMessage({
     id: "listPagination.prev.aria",
     message: "Go to previous page",
@@ -38,7 +39,7 @@ export function ListPagination({
 }): ReactNode {
   const label = useLabel();
   return (
-    <Pagination className="justify-between">
+    <Pagination className="justify-between" label={label(M.nav)}>
       <span className="text-muted-foreground text-sm">
         <Trans
           id="listPagination.page"

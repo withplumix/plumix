@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import type * as React from "react";
 import { Select as SelectPrimitive } from "radix-ui";
 
+import { Check, ChevronDownIcon, ChevronUp } from "./icons.js";
 import { cn } from "./utils.js";
 
 function Select({
@@ -119,7 +119,7 @@ function SelectItem({
         className="absolute end-2 flex size-3.5 items-center justify-center"
       >
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <Check className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -153,7 +153,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <ChevronUpIcon className="size-4" />
+      <ChevronUp className="size-4" />
     </SelectPrimitive.ScrollUpButton>
   );
 }

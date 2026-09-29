@@ -1,7 +1,7 @@
-import * as React from "react";
-import { CheckIcon } from "lucide-react";
+import type * as React from "react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 
+import { Check } from "./icons.js";
 import { cn } from "./utils.js";
 
 function Checkbox({
@@ -21,7 +21,7 @@ function Checkbox({
         data-slot="checkbox-indicator"
         className="grid place-content-center text-current transition-none"
       >
-        <CheckIcon className="size-3.5" />
+        <Check className="size-3.5" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

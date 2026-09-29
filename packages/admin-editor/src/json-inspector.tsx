@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { lazy, Suspense, useState } from "react";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import {
   Dialog,
@@ -96,11 +96,13 @@ function JsonCode({ json }: { readonly json: string }): ReactElement {
 export function JsonSourceDialog(): ReactElement {
   const open = useEditorStore((s) => s.jsonOpen);
   const setJsonOpen = useEditorStore((s) => s.setJsonOpen);
+  const { i18n } = useLingui();
   return (
     <Dialog open={open} onOpenChange={setJsonOpen}>
       <DialogContent
         className="flex max-h-[85vh] flex-col gap-3 sm:max-w-3xl"
         data-testid="json-source-dialog"
+        closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >
         <DialogHeader>
           <DialogTitle>

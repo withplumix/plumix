@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useId, useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
@@ -252,6 +253,7 @@ export function RepeaterField({
           className={repeaterDialogSizeClass(field.dialogSize)}
           aria-describedby={undefined}
           data-testid={`${testId}-dialog`}
+          closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
         >
           <DialogHeader>
             <DialogTitle>

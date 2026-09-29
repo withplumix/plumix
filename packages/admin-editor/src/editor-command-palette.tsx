@@ -54,6 +54,7 @@ export function EditorCommandPalette({
 }: EditorCommandPaletteProps): ReactElement {
   const open = useEditorStore((s) => s.paletteOpen);
   const setPaletteOpen = useEditorStore((s) => s.setPaletteOpen);
+  const { i18n } = useLingui();
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -85,6 +86,7 @@ export function EditorCommandPalette({
       <DialogContent
         className="overflow-hidden p-0"
         data-testid="plumix-command-palette"
+        closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >
         {/* Mounted only while open, so the roster — which is rebuilt whenever
             the tree changes — costs nothing during ordinary editing. */}

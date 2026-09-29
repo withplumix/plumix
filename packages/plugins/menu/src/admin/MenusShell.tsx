@@ -56,6 +56,10 @@ const M = {
     id: "plugin.menu.shell.unassigned",
     message: "— Unassigned —",
   },
+  createClose: {
+    id: "plugin.menu.shell.createClose",
+    message: "Close",
+  },
 } satisfies Record<string, MessageDescriptor>;
 
 const TABS: readonly {
@@ -73,6 +77,7 @@ export function MenusShell(): ReactNode {
   const [slug, setSlug] = useState<string | null>(getSelectedMenuSlug());
   const [createOpen, setCreateOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
+  const { i18n } = useLingui();
 
   function submitCreate(): void {
     const name = draftName.trim();
@@ -119,7 +124,10 @@ export function MenusShell(): ReactNode {
         onSelect={handleSelectMenu}
       />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent data-testid="menus-create-dialog">
+        <DialogContent
+          data-testid="menus-create-dialog"
+          closeLabel={i18n._(M.createClose)}
+        >
           <DialogHeader>
             <DialogTitle>
               <Trans id="plugin.menu.shell.createTitle" message="Create menu" />

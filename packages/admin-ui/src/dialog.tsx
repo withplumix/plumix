@@ -1,11 +1,17 @@
 "use client";
 
-import * as React from "react";
-import { XIcon } from "lucide-react";
+import type * as React from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { Button } from "./button.js";
+import { X } from "./icons.js";
 import { cn } from "./utils.js";
+
+// admin-ui carries no catalog, so a shown close button takes its name from the
+// caller, already localized.
+type DialogCloseButtonProps =
+  | { showCloseButton?: true; closeLabel: string }
+  | { showCloseButton: false; closeLabel?: undefined };
 
 function Dialog({
   ...props
@@ -51,10 +57,10 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  showCloseButton?: boolean;
-}) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> &
+  DialogCloseButtonProps) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -72,8 +78,8 @@ function DialogContent({
             data-slot="dialog-close"
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute end-4 top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
-            <XIcon />
-            <span className="sr-only">Close</span>
+            <X />
+            <span className="sr-only">{closeLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -94,11 +100,14 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 function DialogFooter({
   className,
   showCloseButton = false,
+  closeLabel,
   children,
   ...props
-}: React.ComponentProps<"div"> & {
-  showCloseButton?: boolean;
-}) {
+}: React.ComponentProps<"div"> &
+  (
+    | { showCloseButton?: false; closeLabel?: undefined }
+    | { showCloseButton: true; closeLabel: string }
+  )) {
   return (
     <div
       data-slot="dialog-footer"
@@ -111,7 +120,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">{closeLabel}</Button>
         </DialogPrimitive.Close>
       )}
     </div>
@@ -143,6 +152,8 @@ function DialogDescription({
     />
   );
 }
+
+export type { DialogCloseButtonProps };
 
 export {
   Dialog,

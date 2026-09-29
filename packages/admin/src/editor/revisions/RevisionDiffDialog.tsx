@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -80,7 +81,7 @@ export function RevisionDiffDialog({
       <DialogContent
         className="max-w-4xl"
         data-testid="revision-diff-modal"
-        showCloseButton
+        closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
       >
         <DialogHeader>
           <DialogTitle>

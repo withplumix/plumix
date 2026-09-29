@@ -18,6 +18,10 @@ the new component is importable as `@plumix/admin-ui/<component>` and from
 `plumix/admin/ui` with no hand-edits. Run it yourself after adding or removing
 a module by any other route; the package's roster test fails until you do.
 
+A component already in `src/` is Plumix source, not a vendored copy (ADR 0023):
+take an upstream change with `pnpm dlx shadcn@latest add <name> --diff` and
+apply it by hand, never by overwriting.
+
 Both lists are generated — don't edit them. A module that must stay out of one
 goes in the exception table in `scripts/roster.ts`, with its reason.
 
@@ -39,9 +43,9 @@ radix/sonner/tailwind-merge instance instead of bundling their own.
 ## Stability
 
 `plumix/admin/ui` is a public API for third-party plugin authors, but these are
-vendored shadcn components we own and edit (via `ui:add`). It carries no
+components taken from shadcn that we own and edit. It carries no
 guarantee beyond plumix's repo-wide policy: **pre-1.0, minor versions may
-contain breaking changes — pin your version.** A `ui:add` re-generation or a
+contain breaking changes — pin your version.** An upstream change taken in or a
 hand-edit to a component's markup/props counts as a breaking change under that
 policy, not a patch. Plugin authors should pin `plumix` and test their admin
 chunk against each minor before upgrading.
