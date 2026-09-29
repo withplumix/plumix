@@ -19,7 +19,12 @@ import {
 import { staleClaims } from "./lib/in-flight.js";
 import { say } from "./lib/log.js";
 import { sandboxImageOrRefuse } from "./lib/preflight.js";
-import { idsInJobUrl, repairPullRequest } from "./lib/repair.js";
+import {
+  aRerunCannotTurnItGreen,
+  failedStepsOf,
+  idsInJobUrl,
+  repairPullRequest,
+} from "./lib/repair.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import { rerunOnceTheRunsFinish } from "./lib/run-completion.js";
 import { runShipLoop } from "./lib/run.js";
@@ -143,23 +148,25 @@ const report = await runShipLoop(
         },
       );
     },
-    rerunFailedChecks: async (_pullRequest, refusal) =>
-      refusal.status === "failed" &&
-      rerunOnceTheRunsFinish(
-        [
-          ...new Set(
-            refusal.failingChecks.flatMap(
-              ({ url }) => idsInJobUrl(url)?.runId ?? [],
-            ),
-          ),
-        ],
+    rerunFailedChecks: async (_pullRequest, refusal) => {
+      if (refusal.status !== "failed") return false;
+      const jobs = refusal.failingChecks.flatMap(
+        ({ url }) => idsInJobUrl(url) ?? [],
+      );
+      if (
+        aRerunCannotTurnItGreen(jobs.map(({ jobId }) => failedStepsOf(jobId)))
+      )
+        return false;
+      return rerunOnceTheRunsFinish(
+        [...new Set(jobs.map(({ runId }) => runId))],
         {
           statusOf: runStatus,
           rerun: rerunFailedJobs,
           pause: () => new Promise((resolve) => setTimeout(resolve, 30_000)),
           attempts: 60,
         },
-      ),
+      );
+    },
     inFlightFromEarlierRuns: () => {
       const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
       for (const { ticket } of inFlight) claimed.add(ticket.number);
