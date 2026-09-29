@@ -28,7 +28,7 @@ const cloudflareRuntime: RuntimeDescriptor = {
     "@cloudflare/workers-types": "catalog:cloudflare",
     wrangler: "catalog:cloudflare",
   },
-  secretsFile: ".dev.vars",
+  secretsFile: ".env",
   files: {},
 };
 

@@ -29,7 +29,7 @@ export interface RuntimeDescriptor {
   readonly devDeps: Readonly<Record<string, string>>;
   /**
    * The gitignored file `plumix dev` reads local secrets from, relative to
-   * the project root — `.dev.vars` on Cloudflare, `.env` elsewhere. Written
+   * the project root — `.env` on every runtime. Written
    * with the selected auth methods' binding names when there are any.
    */
   readonly secretsFile: string;

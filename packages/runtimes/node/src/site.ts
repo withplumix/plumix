@@ -215,6 +215,21 @@ export function createNodeSite({
   };
 }
 
+/**
+ * Load `.env` from the working directory into the process env when `main`
+ * says this module is the process's entry point. A variable the environment
+ * already set wins, so a stray file cannot override a platform's injected
+ * secrets; a missing file loads nothing.
+ */
+export function loadEnvFileWhenMain(main: boolean): void {
+  if (!main) return;
+  try {
+    process.loadEnvFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
 export interface ServeProcessOptions extends Pick<
   NodeSite,
   "listener" | "startCron" | "dispose"

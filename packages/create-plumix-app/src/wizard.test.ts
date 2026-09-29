@@ -12,7 +12,7 @@ const cloudflare: RuntimeDescriptor = {
   configSlots: {},
   deps: {},
   devDeps: {},
-  secretsFile: ".dev.vars",
+  secretsFile: ".env",
   files: {},
 };
 

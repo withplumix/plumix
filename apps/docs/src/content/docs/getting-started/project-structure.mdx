@@ -9,11 +9,11 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-A scaffolded Plumix project is seven files, and two of them are yours to write. The rest configure the tooling. Everything the site does arrives through the `plumix` package and whichever plugins you installed.
+A scaffolded Plumix project is eight files, and two of them are yours to write. The rest configure the tooling. Everything the site does arrives through the `plumix` package and whichever plugins you installed.
 
 ## Overview
 
-Here is a project created with the blog and media plugins and GitHub sign-in, which is what adds the eighth file:
+Here is a project created with the blog and media plugins and GitHub sign-in, which is what adds the ninth file:
 
 ```
 my-site/
@@ -23,7 +23,8 @@ my-site/
 ├── wrangler.jsonc       Cloudflare bindings, assets, cron triggers
 ├── package.json         dependencies and the four scripts
 ├── tsconfig.json        compiler options, and what is in the program
-├── .dev.vars            local secrets, written only when a slot needs one
+├── .env                 local secrets, written only when a slot needs one
+├── .env.example         the committed template for .env
 ├── .gitignore
 └── README.md
 ```
@@ -62,9 +63,13 @@ The project installs TypeScript 6. TypeScript 7 works too, since nothing in the 
 
 Strict, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `types` set to Node, the Workers types and React. Its `include` is three entries: `plumix.config.ts`, `theme`, and `.plumix`. That last one is why a type error in generated code reaches your editor.
 
-**`.dev.vars`**
+**`.env`**
 
-Local secret values for `plumix dev`, one `NAME=` per line, and only written when something in your selection needs one. Picking GitHub OAuth is what puts `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` there. It is gitignored, and production secrets go to the deploy rather than into this file.
+Local secret values, one `NAME=` per line, and only written when something in your selection needs one. Picking GitHub OAuth is what puts `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` there. It is the env file on every runtime, and a variable the environment already sets always wins over it. It is gitignored, and production secrets go to the deploy rather than into this file. [Secrets](/deployment/secrets/#local-secrets) has the rule for each runtime.
+
+**`.env.example`**
+
+The committed template for `.env`: the file you copy to start one, and where a new variable gets documented.
 
 ## What the build generates
 

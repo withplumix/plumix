@@ -31,6 +31,14 @@ at all (#2152) is to use those rather than re-implement them in userland.
   request path. The runtime supplies what only it knows, such as the scheme its
   listener accepted and the bytes on its disk, rather than core sniffing a
   socket. The Node runtime's socket check was what reported HTTPS under Bun.
+- **`.env` is every runtime's env file, and the environment wins.** A
+  self-hosted process loads `.env` from its working directory in dev and in
+  production, filling only the keys the environment has not set (#2707). Node
+  24's `process.loadEnvFile` and Bun 1.4.2's loader both keep a variable already
+  exported, so a stray file cannot override a platform's injected secrets. On
+  Cloudflare, `plumix dev` reads the same `.env` through wrangler, and a
+  deployed Worker, which has no filesystem, takes its secrets from `wrangler
+secret`.
 
 ## How a runtime is tested
 

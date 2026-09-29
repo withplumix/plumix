@@ -16,7 +16,7 @@ On the Node runtime, `plumix build` writes `dist/client` and `dist/server/worker
 
 On the Cloudflare runtime, `plumix deploy` hands off to `wrangler deploy`, so what ships is whatever `wrangler.jsonc` describes plus the bundle `plumix build` produced.
 
-Either way, three things in a scaffolded project point at localhost and need real values before the site is live: the passkey origin, the database, and any secret you have been reading out of `.env` or `.dev.vars`. The sections below cover each runtime's version of that swap.
+Either way, three things in a scaffolded project point at localhost and need real values before the site is live: the passkey origin, the database, and any secret you have been reading out of `.env`. The sections below cover each runtime's version of that swap.
 
 ## Quickstart
 
@@ -48,7 +48,7 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
    });
    ```
 
-2. **Set every secret and environment variable the config resolves.** There is no `.dev.vars` upload step: `process.env` on the host is the whole story, so set `RESEND_API_KEY`, `GITHUB_CLIENT_SECRET` and the rest through whatever your host uses — a `.env` file the process manager loads, its own secrets UI, or the shell that starts the process. `PORT` and `HOST` control what the server listens on, defaulting to `3000` and `0.0.0.0`.
+2. **Set every secret and environment variable the config resolves.** The built server loads `.env` from the directory it starts in, and any variable the host already sets wins over the file, so set `RESEND_API_KEY`, `GITHUB_CLIENT_SECRET` and the rest through whatever your host uses — its own secrets UI, the shell that starts the process, or a `.env` beside it. Do not bake `.env` into a container image. `PORT` and `HOST` control what the server listens on, defaulting to `3000` and `0.0.0.0`.
 
 3. **Generate and apply the migrations.**
 
@@ -136,7 +136,7 @@ Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm 
 
    Running on your own domain instead? Drop `allowedOrigins` and write `rpId: "recipes.example"` with `origin: "https://recipes.example"`. Previews on `workers.dev` then need magic links or Cloudflare Access, because the two are different registrable domains. The helper's `productionOrigin` option says the same thing when the build runs on Workers Builds, paired with `defaultBranch` if your production branch is not `main`.
 
-3. **Set every secret the config resolves.** One command per name in `.dev.vars`:
+3. **Set every secret the config resolves.** One command per name in `.env`:
 
    ```sh
    wrangler secret put GITHUB_CLIENT_ID
@@ -216,7 +216,7 @@ A custom production domain breaks that span, and no configuration can restore it
 
 ## Related
 
-[Deployment](/deployment/overview/) is the section this page compresses, and it covers what each step here glosses over. [Node.js](/deployment/node/) and [Cloudflare Workers](/deployment/cloudflare/) cover each runtime's slots one at a time. [Bindings and Environment](/deployment/bindings/) covers how a Cloudflare binding in `wrangler.jsonc` reaches a config slot. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets in full. [Configuration](/getting-started/configuration/) is the reference for the slots you edited above. [Passkeys](/access/passkeys/) covers the relying-party id, allowed origins and adding a second device.
+[Deployment](/deployment/overview/) is the section this page compresses, and it covers what each step here glosses over. [Node.js](/deployment/node/) and [Cloudflare Workers](/deployment/cloudflare/) cover each runtime's slots one at a time. [Bindings and Environment](/deployment/bindings/) covers how a Cloudflare binding in `wrangler.jsonc` reaches a config slot. [Secrets](/deployment/secrets/) covers `.env`, `EnvInput` and production secrets in full. [Configuration](/getting-started/configuration/) is the reference for the slots you edited above. [Passkeys](/access/passkeys/) covers the relying-party id, allowed origins and adding a second device.
 
 ## Next steps
 

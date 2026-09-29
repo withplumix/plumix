@@ -63,7 +63,7 @@ Add an R2 bucket to the recipe site so the [`heroImage` media field](/fields/fie
 
    This forwards to `wrangler types`, which reads your wrangler config and writes `worker-configuration.d.ts` declaring one member of `Cloudflare.Env` per binding.
 
-5. **Let the dev server restart itself.** Saving `wrangler.jsonc` in step 2 already did it. `@cloudflare/vite-plugin` watches the wrangler config path and `.dev.vars`, and calls Vite's own restart when either changes, so a new binding is bound without a manual restart. The watcher listens for changes to a file that exists, not for a new one, so restart by hand the first time you add `.dev.vars`.
+5. **Let the dev server restart itself.** Saving `wrangler.jsonc` in step 2 already did it. `@cloudflare/vite-plugin` watches the wrangler config path and `.env`, and calls Vite's own restart when either changes, so a new binding is bound without a manual restart. The watcher listens for changes to a file that exists, not for a new one, so restart by hand the first time you add `.env`.
 
 </Steps>
 

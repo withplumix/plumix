@@ -91,7 +91,7 @@ This is the path from a scaffolded site to a running process. It assumes a site 
    plumix migrate apply
    ```
 
-3. **Develop.** One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes; the built server reads only the process environment. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
+3. **Develop.** One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes. The built server loads the same file from the directory it starts in, with the same rule: the environment wins, and a missing file is not an error. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
 
    ```sh
    plumix dev --port 3000
@@ -244,7 +244,7 @@ EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]
 ```
 
-`COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument.
+`COPY package.json pnpm-lock.yaml ./` before `COPY . .` means an edit to source alone reuses the installed layer; a lockfile change is the only thing that busts it. Secrets are absent from both stages — they arrive with `docker run --env-file` or whatever the platform's equivalent is, never as a build argument. List `.env` in `.dockerignore` so `COPY . .` cannot carry a local one into the image: the built server would load it.
 
 ## What Node does not do yet
 

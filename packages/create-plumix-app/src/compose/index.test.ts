@@ -19,7 +19,7 @@ const runtime: RuntimeDescriptor = {
   configSlots: {},
   deps: {},
   devDeps: {},
-  secretsFile: ".dev.vars",
+  secretsFile: ".env",
   files: {},
 };
 
@@ -46,24 +46,15 @@ const composeWith = async (
 
 describe("compose — local secrets file", () => {
   it("writes the auth methods' binding names to the runtime's secrets file", async () => {
-    const files = await composeWith({ ...runtime, secretsFile: ".env" }, [
-      oauth,
-    ]);
-
-    expect(files[".env"]).toBe(OAUTH_SECRETS);
-    expect(files[".dev.vars"]).toBeUndefined();
-  });
-
-  it("keeps Cloudflare's .dev.vars byte for byte", async () => {
     const files = await composeWith(runtime, [oauth]);
 
-    expect(files[".dev.vars"]).toBe(OAUTH_SECRETS);
+    expect(files[".env"]).toBe(OAUTH_SECRETS);
   });
 
   it("writes no secrets file when nothing needs a binding", async () => {
     const files = await composeWith(runtime, []);
 
-    expect(files[".dev.vars"]).toBeUndefined();
+    expect(files[".env"]).toBeUndefined();
   });
 });
 
@@ -78,7 +69,7 @@ describe("compose — .gitignore and clean", () => {
     );
 
     expect(files[".gitignore"]).toBe(
-      "node_modules\ndist\n.plumix\n.cache\n.wrangler\n.dev.vars\n",
+      "node_modules\ndist\n.plumix\n.cache\n.wrangler\n.env\n",
     );
     expect(scripts(files["package.json"]).clean).toBe(
       "git clean -xdf .plumix dist node_modules .wrangler",
@@ -86,7 +77,7 @@ describe("compose — .gitignore and clean", () => {
   });
 
   it("names nothing wrangler-shaped for a runtime that contributes no ignores", async () => {
-    const files = await composeWith({ ...runtime, secretsFile: ".env" }, []);
+    const files = await composeWith(runtime, []);
 
     expect(files[".gitignore"]).toBe(
       "node_modules\ndist\n.plumix\n.cache\n.env\n",

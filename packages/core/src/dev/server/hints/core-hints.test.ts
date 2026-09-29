@@ -43,7 +43,7 @@ describe("registerCoreErrorHints", () => {
     expect(hints[0]).toMatch(/migrat/i);
   });
 
-  test("matches a missing-secret error with a dev-vars hint", () => {
+  test("matches a missing-secret error with an env-file hint", () => {
     const hints = hintsFor(
       new Error("Missing required secret: SESSION_SECRET"),
     );
@@ -51,7 +51,7 @@ describe("registerCoreErrorHints", () => {
     expect(hints[0]).toMatch(/secret/i);
   });
 
-  test("the dev-vars hint mentions .dev.vars so the fix is concrete", () => {
+  test("the env-file hint mentions .env so the fix is concrete", () => {
     const hooks = new HookRegistry();
     registerCoreErrorHints(hooks);
     const [card] = collectDevErrorHints(
@@ -59,7 +59,7 @@ describe("registerCoreErrorHints", () => {
       new Error("Missing required secret: SESSION_SECRET"),
       ctx,
     );
-    expect(card?.body).toContain(".dev.vars");
+    expect(card?.body).toContain("`.env`");
   });
 
   test("the migrations hint names the plumix migrate command", () => {

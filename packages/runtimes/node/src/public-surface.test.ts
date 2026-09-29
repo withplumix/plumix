@@ -16,6 +16,7 @@ test("the barrel publishes only what has a consumer outside this package", () =>
     "createRequestListener",
     "diskStorage",
     "images",
+    "loadEnvFileWhenMain",
     "node",
     "nodeSqlite",
     "startScheduledRunner",

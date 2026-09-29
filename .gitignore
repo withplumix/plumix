@@ -86,7 +86,3 @@ packages/plugins/*/locales/*.d.mts
 # `scripts/build-snapshot.mjs`. Ships in the tarball (it is in `files`),
 # never committed.
 packages/create-plumix-app/registry.json
-
-# Cloudflare local secrets
-.dev.vars
-.dev.vars.*

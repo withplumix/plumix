@@ -16,7 +16,7 @@ export { images } from "./images.js";
 export type { ImagesConfig, ResolvedImagesConfig } from "./images.js";
 
 // What the generated entry calls: everything it does beyond importing.
-export { createNodeSite } from "./site.js";
+export { createNodeSite, loadEnvFileWhenMain } from "./site.js";
 export type {
   CronOverrides,
   NodeSite,

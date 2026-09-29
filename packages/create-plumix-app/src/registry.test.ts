@@ -72,7 +72,7 @@ describe("loadRegistry", () => {
     });
   });
 
-  it("defaults the local secrets file to .dev.vars when the block names none", async () => {
+  it("defaults the local secrets file to .env when the block names none", async () => {
     writeRuntimePackage("cloudflare", {
       kind: "runtime",
       id: "cloudflare",
@@ -81,7 +81,7 @@ describe("loadRegistry", () => {
 
     const registry = await loadRegistry(root);
 
-    expect(registry.runtimes[0]?.secretsFile).toBe(".dev.vars");
+    expect(registry.runtimes[0]?.secretsFile).toBe(".env");
   });
 
   it("carries the runtime's extra gitignore entries", async () => {
@@ -102,12 +102,12 @@ describe("loadRegistry", () => {
       kind: "runtime",
       id: "node",
       label: "Node",
-      secretsFile: ".env",
+      secretsFile: ".env.local",
     });
 
     const registry = await loadRegistry(root);
 
-    expect(registry.runtimes[0]?.secretsFile).toBe(".env");
+    expect(registry.runtimes[0]?.secretsFile).toBe(".env.local");
   });
 
   it("reads the package manager a runtime declares", async () => {

@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { scaffold } from "./scaffold.js";
+import { loadScaffoldSources, scaffold } from "./scaffold.js";
 import { packageVersion } from "./test-support.js";
 
 function readPkg(dir: string): {
@@ -303,5 +303,39 @@ describe("scaffold — Node app", () => {
     const blank = join(tmp, "no-media");
     await scaffold({ targetDir: blank, runtimeId: "node", pluginIds: ["og"] });
     expect(readPkg(blank).dependencies).not.toHaveProperty("sharp");
+  });
+});
+
+describe("scaffold — every runtime's env file", () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "plumix-scaffold-env-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("keeps local secrets in a gitignored .env beside a .env.example", async () => {
+    const { registry } = await loadScaffoldSources();
+
+    for (const { id } of registry.runtimes) {
+      const target = join(tmp, id);
+      await scaffold({
+        targetDir: target,
+        runtimeId: id,
+        authMethodIds: ["oauth"],
+      });
+
+      expect(readFileSync(join(target, ".env"), "utf8"), id).toContain(
+        "GITHUB_CLIENT_SECRET=",
+      );
+      expect(existsSync(join(target, ".env.example")), id).toBe(true);
+      expect(
+        readFileSync(join(target, ".gitignore"), "utf8").split("\n"),
+        id,
+      ).toContain(".env");
+    }
   });
 });

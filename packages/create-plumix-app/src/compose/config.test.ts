@@ -28,7 +28,7 @@ const cloudflareRuntime: RuntimeDescriptor = {
     "Set accountSubdomain to your workers.dev subdomain before deploying.",
   deps: {},
   devDeps: {},
-  secretsFile: ".dev.vars",
+  secretsFile: ".env",
   files: {},
 };
 
@@ -186,14 +186,13 @@ describe("assembleConfig — auth methods", () => {
   it("points the secrets comment at the runtime's own secrets file", () => {
     const config = assemble({
       projectName: "app",
-      runtime: { ...cloudflareRuntime, secretsFile: ".env" },
+      runtime: { ...cloudflareRuntime, secretsFile: ".env.local" },
       plugins: [],
       authMethods: [oauth],
     });
     expect(config).toContain(
-      "// Secret bindings — set them in .env locally and as secrets on the",
+      "// Secret bindings — set them in .env.local locally and as secrets on the",
     );
-    expect(config).not.toContain(".dev.vars");
     expect(config).not.toMatch(/wrangler/i);
   });
 

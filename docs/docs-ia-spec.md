@@ -215,7 +215,7 @@ entry — content-editor material is out of scope for this site.
 | `deployment/cloudflare` | Cloudflare Workers       | P0  | The default runtime: D1, R2, KV, Images, edge cache.                                               | `@plumix/runtime-cloudflare`                    |
 | `deployment/node`       | Node.js                  | P1  | A plain process: `node:sqlite`, disk storage, `PORT`/`HOST`, `trustProxy`.                         | `@plumix/runtime-node`                          |
 | `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                                                                   | bindings, slots                                 |
-| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.                                                       | secret slots                                    |
+| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.env`, production secrets.                                                            | secret slots                                    |
 | `deployment/cdn`        | CDN Caching              | P1  | **Roster page** for the tag vocabulary. The slot from any host: hosts, the zone rule, credentials. | `plumix/cdn/cloudflare`                         |
 | `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.                                                        | 7 commands + 5 global flags                     |
 | `deployment/runtimes`   | Runtime Adapters         | P2  | **Roster page.** The adapter contract, its obligations, the runtime floor.                         | `RuntimeAdapter`, `PlumixHandler`, `Invocation` |
