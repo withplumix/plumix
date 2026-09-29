@@ -19,12 +19,20 @@ at all (#2152) is to use those rather than re-implement them in userland.
 - **Native first.** Bun's runtime serves with `Bun.serve`, stores with
   `bun:sqlite`, `Bun.file` and `S3Client`, schedules with `Bun.cron` and resizes
   with `Bun.Image`. It does not run the Node runtime's `node:http` bridge.
-- **The portable implementation fills a gap, never the whole slot.** Bun's
-  presign signs only `host` and does not enforce the content type, so
-  `presignPut` alone delegates to core's portable presigner while every other
-  S3 operation stays on `S3Client`. Bun's `run().changes` counts rows written by
-  triggers, so the SQLite slot reads `changes()` after a write and keeps Bun's
-  driver for everything else.
+- **The portable implementation fills a gap, never the whole slot.** A runtime
+  adapter uses its runtime's primitive for each operation where that primitive
+  meets the contract, and core's portable implementation for each operation
+  where it does not. Bun's presign signs only `host` and does not enforce the
+  content type, so `bunS3`'s `presignPut` delegates to core's portable
+  presigner. Bun 1.4.2's `S3Client` also sends no `x-amz-meta-*` and no
+  `cache-control` on a write, rewrites `text/plain` to
+  `text/plain;charset=utf-8`, and returns no custom metadata from `stat()`. So
+  `put` and `head` run on core's portable signer too, while get, delete, list
+  and ranges stay on `S3Client` (#2688). Metadata is not moved into companion
+  objects to route around this, because the bucket layout stays the one core's
+  `s3()` and R2 write. Bun's `run().changes` counts rows written by triggers, so
+  the SQLite slot reads `changes()` after a write and keeps Bun's driver for
+  everything else.
 - **What every runtime decides alike lives in core, once.** The request trust
   rules, the asset-serving rules and the drain deadline are published on
   `plumix/runtime` (#2681). They are Web APIs only, since they sit on the

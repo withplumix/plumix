@@ -49,3 +49,30 @@ export class BunConfigError extends Error {
 
 /** The longest idle timeout `Bun.serve` accepts, in seconds. */
 export const MAX_IDLE_TIMEOUT_S = 255;
+
+export class StorageError extends Error {
+  static {
+    StorageError.prototype.name = "StorageError";
+  }
+
+  readonly code: "key_escapes_directory";
+  readonly key: string;
+
+  private constructor(
+    code: "key_escapes_directory",
+    message: string,
+    key: string,
+  ) {
+    super(message);
+    this.code = code;
+    this.key = key;
+  }
+
+  static keyEscapesDirectory(ctx: { key: string }): StorageError {
+    return new StorageError(
+      "key_escapes_directory",
+      `@plumix/runtime-bun: diskStorage refuses the key "${ctx.key}", which does not resolve under its directory`,
+      ctx.key,
+    );
+  }
+}

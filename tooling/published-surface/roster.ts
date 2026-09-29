@@ -529,6 +529,19 @@ export const ROSTER: Readonly<
       },
       {
         reason:
+          "the storage slots a site config wires: on disk by default, or " +
+          "any S3-compatible bucket",
+        names: [
+          "diskStorage",
+          "DiskObjectStorage",
+          "DiskStorageConfig",
+          "bunS3",
+          "BunS3Config",
+          "BunS3ObjectStorage",
+        ],
+      },
+      {
+        reason:
           "what the generated entry calls — `.env` loaded when run, the " +
           "site built, the process served — and the site and serve " +
           "options it hands an embedder mounting it in its own `Bun.serve`",
