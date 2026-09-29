@@ -33,10 +33,13 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("async fetch(request, env, ctx)");
   });
 
-  test("builds one handler through the runtime adapter and reuses it across invocations", () => {
-    expect(entry("./config.ts")).toContain(
-      "handler ??= config.runtime.createHandler(app)",
+  test("builds one handler through core from the runtime's spec and reuses it across invocations", () => {
+    const source = entry("./config.ts");
+    expect(source).toContain(
+      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
     );
+    expect(source).toContain("handler ??= createRuntimeHandler(app)");
+    expect(source).not.toContain("config.runtime.createHandler");
   });
 
   test("forwards the positional Worker arguments into an invocation", () => {
@@ -104,7 +107,7 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("if (process.env.PLUMIX_DEV)");
     expect(source).toContain("renderDevBootErrorResponse(bootError)");
     expect(source).toContain(
-      'import { buildApp, renderDevBootErrorResponse } from "plumix/runtime";',
+      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
     );
   });
 

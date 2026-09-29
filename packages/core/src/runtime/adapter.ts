@@ -1,6 +1,9 @@
+import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
-import type { PlumixApp } from "./app.js";
+import type { HookRegistry } from "../hooks/registry.js";
+import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import type { PlumixEnv } from "./contract/bindings.js";
+import type { AssetsBinding } from "./contract/slots.js";
 
 /**
  * What the runtime knows about one call into the handler. An adapter builds
@@ -135,8 +138,19 @@ export interface PlumixHandler {
   readonly dispose?: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
 
-export interface CommandContext {
-  readonly app: PlumixApp;
+/**
+ * What a command reads off the built app. The CLI hands a command the whole
+ * app, so a command that needs more — one that builds the site's handler —
+ * declares it with {@link CommandDefinition}'s type parameter.
+ */
+export interface CommandApp {
+  readonly config: PlumixConfig;
+  readonly hooks: HookRegistry;
+  readonly scheduledTasks: readonly RegisteredScheduledTask[];
+}
+
+export interface CommandContext<App extends CommandApp = CommandApp> {
+  readonly app: App;
   readonly cwd: string;
   readonly configPath: string;
   readonly argv: readonly string[];
@@ -150,7 +164,7 @@ export interface CommandContext {
   readonly runtimeMigrate: CommandRegistry;
 }
 
-export interface CommandDefinition {
+export interface CommandDefinition<App extends CommandApp = CommandApp> {
   readonly describe: string;
   /**
    * Skip the CLI's eager, Node-side `buildApp` and hand the command a throwing
@@ -163,7 +177,7 @@ export interface CommandDefinition {
    * validation before a bundle ships.
    */
   readonly deferApp?: boolean;
-  run(ctx: CommandContext): Promise<void> | void;
+  run(ctx: CommandContext<App>): Promise<void> | void;
 }
 
 export type CommandRegistry = Readonly<Record<string, CommandDefinition>>;
@@ -178,14 +192,45 @@ export interface EntrySourceOptions {
   readonly configModule: string;
 }
 
+/**
+ * What a runtime adds to the handler core builds for it: only the reads its
+ * platform can answer. Core composes the handler (`createRuntimeHandler`), so
+ * the adapter never holds the composed app.
+ */
+export interface RuntimeHandlerSpec {
+  /**
+   * Resolve the static-asset fetcher for an invocation. Without one the admin
+   * SPA answers `admin-not-available`.
+   */
+  readonly assets?: (env: PlumixEnv) => AssetsBinding | undefined;
+  /** How long `dispose()` waits for deferred work; five seconds by default. */
+  readonly disposeTimeoutMs?: number;
+  /**
+   * The client address the platform reports for a request. It replaces the
+   * one on the invocation, absent included: a runtime that reads it here is
+   * the only authority on where a request came from.
+   */
+  readonly clientAddress?: (request: Request) => string | undefined;
+  /**
+   * One-off setup, run once per handler before its first request: a platform
+   * check that fails fast, or dev error hints registered on the app's hooks.
+   */
+  readonly prepare?: (hooks: HookRegistry) => void;
+  /**
+   * Put the platform's own routing in front of the built handler — the demo
+   * runtime answers its session routes before the site does. Receives the
+   * config because what a wrapper supports can depend on the other slots.
+   */
+  readonly wrap?: (
+    handler: PlumixHandler,
+    config: PlumixConfig,
+  ) => PlumixHandler;
+}
+
 export interface RuntimeAdapter {
   readonly name: string;
-  /**
-   * Produce the handler the entry calls. Most adapters return
-   * `createPlumixHandler(app, …)` from core and add only what their platform
-   * knows: the Cloudflare adapter contributes the `ASSETS` binding read.
-   */
-  createHandler(app: PlumixApp): PlumixHandler;
+  /** How core builds the handler the entry calls; see {@link RuntimeHandlerSpec}. */
+  readonly handler: RuntimeHandlerSpec;
   /**
    * Source of the entry module the build serves — the few lines that adapt the
    * platform's serve API to {@link PlumixHandler}: a Workers default export,

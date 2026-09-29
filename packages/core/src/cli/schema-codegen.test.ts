@@ -11,7 +11,7 @@ import { generateSchemaSource } from "./schema-codegen.js";
 const baseConfig: PlumixConfig = {
   runtime: {
     name: "test",
-    createHandler: () => ({ fetch: () => new Response() }),
+    handler: {},
     generateEntry: () => "",
   },
   database: { kind: "test", connect: () => ({ db: {} }) },

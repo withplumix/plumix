@@ -23,7 +23,12 @@ import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
 
-const BUILT_IN_COMMANDS: ReadonlyMap<string, CommandDefinition> = new Map([
+// A built-in may read the whole app — `meta` and `cron` build the site's
+// handler from it; a runtime's own commands see only its `CommandApp` part.
+const BUILT_IN_COMMANDS: ReadonlyMap<
+  string,
+  CommandDefinition<PlumixApp>
+> = new Map<string, CommandDefinition<PlumixApp>>([
   ["migrate", migrateCommand],
   ["cron", cronCommand],
   ["meta", metaCommand],
@@ -289,7 +294,7 @@ async function loadRuntimeCommands(
 function resolveCommand(
   runtimeCommands: CommandRegistry,
   name: string,
-): CommandDefinition | undefined {
+): CommandDefinition<PlumixApp> | undefined {
   return BUILT_IN_COMMANDS.get(name) ?? runtimeCommands[name];
 }
 

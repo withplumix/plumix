@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp, PlumixHandler } from "@plumix/core";
-import { createPlumixHandler } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
 import { createDispatcherHarness, createTestDb } from "@plumix/core/test";
 
@@ -37,7 +36,7 @@ async function context(
     close?: () => void;
     dispose?: PlumixHandler["dispose"];
   } = {},
-): Promise<CommandContext> {
+): Promise<CommandContext<PlumixApp>> {
   // `cron run` takes the same run guard the in-process scheduler does, so it
   // needs a real database to take it in.
   const db = options.db ?? (await createTestDb());
@@ -51,7 +50,7 @@ async function context(
     scheduledTasks: withHandlers(options.tasks ?? TASKS),
     config: {
       ...base.config,
-      runtime: { ...base.config.runtime, createHandler: () => handler },
+      runtime: { ...base.config.runtime, handler: { wrap: () => handler } },
       database: { kind: "test", connect: () => ({ db, close: options.close }) },
     },
   };
@@ -401,7 +400,7 @@ describe("plumix cron run — both connections, composed", () => {
   test("releases the guard's connection and the handler's own", async () => {
     // The seam-level tests above each cover one half with the other stubbed,
     // which is how the reverted attempt in #2255 passed while releasing only
-    // one connection. This drives a real `createPlumixHandler`, so the count
+    // one connection. This drives the real handler core builds, so the count
     // is of connections the command actually caused.
     const db = await createTestDb();
     const opened: number[] = [];
@@ -420,10 +419,6 @@ describe("plumix cron run — both connections, composed", () => {
       config: {
         ...base.config,
         database,
-        runtime: {
-          ...base.config.runtime,
-          createHandler: () => createPlumixHandler(app),
-        },
       },
     };
 

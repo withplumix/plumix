@@ -17,7 +17,7 @@ Three interfaces make up the contract.
 
 `RuntimeAdapter` is what your package exports and what a site names in its `runtime` config slot. It answers two questions: what handler does this app get, and what does the generated entry module look like.
 
-`PlumixHandler` is that handler. It is one object with a `fetch`, and optionally a `scheduled`, a `run` and a `dispose`. You rarely write one from scratch — `createPlumixHandler(app)` returns the whole thing, already carrying app-context assembly, binding validation, request-scoped database wiring and the scheduled-task loop.
+`PlumixHandler` is that handler. It is one object with a `fetch`, and optionally a `scheduled`, a `run` and a `dispose`. You never write one: `createRuntimeHandler(app)` builds it from what your adapter declares, already carrying app-context assembly, binding validation, request-scoped database wiring and the scheduled-task loop.
 
 `Invocation` is what you hand `fetch` on every call: the runtime's configuration bag, an optional `waitUntil`, and an optional trusted client address. It is the seam that keeps the platform's shape out of core — a Worker's positional `(env, ctx)`, a `Bun.serve` handler's `server`, a Lambda event all collapse into it.
 
@@ -25,29 +25,26 @@ The generated entry module is where those meet. `plumix build` asks your adapter
 
 <Aside type="note" title="Three adapters ship today">
   `@plumix/runtime-cloudflare`, `@plumix/runtime-node` and `@plumix/runtime-bun`
-  all wrap the default handler, and all are short, because it does the rest.
-  Read them beside this page. [Cloudflare Workers](/deployment/cloudflare/),
-  [Node.js](/deployment/node/) and [Bun](/deployment/bun/) document them from
-  the operator's side.
+  all declare a few reads on the default handler, and all are short, because it
+  does the rest. Read them beside this page. [Cloudflare
+  Workers](/deployment/cloudflare/), [Node.js](/deployment/node/) and
+  [Bun](/deployment/bun/) document them from the operator's side.
 </Aside>
 
 ## Quickstart
 
-The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the default handler, plus the entry its platform's serve API wants.
+The smallest adapter that runs a Plumix site: a `RuntimeAdapter` declaring what its platform adds to the default handler, plus the entry its platform's serve API wants.
 
 <Steps>
 
-1. **Wrap the default handler.** Everything runtime-neutral is already in `createPlumixHandler`. Supply an `assets` resolver so the admin SPA is served; nothing else is required.
+1. **Declare the handler.** Everything runtime-neutral is already in the handler core builds. Supply an `assets` resolver so the admin SPA is served; nothing else is required.
 
    ```ts
    import type {
      AssetsBinding,
      EntrySourceOptions,
-     PlumixApp,
-     PlumixHandler,
      RuntimeAdapter,
    } from "plumix/runtime";
-   import { createPlumixHandler } from "plumix/runtime";
 
    declare function serveStagedFile(request: Request): Promise<Response>;
    // Step 2 writes this one.
@@ -55,29 +52,25 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
 
    const assets: AssetsBinding = { fetch: serveStagedFile };
 
-   function createHandler(app: PlumixApp): PlumixHandler {
-     return createPlumixHandler(app, { assets: () => assets });
-   }
-
    export function deno(): RuntimeAdapter {
-     return { name: "deno", createHandler, generateEntry };
+     return { name: "deno", handler: { assets: () => assets }, generateEntry };
    }
    ```
 
-2. **Emit the entry.** The entry adapts the serve API. It builds the app once, asks the config's own runtime for the handler, and turns each call into an `Invocation`.
+2. **Emit the entry.** The entry adapts the serve API. It builds the app once, has core build the handler from the config's own runtime, and turns each call into an `Invocation`.
 
    ```ts
    import type { EntrySourceOptions } from "plumix";
 
    export function generateEntry({ configModule }: EntrySourceOptions): string {
      return [
-       'import { buildApp } from "plumix/runtime";',
+       'import { buildApp, createRuntimeHandler } from "plumix/runtime";',
        'import assetManifest from "virtual:plumix/asset-manifest";',
        'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
        `import config from ${JSON.stringify(configModule)};`,
        "",
        "const app = await buildApp(config, { assetManifest, pluginCatalogs });",
-       "const handler = config.runtime.createHandler(app);",
+       "const handler = createRuntimeHandler(app);",
        "",
        "Deno.serve((request, info) =>",
        "  handler.fetch(request, {",
@@ -126,19 +119,23 @@ declare const rest: Omit<RuntimeAdapter, "name">;
 export const adapter: RuntimeAdapter = { name: "deno", ...rest };
 ```
 
-### `RuntimeAdapter.createHandler`
+### `RuntimeAdapter.handler`
 
-Takes the built `PlumixApp` and returns the handler the entry calls. Call `createPlumixHandler(app, options)` and add only what your platform knows — the Cloudflare adapter adds the `ASSETS` binding read and the client address.
+What your platform adds to the handler core builds, as a `RuntimeHandlerSpec`. The entry calls `createRuntimeHandler(app)` once, at module scope or on the first request, and core composes the handler from this; the adapter never holds the built app. Every member is optional:
 
-Called once by the entry, at module scope or on the first request, whichever your entry does. Anything expensive an adapter needs — a signer, a pool, a file-system asset index — belongs here rather than inside `fetch`.
+- `assets(env)` resolves the static-asset fetcher for an invocation. Without it the admin SPA answers `admin-not-available`.
+- `disposeTimeoutMs` bounds how long `dispose()` waits for deferred work; five seconds by default.
+- `clientAddress(request)` reads the client address off the request for platforms whose edge reports it there. It replaces whatever the invocation carried, absent included — the Cloudflare adapter reads `cf-connecting-ip` this way.
+- `prepare(hooks)` runs once per handler, before its first request: a platform check that should fail fast, or dev error hints registered on the app's hooks.
+- `wrap(handler, config)` puts the platform's own routing in front of the built handler, as the demo runtime does for its session routes.
 
 ```ts
-import type { PlumixApp, PlumixHandler } from "plumix/runtime";
-import { createPlumixHandler } from "plumix/runtime";
+import type { RuntimeHandlerSpec } from "plumix/runtime";
 
-export function createHandler(app: PlumixApp): PlumixHandler {
-  return createPlumixHandler(app, { disposeTimeoutMs: 10_000 });
-}
+export const handler: RuntimeHandlerSpec = {
+  disposeTimeoutMs: 10_000,
+  clientAddress: (request) => request.headers.get("fly-client-ip") ?? undefined,
+};
 ```
 
 ### `RuntimeAdapter.generateEntry`

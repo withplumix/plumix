@@ -12,7 +12,7 @@ const noop = (): void => undefined;
 
 const stubAdapter = {
   name: "test" as const,
-  createHandler: () => ({ fetch: () => new Response("stub") }),
+  handler: {},
   generateEntry: () => "",
 };
 const stubDatabase = { kind: "test", connect: () => ({ db: {} }) } as const;

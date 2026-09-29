@@ -13,6 +13,7 @@ export { spawnCapturingStderr, spawnInherit } from "@plumix/core/cli";
 export { parsePortFlag } from "./port-flag.js";
 
 export type {
+  CommandApp,
   CommandContext,
   CommandDefinition,
   CommandRegistry,

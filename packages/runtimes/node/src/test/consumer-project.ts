@@ -50,7 +50,7 @@ import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
 
 export default plumix({
-  runtime: { name: "stub", createHandler: () => ({ fetch: () => new Response("") }), generateEntry: () => "" },
+  runtime: { name: "stub", handler: {}, generateEntry: () => "" },
   database: { kind: "stub", connect: () => ({ db: {} }) },
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({ templates: [fallback(() => null)] }),

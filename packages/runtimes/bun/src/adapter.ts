@@ -1,11 +1,10 @@
 import type { PlumixEnv } from "plumix";
 import type {
   AssetsBinding,
-  PlumixApp,
-  PlumixHandler,
   RuntimeAdapter,
+  RuntimeHandlerSpec,
 } from "plumix/runtime";
-import { createPlumixHandler, DRAIN_DEADLINE_MS } from "plumix/runtime";
+import { DRAIN_DEADLINE_MS } from "plumix/runtime";
 
 import { generateEntry } from "./entry-codegen.js";
 import { ASSETS_DIR_ENV } from "./entry-constants.js";
@@ -61,6 +60,19 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
     : undefined;
 }
 
+// The default handler is the whole adapter; the serve path already put the
+// client address from `server.requestIP` on the invocation.
+// An env is fixed for a handler's lifetime, so each env's layer is built once.
+const assetsLayers = new WeakMap<PlumixEnv, AssetsBinding | undefined>();
+
+const handler: RuntimeHandlerSpec = {
+  assets: (env) => {
+    if (!assetsLayers.has(env)) assetsLayers.set(env, readAssetsBinding(env));
+    return assetsLayers.get(env);
+  },
+  disposeTimeoutMs: DRAIN_DEADLINE_MS,
+};
+
 /** The Bun runtime adapter: a process on `Bun.serve`. */
 export function bun(config: BunConfig = {}): BunRuntimeAdapter {
   // `??`, never `||`: 0 is the value that disables the timeout.
@@ -76,7 +88,7 @@ export function bun(config: BunConfig = {}): BunRuntimeAdapter {
       bodySizeLimit: config.bodySizeLimit ?? DEFAULT_BODY_SIZE_LIMIT,
       idleTimeout,
     },
-    createHandler,
+    handler,
     generateEntry,
     commandsModule: "@plumix/runtime-bun/commands",
   };
@@ -86,15 +98,4 @@ export function isBunRuntime(
   adapter: RuntimeAdapter,
 ): adapter is BunRuntimeAdapter {
   return adapter.name === "bun";
-}
-
-// The default handler is the whole adapter; the serve path already put the
-// client address from `server.requestIP` on the invocation. The env is fixed
-// for a handler's lifetime, so the layer is built once.
-function createHandler(app: PlumixApp): PlumixHandler {
-  let assets: AssetsBinding | undefined;
-  return createPlumixHandler(app, {
-    assets: (env) => (assets ??= readAssetsBinding(env)),
-    disposeTimeoutMs: DRAIN_DEADLINE_MS,
-  });
 }

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
-import { buildApp } from "plumix/runtime";
+import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import * as schema from "plumix/schema";
 import { sessions } from "plumix/schema";
 import { applyCoreTestSchema, factoriesFor } from "plumix/test";
@@ -95,7 +95,7 @@ async function serveSite(config: NodeConfig) {
       plugins: [probe],
     }),
   );
-  const handler = adapter.createHandler(app);
+  const handler = createRuntimeHandler(app);
   const served = await listen(
     createRequestListener(
       async (request, meta) =>

@@ -1,11 +1,10 @@
 import type { PlumixEnv } from "plumix";
 import type {
   AssetsBinding,
-  PlumixApp,
-  PlumixHandler,
   RuntimeAdapter,
+  RuntimeHandlerSpec,
 } from "plumix/runtime";
-import { createPlumixHandler, DRAIN_DEADLINE_MS } from "plumix/runtime";
+import { DRAIN_DEADLINE_MS } from "plumix/runtime";
 
 import { generateEntry } from "./entry-codegen.js";
 import { ASSETS_DIR_ENV } from "./entry-constants.js";
@@ -53,12 +52,25 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
     : undefined;
 }
 
+// The default handler is the whole adapter; the bridge already supplied the
+// client address on the invocation, so nothing is read off the request here.
+// An env is fixed for a handler's lifetime, so each env's layer is built once.
+const assetsLayers = new WeakMap<PlumixEnv, AssetsBinding | undefined>();
+
+const handler: RuntimeHandlerSpec = {
+  assets: (env) => {
+    if (!assetsLayers.has(env)) assetsLayers.set(env, readAssetsBinding(env));
+    return assetsLayers.get(env);
+  },
+  disposeTimeoutMs: DRAIN_DEADLINE_MS,
+};
+
 /** The Node.js runtime adapter: a plain process over `node:http`. */
 export function node(config: NodeConfig = {}): NodeRuntimeAdapter {
   return {
     name: "node",
     config,
-    createHandler,
+    handler,
     generateEntry,
     commandsModule: "@plumix/runtime-node/commands",
   };
@@ -68,15 +80,4 @@ export function isNodeRuntime(
   adapter: RuntimeAdapter,
 ): adapter is NodeRuntimeAdapter {
   return adapter.name === "node";
-}
-
-// The default handler is the whole adapter; the bridge already supplied the
-// client address on the invocation, so nothing is read off the request here.
-// The env is fixed for a handler's lifetime, so the layer is built once.
-function createHandler(app: PlumixApp): PlumixHandler {
-  let assets: AssetsBinding | undefined;
-  return createPlumixHandler(app, {
-    assets: (env) => (assets ??= readAssetsBinding(env)),
-    disposeTimeoutMs: DRAIN_DEADLINE_MS,
-  });
 }

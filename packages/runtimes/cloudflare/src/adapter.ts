@@ -2,11 +2,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { PlumixEnv } from "plumix";
 import type {
   AssetsBinding,
-  PlumixApp,
-  PlumixHandler,
   RuntimeAdapter,
+  RuntimeHandlerSpec,
 } from "plumix/runtime";
-import { createPlumixHandler } from "plumix/runtime";
 
 import { registerCloudflareErrorHints } from "./dev-hints.js";
 import { generateEntry } from "./entry-codegen.js";
@@ -30,6 +28,29 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
   return undefined;
 }
 
+// The default handler is the whole adapter; Cloudflare adds only the reads its
+// platform can answer.
+const handler: RuntimeHandlerSpec = {
+  assets: readAssetsBinding,
+  clientAddress: readClientAddress,
+  prepare: (hooks) => {
+    // Defense in depth: the `node:async_hooks` import above already fails at
+    // module-load time without `nodejs_compat`, but if the runtime ships a
+    // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
+    // from the first AsyncLocalStorage.run() call. Fail fast with a useful hint.
+    if (typeof AsyncLocalStorage !== "function") {
+      throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
+    }
+
+    // Mirrors core's own `PLUMIX_DEV` gate around `registerCoreErrorHints` —
+    // Vite-substituted at bundle time, so this and `registerCloudflareErrorHints`
+    // tree-shake out of a production build.
+    if (process.env.PLUMIX_DEV) {
+      registerCloudflareErrorHints(hooks);
+    }
+  },
+};
+
 /**
  * Build the Cloudflare runtime adapter.
  *
@@ -48,38 +69,9 @@ function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
 export function cloudflare(): RuntimeAdapter {
   return {
     name: "cloudflare",
-    createHandler,
+    handler,
     generateEntry,
     commandsModule: "@plumix/runtime-cloudflare/commands",
-  };
-}
-
-// The default handler is the whole adapter; Cloudflare adds only the read its
-// platform can answer.
-function createHandler(app: PlumixApp): PlumixHandler {
-  // Defense in depth: the `node:async_hooks` import above already fails at
-  // module-load time without `nodejs_compat`, but if the runtime ships a
-  // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
-  // from the first AsyncLocalStorage.run() call. Fail fast with a useful hint.
-  if (typeof AsyncLocalStorage !== "function") {
-    throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
-  }
-
-  // Mirrors core's own `PLUMIX_DEV` gate around `registerCoreErrorHints` —
-  // Vite-substituted at bundle time, so this and `registerCloudflareErrorHints`
-  // tree-shake out of a production build.
-  if (process.env.PLUMIX_DEV) {
-    registerCloudflareErrorHints(app.hooks);
-  }
-
-  const handler = createPlumixHandler(app, { assets: readAssetsBinding });
-  return {
-    ...handler,
-    fetch: (request, invocation) =>
-      handler.fetch(request, {
-        ...invocation,
-        clientAddress: readClientAddress(request),
-      }),
   };
 }
 

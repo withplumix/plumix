@@ -11,7 +11,7 @@ import type { AssetsNotFound } from "plumix/test/conformance";
 import { plumix } from "plumix";
 import { auth as authConfig, SESSION_COOKIE_NAME } from "plumix/auth";
 import { definePlugin, requestStore } from "plumix/plugin";
-import { buildApp } from "plumix/runtime";
+import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { describeAssetsContract } from "plumix/test/conformance";
 import { defineTheme } from "plumix/theme";
 import { describe, expect, test } from "vitest";
@@ -48,7 +48,7 @@ async function createApp(
   return buildApp(config);
 }
 
-// Build app → `createHandler` → `fetch(request, invocation)`: the seam every
+// Build app → `createRuntimeHandler` → `fetch(request, invocation)`: the seam every
 // runtime adapter conforms to. `env` is `unknown` because the tests hand the
 // handler deliberately broken bags (a null binding, no object at all).
 async function invoke(
@@ -58,9 +58,9 @@ async function invoke(
   plugins?: PluginDescriptor[],
 ): Promise<Response> {
   const app = await createApp(database, plugins);
-  return cloudflare()
-    .createHandler(app)
-    .fetch(request, { env: env as Invocation["env"] });
+  return createRuntimeHandler(app).fetch(request, {
+    env: env as Invocation["env"],
+  });
 }
 
 /**
@@ -94,7 +94,7 @@ async function assetsFromContext(
   return captured;
 }
 
-describe("cloudflare adapter — createHandler().fetch", () => {
+describe("cloudflare adapter — createRuntimeHandler().fetch", () => {
   test("routes the public / request through the dispatcher", async () => {
     const response = await invoke(
       new Request("https://cms.example/unknown"),
@@ -153,12 +153,13 @@ describe("cloudflare adapter — createHandler().fetch", () => {
     const app = await buildApp(config);
     const waited: Promise<unknown>[] = [];
 
-    const response = await cloudflare()
-      .createHandler(app)
-      .fetch(new Request("https://cms.example/unknown"), {
+    const response = await createRuntimeHandler(app).fetch(
+      new Request("https://cms.example/unknown"),
+      {
         env: {},
         waitUntil: (promise) => void waited.push(promise),
-      });
+      },
+    );
 
     // Delivery was routed through waitUntil — never awaited before returning.
     expect(waited.length).toBeGreaterThan(0);
@@ -197,7 +198,7 @@ describe("cloudflare adapter — createHandler().fetch", () => {
   // Every invocation the Worker entry builds carries `waitUntil`, so the drain
   // set is always empty here; the adapter still has to pass `dispose` through.
   test("exposes dispose(), and it resolves at once", async () => {
-    const handler = cloudflare().createHandler(await createApp());
+    const handler = createRuntimeHandler(await createApp());
 
     const outcome = await Promise.race([
       handler.dispose?.().then(() => "disposed" as const),
@@ -211,7 +212,7 @@ describe("cloudflare adapter — createHandler().fetch", () => {
 
   test("each request receives its own context (no cross-request leakage)", async () => {
     const app = await createApp();
-    const handler = cloudflare().createHandler(app);
+    const handler = createRuntimeHandler(app);
 
     const [a, b] = await Promise.all([
       handler.fetch(new Request("https://cms.example/unknown?seq=1"), {
@@ -275,14 +276,12 @@ describe("cloudflare adapter — createHandler().fetch", () => {
       }),
     );
 
-    const response = await cloudflare()
-      .createHandler(app)
-      .fetch(
-        new Request("https://cms.example/whoami", {
-          headers: { "cf-connecting-ip": "203.0.113.7" },
-        }),
-        { env: {} },
-      );
+    const response = await createRuntimeHandler(app).fetch(
+      new Request("https://cms.example/whoami", {
+        headers: { "cf-connecting-ip": "203.0.113.7" },
+      }),
+      { env: {} },
+    );
 
     expect(await response.text()).toBe("203.0.113.7");
   });
@@ -551,7 +550,7 @@ describe("cloudflare adapter — binding validation", () => {
       connect: () => ({ db: {} }),
     };
     const app = await createApp(adapterWithBindings);
-    const handler = cloudflare().createHandler(app);
+    const handler = createRuntimeHandler(app);
     const first = await handler.fetch(
       new Request("https://cms.example/unknown"),
       { env: { DB: { fake: true } } },
