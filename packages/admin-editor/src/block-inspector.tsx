@@ -5,7 +5,6 @@ import { Trans } from "@lingui/react";
 import type { JsonValue } from "@plumix/core/blocks";
 import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
-import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
 
 import { createNodeFromEntry } from "./block-catalog.js";
@@ -182,9 +181,8 @@ export function BlockInspector({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="destructive-ghost"
             size="sm"
-            className={destructiveGhostClassName}
             data-testid="inspector-remove-table-row"
             onClick={handleRemoveTableRow}
           >
@@ -193,9 +191,8 @@ export function BlockInspector({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="destructive-ghost"
             size="sm"
-            className={destructiveGhostClassName}
             data-testid="inspector-remove-table-column"
             onClick={handleRemoveTableColumn}
           >

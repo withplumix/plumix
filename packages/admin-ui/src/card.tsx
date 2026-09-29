@@ -1,15 +1,37 @@
+import type { VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { cva } from "class-variance-authority";
 
 import { cn } from "./utils.js";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+const cardVariants = cva(
+  "group/card bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+  {
+    variants: {
+      variant: {
+        default: "",
+        // A card that is itself a link, like a settings page's entry.
+        interactive: "hover:border-primary transition-colors",
+        // A danger zone; its `CardTitle` turns red with it.
+        destructive: "border-destructive/50",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+function Card({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof cardVariants>) {
   return (
     <div
       data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
-        className,
-      )}
+      data-variant={variant}
+      className={cn(cardVariants({ variant }), className)}
       {...props}
     />
   );
@@ -32,7 +54,10 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn(
+        "group-data-[variant=destructive]/card:text-destructive leading-none font-semibold",
+        className,
+      )}
       {...props}
     />
   );

@@ -110,7 +110,8 @@ export function EditorHeader({
                 id: "editor.header.title",
                 message: "Title",
               })}
-              className="hover:bg-accent focus-visible:bg-background h-8 max-w-md min-w-0 border-transparent bg-transparent text-sm font-medium shadow-none"
+              variant="inline"
+              className="h-8 max-w-md min-w-0 text-sm font-medium"
               placeholder={i18n._({
                 id: "editor.header.untitled",
                 message: "Untitled",

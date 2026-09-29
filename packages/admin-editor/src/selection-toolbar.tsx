@@ -2,7 +2,6 @@ import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
-import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import {
   ArrowDown,
   ArrowUp,
@@ -164,7 +163,7 @@ export function SelectionToolbar({
           icon={<Trash2 className="size-4" />}
           onClick={act(() => state.removeSelected())}
           label={<Trans id="editor.selection.delete" message="Delete" />}
-          className={destructiveGhostClassName}
+          variant="destructive-ghost"
         />
       </div>
     </TooltipProvider>
@@ -178,26 +177,25 @@ function IconAction({
   label,
   disabled,
   onClick,
-  className,
+  variant = "ghost",
 }: {
   readonly testId: string;
   readonly icon: ReactNode;
   readonly label: ReactNode;
   readonly disabled?: boolean;
   readonly onClick: () => void;
-  readonly className?: string;
+  readonly variant?: "ghost" | "destructive-ghost";
 }): ReactElement {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
+          variant={variant}
           size="icon-sm"
           data-testid={testId}
           disabled={disabled}
           onClick={onClick}
-          className={className}
         >
           {icon}
         </Button>

@@ -35,7 +35,6 @@ import {
 } from "@plumix/admin-ui/select";
 import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
-import { cn } from "@plumix/admin-ui/utils";
 import { resolveLabel } from "@plumix/core/i18n";
 
 // Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
@@ -361,15 +360,12 @@ function ComboboxControl({
       <PopoverTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant="trigger"
           role="combobox"
           aria-expanded={open}
           id={id}
           data-testid={testId}
-          className={cn(
-            "w-full justify-between font-normal",
-            current === "" && "text-muted-foreground",
-          )}
+          data-placeholder={current === "" ? "" : undefined}
         >
           <span className="truncate">{triggerLabel}</span>
           <ChevronsUpDown className="opacity-50" />

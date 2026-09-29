@@ -11,6 +11,7 @@ import type { JSONContent } from "@plumix/admin-editor/rich-text-field";
 import type { JsonObject } from "@plumix/core";
 import type {
   MetaBoxFieldManifestEntry,
+  MetaBoxFieldSpan,
   RichtextMetaBoxField,
   TemporalInputType,
 } from "@plumix/core/manifest";
@@ -87,8 +88,7 @@ const M = {
 // Controller reads the form context for `control`, which keeps this
 // component agnostic of the caller's TFieldValues generic.
 //
-// `className` lands on the outer FormItem so parent grids can push a
-// col-span class onto it (see `metaBoxFieldColSpanClass`). Unknown
+// `span` places the outer FormItem in a parent's 12-column grid. Unknown
 // `inputType` falls back to a plain text input with a dev-mode warning
 // so a plugin-specific type doesn't crash the editor. Custom React
 // renderers (plugin chunks) are a future extension seam — they slot in
@@ -97,12 +97,12 @@ export function MetaBoxField({
   field,
   name,
   disabled = false,
-  className,
+  span,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly name: string;
   readonly disabled?: boolean;
-  readonly className?: string;
+  readonly span?: MetaBoxFieldSpan;
 }): ReactNode {
   const renderLabel = useLabel();
   const labelText = renderLabel(field.label);
@@ -119,7 +119,7 @@ export function MetaBoxField({
           // them: the box centres in a control-height row to meet the
           // neighbouring inputs' midline instead of floating at their label.
           return (
-            <FormItem className={className} data-testid={testIdPrefix}>
+            <FormItem span={span} data-testid={testIdPrefix}>
               <FormLabel>{labelText}</FormLabel>
               <div className="flex min-h-9 items-center gap-2">
                 <FormControl>
@@ -154,7 +154,7 @@ export function MetaBoxField({
           // optional on/off state text tracks the current value.
           const stateText = rhf.value === true ? field.onText : field.offText;
           return (
-            <FormItem className={className} data-testid={testIdPrefix}>
+            <FormItem span={span} data-testid={testIdPrefix}>
               <FormLabel>{labelText}</FormLabel>
               <div className="flex min-h-9 items-center gap-2">
                 <FormControl>
@@ -197,7 +197,7 @@ export function MetaBoxField({
           // Select root, which renders no DOM node) so the label/error/
           // aria-invalid wiring lands on a real element.
           return (
-            <FormItem className={className} data-testid={testIdPrefix}>
+            <FormItem span={span} data-testid={testIdPrefix}>
               <FormLabel>{labelText}</FormLabel>
               <Select
                 name={rhf.name}
@@ -256,7 +256,7 @@ export function MetaBoxField({
           </FormControl>
         );
         return (
-          <FormItem className={className} data-testid={testIdPrefix}>
+          <FormItem span={span} data-testid={testIdPrefix}>
             <FormLabel>{labelText}</FormLabel>
             {adorned ? (
               <AdornedControl

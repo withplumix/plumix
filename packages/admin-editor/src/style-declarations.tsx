@@ -11,7 +11,6 @@ import {
   CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
-import { destructiveRowClassName } from "@plumix/admin-ui/destructive";
 import { ChevronsUpDown, Plus, Trash2 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -26,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { cn } from "@plumix/admin-ui/utils";
 
 import { CSS_PROPERTIES } from "./css-properties.js";
 import { useStyleField } from "./use-style-field.js";
@@ -198,9 +196,9 @@ function DeclarationRow({
       )}
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className={cn(destructiveRowClassName, "size-8 shrink-0")}
+        variant="destructive-row"
+        size="icon-sm"
+        className="shrink-0"
         data-testid={`style-declaration-${property}-remove`}
         onClick={() => field.clear()}
       >
@@ -285,10 +283,8 @@ function AddDeclaration({
             // come from the attribute, not the visible text).
             aria-label={property === "" ? keyLabel : property}
             data-testid="style-declaration-add-key"
-            className={cn(
-              "h-8 w-1/3 shrink-0 justify-between gap-1 font-normal",
-              property === "" && "text-muted-foreground",
-            )}
+            data-placeholder={property === "" ? "" : undefined}
+            className="w-1/3 shrink-0"
           >
             <span className="truncate">
               {property === "" ? (

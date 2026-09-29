@@ -18,7 +18,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "./button.js";
-import { destructiveRowClassName } from "./destructive.js";
 import { GripVertical, X } from "./icons.js";
 import { cn } from "./utils.js";
 
@@ -155,9 +154,8 @@ function SortableRow({
       {onRemove ? (
         <Button
           type="button"
-          variant="ghost"
+          variant="destructive-row"
           size="icon-sm"
-          className={destructiveRowClassName}
           disabled={disabled}
           onClick={() => {
             onRemove(id);

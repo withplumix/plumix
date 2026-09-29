@@ -6,7 +6,7 @@
   },
   "src/block-input-control.tsx": {
     "shadcn/no-restyle": {
-      "count": 4
+      "count": 1
     }
   },
   "src/canvas-frame.tsx": {
@@ -21,15 +21,10 @@
   },
   "src/editor-header.tsx": {
     "shadcn/no-restyle": {
-      "count": 7
+      "count": 2
     }
   },
   "src/html-attributes.tsx": {
-    "shadcn/no-restyle": {
-      "count": 4
-    }
-  },
-  "src/json-inspector.tsx": {
     "shadcn/no-restyle": {
       "count": 1
     }
@@ -44,19 +39,14 @@
       "count": 2
     }
   },
-  "src/style-control.tsx": {
-    "shadcn/no-restyle": {
-      "count": 2
-    }
-  },
   "src/style-declarations.tsx": {
     "shadcn/no-restyle": {
-      "count": 4
+      "count": 1
     }
   },
   "src/styles-tab.tsx": {
     "shadcn/no-restyle": {
-      "count": 25
+      "count": 3
     }
   }
 }

@@ -20,6 +20,18 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // A select-like picker: the call site sets `data-placeholder` while
+        // nothing is picked, rather than recolouring it with a class.
+        trigger:
+          "bg-background hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 data-[placeholder]:text-muted-foreground w-full justify-between border font-normal shadow-xs",
+        // A destructive action among non-destructive ghost peers. The hover
+        // keeps the red, which the ghost hover would otherwise wash out.
+        "destructive-ghost":
+          "text-destructive hover:bg-accent hover:text-destructive dark:hover:bg-accent/50",
+        // A destructive action repeated on every row, where a red control on
+        // each would be noise: muted until hovered.
+        "destructive-row":
+          "text-muted-foreground hover:bg-accent hover:text-destructive dark:hover:bg-accent/50",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

@@ -31,7 +31,6 @@ import {
   AlertDialogTrigger,
   Button,
   Checkbox,
-  destructiveGhostClassName,
   Input,
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
@@ -785,11 +784,10 @@ function SortableTreeRow({
       ) : null}
       <Button
         type="button"
-        variant="ghost"
+        variant="destructive-ghost"
         size="xs"
         data-testid={`menu-item-remove-${String(id)}`}
         disabled={isUnauthorized}
-        className={destructiveGhostClassName}
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "removeItem", key: item.key });

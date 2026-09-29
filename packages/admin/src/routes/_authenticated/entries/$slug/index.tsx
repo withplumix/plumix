@@ -44,7 +44,6 @@ import {
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
-import { destructiveRowClassName } from "@plumix/admin-ui/destructive";
 import {
   Empty,
   EmptyContent,
@@ -374,7 +373,6 @@ function buildColumns({
 }): DataTableColumnDef<Entry>[] {
   const selectColumn: DataTableColumnDef<Entry> = {
     id: "select",
-    meta: { className: "w-8" },
     header: ({ table }) => {
       const all = table.getIsAllPageRowsSelected();
       const some = table.getIsSomePageRowsSelected();
@@ -449,7 +447,7 @@ function buildColumns({
     },
     {
       accessorKey: "updatedAt",
-      meta: { className: "text-end" },
+      meta: { align: "end" },
       header: () => (
         <SortableHeader
           label={renderLabel(M.columnUpdated)}
@@ -1231,7 +1229,7 @@ function TitleCell({
               onClick={() => {
                 onTrash(entry.id);
               }}
-              className={cn(destructiveRowClassName, "disabled:opacity-50")}
+              className="text-muted-foreground hover:text-destructive disabled:opacity-50"
               data-testid={`content-list-row-trash-${String(entry.id)}`}
             >
               {isTrashing
@@ -1286,7 +1284,7 @@ function TitleCell({
               onClick={() => {
                 onDeletePermanent(entry.id);
               }}
-              className={destructiveRowClassName}
+              className="text-muted-foreground hover:text-destructive"
               data-testid={`content-list-row-delete-${String(entry.id)}`}
             >
               {renderLabel(M.rowDelete)}

@@ -1,11 +1,6 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import { useState } from "react";
-import {
-  Button,
-  Checkbox,
-  destructiveGhostClassName,
-  Input,
-} from "plumix/admin/ui";
+import { Button, Checkbox, Input } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type {
@@ -194,16 +189,13 @@ export function CommentsShell(): React.ReactElement {
               <Button
                 key={action}
                 type="button"
-                variant="ghost"
+                variant={
+                  isDestructiveAction(action) ? "destructive-ghost" : "ghost"
+                }
                 size="xs"
                 data-testid={`comments-bulk-${action}`}
                 disabled={bulk.isPending}
                 onClick={() => runBulk(action)}
-                className={
-                  isDestructiveAction(action)
-                    ? destructiveGhostClassName
-                    : undefined
-                }
               >
                 {i18n._(ACTION_LABELS[action])}
               </Button>
@@ -271,17 +263,16 @@ export function CommentsShell(): React.ReactElement {
                     <Button
                       key={action}
                       type="button"
-                      variant="ghost"
+                      variant={
+                        isDestructiveAction(action)
+                          ? "destructive-ghost"
+                          : "ghost"
+                      }
                       size="xs"
                       data-testid={`comment-${action}-${comment.id}`}
                       disabled={moderation.isPending}
                       onClick={() =>
                         moderation.mutate({ action, id: comment.id })
-                      }
-                      className={
-                        isDestructiveAction(action)
-                          ? destructiveGhostClassName
-                          : undefined
                       }
                     >
                       {i18n._(ACTION_LABELS[action])}

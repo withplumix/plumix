@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
-import { metaBoxFieldColSpanClass } from "@/components/meta-box/meta-box-grid.js";
 import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
 import {
   applyMetaFieldErrors,
@@ -149,7 +148,7 @@ export function SettingsGroupCard({
                   field={field}
                   name={field.key}
                   disabled={save.isPending}
-                  className={metaBoxFieldColSpanClass(field.span)}
+                  span={field.span ?? 12}
                 />
               ))}
             </div>

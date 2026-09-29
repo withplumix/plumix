@@ -5,7 +5,6 @@ import { Trans } from "@lingui/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 
 import { Button } from "@plumix/admin-ui/button";
-import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import {
   Bold,
   Code2,
@@ -36,7 +35,6 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
-import { cn } from "@plumix/admin-ui/utils";
 import { HEADING_LEVELS } from "@plumix/core/blocks";
 
 import type { RichTextExtensionOptions } from "./rich-text-extensions.js";
@@ -486,9 +484,9 @@ export function LinkPopover({
           {active ? (
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className={cn(destructiveGhostClassName, "size-8 shrink-0")}
+              variant="destructive-ghost"
+              size="icon-sm"
+              className="shrink-0"
               data-testid={`${testId}-link-remove`}
               title="Remove link"
               aria-label="Remove link"

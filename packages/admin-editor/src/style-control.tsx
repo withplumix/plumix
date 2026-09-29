@@ -63,14 +63,12 @@ export function StyleControl({
   const isCustom = field.mode === "custom";
 
   return (
-    <Field className="gap-1" data-testid={testId}>
+    <Field size="sm" data-testid={testId}>
       {/* Label above the Token/Custom toggle (not side-by-side) so the toggle
           never clips in the narrow half-width grid cells; the toggle sits at
           the right edge under the label. */}
       <div className="flex flex-col gap-0.5">
-        <FieldLabel htmlFor={controlId} className="text-xs">
-          {label}
-        </FieldLabel>
+        <FieldLabel htmlFor={controlId}>{label}</FieldLabel>
         {showModes ? (
           <div className="flex justify-end gap-0.5 text-xs">
             <ModeButton
