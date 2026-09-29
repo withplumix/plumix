@@ -23,11 +23,12 @@ Three interfaces make up the contract.
 
 The generated entry module is where those meet. `plumix build` asks your adapter for its source, the plumix Vite plugin bundles it, and the result is what the platform runs.
 
-<Aside type="note" title="Two adapters ship today">
-  `@plumix/runtime-cloudflare` and `@plumix/runtime-node` both wrap the default
-  handler, and both are short, because it does the rest. Read them beside this
-  page. [Cloudflare Workers](/deployment/cloudflare/) and
-  [Node.js](/deployment/node/) document them from the operator's side.
+<Aside type="note" title="Three adapters ship today">
+  `@plumix/runtime-cloudflare`, `@plumix/runtime-node` and `@plumix/runtime-bun`
+  all wrap the default handler, and all are short, because it does the rest.
+  Read them beside this page. [Cloudflare Workers](/deployment/cloudflare/),
+  [Node.js](/deployment/node/) and [Bun](/deployment/bun/) document them from
+  the operator's side.
 </Aside>
 
 ## Quickstart
@@ -58,8 +59,8 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
      return createPlumixHandler(app, { assets: () => assets });
    }
 
-   export function bun(): RuntimeAdapter {
-     return { name: "bun", createHandler, generateEntry };
+   export function deno(): RuntimeAdapter {
+     return { name: "deno", createHandler, generateEntry };
    }
    ```
 
@@ -78,17 +79,16 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
        "const app = await buildApp(config, { assetManifest, pluginCatalogs });",
        "const handler = config.runtime.createHandler(app);",
        "",
-       "Bun.serve({",
-       "  fetch: (request, server) =>",
-       "    handler.fetch(request, {",
-       "      env: process.env,",
-       "      clientAddress: server.requestIP(request)?.address,",
-       "    }),",
-       "});",
+       "Deno.serve((request, info) =>",
+       "  handler.fetch(request, {",
+       "    env: Deno.env.toObject(),",
+       "    clientAddress: info.remoteAddr.hostname,",
+       "  }),",
+       ");",
        "",
-       "process.on('SIGTERM', async () => {",
+       "Deno.addSignalListener('SIGTERM', async () => {",
        "  await handler.dispose?.();",
-       "  process.exit(0);",
+       "  Deno.exit(0);",
        "});",
      ].join("\n");
    }
@@ -97,11 +97,11 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the de
 3. **Name it in the config.** An adapter is a slot like any other, so a site swaps runtimes by swapping one call.
 
    ```ts no-typecheck
-   import { bun } from "@example/runtime-bun";
+   import { deno } from "@example/runtime-deno";
    import { defineConfig } from "plumix";
 
    export default defineConfig({
-     runtime: bun(),
+     runtime: deno(),
      // …
    });
    ```
@@ -123,7 +123,7 @@ import type { RuntimeAdapter } from "plumix";
 
 declare const rest: Omit<RuntimeAdapter, "name">;
 
-export const adapter: RuntimeAdapter = { name: "bun", ...rest };
+export const adapter: RuntimeAdapter = { name: "deno", ...rest };
 ```
 
 ### `RuntimeAdapter.createHandler`
@@ -187,7 +187,7 @@ declare const base: RuntimeAdapter;
 
 export const adapter: RuntimeAdapter = {
   ...base,
-  commandsModule: "@example/runtime-bun/commands",
+  commandsModule: "@example/runtime-deno/commands",
 };
 ```
 
@@ -398,7 +398,7 @@ Node 23.8 has `URLPattern` but exports it from `node:url` only, and core uses th
   before publishing a floor of your own.
 </Aside>
 
-Plumix's own repository pins Node to `^24.15.0`, above that floor.
+Plumix's own repository pins Node to `^24.15.0`, above that floor. A runtime adapter can ask more of its engine than core does: `@plumix/runtime-bun` needs Bun 1.4, whose server waits for in-flight requests on `stop()`, and the repository pins Bun to 1.4.2 in `.bun-version`. [Bun](/deployment/bun/) covers what that adapter adds.
 
 ## Proving a slot
 
