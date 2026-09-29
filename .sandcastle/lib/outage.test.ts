@@ -13,6 +13,7 @@ describe("looksLikeTheRunBeingOver", () => {
 
   test.each([
     "Claude AI usage limit reached",
+    "claude-code exited with code 1: You've hit your weekly limit · resets Sep 30, 10pm (UTC)",
     "rate_limit_error: too many requests",
     "HTTP 429 Too Many Requests",
     "Your credit balance is too low to access the Anthropic API",
