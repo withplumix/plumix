@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   copyFile,
@@ -76,6 +77,7 @@ import {
 } from "./plugin-catalog-resolve.js";
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
 import { stageUserPublic } from "./public-staging.js";
+import { swapIntoPlace } from "./swap-into-place.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
 // The pre-compiled admin SPA ships as its own package (@plumix/admin). Locate
@@ -667,10 +669,31 @@ async function stageAdminAssets(
   blockModules: readonly BlockModuleRef[],
 ): Promise<void> {
   const dest = resolve(publicDir, "_plumix/admin");
-  if (!(await destIsFresh(dest, ADMIN_SOURCE_DIR))) {
-    await rm(dest, { recursive: true, force: true });
-    await cp(ADMIN_SOURCE_DIR, dest, { recursive: true });
+  const staging = resolve(publicDir, `_plumix/.admin-staging-${randomUUID()}`);
+  await cp(ADMIN_SOURCE_DIR, staging, { recursive: true });
+  try {
+    await stageAdminInto(
+      staging,
+      manifest,
+      plugins,
+      registry,
+      projectRoot,
+      blockModules,
+    );
+    await swapIntoPlace(staging, dest);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
   }
+}
+
+async function stageAdminInto(
+  dest: string,
+  manifest: PlumixManifest,
+  plugins: readonly AnyPluginDescriptor[],
+  registry: PluginRegistry,
+  projectRoot: string,
+  blockModules: readonly BlockModuleRef[],
+): Promise<void> {
   const chunks = await stagePluginChunks(dest, plugins, projectRoot);
   // Separate from chunk staging: a server-side-only plugin (no `adminChunk`)
   // can still contribute admin-rendered labels and needs its catalogs shipped.
@@ -830,24 +853,6 @@ function escapeAttribute(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
-}
-
-async function destIsFresh(dest: string, src: string): Promise<boolean> {
-  // Dest-first: on the common cold-run case (dest doesn't exist) we skip the
-  // src stat entirely; on warm runs we pay both stats sequentially, which is
-  // dominated by filesystem cache anyway.
-  let destStat: Awaited<ReturnType<typeof stat>>;
-  try {
-    destStat = await stat(dest);
-  } catch {
-    return false;
-  }
-  try {
-    const srcStat = await stat(src);
-    return destStat.mtimeMs >= srcStat.mtimeMs;
-  } catch {
-    return false;
-  }
 }
 
 // Per-island synthesized entry name. Used as the `rollupOptions.input`
