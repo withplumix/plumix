@@ -85,7 +85,10 @@ if (!onlyTickets.length) {
   const claimedEarlier = listReadyTickets()
     .filter(({ assignees }) => assignees.length > 0)
     .map(({ number }) => number);
-  for (const ticketNumber of staleClaims(claimedEarlier, loopPullRequestsInFlight())) {
+  for (const ticketNumber of staleClaims(
+    claimedEarlier,
+    loopPullRequestsInFlight(),
+  )) {
     releaseClaim(ticketNumber);
     say(
       `#${ticketNumber} was claimed by a run that stopped mid-ticket; released`,
