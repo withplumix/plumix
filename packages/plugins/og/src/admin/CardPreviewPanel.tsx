@@ -78,7 +78,7 @@ function LoadedPreview({
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
-      <div className="bg-muted flex aspect-[40/21] items-center justify-center overflow-hidden rounded border">
+      <div className="bg-muted aspect-og-card flex items-center justify-center overflow-hidden rounded border">
         {preview ? (
           // An answer with no image is a chain that resolved to nothing, which
           // the line below already says — so the frame stays empty rather than

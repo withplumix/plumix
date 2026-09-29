@@ -303,7 +303,7 @@ export function CommentsShell(): React.ReactElement {
           <div data-testid="comment-detail-body" className="text-sm">
             {selected.bodyMd}
           </div>
-          <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <dl className="text-muted-foreground grid-cols-label-value grid gap-x-3 gap-y-1 text-xs">
             <dt className="font-medium">
               <Trans id="plugin.comments.detail.author" message="Author" />
             </dt>

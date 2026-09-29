@@ -602,7 +602,7 @@ export function MediaLibrary({
         {list.status === "success" && items.length > 0 && (
           <div
             data-testid="media-library-grid"
-            className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
+            className="grid-cols-media grid gap-4"
           >
             {items.map((item) => {
               const selected = isPicker
@@ -968,7 +968,7 @@ function UploadProgressBar({
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-sm bg-white/10">
         <div
-          className="bg-primary h-full transition-[width] duration-200 ease-in-out"
+          className="bg-primary transition-width h-full duration-200 ease-in-out"
           style={{ width: `${String(pct)}%` }}
         />
       </div>
@@ -1038,7 +1038,7 @@ function MediaCard({
       >
         {item.title}
       </div>
-      <div className="flex gap-2 text-[0.7rem] opacity-60">
+      <div className="flex gap-2 text-xs opacity-60">
         <span>{formatShortDate(i18n.locale, item.uploadedAt)}</span>
         <span>·</span>
         <span>{formatSize(i18n.locale, item.size)}</span>
@@ -1054,7 +1054,7 @@ function MediaSkeletonGrid(): ReactNode {
   return (
     <div
       data-testid="media-library-loading"
-      className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4"
+      className="grid-cols-media grid gap-4"
     >
       {placeholders.map((i) => (
         <div
@@ -1063,8 +1063,8 @@ function MediaSkeletonGrid(): ReactNode {
           className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3"
         >
           <Skeleton className="aspect-square w-full rounded-sm" />
-          <Skeleton className="h-3.5 w-[70%] rounded-sm" />
-          <Skeleton className="h-[0.7rem] w-[40%] rounded-sm" />
+          <Skeleton className="h-3.5 w-7/10 rounded-sm" />
+          <Skeleton className="h-3 w-2/5 rounded-sm" />
         </div>
       ))}
     </div>
@@ -1075,7 +1075,7 @@ function FileTypeBadge({ mime }: { mime: string }): ReactNode {
   const label = badgeLabel(mime);
   if (!label) return null;
   return (
-    <span className="absolute end-2 top-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wider text-white">
+    <span className="absolute end-2 top-2 rounded-sm bg-black/75 px-1.5 py-0.5 text-xs font-semibold tracking-wider text-white">
       {label}
     </span>
   );
@@ -1156,7 +1156,7 @@ function MediaDetailDrawer({
   return (
     <aside
       data-testid="media-detail-drawer"
-      className="border-border bg-card sticky top-8 flex max-h-[calc(100vh-4rem)] w-80 flex-shrink-0 flex-col self-start overflow-y-auto rounded-lg border"
+      className="border-border bg-card max-h-sticky-panel sticky top-8 flex w-80 flex-shrink-0 flex-col self-start overflow-y-auto rounded-lg border"
     >
       <div className="border-border flex items-center justify-between border-b px-4 py-3">
         <span className="text-xs tracking-wider opacity-70">
@@ -1241,7 +1241,7 @@ function MediaDetailDrawer({
           <div className="flex items-center gap-2">
             <code
               data-testid="media-detail-url"
-              className="flex-1 truncate text-[0.7rem] break-all opacity-85"
+              className="flex-1 truncate text-xs break-all opacity-85"
               title={absoluteUrl}
             >
               {absoluteUrl}
@@ -1252,7 +1252,7 @@ function MediaDetailDrawer({
               size="xs"
               onClick={() => void copy()}
               data-testid="media-detail-copy"
-              className="flex-shrink-0 text-[0.7rem]"
+              className="flex-shrink-0 text-xs"
             >
               {copied ? (
                 <Trans id="plugin.media.detail.copied" message="Copied" />
@@ -1375,9 +1375,7 @@ function ConfirmDialog({
 
 function DetailLabel({ children }: { children: ReactNode }): ReactNode {
   return (
-    <div className="mb-1 text-[0.7rem] tracking-wider opacity-60">
-      {children}
-    </div>
+    <div className="mb-1 text-xs tracking-wider opacity-60">{children}</div>
   );
 }
 
@@ -1464,7 +1462,7 @@ function AltEditor({
         <span
           data-testid={`${testIdPrefix}-${String(cardId)}-alt-saved`}
           aria-live="polite"
-          className="text-primary pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-[0.65rem]"
+          className="text-primary pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-xs"
         >
           <Trans id="plugin.media.altEditor.saved" message="✓ Saved" />
         </span>

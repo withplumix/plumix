@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
-  buttonVariants,
   Checkbox,
   destructiveGhostClassName,
   Input,
@@ -382,7 +381,7 @@ function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
           </AlertDialogCancel>
           <AlertDialogAction
             data-testid="menu-delete-confirm"
-            className={buttonVariants({ variant: "destructive" })}
+            variant="destructive"
             onClick={() => {
               remove.mutate({ termId });
             }}

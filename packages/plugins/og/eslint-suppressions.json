@@ -1,7 +1,0 @@
-{
-  "src/admin/CardPreviewPanel.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    }
-  }
-}

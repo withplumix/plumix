@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button, buttonVariants } from "@plumix/admin-ui/button";
+import { Button } from "@plumix/admin-ui/button";
 import {
   Card,
   CardContent,
@@ -402,7 +402,7 @@ function ApiTokensCardView({
                 <TableHead>
                   <Trans id="apiTokens.col.expires" message="Expires" />
                 </TableHead>
-                <TableHead className="w-[1%] text-end">
+                <TableHead className="w-px text-end">
                   <Trans id="apiTokens.col.actions" message="Actions" />
                 </TableHead>
               </TableRow>
@@ -493,7 +493,7 @@ function ApiTokensCardView({
             <AlertDialogAction
               data-testid="api-tokens-revoke-confirm-button"
               disabled={revokePending}
-              className={buttonVariants({ variant: "destructive" })}
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
                 if (!revokeTarget) return;

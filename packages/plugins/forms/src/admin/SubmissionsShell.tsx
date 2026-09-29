@@ -562,7 +562,7 @@ function SubmissionDetail({
         ))}
       </div>
 
-      <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+      <dl className="text-muted-foreground grid-cols-label-value grid gap-x-3 gap-y-1 text-xs">
         <dt>
           <Trans id="plugin.forms.inbox.detail.received" message="Received" />
         </dt>

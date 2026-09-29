@@ -159,7 +159,7 @@ export function ShortcutsDialog(): ReactElement {
   return (
     <Dialog open={open} onOpenChange={setShortcutsOpen}>
       <DialogContent
-        className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-dialog overflow-y-auto sm:max-w-2xl"
         data-testid="plumix-shortcuts-dialog"
         closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >
