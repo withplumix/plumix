@@ -55,6 +55,12 @@ function webServerCommandOf(config: ReturnType<typeof definePlumixE2EConfig>) {
     : "";
 }
 
+function readinessUrlOf(config: ReturnType<typeof definePlumixE2EConfig>) {
+  return config.webServer && "url" in config.webServer
+    ? config.webServer.url
+    : undefined;
+}
+
 describe("definePlumixE2EConfig", () => {
   test("derives baseURL from port when not explicitly set", () => {
     const config = definePlumixE2EConfig({
@@ -228,18 +234,25 @@ describe("definePlumixE2EConfig", () => {
     });
   });
 
-  test("webServer readiness defaults to URL-based polling against baseURL", () => {
+  test("a playground's readiness waits on a request the Plumix handler answers, not the admin shell", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
       configDir,
       playground: "..",
     });
 
-    const url =
-      config.webServer && "url" in config.webServer
-        ? config.webServer.url
-        : undefined;
-    expect(url).toBe("http://localhost:3040/_plumix/admin/");
+    expect(readinessUrlOf(config)).toBe(
+      "http://localhost:3040/_plumix/auth/magic-link/verify",
+    );
+  });
+
+  test("a custom webServerCommand's readiness polls baseURL", () => {
+    const config = definePlumixE2EConfig({
+      port: 3040,
+      webServerCommand: "noop",
+    });
+
+    expect(readinessUrlOf(config)).toBe("http://localhost:3040/_plumix/admin/");
   });
 
   test("webServerPort override switches readiness to TCP port", () => {
@@ -382,11 +395,9 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
         playground: "..",
       });
 
-      const url =
-        config.webServer && "url" in config.webServer
-          ? config.webServer.url
-          : undefined;
-      expect(url).toBe("http://localhost:3110/_plumix/admin/");
+      expect(readinessUrlOf(config)).toBe(
+        "http://localhost:3110/_plumix/auth/magic-link/verify",
+      );
     });
   });
 
