@@ -24,7 +24,17 @@ const CACHE_MOUNTS = [
     hostPath: join(homedir(), ".sandcastle-caches/playwright"),
     sandboxPath: "/home/agent/.cache/ms-playwright",
   },
+  {
+    hostPath: join(homedir(), ".sandcastle-caches/bun"),
+    sandboxPath: "/home/agent/.bun",
+  },
 ];
+
+const INSTALL_THE_PINNED_BUN =
+  'if [ -f .bun-version ]; then v="$(cat .bun-version)"; ' +
+  '[ "$(~/.bun/bin/bun --version 2>/dev/null)" = "$v" ] || ' +
+  'curl -fsSL https://bun.sh/install | bash -s "bun-v$v"; ' +
+  "mkdir -p ~/.local/bin && ln -sf ~/.bun/bin/bun ~/.local/bin/bun; fi";
 
 const TASKS_A_LANE_RUNS_AT_ONCE = 2;
 const WORKERS_EACH_OF_THOSE_TASKS_GETS = 2;
@@ -39,7 +49,8 @@ const ENV_THAT_KEEPS_TURBO_FROM_OVERSUBSCRIBING_THE_CORES = {
   PLAYWRIGHT_BROWSERS_PATH: "/home/agent/.cache/ms-playwright",
 };
 
-const SETUP_STEPS = [
+export const SETUP_STEPS = [
+  INSTALL_THE_PINNED_BUN,
   "pnpm install --frozen-lockfile",
   "pnpm --filter @plumix/admin exec playwright install chromium",
   "pnpm build",
