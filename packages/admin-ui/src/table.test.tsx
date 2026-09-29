@@ -5,7 +5,7 @@ import { TableCell, TableHead } from "./table.js";
 
 function classesOf(markup: string): string[] {
   const escaped = /class="([^"]*)"/.exec(markup)?.[1] ?? "";
-  return escaped.replaceAll("&amp;", "&").replaceAll("&gt;", ">").split(" ");
+  return escaped.replaceAll("&gt;", ">").replaceAll("&amp;", "&").split(" ");
 }
 
 describe("TableHead and TableCell", () => {
