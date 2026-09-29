@@ -11,7 +11,13 @@ edit any file, do not commit.
 
 The ticket it claims to implement:
 
-!`gh issue view {{TICKET}} --json number,title,body`
+!`gh issue view {{TICKET}} --json number,title,body,comments`
+
+A decision the ticket pins — a value, a trade-off, a behaviour it changes on
+purpose — is a requirement, not a finding, even where you would have chosen
+differently. The brief may be in a comment rather than the body. If you think a
+pinned decision is wrong, report it as `low` and say why; it never stops the
+branch.
 
 # Output
 

@@ -15,6 +15,15 @@ AGENTS.md is the standard: comments say why and never what, no safety nets the
 ticket did not ask for, no N+1, extend the suite that already covers the area
 rather than adding a second harness.
 
+The ticket it implements:
+
+!`gh issue view {{TICKET}} --json number,title,body,comments`
+
+A decision the ticket pins — what stays duplicated, what is left for a later
+ticket, what the scope excludes — is a requirement, not a finding. If you think a
+pinned decision is wrong, report it as `low` and say why; it never stops the
+branch.
+
 # Output
 
 Emit your findings as JSON inside `<findings>` tags. Empty array if nothing is
