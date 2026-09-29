@@ -8,6 +8,8 @@ export { bunSqlite } from "./bun-sqlite.js";
 export { diskStorage } from "./disk-storage.js";
 export type { DiskObjectStorage, DiskStorageConfig } from "./disk-storage.js";
 export { bunS3 } from "./bun-s3.js";
+export { images } from "./images.js";
+export type { ImagesConfig } from "./images.js";
 export type { BunS3Config, BunS3ObjectStorage } from "./bun-s3.js";
 export type {
   BunSqliteConfig,

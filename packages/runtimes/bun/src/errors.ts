@@ -76,3 +76,39 @@ export class StorageError extends Error {
     );
   }
 }
+
+export class ImagesError extends Error {
+  static {
+    ImagesError.prototype.name = "ImagesError";
+  }
+
+  readonly code: "invalid_widths" | "upstream";
+  /** What the route answers in place of the variant. */
+  readonly status: number;
+
+  private constructor(
+    code: ImagesError["code"],
+    message: string,
+    status: number,
+  ) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+
+  static invalidWidths(ctx: { widths: readonly number[] }): ImagesError {
+    return new ImagesError(
+      "invalid_widths",
+      `@plumix/runtime-bun: images() needs \`widths\` to be a non-empty list of positive integers, got ${JSON.stringify(ctx.widths)}`,
+      500,
+    );
+  }
+
+  static upstream(ctx: { status: number }): ImagesError {
+    return new ImagesError(
+      "upstream",
+      `@plumix/runtime-bun: the image source answered ${String(ctx.status)}`,
+      ctx.status,
+    );
+  }
+}

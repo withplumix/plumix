@@ -542,6 +542,12 @@ export const ROSTER: Readonly<
       },
       {
         reason:
+          "the image-delivery slot a site config wires, which the media " +
+          "plugin requires",
+        names: ["images", "ImagesConfig"],
+      },
+      {
+        reason:
           "what the generated entry calls — `.env` loaded when run, the " +
           "site built, the process served — and the site and serve " +
           "options it hands an embedder mounting it in its own `Bun.serve`, " +

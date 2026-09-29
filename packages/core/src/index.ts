@@ -80,6 +80,30 @@ export type {
   MemoryObjectStorage,
   MemoryStorageConfig,
 } from "./runtime/memory-storage.js";
+export {
+  clampQuality,
+  etagMatches,
+  fetchRemoteImageSource,
+  IMAGE_ROUTE,
+  IMAGE_SOURCE_HEADERS,
+  imageSourceKey,
+  imageTransformUrl,
+  isPermittedImageSource,
+  isSameHostImageSource,
+  negotiateImageFormat,
+  parseImageParams,
+  readImageSource,
+  snapWidth,
+} from "./runtime/image-rules.js";
+export type {
+  ImageFit,
+  ImageFormat,
+  ImageParams,
+  ImageSourceResult,
+  ImageUrlRules,
+  NegotiatedFormat,
+  RemoteImageSourceOptions,
+} from "./runtime/image-rules.js";
 export { resolveAssetPath } from "./runtime/asset-path.js";
 export type { AssetPath } from "./runtime/asset-path.js";
 export { trustRequest } from "./runtime/request-trust.js";
