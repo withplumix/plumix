@@ -19,8 +19,9 @@ for names main renamed or removed that the rest of this branch still uses, and f
 them in the same commit. For `pnpm-lock.yaml`, take main's and run `pnpm install`;
 for `.po` catalogs, resolve the entries and let the gates catch drift.
 
-Continue until `git status` shows no rebase in progress. The harness re-runs the
-full gate suite afterwards, so do not run it yourself.
+Continue until `git status` shows no rebase in progress. The harness pushes the
+branch as soon as the rebase finishes and CI checks it, so do not run the gates
+yourself: this sandbox is not installed or built.
 
 Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
 shared with every other checkout on that machine, and your own worktree's path does not resolve

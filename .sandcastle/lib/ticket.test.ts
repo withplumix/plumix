@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { RunAgentPhase } from "./agent.js";
 import { CHANGESET_GATE, GATES } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
@@ -7,6 +8,7 @@ import {
   readDeclinedTag,
   readFindingsTag,
   readPullRequestTag,
+  reviewAll,
 } from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
@@ -142,7 +144,7 @@ describe("gate applicability", () => {
       ({ name }) => name,
     );
 
-    expect(unconditional).toContain("typecheck");
+    expect(unconditional).toContain("format");
     expect(unconditional).toContain("test");
     expect(unconditional).toContain("knip");
   });
@@ -261,5 +263,40 @@ describe("sandbox setup", () => {
     expect(bun).toBeLessThan(
       SETUP_STEPS.findIndex((step) => step === "pnpm build"),
     );
+  });
+});
+
+describe("reviewAll", () => {
+  test("the reviewers read the branch at the same time, and their findings keep the reviewers' order", async () => {
+    const started: string[] = [];
+    let everyoneStarted: () => void = () => {};
+    const allThree = new Promise<void>((resolve) => {
+      everyoneStarted = resolve;
+    });
+    const runAgentPhase = async (phase: string) => {
+      started.push(phase);
+      if (started.length === 3) everyoneStarted();
+      await allThree;
+      const reviewer = phase.split(":")[1]?.split("#")[0] ?? phase;
+      return {
+        stdout: findingsBlock(
+          `{"findings":[{"file":"${reviewer}.ts","severity":"high","summary":"s","why":"w"}]}`,
+        ),
+      } as unknown as Awaited<ReturnType<RunAgentPhase>>;
+    };
+
+    const findings = await reviewAll(
+      runAgentPhase,
+      { record: () => {} },
+      TICKET,
+      1,
+      "body",
+    );
+
+    expect(findings.map(({ file }) => file)).toEqual([
+      "correctness.ts",
+      "simplify.ts",
+      "spec.ts",
+    ]);
   });
 });

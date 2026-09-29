@@ -19,7 +19,7 @@ import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import {
   closePlumixSandbox,
-  createReadOnlySandbox,
+  createUnbuiltSandbox,
   pinSandboxImage,
 } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
@@ -152,7 +152,7 @@ const sandboxes = await Promise.all(
   Array.from({ length: laneCount }, (_, lane) => {
     const branch = `triage/run-${branchTokenThatOutlivesAnInterruptedRun}-lane-${lane}`;
     resetBranchToMain(branch);
-    return createReadOnlySandbox(branch);
+    return createUnbuiltSandbox(branch);
   }),
 ).catch((error: unknown) => {
   say(

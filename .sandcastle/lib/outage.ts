@@ -28,3 +28,23 @@ export const whenTheLimitLifts = (
   if (lifts <= now) lifts.setUTCDate(lifts.getUTCDate() + 1);
   return lifts;
 };
+
+const GITHUB_DROPPED_IT =
+  /internal server error|\b50[0234]\b|could not resolve host|connection reset|connection timed out|operation timed out|early eof|unexpected disconnect/i;
+
+const PAUSES_BEFORE_ANOTHER_TRY_MS = [10_000, 30_000, 60_000];
+
+export const retryWhatGitHubDropped = async <T>(
+  attempt: () => Promise<T>,
+  pause: (ms: number) => Promise<void>,
+): Promise<T> => {
+  for (const ms of PAUSES_BEFORE_ANOTHER_TRY_MS) {
+    try {
+      return await attempt();
+    } catch (error) {
+      if (!GITHUB_DROPPED_IT.test(String(error))) throw error;
+      await pause(ms);
+    }
+  }
+  return attempt();
+};

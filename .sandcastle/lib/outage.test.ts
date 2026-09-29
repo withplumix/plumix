@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { looksLikeTheRunBeingOver, whenTheLimitLifts } from "./outage.js";
+import {
+  looksLikeTheRunBeingOver,
+  retryWhatGitHubDropped,
+  whenTheLimitLifts,
+} from "./outage.js";
 
 describe("looksLikeTheRunBeingOver", () => {
   test("recognises the sentence claude code actually prints", () => {
@@ -89,5 +93,74 @@ describe("whenTheLimitLifts", () => {
         at("2026-09-27T18:00:00Z"),
       ),
     ).toBeNull();
+  });
+});
+
+describe("retryWhatGitHubDropped", () => {
+  const PUSH_REJECTED_BY_A_500 =
+    "Command failed: git push --force-with-lease -u origin feat/x-2725\nremote: Internal Server Error\n ! [remote rejected] feat/x-2725 -> feat/x-2725 (Internal Server Error)";
+
+  const failingThenSucceeding = (failures: readonly string[]) => {
+    let calls = 0;
+    return {
+      attempt: async () => {
+        const failure = failures[calls];
+        calls += 1;
+        if (failure !== undefined) throw new Error(failure);
+        return "pushed";
+      },
+      calls: () => calls,
+    };
+  };
+
+  test("a push GitHub answered with a 500 is tried again until it lands", async () => {
+    const push = failingThenSucceeding([
+      PUSH_REJECTED_BY_A_500,
+      PUSH_REJECTED_BY_A_500,
+    ]);
+    const paused: number[] = [];
+
+    await expect(
+      retryWhatGitHubDropped(push.attempt, async (ms) => {
+        paused.push(ms);
+      }),
+    ).resolves.toBe("pushed");
+    expect(push.calls()).toBe(3);
+    expect(paused).toHaveLength(2);
+  });
+
+  test.each([
+    "The requested URL returned error: 502",
+    "remote: fatal error in commit_refs (HTTP 503)",
+    "fatal: unable to access 'https://github.com/o/r.git/': Could not resolve host: github.com",
+    "error: RPC failed; curl 56 Recv failure: Connection reset by peer",
+  ])("%s is worth another try", async (failure) => {
+    const push = failingThenSucceeding([failure]);
+
+    await expect(
+      retryWhatGitHubDropped(push.attempt, async () => {}),
+    ).resolves.toBe("pushed");
+  });
+
+  test("a push refused for its content fails at once", async () => {
+    const push = failingThenSucceeding([
+      " ! [rejected] feat/x-2725 -> feat/x-2725 (stale info)",
+    ]);
+
+    await expect(
+      retryWhatGitHubDropped(push.attempt, async () => {}),
+    ).rejects.toThrow("stale info");
+    expect(push.calls()).toBe(1);
+  });
+
+  test("GitHub still failing after the last pause is reported", async () => {
+    const push = failingThenSucceeding(
+      Array.from({ length: 10 }, () => PUSH_REJECTED_BY_A_500),
+    );
+
+    await expect(
+      retryWhatGitHubDropped(push.attempt, async () => {}),
+    ).rejects.toThrow("Internal Server Error");
+    expect(push.calls()).toBeLessThan(10);
   });
 });

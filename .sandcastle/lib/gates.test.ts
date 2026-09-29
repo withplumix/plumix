@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Gate } from "./gates.js";
-import { gateBehindCheck, GATES, runGates } from "./gates.js";
+import { gateBehindCheck, GATES, GATES_LEFT_TO_CI, runGates } from "./gates.js";
 
 const sandboxWhereTheseCommandsFail = (failing: readonly string[]) => ({
   exec: async (command: string) => ({
@@ -139,7 +139,9 @@ describe("package-scoped gates", () => {
   test.each(["lint", "typecheck", "test", "e2e", "publint", "attw"])(
     "%s runs only the packages the branch changed and the packages that depend on them",
     (name) => {
-      const gate = GATES.find((candidate) => candidate.name === name);
+      const gate = [...GATES, ...GATES_LEFT_TO_CI].find(
+        (candidate) => candidate.name === name,
+      );
 
       expect(gate?.command).toContain("--filter=...[origin/main]");
     },
@@ -148,7 +150,9 @@ describe("package-scoped gates", () => {
   test.each(["lint", "typecheck", "test", "e2e", "publint", "attw"])(
     "%s prints only the tasks that failed, so the output the fixer is handed ends with the failure",
     (name) => {
-      const gate = GATES.find((candidate) => candidate.name === name);
+      const gate = [...GATES, ...GATES_LEFT_TO_CI].find(
+        (candidate) => candidate.name === name,
+      );
 
       expect(gate?.command).toContain("--output-logs=errors-only");
     },

@@ -1,13 +1,19 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
+import type { Gate } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
 import type { MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
 import { rebaseOntoLatestMain } from "./freshen.js";
-import { CHANGESET_GATE, GATES } from "./gates.js";
+import {
+  CHANGESET_GATE,
+  gateBehindCheck,
+  GATES,
+  GATES_LEFT_TO_CI,
+} from "./gates.js";
 import {
   branchOfPullRequest,
   clearLeftoverWorktree,
@@ -22,6 +28,7 @@ import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
   createPlumixSandbox,
+  createUnbuiltSandbox,
 } from "./sandbox.js";
 import {
   fixerFor,
@@ -94,6 +101,26 @@ export const asCiEvidenceBrief = (
     );
   }
   return sections.join("\n\n");
+};
+
+const INSTALL_GATE: Gate = {
+  name: "install",
+  command: "pnpm install --frozen-lockfile && pnpm build",
+};
+
+export const gatesARepairRuns = (
+  refusal: Extract<MergeOutcome, { status: "failed" }>,
+): readonly Gate[] => {
+  if (refusal.conflicted) return [];
+  const failedInCi = new Set(
+    refusal.failingChecks.map(({ name }) => gateBehindCheck(name)),
+  );
+  return [
+    INSTALL_GATE,
+    ...GATES_LEFT_TO_CI.filter((gate) => failedInCi.has(gate)),
+    ...GATES,
+    CHANGESET_GATE,
+  ];
 };
 
 const gh = (args: readonly string[], cwd = REPO_ROOT): string =>
@@ -201,7 +228,9 @@ export const repairPullRequest = async (
       say(`  CI run ${runId} is still going; reading what it has`);
   }
 
-  const sandbox = await createPlumixSandbox(branch);
+  const sandbox = await (
+    refusal.conflicted ? createUnbuiltSandbox : createPlumixSandbox
+  )(branch);
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
   const declined = (reason: string): RepairOutcome => ({
     status: "declined",
@@ -269,18 +298,17 @@ export const repairPullRequest = async (
       if (fixDeclined) return declined(`${refusal.reason}\n\n${fixDeclined}`);
     }
 
-    const install = {
-      name: "install",
-      command: "pnpm install --frozen-lockfile && pnpm build",
-    };
-    const gates = await gatesUntilGreen(
-      sandbox,
-      [install, ...GATES, CHANGESET_GATE],
-      journal,
-      fixer,
-      "repair",
-    );
-    if (gates.blocked) return declined(gates.blocked);
+    const toRun = gatesARepairRuns(refusal);
+    if (toRun.length > 0) {
+      const gates = await gatesUntilGreen(
+        sandbox,
+        toRun,
+        journal,
+        fixer,
+        "repair",
+      );
+      if (gates.blocked) return declined(gates.blocked);
+    }
 
     const onMain = await rebaseOntoLatestMain(sandbox, syncRepoToMain);
     if (onMain === "kept") {
@@ -288,7 +316,7 @@ export const repairPullRequest = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
-    pushBranch(branch, sandbox.worktreePath);
+    await pushBranch(branch, sandbox.worktreePath);
     resolveReviewThreads((refusal.reviewThreads ?? []).map(({ id }) => id));
     return { status: "repaired" };
   } finally {

@@ -145,45 +145,44 @@ const asFixBrief = (findings: readonly Finding[]): string =>
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
 
-const reviewAll = async (
+export const reviewAll = async (
   runAgentPhase: RunAgentPhase,
-  journal: Journal,
+  journal: Pick<Journal, "record">,
   ticket: Ticket,
   round: number,
   pullRequestBody: string,
 ): Promise<readonly Finding[]> => {
-  const collected: Finding[] = [];
+  const reviews = await Promise.all(
+    REVIEWERS.map(async (reviewer) => {
+      const phase = `review:${reviewer.name}#${round}`;
+      const { stdout } = await runAgentPhase(phase, REVIEWER, {
+        promptFile: join(PROMPT_DIR, reviewer.promptFile),
+        promptArgs: {
+          TICKET: String(ticket.number),
+          BASE: MERGE_BASE,
+          PR_BODY: pullRequestBody,
+        },
+        maxIterations: 1,
+        idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
+      });
 
-  for (const reviewer of REVIEWERS) {
-    const phase = `review:${reviewer.name}#${round}`;
-    const { stdout } = await runAgentPhase(phase, REVIEWER, {
-      promptFile: join(PROMPT_DIR, reviewer.promptFile),
-      promptArgs: {
-        TICKET: String(ticket.number),
-        BASE: MERGE_BASE,
-        PR_BODY: pullRequestBody,
-      },
-      maxIterations: 1,
-      idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
-    });
-
-    const review = readFindingsTag(stdout);
-    journal.record({
-      phase: `${phase}:findings`,
-      kind: "review",
-      model: REVIEWER.model,
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      outcome: review.emittedParseableFindings ? "ok" : "fail",
-      detail: review.emittedParseableFindings
-        ? undefined
-        : "no parseable <findings> block",
-      findings: asFindingTally(review),
-    });
-    collected.push(...review.findings);
-  }
-
-  return collected;
+      const review = readFindingsTag(stdout);
+      journal.record({
+        phase: `${phase}:findings`,
+        kind: "review",
+        model: REVIEWER.model,
+        startedAt: new Date().toISOString(),
+        durationMs: 0,
+        outcome: review.emittedParseableFindings ? "ok" : "fail",
+        detail: review.emittedParseableFindings
+          ? undefined
+          : "no parseable <findings> block",
+        findings: asFindingTally(review),
+      });
+      return review.findings;
+    }),
+  );
+  return reviews.flat();
 };
 
 export interface Fixer {
@@ -392,7 +391,7 @@ export const shipTicket = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
-    pushBranch(branch, sandbox.worktreePath);
+    await pushBranch(branch, sandbox.worktreePath);
     const advisoryNote =
       advisory.length === 0
         ? ""
