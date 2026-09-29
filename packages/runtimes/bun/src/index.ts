@@ -18,6 +18,7 @@ export type {
 // What the generated entry calls: everything it does beyond importing.
 export { createBunSite, loadEnvFileWhenMain, serveProcess } from "./site.js";
 export type {
+  BunCronOverrides,
   BunSite,
   BunSiteHandler,
   BunSiteOptions,

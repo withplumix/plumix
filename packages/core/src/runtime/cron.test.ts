@@ -40,11 +40,23 @@ describe("parseCron", () => {
   });
 
   test("treats a day field beginning with * as unrestricted, as Vixie cron does", () => {
-    // `*/2` is a step over every day, not a restriction, so this fires on
-    // Mondays only — not "every second day OR any Monday".
+    // `*/2` does not count as a restriction, so the day fields AND: odd-dated
+    // Mondays — not "every second day OR any Monday".
     const stepped = parseCron("0 0 */2 * MON");
-    expect(stepped.matches(at("2026-09-07T00:00:00Z"))).toBe(true); // Monday
+    expect(stepped.matches(at("2026-09-07T00:00:00Z"))).toBe(true); // odd Monday
     expect(stepped.matches(at("2026-09-05T00:00:00Z"))).toBe(false); // odd, not Monday
+    expect(stepped.matches(at("2026-09-14T00:00:00Z"))).toBe(false); // even Monday
+  });
+
+  test("still applies the step of a day field beginning with *", () => {
+    // Unrestricted decides AND over OR; it does not throw the field's values away.
+    const oddDays = parseCron("0 0 */2 * *");
+    expect(oddDays.matches(at("2026-09-05T00:00:00Z"))).toBe(true);
+    expect(oddDays.matches(at("2026-09-06T00:00:00Z"))).toBe(false);
+
+    const everyOtherWeekday = parseCron("0 0 * * */2"); // SUN, TUE, THU, SAT
+    expect(everyOtherWeekday.matches(at("2026-09-06T00:00:00Z"))).toBe(true); // Sunday
+    expect(everyOtherWeekday.matches(at("2026-09-07T00:00:00Z"))).toBe(false); // Monday
   });
 
   test("ORs day-of-month against day-of-week when both are restricted", () => {

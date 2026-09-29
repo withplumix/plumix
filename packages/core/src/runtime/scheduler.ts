@@ -1,10 +1,9 @@
-import type {
-  CronSchedule,
-  PlumixApp,
-  ScheduledRunGuard,
-  ScheduledRunReport,
-} from "plumix/runtime";
-import { declaredSchedules, parseCron } from "plumix/runtime";
+import type { ScheduledRunReport } from "./adapter.js";
+import type { PlumixApp } from "./app.js";
+import type { CronSchedule } from "./cron.js";
+import type { ScheduledRunGuard } from "./scheduled-guard.js";
+import { parseCron } from "./cron.js";
+import { declaredSchedules } from "./schedules.js";
 
 const MINUTE_MS = 60_000;
 
@@ -58,13 +57,16 @@ const systemClock: SchedulerClock = {
   sleep: (ms) =>
     new Promise((resolve) => {
       const timer = setTimeout(resolve, ms);
-      // A pending tick must not be what keeps the process alive.
-      timer.unref();
+      // A pending tick must not be what keeps the process alive. `unref` is
+      // Node's and Bun's timer handle; a runtime whose `setTimeout` returns a
+      // number has no event loop for it to hold open.
+      (timer as { unref?: () => void }).unref?.();
     }),
 };
 
 /**
- * Fires a site's scheduled tasks on a Node deploy.
+ * Fires a site's scheduled tasks in a self-hosted process — the loop the Node
+ * and Bun runtimes both run, so a schedule means the same minute on each.
  *
  * The schedules come from `app.scheduledTasks`, never from a list here: they
  * are contributed by plugins, so any list a runtime kept would go stale the

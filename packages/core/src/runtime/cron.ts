@@ -114,9 +114,7 @@ export function parseCron(expression: string): CronSchedule {
       const dom = daysOfMonth.has(date.getUTCDate());
       const dow = daysOfWeek.has(date.getUTCDay());
       if (domRestricted && dowRestricted) return dom || dow;
-      if (domRestricted) return dom;
-      if (dowRestricted) return dow;
-      return true;
+      return dom && dow;
     },
   };
 }

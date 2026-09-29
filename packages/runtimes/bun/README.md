@@ -55,6 +55,8 @@ bun dist/server/worker.js
 
 The server loads `.env` from the working directory before the site is built, then listens on `PORT` (default 3000) and `HOST` (default `0.0.0.0`) and serves `dist/client` ahead of the site, hashed assets under `/assets/` as immutable. On `SIGTERM` or `SIGINT` it stops accepting connections, lets in-flight responses finish, drains deferred work and exits 0; after 10 seconds it cuts what is left and exits 1, naming it. A second signal exits at once.
 
+The process also fires the site's scheduled tasks, in UTC, at the same minutes as on Node and Cloudflare. Core's scheduler drives them rather than `Bun.cron`, which reads a `*`-led day field (`*/2`) beside a restricted one differently. Each run takes the scheduled-run lease in the database, so several instances sharing one database fire a minute once. On a signal the scheduler stops before deferred work drains, and its timer never keeps the process alive.
+
 Imported rather than run, `dist/server/worker.js` starts nothing and default-exports the portable `{ fetch, scheduled }`, to mount in a server of your own.
 
 ### `bunSqlite({ path })`

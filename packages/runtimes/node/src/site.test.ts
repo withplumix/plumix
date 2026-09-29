@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { PluginDescriptor } from "plumix/plugin";
+import type { Scheduler } from "plumix/runtime";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
@@ -22,7 +23,6 @@ import {
 } from "vitest";
 
 import type { NodeConfig } from "./adapter.js";
-import type { Scheduler } from "./scheduler.js";
 import type { CronOverrides, ServeProcessOptions } from "./site.js";
 import { node } from "./adapter.js";
 import { listen } from "./http/test-support.js";

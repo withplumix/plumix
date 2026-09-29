@@ -103,6 +103,13 @@ export {
   createScheduledRunGuard,
   scheduledLeaseScope,
 } from "./runtime/scheduled-guard.js";
+export { startScheduledRunner } from "./runtime/scheduled-runner.js";
+export type { ScheduledRunnerOptions } from "./runtime/scheduled-runner.js";
+export type {
+  Scheduler,
+  SchedulerClock,
+  SchedulerLogger,
+} from "./runtime/scheduler.js";
 export type * from "./runtime/contract/slots.js";
 export { slugify } from "./slugify.js";
 // The page data core renders, for a plugin serving something of its own
