@@ -1,6 +1,6 @@
 # @plumix/runtime-bun
 
-The **Bun runtime** for Plumix — run a site on Bun, using what Bun ships: `Bun.serve` for HTTP, `Bun.file` for the built assets and `bun:sqlite` for the database, so nothing native is installed.
+The **Bun runtime** for Plumix — run a site on Bun, using what Bun ships: `Bun.serve` for HTTP, `Bun.file` for the built assets and uploads, `S3Client` for a bucket and `bun:sqlite` for the database, so nothing native is installed.
 
 Bun 1.4 or newer. Every command runs on Bun: `bun --bun plumix …`.
 
@@ -60,6 +60,40 @@ Imported rather than run, `dist/server/worker.js` starts nothing and default-exp
 ### `bunSqlite({ path })`
 
 Opens the SQLite file at `path` (parent directories are created) with WAL journaling, a 5 second busy timeout, `synchronous = NORMAL`, and foreign keys on — Bun's own defaults differ on all four, so each is set on connect. A relative `path` resolves against the project root, in the server and in `plumix migrate apply` alike. One file, one process: for a remote or shared database use `plumix/db/libsql` instead.
+
+### `diskStorage({ dir })`
+
+The object-storage slot on the filesystem, through `Bun.file`: each key is a file under `dir/objects/`, its content type and custom metadata a JSON file under `dir/meta/`. `url()` returns null, so the media plugin serves uploads through its own route, and there is no presigned upload; the browser sends the bytes to the site, which writes them. One directory, one process: for several processes sharing a bucket, `bunS3()` is the swap, one config line.
+
+```ts
+import { diskStorage } from "@plumix/runtime-bun";
+
+export default plumix({
+  storage: diskStorage({ dir: "data/media" }),
+  // …
+});
+```
+
+### `bunS3({ bucket, endpoint?, region?, credentials })`
+
+The object-storage slot in any S3-compatible bucket — AWS S3, R2, MinIO — on Bun's `S3Client`. `endpoint` defaults to AWS S3 in `region`, and `region` to `us-east-1` (`auto` for R2). `credentials` is the key pair, or an `(env) => credentials` resolver for when it is a secret; it is handed to `S3Client` explicitly, so Bun's own `S3_*`/`AWS_*` variables never pick the account. One gap remains in Bun 1.4.2: when `credentials` carries no `sessionToken`, its client still adds one from `S3_SESSION_TOKEN` or `AWS_SESSION_TOKEN` as the process started, so leave those unset unless they belong to this key. `put` and `head` go through core's portable signer, because Bun 1.4.2's client sends no custom metadata or `cache-control` and adds a charset to `text/plain`; the bucket is laid out exactly as `s3()` from `plumix/storage/s3` and R2 lay it out. `presignPut` signs the content type, so the browser uploads straight to the bucket and cannot send another type. `url()` returns null, so the media plugin serves through its own route.
+
+```ts
+import { bunS3 } from "@plumix/runtime-bun";
+
+export default plumix({
+  storage: bunS3({
+    bucket: "media",
+    endpoint: "https://<account>.r2.cloudflarestorage.com",
+    region: "auto",
+    credentials: (env) => ({
+      accessKeyId: env.S3_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    }),
+  }),
+  // …
+});
+```
 
 ### `plumix migrate apply`
 
