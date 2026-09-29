@@ -36,7 +36,8 @@ export interface ShipLoopOptions {
 
 export type RepairOutcome =
   | { readonly status: "repaired" }
-  | { readonly status: "declined"; readonly reason: string };
+  | { readonly status: "declined"; readonly reason: string }
+  | { readonly status: "not-this-branch"; readonly reason: string };
 
 export const REPAIRS_A_PULL_REQUEST_GETS = 2;
 
@@ -117,6 +118,24 @@ export const runShipLoop = async (
       );
       if (repaired.status === "declined") {
         return { status: "failed", reason: repaired.reason, failingChecks: [] };
+      }
+      if (repaired.status === "not-this-branch") {
+        const refusedFor = outcome;
+        if (!(await ports.rerunFailedChecks(pullRequest, refusedFor))) {
+          return {
+            status: "failed",
+            reason: repaired.reason,
+            failingChecks: [],
+          };
+        }
+        ports.say(
+          `  #${pullRequest.number} failed on something that is not this branch, re-running it`,
+        );
+        ports.requeue(pullRequest);
+        outcome = await ports.confirm(pullRequest);
+        return outcome.status === "merged"
+          ? outcome
+          : { status: "failed", reason: repaired.reason, failingChecks: [] };
       }
       ports.requeue(pullRequest);
       outcome = await ports.confirm(pullRequest);

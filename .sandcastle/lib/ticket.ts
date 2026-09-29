@@ -185,8 +185,13 @@ export const reviewAll = async (
   return reviews.flat();
 };
 
+export interface Declined {
+  readonly reason: string;
+  readonly notThisBranch: boolean;
+}
+
 export interface Fixer {
-  readonly apply: (phase: string, brief: string) => Promise<string | null>;
+  readonly apply: (phase: string, brief: string) => Promise<Declined | null>;
 }
 
 export const fixerFor = (
@@ -205,10 +210,14 @@ export const fixerFor = (
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
       if (fixed.commits.length > 0) return null;
-      return (
-        readDeclinedTag(fixed.stdout) ??
-        "the fixer changed nothing and gave no reason"
-      );
+      const notThisBranch = taggedBlock(fixed.stdout, "not-this-branch");
+      if (notThisBranch) return { reason: notThisBranch, notThisBranch: true };
+      return {
+        reason:
+          readDeclinedTag(fixed.stdout) ??
+          "the fixer changed nothing and gave no reason",
+        notThisBranch: false,
+      };
     },
   };
 };
@@ -272,7 +281,7 @@ export const gatesUntilGreen = async (
     );
     if (declined) {
       say(`--- waived \`${failure.command}\`: CI decides ---`);
-      waived.push({ command: failure.command, reason: declined });
+      waived.push({ command: failure.command, reason: declined.reason });
     }
   }
 };
@@ -370,7 +379,7 @@ export const shipTicket = async (
       if (declined) {
         return {
           status: "blocked",
-          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined}`,
+          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined.reason}`,
         };
       }
     }

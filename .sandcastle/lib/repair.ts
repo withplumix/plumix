@@ -19,6 +19,7 @@ import {
   clearLeftoverWorktree,
   pushBranch,
   resolveReviewThreads,
+  runStatus,
   syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
@@ -142,24 +143,6 @@ const failedStepsOf = (jobId: string): readonly string[] =>
       '[.steps[] | select(.conclusion == "failure") | .name]',
     ]),
   ) as readonly string[];
-
-const runStatus = (runId: string): string => {
-  try {
-    return gh([
-      "run",
-      "view",
-      runId,
-      "-R",
-      REPO_SLUG,
-      "--json",
-      "status",
-      "--jq",
-      ".status",
-    ]).trim();
-  } catch {
-    return "";
-  }
-};
 
 const failedLogTail = (jobId: string): string => {
   try {
@@ -295,7 +278,14 @@ export const repairPullRequest = async (
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
       const fixDeclined = await fixer.apply("repair:ci", brief);
-      if (fixDeclined) return declined(`${refusal.reason}\n\n${fixDeclined}`);
+      if (fixDeclined?.notThisBranch) {
+        return {
+          status: "not-this-branch",
+          reason: `${refusal.reason}\n\n${fixDeclined.reason}`,
+        };
+      }
+      if (fixDeclined)
+        return declined(`${refusal.reason}\n\n${fixDeclined.reason}`);
     }
 
     const toRun = gatesARepairRuns(refusal);

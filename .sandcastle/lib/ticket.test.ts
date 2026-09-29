@@ -208,7 +208,12 @@ describe("gatesUntilGreen", () => {
       sandbox((command) => command === "e2e", ran),
       gates,
       journal,
-      { apply: async () => "a startup race in plumix dev that main has too" },
+      {
+        apply: async () => ({
+          reason: "a startup race in plumix dev that main has too",
+          notThisBranch: true,
+        }),
+      },
       "final",
     );
 
