@@ -21,6 +21,7 @@ import type { ServerEnvironmentOptions } from "./server-environment.js";
 import type { DevListener, LoadedSite } from "./site-reloader.js";
 import { PlumixCliError } from "../cli/errors.js";
 import { parsePortFlag } from "../cli/port-flag.js";
+import { createDotenvLoader } from "./dotenv.js";
 import { emitPlumixSources, plumix } from "./index.js";
 import { serverEnvironment, serverExternals } from "./server-environment.js";
 import { createSiteReloader } from "./site-reloader.js";
@@ -103,11 +104,6 @@ export interface DevCommandOptions<Entry extends DevEntry> {
    */
   readonly environment: (runtime: RuntimeAdapter) => ServerEnvironmentOptions;
   /**
-   * Loads the project's env file into the process, first on start and again
-   * on each restart, before the config is evaluated.
-   */
-  readonly loadEnv: (cwd: string) => void;
-  /**
    * Serves the staged public tree from disk, ahead of Vite's own middlewares.
    * Vite answers `publicDir` from a listing taken once at `createServer` and
    * repaired by watcher events, and the admin shell is staged after that
@@ -150,6 +146,8 @@ export async function runDevCommand<Entry extends DevEntry>(
 ): Promise<void> {
   const { port, host } = parseDevArgs(ctx.argv);
   const reloader = createSiteReloader();
+  // `.env` is every self-hosted runtime's env file, and the shell wins over it.
+  const loadDotenv = createDotenvLoader();
   // Set by `config` before `configureServer` reads it, on start and restart.
   let entryPath = "";
 
@@ -184,7 +182,7 @@ export async function runDevCommand<Entry extends DevEntry>(
     // the CLI's own evaluation, which the plugin would otherwise reuse,
     // predates the file.
     async config() {
-      options.loadEnv(ctx.cwd);
+      loadDotenv(join(ctx.cwd, ".env"));
       const { runtime } = await emitPlumixSources(ctx.cwd, ctx.configPath, {
         fresh: true,
       });

@@ -16,7 +16,7 @@ const OWN_MODULES = join(PACKAGE_ROOT, "node_modules");
 
 // The bin's own script, not the `.bin` shim: pnpm writes that as a shell
 // script, which `bun --bun` cannot execute.
-const PLUMIX_SCRIPT = join(
+export const PLUMIX_SCRIPT = join(
   realpathSync(join(OWN_MODULES, "plumix")),
   "bin/plumix.mjs",
 );
@@ -25,7 +25,7 @@ const PLUMIX_SCRIPT = join(
  * What the CLI is spawned with. `pnpm exec` sets `NODE_PATH` to the hoisted
  * store, through which a fixture would resolve packages it never installed.
  */
-const CLI_ENV: NodeJS.ProcessEnv = {
+export const CLI_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_OPTIONS: undefined,
   NODE_PATH: undefined,
@@ -63,6 +63,13 @@ export async function plumixOn(
     };
   }
 }
+
+export const rpc = (origin: string, path: string): Promise<Response> =>
+  fetch(`${origin}/_plumix/rpc/${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-plumix-request": "1" },
+    body: JSON.stringify({ json: {} }),
+  });
 
 /** A config naming this package's adapter and `bunSqlite()` on a relative path. */
 export const BUN_CONFIG = `import { auth } from "plumix/auth";

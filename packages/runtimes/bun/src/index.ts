@@ -12,7 +12,7 @@ export type {
 } from "./bun-sqlite.js";
 
 // What the generated entry calls: everything it does beyond importing.
-export { createBunSite, serveProcess } from "./site.js";
+export { createBunSite, loadEnvFileWhenMain, serveProcess } from "./site.js";
 export type {
   BunSite,
   BunSiteHandler,
