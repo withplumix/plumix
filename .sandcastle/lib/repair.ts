@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { Gate } from "./gates.js";
@@ -134,7 +136,7 @@ const gh = (args: readonly string[], cwd = REPO_ROOT): string =>
 const git = (args: readonly string[]): string =>
   execFileSync("git", [...args], { cwd: REPO_ROOT, encoding: "utf8" });
 
-const failedStepsOf = (jobId: string): readonly string[] =>
+export const failedStepsOf = (jobId: string): readonly string[] =>
   JSON.parse(
     gh([
       "api",
@@ -160,27 +162,48 @@ const failedLogTail = (jobId: string): string => {
   }
 };
 
-const recapturedScreenshotsInto = (
-  runId: string,
+export const aRerunCannotTurnItGreen = (
+  failedStepsOfEachJob: readonly (readonly string[])[],
+): boolean =>
+  failedStepsOfEachJob.some((steps) => steps.includes(SCREENSHOT_DIFF_STEP));
+
+// `gh run download` will not extract over a file that exists, and every image it brings back is
+// one the branch has committed, so it downloads somewhere empty and the images are copied over.
+export const recaptureScreenshots = (
+  downloadInto: (directory: string) => void,
   worktreePath: string,
 ): boolean => {
+  const downloaded = mkdtempSync(join(tmpdir(), "recaptured-screenshots-"));
   try {
-    gh([
-      "run",
-      "download",
-      runId,
-      "-R",
-      REPO_SLUG,
-      "-n",
-      SCREENSHOT_ARTIFACT,
-      "-D",
-      join(worktreePath, SCREENSHOT_DIR),
-    ]);
+    downloadInto(downloaded);
+    cpSync(downloaded, join(worktreePath, SCREENSHOT_DIR), { recursive: true });
     return true;
   } catch {
     return false;
+  } finally {
+    rmSync(downloaded, { recursive: true, force: true });
   }
 };
+
+const recapturedScreenshotsInto = (
+  runId: string,
+  worktreePath: string,
+): boolean =>
+  recaptureScreenshots(
+    (directory) =>
+      gh([
+        "run",
+        "download",
+        runId,
+        "-R",
+        REPO_SLUG,
+        "-n",
+        SCREENSHOT_ARTIFACT,
+        "-D",
+        directory,
+      ]),
+    worktreePath,
+  );
 
 export const repairPullRequest = async (
   ticket: Ticket,

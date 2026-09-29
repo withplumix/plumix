@@ -1,11 +1,22 @@
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { MergeOutcome } from "./verdict.js";
 import {
+  aRerunCannotTurnItGreen,
   asCiEvidenceBrief,
   failedOnlyOnTheScreenshotDiff,
   gatesARepairRuns,
   idsInJobUrl,
+  recaptureScreenshots,
   SCREENSHOT_DIFF_STEP,
 } from "./repair.js";
 
@@ -139,5 +150,56 @@ describe("gatesARepairRuns", () => {
       expect.arrayContaining(["install", "test", "changeset"]),
     );
     expect(names).not.toContain("lint");
+  });
+});
+
+describe("aRerunCannotTurnItGreen", () => {
+  test("a job that failed the screenshot diff fails it again on a re-run, so the free re-run is skipped", () => {
+    expect(
+      aRerunCannotTurnItGreen([["Run pnpm test:e2e"], [SCREENSHOT_DIFF_STEP]]),
+    ).toBe(true);
+  });
+
+  test("a job that failed only a test may pass on a re-run", () => {
+    expect(aRerunCannotTurnItGreen([["Run pnpm test:e2e"]])).toBe(false);
+  });
+});
+
+describe("recaptureScreenshots", () => {
+  // `gh run download` refuses to extract over a file that exists, which is
+  // every committed image.
+  const ghRunDownload = (images: Record<string, string>) => (into: string) => {
+    mkdirSync(into, { recursive: true });
+    if (readdirSync(into).length > 0)
+      throw new Error("error extracting zip archive: file exists");
+    for (const [name, bytes] of Object.entries(images))
+      writeFileSync(join(into, name), bytes);
+  };
+
+  test("the recaptured images replace the committed ones they share a name with", () => {
+    const worktree = mkdtempSync(join(tmpdir(), "recapture-"));
+    const shots = join(worktree, "apps/docs/src/assets/screenshots");
+    mkdirSync(shots, { recursive: true });
+    writeFileSync(join(shots, "admin-dashboard-light.png"), "old");
+
+    const recaptured = recaptureScreenshots(
+      ghRunDownload({ "admin-dashboard-light.png": "new" }),
+      worktree,
+    );
+
+    expect(recaptured).toBe(true);
+    expect(readFileSync(join(shots, "admin-dashboard-light.png"), "utf8")).toBe(
+      "new",
+    );
+  });
+
+  test("a download that fails recaptures nothing", () => {
+    const worktree = mkdtempSync(join(tmpdir(), "recapture-"));
+
+    expect(
+      recaptureScreenshots(() => {
+        throw new Error("no artifact docs-screenshots");
+      }, worktree),
+    ).toBe(false);
   });
 });
