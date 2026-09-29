@@ -111,7 +111,7 @@ export function EditorHeader({
                 message: "Title",
               })}
               variant="inline"
-              className="h-8 max-w-md min-w-0 text-sm font-medium"
+              className="h-8 max-w-md min-w-0"
               placeholder={i18n._({
                 id: "editor.header.untitled",
                 message: "Untitled",

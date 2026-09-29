@@ -3,14 +3,33 @@ import { cva } from "class-variance-authority";
 
 import { cn } from "./utils.js";
 
-function Empty({ className, ...props }: React.ComponentProps<"div">) {
+const emptyVariants = cva(
+  "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border-dashed p-6 text-center text-balance md:p-12",
+  {
+    variants: {
+      variant: {
+        default: "",
+        // An empty state that stands in for a list, drawn where the list
+        // would have been.
+        outline: "border",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+function Empty({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof emptyVariants>) {
   return (
     <div
       data-slot="empty"
-      className={cn(
-        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border-dashed p-6 text-center text-balance md:p-12",
-        className,
-      )}
+      data-variant={variant}
+      className={cn(emptyVariants({ variant }), className)}
       {...props}
     />
   );

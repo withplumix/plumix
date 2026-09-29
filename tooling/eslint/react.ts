@@ -70,8 +70,6 @@ export const reactConfig = defineConfig(
   },
   // Design-system rules for code composing `@plumix/admin-ui`. The primitives
   // themselves are exempt because admin-ui's own config ignores them.
-  // `no-restyle` and `no-arbitrary-values` predate their existing violations,
-  // which each package's `eslint-suppressions.json` carries until fixed.
   // A container's `gap-*` and `space-*` only space its children, so it
   // leaves the primitive's own look alone. `require-static-classes` keeps
   // every treatment where the other rules can read it: a variant or a

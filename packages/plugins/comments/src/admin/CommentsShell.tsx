@@ -247,9 +247,9 @@ export function CommentsShell(): React.ReactElement {
                     size="sm"
                     data-testid={`comment-open-${comment.id}`}
                     onClick={() => setSelected(comment)}
-                    className="justify-start truncate"
+                    className="min-w-0 shrink justify-start"
                   >
-                    {comment.authorName}
+                    <span className="truncate">{comment.authorName}</span>
                   </Button>
                 </td>
                 <td

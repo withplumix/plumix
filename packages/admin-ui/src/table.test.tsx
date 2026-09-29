@@ -22,4 +22,13 @@ describe("TableHead and TableCell", () => {
       );
     }
   });
+
+  it("mutes a cell marked muted and leaves the default cell's colour alone", () => {
+    expect(
+      classesOf(renderToStaticMarkup(<TableCell variant="muted" />)),
+    ).toContain("text-muted-foreground");
+    expect(classesOf(renderToStaticMarkup(<TableCell />))).not.toContain(
+      "text-muted-foreground",
+    );
+  });
 });

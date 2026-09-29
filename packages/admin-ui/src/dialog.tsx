@@ -58,7 +58,7 @@ function DialogOverlay({
 // The width applies from `sm` up; below it every size keeps the
 // `max-w-[calc(100%-2rem)]` gutters.
 const dialogContentVariants = cva(
-  "bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed start-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none rtl:-translate-x-[-50%]",
+  "bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed start-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-lg duration-200 outline-none rtl:-translate-x-[-50%]",
   {
     variants: {
       size: {
@@ -66,9 +66,16 @@ const dialogContentVariants = cva(
         md: "sm:max-w-2xl",
         lg: "sm:max-w-4xl",
       },
+      variant: {
+        default: "p-6",
+        // A dialog whose content brings its own padding, like a command
+        // palette's list.
+        flush: "overflow-hidden p-0",
+      },
     },
     defaultVariants: {
       size: "sm",
+      variant: "default",
     },
   },
 );
@@ -77,15 +84,21 @@ type DialogContentSize = NonNullable<
   VariantProps<typeof dialogContentVariants>["size"]
 >;
 
+type DialogContentVariant = NonNullable<
+  VariantProps<typeof dialogContentVariants>["variant"]
+>;
+
 function DialogContent({
   className,
   children,
   size = "sm",
+  variant = "default",
   showCloseButton = true,
   closeLabel,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   size?: DialogContentSize;
+  variant?: DialogContentVariant;
 } & DialogCloseButtonProps) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -93,7 +106,8 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         data-size={size}
-        className={cn(dialogContentVariants({ size }), className)}
+        data-variant={variant}
+        className={cn(dialogContentVariants({ size, variant }), className)}
         {...props}
       >
         {children}
@@ -177,7 +191,7 @@ function DialogDescription({
   );
 }
 
-export type { DialogCloseButtonProps, DialogContentSize };
+export type { DialogCloseButtonProps, DialogContentSize, DialogContentVariant };
 
 export {
   Dialog,

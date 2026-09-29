@@ -21,6 +21,21 @@ describe("Input variants", () => {
     expect(classes).not.toContain("border-input");
   });
 
+  it("shows a generated value as muted mono on a muted fill", () => {
+    const classes = classesOf(
+      renderToStaticMarkup(<Input variant="generated" readOnly />),
+    );
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "border-input",
+        "bg-muted",
+        "text-muted-foreground",
+        "font-mono",
+      ]),
+    );
+    expect(classes).not.toContain("bg-transparent");
+  });
+
   it("keeps the default input's border", () => {
     expect(classesOf(renderToStaticMarkup(<Input />))).toContain(
       "border-input",

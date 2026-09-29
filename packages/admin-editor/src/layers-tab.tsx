@@ -250,21 +250,22 @@ function LayerRow({
             <span className="truncate">{label}</span>
           </button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                data-testid={`layer-menu-${item.id}`}
-                aria-label={i18n._({
-                  id: "editor.layers.actions",
-                  message: "Block actions",
-                })}
-                className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-              >
-                <MoreVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <span className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-[state=open]:opacity-100">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  data-testid={`layer-menu-${item.id}`}
+                  aria-label={i18n._({
+                    id: "editor.layers.actions",
+                    message: "Block actions",
+                  })}
+                >
+                  <MoreVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </span>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 data-testid={`layer-copy-${item.id}`}
@@ -291,7 +292,7 @@ function LayerRow({
               <DropdownMenuItem
                 data-testid={`layer-delete-${item.id}`}
                 onSelect={() => onAction("delete")}
-                className="text-destructive focus:text-destructive"
+                variant="destructive"
               >
                 <Trash2 />
                 <Trans id="editor.layers.delete" message="Delete" />

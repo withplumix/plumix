@@ -335,7 +335,7 @@ function EmptyState({
   const renderLabel = useLabel();
   const addLabel = renderLabel(termTaxonomyLabel(taxonomy, "addNewItem"));
   return (
-    <Empty data-testid="taxonomy-list-empty-state" className="border">
+    <Empty data-testid="taxonomy-list-empty-state" variant="outline">
       <EmptyHeader>
         <EmptyTitle>
           {renderLabel(termTaxonomyLabel(taxonomy, "notFound"))}

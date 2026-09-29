@@ -84,7 +84,7 @@ export function EditorCommandPalette({
         </DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="overflow-hidden p-0"
+        variant="flush"
         data-testid="plumix-command-palette"
         closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >

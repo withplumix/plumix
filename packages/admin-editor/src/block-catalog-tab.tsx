@@ -4,7 +4,11 @@ import { useLingui } from "@lingui/react";
 
 import type { BlockNode } from "@plumix/core/blocks";
 import { Search } from "@plumix/admin-ui/icons";
-import { Input } from "@plumix/admin-ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@plumix/admin-ui/input-group";
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
@@ -98,19 +102,20 @@ export function BlockCatalog({
 
   return (
     <div className="flex flex-col gap-3 p-2" data-testid="block-catalog">
-      <div className="relative">
-        <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
-        <Input
+      <InputGroup>
+        <InputGroupAddon>
+          <Search aria-hidden />
+        </InputGroupAddon>
+        <InputGroupInput
           type="search"
           name="block-catalog-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           aria-label={searchLabel}
           placeholder={searchLabel}
-          className="h-9 ps-8"
           data-testid="block-catalog-search"
         />
-      </div>
+      </InputGroup>
 
       {empty ? (
         <p

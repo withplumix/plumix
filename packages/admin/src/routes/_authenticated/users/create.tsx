@@ -407,7 +407,7 @@ function InviteSuccess({
                   e.currentTarget.select();
                 }}
                 data-testid="invite-url-input"
-                className="bg-muted text-muted-foreground font-mono"
+                variant="generated"
               />
               <Button
                 type="button"

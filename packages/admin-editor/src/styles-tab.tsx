@@ -427,8 +427,7 @@ const TEXT_ALIGNMENTS = [
   { value: "right", Icon: AlignRight, label: "Align right" },
 ] as const;
 
-/** A tooltipped toggle item. `px-2` tightens the item's hardcoded px-3 so all
- *  seven text controls fit the narrow rail without overflowing. */
+/** A tooltipped toggle item. */
 function TooltipToggleItem({
   value,
   testid,
@@ -443,12 +442,7 @@ function TooltipToggleItem({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <ToggleGroupItem
-          value={value}
-          data-testid={testid}
-          aria-label={label}
-          className="px-2"
-        >
+        <ToggleGroupItem value={value} data-testid={testid} aria-label={label}>
           {children}
         </ToggleGroupItem>
       </TooltipTrigger>
@@ -471,7 +465,7 @@ function TextStyleControls({
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="flex items-center justify-between gap-1"
+        className="flex flex-wrap items-center justify-between gap-1"
         data-testid="style-text-controls"
       >
         <ToggleGroup
@@ -777,9 +771,8 @@ function LayoutToggle({
             key={opt}
             value={opt}
             data-testid={`style-${property}-${opt}`}
-            className="text-xs"
           >
-            {LAYOUT_LABELS[opt] ?? opt}
+            <span className="text-xs">{LAYOUT_LABELS[opt] ?? opt}</span>
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
@@ -1030,8 +1023,8 @@ function TextShadowControls({
           <div className="grid grid-cols-3 gap-2">
             {(["x", "y", "blur"] as const).map((key) => (
               <Field key={key} size="sm">
-                <FieldLabel htmlFor={`${baseId}-${key}`} className="capitalize">
-                  {key}
+                <FieldLabel htmlFor={`${baseId}-${key}`}>
+                  <span className="capitalize">{key}</span>
                 </FieldLabel>
                 <Input
                   id={`${baseId}-${key}`}

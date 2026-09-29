@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import { Search } from "@plumix/admin-ui/icons";
-import { Input } from "@plumix/admin-ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@plumix/admin-ui/input-group";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -38,12 +42,11 @@ export function DebouncedSearchInput({
   }, [value, initialValue, onCommit]);
 
   return (
-    <div className="relative">
-      <Search
-        aria-hidden
-        className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2"
-      />
-      <Input
+    <InputGroup className="w-64">
+      <InputGroupAddon>
+        <Search aria-hidden />
+      </InputGroupAddon>
+      <InputGroupInput
         type="search"
         role="searchbox"
         value={value}
@@ -54,8 +57,7 @@ export function DebouncedSearchInput({
         onChange={(e) => {
           setValue(e.target.value);
         }}
-        className="h-9 w-64 ps-9"
       />
-    </div>
+    </InputGroup>
   );
 }

@@ -498,7 +498,7 @@ function ApproveCard({
                         />
                         <UILabel
                           htmlFor="auth-device-scope-inherit"
-                          className="font-normal"
+                          variant="choice"
                         >
                           <Trans
                             id="auth.device.scopeMode.inherit"
@@ -514,7 +514,7 @@ function ApproveCard({
                         />
                         <UILabel
                           htmlFor="auth-device-scope-restrict"
-                          className="font-normal"
+                          variant="choice"
                         >
                           <Trans
                             id="auth.device.scopeMode.restrict"
@@ -547,7 +547,7 @@ function ApproveCard({
                         placeholder={label(M.scopesPlaceholder)}
                         disabled={pending}
                         data-testid="auth-device-scopes-textarea"
-                        className="font-mono"
+                        variant="code"
                         {...field}
                       />
                     </FormControl>

@@ -333,7 +333,7 @@ function ListSection({
                 <Skeleton className="mb-2 h-4 w-2/3" />
                 <Skeleton className="h-3 w-1/3" />
               </div>
-              <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
+              <Skeleton className="h-7 w-7 shrink-0" />
             </li>
           ))}
         </ul>
@@ -512,7 +512,7 @@ function RevisionRow({
                 void save();
               }
             }}
-            className="h-8 text-xs"
+            className="h-8"
           />
 
           <Button

@@ -444,11 +444,8 @@ function buildColumns({
       accessorKey: "status",
       header: renderLabel(M.columnStatus),
       cell: ({ row }) => (
-        <Badge
-          variant={STATUS_VARIANT[row.original.status]}
-          className="capitalize"
-        >
-          {row.original.status}
+        <Badge variant={STATUS_VARIANT[row.original.status]}>
+          <span className="capitalize">{row.original.status}</span>
         </Badge>
       ),
     },
@@ -1454,7 +1451,7 @@ function EmptyState({
   const renderLabel = useLabel();
   const addLabel = renderLabel(entryTypeLabel(entryType, "addNewItem"));
   return (
-    <Empty data-testid="content-list-empty-state" className="border">
+    <Empty data-testid="content-list-empty-state" variant="outline">
       <EmptyHeader>
         <EmptyTitle>
           {renderLabel(entryTypeLabel(entryType, "notFound"))}
