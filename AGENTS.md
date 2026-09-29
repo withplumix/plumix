@@ -1,293 +1,128 @@
 # AGENTS.md
 
-Agent-facing conventions for the Plumix repo.
-
-## What this is
-
-CMS inspired by WordPress, with pluggable runtime adapters. Two ship: Cloudflare (`@plumix/runtime-cloudflare`, using D1/KV/R2, the default) and Node.js (`@plumix/runtime-node`, `node:sqlite` and disk storage). Pre-1.0: every `0.x` minor may break.
-
-Request-path code in core, the plugins and the shared packages runs on Cloudflare Workers, so it must stay Worker-compatible — no Node built-ins, no `fs`, no dynamic require. CLI and build-time modules, and all of `packages/runtimes/node`, may use Node built-ins.
+Plumix is a CMS with pluggable runtime adapters; Cloudflare is the default. It is pre-1.0, so every `0.x` minor may break.
 
 ## Working rules
 
 - **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red — one RED→GREEN cycle at a time, never all-tests-then-all-impl.
-- **Stay in scope.** One PR per issue; no drive-by refactors, bulk cleanups, or unrelated edits. Serialize dependent PRs — ship, merge, rebase, then start the next.
-- **Localize user-facing strings.** Everything a user reads — JSX text, `aria`/`title`/`alt`, toasts, block metadata — goes through Lingui descriptors (`useLabel`), never hardcoded English.
+- **Stay in scope.** One PR per issue; every changed line traces to it. No drive-by refactors or bulk cleanups: match the surrounding style, remove only what your change left unused, and mention dead code you find rather than deleting it. Serialize dependent PRs — ship, merge, rebase, then start the next.
 - **Investigate before building.** When a change is consumed in more than one place (server, admin, editor, a second bundle), find out how each consumer gets it today before you design. Say what you verified and where you stopped. Resolving a path is not a working render.
-- **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for. Comments say why, never what.
-- **Extend existing suites.** Put a new test in the suite that already covers the area rather than adding a second harness. Seed through the fishery factories, not raw writes. A spy that shares the code's own assumption cannot fail, so assert on what the code did, not on what it called.
-- **Batch by default.** One `WHERE id IN (...)` on the server, one query on the client. No N+1.
+- **Claims need evidence.** Back every statement about how the code behaves — in a PR body, a review reply, a decline — with a file and line, a source excerpt, or a command someone can rerun.
+- **Read the READMEs on the way down.** Before editing a file, read every `README.md` from the repo root to its folder. Packages keep their local procedures there.
+- **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for.
+- **Stop rather than work around.** When a test passes only with another flag, counter or copy of state, stop and consolidate who owns that state. Never get past a blocker by deleting a lockfile, `--force`, `--ignore-scripts` or disabling a check; stop and say what blocks you.
+- **A failing check is yours until shown otherwise.** Call a failure pre-existing only after reproducing it on `main`, and give that evidence.
+- **Leave changes you did not make.** Never revert or rewrite someone else's edits in a shared worktree, stash or branch.
+- **Regenerate, don't hand-edit.** A generated file changes only through the script that owns it, and the result is committed. Hand-authored catalogs are the exception, and they say so.
+- **Keep docs true in the same change.** When a change makes a README, an ADR, this file or `CODING_STANDARDS.md` wrong, fix it in the same PR.
+
+## Coding standards
+
+[`CODING_STANDARDS.md`](./CODING_STANDARDS.md) is how code in Plumix is written. Read it before writing or reviewing code.
 
 ## Commands
 
-Turborepo drives everything from the root:
+Run everything from the root. Most root scripts run the turbo task of the same name across the workspace.
 
-- `pnpm build` — every package in topological order
-- `pnpm typecheck` / `pnpm lint` / `pnpm format` — turbo tasks; `lint` and `typecheck` `dependsOn: ^build` so they need built upstream deps
-- `pnpm test:unit` — low-level vitest across every package; workspace imports resolve to source and i18n catalogs are stubbed, so it needs no build or `i18n:compile`
-- `pnpm test:build` — vitest suites that need the build graph and inspect what it produced (`*.build.test.ts`)
-- `pnpm test:e2e` — Playwright e2e (only the packages that opt in)
-- `pnpm test` — convenience umbrella for `test:unit` + `test:build`
-- `pnpm knip` — unused-export and dependency check
-- `pnpm i18n:check` — source↔catalog drift gate; fails when `<Trans>`/`defineMessage` strings change without `lingui extract` (run `pnpm --filter <pkg> i18n:extract` + `i18n:compile`, commit the `locales/` churn). Exception: `plugin-blog` and `plugin-pages` hand-author their `locales/*.po` (a plugin definition is server-side, no Babel macro pass) — their `i18n:extract` refuses to run instead of overwriting the catalog; fix drift by editing `locales/en.po` directly.
-- `pnpm commitlint` — conventional-commit lint
+| Script                            | What it does                                                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `build`                           | Build every package in dependency order.                                                                          |
+| `dev`                             | `turbo watch dev` across the workspace.                                                                           |
+| `typecheck` / `lint` / `lint:fix` | Type-check and lint. Both need upstream packages built (see below).                                               |
+| `format` / `format:fix`           | Prettier: `format` checks, `format:fix` writes.                                                                   |
+| `test:unit`                       | Vitest in every package. Workspace imports resolve to source and i18n catalogs are stubbed, so it needs no build. |
+| `test:build`                      | The `*.build.test.ts` suites, which inspect what the build produced.                                              |
+| `test`                            | `test:unit` + `test:build`.                                                                                       |
+| `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                            |
+| `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                             |
+| `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                     |
+| `i18n:ratchet:check`              | Fails when a file on the admin's unlocalized-strings denylist no longer needs to be on it.                        |
+| `knip`                            | Unused files, exports and dependencies.                                                                           |
+| `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                            |
+| `commitlint`                      | Lint commit messages.                                                                                             |
+| `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                               |
+| `smoke`                           | Publish to a throwaway registry, scaffold an app from it, and boot it.                                            |
+| `clean` / `clean:workspaces`      | Remove the root `node_modules` / each package's `dist`, caches and `node_modules`.                                |
+| `release` / `version-packages`    | Changesets publishing; the release bot runs these.                                                                |
 
-**Bun.** The Bun runtime's suites (`packages/runtimes/bun`) run on Bun, so install Bun locally at the version in `.bun-version`. Its `test:unit` runs `bun --bun` on vitest's own entry script.
+**i18n drift.** Fix an `i18n:check` failure with `pnpm --filter <pkg> i18n:extract` then `i18n:compile`, and commit the `locales/` churn. A package whose `i18n:extract` refuses to run hand-authors its `locales/*.po` (its strings live in a server-side plugin definition, which no Babel macro pass reads); fix its drift by editing `locales/en.po`.
 
-**Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test:build`, `test:e2e`, `publint`, `attw`):
+**Runtime versions.** A runtime adapter's suites run on that runtime ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)). Install each runtime at the version its pin file at the repo root names (`.nvmrc`, `.<runtime>-version`).
+
+**A check covers only what it reads.** `test:unit` reads source; `typecheck`, `test:build`, e2e and anything served from a build read `dist/`. A green check on one side says nothing about the other, so rebuild before trusting a check that reads `dist/`.
+
+**Why typecheck needs a build.** Every published package's `exports` points `types` at `dist/`, so a package type-checks only once the packages it imports are built. Turbo builds them first (`typecheck` and `lint` depend on `^build` in `turbo.json`, plus the package's own `i18n:compile`); `pnpm --filter` runs the script alone, so it passes only when a `dist/` is already lying around. For one package, use turbo:
 
 ```bash
 pnpm exec turbo run typecheck --filter @plumix/core
 ```
 
-Bare `pnpm --filter @plumix/core typecheck` works locally with a warm tree but fails cold in CI because upstream `build` won't have run. `test:unit` is the exception — it has no `dependsOn` (source-resolved, nothing generated), so pnpm or turbo both work.
+The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm --filter` works for it.
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 
-**Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm knip && pnpm test` must be clean (`format` checks; `format:fix` writes), and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, i18n, publint, and attw.
+**Browser tier.** Run `pnpm exec playwright install chromium` once before the first `pnpm test:unit`; `*.browser.test.*` files run in headless Chromium.
+
+**Tests.** What the shared test helpers provide, and how to diagnose a slow test before reaching for a timeout, are in [`docs/agents/testing.md`](docs/agents/testing.md).
+
+**Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm knip && pnpm test` must be clean, and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, i18n, publint, and attw.
 
 ## Architecture
 
 ### Workspaces
 
-```
-packages/
-├── core/                @plumix/core              — engine: blocks, schema, auth, hooks, RPC, route, plugin manifest
-├── admin/               @plumix/admin             — React SPA (Vite + Tanstack Router/Query); shadcn-based UI
-├── plumix/              plumix                    — public umbrella; subpath exports re-export internals
-├── create-plumix-app/                             — scaffolder
-├── plugins/
-│   ├── audit-log/ blog/ comments/ media/ menu/ og/ pages/ — first-party plugins
-└── runtimes/
-    ├── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
-    └── node/            @plumix/runtime-node — Node.js process runtime; node:sqlite database
-apps/
-├── demo/       @plumix-apps/demo      — anon "try the editor" sandbox; deploy + dev harness + demo e2e
-├── marketing/  @plumix-apps/marketing — marketing site on plumix (scaffold)
-└── docs/       @plumix-apps/docs      — Astro Starlight documentation site
-tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspace packages
-tooling/e2e-ports — guards every Playwright suite's ports against every other suite's
-tooling/published-surface — records a reason for every export a consumer can import
-```
+- `packages/` holds everything published. The framework is `plumix` (the public umbrella) plus the
+  internal `@plumix/*` packages it re-exports; they are the `fixed` group in
+  `.changeset/config.json`. Around it: `create-plumix-app`, one plugin per folder under `plugins/`,
+  one runtime adapter per folder under `runtimes/`.
+- `apps/` holds private sites built on Plumix.
+- `tooling/` holds private workspace packages that configure or guard the repo itself.
+
+Each package's `package.json` `description` says what it is.
 
 ### The umbrella rule
 
-The `plumix` package re-exports the public API surface from the internal `@plumix/{core,admin,admin-editor,admin-ui}` packages under subpaths (`plumix`, `plumix/vite`, `plumix/admin`, `plumix/admin/react`, `plumix/admin/ui`, `plumix/theme`, `plumix/plugin`, …).
+Every package outside the framework imports Plumix only through `plumix` and its subpaths (the
+`exports` of `packages/plumix/package.json`), never through an internal `@plumix/*` package. That
+boundary lets the internal packages refactor freely while the published surface stays stable. The
+`noInternalImports` ESLint config in `@plumix/eslint-config` catches it in the packages that opt in.
 
-**Consumer packages — plugins, runtimes, examples, `create-plumix-app` — must import from `plumix` (or its subpaths). They must not import from the internal packages (`@plumix/core`, `@plumix/admin`, `@plumix/admin-editor`, `@plumix/admin-ui`) directly.**
+Every export a consumer can import is a recorded decision in `tooling/published-surface`, and a PR
+that adds one adds its row, with a reason, to its roster.
 
-This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by ESLint's `no-restricted-imports` rule via the `noInternalImports` config in `@plumix/eslint-config`, which consumer packages opt into.
+### Runtimes
 
-Every export a consumer can import is a recorded decision in `tooling/published-surface`, and a PR that adds one adds its row, with a reason, to its roster.
+Code on the request path in core and the plugins runs on every runtime, so it uses only APIs they all provide. Code that needs one runtime's primitives belongs in that runtime's adapter ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)).
+
+A change to the contract the adapters implement lands in every adapter in the same PR, or the PR says why an adapter is left out. Working through one runtime is not done.
 
 ### Core's layers
 
-`@plumix/core` is one package, arranged in layers that import only downward: `foundation` → `contracts` → `capabilities` → `surfaces` → `top` ([ADR 0010](docs/adr/0010-core-is-one-package-of-enforced-layers.md) has the table). Each folder belongs to exactly one layer. When a subsystem spans two layers, its lower half lives in a colocated `contract/` subfolder. `top` is the composition root and the assembled façades. Nothing inside core imports it. `import type` and dynamic `import()` count as edges, and no two subsystems in the same layer may import each other in a cycle. Each folder is also either client-safe or server-only, and nothing reachable from a client entry may reach server-only code.
-
-When new code needs something from a higher layer, move the contract down. Don't point the import up. Don't reach for a new package either: splitting a layer into its own package waits on the trigger the ADR names.
+`@plumix/core` is one package arranged in layers that import only downward
+([ADR 0010](docs/adr/0010-core-is-one-package-of-enforced-layers.md) has the layers and the rules).
+When new code needs something from a higher layer, move the contract down. Don't point the import
+up, and don't split a layer into its own package before the trigger the ADR names.
 
 ### Plugin model
 
-A plugin is a descriptor built with `definePlugin` (from `plumix/plugin`); options-taking plugins export a factory returning one instead — `menu({ locations })`, `media(...)`, `auditLog(...)`. The descriptor declares the plugin's schema (drizzle tables), routes, RPC procedures, admin routes/components, hooks, and capabilities. First-party plugins under `packages/plugins/*` are the canonical examples.
+A plugin is a descriptor built with `definePlugin` from `plumix/plugin`, or a factory taking
+options that returns one. The descriptor declares everything the plugin contributes. The
+first-party plugins under `packages/plugins/` are the canonical examples.
 
 ### Dependency catalog
 
-`pnpm-workspace.yaml` defines a `catalog:` for deps used by multiple packages (drizzle, react, vite, vitest, etc.). A dep used by exactly one package goes direct in that package's `package.json`, **not** in the catalog — the catalog is for de-duplication, not centralization.
-
-Version families that release in lockstep get a **named catalog** under `catalogs:` (`catalogs.tailwind`, `catalogs.lingui`) and are consumed as `"catalog:tailwind"` / `"catalog:lingui"` — a bump is then a single-line change.
+A dependency used by more than one package goes in the `catalog:` in `pnpm-workspace.yaml`; one
+used by a single package goes direct in that package's `package.json`. The catalog is for
+de-duplication, not centralization. Version families that release in lockstep share a **named
+catalog** under `catalogs:`, so a bump is a single-line change.
 
 ### Env & secrets
 
 Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local secrets live in `.env` (gitignored) on every runtime, and the environment wins over it. Never paste secret values into commits, logs, or chat.
 
-### Earned types
-
-`x as unknown as Y` is rejected in production `src/` by `plumix/no-chained-type-assertion`.
-Routing through `unknown` throws away every constraint the compiler could have checked, so the
-conversion arrives as a claim with its evidence removed. Give the value an honest type instead —
-decode it at the boundary it enters, or widen the declaration it flows into.
-
-Where the conversion is genuinely load-bearing — the fluent-builder variance escapes are the honest
-case — keep it with a `// Safety:` comment stating the invariant that makes it sound, on the line
-directly above the one the converted expression starts on. An assertion buried inside a multi-line
-call has to be hoisted into its own binding first. The rule can only check that a sentence was
-written; what keeps the escape meaningful is being rare enough that a reviewer reads every one.
-Never silence it with a bare disable comment.
-
-A declared return type of `unknown` — or a promise of one — is rejected in production `src/` by
-`plumix/no-unknown-return`. It is the rule that stops the previous one being needed: an `unknown`
-return has not solved a typing problem, it has exported one to every caller, and callers reach for
-an assertion. Return the shape the function produces — `JsonValue` / `JsonObject` for serialized
-data, a union naming what it can hand back, or the output of the valibot schema that decoded the
-input. A function named as a parser must not hand back an unparsed value. `unknown` stays correct
-as a _parameter_ (that is what a parse boundary takes) and inside a wider type.
-
-The rule stays silent where the return was never yours to choose: a signature an outside contract
-already declares open (a proxy trap, a `JSON.parse` reviver) and a function type used as a
-type-level pattern (`extends (...args: never[]) => unknown`). Both are read from the code, so
-neither needs a disable comment.
-
-One case does: a registry that stores handlers for every name in a single map erases a type
-TypeScript has no way to spell, and the value is recovered at the typed boundary the registry
-returns through rather than handed to a caller. Disable the rule there, and say in the comment
-where the erasure is undone.
-
-A dictionary type whose value type is `unknown`, `any`, `object` or `{}` is rejected in production
-`src/` by `plumix/no-unsafe-dictionary`. `Record<string, unknown>` is how both "JSON nobody has
-parsed yet" and "a bag that is open by design" get spelled, and neither the compiler nor a reader
-can tell which one is in front of them.
-
-Serialized data is `JsonObject`. Anything else has to be a **named** type, and the name is where
-the answer lives — once, at the declaration, rather than at each of the hundred sites that would
-otherwise repeat it. Give that declaration a `Not JSON: …` sentence naming what puts a
-non-serializable value in the bag; use `Not JsonObject: …` when the value really is JSON but the
-sanctioned type is out of reach from that package. The marker alone is not enough — the rule counts
-the words after it, for the same reason `// Safety:` does. Never silence it with a bare disable
-comment.
-
-`any`, `object` and `{}` get no such escape, named or not: `unknown` defers a proof, the other
-three waive it.
-
-The rule stays silent wherever nothing is being declared: a generic constraint or default, a type
-predicate, an assertion target, and a local's annotation. A signature or a member is a declaration
-wherever it sits, so neither an enclosing alias nor an enclosing `const` lends it cover.
-
-A `typeof` on a field read off a value the compiler knows nothing about is rejected in production
-`src/` by `plumix/no-unparsed-property-typeof`. It catches two shapes. Where the object is `any`,
-`json.access_token` type-checks only because someone decided `json` has that field, so the `typeof`
-tests the leaf and leaves the claim about the object standing on nothing. Where the leaf is
-honestly declared `unknown` — `settings.value`, a stored bag's column — nothing was assumed: the
-declaration deferred the parse, and the read is where the debt comes due. Decode the value with a
-valibot schema and read a typed field off the result.
-
-Four positions stay silent, and they are as much the rule as the report is. A bare `unknown` or
-`any` value: that is what a parse boundary takes, and the first check inside one has nothing to
-reach through. A union the compiler already knows: `typeof` picking the arm of a `Label` or of an
-`EnvInput` config slot is the documented idiom. A key read off a dictionary — or an element of an
-`unknown[]`: the index signature already declared its values undescribed. A shape that merely
-_carries_ an index signature beside declared members is not a bag and does report, so parsing with
-a loose-object schema buys no silence for the fields it left undescribed. And a comparison against
-`"function"` or `"symbol"`: no serialized value produces either tag, so asking for one is a
-structural question about the object in hand rather than a decode that was skipped.
-
-Binding the read to an annotated local first (`const raw: unknown = bag.x`) puts it in the first of
-those positions and the rule goes quiet — the same escape `no-unsafe-dictionary` grants a local's
-annotation, and for the same reason. It is an escape, not a fix.
-
-Where the boundary genuinely cannot be decoded yet, keep the check with a `Not parsed: …` sentence
-in the comment directly above the statement, naming what is holding the schema up. The words after
-the marker are counted, as with `// Safety:` and `Not JSON:`.
-
-### Failure copy
-
-The admin shows every failure through a localized `MessageDescriptor` it chose, never a caught
-error's `message` ([ADR 0018](docs/adr/0018-the-admin-shows-a-failure-through-a-descriptor-it-chose.md)).
-oRPC fills `message` with its own English name for the code, and a plugin's throw arrives masked,
-so there is no author text in it to pass through. Reading `.message` off an `Error` or a subclass —
-`query.error` and `mutation.error` included — is rejected by `plumix/no-error-message-in-ui` in the
-admin packages and every plugin's `src/admin/`. Map the failure with `describeRpcError` from
-`plumix/admin` and a site-specific fallback, and type the state that holds it
-`MessageDescriptor | null`. Authored text a procedure sends as data, like the meta field errors'
-`Label`, is content and stays.
-
-An argument to `console.*` is exempt. A render boundary that shows a client exception as secondary
-detail keeps the read with a `// Shown verbatim: …` sentence directly above the statement; the
-words after the marker are counted, as with `// Safety:`. Never silence it with a bare disable
-comment.
-
-## Tests
-
-One vitest suite per package. Two layouts, in order of preference:
-
-1. **Colocate** — `src/foo.test.ts` next to `src/foo.ts`. Default for everything, including tests that use in-memory DBs or the harnesses from `@plumix/core/test` (they run inside the vitest worker), and `src/foo.browser.test.tsx` for the browser tier.
-2. **Package-level `test/`** — only when colocation can't work: tests that spawn a real binary, run against built `dist/`, or exercise the package as an external consumer.
-
-E2E (Playwright) is separate, lives under each package's `e2e/`, runs via `pnpm test:e2e`.
-
-### Tiers
-
-A unit test runs in one of two tiers, and its filename picks the tier
-([ADR 0021](docs/adr/0021-tests-run-in-node-or-in-a-real-browser.md)). `*.test.ts(x)` runs in Node:
-server code, routes, RPC, hooks, pure logic, rendering to a string. `*.browser.test.ts(x)` runs in
-headless Chromium: anything that renders into a DOM or touches a browser API. Nothing simulates a
-DOM — no `test.environment`, no `@vitest-environment` docblock, no jsdom or happy-dom, no setup file
-stubbing a browser API. A test that needs both a DOM and a Node harness is two files. Run
-`pnpm exec playwright install chromium` once before the first `pnpm test:unit`.
-
-For a consumer package, `plumix/test` is the one test import in both tiers: harnesses, factories,
-`stubPluginRpc`, the block render helpers, and the `fakeFile`/`fakeImage` upload fakes. Its
-`browser` build exports the same names, and a Node-only one throws there with the fix. `plumix/test-tier` reports an environment
-setting, and a DOM import or DOM global read in a test not named `*.browser.test.*`; a `typeof`
-probe stays allowed.
-
-### Selectors
-
-Tests use `getByTestId` only. Every other query — by role, text, label, placeholder, alt text, title
-or display value, in any `get`/`query`/`find` and `All` variant — is rejected by
-`plumix/no-non-testid-queries` in test files and e2e specs. Add a `data-testid` to the markup rather
-than reaching for another query.
-
-### Test doubles
-
-Module mocking is rejected in test files by `plumix/no-module-mocking` — `vi.mock`, `vi.doMock`,
-`vi.unmock`, `vi.importActual` and the rest of that family. A test that names a module path asserts
-where code lives, not what it does, so moving the file leaves it passing while covering nothing.
-Substitute at a real seam instead: pass the collaborator in, stub the platform boundary
-(`vi.stubGlobal("fetch", …)`), seed the input the subject actually reads, or render the real
-collaborator. `vi.fn` and `vi.spyOn` are untouched — they substitute values, not modules. When no
-seam exists, add one to the source at the highest point that serves every caller, not one per test.
-
-Admin tests have three shared seams in `packages/admin/test/`: `stubRpc` (answers the real oRPC
-client at the fetch boundary), `seedManifest` (writes the manifest payload the admin shell writes),
-and `renderWithRouter` (a real memory-history router, so navigation lands on a URL).
-
-### Slow tests and timeouts
-
-Vitest's 5s default is a hang detector, and `pnpm test:unit` pins turbo to `--concurrency=2` so a
-contended runner doesn't turn a fast test into a timeout (the reasoning is in `turbo.json`). Profile
-before reaching for an override — often it is masking something:
-
-- **Setup dominates the test body** → fix the setup. A 530-entry seed loop became one multi-row
-  insert per table (#2162, 140ms → 28ms).
-- **A lazy `import()` inside a test, where nothing depends on when the module evaluates** → hoist it
-  to a static import, which moves the cost into collection where no per-test timeout applies.
-  `cf-access.test.ts` was the only suite reaching for `plumix/test` with `await import()`; hoisting
-  took that test's median from 546ms to 54ms and deleted a `{ timeout: 30_000 }` (#2184). Check the
-  condition first: several suites import lazily _because_ load order is the thing under test — the
-  island runtime ones re-import per test after clearing `window.Plumix`, and hoisting them breaks
-  the test.
-- **The cost can be paid from a hook** → `beforeAll` pre-warm. The budget moves to the hook, so each
-  test's 5s goes back to being a hang detector and the suite stops depending on which test sorts
-  first (#1880).
-- **One outlier over a quiet field** → scope a per-test timeout and name the mechanism in a comment
-  (#1522).
-
-Judge an override against the **distribution**, not the single worst test. Under jsdom,
-`@plumix/admin-editor` kept a package-wide `testTimeout: 15_000` because 22 of its tests peaked above
-1000ms and its worst three — 2386ms, 1591ms, 1509ms — came within 2.1–3.3x of the 5s default
-(#2184): a dense band, where scoping a timeout to the worst test only promotes the next one. In
-Chromium its worst test is 419ms across three runs beside another suite and none passes 1000ms, so
-the override is gone. A distribution moves with the environment; re-measure before keeping one.
-
-### Coverage
-
-Wired in every test-having package (`pnpm exec vitest run --coverage`). Tracked, not enforced; no thresholds.
-
-### shadcn
-
-The primitives in `packages/admin-ui/src` that came from shadcn are Plumix source
-([ADR 0023](docs/adr/0023-admin-ui-owns-the-primitives-it-took-from-shadcn.md)): fully linted,
-localized through required label props, and extended in place. Take an upstream change by running
-`pnpm dlx shadcn@latest add <name> --diff` from `packages/admin-ui` and applying what you want by
-hand — never `--overwrite`.
-
-Code that composes those primitives is checked by `@shadcn/lint` (the React config): no raw palette
-colours, no classes Tailwind cannot generate, no restyling a primitive beyond layout, no arbitrary
-values.
-
 ## Commits, branches, PRs
 
-- Conventional Commits enforced by commitlint (`@commitlint/config-conventional` + `config-pnpm-scopes`).
+- Conventional Commits, enforced by commitlint (`commitlint.config.ts`).
 - **Scopes** are validated against workspace package names — run `pnpm ls -r --depth -1` to list them. For `.github/` meta changes, use `ci:` with no scope.
 - Use `refactor`, not `ref` — `ref` isn't in the allowed type-enum.
 - **Subject must start lowercase.** Rephrase to start with a lowercase verb if you'd otherwise lead with `CI`, `API`, `OAuth`, etc.
@@ -306,12 +141,12 @@ Publishing is automated by Changesets (`.changeset/README.md`). Merging a PR tha
 pnpm changeset   # pick the bump, write a one-line user-facing summary, commit the generated file
 ```
 
-**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages (`apps/*`, `tooling/*`, `packages/plugins/*/playground`).
+**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages.
 
 **Which package to select, and the bump:**
 
-- **Framework** — `plumix`, `create-plumix-app`, and the internal `@plumix/{core,admin,admin-editor,admin-ui}` are a `fixed` group: select any one and they all bump together to the same version.
-- **Plugins and the runtime adapter** — `@plumix/plugin-*` and `@plumix/runtime-cloudflare` version **independently**; select the specific package (a plugin fix ships with no framework release).
+- **Framework** — the `fixed` group in `.changeset/config.json`: select any one and they all bump together to the same version.
+- **Everything else** versions **independently**; select the specific package (a plugin fix ships with no framework release).
 - Pre-1.0 (`0.x`): **patch** = fix, **minor** = feature _or_ breaking change.
 
 Write the summary as upgrade release-notes, not a commit message: lead with a present-tense verb (Adds / Fixes / Removes) and describe the observable effect.
@@ -324,7 +159,7 @@ GitHub Issues at `withplumix/plumix`, operated via the `gh` CLI. See `docs/agent
 
 ### Triage labels
 
-Five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`); will be created on first use. See `docs/agents/triage-labels.md`.
+The label for each triage role is in `docs/agents/triage-labels.md`.
 
 ### Domain docs
 

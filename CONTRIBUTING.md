@@ -160,7 +160,7 @@ Links mean two different things in this repo, so two gates check them; every
 file belongs to one or the other.
 
 **Repository prose** — everything outside `apps/docs/src/content/docs`:
-`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/**`, the changelogs, the
+`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CODING_STANDARDS.md`, `docs/**`, the changelogs, the
 package READMEs. Links here resolve against the file tree, the way GitHub
 renders them, so they are ordinary relative paths. The `Links` CI job checks
 them offline with [lychee](https://lychee.cli.rs), including `#anchor`

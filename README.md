@@ -59,7 +59,8 @@ Add features by dropping official plugins into your config:
 ## Documentation
 
 Agent-facing conventions live in [`AGENTS.md`](./AGENTS.md) and
-[`docs/agents/`](./docs/agents). Authoring guides ship with 1.0.
+[`docs/agents/`](./docs/agents), and how code is written in
+[`CODING_STANDARDS.md`](./CODING_STANDARDS.md). Authoring guides ship with 1.0.
 
 ## Contributing
 
