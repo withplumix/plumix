@@ -42,6 +42,8 @@ yarn-error.log*
 
 # node runtime playground: SQLite file + uploads, wiped before each e2e run
 packages/runtimes/node/playground/data/
+# bun runtime playground: the same
+packages/runtimes/bun/playground/data/
 
 # drizzle-kit generated migrations (committed under packages once a release flow is in place)
 .drizzle/

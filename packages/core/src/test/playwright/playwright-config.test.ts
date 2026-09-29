@@ -116,6 +116,26 @@ describe("definePlumixE2EConfig", () => {
     );
   });
 
+  test("a runtime's cli prefix runs generate, apply and dev in place of pnpm exec plumix", async () => {
+    const bunPlayground = await playground([
+      runtimePackage("@plumix/runtime-bun", {
+        cli: "bun --bun node_modules/plumix/bin/plumix.mjs",
+        wipe: ["data"],
+        database: { glob: "data/*.sqlite" },
+      }),
+    ]);
+
+    const config = definePlumixE2EConfig({
+      port: 3130,
+      configDir: bunPlayground,
+      playground: ".",
+    });
+
+    expect(webServerCommandOf(config)).toBe(
+      "cd . && rm -rf data drizzle && bun --bun node_modules/plumix/bin/plumix.mjs migrate generate && bun --bun node_modules/plumix/bin/plumix.mjs migrate apply && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
+    );
+  });
+
   test("applyMigrations=false drops the apply step but keeps migrate generate", () => {
     const config = definePlumixE2EConfig({
       port: 3070,

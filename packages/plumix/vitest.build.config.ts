@@ -10,5 +10,9 @@ export default defineConfig({
   plugins: [plumixSourceResolver()],
   test: {
     include: ["src/**/*.build.test.{ts,tsx}"],
+    // pnpm's bin shims export `NODE_PATH` into its hoisted store, and a CLI
+    // started any other way — `bun --bun` on the `.mjs` entry — has none, so
+    // nothing the build resolves may lean on it.
+    env: { NODE_PATH: "" },
   },
 });

@@ -1,0 +1,27 @@
+{
+  "name": "@plumix/runtime-bun-playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plumix consumer on the Bun runtime — runs the shared runtime e2e spec + manual dogfooding",
+  "license": "MIT",
+  "scripts": {
+    "build": "bun --bun ./node_modules/plumix/bin/plumix.mjs build",
+    "clean": "git clean -xdf .plumix data dist node_modules",
+    "dev": "bun --bun ./node_modules/plumix/bin/plumix.mjs dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-media": "workspace:*",
+    "@plumix/runtime-bun": "workspace:*",
+    "plumix": "workspace:*",
+    "react": "catalog:react"
+  },
+  "devDependencies": {
+    "@plumix/typescript-config": "workspace:*",
+    "@types/bun": "1.4.2",
+    "@types/react": "catalog:react",
+    "typescript": "catalog:"
+  }
+}

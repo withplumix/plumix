@@ -61,6 +61,11 @@ const ADMIN_THEME_CSS = resolve(
   dirname(require.resolve("@plumix/admin/package.json")),
   "dist/theme.css",
 );
+// Tailwind is plumix's dependency, not the site's: resolved from the site
+// root it is found only where an install hoisted it there or pnpm's bin shim
+// put its store on `NODE_PATH`, and `bun --bun` on the CLI entry has neither.
+const TAILWIND_THEME_CSS = require.resolve("tailwindcss/theme.css");
+const TAILWIND_UTILITIES_CSS = require.resolve("tailwindcss/utilities.css");
 
 export async function assemblePluginAdminBundle({
   plugins,
@@ -285,8 +290,8 @@ async function compilePluginCss({
   // responsive `md:block`). Plugin-specific utilities still apply — nothing
   // in the admin competes with them.
   const input = [
-    `@import "tailwindcss/theme" layer(theme);`,
-    `@import "tailwindcss/utilities" layer(plumix-plugins);`,
+    `@import ${JSON.stringify(TAILWIND_THEME_CSS)} layer(theme);`,
+    `@import ${JSON.stringify(TAILWIND_UTILITIES_CSS)} layer(plumix-plugins);`,
     themeCss,
     sourceLines,
   ].join("\n");

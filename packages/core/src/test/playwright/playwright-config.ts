@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { defineConfig, devices } from "@playwright/test";
 
+import type { RuntimeE2E } from "./runtime-e2e.js";
 import type { PlumixWorkerOptions } from "./test.js";
 import { readRuntimeE2E } from "./runtime-e2e.js";
 
@@ -132,6 +133,8 @@ export function resolveE2EPort(base: number): number {
 
 interface PlaygroundCommand {
   readonly playground: string;
+  /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
+  readonly cli: string;
   /** Paths the runtime's `plumix.e2e` block says to wipe before a run. */
   readonly wipe: readonly string[];
   readonly port: number;
@@ -150,30 +153,30 @@ function bakePlaygroundCommand(input: PlaygroundCommand): string {
     // `./drizzle/*.sql` for its per-session schema, so these two steps
     // cannot be separated.
     `rm -rf ${[...input.wipe, "drizzle"].join(" ")}`,
-    "pnpm exec plumix migrate generate",
+    `${input.cli} migrate generate`,
   ];
-  // Already delegated to the runtime by the CLI, so the command stays the
-  // same whichever runtime the playground depends on.
-  if (input.applyMigrations) steps.push("pnpm exec plumix migrate apply");
+  // Already delegated to the runtime by the CLI, so only the prefix it runs
+  // through differs between runtimes.
+  if (input.applyMigrations) steps.push(`${input.cli} migrate apply`);
   if (input.extraSetup) steps.push(input.extraSetup);
   const devFlags = [`--port ${String(input.port)}`];
   if (input.inspectorPort !== undefined) {
     devFlags.push(`--inspector-port ${String(input.inspectorPort)}`);
   }
-  steps.push(`pnpm exec plumix dev ${devFlags.join(" ")}`);
+  steps.push(`${input.cli} dev ${devFlags.join(" ")}`);
   return steps.join(" && ");
 }
 
-function runtimeWipe(
+function playgroundRuntime(
   configDir: string | undefined,
   playground: string,
-): readonly string[] {
+): RuntimeE2E {
   if (configDir === undefined) {
     throw new Error(
       "definePlumixE2EConfig: `playground` is resolved against `configDir` — pass `configDir: import.meta.dirname`.",
     );
   }
-  return readRuntimeE2E(resolve(configDir, playground)).wipe;
+  return readRuntimeE2E(resolve(configDir, playground));
 }
 
 /**
@@ -231,12 +234,17 @@ export function definePlumixE2EConfig(
   // Object instead. Nothing to pin to one worker, and nothing for the
   // baseline fixture to snapshot.
   const hasSharedDb = isPlayground && options.applyMigrations !== false;
+  const runtime =
+    options.playground === undefined
+      ? undefined
+      : playgroundRuntime(options.configDir, options.playground);
   const webServerCommand =
     options.webServerCommand ??
-    (options.playground !== undefined
+    (options.playground !== undefined && runtime !== undefined
       ? bakePlaygroundCommand({
           playground: options.playground,
-          wipe: runtimeWipe(options.configDir, options.playground),
+          cli: runtime.cli ?? "pnpm exec plumix",
+          wipe: runtime.wipe,
           port,
           inspectorPort:
             options.inspectorPort === undefined
