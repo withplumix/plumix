@@ -8,7 +8,6 @@ import type {
   ObjectStorage,
 } from "plumix";
 import type { S3Credentials } from "plumix/storage/s3";
-import { S3Client } from "bun";
 import { resolveEnvInput } from "plumix";
 import {
   DEFAULT_PRESIGN_TTL_SECONDS,
@@ -81,8 +80,10 @@ export function bunS3(config: BunS3Config): BunS3ObjectStorage {
         credentials,
       }).connect(env);
       // Every field is given, so Bun's own `S3_*`/`AWS_*` lookup never picks
-      // the account.
-      const client = new S3Client({
+      // the account. Reached through the global rather than imported from
+      // `bun`, so the package root still loads under Node, where a CLI command
+      // reports that Bun is required.
+      const client = new Bun.S3Client({
         bucket: config.bucket,
         region,
         endpoint,
