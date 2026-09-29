@@ -564,10 +564,11 @@ describe("the built site served by bun", () => {
         expect(first.headers.get("content-type")).toBe("image/webp");
         const variant = join(dir, "variant.bin");
         writeFileSync(variant, new Uint8Array(await first.arrayBuffer()));
-        // Decoded by Bun, which this suite's own process is not.
+        // Decoded by Bun, which this suite's own process is not. One string,
+        // because Bun colours numeric console.log arguments under FORCE_COLOR.
         const { stdout } = await promisify(execFile)("bun", [
           "-e",
-          `const m = await new Bun.Image(${JSON.stringify(variant)}).metadata(); console.log(m.format, m.width, m.height);`,
+          `const m = await new Bun.Image(${JSON.stringify(variant)}).metadata(); console.log(\`\${m.format} \${m.width} \${m.height}\`);`,
         ]);
         expect(stdout.trim()).toBe("webp 640 427");
         expect(existsSync(join(dir, "data/images"))).toBe(true);
