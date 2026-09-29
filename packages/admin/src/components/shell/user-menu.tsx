@@ -6,7 +6,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 
 import type { AuthSessionUser } from "@plumix/core";
-import { Avatar, AvatarFallback } from "@plumix/admin-ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,11 +55,14 @@ export function UserMenu({ user }: { user: UserIdentity }): ReactNode {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton size="lg" data-testid="user-menu-trigger">
-          <Avatar className="size-8">
-            <AvatarFallback>
-              <span className="text-xs font-semibold">{initials}</span>
-            </AvatarFallback>
-          </Avatar>
+          {/* Not an `AvatarFallback`: its muted text on the muted fill falls
+              short of WCAG AA contrast at this size. */}
+          <div
+            aria-hidden
+            className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+          >
+            {initials}
+          </div>
           <div className="grid flex-1 text-start text-sm leading-tight">
             <span className="truncate font-medium">{displayName}</span>
             <span className="text-muted-foreground truncate text-xs">
