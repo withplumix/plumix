@@ -10,6 +10,7 @@ import { layerDirection } from "../eslint.config.js";
 import baseline from "../layers.baseline.json" with { type: "json" };
 import {
   CLIENT_SUBPATHS,
+  CYCLE_UNITS,
   environmentOf,
   FOLDERS,
   layerOf,
@@ -143,10 +144,17 @@ function environmentViolations(
   });
 }
 
-// A top-level folder, or a root file on its own.
+// A top-level folder, or a root file on its own, or the unit it belongs to
+// in its layer.
 function subsystemOf(file: string): string {
   const [head, ...rest] = file.split("/");
-  return rest.length === 0 || head === undefined ? file : head;
+  const subsystem = rest.length === 0 || head === undefined ? file : head;
+  const layer = layerOf(file);
+  const unit = Object.entries(CYCLE_UNITS).find(
+    ([, { layer: unitLayer, members }]) =>
+      unitLayer === layer && members.includes(subsystem),
+  );
+  return unit?.[0] ?? subsystem;
 }
 
 // Every edge kind counts here, type-only included: a cycle erased from the
@@ -251,6 +259,26 @@ describe("the subsystems inside a layer form no cycle", () => {
           members: ["entries", "terms"],
         },
         detail: "entries → terms → entries, via entries/a.ts → terms/b.ts",
+      },
+    ]);
+  });
+
+  test("a cycle inside a unit is allowed, one through it is named with the unit", () => {
+    const graph: Graph = new Map<string, readonly ImportEdge[]>([
+      ["context/a.ts", [{ to: "plugin/b.ts", kind: "typeOnly" }]],
+      ["plugin/b.ts", [{ to: "context/a.ts", kind: "typeOnly" }]],
+      ["hooks/c.ts", [{ to: "support.ts", kind: "typeOnly" }]],
+      ["support.ts", [{ to: "theme.ts", kind: "typeOnly" }]],
+    ]);
+    expect(cycleViolations(graph)).toEqual([
+      {
+        violation: {
+          rule: "cycle",
+          layer: "contracts",
+          members: ["app-context", "support.ts"],
+        },
+        detail:
+          "app-context → support.ts → app-context, via hooks/c.ts → support.ts",
       },
     ]);
   });
