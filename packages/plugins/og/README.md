@@ -331,7 +331,7 @@ A free-plan site is not left without share images. The featured-image path above
 
 ## Which engine version you get
 
-`@takumi-rs/wasm` is declared at an exact version rather than a range, so the copy rendering your cards is the copy this package's own tests rasterize with. It is the only thing that turns a card into bytes, and a break in it does not throw — you find out when a link unfurls wrong weeks later. Pinning it pins the whole engine, because it declares its own `@takumi-rs/helpers` at an exact version too, so no part of the rasterizer floats behind it.
+`@takumi-rs/wasm` is declared at an exact version rather than a range, so the copy rendering your cards is the copy this package's own tests rasterize with. It is the only thing that turns a card into bytes, and a break in it does not throw — you find out when a link unfurls wrong weeks later. Pinning it pins the whole engine, because it declares its own `@takumi-rs/helpers` at an exact version too, so no part of the rasterizer floats behind it. `src/takumi.test.ts` fails if the declared version stops matching the installed one, so the pin cannot quietly become a range.
 
 Adopting a newer one is a deliberate release, gated on the suite that loads the real wasm and checks a card comes back as encoded pixels — so an engine that stopped rendering fails there rather than on your site. For a version this package has not adopted, your package manager's overrides are the lever, and the render is then yours to verify.
 

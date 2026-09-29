@@ -4,16 +4,16 @@ Plumix is a CMS with pluggable runtime adapters; Cloudflare is the default. It i
 
 ## Working rules
 
-- **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red — one RED→GREEN cycle at a time, never all-tests-then-all-impl.
-- **Stay in scope.** One PR per issue; every changed line traces to it. No drive-by refactors or bulk cleanups: match the surrounding style, remove only what your change left unused, and mention dead code you find rather than deleting it. Serialize dependent PRs — ship, merge, rebase, then start the next.
+- **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red, one RED→GREEN cycle at a time, never all the tests first and then all the code.
+- **Stay in scope.** One PR per issue, and every changed line traces to it. Skip drive-by refactors and bulk cleanups. Match the surrounding style, remove only what your change left unused, and mention dead code you find rather than deleting it. Ship dependent PRs one at a time. Merge one and rebase before you start the next.
 - **Investigate before building.** When a change is consumed in more than one place (server, admin, editor, a second bundle), find out how each consumer gets it today before you design. Say what you verified and where you stopped. Resolving a path is not a working render.
-- **Claims need evidence.** Back every statement about how the code behaves — in a PR body, a review reply, a decline — with a file and line, a source excerpt, or a command someone can rerun.
+- **Claims need evidence.** Back every statement about how the code behaves with a file and line, a source excerpt, or a command someone can rerun. That goes for PR bodies, review replies and declines alike.
 - **Read the READMEs on the way down.** Before editing a file, read every `README.md` from the repo root to its folder. Packages keep their local procedures there.
 - **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for.
 - **Stop rather than work around.** When a test passes only with another flag, counter or copy of state, stop and consolidate who owns that state. Never get past a blocker by deleting a lockfile, `--force`, `--ignore-scripts` or disabling a check; stop and say what blocks you.
 - **A failing check is yours until shown otherwise.** Call a failure pre-existing only after reproducing it on `main`, and give that evidence.
 - **Leave changes you did not make.** Never revert or rewrite someone else's edits in a shared worktree, stash or branch.
-- **Regenerate, don't hand-edit.** A generated file changes only through the script that owns it, and the result is committed. Hand-authored catalogs are the exception, and they say so.
+- **Regenerate, don't hand-edit.** Change a generated file only by running the script that owns it, and commit the result. Hand-authored catalogs are the exception, and they say so.
 - **Keep docs true in the same change.** When a change makes a README, an ADR, this file or `CODING_STANDARDS.md` wrong, fix it in the same PR.
 
 ## Coding standards
@@ -24,26 +24,26 @@ Plumix is a CMS with pluggable runtime adapters; Cloudflare is the default. It i
 
 Run everything from the root. Most root scripts run the turbo task of the same name across the workspace.
 
-| Script                            | What it does                                                                                                      |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `build`                           | Build every package in dependency order.                                                                          |
-| `dev`                             | `turbo watch dev` across the workspace.                                                                           |
-| `typecheck` / `lint` / `lint:fix` | Type-check and lint. Both need upstream packages built (see below).                                               |
-| `format` / `format:fix`           | Prettier: `format` checks, `format:fix` writes.                                                                   |
-| `test:unit`                       | Vitest in every package. Workspace imports resolve to source and i18n catalogs are stubbed, so it needs no build. |
-| `test:build`                      | The `*.build.test.ts` suites, which inspect what the build produced.                                              |
-| `test`                            | `test:unit` + `test:build`.                                                                                       |
-| `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                            |
-| `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                             |
-| `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                     |
-| `i18n:ratchet:check`              | Fails when a file on the admin's unlocalized-strings denylist no longer needs to be on it.                        |
-| `knip`                            | Unused files, exports and dependencies.                                                                           |
-| `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                            |
-| `commitlint`                      | Lint commit messages.                                                                                             |
-| `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                               |
-| `smoke`                           | Publish to a throwaway registry, scaffold an app from it, and boot it.                                            |
-| `clean` / `clean:workspaces`      | Remove the root `node_modules` / each package's `dist`, caches and `node_modules`.                                |
-| `release` / `version-packages`    | Changesets publishing; the release bot runs these.                                                                |
+| Script                            | What it does                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `build`                           | Build every package in dependency order.                                                                            |
+| `dev`                             | `turbo watch dev` across the workspace.                                                                             |
+| `typecheck` / `lint` / `lint:fix` | Type-check and lint. Both need upstream packages built (see below).                                                 |
+| `format` / `format:fix`           | Prettier: `format` checks, `format:fix` writes.                                                                     |
+| `test:unit`                       | Vitest in every package. It reads workspace packages from source and stubs the i18n catalogs, so it needs no build. |
+| `test:build`                      | The `*.build.test.ts` suites, which inspect what the build produced.                                                |
+| `test`                            | `test:unit` + `test:build`.                                                                                         |
+| `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                              |
+| `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
+| `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
+| `i18n:ratchet:check`              | Fails when a file on the admin's unlocalized-strings denylist no longer needs to be on it.                          |
+| `knip`                            | Unused files, exports and dependencies.                                                                             |
+| `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                              |
+| `commitlint`                      | Lint commit messages.                                                                                               |
+| `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                                 |
+| `smoke`                           | Publish to a throwaway registry, scaffold an app from it, and boot it.                                              |
+| `clean` / `clean:workspaces`      | Remove the root `node_modules` / each package's `dist`, caches and `node_modules`.                                  |
+| `release` / `version-packages`    | Changesets publishing; the release bot runs these.                                                                  |
 
 **i18n drift.** Fix an `i18n:check` failure with `pnpm --filter <pkg> i18n:extract` then `i18n:compile`, and commit the `locales/` churn. A package whose `i18n:extract` refuses to run hand-authors its `locales/*.po` (its strings live in a server-side plugin definition, which no Babel macro pass reads); fix its drift by editing `locales/en.po`.
 
@@ -87,8 +87,8 @@ Every package outside the framework imports Plumix only through `plumix` and its
 boundary lets the internal packages refactor freely while the published surface stays stable. The
 `noInternalImports` ESLint config in `@plumix/eslint-config` catches it in the packages that opt in.
 
-Every export a consumer can import is a recorded decision in `tooling/published-surface`, and a PR
-that adds one adds its row, with a reason, to its roster.
+`tooling/published-surface` records a reason for every export a consumer can import. A PR that adds
+an export adds its row there.
 
 ### Runtimes
 
@@ -118,38 +118,38 @@ catalog** under `catalogs:`, so a bump is a single-line change.
 
 ### Env & secrets
 
-Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local secrets live in `.env` (gitignored) on every runtime, and the environment wins over it. Never paste secret values into commits, logs, or chat.
+Gate dev-only code on `import.meta.env.DEV`, a compile-time constant, not on `process.env`, so a dev endpoint fails closed in production. A secret config slot takes an `EnvInput<T>`, and `resolveEnvInput` reads it. Local secrets live in `.env` (gitignored) on every runtime, and a variable set in the environment wins over it. Never paste secret values into commits, logs, or chat.
 
 ## Commits, branches, PRs
 
 - Conventional Commits, enforced by commitlint (`commitlint.config.ts`).
-- **Scopes** are validated against workspace package names — run `pnpm ls -r --depth -1` to list them. For `.github/` meta changes, use `ci:` with no scope.
-- Use `refactor`, not `ref` — `ref` isn't in the allowed type-enum.
+- **Scopes** must be workspace package names, and `pnpm ls -r --depth -1` lists them. For `.github/` meta changes, use `ci:` with no scope.
+- Use `refactor`, not `ref`. Commitlint rejects `ref`.
 - **Subject must start lowercase.** Rephrase to start with a lowercase verb if you'd otherwise lead with `CI`, `API`, `OAuth`, etc.
-- **Wrap commit body lines at ≤100 chars** — footer-max-line-length inherits from config-conventional even though body-max-line-length is disabled.
+- **Wrap commit body lines at 100 characters.** `commitlint.config.ts` turns the body limit off, but config-conventional's 100-character footer limit still applies.
 - Branch names are `<type>/<short-desc>`. Never "claude" in a branch name or PR title. Commit and PR bodies carry the `Co-Authored-By` trailer.
 - Write `Fixes #N` only after `gh issue view N` shows a title that matches the work. A branch or worktree name is not a source for N. Use `Refs #N` when the issue stays open.
 - All PRs are squash-merged.
 
 ## Releases (changesets)
 
-Publishing is automated by Changesets (`.changeset/README.md`). Merging a PR that contains changesets makes the bot open a **"Version Packages"** PR; merging _that_ publishes to npm (signed with provenance, behind a Verdaccio boot-smoke gate).
+Changesets publishes the packages (`.changeset/README.md`). Merging a PR that contains changesets makes the bot open a **"Version Packages"** PR. Merging _that_ one publishes to npm, signed with provenance, once a boot test against a local Verdaccio registry passes.
 
-**Write a changeset** when your PR changes anything a _consumer_ of a published package would notice — a feature, a fix, or a behavior / API / exports / dependency change:
+**Write a changeset** when your PR changes anything a _consumer_ of a published package would notice, such as a feature, a fix, or a change to behavior, API, exports or dependencies:
 
 ```bash
 pnpm changeset   # pick the bump, write a one-line user-facing summary, commit the generated file
 ```
 
-**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages.
+**Skip it** when a consumer would see no difference (tests, CI, docs, internal refactors, chores), or when the change touches only private packages.
 
 **Which package to select, and the bump:**
 
-- **Framework** — the `fixed` group in `.changeset/config.json`: select any one and they all bump together to the same version.
+- **Framework.** The packages in the `fixed` group in `.changeset/config.json` bump together. Select any one and they all move to the same version.
 - **Everything else** versions **independently**; select the specific package (a plugin fix ships with no framework release).
 - Pre-1.0 (`0.x`): **patch** = fix, **minor** = feature _or_ breaking change.
 
-Write the summary as upgrade release-notes, not a commit message: lead with a present-tense verb (Adds / Fixes / Removes) and describe the observable effect.
+Write the summary as a release note, not a commit message. Start with a present-tense verb (Adds, Fixes, Removes) and describe what a user will notice.
 
 ## Agent skills
 
@@ -163,4 +163,4 @@ The label for each triage role is in `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single context: one root `CONTEXT.md`, split by subheading, and repo-wide decisions in `docs/adr/`. There is no `CONTEXT-MAP.md` and no per-package glossary — ADR 0001 rejected both, because the domain vocabulary means the same thing in every package. See `docs/agents/domain.md`.
+One root `CONTEXT.md`, split by subheading, holds the domain vocabulary, and `docs/adr/` holds repo-wide decisions. There is no `CONTEXT-MAP.md` and no per-package glossary. ADR 0001 rejected both, because the vocabulary means the same thing in every package. See `docs/agents/domain.md`.

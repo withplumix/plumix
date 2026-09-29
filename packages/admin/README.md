@@ -98,12 +98,14 @@ resolving and the command fails naming both the subject and the id, rather than
 writing a stale picture.
 
 CI leans on exactly that: the e2e job runs the capture and asserts it succeeds,
-so markup that moves fails a pull request instead of reaching a reader. Nothing
-compares pixels and no baselines are kept — an image diff would catch cosmetic
-drift too, but every intended redesign would fail it, and a noisy job gets
-turned off. CI throws away the images it writes; regenerating the committed
-ones is the local act below. Turbo caches the task either way, which is sound
-because both runs write the same bytes — `turbo.json` has the rest.
+so markup that moves fails a pull request instead of reaching a reader. It then
+asserts the committed images are the ones the capture produced, with a
+`git diff` over `apps/docs/src/assets/screenshots`. Because the capture renders
+in the pinned container below, a difference means images that were not
+regenerated alongside the change, or a container that stopped being
+deterministic; the job uploads what it rendered as the `docs-screenshots`
+artifact. Turbo caches the task, so a change that cannot move a pixel skips both
+steps — `turbo.json` has the rest.
 
 The data is mocked and the clock is frozen, so a re-run with no UI change
 rewrites the same bytes. Keeping that true off this machine takes one more
