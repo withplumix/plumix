@@ -13,6 +13,7 @@ import {
   centerOnRect,
   clampPanToFrame,
   frameSelection,
+  stageTransform,
   wheelToView,
 } from "./canvas-view.js";
 import {
@@ -100,7 +101,7 @@ export function usePanZoom({
       liveViewRef.current = view;
       const el = stageRef.current;
       if (el) {
-        el.style.transform = `translate(${String(view.panX)}px, ${String(view.panY)}px) scale(${String(view.zoom)})`;
+        el.style.setProperty("--stage-transform", stageTransform(view));
       }
       if (!gesturingRef.current) {
         gesturingRef.current = true;
@@ -189,8 +190,10 @@ export function usePanZoom({
   // renders.
   useLayoutEffect(() => {
     if (gesturingRef.current && stageRef.current) {
-      const v = liveViewRef.current;
-      stageRef.current.style.transform = `translate(${String(v.panX)}px, ${String(v.panY)}px) scale(${String(v.zoom)})`;
+      stageRef.current.style.setProperty(
+        "--stage-transform",
+        stageTransform(liveViewRef.current),
+      );
     }
   });
 

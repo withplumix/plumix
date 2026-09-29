@@ -1,5 +1,5 @@
 import type { MessageDescriptor } from "plumix/i18n";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { describeRpcError } from "plumix/admin";
 import {
@@ -549,8 +549,8 @@ function SubmissionDetail({
           <p
             key={line.path}
             data-testid={`forms-answer-${line.path}`}
-            className="flex flex-wrap gap-2 text-sm"
-            style={{ marginInlineStart: `${String(line.depth)}rem` }}
+            className="ms-(--indent) flex flex-wrap gap-2 text-sm"
+            style={{ "--indent": `${String(line.depth)}rem` } as CSSProperties}
           >
             <span className="text-muted-foreground">
               {line.row === undefined ? line.label : `${line.label}.`}

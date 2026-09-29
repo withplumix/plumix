@@ -82,7 +82,8 @@ describe("LayersTab", () => {
     expect(getByTestId("layer-g")).toBeDefined();
     // The nested child is rendered and indented one level.
     const child = getByTestId("layer-c").parentElement;
-    expect(child?.style.paddingInlineStart).toBe("16px");
+    // `ps-(--indent)` reads it; this tier loads no CSS to compute it.
+    expect(child?.style.getPropertyValue("--indent")).toBe("16px");
   });
 
   test("lists the children of every slot of a two-slot block", () => {
@@ -98,7 +99,8 @@ describe("LayersTab", () => {
     ]);
     expect(getByTestId("layer-l")).toBeDefined();
     const second = getByTestId("layer-r").parentElement;
-    expect(second?.style.paddingInlineStart).toBe("16px");
+    // `ps-(--indent)` reads it; this tier loads no CSS to compute it.
+    expect(second?.style.getPropertyValue("--indent")).toBe("16px");
   });
 
   test("uses the registry title as the layer label", () => {

@@ -509,8 +509,9 @@ describe("MetaBoxField dispatcher", () => {
     );
     const swatch = screen.getByTestId("meta-box-field-k-input-swatch");
     const hex = screen.getByTestId("meta-box-field-k-input-hex");
-    // Swatch trigger reflects the color via inline `background-color`.
-    expect(swatch).toHaveStyle({ "background-color": "#1a2b3c" });
+    // Swatch trigger reflects the color through `--swatch`, which its
+    // `bg-(--swatch)` reads; this tier loads no CSS to compute the colour.
+    expect(swatch.style.getPropertyValue("--swatch")).toBe("#1a2b3c");
     expect(hex).toHaveValue("#1a2b3c");
     // The FormControl id lands on the hex input (the value control), not the
     // ColorPicker's wrapper div, so the visible <FormLabel> actually names and

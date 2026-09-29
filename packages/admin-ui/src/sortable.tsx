@@ -1,5 +1,5 @@
 import type { DragEndEvent } from "@dnd-kit/core";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./button.js";
 import { destructiveRowClassName } from "./destructive.js";
 import { GripVertical, X } from "./icons.js";
+import { cn } from "./utils.js";
 
 // Generic vertical-list sortable primitive built around dnd-kit. Used
 // by `mediaList` / `userList` / `entryList` / repeater rows — any
@@ -127,12 +128,16 @@ function SortableRow({
   return (
     <li
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.6 : 1,
-      }}
-      className="border-input bg-background flex items-center gap-2 rounded-md border px-2 py-1.5"
+      style={
+        {
+          "--sortable-transform": CSS.Transform.toString(transform),
+          "--sortable-transition": transition,
+        } as CSSProperties
+      }
+      className={cn(
+        "plumix-sortable border-input bg-background flex items-center gap-2 rounded-md border px-2 py-1.5",
+        isDragging && "opacity-60",
+      )}
       data-testid={testId}
     >
       <button

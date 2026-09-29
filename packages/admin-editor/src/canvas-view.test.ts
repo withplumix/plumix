@@ -10,6 +10,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   reconcileView,
+  stageTransform,
   wheelToView,
   zoomToCursor,
 } from "./canvas-view.js";
@@ -238,5 +239,14 @@ describe("reconcileView", () => {
         viewport,
       }),
     ).toBeNull();
+  });
+});
+
+describe("stageTransform", () => {
+  // Pans first so the offset stays in screen pixels whatever the zoom.
+  test("translates by the pan, then scales by the zoom", () => {
+    expect(stageTransform({ panX: 12, panY: -8, zoom: 0.5 })).toBe(
+      "translate(12px, -8px) scale(0.5)",
+    );
   });
 });

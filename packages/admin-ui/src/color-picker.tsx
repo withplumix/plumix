@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
@@ -56,8 +57,11 @@ export function ColorPicker({
             data-testid={testId ? `${testId}-swatch` : undefined}
             className={cn(
               "border-input ring-ring/30 size-9 shrink-0 rounded-md border outline-hidden transition-[box-shadow] hover:ring-2 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
+              isHex(value) ? "bg-(--swatch)" : "bg-black",
             )}
-            style={{ backgroundColor: safeHex }}
+            style={
+              { "--swatch": isHex(value) ? value : undefined } as CSSProperties
+            }
           />
         </PopoverTrigger>
         <PopoverContent

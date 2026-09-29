@@ -376,9 +376,8 @@ function ComboboxControl({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0"
+        className="w-(--radix-popover-trigger-width) p-0"
         align="start"
-        style={{ width: "var(--radix-popover-trigger-width)" }}
       >
         <Command>
           <CommandInput

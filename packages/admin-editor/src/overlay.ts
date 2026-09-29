@@ -37,3 +37,7 @@ export function overlayBox(
     height: rect.height * zoom,
   };
 }
+
+/** A number as a CSS pixel length. React appends no unit to a custom
+ *  property, and `.plumix-canvas-overlay` reads its `--box-*` as lengths. */
+export const px = (n: number): string => `${String(n)}px`;

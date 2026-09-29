@@ -238,6 +238,7 @@ export function CommentMarkup({
       <div
         className="plumix-comment-honeypot"
         data-plumix-comment-honeypot=""
+        // eslint-disable-next-line shadcn/no-inline-styles -- public markup, where no admin stylesheet loads; core keeps this inline so hiding never depends on a theme's CSS
         style={VISUALLY_HIDDEN_STYLE}
         aria-hidden="true"
       >

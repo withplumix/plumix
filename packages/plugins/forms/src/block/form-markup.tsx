@@ -730,6 +730,7 @@ export function FormMarkup({
       <div
         className="plumix-form-honeypot"
         data-plumix-form-honeypot=""
+        // eslint-disable-next-line shadcn/no-inline-styles -- public markup, where no admin stylesheet loads; core keeps this inline so hiding never depends on a theme's CSS
         style={VISUALLY_HIDDEN_STYLE}
         aria-hidden="true"
       >

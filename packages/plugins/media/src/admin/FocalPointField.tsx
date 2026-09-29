@@ -1,5 +1,9 @@
 import type { JsonObject, JsonValue } from "plumix";
-import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  CSSProperties,
+  ReactNode,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { useCallback, useRef } from "react";
 import { useLingui } from "plumix/i18n";
 import * as v from "valibot";
@@ -126,11 +130,14 @@ export function FocalPointField({
       />
       <span
         data-testid={`${testId}-dot`}
-        className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-black/40 shadow ring-1 ring-black/40"
-        style={{
-          left: `${String(focal.x * 100)}%`,
-          top: `${String(focal.y * 100)}%`,
-        }}
+        className="pointer-events-none absolute inset-(--focal-inset) size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-black/40 shadow ring-1 ring-black/40"
+        // The focal point is a spot in the image, which does not mirror under
+        // RTL, so the inset is physical: top, right, bottom, left.
+        style={
+          {
+            "--focal-inset": `${String(focal.y * 100)}% auto auto ${String(focal.x * 100)}%`,
+          } as CSSProperties
+        }
       />
     </div>
   );
