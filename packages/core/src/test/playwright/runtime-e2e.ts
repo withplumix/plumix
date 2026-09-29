@@ -8,6 +8,12 @@ import { basename, join } from "node:path";
  */
 export interface RuntimeE2E {
   readonly packageName: string;
+  /**
+   * Command prefix the playground's `plumix` CLI steps run through, in place
+   * of `pnpm exec plumix` — for a runtime whose CLI must run on a runtime
+   * other than the one pnpm's shim starts. Relative to the playground.
+   */
+  readonly cli?: string;
   /** Paths, relative to the playground, wiped before the server starts. */
   readonly wipe: readonly string[];
   /** Where the playground's SQLite file lives once migrations have run. */

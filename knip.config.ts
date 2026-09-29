@@ -155,6 +155,9 @@ const config: KnipConfig = {
     "packages/runtimes/node/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/runtimes/bun/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
@@ -214,12 +217,8 @@ const config: KnipConfig = {
         "src/support/index.ts",
         "src/vite/index.ts",
       ],
-      // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
-      // - tailwindcss is resolved at runtime by `@tailwindcss/node`'s
-      //   `compile()` (which `import`s `tailwindcss/theme` and
-      //   `tailwindcss/utilities` from the synthesised CSS string), not
-      //   from any TS source.
-      ignoreDependencies: ["drizzle-kit", "tailwindcss"],
+      // drizzle-kit is invoked by consumers as a CLI hint, not imported.
+      ignoreDependencies: ["drizzle-kit"],
     },
     "packages/runtimes/cloudflare": {
       // `cloudflare:workers` (DemoDB's DurableObject base class) is a
@@ -243,7 +242,10 @@ const config: KnipConfig = {
       playwright: false,
     },
     "packages/runtimes/bun": {
-      entry: ["src/index.ts", "src/commands/index.ts"],
+      // With knip's playwright plugin off, the export-map entries and the
+      // specs are listed by hand.
+      entry: ["src/index.ts", "src/commands/index.ts", "e2e/*.spec.ts"],
+      playwright: false,
     },
     "packages/runtimes/node": {
       // With knip's playwright plugin off, the export-map entries and the
