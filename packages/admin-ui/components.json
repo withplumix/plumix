@@ -17,5 +17,6 @@
     "lib": "src/",
     "hooks": "src/"
   },
-  "iconLibrary": "lucide"
+  "iconLibrary": "lucide",
+  "rtl": true
 }

@@ -192,10 +192,7 @@ function HeaderPublish({
               className="text-muted-foreground me-1 inline-flex items-center gap-1.5 text-xs"
               data-testid="editor-unpublished-changes"
             >
-              <span
-                className="size-1.5 rounded-full bg-amber-500"
-                aria-hidden
-              />
+              <span className="bg-warning size-1.5 rounded-full" aria-hidden />
               <Trans
                 id="editor.toolbar.unpublishedChanges"
                 message="Unpublished changes"

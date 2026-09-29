@@ -18,6 +18,7 @@
   "dependencies": {
     "@eslint/compat": "^2",
     "@eslint/js": "^10",
+    "@shadcn/lint": "^0.2.0",
     "eslint-plugin-import-x": "^4",
     "eslint-plugin-lingui": "^0.16.0",
     "eslint-plugin-react": "^7.37.5",

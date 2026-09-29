@@ -1,0 +1,20 @@
+{
+  "src/admin/MediaLibrary.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 13
+    },
+    "shadcn/no-restyle": {
+      "count": 9
+    }
+  },
+  "src/admin/MediaListPickerField.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 1
+    }
+  },
+  "src/admin/MediaPickerField.tsx": {
+    "shadcn/no-arbitrary-values": {
+      "count": 1
+    }
+  }
+}
