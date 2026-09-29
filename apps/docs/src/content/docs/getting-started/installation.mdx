@@ -107,10 +107,10 @@ pnpm create plumix-app my-site --plugins blog,pages,media,seo,feeds --auth oauth
 
 The flags are:
 
-- `--runtime <id>` picks the runtime, `node` or `cloudflare`. Defaults to `node`.
+- `--runtime <id>` picks the runtime, `node`, `bun` or `cloudflare`. Defaults to `node`. A `bun` project installs with Bun and runs every `plumix` command as `bun --bun plumix …`.
 - `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log`, `og`, `seo` and `feeds`. Leave the flag off and you get `seo` and `feeds`. The flag replaces that pair rather than adding to it, so `--plugins blog` scaffolds blog alone, and `--plugins=` scaffolds none.
 - `--auth <ids>` adds sign-in methods to passkeys, as a comma-separated list: `oauth` for GitHub, `magic-link`, and `cfAccess` for Cloudflare Access on the `cloudflare` runtime. Leave it off and you get passkeys alone. An unknown id exits with the list of methods the runtime offers.
-- `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
+- `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back. `--runtime bun` always installs with Bun, so it exits with an error beside a `--pm` naming another manager.
 - `--no-install` skips the dependency install.
 - `--no-db` skips generating and applying the local migration.
 - `--no-git` skips `git init` and the first commit.

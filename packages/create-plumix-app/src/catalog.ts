@@ -1,6 +1,7 @@
 import { glob, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import type { PackageManager } from "./package-manager.js";
 import { ScaffoldError } from "./errors.js";
 
 export interface PackageJson {
@@ -26,6 +27,13 @@ export interface CatalogContext {
   readonly catalogs?: Record<string, Record<string, string>>;
   /** Every workspace package's own version (name → version). */
   readonly workspaceVersions: Record<string, string>;
+  /**
+   * The exact version the repo pins for a package manager a runtime installs
+   * with, written to the project's `packageManager` field.
+   */
+  readonly packageManagerVersions?: Readonly<
+    Partial<Record<PackageManager, string>>
+  >;
 }
 
 export const EMPTY_CATALOG_CONTEXT: CatalogContext = {
@@ -80,6 +88,11 @@ export async function loadCatalogContext(
     catalog: parseWorkspaceCatalog(yaml),
     catalogs: parseNamedCatalogs(yaml),
     workspaceVersions: await collectWorkspaceVersions(repoRoot, yaml),
+    // The same file CI and contributors install Bun from, so a project runs
+    // the Bun the runtime was tested on.
+    packageManagerVersions: {
+      bun: (await readFile(join(repoRoot, ".bun-version"), "utf8")).trim(),
+    },
   };
 }
 

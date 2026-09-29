@@ -229,6 +229,64 @@ describe("runCli", () => {
     expect(stderr.join("\n")).toMatch(/unknown package manager "foo"/i);
   });
 
+  test("exits 1 without writing when --pm names another manager than the runtime installs with", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "bun-pnpm");
+
+    const code = await run(
+      [target, "-y", "--runtime", "bun", "--pm", "pnpm"],
+      io,
+    );
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(
+      /"bun" runtime installs with bun.*--pm pnpm/is,
+    );
+    expect(existsSync(target)).toBe(false);
+  });
+
+  test("installs a Bun project with bun and runs its plumix commands on bun, whatever invoked it", async () => {
+    const { io, stdout } = captureIO();
+    const target = join(tmp, "bun-app");
+    const calls: string[] = [];
+    const runner: CommandRunner = {
+      run: (command, args) => {
+        calls.push([command, ...args].join(" "));
+        return Promise.resolve({ ok: true });
+      },
+    };
+
+    const code = await runCli(
+      [target, "-y", "--runtime", "bun", "--no-git"],
+      io,
+      {
+        runner,
+        userAgent: "pnpm/10.0.0 npm/? node/v24",
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([
+      "bun install",
+      "bun --bun plumix migrate generate",
+      "bun --bun plumix migrate apply --local",
+    ]);
+    expect(stdout.join("\n")).toContain("bun dev");
+  });
+
+  test("an explicit --pm bun agrees with the Bun runtime", async () => {
+    const { io } = captureIO();
+    const target = join(tmp, "bun-bun");
+
+    const code = await run(
+      [target, "-y", "--runtime", "bun", "--pm", "bun"],
+      io,
+    );
+
+    expect(code).toBe(0);
+    expect(existsSync(join(target, "bunfig.toml"))).toBe(true);
+  });
+
   test("exits 1 with a listing error for an unknown --runtime", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "bad-runtime");

@@ -29,6 +29,10 @@ interface RawScaffoldMeta extends Contribution {
   readonly types?: readonly string[];
   /** Runtime only: the package manager a project on this runtime installs with. */
   readonly packageManager?: PackageManager;
+  /** Runtime only: package.json scripts that replace or join the base ones. */
+  readonly scripts?: Record<string, string>;
+  /** Runtime only: the command prefix that runs the `plumix` CLI. */
+  readonly cli?: string;
   /** Runtime only: path to the markdown that becomes the README's Deploy section. */
   readonly readme?: string;
   /** dest path in the scaffolded project → source path in this package. */
@@ -156,6 +160,8 @@ async function toRuntimeDescriptor(
     gitignore: meta.gitignore,
     types: meta.types,
     packageManager: meta.packageManager,
+    scripts: meta.scripts,
+    cli: meta.cli,
     readme: meta.readme
       ? await readContributed(pkgDir, meta.readme, rel)
       : undefined,

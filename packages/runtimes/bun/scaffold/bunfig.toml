@@ -1,0 +1,3 @@
+# The runtime reads `.env` itself, and only `.env`; Bun's own loading would
+# also apply `.env.local` and `.env.{NODE_ENV}`.
+env = false
