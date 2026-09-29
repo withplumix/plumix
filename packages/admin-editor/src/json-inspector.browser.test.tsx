@@ -8,6 +8,7 @@ import {
   render,
 } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { page } from "vitest/browser";
 
 import type { BlockNode } from "@plumix/core/blocks";
 
@@ -92,5 +93,30 @@ describe("JsonSourceDialog", () => {
     // Dialog content is portalled to the body, not the render container.
     const output = await findByTestId(document.body, "json-inspector-output");
     expect(output.textContent).toContain('"h1"');
+  });
+
+  test("names its close button with the editor's localized label", async () => {
+    i18n.loadAndActivate({
+      locale: "de",
+      messages: { "editor.dialog.close": "Schließen" },
+    });
+    try {
+      render(
+        <I18nProvider i18n={i18n}>
+          <EditorProvider initialTree={TREE}>
+            <Opener />
+            <JsonSourceDialog />
+          </EditorProvider>
+        </I18nProvider>,
+      );
+      const dialog = await findByTestId(document.body, "json-source-dialog");
+      const close = dialog.querySelector('[data-slot="dialog-close"]');
+      if (!close) throw new Error("the dialog rendered no close button");
+      await expect
+        .element(page.elementLocator(close))
+        .toHaveAccessibleName("Schließen");
+    } finally {
+      i18n.loadAndActivate({ locale: "en", messages: {} });
+    }
   });
 });

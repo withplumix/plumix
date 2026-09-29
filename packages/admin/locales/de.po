@@ -138,7 +138,7 @@ msgstr "{count, plural, one {# Eintrag ausgewählt} other {# Einträge ausgewäh
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.test.tsx
+#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# Gruppe} other {# Gruppen}}"
@@ -528,6 +528,11 @@ msgid "userEdit.backToList"
 msgstr "Zurück zu den Benutzern"
 
 #. js-lingui-explicit-id
+#: src/components/shell/shell-header.tsx
+msgid "shell.breadcrumb"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse.generic"
 msgstr "Durchsuchen"
@@ -706,6 +711,11 @@ msgstr "Filter zurücksetzen oder jemanden Neues einladen."
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.default"
 msgstr "CLI"
+
+#. js-lingui-explicit-id
+#: src/lib/dialog-labels.ts
+msgid "dialog.close"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -2005,6 +2015,11 @@ msgid "editor.preview.more"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/shell/app-sidebar.tsx
+msgid "shell.sidebar.mobileDescription"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "In den Papierkorb"
@@ -2127,6 +2142,11 @@ msgstr "Name muss ≤ 64 Zeichen lang sein."
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.hint.navigate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/app-sidebar.tsx
+msgid "shell.sidebar.mobileTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2394,6 +2414,11 @@ msgstr "Übersicht"
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
 msgstr "Seite {page}"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.nav"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3587,6 +3612,11 @@ msgstr "Titel"
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/shell/shell-header.tsx
+msgid "shell.sidebar.toggle"
 msgstr ""
 
 #. js-lingui-explicit-id

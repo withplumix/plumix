@@ -1,7 +1,9 @@
 import type { Crumb } from "@/lib/breadcrumbs.js";
+import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
+import { defineMessage } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
@@ -14,6 +16,14 @@ import {
 } from "@plumix/admin-ui/breadcrumb";
 import { Separator } from "@plumix/admin-ui/separator";
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
+
+const M = {
+  toggleSidebar: defineMessage({
+    id: "shell.sidebar.toggle",
+    message: "Toggle sidebar",
+  }),
+  breadcrumb: defineMessage({ id: "shell.breadcrumb", message: "Breadcrumb" }),
+} satisfies Record<string, MessageDescriptor>;
 
 function useBreadcrumbs(): readonly Crumb[] {
   const pathname = useRouterState({
@@ -31,9 +41,9 @@ export function ShellHeader(): ReactNode {
       : i18n._(crumb.label.id, crumb.values, { message: crumb.label.message });
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-      <SidebarTrigger className="-ms-1" />
+      <SidebarTrigger className="-ms-1" label={i18n._(M.toggleSidebar)} />
       <Separator orientation="vertical" className="me-2 h-4" />
-      <Breadcrumb>
+      <Breadcrumb label={i18n._(M.breadcrumb)}>
         <BreadcrumbList>
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1;

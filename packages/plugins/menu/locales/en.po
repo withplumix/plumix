@@ -160,6 +160,11 @@ msgstr "Create menu"
 
 #. js-lingui-explicit-id
 #: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createClose"
+msgstr "Close"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
 msgid "plugin.menu.shell.createDescription"
 msgstr "Name your new menu. You can add links to it next."
 

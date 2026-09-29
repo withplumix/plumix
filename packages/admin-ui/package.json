@@ -85,6 +85,10 @@
       "types": "./dist/empty.d.ts",
       "default": "./dist/empty.js"
     },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
     "./field": {
       "types": "./dist/field.d.ts",
       "default": "./dist/field.js"

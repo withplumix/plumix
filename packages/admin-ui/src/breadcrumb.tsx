@@ -1,11 +1,15 @@
-import * as React from "react";
-import { ChevronRight, MoreHorizontal } from "lucide-react";
+import type * as React from "react";
 import { Slot } from "radix-ui";
 
+import { ChevronRight, MoreHorizontal } from "./icons.js";
 import { cn } from "./utils.js";
 
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
+// admin-ui carries no catalog, so every `label` here arrives already localized.
+function Breadcrumb({
+  label,
+  ...props
+}: React.ComponentProps<"nav"> & { label: string }) {
+  return <nav aria-label={label} data-slot="breadcrumb" {...props} />;
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
@@ -82,8 +86,9 @@ function BreadcrumbSeparator({
 
 function BreadcrumbEllipsis({
   className,
+  label,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<"span"> & { label: string }) {
   return (
     <span
       data-slot="breadcrumb-ellipsis"
@@ -93,7 +98,7 @@ function BreadcrumbEllipsis({
       {...props}
     >
       <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

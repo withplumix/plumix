@@ -2,6 +2,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { publicEntryTypeNames } from "@/lib/manifest.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
@@ -207,6 +208,7 @@ export function LinkField({
       </label>
       <CommandDialog
         open={open}
+        closeLabel={labelFn(DIALOG_CLOSE_LABEL)}
         onOpenChange={setOpen}
         title={labelFn(field.label)}
         description={labelFn(M.dialogDescription)}

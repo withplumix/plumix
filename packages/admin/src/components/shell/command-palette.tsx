@@ -2,6 +2,7 @@ import type { PaletteCommand } from "@/lib/palette-commands.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { findEntryTypeByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import {
@@ -251,7 +252,10 @@ export function CommandPalette({
         <DialogTitle>{renderLabel(M.title)}</DialogTitle>
         <DialogDescription>{renderLabel(M.description)}</DialogDescription>
       </DialogHeader>
-      <DialogContent className="overflow-hidden p-0">
+      <DialogContent
+        className="overflow-hidden p-0"
+        closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
+      >
         <Command
           shouldFilter={false}
           onClickCapture={captureNewTab}

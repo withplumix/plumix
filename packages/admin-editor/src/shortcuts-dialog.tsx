@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { useEffect } from "react";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import {
   Dialog,
@@ -143,6 +143,7 @@ export function ShortcutsDialog(): ReactElement {
   const open = useEditorStore((s) => s.shortcutsOpen);
   const setShortcutsOpen = useEditorStore((s) => s.setShortcutsOpen);
   const apple = isApplePlatform();
+  const { i18n } = useLingui();
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -160,6 +161,7 @@ export function ShortcutsDialog(): ReactElement {
       <DialogContent
         className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
         data-testid="plumix-shortcuts-dialog"
+        closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >
         <DialogHeader>
           <DialogTitle data-testid="plumix-shortcuts-title">

@@ -68,6 +68,7 @@ export function EditorToolbar({
    *  (shown only while the canvas is still empty). */
   readonly hasStarters?: boolean;
 }): ReactElement {
+  const { i18n } = useLingui();
   return (
     <header
       // Horizontal inset (px-3) matches the editor header above, so the rails
@@ -84,6 +85,10 @@ export function EditorToolbar({
               // size-8 matches the header back button (icon-sm) so the two
               // leftmost controls share an icon center, not just a left edge.
               className="size-8 shrink-0"
+              label={i18n._({
+                id: "editor.toolbar.rails",
+                message: "Toggle panels",
+              })}
             />
           </TooltipTrigger>
           <TooltipContent>

@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -197,6 +198,7 @@ export function RevisionsSheet({
         side="right"
         data-plumix-revisions-sheet=""
         className="overflow-y-auto"
+        closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
       >
         <SheetHeader>
           <SheetTitle>

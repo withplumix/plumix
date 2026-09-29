@@ -1,19 +1,20 @@
-import * as React from "react";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MoreHorizontalIcon,
-} from "lucide-react";
+import type * as React from "react";
 
 import type { Button } from "./button.js";
 import { buttonVariants } from "./button.js";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "./icons.js";
 import { cn } from "./utils.js";
 
-function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+// admin-ui carries no catalog, so every `label` here arrives already localized.
+function Pagination({
+  className,
+  label,
+  ...props
+}: React.ComponentProps<"nav"> & { label: string }) {
   return (
     <nav
       role="navigation"
-      aria-label="pagination"
+      aria-label={label}
       data-slot="pagination"
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
@@ -68,42 +69,45 @@ function PaginationLink({
 
 function PaginationPrevious({
   className,
+  label,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: React.ComponentProps<typeof PaginationLink> & { label: string }) {
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={label}
       size="default"
       className={cn("gap-1 px-2.5 sm:ps-2.5", className)}
       {...props}
     >
-      <ChevronLeftIcon className="rtl:rotate-180" />
-      <span className="hidden sm:block">Previous</span>
+      <ChevronLeft className="rtl:rotate-180" />
+      <span className="hidden sm:block">{label}</span>
     </PaginationLink>
   );
 }
 
 function PaginationNext({
   className,
+  label,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) {
+}: React.ComponentProps<typeof PaginationLink> & { label: string }) {
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={label}
       size="default"
       className={cn("gap-1 px-2.5 sm:pe-2.5", className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
-      <ChevronRightIcon className="rtl:rotate-180" />
+      <span className="hidden sm:block">{label}</span>
+      <ChevronRight className="rtl:rotate-180" />
     </PaginationLink>
   );
 }
 
 function PaginationEllipsis({
   className,
+  label,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<"span"> & { label: string }) {
   return (
     <span
       aria-hidden
@@ -111,8 +115,8 @@ function PaginationEllipsis({
       className={cn("flex size-9 items-center justify-center", className)}
       {...props}
     >
-      <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
+      <MoreHorizontal className="size-4" />
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

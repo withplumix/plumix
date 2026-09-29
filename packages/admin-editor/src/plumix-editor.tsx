@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import type {
   BlockRegistry,
@@ -155,6 +155,7 @@ export function PlumixEditor({
   previewRefreshToken,
   resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
+  const { i18n } = useLingui();
   // Starter patterns eligible for this entry type, offered to a blank entry.
   const starterCandidates = useMemo(
     () => selectStarterPatterns(patterns ?? [], entryType),
@@ -227,6 +228,14 @@ export function PlumixEditor({
               collapsible="offcanvas"
               className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
               data-testid="plumix-editor-left"
+              mobileTitle={i18n._({
+                id: "editor.rail.left.title",
+                message: "Blocks and layers",
+              })}
+              mobileDescription={i18n._({
+                id: "editor.rail.left.description",
+                message: "Insert blocks and arrange the page's layers.",
+              })}
             >
               <Tabs
                 defaultValue="blocks"
@@ -297,12 +306,21 @@ function RightRail({
 }): ReactElement {
   const rightPanel = useEditorStore((s) => s.rightPanel);
   const setRightPanel = useEditorStore((s) => s.setRightPanel);
+  const { i18n } = useLingui();
   return (
     <Sidebar
       side="right"
       collapsible="offcanvas"
       className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
       data-testid="plumix-editor-right"
+      mobileTitle={i18n._({
+        id: "editor.rail.right.title",
+        message: "Inspector",
+      })}
+      mobileDescription={i18n._({
+        id: "editor.rail.right.description",
+        message: "Edit the selected block, its styles and the page.",
+      })}
     >
       <Tabs
         value={rightPanel}

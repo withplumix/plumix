@@ -138,7 +138,7 @@ msgstr "{count, plural, one {# entry selected} other {# entries selected}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/-index.test.tsx
+#: src/routes/_authenticated/settings/-index.browser.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
@@ -528,6 +528,11 @@ msgid "userEdit.backToList"
 msgstr "Back to users"
 
 #. js-lingui-explicit-id
+#: src/components/shell/shell-header.tsx
+msgid "shell.breadcrumb"
+msgstr "Breadcrumb"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
 msgid "dashboard.tile.browse.generic"
 msgstr "Browse"
@@ -706,6 +711,11 @@ msgstr "Clear the filter, or invite someone new to join."
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.tokenName.default"
 msgstr "CLI"
+
+#. js-lingui-explicit-id
+#: src/lib/dialog-labels.ts
+msgid "dialog.close"
+msgstr "Close"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -2005,6 +2015,11 @@ msgid "editor.preview.more"
 msgstr "More preview options"
 
 #. js-lingui-explicit-id
+#: src/components/shell/app-sidebar.tsx
+msgid "shell.sidebar.mobileDescription"
+msgstr "Move between the sections of the admin."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "Move to trash"
@@ -2128,6 +2143,11 @@ msgstr "Name must be ≤ 64 characters."
 #: src/components/shell/command-palette.tsx
 msgid "palette.hint.navigate"
 msgstr "Navigate"
+
+#. js-lingui-explicit-id
+#: src/components/shell/app-sidebar.tsx
+msgid "shell.sidebar.mobileTitle"
+msgstr "Navigation"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -2394,6 +2414,11 @@ msgstr "Overview"
 #: src/components/data-table/list-pagination.tsx
 msgid "listPagination.page"
 msgstr "Page {page}"
+
+#. js-lingui-explicit-id
+#: src/components/data-table/list-pagination.tsx
+msgid "listPagination.nav"
+msgstr "Pagination"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3588,6 +3613,11 @@ msgstr "Title"
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.title"
 msgstr "Title"
+
+#. js-lingui-explicit-id
+#: src/components/shell/shell-header.tsx
+msgid "shell.sidebar.toggle"
+msgstr "Toggle sidebar"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts

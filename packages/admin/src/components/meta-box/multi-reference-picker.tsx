@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -264,6 +265,7 @@ export function MultiReferencePicker({
       </div>
       <CommandDialog
         open={open}
+        closeLabel={labelFn(DIALOG_CLOSE_LABEL)}
         onOpenChange={setOpen}
         title={label}
         description={dialogDescription}

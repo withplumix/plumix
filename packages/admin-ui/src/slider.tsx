@@ -51,7 +51,6 @@ function Slider({
       </SliderPrimitive.Track>
       {values.map((_, index) => (
         <SliderPrimitive.Thumb
-          // eslint-disable-next-line react/no-array-index-key
           key={index}
           data-slot="slider-thumb"
           aria-label={ariaLabel}
