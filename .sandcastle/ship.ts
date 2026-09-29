@@ -3,6 +3,7 @@ import {
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
+  listReadyTickets,
   loopPullRequestsInFlight,
   parentsWithEveryChildClosed,
   parkTicket,
@@ -15,6 +16,7 @@ import {
   ticketByNumber,
   waitForMerge,
 } from "./lib/github.js";
+import { staleClaims } from "./lib/in-flight.js";
 import { say } from "./lib/log.js";
 import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import { idsInJobUrl, repairPullRequest } from "./lib/repair.js";
@@ -78,6 +80,18 @@ if (!sandboxImage) process.exit(1);
 pinSandboxImage(sandboxImage);
 
 syncRepoToMain();
+
+if (!onlyTickets.length) {
+  const claimedEarlier = listReadyTickets()
+    .filter(({ assignees }) => assignees.length > 0)
+    .map(({ number }) => number);
+  for (const ticketNumber of staleClaims(claimedEarlier, loopPullRequestsInFlight())) {
+    releaseClaim(ticketNumber);
+    say(
+      `#${ticketNumber} was claimed by a run that stopped mid-ticket; released`,
+    );
+  }
+}
 
 const report = await runShipLoop(
   {

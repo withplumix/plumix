@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { stillInTheLoopsHands } from "./in-flight.js";
+import { staleClaims, stillInTheLoopsHands } from "./in-flight.js";
 
 const pr = (number: number, headRefName: string) => ({
   number,
@@ -57,5 +57,22 @@ describe("stillInTheLoopsHands", () => {
     expect(
       stillInTheLoopsHands([pr(2720, "feat/bun-runtime-2685")], [issue(2685)]),
     ).toHaveLength(1);
+  });
+});
+
+describe("staleClaims", () => {
+  const queued = (ticket: number) => ({
+    ticket: { number: ticket, title: `t${ticket}` },
+    pullRequest: { number: 100 + ticket, url: `pr/${ticket}` },
+  });
+
+  test("a claimed ticket with no pull request in flight was left by a run that stopped mid-ticket", () => {
+    expect(staleClaims([2748, 2737, 2726], [queued(2726)])).toEqual([
+      2748, 2737,
+    ]);
+  });
+
+  test("a claim whose pull request is still in flight is kept, so the run adopts it", () => {
+    expect(staleClaims([2726], [queued(2726)])).toEqual([]);
   });
 });

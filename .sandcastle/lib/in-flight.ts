@@ -40,3 +40,12 @@ export const stillInTheLoopsHands = (
         ]
       : [];
   });
+
+export const staleClaims = (
+  claimed: readonly number[],
+  inFlight: readonly Queued[],
+): readonly number[] =>
+  claimed.filter(
+    (ticketNumber) =>
+      !inFlight.some(({ ticket }) => ticket.number === ticketNumber),
+  );
