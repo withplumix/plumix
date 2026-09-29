@@ -7,6 +7,7 @@ import type {
   PullRequestSnapshot,
 } from "./verdict.js";
 import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
+import { blockersNamedIn } from "./named-blockers.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -119,6 +120,29 @@ export const closeCompletedParent = (ticketNumber: number): void => {
   ]);
 };
 
+const waitsOnANamedBlocker = (ticketNumber: number): boolean => {
+  const text = gh([
+    "issue",
+    "view",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "body,comments",
+    "--jq",
+    '[.body, (.comments[].body)] | join("\\n")',
+  ]);
+  return blockersNamedIn(text).some(
+    (blocker) =>
+      gh([
+        "api",
+        `repos/${REPO_SLUG}/issues/${blocker}`,
+        "--jq",
+        ".state",
+      ]).trim() === "open",
+  );
+};
+
 export const firstUnblockedUnassignedTicket = (
   alreadyTaken: ReadonlySet<number>,
 ): Ticket | undefined => {
@@ -130,7 +154,11 @@ export const firstUnblockedUnassignedTicket = (
     .sort((a, b) => a.number - b.number);
 
   for (const { number, title } of waiting) {
-    if (countOpenBlockers(number) === 0 && !isParentIssue(number))
+    if (
+      countOpenBlockers(number) === 0 &&
+      !isParentIssue(number) &&
+      !waitsOnANamedBlocker(number)
+    )
       return { number, title };
   }
   return undefined;
