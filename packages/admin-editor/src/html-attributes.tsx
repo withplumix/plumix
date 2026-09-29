@@ -11,7 +11,6 @@ import {
   CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
-import { destructiveRowClassName } from "@plumix/admin-ui/destructive";
 import { ChevronsUpDown, Plus, Trash2 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -19,7 +18,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
-import { cn } from "@plumix/admin-ui/utils";
 import { isAllowedHtmlAttr } from "@plumix/core/blocks";
 
 // Common allowlisted attributes offered as suggestions. The field still accepts
@@ -132,9 +130,9 @@ function AttrRow({
       />
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
-        className={cn(destructiveRowClassName, "size-8 shrink-0")}
+        variant="destructive-row"
+        size="icon-sm"
+        className="shrink-0"
         data-testid={`html-attr-${name}-remove`}
         onClick={() => onChange(name, null)}
       >
@@ -205,7 +203,7 @@ function AddAttr({
         <PopoverTrigger asChild>
           <Button
             type="button"
-            variant="outline"
+            variant="trigger"
             size="sm"
             role="combobox"
             aria-expanded={open}
@@ -214,10 +212,8 @@ function AddAttr({
             // come from the attribute, not the visible text).
             aria-label={name === "" ? keyLabel : name}
             data-testid="html-attr-add-key"
-            className={cn(
-              "h-8 w-1/3 shrink-0 justify-between gap-1 font-normal",
-              name === "" && "text-muted-foreground",
-            )}
+            data-placeholder={name === "" ? "" : undefined}
+            className="w-1/3 shrink-0"
           >
             <span className="truncate">
               {name === "" ? (

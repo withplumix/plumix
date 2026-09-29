@@ -14,7 +14,6 @@ import {
   AlertDialogTrigger,
   Badge,
   Button,
-  destructiveGhostClassName,
   Select,
   SelectContent,
   SelectItem,
@@ -445,16 +444,13 @@ function SubmissionDetail({
               <Button
                 key={status}
                 type="button"
-                variant="ghost"
+                variant={status === "spam" ? "destructive-ghost" : "ghost"}
                 size="xs"
                 data-testid={`forms-detail-status-${status}`}
                 disabled={setStatus.isPending}
                 onClick={() => {
                   setStatus.mutate({ id: row.id, status });
                 }}
-                className={
-                  status === "spam" ? destructiveGhostClassName : undefined
-                }
               >
                 {i18n._(STATUS_LABELS[status])}
               </Button>
@@ -466,11 +462,10 @@ function SubmissionDetail({
             <AlertDialogTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
+                variant="destructive-ghost"
                 size="xs"
                 data-testid="forms-detail-delete"
                 disabled={remove.isPending}
-                className={destructiveGhostClassName}
               >
                 <Trans id="plugin.forms.inbox.delete" message="Delete" />
               </Button>

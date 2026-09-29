@@ -20,7 +20,6 @@ import {
 } from "@plumix/admin-ui/card";
 
 import { MetaBoxField } from "./meta-box-field.js";
-import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
 // `MetaBoxCard` serves the page-width surfaces (term + user edit). The
@@ -142,7 +141,7 @@ function MetaBoxFieldsGrid({
           field={field}
           name={`${basePath}.${field.key}`}
           disabled={disabled ?? false}
-          className={metaBoxFieldColSpanClass(field.span)}
+          span={field.span ?? 12}
         />
       ))}
     </div>

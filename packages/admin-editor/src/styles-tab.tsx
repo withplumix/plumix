@@ -584,8 +584,8 @@ function VisibilityControls({
       {VISIBILITY_DEVICES.map((device) => {
         const isHidden = hidden?.[device.bucket] ?? false;
         return (
-          <Field key={device.id} orientation="horizontal">
-            <FieldLabel htmlFor={`visibility-${device.id}`} className="text-xs">
+          <Field key={device.id} orientation="horizontal" size="sm">
+            <FieldLabel htmlFor={`visibility-${device.id}`}>
               {device.label}
             </FieldLabel>
             <Switch
@@ -707,10 +707,8 @@ function KeywordControl({
   const testId = `style-control-${property}`;
   const controlId = useId();
   return (
-    <Field className="gap-1" data-testid={testId}>
-      <FieldLabel htmlFor={controlId} className="text-xs">
-        {label}
-      </FieldLabel>
+    <Field size="sm" data-testid={testId}>
+      <FieldLabel htmlFor={controlId}>{label}</FieldLabel>
       <Select
         value={value ?? KEYWORD_NONE}
         onValueChange={(next) => onChange(next === KEYWORD_NONE ? null : next)}
@@ -764,10 +762,8 @@ function LayoutToggle({
   // be orphaned and give the group no accessible name).
   const labelId = useId();
   return (
-    <Field className="gap-1">
-      <FieldTitle id={labelId} className="text-xs">
-        {label}
-      </FieldTitle>
+    <Field size="sm">
+      <FieldTitle id={labelId}>{label}</FieldTitle>
       <ToggleGroup
         type="single"
         variant="outline"
@@ -868,10 +864,10 @@ function BackgroundImageField({
     return <BackgroundImageControl value={value} onChange={onChange} />;
   }
   return (
-    <Field className="gap-1" data-testid="style-control-backgroundImage">
+    <Field size="sm" data-testid="style-control-backgroundImage">
       {/* FieldTitle, not FieldLabel: the picker is a plugin component whose
           focusable id we don't control, so a <label htmlFor> would be orphaned. */}
-      <FieldTitle className="text-xs">
+      <FieldTitle>
         <Trans id="editor.styles.fillImage" message="Fill image" />
       </FieldTitle>
       {createElement(Picker, {
@@ -911,8 +907,8 @@ function BackgroundImageControl({
 }): ReactElement {
   const inputId = useId();
   return (
-    <Field className="gap-1" data-testid="style-control-backgroundImage">
-      <FieldLabel htmlFor={inputId} className="text-xs">
+    <Field size="sm" data-testid="style-control-backgroundImage">
+      <FieldLabel htmlFor={inputId}>
         <Trans id="editor.styles.fillImage" message="Fill image" />
       </FieldLabel>
       <Input
@@ -1007,8 +1003,8 @@ function TextShadowControls({
 
   return (
     <div className="flex flex-col gap-2" data-testid="style-text-shadow">
-      <Field orientation="horizontal">
-        <FieldLabel htmlFor={`${baseId}-toggle`} className="text-xs">
+      <Field orientation="horizontal" size="sm">
+        <FieldLabel htmlFor={`${baseId}-toggle`}>
           <Trans id="editor.styles.textShadow" message="Text shadow" />
         </FieldLabel>
         <Switch
@@ -1033,11 +1029,8 @@ function TextShadowControls({
           />
           <div className="grid grid-cols-3 gap-2">
             {(["x", "y", "blur"] as const).map((key) => (
-              <Field key={key} className="gap-1">
-                <FieldLabel
-                  htmlFor={`${baseId}-${key}`}
-                  className="text-xs capitalize"
-                >
+              <Field key={key} size="sm">
+                <FieldLabel htmlFor={`${baseId}-${key}`} className="capitalize">
                   {key}
                 </FieldLabel>
                 <Input
@@ -1073,8 +1066,8 @@ function OpacityControl({
   const parsed = value !== undefined ? Number(value) : 1;
   const slider = Number.isFinite(parsed) ? parsed : 1;
   return (
-    <Field className="gap-1" data-testid="style-control-opacity">
-      <FieldLabel htmlFor={inputId} className="text-xs">
+    <Field size="sm" data-testid="style-control-opacity">
+      <FieldLabel htmlFor={inputId}>
         <Trans id="editor.styles.opacity" message="Opacity" />
       </FieldLabel>
       <div className="flex items-center gap-2">
@@ -1127,8 +1120,8 @@ function TagNameField({
   const resolved = resolveRootTag(value);
   const selectId = useId();
   return (
-    <Field className="gap-1" data-testid="block-tag-name">
-      <FieldLabel htmlFor={selectId} className="text-xs">
+    <Field size="sm" data-testid="block-tag-name">
+      <FieldLabel htmlFor={selectId}>
         <Trans id="editor.htmlAttrs.tagName" message="Tag name" />
       </FieldLabel>
       <Select
@@ -1176,8 +1169,8 @@ function CssClassesField({
   const { i18n } = useLingui();
   const inputId = useId();
   return (
-    <Field className="gap-1">
-      <FieldLabel htmlFor={inputId} className="text-xs">
+    <Field size="sm">
+      <FieldLabel htmlFor={inputId}>
         <Trans id="editor.styles.cssClasses" message="CSS classes" />
       </FieldLabel>
       <Input

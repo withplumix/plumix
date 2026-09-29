@@ -66,13 +66,16 @@ export const reactConfig = defineConfig(
         NO_PHYSICAL_CLASSES_SELECTOR,
         NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
-      "plumix/no-hand-rolled-destructive-tint": "error",
     },
   },
   // Design-system rules for code composing `@plumix/admin-ui`. The primitives
   // themselves are exempt because admin-ui's own config ignores them.
   // `no-restyle` and `no-arbitrary-values` predate their existing violations,
   // which each package's `eslint-suppressions.json` carries until fixed.
+  // A container's `gap-*` and `space-*` only space its children, so it
+  // leaves the primitive's own look alone. `require-static-classes` keeps
+  // every treatment where the other rules can read it: a variant or a
+  // `data-*` state, never a class built at runtime.
   // `plumix-*` classes are the styling hooks public markup exposes to themes,
   // and `hljs` is highlight.js's, so neither is a Tailwind utility.
   // The layout utilities `@plumix/admin`'s theme.css declares are named for
@@ -96,9 +99,31 @@ export const reactConfig = defineConfig(
         "error",
         { allow: ["plumix-*", "hljs", ...THEME_LAYOUT_UTILITIES] },
       ],
-      "shadcn/no-restyle": ["error", { allow: ["layout", "max-h-*", "h-*"] }],
+      "shadcn/no-restyle": [
+        "error",
+        {
+          allow: ["layout", "max-h-*", "h-*"],
+          contracts: [
+            {
+              pattern:
+                "^(Card(Header|Content|Footer)|Field(Group|Set)?|DialogContent|SheetContent|PopoverContent|AccordionContent|RadioGroup)$",
+              allow: [
+                "layout",
+                "max-h-*",
+                "h-*",
+                "gap-*",
+                "gap-x-*",
+                "gap-y-*",
+                "space-x-*",
+                "space-y-*",
+              ],
+            },
+          ],
+        },
+      ],
       "shadcn/no-arbitrary-values": "error",
       "shadcn/no-inline-styles": "error",
+      "shadcn/require-static-classes": "error",
     },
   },
   // Block renderers apply the styles an author set in the editor, and inline

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
-import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
 // A group renders its members on a 12-column grid in a bordered card, each
@@ -38,7 +37,7 @@ export function GroupField({
             field={member}
             name={`${name}.${member.key}`}
             disabled={disabled}
-            className={metaBoxFieldColSpanClass(member.span)}
+            span={member.span ?? 12}
           />
         ))}
       </div>

@@ -54,16 +54,14 @@ chunk against each minor before upgrading.
 
 **Destructive actions.** A standalone or primary destructive button (a delete
 button, a confirm dialog's action) uses `<Button variant="destructive">`. The
-two inline shapes each have a shared tint in `@plumix/admin-ui/destructive`
-(also on `plumix/admin/ui`):
+two inline shapes are Button variants too:
 
-- `destructiveGhostClassName` — always red. For a destructive action sitting
+- `variant="destructive-ghost"` — always red. For a destructive action sitting
   inline among non-destructive peers: a ghost action toolbar's Delete, a
-  link-remove beside a URL field. Pair it with `variant="ghost"`.
-- `destructiveRowClassName` — muted until hovered, then red. For a destructive
-  action repeated once per row — a sortable list item's remove, a row's Trash
-  link — where a red control on every row would be noise.
+  link-remove beside a URL field.
+- `variant="destructive-row"` — muted until hovered, then red. For a
+  destructive action repeated once per row — a sortable list item's remove, a
+  row's Trash link — where a red control on every row would be noise.
 
-Compose either with `cn` when the control needs more utilities. Never spell a
-tint out by hand: `plumix/no-hand-rolled-destructive-tint` rejects it in a
-`className`, so the surfaces can't drift on what "destructive" looks like.
+Never spell a tint out in a `className`: `shadcn/no-restyle` rejects a colour
+on a primitive, so the surfaces can't drift on what "destructive" looks like.

@@ -746,9 +746,9 @@ function DeleteCard({ target }: { target: User }): ReactNode {
 
   if (!confirming) {
     return (
-      <Card className="border-destructive/50">
+      <Card variant="destructive">
         <CardHeader>
-          <CardTitle className="text-destructive">
+          <CardTitle>
             <Trans id="userEdit.delete.title" message="Delete user" />
           </CardTitle>
           <CardDescription>

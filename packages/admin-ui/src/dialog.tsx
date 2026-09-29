@@ -1,6 +1,8 @@
 "use client";
 
+import type { VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { cva } from "class-variance-authority";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { Button } from "./button.js";
@@ -53,23 +55,45 @@ function DialogOverlay({
   );
 }
 
+// The width applies from `sm` up; below it every size keeps the
+// `max-w-[calc(100%-2rem)]` gutters.
+const dialogContentVariants = cva(
+  "bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed start-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none rtl:-translate-x-[-50%]",
+  {
+    variants: {
+      size: {
+        sm: "sm:max-w-lg",
+        md: "sm:max-w-2xl",
+        lg: "sm:max-w-4xl",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+    },
+  },
+);
+
+type DialogContentSize = NonNullable<
+  VariantProps<typeof dialogContentVariants>["size"]
+>;
+
 function DialogContent({
   className,
   children,
+  size = "sm",
   showCloseButton = true,
   closeLabel,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> &
-  DialogCloseButtonProps) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  size?: DialogContentSize;
+} & DialogCloseButtonProps) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(
-          "bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed start-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none sm:max-w-lg rtl:-translate-x-[-50%]",
-          className,
-        )}
+        data-size={size}
+        className={cn(dialogContentVariants({ size }), className)}
         {...props}
       >
         {children}
@@ -153,7 +177,7 @@ function DialogDescription({
   );
 }
 
-export type { DialogCloseButtonProps };
+export type { DialogCloseButtonProps, DialogContentSize };
 
 export {
   Dialog,

@@ -54,9 +54,15 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const fieldVariants = cva(
-  "group/field data-[invalid=true]:text-destructive flex w-full gap-3",
+  "group/field data-[invalid=true]:text-destructive flex w-full",
   {
     variants: {
+      // `sm` is the editor inspector's compact field; its label and title
+      // shrink through `group-data-[size=sm]/field`.
+      size: {
+        default: "gap-3",
+        sm: "gap-1",
+      },
       orientation: {
         vertical: ["flex-col [&>*]:w-full [&>.sr-only]:w-auto"],
         horizontal: [
@@ -73,6 +79,7 @@ const fieldVariants = cva(
     },
     defaultVariants: {
       orientation: "vertical",
+      size: "default",
     },
   },
 );
@@ -80,6 +87,7 @@ const fieldVariants = cva(
 function Field({
   className,
   orientation = "vertical",
+  size = "default",
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
   return (
@@ -87,7 +95,8 @@ function Field({
       role="group"
       data-slot="field"
       data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
+      data-size={size}
+      className={cn(fieldVariants({ orientation, size }), className)}
       {...props}
     />
   );
@@ -114,7 +123,7 @@ function FieldLabel({
     <Label
       data-slot="field-label"
       className={cn(
-        "group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50",
+        "group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 group-data-[size=sm]/field:text-xs",
         "has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border [&>*]:data-[slot=field]:p-4",
         "has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5 dark:has-data-[state=checked]:bg-primary/10",
         className,
@@ -129,7 +138,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="field-label"
       className={cn(
-        "flex w-fit items-center gap-2 text-sm leading-snug font-medium group-data-[disabled=true]/field:opacity-50",
+        "flex w-fit items-center gap-2 text-sm leading-snug font-medium group-data-[disabled=true]/field:opacity-50 group-data-[size=sm]/field:text-xs",
         className,
       )}
       {...props}

@@ -407,9 +407,9 @@ function DeleteCard({
 
   return (
     <>
-      <Card className="border-destructive/50">
+      <Card variant="destructive">
         <CardHeader>
-          <CardTitle className="text-destructive">
+          <CardTitle>
             <Trans id="terms.edit.delete.cardTitle" message="Delete term" />
           </CardTitle>
           <CardDescription>

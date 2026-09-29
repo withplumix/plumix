@@ -91,7 +91,7 @@ function SettingsIndexRoute(): ReactNode {
             className="block"
             data-testid={`settings-page-link-${page.name}`}
           >
-            <Card className="hover:border-primary transition-colors">
+            <Card variant="interactive">
               <CardHeader>
                 <CardTitle>
                   <h2 className="text-base font-semibold">

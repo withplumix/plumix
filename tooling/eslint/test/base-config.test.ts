@@ -563,41 +563,24 @@ describe("plumix/no-unparsed-property-typeof", () => {
   });
 });
 
-describe("plumix/no-hand-rolled-destructive-tint", () => {
+describe("the design-system rules on admin-ui primitives", () => {
   const withReact = new ESLint({
     cwd: fixturesDir,
     overrideConfigFile: true,
     overrideConfig: [...baseConfig, ...reactConfig],
   });
-  const tintReports = async (fixture: string) => {
+  const shadcnReports = async (fixture: string) => {
     const [result] = await withReact.lintFiles([fixture]);
     return (result?.messages ?? [])
-      .filter(
-        (message) =>
-          message.ruleId === "plumix/no-hand-rolled-destructive-tint",
-      )
-      .map((message) => ({ line: message.line, message: message.message }));
+      .filter((message) => message.ruleId?.startsWith("shadcn/"))
+      .map((message) => ({ ruleId: message.ruleId, line: message.line }));
   };
 
-  it("rejects either tint spelled out inside a className, naming the export to import", async () => {
-    const reports = await tintReports("src/destructive-tint.violations.tsx");
-    expect(reports.map((report) => report.line)).toEqual([4, 7, 11, 17]);
-    expect(
-      reports.map(
-        (report) => /destructive\w+ClassName/.exec(report.message)?.[0],
-      ),
-    ).toEqual([
-      "destructiveGhostClassName",
-      "destructiveRowClassName",
-      "destructiveGhostClassName",
-      "destructiveRowClassName",
+  it("lets a container primitive space its children, keeps the rest restyle-free and rejects a class it cannot read", async () => {
+    await expect(shadcnReports("src/primitive-classes.tsx")).resolves.toEqual([
+      { ruleId: "shadcn/no-restyle", line: 10 },
+      { ruleId: "shadcn/require-static-classes", line: 11 },
     ]);
-  });
-
-  it("stays silent on the declarations themselves and on other destructive text", async () => {
-    await expect(
-      tintReports("src/destructive-tint.allowed.tsx"),
-    ).resolves.toEqual([]);
   });
 });
 

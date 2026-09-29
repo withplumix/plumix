@@ -7,7 +7,6 @@ import type {
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useLabel } from "@/lib/use-label.js";
-import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import {
@@ -35,11 +34,11 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Per-column alignment + className passthrough. Column defs opt in via
-// `meta: { className: "text-right" }`; both the header cell and every
-// body cell pick up the class so alignment stays in sync.
+// Per-column alignment. Column defs opt in via `meta: { align: "end" }`;
+// the header cell and every body cell carry it as `data-align`, so
+// alignment stays in sync.
 interface DataTableColumnMeta {
-  className?: string;
+  align?: "start" | "end";
 }
 
 const features = tableFeatures({
@@ -115,7 +114,7 @@ export function DataTable<TData extends RowData>({
                 <TableHead
                   key={header.id}
                   colSpan={header.colSpan}
-                  className={cn(header.column.columnDef.meta?.className)}
+                  data-align={header.column.columnDef.meta?.align}
                 >
                   {header.isPlaceholder
                     ? null
@@ -144,7 +143,7 @@ export function DataTable<TData extends RowData>({
                 {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}
-                    className={cn(cell.column.columnDef.meta?.className)}
+                    data-align={cell.column.columnDef.meta?.align}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

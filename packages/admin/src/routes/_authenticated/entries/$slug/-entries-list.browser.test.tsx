@@ -2,6 +2,8 @@ import { ORPCError } from "@orpc/client";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { entryFactory } from "@plumix/core/test/browser";
+
 import { clearManifest, seedManifest } from "../../../../../test/manifest.js";
 import { renderRoute } from "../../../../../test/render-with-router.js";
 import { stubRpc } from "../../../../../test/rpc.js";
@@ -49,5 +51,54 @@ describe("entries list", () => {
     expect(
       await screen.findByTestId("content-list-load-error"),
     ).toHaveTextContent("Couldn't load posts. Try again.");
+  });
+
+  test("a row's trash action wears the destructive-row treatment Button owns", async () => {
+    seedManifest({
+      entryTypes: [
+        {
+          name: "post",
+          capabilityType: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          isPublic: true,
+          showUI: true,
+          showInSidebar: true,
+        },
+      ],
+    });
+    const now = new Date();
+    stubRpc({
+      "entry/list": () => [
+        {
+          ...entryFactory.build({ authorId: 1, title: "Hello" }),
+          id: 7,
+          type: "post",
+          status: "draft" as const,
+          parentId: null,
+          content: null,
+          excerpt: null,
+          sortOrder: 0,
+          publishedAt: null,
+          meta: {},
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    });
+    await renderRoute(Route, {
+      path: "/entries/$slug/",
+      url: "/entries/posts",
+      capabilities: ["entry:post:read", "entry:post:delete"],
+    });
+
+    const trash = await screen.findByTestId("content-list-row-trash-7");
+    expect([...trash.classList]).toEqual(
+      expect.arrayContaining([
+        "text-muted-foreground",
+        "hover:text-destructive",
+        "focus-visible:ring-[3px]",
+      ]),
+    );
   });
 });

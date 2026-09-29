@@ -23,10 +23,6 @@ import { SortableList } from "@plumix/admin-ui/sortable";
 import { isFieldVisible } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
-import {
-  metaBoxFieldColSpanClass,
-  repeaterDialogSizeClass,
-} from "./meta-box-grid.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
 // Row ids are index-derived. dnd-kit only needs stability within a single
@@ -250,7 +246,7 @@ export function RepeaterField({
         }}
       >
         <DialogContent
-          className={repeaterDialogSizeClass(field.dialogSize)}
+          size={field.dialogSize ?? "md"}
           aria-describedby={undefined}
           data-testid={`${testId}-dialog`}
           closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
@@ -316,7 +312,7 @@ function RepeaterRowFields({
             field={sf}
             name={`${rowName}.${sf.key}`}
             disabled={disabled}
-            className={metaBoxFieldColSpanClass(sf.span)}
+            span={sf.span ?? 12}
           />
         ))}
       </div>

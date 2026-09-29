@@ -6,7 +6,6 @@ import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { parseUserAgent } from "@/lib/user-agent.js";
-import { cn } from "@/lib/utils.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,7 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
-import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import {
   describeRpcError,
   rpcErrorCode,
@@ -248,9 +246,9 @@ function SessionRow({ session, onChanged }: SessionRowProps): ReactNode {
       {!session.current ? (
         <Button
           type="button"
-          variant="ghost"
+          variant="destructive-ghost"
           size="sm"
-          className={cn(destructiveGhostClassName, "shrink-0")}
+          className="shrink-0"
           onClick={() => {
             setConfirming(true);
           }}

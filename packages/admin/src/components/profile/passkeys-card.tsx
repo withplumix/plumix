@@ -31,7 +31,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
-import { destructiveGhostClassName } from "@plumix/admin-ui/destructive";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -420,9 +419,8 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="destructive-ghost"
               size="sm"
-              className={destructiveGhostClassName}
               onClick={() => {
                 setConfirmingDelete(true);
               }}

@@ -69,10 +69,6 @@
       "types": "./dist/command.d.ts",
       "default": "./dist/command.js"
     },
-    "./destructive": {
-      "types": "./dist/destructive.d.ts",
-      "default": "./dist/destructive.js"
-    },
     "./dialog": {
       "types": "./dist/dialog.d.ts",
       "default": "./dist/dialog.js"
