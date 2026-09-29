@@ -64,22 +64,14 @@ export async function plumixOn(
   }
 }
 
-/**
- * A config naming this package's commands module and `bunSqlite()` on a
- * relative path. The runtime is a stub until the package ships its adapter.
- */
+/** A config naming this package's adapter and `bunSqlite()` on a relative path. */
 export const BUN_CONFIG = `import { auth } from "plumix/auth";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
-import { bunSqlite } from "@plumix/runtime-bun";
+import { bun, bunSqlite } from "@plumix/runtime-bun";
 
 export default plumix({
-  runtime: {
-    name: "bun",
-    commandsModule: "@plumix/runtime-bun/commands",
-    createHandler: () => ({ fetch: () => new Response("") }),
-    generateEntry: () => "",
-  },
+  runtime: bun(),
   database: bunSqlite({ path: "data/site.sqlite" }),
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({ templates: [fallback(() => null)] }),
