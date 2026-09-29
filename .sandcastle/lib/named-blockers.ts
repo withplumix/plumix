@@ -1,4 +1,4 @@
-const BLOCKED_BY = /blocked by((?:[\s,]*(?:and\s+)?#\d+)+)/gi;
+const BLOCKED_BY = /blocked by((?:[\s,*-]*(?:and\s+)?#\d+)+)/gi;
 
 export const blockersNamedIn = (text: string): readonly number[] => [
   ...new Set(

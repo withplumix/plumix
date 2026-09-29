@@ -18,4 +18,12 @@ describe("blockersNamedIn", () => {
       [],
     );
   });
+
+  test("reads the blockers a brief lists under its Blocked by heading", () => {
+    expect(
+      blockersNamedIn(
+        "## Blocked by\n\n- #2690\n- #2691\n* #2693\n\n## Delivery\n\n- **One PR** against main, whose body opens with `**Fixes #2694**`.",
+      ),
+    ).toEqual([2690, 2691, 2693]);
+  });
 });
