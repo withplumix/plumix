@@ -226,7 +226,7 @@ export function PlumixEditor({
             <Sidebar
               side="left"
               collapsible="offcanvas"
-              className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
+              className="!h-editor-body top-(--header-height)"
               data-testid="plumix-editor-left"
               mobileTitle={i18n._({
                 id: "editor.rail.left.title",
@@ -311,7 +311,7 @@ function RightRail({
     <Sidebar
       side="right"
       collapsible="offcanvas"
-      className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
+      className="!h-editor-body top-(--header-height)"
       data-testid="plumix-editor-right"
       mobileTitle={i18n._({
         id: "editor.rail.right.title",

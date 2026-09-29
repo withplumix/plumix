@@ -1,8 +1,5 @@
 {
   "src/block-catalog-tab.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 1
     }
@@ -33,9 +30,6 @@
     }
   },
   "src/json-inspector.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    },
     "shadcn/no-restyle": {
       "count": 1
     }
@@ -45,19 +39,9 @@
       "count": 6
     }
   },
-  "src/plumix-editor.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 2
-    }
-  },
   "src/rich-text-field.tsx": {
     "shadcn/no-restyle": {
       "count": 2
-    }
-  },
-  "src/shortcuts-dialog.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
     }
   },
   "src/style-control.tsx": {

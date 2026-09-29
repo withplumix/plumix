@@ -30,9 +30,6 @@
     }
   },
   "src/components/meta-box/meta-box-field.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 1
     }
@@ -43,9 +40,6 @@
     }
   },
   "src/components/profile/api-tokens-card.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 12
     }
@@ -136,9 +130,6 @@
     }
   },
   "src/routes/_authenticated/users/index.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 3
     }

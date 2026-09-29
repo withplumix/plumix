@@ -23,7 +23,7 @@ const OUTPUT_TESTID = "json-inspector-output";
 // two can't drift. Lives here (the eager module) and passes down as a prop —
 // importing it from the lazy `json-highlight` chunk would defeat the split.
 const JSON_PRE_CLASS =
-  "bg-muted max-h-[70vh] overflow-auto rounded p-3 text-xs leading-relaxed";
+  "bg-muted max-h-dialog overflow-auto rounded p-3 text-xs leading-relaxed";
 
 /**
  * Read-only JSON view of the canonical tree, switchable between the selected
@@ -100,7 +100,7 @@ export function JsonSourceDialog(): ReactElement {
   return (
     <Dialog open={open} onOpenChange={setJsonOpen}>
       <DialogContent
-        className="flex max-h-[85vh] flex-col gap-3 sm:max-w-3xl"
+        className="max-h-dialog flex flex-col gap-3 sm:max-w-3xl"
         data-testid="json-source-dialog"
         closeLabel={i18n._({ id: "editor.dialog.close", message: "Close" })}
       >

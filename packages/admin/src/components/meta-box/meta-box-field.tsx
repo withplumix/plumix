@@ -486,7 +486,7 @@ function renderRangeField({
         className="flex-1"
       />
       <span
-        className="text-muted-foreground min-w-[3ch] text-end text-sm tabular-nums"
+        className="text-muted-foreground min-w-6 text-end text-sm tabular-nums"
         data-testid={`${testId}-display`}
       >
         {Number.isFinite(num) ? num : "–"}

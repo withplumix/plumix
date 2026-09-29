@@ -8,9 +8,9 @@
  *      `dist/theme.css` this package emits (see vite.config.ts) so
  *      plugin utility classes resolve against the same theme.
  *
- * Only the `@theme inline` mapping and the dark variant live here — the
- * `:root` / `.dark` variable *values* stay in `globals.css`, defined on
- * the live admin document. Plugin CSS therefore only needs the mapping;
+ * Only the `@theme inline` mapping, the dark variant and the named layout
+ * utilities live here — the `:root` / `.dark` variable *values* stay in
+ * `globals.css`, defined on the live admin document. Plugin CSS therefore only needs the mapping;
  * it references the document's vars at runtime.
  */
 
@@ -61,3 +61,40 @@
 }
 
 @custom-variant dark (&:is(.dark *));
+
+/* Layout roles the scale has no step for. A name keeps every site on one
+   value, where an arbitrary value lets each drift to its own. */
+@utility max-h-dialog {
+  max-height: 85vh;
+}
+
+/* A sticky panel offset `top-8` that keeps the same gap at the bottom. */
+@utility max-h-sticky-panel {
+  max-height: calc(100vh - 4rem);
+}
+
+@utility h-editor-body {
+  height: calc(100svh - var(--header-height));
+}
+
+@utility grid-cols-media {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+@utility grid-cols-label-value {
+  grid-template-columns: auto 1fr;
+}
+
+/* Open Graph's 1200x630 card. */
+@utility aspect-og-card {
+  aspect-ratio: 40 / 21;
+}
+
+@utility transition-width {
+  transition-property: width;
+  transition-timing-function: var(
+    --tw-ease,
+    var(--default-transition-timing-function)
+  );
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}

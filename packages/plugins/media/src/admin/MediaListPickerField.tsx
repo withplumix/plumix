@@ -345,7 +345,7 @@ function MediaListPickerModal({
       <DialogContent
         data-testid={testId}
         showCloseButton={false}
-        className="flex max-h-[90vh] max-w-5xl flex-col overflow-y-auto"
+        className="max-h-dialog flex max-w-5xl flex-col overflow-y-auto"
       >
         {/* MediaLibrary renders its own visible heading + footer controls;
             this names the dialog for assistive tech without duplicating it

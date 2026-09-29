@@ -1,8 +1,5 @@
 {
   "src/admin/CommentsShell.tsx": {
-    "shadcn/no-arbitrary-values": {
-      "count": 1
-    },
     "shadcn/no-restyle": {
       "count": 1
     }

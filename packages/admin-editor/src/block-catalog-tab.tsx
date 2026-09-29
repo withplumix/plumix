@@ -208,7 +208,7 @@ function CatalogCard({
       className="border-border hover:bg-accent hover:border-accent-foreground/20 flex aspect-square flex-col items-center justify-center gap-1.5 rounded-md border p-2 text-center"
     >
       <BlockIcon name={icon} className="text-muted-foreground size-5" />
-      <span className="text-foreground w-full truncate text-[11px] leading-tight">
+      <span className="text-foreground w-full truncate text-xs leading-tight">
         {label}
       </span>
     </button>

@@ -391,7 +391,7 @@ function RoleFilter({
         size="sm"
         aria-label={label(M.roleFilterAria)}
         data-testid="users-role-filter"
-        className="w-[180px]"
+        className="w-44"
       >
         <SelectValue />
       </SelectTrigger>

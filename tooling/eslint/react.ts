@@ -8,6 +8,16 @@ import {
   NO_THROW_NEW_ERROR_SELECTOR,
 } from "./base.js";
 
+const THEME_LAYOUT_UTILITIES = [
+  "max-h-dialog",
+  "max-h-sticky-panel",
+  "h-editor-body",
+  "grid-cols-media",
+  "grid-cols-label-value",
+  "aspect-og-card",
+  "transition-width",
+];
+
 // Physical CSS classes don't auto-flip under `<html dir="rtl">`. `pl-4` stays
 // padding-left in every locale, while `ps-4` resolves to start-side per
 // direction. Universal RTL safety for any package emitting JSX.
@@ -65,6 +75,11 @@ export const reactConfig = defineConfig(
   // which each package's `eslint-suppressions.json` carries until fixed.
   // `plumix-*` classes are the styling hooks public markup exposes to themes,
   // and `hljs` is highlight.js's, so neither is a Tailwind utility.
+  // The layout utilities `@plumix/admin`'s theme.css declares are named for
+  // `no-unknown-classes` because plugins have no stylesheet for it to discover
+  // them in. `no-restyle` cannot tell what a declared utility changes, so the
+  // sizing families that sit on primitives are allowed by prefix; a named
+  // entry would warn in every package that cannot see the theme.
   {
     files: ["src/**/*.tsx"],
     ignores: ["**/*.test.tsx"],
@@ -77,8 +92,11 @@ export const reactConfig = defineConfig(
     },
     rules: {
       "shadcn/no-raw-colors": "error",
-      "shadcn/no-unknown-classes": ["error", { allow: ["plumix-*", "hljs"] }],
-      "shadcn/no-restyle": ["error", { allow: ["layout"] }],
+      "shadcn/no-unknown-classes": [
+        "error",
+        { allow: ["plumix-*", "hljs", ...THEME_LAYOUT_UTILITIES] },
+      ],
+      "shadcn/no-restyle": ["error", { allow: ["layout", "max-h-*", "h-*"] }],
       "shadcn/no-arbitrary-values": "error",
     },
   },
