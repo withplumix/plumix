@@ -1,8 +1,10 @@
+import type { RuntimeDescriptor } from "./compose/types.js";
 import type { PackageManager } from "./package-manager.js";
 import type { CommandRunner } from "./post-scaffold.js";
 import type { CliIO, Reporter } from "./reporter.js";
 import type { ScaffoldSources } from "./sources.js";
 import type { WizardSelection } from "./wizard.js";
+import { ScaffoldError } from "./errors.js";
 import {
   detectPackageManager,
   isKnownPackageManager,
@@ -78,10 +80,10 @@ export async function runCli(
     );
     return 1;
   }
-  const pm: PackageManager =
+  const requestedPm: PackageManager | undefined =
     reconciled.pm !== undefined && isKnownPackageManager(reconciled.pm)
       ? reconciled.pm
-      : detectPackageManager(deps.userAgent);
+      : undefined;
 
   const interactive = reconciled.prompts.length > 0 && isInteractive();
   const reporter: Reporter = interactive ? clackReporter : plainReporter(io);
@@ -127,6 +129,8 @@ export async function runCli(
   }
 
   try {
+    const runtime = sources.registry.runtimes.find((r) => r.id === runtimeId);
+    const pm = resolvePackageManager(runtime, requestedPm, deps.userAgent);
     const result = await scaffold({
       targetDir,
       runtimeId,
@@ -142,10 +146,12 @@ export async function runCli(
       db: reconciled.db,
       git: reconciled.git,
       runner,
+      cli: runtime?.cli,
     });
     const steps = nextSteps(pm, result.name, {
       installed: post.installed,
       dbReady: post.dbSetup,
+      cli: runtime?.cli,
     });
 
     reporter.created({
@@ -161,6 +167,28 @@ export async function runCli(
     reporter.cancelled(messageOf(error));
     return 1;
   }
+}
+
+/**
+ * A runtime that pins a package manager installs with it whatever invoked us
+ * — pnpm's shell-script `.bin` shims cannot run under `bun --bun` — so only an
+ * explicit `--pm` naming another one is refused. Otherwise `--pm` wins over
+ * the invoking manager.
+ */
+function resolvePackageManager(
+  runtime: RuntimeDescriptor | undefined,
+  requested: PackageManager | undefined,
+  userAgent: string | undefined,
+): PackageManager {
+  const pinned = runtime?.packageManager;
+  if (pinned && requested !== undefined && requested !== pinned) {
+    throw ScaffoldError.packageManagerConflict({
+      runtime: runtime.id,
+      packageManager: pinned,
+      requested,
+    });
+  }
+  return pinned ?? requested ?? detectPackageManager(userAgent);
 }
 
 function messageOf(error: unknown): string {

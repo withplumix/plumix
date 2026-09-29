@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { PluginDescriptor, RuntimeDescriptor } from "./compose/types.js";
 import type { Registry } from "./registry.js";
+import { loadRegistry } from "./registry.js";
 import { planBoot, planInstall, planSmokeCombos } from "./smoke-plan.js";
+import { REPO_ROOT } from "./test-support.js";
 
 function runtime(
   id: string,
@@ -79,6 +81,20 @@ describe("planSmokeCombos", () => {
         excluded: ["media"],
       },
     ]);
+  });
+});
+
+describe("planSmokeCombos — the workspace's runtimes", () => {
+  it("runs Bun's combos on bun, leaving media out until Bun delivers images", async () => {
+    const combos = planSmokeCombos(await loadRegistry(REPO_ROOT));
+
+    expect(combos.find((combo) => combo.name === "bun-blank")).toMatchObject({
+      packageManager: "bun",
+    });
+    const allPlugins = combos.find((combo) => combo.name === "bun-all-plugins");
+    expect(allPlugins).toMatchObject({ packageManager: "bun" });
+    expect(allPlugins?.excluded).toEqual(["media"]);
+    expect(allPlugins?.args.join(" ")).not.toMatch(/\bmedia\b/);
   });
 });
 

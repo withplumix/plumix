@@ -37,12 +37,19 @@ export function assemblePackageJson(
     ...runtime.deps,
   });
   const devDeps = sortedByKey({ ...base.devDependencies, ...runtime.devDeps });
+  const pinned =
+    runtime.packageManager &&
+    ctx.packageManagerVersions?.[runtime.packageManager];
 
   const pkg: PackageJson = {
     ...base,
     name: projectName,
+    ...(pinned
+      ? { packageManager: `${runtime.packageManager}@${pinned}` }
+      : {}),
     scripts: {
       ...base.scripts,
+      ...runtime.scripts,
       // The base command names what every project has; the runtime adds what
       // its own tooling writes.
       clean: [base.scripts?.clean, ...(runtime.gitignore ?? [])].join(" "),

@@ -18,6 +18,8 @@ interface PostScaffoldOptions {
   readonly db: boolean;
   readonly git: boolean;
   readonly runner: CommandRunner;
+  /** The runtime's own prefix for the `plumix` CLI, when it declares one. */
+  readonly cli?: string;
 }
 
 export interface PostScaffoldResult {
@@ -42,6 +44,17 @@ function pmExec(pm: PackageManager): readonly [string, ...string[]] {
   }
 }
 
+// A runtime's declared prefix is static scaffold metadata with no quoting, so
+// splitting on spaces recovers its argv.
+function plumixCommand(
+  pm: PackageManager,
+  cli: string | undefined,
+): readonly [string, ...string[]] {
+  if (cli === undefined) return [...pmExec(pm), "plumix"];
+  const [cmd = "plumix", ...args] = cli.split(" ");
+  return [cmd, ...args];
+}
+
 /**
  * Run the optional post-scaffold steps: install dependencies, set up the
  * local database (generate migrations for the selected plugins and apply
@@ -56,6 +69,7 @@ export async function runPostScaffold({
   db,
   git,
   runner,
+  cli,
 }: PostScaffoldOptions): Promise<PostScaffoldResult> {
   let installed = false;
   let installFailed = false;
@@ -70,9 +84,9 @@ export async function runPostScaffold({
   let dbSetup = false;
   let dbSetupFailed = false;
   if (db && installed) {
-    const [cmd, ...prefix] = pmExec(pm);
+    const [cmd, ...prefix] = plumixCommand(pm, cli);
     const plumix = (...args: string[]) =>
-      runner.run(cmd, [...prefix, "plumix", ...args], targetDir);
+      runner.run(cmd, [...prefix, ...args], targetDir);
     const generated = await plumix("migrate", "generate");
     dbSetup = generated.ok && (await plumix("migrate", "apply", "--local")).ok;
     dbSetupFailed = !dbSetup;
@@ -108,14 +122,14 @@ export async function runPostScaffold({
 export function nextSteps(
   pm: PackageManager,
   name: string,
-  done: { installed: boolean; dbReady: boolean },
+  done: { installed: boolean; dbReady: boolean; cli?: string },
 ): string[] {
-  const exec = pmExec(pm).join(" ");
+  const plumix = plumixCommand(pm, done.cli).join(" ");
   const steps = [`cd ${name}`];
   if (!done.installed) steps.push(`${pm} install`);
   if (!done.dbReady) {
-    steps.push(`${exec} plumix migrate generate`);
-    steps.push(`${exec} plumix migrate apply --local`);
+    steps.push(`${plumix} migrate generate`);
+    steps.push(`${plumix} migrate apply --local`);
   }
   steps.push(pm === "npm" ? "npm run dev" : `${pm} dev`);
   return steps;

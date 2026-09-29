@@ -49,6 +49,14 @@ export interface RuntimeDescriptor {
    * runtime needs one in particular. Absent means pnpm.
    */
   readonly packageManager?: PackageManager;
+  /** package.json scripts that replace or join the base skeleton's. */
+  readonly scripts?: Readonly<Record<string, string>>;
+  /**
+   * The command prefix that runs the project's `plumix` CLI, for a runtime
+   * whose commands need more than the package manager's exec — Bun's
+   * `bun --bun plumix`. Absent means the package manager's own.
+   */
+  readonly cli?: string;
   /** Markdown for the README's Deploy section: how this runtime ships and runs. */
   readonly readme?: string;
   /** Whole files the runtime contributes, keyed by relative path. */

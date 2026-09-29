@@ -36,9 +36,72 @@
   },
   "files": [
     "dist",
+    "scaffold",
     "README.md",
     "LICENSE"
   ],
+  "plumix": {
+    "scaffold": {
+      "kind": "runtime",
+      "id": "bun",
+      "label": "Bun",
+      "description": "A Bun process with bun:sqlite and uploads on disk",
+      "imports": [
+        "import { bun, bunSqlite } from \"@plumix/runtime-bun\";"
+      ],
+      "configSlots": {
+        "runtime": "bun()",
+        "database": "bunSqlite({ path: \"data/site.sqlite\" })"
+      },
+      "authOrigin": "rpId: \"localhost\", origin: \"http://localhost:3000\"",
+      "authOriginComment": "Passkeys are bound to the origin: change both to the host you deploy on.",
+      "deps": {
+        "@plumix/runtime-bun": "workspace:*"
+      },
+      "devDeps": {
+        "@types/bun": "1.4.2"
+      },
+      "packageManager": "bun",
+      "scripts": {
+        "build": "bun --bun plumix build",
+        "dev": "bun --bun plumix dev",
+        "migrate:apply": "bun --bun plumix migrate apply"
+      },
+      "cli": "bun --bun plumix",
+      "secretsFile": ".env",
+      "gitignore": [
+        "data"
+      ],
+      "types": [
+        "bun"
+      ],
+      "readme": "scaffold/README-deploy.md",
+      "files": {
+        ".env.example": "scaffold/env.example",
+        "bunfig.toml": "scaffold/bunfig.toml"
+      },
+      "capabilities": {
+        "storage": {
+          "imports": [
+            "import { diskStorage } from \"@plumix/runtime-bun\";"
+          ],
+          "configSlots": {
+            "storage": "diskStorage({ dir: \"data/media\" })"
+          }
+        }
+      }
+    },
+    "e2e": {
+      "start": "bun dist/server/worker.js",
+      "cli": "bun --bun node_modules/plumix/bin/plumix.mjs",
+      "wipe": [
+        "data"
+      ],
+      "database": {
+        "glob": "data/*.sqlite"
+      }
+    }
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true

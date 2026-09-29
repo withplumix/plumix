@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { loadScaffoldSources, scaffold } from "./scaffold.js";
-import { packageVersion } from "./test-support.js";
+import { packageVersion, REPO_ROOT } from "./test-support.js";
 
 function readPkg(dir: string): {
   name: string;
@@ -303,6 +303,102 @@ describe("scaffold — Node app", () => {
     const blank = join(tmp, "no-media");
     await scaffold({ targetDir: blank, runtimeId: "node", pluginIds: ["og"] });
     expect(readPkg(blank).dependencies).not.toHaveProperty("sharp");
+  });
+});
+
+describe("scaffold — Bun app", () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "plumix-scaffold-bun-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("composes a Bun process: bun(), bunSqlite under data/, a localhost passkey origin", async () => {
+    const target = join(tmp, "bun-app");
+
+    await scaffold({ targetDir: target, runtimeId: "bun", pluginIds: ["og"] });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain(
+      'import { bun, bunSqlite, diskStorage } from "@plumix/runtime-bun";',
+    );
+    expect(config).toContain("runtime: bun(),");
+    expect(config).toContain(
+      'database: bunSqlite({ path: "data/site.sqlite" }),',
+    );
+    expect(config).toContain('storage: diskStorage({ dir: "data/media" }),');
+    expect(config).toContain(
+      'rpId: "localhost", origin: "http://localhost:3000"',
+    );
+    expect(config).not.toContain("runtime-node");
+
+    expect(existsSync(join(target, ".env.example"))).toBe(true);
+    expect(existsSync(join(target, "Dockerfile"))).toBe(false);
+    expect(
+      readFileSync(join(target, ".gitignore"), "utf8").split("\n"),
+    ).toEqual(expect.arrayContaining(["data", ".env"]));
+    const tsconfig = JSON.parse(
+      readFileSync(join(target, "tsconfig.json"), "utf8"),
+    ) as { compilerOptions: { types: string[] } };
+    expect(tsconfig.compilerOptions.types).toContain("bun");
+    const readme = readFileSync(join(target, "README.md"), "utf8");
+    expect(readme).toContain("bun install");
+    expect(readme).toContain("bun --bun plumix migrate apply");
+    expect(readme).toContain("bun dist/server/worker.js");
+  });
+
+  test("turns off Bun's own env loading, so only the runtime reads .env", async () => {
+    const target = join(tmp, "bunfig");
+
+    await scaffold({ targetDir: target, runtimeId: "bun" });
+
+    expect(readFileSync(join(target, "bunfig.toml"), "utf8")).toMatch(
+      /^env = false$/m,
+    );
+  });
+
+  test("installs with the Bun the repo pins and runs every plumix command on it", async () => {
+    const target = join(tmp, "bun-pkg");
+
+    await scaffold({ targetDir: target, runtimeId: "bun" });
+
+    const pkg = JSON.parse(
+      readFileSync(join(target, "package.json"), "utf8"),
+    ) as {
+      packageManager?: string;
+      scripts?: Record<string, string>;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const bunVersion = readFileSync(
+      join(REPO_ROOT, ".bun-version"),
+      "utf8",
+    ).trim();
+    expect(pkg.packageManager).toBe(`bun@${bunVersion}`);
+    expect(pkg.scripts).toMatchObject({
+      dev: "bun --bun plumix dev",
+      build: "bun --bun plumix build",
+      "migrate:apply": "bun --bun plumix migrate apply",
+    });
+    expect(pkg.dependencies?.["@plumix/runtime-bun"]).toBe(
+      `^${packageVersion("packages/runtimes/bun")}`,
+    );
+    expect(pkg.dependencies).not.toHaveProperty("@plumix/runtime-node");
+    expect(pkg.devDependencies).toHaveProperty("@types/bun");
+  });
+
+  test("refuses media until the runtime delivers images", async () => {
+    await expect(
+      scaffold({
+        targetDir: join(tmp, "media"),
+        runtimeId: "bun",
+        pluginIds: ["media"],
+      }),
+    ).rejects.toThrow(/"imageDelivery" capability.*"bun" runtime/);
   });
 });
 

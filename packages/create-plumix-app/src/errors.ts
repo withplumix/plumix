@@ -13,7 +13,8 @@ type ScaffoldErrorCode =
   | "wrangler_file_missing"
   | "snapshot_missing"
   | "smoke_package_manager_unsupported"
-  | "smoke_start_missing";
+  | "smoke_start_missing"
+  | "package_manager_conflict";
 
 /**
  * A scaffolder failure. The interface callers depend on is the human-readable
@@ -157,6 +158,17 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "smoke_package_manager_unsupported",
       `The scaffold smoke cannot redirect ${ctx.packageManager} at the packed tarballs: only pnpm and bun are wired.`,
+    );
+  }
+
+  static packageManagerConflict(ctx: {
+    runtime: string;
+    packageManager: string;
+    requested: string;
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "package_manager_conflict",
+      `The "${ctx.runtime}" runtime installs with ${ctx.packageManager}, so it cannot be combined with --pm ${ctx.requested}. Drop --pm, or pass --pm ${ctx.packageManager}.`,
     );
   }
 
