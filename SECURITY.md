@@ -1,60 +1,73 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-**Please do not open a public GitHub issue for security vulnerabilities.**
+Report it privately through [GitHub Security Advisories](https://github.com/withplumix/plumix/security/advisories/new). Don't describe it in an issue, a discussion or any other public place until we have acknowledged it and agreed on disclosure.
 
-Instead, please report them via [GitHub Security Advisories](https://github.com/withplumix/plumix/security/advisories/new).
+Include:
 
-### What to include
+- what the vulnerability is and what an attacker gains
+- the affected package and version
+- the steps or proof of concept that reproduce it, run by you
+- any configuration it depends on
 
-- A description of the vulnerability
-- Steps to reproduce
-- Affected versions
-- Any potential impact
-
-### Response timeline
-
-- **Acknowledgment:** within 3 working days
-- **Initial assessment:** within 1 week
-- **Fix timeline:** depends on severity, but we aim for patches within 2 weeks for critical issues
-
-This project follows a **90-day disclosure timeline**.
-
-> **Please do not report, discuss, or describe security issues in GitHub Issues, GitHub Discussions, or any other public forum without prior contact and acknowledgment from the maintainers.**
-
-## Scope
-
-Every package published from this repository is in scope: `plumix`, `create-plumix-app`, and everything under `@plumix/`. A rule rather than a list, so that shipping a package does not quietly put it outside the policy.
-
-Four take untrusted input, and are the ones we most want reports about:
-
-- **`@plumix/core`** — authentication, sessions, the CSRF gate, the access policies and the request dispatcher.
-- **`@plumix/plugin-comments`** and **`@plumix/plugin-forms`** — anonymous public form submissions.
-- **`@plumix/plugin-search`** — a visitor's typing reaches a full-text query.
-- **`@plumix/plugin-media`** — uploads.
-
-### Out of scope
-
-None of these is a vulnerability in this project on its own. Each becomes one the moment you can show the path we have missed, and that path is the report.
-
-- **A dependency's published CVE with no reachable call path.** We watch advisories. What is worth reporting is the route through our code that reaches the vulnerable function.
-- **Admin access on `demo.plumix.dev`.** The demo hands every visitor a synthetic admin in a per-session database of its own. That is the "try the editor" sandbox working as designed, not a broken login. Reaching _another_ session's data, or reaching the real auth rails the demo blocks, is a report.
-- **Configuration of a site we host, rather than a defect in the packages.** `plumix.dev`, `docs.plumix.dev` and `demo.plumix.dev` are deployed from `apps/`. A missing header on one of them is ours to fix and worth telling us about, but it is not a vulnerability in the software. Anything you can reproduce against the packages is a report, wherever you noticed it.
-- **Self-XSS**, and anything else that requires the victim to paste attacker-supplied content into their own console or editor.
-- **Code a site owner chose to run.** A plugin or theme executes as part of the application, so installing one is running its code by design. A path that reaches that execution without an install is a report.
-- **Output from a scanner with no demonstrated impact.** A finding needs the request that proves it.
+A report written with an AI tool is welcome if you reproduced it yourself. Don't request a CVE of your own. GitHub issues one through the advisory.
 
 ## What happens next
 
-A confirmed report becomes a [GitHub Security Advisory](https://github.com/withplumix/plumix/security/advisories), which is where the fix is described. The patch ships as a normal release, so the version carrying it is the one the advisory names.
+- We acknowledge a report within 3 working days. If you hear nothing by then, comment on the advisory.
+- We send an initial assessment within 1 week.
+- We aim to patch a critical issue within 2 weeks. Other fixes take as long as their severity allows.
 
-We run no bug bounty. A reporter is credited in the advisory unless they ask not to be.
+A confirmed report becomes a [GitHub Security Advisory](https://github.com/withplumix/plumix/security/advisories). The patch ships as a normal release, and the advisory names the version that carries it. We publish the advisory when the fix ships, and no later than 90 days after the report.
 
-## Supported Versions
+We run no bug bounty. The advisory credits the reporter unless they ask us not to.
 
-| Version | Supported            |
-| ------- | -------------------- |
-| 0.x     | ✅ Latest minor only |
+## Supported versions
 
-We only support the latest minor release. Upgrade to receive security fixes.
+Only the latest minor release of each published package gets security fixes. Upgrade to receive them.
+
+## Threat model
+
+A finding counts as a vulnerability only if it works without help from something Plumix trusts. A real bug outside this model still gets fixed, as a normal release rather than an advisory.
+
+Plumix trusts:
+
+- the site owner and the machines and accounts they deploy from
+- `plumix.config.ts`, the environment and the secrets the owner sets
+- the plugins and themes the owner installs, which run as part of the application
+- the runtime and the platform services it binds to
+
+Plumix does not trust:
+
+- any inbound request, signed in or not
+- a signed-in user beyond the capabilities their role grants
+- content a user stores, which other people's browsers render later
+- uploaded files, form submissions and search input
+
+The reports we most want show a visitor or a lower-privileged user getting past authentication, sessions, the CSRF check or an access policy, reading content they shouldn't see, such as drafts or private entries, or getting script into a page someone else views.
+
+## Scope
+
+Every package published from this repository is in scope: `plumix`, `create-plumix-app`, and everything under `@plumix/`.
+
+### Out of scope
+
+None of these is a vulnerability in Plumix on its own. Each becomes one when you can show the path we missed, and that path is the report.
+
+- **A dependency's published CVE with no reachable call path.** Report the dependency's bug upstream. The route through our code to the vulnerable function is what's worth reporting here.
+- **Plugins and themes published elsewhere.** Report those to their maintainers.
+- **Behaviour that only appears under `plumix dev`.** The dev server favours debugging over hardening. A dev-only endpoint you can reach in a production build is a report.
+- **Admin access on `demo.plumix.dev`.** The demo gives every visitor a synthetic admin in a database of their own. That's the "try the editor" sandbox working as designed. Reaching _another_ visitor's data, or the real sign-in the demo blocks, is a report.
+- **Configuration of a site we host.** `plumix.dev`, `docs.plumix.dev` and `demo.plumix.dev` are deployed from `apps/`. A missing header on one of them is ours to fix and worth telling us about, but it isn't a vulnerability in the packages. Anything you can reproduce against the packages is a report, wherever you noticed it.
+- **Self-XSS**, and anything else that needs the victim to paste attacker-supplied content into their own console or editor.
+- **Code the site owner chose to run.** Installing a plugin or theme runs its code by design. A path that runs code without an install is a report.
+- **Scanner output with no demonstrated impact.** A finding needs the request that proves it.
+
+## Safe harbor
+
+We won't pursue good-faith research that stays within these bounds:
+
+- Test against your own installation, or the demo's per-visitor sandbox.
+- Don't access, change or delete anyone else's data, and don't degrade a live service.
+- Stop and tell us if you reach data that isn't yours.
