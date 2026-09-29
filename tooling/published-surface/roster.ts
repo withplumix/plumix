@@ -515,13 +515,36 @@ export const ROSTER: Readonly<
   "@plumix/runtime-bun": {
     ".": [
       {
-        reason: "the database slot a site config wires",
+        reason: "the adapter and the database slot a site config wires",
         names: [
+          "bun",
+          "BunConfig",
+          "BunRuntimeAdapter",
+          "ResolvedBunConfig",
           "bunSqlite",
           "BunSqliteConfig",
           "BunSqliteDatabase",
           "BunSqliteDatabaseAdapter",
         ],
+      },
+      {
+        reason:
+          "what the generated entry calls, and the site and serve options " +
+          "it hands an embedder mounting it in its own `Bun.serve`",
+        names: [
+          "createBunSite",
+          "serveProcess",
+          "BunSite",
+          "BunSiteHandler",
+          "BunSiteOptions",
+          "BunSiteServe",
+        ],
+      },
+      {
+        reason:
+          "the assets layer `createBunSite` serves ahead of the handler, " +
+          "for a host that assembles its own",
+        names: ["createAssetsLayer", "AssetsLayer", "AssetsLayerOptions"],
       },
     ],
     "./commands": [
@@ -686,7 +709,7 @@ export const ROSTER: Readonly<
         reason:
           "the shared bodies of a self-hosted runtime's `build` and `dev` " +
           "commands, which the runtime supplies only its configuration to " +
-          "(runtime-node)",
+          "(runtime-node, runtime-bun)",
         names: [
           "serverEnvironment",
           "ServerEnvironmentOptions",

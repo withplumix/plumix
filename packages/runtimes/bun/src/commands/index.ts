@@ -1,5 +1,6 @@
 import type { CommandRegistry } from "plumix";
 
+import { buildCommand } from "./build.js";
 import { BunCliError } from "./errors.js";
 import { migrateApplyCommand } from "./migrate-apply.js";
 
@@ -7,7 +8,9 @@ import { migrateApplyCommand } from "./migrate-apply.js";
 // `Bun.serve`, so the module refuses to load and says how to run it instead.
 if (!("Bun" in globalThis)) throw BunCliError.bunRequired();
 
-export const commands: CommandRegistry = {};
+export const commands: CommandRegistry = {
+  build: buildCommand,
+};
 
 export const migrate: CommandRegistry = {
   apply: migrateApplyCommand,

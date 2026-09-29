@@ -25,3 +25,27 @@ export class MigrateApplyError extends Error {
     );
   }
 }
+
+export class BunConfigError extends Error {
+  static {
+    BunConfigError.prototype.name = "BunConfigError";
+  }
+
+  readonly code: "idle_timeout_too_long";
+
+  private constructor(code: "idle_timeout_too_long", message: string) {
+    super(message);
+    this.code = code;
+  }
+
+  static idleTimeoutTooLong(ctx: { idleTimeout: number }): BunConfigError {
+    return new BunConfigError(
+      "idle_timeout_too_long",
+      `@plumix/runtime-bun: bun() needs \`idleTimeout\` to be at most ${String(MAX_IDLE_TIMEOUT_S)} seconds, ` +
+        `Bun's ceiling, got ${String(ctx.idleTimeout)}. Use 0 to disable it.`,
+    );
+  }
+}
+
+/** The longest idle timeout `Bun.serve` accepts, in seconds. */
+export const MAX_IDLE_TIMEOUT_S = 255;
