@@ -32,6 +32,8 @@ Turborepo drives everything from the root:
 - `pnpm i18n:check` — source↔catalog drift gate; fails when `<Trans>`/`defineMessage` strings change without `lingui extract` (run `pnpm --filter <pkg> i18n:extract` + `i18n:compile`, commit the `locales/` churn). Exception: `plugin-blog` and `plugin-pages` hand-author their `locales/*.po` (a plugin definition is server-side, no Babel macro pass) — their `i18n:extract` refuses to run instead of overwriting the catalog; fix drift by editing `locales/en.po` directly.
 - `pnpm commitlint` — conventional-commit lint
 
+**Bun.** The Bun runtime's suites (`packages/runtimes/bun`) run on Bun, so install Bun locally at the version in `.bun-version`. Its `test:unit` runs `bun --bun` on vitest's own entry script.
+
 **Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test:build`, `test:e2e`, `publint`, `attw`):
 
 ```bash
