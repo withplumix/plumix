@@ -88,6 +88,14 @@
           "configSlots": {
             "storage": "diskStorage({ dir: \"data/media\" })"
           }
+        },
+        "imageDelivery": {
+          "imports": [
+            "import { images } from \"@plumix/runtime-bun\";"
+          ],
+          "configSlots": {
+            "imageDelivery": "images()"
+          }
         }
       }
     },

@@ -1,8 +1,7 @@
-import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import type { ImageDelivery } from "plumix";
+import type { ImageDelivery, PlumixEnv } from "plumix";
 import type { RemotePattern } from "plumix/blocks/renderer";
-import type SharpModule from "sharp";
+import type { ImageFormat } from "plumix/runtime";
 import { imageSourceKey, imageTransformUrl } from "plumix/runtime";
 
 import type { VariantCache } from "./image-cache.js";
@@ -24,36 +23,41 @@ export interface ImagesConfig {
   readonly remotePatterns?: readonly RemotePattern[];
   /** Where rendered variants are kept; `.cache/plumix/images` by default. */
   readonly cacheDir?: string;
-  /**
-   * How many bytes of variants `cacheDir` may hold; 1 GiB by default. Past
-   * it, the least recently served variant is dropped.
-   */
-  readonly cacheSize?: number;
 }
 
-export interface ResolvedImagesConfig {
+interface ResolvedImagesConfig {
   /** Ascending, deduplicated. */
   readonly widths: readonly number[];
   readonly remotePatterns: readonly RemotePattern[];
   /** Absolute. */
   readonly cacheDir: string;
-  readonly cacheSize: number;
 }
 
-export interface NodeImageDelivery extends ImageDelivery {
-  readonly kind: "node-images";
+export interface BunImageDelivery extends ImageDelivery {
+  readonly kind: "bun-images";
   readonly acceptsRelativeSources: true;
   readonly config: ResolvedImagesConfig;
-  /** `sharp`, loaded on first use; `connect` is the first user. */
-  sharp(): typeof SharpModule;
   /** The variants under `cacheDir`, shared with the route. */
   readonly cache: VariantCache;
+  /**
+   * The formats `Bun.Image` encodes on this host, probed once, on `connect`.
+   * AVIF needs an OS encoder, which Linux does not have.
+   */
+  encodable(): Promise<readonly ImageFormat[]>;
   purge(sourceUrl: string): Promise<void>;
+  connect(env: PlumixEnv, ctx?: { readonly basePath: string }): ImageDelivery;
 }
 
 const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
 const DEFAULT_CACHE_DIR = ".cache/plumix/images";
-const DEFAULT_CACHE_SIZE = 1024 * 1024 * 1024;
+const PROBED: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
+// A 1×1 PNG, the smallest input every encoder can be asked to take.
+const PIXEL = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  ),
+  (char) => char.charCodeAt(0),
+);
 
 function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
   const widths = [...new Set(config.widths ?? DEFAULT_WIDTHS)].sort(
@@ -65,47 +69,53 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
   ) {
     throw ImagesError.invalidWidths({ widths: config.widths ?? [] });
   }
-  const cacheSize = config.cacheSize ?? DEFAULT_CACHE_SIZE;
-  if (!Number.isInteger(cacheSize) || cacheSize <= 0) {
-    throw ImagesError.invalidCacheSize({ cacheSize });
-  }
   return {
     widths,
     remotePatterns: config.remotePatterns ?? [],
     cacheDir: resolve(config.cacheDir ?? DEFAULT_CACHE_DIR),
-    cacheSize,
   };
 }
 
-const ownRequire = createRequire(import.meta.url);
-
-/**
- * `sharp` is an optional peer: a site without images() must install nothing
- * native, so it is required here, on first use, and a missing package is
- * named rather than surfacing as a resolution error deep in a request.
- */
-function loadSharp(): typeof SharpModule {
-  let loaded: typeof SharpModule;
-  try {
-    loaded = ownRequire("sharp") as typeof SharpModule;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {
-      throw ImagesError.sharpMissing({ cause: error });
-    }
-    throw error;
+/** Encode `image` as `format`; each setter records the format it names. */
+export function encodeAs(
+  image: Bun.Image,
+  format: ImageFormat | "png",
+  quality: number | undefined,
+): Bun.Image {
+  const options = quality === undefined ? {} : { quality };
+  switch (format) {
+    case "jpeg":
+      return image.jpeg(options);
+    case "webp":
+      return image.webp(options);
+    case "avif":
+      return image.avif(options);
+    case "png":
+      return image.png();
   }
-  // libvips' operation cache is the one piece of shared mutable state under
-  // concurrent transforms; the known race is avoided by not having it.
-  loaded.cache(false);
-  return loaded;
+}
+
+// A format the host cannot encode rejects at the terminal, whatever the
+// input, so one pixel through each encoder is the whole probe.
+async function probeEncodable(): Promise<readonly ImageFormat[]> {
+  const results = await Promise.all(
+    PROBED.map((format) =>
+      encodeAs(new Bun.Image(PIXEL), format, undefined)
+        .bytes()
+        .then(
+          () => true,
+          () => false,
+        ),
+    ),
+  );
+  return PROBED.filter((_, index) => results[index]);
 }
 
 /**
- * The `imageDelivery` slot on Node: `url()` is URL math onto
- * `/_plumix/image`, which the entry's pre-handler layer serves through
- * `sharp`. A same-origin source is resolved through the site's own handler,
- * so the media plugin's gating applies; a remote one must match
- * `remotePatterns`.
+ * The `imageDelivery` slot on Bun: `url()` is URL math onto
+ * `/_plumix/image`, which the serve path answers through `Bun.Image`. A
+ * same-origin source is resolved through the site's own handler, so the
+ * media plugin's gating applies; a remote one must match `remotePatterns`.
  *
  * @example
  * ```ts
@@ -115,24 +125,23 @@ function loadSharp(): typeof SharpModule {
  * });
  * ```
  */
-export function images(config: ImagesConfig = {}): NodeImageDelivery {
+export function images(config: ImagesConfig = {}): BunImageDelivery {
   const resolved = resolveConfig(config);
-  let sharp: typeof SharpModule | undefined;
-  const slot: NodeImageDelivery = {
-    kind: "node-images",
+  let probe: Promise<readonly ImageFormat[]> | undefined;
+  const slot: BunImageDelivery = {
+    kind: "bun-images",
     acceptsRelativeSources: true,
     config: resolved,
-    sharp: () => (sharp ??= loadSharp()),
-    cache: createVariantCache(resolved.cacheDir, resolved.cacheSize),
+    cache: createVariantCache(resolved.cacheDir),
+    encodable: () => (probe ??= probeEncodable()),
     purge: (sourceUrl) => slot.cache.purge(imageSourceKey(sourceUrl)),
     url: (sourceUrl, opts) =>
       imageTransformUrl({ ...resolved, basePath: "" }, sourceUrl, opts),
-    // Returns a distinct object per basePath rather than mutating `slot`, so
-    // one `images()` instance connected more than once — a test constructing
-    // several sites, a dev-server reconnect — never has one connection's
-    // basePath leak into another's.
+    // A distinct object per basePath rather than a mutated `slot`, so one
+    // `images()` connected more than once never leaks one connection's
+    // basePath into another's.
     connect(_env, ctx) {
-      slot.sharp();
+      void slot.encodable();
       const basePath = ctx?.basePath ?? "";
       if (basePath === "") return slot;
       return {
@@ -145,8 +154,8 @@ export function images(config: ImagesConfig = {}): NodeImageDelivery {
   return slot;
 }
 
-export function isNodeImages(
+export function isBunImages(
   slot: ImageDelivery | undefined,
-): slot is NodeImageDelivery {
-  return slot?.kind === "node-images";
+): slot is BunImageDelivery {
+  return slot?.kind === "bun-images";
 }

@@ -85,7 +85,7 @@ describe("planSmokeCombos", () => {
 });
 
 describe("planSmokeCombos — the workspace's runtimes", () => {
-  it("runs Bun's combos on bun, leaving media out until Bun delivers images", async () => {
+  it("runs Bun's combos on bun, with media among its plugins now Bun delivers images", async () => {
     const combos = planSmokeCombos(await loadRegistry(REPO_ROOT));
 
     expect(combos.find((combo) => combo.name === "bun-blank")).toMatchObject({
@@ -93,8 +93,8 @@ describe("planSmokeCombos — the workspace's runtimes", () => {
     });
     const allPlugins = combos.find((combo) => combo.name === "bun-all-plugins");
     expect(allPlugins).toMatchObject({ packageManager: "bun" });
-    expect(allPlugins?.excluded).toEqual(["media"]);
-    expect(allPlugins?.args.join(" ")).not.toMatch(/\bmedia\b/);
+    expect(allPlugins?.excluded).toEqual([]);
+    expect(allPlugins?.args.join(" ")).toMatch(/\bmedia\b/);
   });
 });
 

@@ -391,14 +391,21 @@ describe("scaffold — Bun app", () => {
     expect(pkg.devDependencies).toHaveProperty("@types/bun");
   });
 
-  test("refuses media until the runtime delivers images", async () => {
-    await expect(
-      scaffold({
-        targetDir: join(tmp, "media"),
-        runtimeId: "bun",
-        pluginIds: ["media"],
-      }),
-    ).rejects.toThrow(/"imageDelivery" capability.*"bun" runtime/);
+  test("hosts media, delivering images through the runtime's own images()", async () => {
+    const target = join(tmp, "media");
+
+    await scaffold({
+      targetDir: target,
+      runtimeId: "bun",
+      pluginIds: ["media"],
+    });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain(
+      'import { bun, bunSqlite, diskStorage, images } from "@plumix/runtime-bun";',
+    );
+    expect(config).toContain("imageDelivery: images()");
+    expect(config).toContain('storage: diskStorage({ dir: "data/media" })');
   });
 });
 

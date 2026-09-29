@@ -3,20 +3,31 @@ import { availableParallelism } from "node:os";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AssetsBinding, ImageDelivery } from "plumix";
-import type { TrustedRequest } from "plumix/runtime";
-import { matchesRemotePattern } from "plumix/blocks/renderer";
+import type {
+  ImageFormat,
+  ImageParams,
+  NegotiatedFormat,
+  TrustedRequest,
+} from "plumix/runtime";
+import {
+  etagMatches,
+  fetchRemoteImageSource,
+  IMAGE_ROUTE,
+  IMAGE_SOURCE_HEADERS,
+  imageSourceKey,
+  isPermittedImageSource,
+  isSameHostImageSource,
+  negotiateImageFormat,
+  parseImageParams,
+  readImageSource,
+} from "plumix/runtime";
 import { normalizeBasePath, withBasePath } from "plumix/support";
 
 import type { CachedVariant } from "../image-cache.js";
-import type { ImageFormat, ImageParams, NodeImageDelivery } from "../images.js";
+import type { NodeImageDelivery } from "../images.js";
 import type { BridgeOptions } from "./bridge.js";
 import { ImagesError } from "../errors.js";
-import {
-  IMAGE_ROUTE,
-  isNodeImages,
-  parseImageParams,
-  sourceKey,
-} from "../images.js";
+import { isNodeImages } from "../images.js";
 import { trustedRequest, writeResponse } from "./bridge.js";
 
 export interface ImageLayerOptions extends Pick<BridgeOptions, "trustProxy"> {
@@ -52,11 +63,6 @@ export interface ImageLayer {
   ) => void;
 }
 
-const MAX_HOPS = 10;
-/** A source larger than this is not a picture a page would show. */
-const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
-const REMOTE_TIMEOUT_MS = 15_000;
-const SOURCE_HEADERS = { accept: "image/*,*/*;q=0.8" };
 /** Every variant is content-addressed by its URL, and its format follows `Accept`. */
 const CACHED_HEADERS = {
   "cache-control": "public, max-age=31536000, immutable",
@@ -73,13 +79,13 @@ const CONTENT_TYPES = {
 type OutputFormat = keyof typeof CONTENT_TYPES;
 const OUTPUT_FORMATS = Object.keys(CONTENT_TYPES) as readonly OutputFormat[];
 
-/** What a request asks for before the source is seen: a format, or the source's own. */
-type FormatClass = ImageFormat | "source";
+/** `sharp` encodes every format the slot contract names, on every host. */
+const ENCODABLE: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
 
 /** One request's transform, named: the hash is both the cache file and the `ETag`. */
 interface VariantRequest {
   readonly params: ImageParams;
-  readonly format: FormatClass;
+  readonly format: NegotiatedFormat;
   /** What a purge names: the source without its query, a same-host one by path. */
   readonly source: string;
   readonly key: string;
@@ -118,54 +124,8 @@ function limited(max: number, render: Render): Render {
   };
 }
 
-const candidates = (format: FormatClass): readonly OutputFormat[] =>
+const candidates = (format: NegotiatedFormat): readonly OutputFormat[] =>
   format === "source" ? OUTPUT_FORMATS : [format];
-
-function negotiate(
-  explicit: ImageFormat | undefined,
-  accept: string | undefined,
-): FormatClass {
-  if (explicit) return explicit;
-  return negotiatedFormat(accept) ?? "source";
-}
-
-/**
- * The next-gen format an `Accept` header opts into, or `undefined` if none.
- * A format counts as accepted when its exact range or the `image/*` subtype
- * wildcard names it with `q` above zero — the bare full-wildcard range does
- * not, since an inert fetch or a browser's default `Accept` mustn't be read
- * as "send me a next-gen format". The exact range always wins over the
- * subtype wildcard regardless of header order, so an explicit `q=0` still
- * refuses a format even alongside a wildcard that would otherwise allow it.
- * Parses the header once and checks avif before webp, matching the
- * preference order the two separate lookups used to apply.
- */
-function negotiatedFormat(
-  accept: string | undefined,
-): "avif" | "webp" | undefined {
-  if (!accept) return undefined;
-  let wildcardQ: number | undefined;
-  let avifQ: number | undefined;
-  let webpQ: number | undefined;
-  for (const range of accept.split(",")) {
-    const [rawToken, ...params] = range.split(";");
-    const token = rawToken?.trim().toLowerCase();
-    if (token !== "image/avif" && token !== "image/webp" && token !== "image/*")
-      continue;
-    const rawQ = params
-      .map((p) => p.trim())
-      .find((p) => p.startsWith("q="))
-      ?.slice(2);
-    const parsed = rawQ === undefined ? 1 : Number(rawQ);
-    const q = Number.isFinite(parsed) ? parsed : 1;
-    if (token === "image/avif") avifQ = q;
-    else if (token === "image/webp") webpQ = q;
-    else wildcardQ = q;
-  }
-  if ((avifQ ?? wildcardQ ?? 0) > 0) return "avif";
-  if ((webpQ ?? wildcardQ ?? 0) > 0) return "webp";
-  return undefined;
-}
 
 // What sharp names a decoded input, onto what it can encode. Vector and
 // exotic raster inputs come out lossless.
@@ -176,7 +136,7 @@ function ownFormat(format: string | undefined): OutputFormat {
     : "png";
 }
 
-function variantKey(params: ImageParams, format: FormatClass): string {
+function variantKey(params: ImageParams, format: NegotiatedFormat): string {
   const { src, width, height, fit, quality } = params;
   return createHash("sha256")
     .update(JSON.stringify([src, width, height, fit, quality, format]))
@@ -184,37 +144,11 @@ function variantKey(params: ImageParams, format: FormatClass): string {
     .slice(0, 40);
 }
 
-function etagMatches(ifNoneMatch: string, etag: string): boolean {
-  return ifNoneMatch
-    .split(",")
-    .map((s) => s.trim().replace(/^W\//, ""))
-    .some((s) => s === "*" || s === etag);
-}
-
-// By host, not origin: behind a TLS-terminating proxy the process sees `http`
-// while an absolute URL of its own site says `https`.
-function isSameHost(src: string, host: string): boolean {
-  if (src.startsWith("/")) return !src.startsWith("//");
-  return URL.parse(src)?.host === host;
-}
-
 /** The body, bounded: a source past the cap is refused before it is held. */
-async function readBounded(response: Response): Promise<Buffer> {
-  if (Number(response.headers.get("content-length")) > MAX_SOURCE_BYTES) {
-    await response.body?.cancel();
-    throw ImagesError.upstream({ status: 413 });
-  }
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  for await (const chunk of response.body ?? []) {
-    received += chunk.byteLength;
-    if (received > MAX_SOURCE_BYTES) {
-      await response.body?.cancel();
-      throw ImagesError.upstream({ status: 413 });
-    }
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
+async function readBounded(response: Response): Promise<Uint8Array> {
+  const bytes = await readImageSource(response);
+  if (bytes === null) throw ImagesError.upstream({ status: 413 });
+  return bytes;
 }
 
 /**
@@ -246,10 +180,10 @@ function serveWith(
     params,
     url,
     clientAddress: address,
-  }: VariantRequest): Promise<Buffer> {
+  }: VariantRequest): Promise<Uint8Array> {
     const target = new URL(params.src, url);
     if (target.pathname === route) throw refused();
-    const request = new Request(target, { headers: SOURCE_HEADERS });
+    const request = new Request(target, { headers: IMAGE_SOURCE_HEADERS });
     let response = await options.assets?.fetch(request);
     if (response === undefined || response.status === 404) {
       response = await options.fetch(request, { clientAddress: address });
@@ -258,53 +192,12 @@ function serveWith(
     return readBounded(response);
   }
 
-  function isPermittedSource(src: string): boolean {
-    const url = URL.parse(src);
-    return url !== null && isPermittedUrl(url);
-  }
+  const sourceRules = { remotePatterns, route };
 
-  // The route is not a source for itself on either branch: the handler behind
-  // `fetch` does not hold it, but a self-fetch over the network would, and a
-  // nested one at every level.
-  function isPermittedUrl(url: URL): boolean {
-    return (
-      (url.protocol === "http:" || url.protocol === "https:") &&
-      url.pathname !== route &&
-      matchesRemotePattern(url.href, remotePatterns)
-    );
-  }
-
-  // Every hop is re-validated against the roster: a permitted host may not
-  // hand the route a source it would have refused directly.
-  async function resolveRemote(src: string): Promise<Buffer> {
-    let url = new URL(src);
-    for (let hop = 0; hop <= MAX_HOPS; hop += 1) {
-      if (!isPermittedUrl(url)) throw refused();
-      let response: Response;
-      try {
-        response = await fetch(url, {
-          redirect: "manual",
-          headers: SOURCE_HEADERS,
-          signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
-        });
-      } catch {
-        throw ImagesError.upstream({ status: 502 });
-      }
-      const location = response.headers.get("location");
-      if (response.status >= 300 && response.status < 400 && location) {
-        await response.body?.cancel();
-        const next = URL.parse(location, url);
-        if (next === null) throw refused();
-        url = next;
-        continue;
-      }
-      if (!response.ok) {
-        await response.body?.cancel();
-        throw ImagesError.upstream({ status: 502 });
-      }
-      return readBounded(response);
-    }
-    throw refused();
+  async function resolveRemote(src: string): Promise<Uint8Array> {
+    const source = await fetchRemoteImageSource(src, sourceRules);
+    if (!source.ok) throw ImagesError.upstream({ status: source.status });
+    return readBounded(source.response);
   }
 
   const render = limited(availableParallelism(), renderVariant);
@@ -312,7 +205,7 @@ function serveWith(
   async function renderVariant(request: VariantRequest): Promise<Variant> {
     const { params, format, source, key, url } = request;
     const epoch = cache.epoch(source);
-    const bytes = isSameHost(params.src, url.host)
+    const bytes = isSameHostImageSource(params.src, url.host)
       ? await resolveSameOrigin(request)
       : await resolveRemote(params.src);
     const sharp = slot.sharp();
@@ -403,22 +296,24 @@ function serveWith(
     req: IncomingMessage,
     { url, clientAddress }: TrustedRequest,
   ): Promise<Response> {
-    const params = parseImageParams(slot.config, url.searchParams);
+    const params = parseImageParams(slot.config.widths, url.searchParams);
     // The roster is checked ahead of the cache: what the config refuses now
     // is refused whether or not an earlier config rendered it.
     if (
       params === null ||
-      !(isSameHost(params.src, url.host) || isPermittedSource(params.src))
+      !(
+        isSameHostImageSource(params.src, url.host) ||
+        isPermittedImageSource(params.src, sourceRules)
+      )
     ) {
       return new Response("Bad Request", { status: 400 });
     }
-    const sameHost = isSameHost(params.src, url.host);
-    const format = negotiate(params.format, req.headers.accept);
-    // However the host is spelled, a same-host source is one source, and the
-    // one the media plugin purges by path.
-    const source = sameHost
-      ? new URL(params.src, url).pathname
-      : sourceKey(params.src);
+    const format = negotiateImageFormat(
+      params.format,
+      req.headers.accept,
+      ENCODABLE,
+    );
+    const source = imageSourceKey(params.src, url);
     const key = variantKey(params, format);
     const etag = `"${key}"`;
     const ifNoneMatch = req.headers["if-none-match"];

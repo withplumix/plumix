@@ -26,6 +26,7 @@ import type { ResolvedBunConfig } from "./adapter.js";
 import { bun, isBunRuntime } from "./adapter.js";
 import { ASSETS_DIR_ENV, PROJECT_ROOT_ENV } from "./entry-constants.js";
 import { createAssetsLayer } from "./http/assets.js";
+import { createImageLayer } from "./http/images.js";
 
 export interface BunSiteOptions {
   readonly config: PlumixConfig;
@@ -96,9 +97,10 @@ export type BunCronOverrides = Omit<
 export interface BunSite {
   readonly handler: BunSiteHandler;
   /**
-   * The serve path: the built assets first, then the site, behind the shared
-   * trust rules. Spread into `Bun.serve` by an embedder that picks its own
-   * port; `serveProcess` is the process that does.
+   * The serve path: the built assets first, then image transforms, then the
+   * site, behind the shared trust rules. Spread into `Bun.serve` by an
+   * embedder that picks its own port; `serveProcess` is the process that
+   * does.
    */
   readonly serve: BunSiteServe;
   /**
@@ -163,6 +165,14 @@ export function createBunSite({
   };
 
   const assets = createAssetsLayer({ root: assetsDir });
+  // A same-origin image source is whatever the process would serve at that
+  // path: a built asset, else the site as an anonymous GET.
+  const images = createImageLayer(config.imageDelivery, {
+    assets,
+    basePath: config.basePath,
+    fetch: (request, clientAddress) =>
+      handler.fetch(request, { env, clientAddress }),
+  });
 
   const serve: BunSiteServe = {
     async fetch(request, server) {
@@ -189,6 +199,8 @@ export function createBunSite({
       }
       const asset = await assets.serve(trusted);
       if (asset !== null) return asset;
+      const image = await images.serve(trusted, clientAddress);
+      if (image !== null) return image;
       const response = await handler.fetch(trusted, { env, clientAddress });
       if (isEventStream(response)) server.timeout(request, 0);
       return response;

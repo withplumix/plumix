@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { ChildProcess } from "node:child_process";
+import { fakeImage } from "plumix/test";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import {
@@ -26,13 +27,14 @@ const config = (markers: {
   drained: string;
   aborted: string;
   fired: string;
+  photo: string;
 }) => `import { appendFileSync, writeFileSync } from "node:fs";
 import { Database } from "bun:sqlite";
 import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
-import { bun, bunSqlite } from "@plumix/runtime-bun";
+import { bun, bunSqlite, images } from "@plumix/runtime-bun";
 
 const knob = (name) => process.env[name] === undefined ? undefined : Number(process.env[name]);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,6 +44,10 @@ const probes = definePlugin("probes", (ctx) => {
     id: "tick",
     cron: "* * * * *",
     handler: () => appendFileSync(${JSON.stringify(markers.fired)}, "fired\\n"),
+  });
+  ctx.registerPublicRoute({
+    path: "/photo.png",
+    handler: () => new Response(Bun.file(${JSON.stringify(markers.photo)}), { headers: { "content-type": "image/png" } }),
   });
   ctx.registerPublicRoute({ path: "/bun-builtin", handler: () => new Response(typeof Database) });
   ctx.registerPublicRoute({
@@ -116,6 +122,7 @@ export default plumix({
     bodySizeLimit: knob("PROBE_BODY_LIMIT"),
   }),
   database: bunSqlite({ path: "data/site.sqlite" }),
+  imageDelivery: images({ cacheDir: "data/images" }),
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({ templates: [fallback(() => null)] }),
   plugins: [probes],
@@ -246,15 +253,23 @@ let dir: string;
 let drained: string;
 let aborted: string;
 let fired: string;
+let photo: string;
 
 beforeAll(async () => {
   dir = scaffoldConsumerProject("plumix-bun-entry-", "");
   drained = join(dir, "drained.marker");
   aborted = join(dir, "aborted.marker");
   fired = join(dir, "fired.marker");
+  photo = join(dir, "photo.png");
+  writeFileSync(
+    photo,
+    new Uint8Array(
+      await fakeImage("photo.png", { width: 1200, height: 800 }).arrayBuffer(),
+    ),
+  );
   writeFileSync(
     join(dir, "plumix.config.mjs"),
-    config({ drained, aborted, fired }),
+    config({ drained, aborted, fired, photo }),
   );
   for (const args of [
     ["migrate", "generate"],
@@ -536,6 +551,38 @@ describe("the built site served by bun", () => {
       expect(Date.now() - began).toBeLessThan(2_000);
     });
   }, 65_000);
+
+  test(
+    "serves a resized image ahead of the site, resolving the source through it, and answers 304 on revalidation",
+    () =>
+      withServer(dir, async ({ origin }) => {
+        const query = `${origin}/_plumix/image?src=/photo.png&w=640`;
+        const accept = "image/avif,image/webp,*/*";
+        const first = await fetch(query, { headers: { accept } });
+        expect(first.status).toBe(200);
+        // Linux has no AVIF encoder, so the negotiation falls to WebP.
+        expect(first.headers.get("content-type")).toBe("image/webp");
+        const variant = join(dir, "variant.bin");
+        writeFileSync(variant, new Uint8Array(await first.arrayBuffer()));
+        // Decoded by Bun, which this suite's own process is not. One string,
+        // because Bun colours numeric console.log arguments under FORCE_COLOR.
+        const { stdout } = await promisify(execFile)("bun", [
+          "-e",
+          `const m = await new Bun.Image(${JSON.stringify(variant)}).metadata(); console.log(\`\${m.format} \${m.width} \${m.height}\`);`,
+        ]);
+        expect(stdout.trim()).toBe("webp 640 427");
+        expect(existsSync(join(dir, "data/images"))).toBe(true);
+
+        const revalidated = await fetch(query, {
+          headers: { accept, "if-none-match": first.headers.get("etag") ?? "" },
+        });
+        expect(revalidated.status).toBe(304);
+        expect(
+          (await fetch(`${origin}/_plumix/image?src=/nope.png&w=320`)).status,
+        ).toBe(404);
+      }),
+    60_000,
+  );
 
   test("importing the entry exports the portable handler and starts no server", async () => {
     const worker = pathToFileURL(join(dir, "dist/server/worker.js")).href;

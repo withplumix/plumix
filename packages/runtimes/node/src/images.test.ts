@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { ImagesError } from "./errors.js";
-import { images, parseImageParams } from "./images.js";
+import { images } from "./images.js";
 
 const params = (url: string) => new URL(url, "http://localhost").searchParams;
 
@@ -122,40 +122,5 @@ describe("images() — URL math onto /_plumix/image", () => {
     expect(cms?.url("/a.png", { width: 320 })).toMatch(/^\/cms\/_plumix\//);
     expect(blog?.url("/a.png", { width: 320 })).toMatch(/^\/blog\/_plumix\//);
     expect(slot.url("/a.png", { width: 320 })).toMatch(/^\/_plumix\//);
-  });
-});
-
-describe("parseImageParams — what the route accepts", () => {
-  const slot = images({ widths: [320, 640, 1280] });
-
-  test("snaps and clamps a hand-written query the way url() does", () => {
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&w=700&q=999")),
-    ).toEqual({ src: "/a.png", width: 1280, quality: 100 });
-  });
-
-  test("a width or quality below range rises to the floor rather than failing", () => {
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&w=0&q=-4")),
-    ).toEqual({ src: "/a.png", width: 320, quality: 1 });
-  });
-
-  test("refuses a missing src, an unparseable width, or an unknown format", () => {
-    expect(parseImageParams(slot.config, params("?w=640"))).toBeNull();
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&w=abc")),
-    ).toBeNull();
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&f=bmp")),
-    ).toBeNull();
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&fit=zoom")),
-    ).toBeNull();
-  });
-
-  test("bounds a height by the roster's largest width", () => {
-    expect(
-      parseImageParams(slot.config, params("?src=/a.png&w=640&h=99999")),
-    ).toEqual({ src: "/a.png", width: 640, height: 1280 });
   });
 });

@@ -97,6 +97,22 @@ export default plumix({
 });
 ```
 
+### `images({ widths, remotePatterns, cacheDir })`
+
+The image-delivery slot, through `Bun.Image`, so nothing native is installed. `url()` is URL math onto `/_plumix/image`, which the server answers ahead of the site. A same-origin source (`/_plumix/media/serve/1`, a file in `public/`) is resolved through the process itself, as an anonymous GET, so what the media plugin gates stays gated and nothing crosses the network; a remote source must match `remotePatterns` (the shape `images.remotePatterns` takes for `<Image>`), is fetched with each redirect re-checked and ten hops at most, and anything else is 400. A source over 32 MiB is refused, a remote that does not answer within 15 seconds is 502, and bytes `Bun.Image` cannot decode are 415. A width snaps up to the next entry of `widths` (`320` to `1920` by default) and quality is clamped. The format comes from `Accept`, among the formats the host can encode, which are probed once on connect: AVIF, WebP or the source's own. Linux has no AVIF encoder, so there a browser asking for AVIF gets WebP. `Bun.Image` has no crop, so `fit: "cover"` scales the image to cover the box and leaves the overflow to the page's `object-fit`; an animated GIF comes out as its first frame. Each variant is rendered once and kept under `cacheDir` (`.cache/plumix/images`) under a hash of the request, served with an immutable cache header and an `ETag` that answers `If-None-Match` with 304. `purge(sourceUrl)` forgets every variant of one source, whatever query it was requested with; the media plugin calls it when an item is trashed or deleted.
+
+```ts
+import { diskStorage, images } from "@plumix/runtime-bun";
+
+export default plumix({
+  storage: diskStorage({ dir: "data/media" }),
+  imageDelivery: images({
+    remotePatterns: [{ hostname: "images.example.com" }],
+  }),
+  // …
+});
+```
+
 ### `plumix migrate apply`
 
 ```bash

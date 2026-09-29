@@ -5,6 +5,7 @@ import type { BunSite } from "../site.js";
 import { bun, isBunRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV, PROJECT_ROOT_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
+import { createImageLayer } from "../http/images.js";
 import { createDevMiddleware } from "./node-bridge.js";
 import { bunServerEnvironment } from "./vite.js";
 
@@ -39,9 +40,19 @@ export const devCommand: CommandDefinition = {
           [ASSETS_DIR_ENV]: publicDir,
           [PROJECT_ROOT_ENV]: ctx.cwd,
         };
+        const fetch = (request: Request, clientAddress: string | undefined) =>
+          entry.default.fetch(request, { env, clientAddress });
+        // As in the built site: a same-origin image source is a public file
+        // Vite would serve, else the site, as an anonymous GET.
+        const images = createImageLayer(config.imageDelivery, {
+          assets: createAssetsLayer({ root: publicDir }),
+          basePath: config.basePath,
+          fetch,
+        });
         const listener = createDevMiddleware(
-          (request, clientAddress) =>
-            entry.default.fetch(request, { env, clientAddress }),
+          async (request, clientAddress) =>
+            (await images.serve(request, clientAddress)) ??
+            fetch(request, clientAddress),
           { trustProxy },
         );
         return Promise.resolve({
