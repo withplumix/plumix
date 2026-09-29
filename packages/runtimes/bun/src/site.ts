@@ -182,6 +182,23 @@ export function createBunSite({
 }
 
 /**
+ * Load `.env` from the working directory into the process env when `main`
+ * says this module is the process's entry point. A variable the environment
+ * already set wins, so a stray file cannot override a platform's injected
+ * secrets; a missing file loads nothing. Bun's own loading, which would also
+ * read `.env.local` and `.env.{NODE_ENV}`, is what `env = false` in
+ * `bunfig.toml` turns off.
+ */
+export function loadEnvFileWhenMain(main: boolean): void {
+  if (!main) return;
+  try {
+    process.loadEnvFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
+/**
  * Run the site as a process: `Bun.serve` on `PORT` and `HOST`, and the
  * shutdown protocol. The entry calls it only when it is the process's entry
  * point, and default-exports the `Server` it returns, which Bun does not

@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import type { CommandDefinition } from "plumix";
 import type { DevEntry } from "plumix/vite";
 
@@ -9,7 +8,6 @@ import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createImageLayer } from "../http/images.js";
-import { createDotenvLoader } from "./dotenv.js";
 import { nodeServerEnvironment } from "./vite.js";
 
 type NodeDevEntry = DevEntry & Partial<Pick<NodeSite, "startCron" | "dispose">>;
@@ -22,11 +20,9 @@ export const devCommand: CommandDefinition = {
   deferApp: true,
   async run(ctx) {
     const { runDevCommand } = await import("plumix/vite");
-    const loadDotenv = createDotenvLoader();
 
     await runDevCommand<NodeDevEntry>(ctx, {
       environment: nodeServerEnvironment,
-      loadEnv: (cwd) => loadDotenv(join(cwd, ".env")),
       stagedFiles: (root) => createAssetsLayer({ root }).serve,
       async site({ config, entry, publicDir }) {
         const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)

@@ -14,7 +14,11 @@ import { promisify } from "node:util";
 import type { ChildProcess } from "node:child_process";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import { plumixOn, scaffoldConsumerProject } from "./test/consumer-project.js";
+import {
+  plumixOn,
+  rpc,
+  scaffoldConsumerProject,
+} from "./test/consumer-project.js";
 
 // Each knob is read off the process env when the built site boots, so one
 // build serves every configuration a case needs.
@@ -34,6 +38,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const probes = definePlugin("probes", (ctx) => {
   ctx.registerPublicRoute({ path: "/bun-builtin", handler: () => new Response(typeof Database) });
+  ctx.registerPublicRoute({
+    path: "/env",
+    handler: (_request, app) => Response.json({ A: app.env.PROBE_A ?? null, B: app.env.PROBE_B ?? null, C: app.env.PROBE_C ?? null }),
+  });
   ctx.registerPublicRoute({
     path: "/whoami",
     handler: (request, app) => Response.json({ url: request.url, address: app.clientAddress ?? null }),
@@ -212,13 +220,6 @@ function listeningPorts(pid: number): number[] {
   }
   return ports;
 }
-
-const rpc = (origin: string, path: string): Promise<Response> =>
-  fetch(`${origin}/_plumix/rpc/${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-plumix-request": "1" },
-    body: JSON.stringify({ json: {} }),
-  });
 
 async function waitFor(check: () => boolean, ms: number): Promise<boolean> {
   const until = Date.now() + ms;
@@ -521,4 +522,39 @@ describe("the built site served by bun", () => {
     expect(stdout.trim()).toBe("function function");
     expect(stdout).not.toContain("listening");
   }, 60_000);
+
+  test("with Bun's own env loading off, .env fills what the environment left unset, the environment wins, and .env.local is never read", async () => {
+    writeFileSync(join(dir, "bunfig.toml"), "env = false\n");
+    writeFileSync(join(dir, ".env"), "PROBE_A=fromfile\nPROBE_B=fromfile\n");
+    writeFileSync(join(dir, ".env.local"), "PROBE_C=local\n");
+    try {
+      await withServer(
+        dir,
+        async ({ origin }) => {
+          expect(await (await fetch(`${origin}/env`)).json()).toEqual({
+            A: "platform",
+            B: "fromfile",
+            C: null,
+          });
+        },
+        { PROBE_A: "platform" },
+      );
+    } finally {
+      for (const file of ["bunfig.toml", ".env", ".env.local"]) {
+        rmSync(join(dir, file));
+      }
+    }
+  }, 60_000);
+
+  test(
+    "with no .env, it starts and serves",
+    () =>
+      withServer(dir, async ({ origin }) => {
+        expect(existsSync(join(dir, ".env"))).toBe(false);
+        const response = await fetch(`${origin}/env`);
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ A: null, B: null, C: null });
+      }),
+    60_000,
+  );
 });

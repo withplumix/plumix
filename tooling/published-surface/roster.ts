@@ -529,10 +529,12 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "what the generated entry calls, and the site and serve options " +
-          "it hands an embedder mounting it in its own `Bun.serve`",
+          "what the generated entry calls — `.env` loaded when run, the " +
+          "site built, the process served — and the site and serve " +
+          "options it hands an embedder mounting it in its own `Bun.serve`",
         names: [
           "createBunSite",
+          "loadEnvFileWhenMain",
           "serveProcess",
           "BunSite",
           "BunSiteHandler",

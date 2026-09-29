@@ -1,6 +1,7 @@
 import type { CommandRegistry } from "plumix";
 
 import { buildCommand } from "./build.js";
+import { devCommand } from "./dev.js";
 import { BunCliError } from "./errors.js";
 import { migrateApplyCommand } from "./migrate-apply.js";
 
@@ -9,6 +10,7 @@ import { migrateApplyCommand } from "./migrate-apply.js";
 if (!("Bun" in globalThis)) throw BunCliError.bunRequired();
 
 export const commands: CommandRegistry = {
+  dev: devCommand,
   build: buildCommand,
 };
 
