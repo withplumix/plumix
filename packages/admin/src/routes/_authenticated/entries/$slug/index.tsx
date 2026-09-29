@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import {
   Empty,
@@ -68,6 +68,13 @@ type Entry = WithResolvedMeta<StoredEntry>;
 type Term = WithResolvedMeta<StoredTerm>;
 
 const PAGE_SIZE = 20;
+
+// A row's Trash and Delete sit in a line of text links, so they take the
+// Button's destructive-row treatment without its box.
+const rowDestructiveClassName = cn(
+  buttonVariants({ variant: "destructive-row", size: "xs" }),
+  "h-auto p-0 font-normal hover:bg-transparent dark:hover:bg-transparent",
+);
 
 // Mirrors `EntryStatus` from core's schema; kept local as a runtime array so
 // the valibot picklist stays tree-shakeable (importing the core runtime
@@ -1229,7 +1236,7 @@ function TitleCell({
               onClick={() => {
                 onTrash(entry.id);
               }}
-              className="text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className={rowDestructiveClassName}
               data-testid={`content-list-row-trash-${String(entry.id)}`}
             >
               {isTrashing
@@ -1284,7 +1291,7 @@ function TitleCell({
               onClick={() => {
                 onDeletePermanent(entry.id);
               }}
-              className="text-muted-foreground hover:text-destructive"
+              className={rowDestructiveClassName}
               data-testid={`content-list-row-delete-${String(entry.id)}`}
             >
               {renderLabel(M.rowDelete)}
