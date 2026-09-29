@@ -1,6 +1,6 @@
-// What this package publishes. `IMAGE_ROUTE`, `createScheduler` and the wide
-// `NodeImageDelivery` shape are deliberately absent: each is reachable inside
-// the package through a relative import and had no consumer outside it.
+// What this package publishes. `IMAGE_ROUTE` and the wide `NodeImageDelivery`
+// shape are deliberately absent: each is reachable inside the package through
+// a relative import and had no consumer outside it.
 
 export { node } from "./adapter.js";
 export type { NodeConfig, NodeRuntimeAdapter } from "./adapter.js";
@@ -41,4 +41,4 @@ export type {
   Scheduler,
   SchedulerClock,
   SchedulerLogger,
-} from "./scheduler.js";
+} from "plumix/runtime";

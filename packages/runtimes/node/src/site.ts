@@ -13,6 +13,7 @@ import type {
   PlumixHandler,
   ScheduledEvent,
   ScheduledRunReport,
+  Scheduler,
 } from "plumix/runtime";
 import {
   buildApp,
@@ -23,7 +24,6 @@ import {
 import type { NodeConfig } from "./adapter.js";
 import type { RequestHandler, RequestListener } from "./http/bridge.js";
 import type { ScheduledRunnerOptions } from "./scheduled-runner.js";
-import type { Scheduler } from "./scheduler.js";
 import { isNodeRuntime } from "./adapter.js";
 import { ASSETS_DIR_ENV } from "./entry-constants.js";
 import { createAssetsLayer } from "./http/assets.js";

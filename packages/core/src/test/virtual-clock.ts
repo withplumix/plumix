@@ -1,4 +1,4 @@
-import type { SchedulerClock } from "plumix/runtime";
+import type { SchedulerClock } from "../runtime/scheduler.js";
 
 /**
  * A clock whose sleeps are jumps, so a simulated day costs no wall time and no

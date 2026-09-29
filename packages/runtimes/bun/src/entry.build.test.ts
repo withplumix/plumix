@@ -25,7 +25,8 @@ import {
 const config = (markers: {
   drained: string;
   aborted: string;
-}) => `import { writeFileSync } from "node:fs";
+  fired: string;
+}) => `import { appendFileSync, writeFileSync } from "node:fs";
 import { Database } from "bun:sqlite";
 import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
@@ -37,6 +38,11 @@ const knob = (name) => process.env[name] === undefined ? undefined : Number(proc
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const probes = definePlugin("probes", (ctx) => {
+  ctx.registerScheduledTask({
+    id: "tick",
+    cron: "* * * * *",
+    handler: () => appendFileSync(${JSON.stringify(markers.fired)}, "fired\\n"),
+  });
   ctx.registerPublicRoute({ path: "/bun-builtin", handler: () => new Response(typeof Database) });
   ctx.registerPublicRoute({
     path: "/env",
@@ -239,12 +245,17 @@ const FORGED = {
 let dir: string;
 let drained: string;
 let aborted: string;
+let fired: string;
 
 beforeAll(async () => {
   dir = scaffoldConsumerProject("plumix-bun-entry-", "");
   drained = join(dir, "drained.marker");
   aborted = join(dir, "aborted.marker");
-  writeFileSync(join(dir, "plumix.config.mjs"), config({ drained, aborted }));
+  fired = join(dir, "fired.marker");
+  writeFileSync(
+    join(dir, "plumix.config.mjs"),
+    config({ drained, aborted, fired }),
+  );
   for (const args of [
     ["migrate", "generate"],
     ["migrate", "apply"],
@@ -508,6 +519,23 @@ describe("the built site served by bun", () => {
       }),
     60_000,
   );
+
+  // A `* * * * *` task first fires at the next minute boundary, up to 60 s
+  // after the server starts, so the case needs a minute plus the boot.
+  test("fires a task declared on * * * * * at the minute boundary, then exits on SIGTERM", () => {
+    rmSync(fired, { force: true });
+    return withServer(dir, async ({ child, exited }) => {
+      expect(await waitFor(() => existsSync(fired), 62_000)).toBe(true);
+      expect(readFileSync(fired, "utf8")).toBe("fired\n");
+
+      // The job is registered and sleeping towards the next minute; neither
+      // its timer nor the scheduler may hold the process past the drain.
+      const began = Date.now();
+      child.kill("SIGTERM");
+      expect(await exited).toBe(0);
+      expect(Date.now() - began).toBeLessThan(2_000);
+    });
+  }, 65_000);
 
   test("importing the entry exports the portable handler and starts no server", async () => {
     const worker = pathToFileURL(join(dir, "dist/server/worker.js")).href;

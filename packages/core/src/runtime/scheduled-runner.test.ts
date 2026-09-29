@@ -1,10 +1,11 @@
-import type { Db, PlumixApp } from "plumix";
-import { createTestDb } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
+import type { Db } from "../context/app-context.js";
+import type { PlumixApp } from "./app.js";
 import type { ScheduledRunnerOptions } from "./scheduled-runner.js";
+import { createTestDb } from "../test/harness.js";
+import { virtualClock } from "../test/virtual-clock.js";
 import { startScheduledRunner } from "./scheduled-runner.js";
-import { virtualClock } from "./test/virtual-clock.js";
 
 const TASKS: PlumixApp["scheduledTasks"] = [
   {
@@ -35,6 +36,7 @@ describe("startScheduledRunner", () => {
 
     const replicas = ["a", "b"].map((replica) =>
       startScheduledRunner({
+        holder: "test",
         app: appWith(() => ({ db })),
         env: {},
         db,
@@ -62,6 +64,7 @@ describe("startScheduledRunner", () => {
 
     const replicas = ["a", "b"].map(() =>
       startScheduledRunner({
+        holder: "test",
         app: appWith(() => ({ db })),
         env: {},
         db,
@@ -83,6 +86,7 @@ describe("startScheduledRunner", () => {
     const connect = vi.fn(() => ({ db }));
 
     const runner = startScheduledRunner({
+      holder: "test",
       app: appWith(connect),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
@@ -99,6 +103,7 @@ describe("startScheduledRunner", () => {
     const close = vi.fn();
 
     const runner = startScheduledRunner({
+      holder: "test",
       app: appWith(() => ({ db, close })),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
@@ -116,6 +121,7 @@ describe("startScheduledRunner", () => {
     const clock = virtualClock("2026-09-07T02:58:00Z");
 
     const runner = startScheduledRunner({
+      holder: "test",
       app: appWith(() => ({ db, close })),
       env: {},
       clock,
@@ -135,6 +141,7 @@ describe("startScheduledRunner", () => {
     const close = vi.fn();
 
     const runner = startScheduledRunner({
+      holder: "test",
       app: appWith(() => ({ db, close })),
       env: {},
       clock: virtualClock("2026-09-07T02:58:00Z"),
@@ -152,6 +159,7 @@ describe("startScheduledRunner", () => {
     const warn = vi.fn();
 
     const runner = startScheduledRunner({
+      holder: "test",
       app: appWith(() => ({
         db,
         close: () => {

@@ -1,3 +1,4 @@
+import { hostname as machineName } from "node:os";
 import { dirname, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -10,9 +11,16 @@ import type {
   PlumixApp,
   PlumixHandler,
   ScheduledEvent,
+  ScheduledRunnerOptions,
   ScheduledRunReport,
+  Scheduler,
 } from "plumix/runtime";
-import { buildApp, DRAIN_DEADLINE_MS, trustRequest } from "plumix/runtime";
+import {
+  buildApp,
+  DRAIN_DEADLINE_MS,
+  startScheduledRunner,
+  trustRequest,
+} from "plumix/runtime";
 
 import type { ResolvedBunConfig } from "./adapter.js";
 import { bun, isBunRuntime } from "./adapter.js";
@@ -78,6 +86,13 @@ export interface BunSiteServe {
   readonly development: false;
 }
 
+// `db` is the runner's test seam; an embedder's cron writes to the site's own
+// database.
+export type BunCronOverrides = Omit<
+  ScheduledRunnerOptions,
+  "app" | "env" | "fire" | "db" | "holder"
+>;
+
 export interface BunSite {
   readonly handler: BunSiteHandler;
   /**
@@ -86,6 +101,14 @@ export interface BunSite {
    * port; `serveProcess` is the process that does.
    */
   readonly serve: BunSiteServe;
+  /**
+   * Start firing this site's scheduled tasks, returning a handle whose
+   * `stop()` waits for the run in flight. Core's scheduler drives them rather
+   * than `Bun.cron`, which reads a `*`-led day field beside a restricted one
+   * differently (`cron-parity.test.ts`). Building the site starts no
+   * background work on its own; `serveProcess` calls this.
+   */
+  readonly startCron: (overrides?: BunCronOverrides) => Promise<Scheduler>;
   /**
    * Drain the deferred work no invocation carried away — telemetry delivery,
    * cache purges — and release the handler's database connection. Resolves
@@ -175,10 +198,23 @@ export function createBunSite({
     development: false,
   };
 
+  const startCron = async (
+    overrides: BunCronOverrides = {},
+  ): Promise<Scheduler> => {
+    const app = await appPromise;
+    return startScheduledRunner({
+      app,
+      env,
+      holder: `${machineName()}:${String(process.pid)}`,
+      fire: (cron, scheduledTime) => handler.scheduled({ scheduledTime, cron }),
+      ...overrides,
+    });
+  };
+
   const dispose = (options?: DisposeOptions): Promise<DisposeResult> =>
     built?.dispose?.(options) ?? Promise.resolve({ abandoned: 0 });
 
-  return { handler, serve, dispose };
+  return { handler, serve, startCron, dispose };
 }
 
 /**
@@ -199,10 +235,10 @@ export function loadEnvFileWhenMain(main: boolean): void {
 }
 
 /**
- * Run the site as a process: `Bun.serve` on `PORT` and `HOST`, and the
- * shutdown protocol. The entry calls it only when it is the process's entry
- * point, and default-exports the `Server` it returns, which Bun does not
- * serve a second time.
+ * Run the site as a process: `Bun.serve` on `PORT` and `HOST`, its scheduled
+ * tasks, and the shutdown protocol. The entry calls it only when it is the
+ * process's entry point, and default-exports the `Server` it returns, which
+ * Bun does not serve a second time.
  */
 export function serveProcess(site: BunSite): Server<undefined> {
   /* eslint-disable turbo/no-undeclared-env-vars -- the built site reads these when it runs, not during any turbo task */
@@ -212,6 +248,23 @@ export function serveProcess(site: BunSite): Server<undefined> {
   const server = Bun.serve({ ...site.serve, port, hostname });
   console.log(`plumix: listening on http://${hostname}:${String(server.port)}`);
 
+  // Started after the listen and never awaited by it: building the app must
+  // not delay serving, and a scheduler that cannot start must not take down a
+  // process already answering requests.
+  let scheduler: Scheduler | undefined;
+  let stopping = false;
+  void site.startCron().then(
+    // A signal can land while `buildApp` is still running; without this the
+    // scheduler would start behind the shutdown and fire into its drain.
+    (started) => {
+      scheduler = started;
+      if (stopping) void started.stop({ timeoutMs: 0 });
+    },
+    (error: unknown) => {
+      console.error("plumix: cron failed to start", error);
+    },
+  );
+
   // Both listeners come off, so a second signal of either kind falls to the
   // default action and ends the process at once.
   const drain = async (signal: NodeJS.Signals): Promise<void> => {
@@ -220,8 +273,15 @@ export function serveProcess(site: BunSite): Server<undefined> {
     console.log(`plumix: ${signal} received, draining`);
     const deadline = Date.now() + DRAIN_DEADLINE_MS;
     // On Bun 1.4 `stop()` resolves once the in-flight requests have finished.
+    const stopped = server.stop().then(() => true);
+    // Before `dispose()`, not during it: a firing that started behind the
+    // drain would hand it more deferred work. Bounded by the same budget, so a
+    // long task cannot leave `dispose()` nothing.
+    stopping = true;
+    const cronSettled =
+      (await scheduler?.stop({ timeoutMs: remainingMs(deadline) })) ?? true;
     const finished = await Promise.race([
-      server.stop().then(() => true),
+      stopped,
       // Unref'd: when the stop wins, this timer outlives the race, and a
       // pending tick must not be what keeps the process alive.
       sleep(remainingMs(deadline), false, { ref: false }),
@@ -230,6 +290,11 @@ export function serveProcess(site: BunSite): Server<undefined> {
     const { abandoned } = await site.dispose({
       timeoutMs: remainingMs(deadline),
     });
+    if (!cronSettled) {
+      console.error(
+        `plumix: exiting with a scheduled run cut; the ${String(DRAIN_DEADLINE_MS)}ms shutdown budget ran out`,
+      );
+    }
     if (!finished) {
       console.error(
         `plumix: exiting with in-flight responses cut; the ${String(DRAIN_DEADLINE_MS)}ms shutdown budget ran out`,
@@ -240,7 +305,7 @@ export function serveProcess(site: BunSite): Server<undefined> {
         `plumix: exiting with ${String(abandoned)} deferred task(s) abandoned`,
       );
     }
-    process.exit(!finished || abandoned > 0 ? 1 : 0);
+    process.exit(!cronSettled || !finished || abandoned > 0 ? 1 : 0);
   };
   const shutdown = (signal: NodeJS.Signals): void => void drain(signal);
   process.on("SIGTERM", shutdown);

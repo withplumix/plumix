@@ -1,8 +1,8 @@
-import type { PlumixApp } from "plumix";
 import { describe, expect, test, vi } from "vitest";
 
+import type { PlumixApp } from "./app.js";
+import { virtualClock } from "../test/virtual-clock.js";
 import { createScheduler } from "./scheduler.js";
-import { virtualClock } from "./test/virtual-clock.js";
 
 type TaskFields = Omit<PlumixApp["scheduledTasks"][number], "handler">;
 

@@ -17,8 +17,17 @@ at all (#2152) is to use those rather than re-implement them in userland.
 > implementation fills exactly that gap and nothing more.**
 
 - **Native first.** Bun's runtime serves with `Bun.serve`, stores with
-  `bun:sqlite`, `Bun.file` and `S3Client`, schedules with `Bun.cron` and resizes
-  with `Bun.Image`. It does not run the Node runtime's `node:http` bridge.
+  `bun:sqlite`, `Bun.file` and `S3Client`, and resizes with `Bun.Image`. It
+  does not run the Node runtime's `node:http` bridge.
+- **A built-in that disagrees with the contract is not used.** The Bun cron
+  ticket (#2690) compared `Bun.cron.parse` with core's cron dialect on every
+  construct the dialect accepts. Bun 1.4.2 treats `*/2` as a restricted day
+  field. Where the other day field is restricted too, Bun ORs the two fields
+  where Vixie cron ANDs them, so `0 0 */2 * MON` would fire on a different day
+  than on Node. The dialect is the contract, so core's scheduler, which the
+  Node runtime also runs, drives Bun's jobs, and `Bun.cron` is not used. The
+  parity test pins the disagreeing expressions, and those cases fail once Bun
+  agrees on them, which is the signal that `Bun.cron` can take over.
 - **The portable implementation fills a gap, never the whole slot.** A runtime
   adapter uses its runtime's primitive for each operation where that primitive
   meets the contract, and core's portable implementation for each operation
