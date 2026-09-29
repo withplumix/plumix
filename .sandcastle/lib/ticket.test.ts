@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { CHANGESET_GATE, GATES } from "./gates.js";
-import { workersALaneOversubscribes } from "./sandbox.js";
+import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
   gatesUntilGreen,
   readDeclinedTag,
@@ -250,5 +250,16 @@ describe("gatesUntilGreen", () => {
     );
 
     expect(outcome.blocked).toMatch(/still failing `typecheck`/);
+  });
+});
+
+describe("sandbox setup", () => {
+  test("installs the Bun the repo pins, before anything that runs its suites", () => {
+    const bun = SETUP_STEPS.findIndex((step) => step.includes(".bun-version"));
+
+    expect(bun).toBeGreaterThanOrEqual(0);
+    expect(bun).toBeLessThan(
+      SETUP_STEPS.findIndex((step) => step === "pnpm build"),
+    );
   });
 });
