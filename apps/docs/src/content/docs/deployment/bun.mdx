@@ -159,7 +159,7 @@ Two factories fill the `storage` slot, and swapping one for the other is one con
 
 `diskStorage({ dir })` keeps uploads under the directory, each object a file with its content type and metadata in a JSON file beside it. The media plugin serves them through its own route; there is no public URL and no presigned upload, so the site receives the bytes itself. It is the scaffold's default and a supported production setup on a single machine, as long as the directory is on a disk that outlives a redeploy — [VPS and containers](#vps-and-containers) has the shape.
 
-`bunS3({ bucket, endpoint?, region?, credentials })` keeps them in any S3-compatible bucket through Bun's `S3Client`, which is what several processes sharing uploads need. `endpoint` defaults to AWS S3 in `region`, and `region` to `us-east-1`. For R2 point `endpoint` at the account's R2 host with `region: "auto"`; for MinIO, at the MinIO server.
+`bunS3({ bucket, endpoint?, region?, credentials, publicUrlBase? })` keeps them in any S3-compatible bucket through Bun's `S3Client`, which is what several processes sharing uploads need. `endpoint` defaults to AWS S3 in `region`, and `region` to `us-east-1`. For R2 point `endpoint` at the account's R2 host with `region: "auto"`; for MinIO, at the MinIO server.
 
 ```ts no-typecheck
 import { bunS3 } from "@plumix/runtime-bun";
@@ -178,6 +178,25 @@ export default {
 ```
 
 `credentials` is the key pair, or an `(env) => credentials` resolver as above when it is a secret, and it is handed to `S3Client` explicitly, so Bun's own `S3_*` and `AWS_*` variables never pick the account. One gap remains in Bun 1.4.2: when `credentials` carries no `sessionToken`, the client still adds one from `S3_SESSION_TOKEN` or `AWS_SESSION_TOKEN`, so leave those unset unless they belong to this key. Presigned uploads sign the content type, so the browser uploads straight to the bucket and cannot send a different type than the one approved. The bucket is laid out exactly as `s3()` from `plumix/storage/s3` and R2 lay it out, so a site can move between them without moving objects.
+
+`publicUrlBase` is the CDN or custom domain in front of the bucket, such as an R2 custom domain or a MinIO bucket behind a public host. Set it and an object's URL is `<publicUrlBase>/<key>`, with the key encoded as `s3()` and R2 encode it, so browsers fetch media from there and no byte passes through the Bun process. Leave it unset and the URL is `null`: the media plugin serves each object through its own route, which checks the entry's status on every request. A public URL is not re-checked, so set it only for a bucket whose objects may be read by anyone holding the key. With `images()`, a public URL is a remote source, so add the host to `remotePatterns`.
+
+```ts no-typecheck
+import { bunS3 } from "@plumix/runtime-bun";
+
+export default {
+  storage: bunS3({
+    bucket: "media",
+    endpoint: "https://<account>.r2.cloudflarestorage.com",
+    region: "auto",
+    credentials: (env) => ({
+      accessKeyId: env.S3_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    }),
+    publicUrlBase: "https://media.example.com",
+  }),
+};
+```
 
 ## Images
 

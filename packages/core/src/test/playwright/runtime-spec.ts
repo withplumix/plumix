@@ -84,11 +84,11 @@ export function runtimeSpec(): void {
       const published = entryUpdated(page);
       await page.getByTestId("plumix-editor-publish-button").click();
       await published;
-      // A published entry with nothing pending leaves the button disabled —
-      // the editor's receipt.
-      await expect(
-        page.getByTestId("plumix-editor-publish-button"),
-      ).toBeDisabled();
+      // Once the refetched entry reads published, a post edits through a
+      // draft, so the header swaps to the draft Publish — disabled with
+      // nothing pending. That is the editor's receipt; the first button only
+      // stays mounted until the refetch lands, which a fast runtime beats.
+      await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
 
       await page.goto("entries/posts?status=published");
       await expect(

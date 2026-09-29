@@ -1,5 +1,6 @@
 import type { Server } from "bun";
 import type { FakeS3 } from "plumix/test/conformance";
+import { s3 } from "plumix/storage/s3";
 import { describeObjectStorageContract, fakeS3 } from "plumix/test/conformance";
 import { afterAll, describe, expect, test } from "vitest";
 
@@ -32,12 +33,13 @@ function serve(fake: FakeS3): string {
 }
 
 // One bucket per call: the contract wants every case to start empty.
-function bind() {
+function bind(overrides: { publicUrlBase?: string } = {}) {
   const fake = fakeS3({ ...BUCKET, credentials: CREDENTIALS });
   const storage = bunS3({
     ...BUCKET,
     endpoint: serve(fake),
     credentials: CREDENTIALS,
+    ...overrides,
   }).connect({});
   return { fake, storage };
 }
@@ -47,7 +49,33 @@ describeObjectStorageContract({
   presign: true,
 });
 
+describe("with a publicUrlBase", () => {
+  describeObjectStorageContract({
+    connect: () => bind({ publicUrlBase: "https://cdn.example.com" }).storage,
+    publicUrls: true,
+    presign: true,
+  });
+});
+
 describe("bunS3", () => {
+  test("a key that needs encoding gets the same public URL as from s3()", async () => {
+    const publicUrlBase = "https://cdn.example.com/media/";
+    const key = "uploads/My photo #1 café.jpg";
+    const portable = s3({
+      ...BUCKET,
+      endpoint: "https://s3.us-east-1.amazonaws.com",
+      credentials: CREDENTIALS,
+      publicUrlBase,
+    });
+
+    const url = await bind({ publicUrlBase }).storage.url(key);
+
+    expect(url).toBe(await portable.connect({}).url(key));
+    expect(url).toBe(
+      "https://cdn.example.com/media/uploads/My%20photo%20%231%20caf%C3%A9.jpg",
+    );
+  });
+
   // Bun's own presign signs only `host`, so a browser could send any type.
   test("a presigned PUT is signed for its content type, and refused with another", async () => {
     const { fake, storage } = bind();

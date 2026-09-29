@@ -30,6 +30,12 @@ export interface BunS3Config {
    * handler's env on connect — the form to use when the key pair is a secret.
    */
   readonly credentials: EnvInput<S3Credentials>;
+  /**
+   * Public base URL for bucket objects (a CDN or custom domain in front of the
+   * bucket). Absent, `url()` returns `null` and the media plugin serves objects
+   * through its own route.
+   */
+  readonly publicUrlBase?: string;
 }
 
 export interface BunS3ObjectStorage extends ObjectStorage {
@@ -62,8 +68,9 @@ function objectBody(source: S3File): ReadableStream<Uint8Array> {
  * `s3()` fills that operation and nothing more (ADR 0019): `put` and `head`,
  * since Bun 1.4.2 sends no `x-amz-meta-*` or `cache-control`, rewrites
  * `text/plain` with a charset and returns no custom metadata from `stat()`;
- * and `presignPut`, since Bun's presign signs only `host`. The bucket layout
- * is the one `s3()` and R2 write. `url()` is null, so media proxies.
+ * `presignPut`, since Bun's presign signs only `host`; and `url`, so a key is
+ * encoded as `s3()` and R2 encode it. The bucket layout is the one `s3()` and
+ * R2 write. Without `publicUrlBase`, `url()` is null, so media proxies.
  */
 export function bunS3(config: BunS3Config): BunS3ObjectStorage {
   return {
@@ -78,6 +85,7 @@ export function bunS3(config: BunS3Config): BunS3ObjectStorage {
         region,
         endpoint,
         credentials,
+        publicUrlBase: config.publicUrlBase,
       }).connect(env);
       // Every field is given, so Bun's own `S3_*`/`AWS_*` lookup never picks
       // the account. Reached through the global rather than imported from
@@ -145,7 +153,7 @@ export function bunS3(config: BunS3Config): BunS3ObjectStorage {
           };
         },
 
-        url: () => Promise.resolve(null),
+        url: (key, opts) => portable.url(key, opts),
 
         presignPut: (key, opts) =>
           presignPutUrl({
