@@ -743,7 +743,6 @@ export const loopPullRequestsInFlight = (): readonly Queued[] => {
       title: string;
       state: string;
       labels: { name: string }[];
-      assignees: { login: string }[];
     }>([
       "issue",
       "view",
@@ -751,17 +750,14 @@ export const loopPullRequestsInFlight = (): readonly Queued[] => {
       "-R",
       REPO_SLUG,
       "--json",
-      "number,title,state,labels,assignees",
+      "number,title,state,labels",
     ]),
   );
-  const loopUser = gh(["api", "user", "--jq", ".login"]).trim();
   return stillInTheLoopsHands(
     pullRequests,
-    issues.map(({ labels, assignees, ...issue }) => ({
+    issues.map(({ labels, ...issue }) => ({
       ...issue,
       labels: labels.map(({ name }) => name),
-      assignees: assignees.map(({ login }) => login),
     })),
-    loopUser,
   );
 };

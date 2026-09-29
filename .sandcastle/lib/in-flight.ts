@@ -12,7 +12,6 @@ interface IssueState {
   readonly title: string;
   readonly state: string;
   readonly labels: readonly string[];
-  readonly assignees: readonly string[];
 }
 
 const LOOP_BRANCH = /^feat\/.+-(\d+)$/;
@@ -25,16 +24,13 @@ export const ticketOfLoopBranch = (branch: string): number | undefined => {
 export const stillInTheLoopsHands = (
   pullRequests: readonly OpenPullRequest[],
   issues: readonly IssueState[],
-  loopUser: string,
 ): readonly Queued[] =>
   pullRequests.flatMap(({ number, url, headRefName }) => {
     const ticket = issues.find(
       (issue) => issue.number === ticketOfLoopBranch(headRefName),
     );
     const held =
-      ticket?.state === "OPEN" &&
-      ticket.labels.includes(READY_LABEL) &&
-      ticket.assignees.includes(loopUser);
+      ticket?.state === "OPEN" && ticket.labels.includes(READY_LABEL);
     return held
       ? [
           {

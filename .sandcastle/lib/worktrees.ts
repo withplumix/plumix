@@ -6,6 +6,10 @@ export const leftoverSandboxWorktree = (
   branch: string,
 ): string | undefined => {
   const sandboxDirectory = join(repoRoot, ".sandcastle", "worktrees");
+  const namedAfterTheBranch = join(
+    sandboxDirectory,
+    branch.replace(/\//g, "-"),
+  );
   return porcelainListing
     .split("\n\n")
     .map((entry) => ({
@@ -14,7 +18,8 @@ export const leftoverSandboxWorktree = (
     }))
     .find(
       (worktree) =>
-        worktree.branch === branch &&
-        worktree.path?.startsWith(`${sandboxDirectory}/`),
+        worktree.path === namedAfterTheBranch ||
+        (worktree.branch === branch &&
+          worktree.path?.startsWith(`${sandboxDirectory}/`)),
     )?.path;
 };

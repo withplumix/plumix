@@ -12,6 +12,10 @@ const listing = [
   "HEAD 2222222",
   "branch refs/heads/feat/cli-errors-2472",
   "",
+  "worktree /repo/.sandcastle/worktrees/feat-bun-runtime-2685",
+  "HEAD 4444444",
+  "detached",
+  "",
   "worktree /elsewhere/someone-else",
   "HEAD 3333333",
   "branch refs/heads/feat/theirs-9999",
@@ -35,5 +39,11 @@ describe("leftoverSandboxWorktree", () => {
     expect(
       leftoverSandboxWorktree(listing, ROOT, "feat/never-started-1"),
     ).toBeUndefined();
+  });
+
+  test("finds a worktree a cut-off rebase left detached, by the directory named after the branch", () => {
+    expect(
+      leftoverSandboxWorktree(listing, ROOT, "feat/bun-runtime-2685"),
+    ).toBe("/repo/.sandcastle/worktrees/feat-bun-runtime-2685");
   });
 });
