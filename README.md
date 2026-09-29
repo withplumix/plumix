@@ -1,77 +1,48 @@
-```
-        _                 _
-  _ __ | |_   _ _ __ ___ (_)_  __
- | '_ \| | | | | '_ ` _ \| \ \/ /
- | |_) | | |_| | | | | | | |>  <
- | .__/|_|\__,_|_| |_| |_|_/_/\_\
- |_|
-```
+<p align="center">
+  <a href="https://docs.plumix.dev">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/wordmark-dark.svg">
+      <img alt="Plumix" src=".github/assets/wordmark-light.svg" width="380">
+    </picture>
+  </a>
+</p>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+<p align="center"><strong>The code-first TypeScript CMS for any runtime.</strong></p>
 
-**A modern CMS, built for the edge** — content modeling, a block editor, passkey auth, and a full admin UI, with a pluggable runtime so you're never locked to one platform.
+<p align="center">
+  <a href="https://github.com/withplumix/plumix/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/withplumix/plumix/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://www.npmjs.com/package/plumix"><img alt="npm" src="https://img.shields.io/npm/v/plumix.svg?label=npm"></a>
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
+
+<p align="center">
+  <a href="https://docs.plumix.dev">Documentation</a> ·
+  <a href="https://demo.plumix.dev">Live demo</a> ·
+  <a href="https://github.com/withplumix/plumix/discussions">Discussions</a> ·
+  <a href="./CONTRIBUTING.md">Contributing</a>
+</p>
+
+You describe the content model in TypeScript, and Plumix builds the admin screens, public URLs and permission checks from it. It deploys as one process on the runtime you choose, and the public site renders from a theme you own.
 
 > [!WARNING]
-> **Pre-1.0 software.** Minor versions can contain breaking changes — pin your versions.
+> Plumix is pre-1.0. A minor release can break things, so pin your versions.
 
-## Why Plumix
-
-- **Edge-native** — deploys as a single unit and runs close to your users, with no origin server to babysit.
-- **Runtime-agnostic** — the runtime is a pluggable adapter, not a lock-in. Run it where it makes sense for you.
-- **Headless, your way** — a typed content API with a block editor, and themes that render however you like.
-- **Passwordless auth** — passkeys (WebAuthn) first, with optional OAuth and magic-link sign-in.
-- **Extensible** — plugins add entry types, blocks, admin pages, RPC, routes, and cron.
-- **Type-safe end to end** — TypeScript throughout, with typed RPC between the admin and your worker.
-
-## Quick start
+## Install
 
 ```bash
-pnpm create plumix-app my-site
-cd my-site
-pnpm install
-pnpm dev
+pnpm create plumix-app
 ```
 
-Then open `http://localhost:5173/_plumix/admin` and create your first passkey.
-
-## Runtimes
-
-The runtime is pluggable — you choose where Plumix runs. Available now:
-
-- **[Cloudflare Workers](./packages/runtimes/cloudflare)** — D1, R2, KV, Images, and CDN.
-
-More runtimes are on the way.
-
-## Plugins
-
-Add features by dropping official plugins into your config:
-
-- **[Blog](./packages/plugins/blog)** — posts, categories, and tags.
-- **[Pages](./packages/plugins/pages)** — hierarchical static pages.
-- **[Menu](./packages/plugins/menu)** — navigation menus from entries, terms, and custom URLs.
-- **[Comments](./packages/plugins/comments)** — threaded, moderated discussion.
-- **[Media](./packages/plugins/media)** — media library and uploads.
-- **[Audit log](./packages/plugins/audit-log)** — an activity feed of who did what.
-- **[SEO](./packages/plugins/seo)** — head meta, Open Graph, `robots.txt`, and the sitemap.
-- **[OG cards](./packages/plugins/og)** — a generated social card per page.
-- **[Feeds](./packages/plugins/feeds)** — RSS and Atom for the site and every archive.
+The wizard sets up the project and prints the commands to run next. New to Plumix? Start with the [installation guide](https://docs.plumix.dev/getting-started/installation/).
 
 ## Documentation
 
-Agent-facing conventions live in [`AGENTS.md`](./AGENTS.md) and
-[`docs/agents/`](./docs/agents), and how code is written in
-[`CODING_STANDARDS.md`](./CODING_STANDARDS.md). Authoring guides ship with 1.0.
+[docs.plumix.dev](https://docs.plumix.dev) covers the content model, themes, plugins and deploying.
 
 ## Contributing
 
-PRs and ideas welcome. The [Contributing guide](./CONTRIBUTING.md) walks you
-through setup — new contributors especially welcome.
-
-## Security
-
-Found a vulnerability? Please follow our [security policy](./SECURITY.md) rather
-than opening a public issue.
+Start with the [contributing guide](./CONTRIBUTING.md), ask questions in [Discussions](https://github.com/withplumix/plumix/discussions), and report security issues privately through the [security policy](./SECURITY.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](./LICENSE)

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Plumix is a CMS with pluggable runtime adapters; Cloudflare is the default. It is pre-1.0, so every `0.x` minor may break.
+Plumix is a CMS with pluggable runtime adapters. It is pre-1.0, so every `0.x` minor may break.
 
 ## Working rules
 
