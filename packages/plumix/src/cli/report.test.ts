@@ -7,6 +7,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 // like a tidy-up and would silently delete that coverage.
 import { CliError } from "@plumix/core";
 
+import { PlumixCliError } from "./errors.js";
 import { badge, exitWithError } from "./report.js";
 
 describe("badge", () => {
@@ -48,7 +49,7 @@ describe("exitWithError", () => {
   test("prints the cause, not just the code and generic hint", () => {
     // The #1883 failure: a config importing a workspace dist CI hadn't built.
     const out = capture(
-      CliError.configLoadFailed({
+      PlumixCliError.configLoadFailed({
         configPath: "playground/plumix.config.ts",
         cause: new Error(
           "Cannot find package '@plumix/plugin-blog' imported from playground/plumix.config.ts",
@@ -65,7 +66,7 @@ describe("exitWithError", () => {
     // Node's bare-specifier failure carries a require stack, so the cause is
     // three lines; flush-left they would read as belonging to the hint below.
     const out = capture(
-      CliError.configLoadFailed({
+      PlumixCliError.configLoadFailed({
         configPath: "playground/plumix.config.ts",
         cause: new Error(
           "Cannot find module '@plumix/plugin-blog'\nRequire stack:\n- playground/plumix.config.ts",
@@ -85,7 +86,7 @@ describe("exitWithError", () => {
   test("prints a cause that is not an Error rather than dropping it", () => {
     // A config that throws a primitive — the text is all the reader gets.
     const out = capture(
-      CliError.configLoadFailed({
+      PlumixCliError.configLoadFailed({
         configPath: "plumix.config.ts",
         cause: "boom, no Error wrapper",
       }),
@@ -96,11 +97,19 @@ describe("exitWithError", () => {
 
   test("prints only the code, message and hint when there is no cause", () => {
     const out = capture(
-      CliError.configInvalid({ configPath: "plumix.config.ts" }),
+      PlumixCliError.configInvalid({ configPath: "plumix.config.ts" }),
     );
 
     expect(out).toContain("config_invalid: Invalid config shape");
     expect(out).toContain("Default export must be");
     expect(out.trimEnd().split("\n")).toHaveLength(2);
+  });
+
+  test("reports a CliError built through core's root barrel", () => {
+    const out = capture(
+      CliError.spawnFailed({ command: "wrangler", cause: undefined }),
+    );
+
+    expect(out).toContain("spawn_failed: Failed to start wrangler");
   });
 });

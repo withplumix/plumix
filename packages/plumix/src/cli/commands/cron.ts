@@ -10,12 +10,12 @@ import type {
   ScheduledRunReport,
 } from "@plumix/core";
 import {
-  CliError,
   declaredSchedules,
   parseCron,
   scheduledTasksFor,
 } from "@plumix/core/cli";
 
+import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 
 const MINUTE_MS = 60_000;
@@ -35,7 +35,7 @@ export const cronCommand: CommandDefinition = {
       await runSchedule(ctx);
       return;
     }
-    throw CliError.unknownSubcommand({
+    throw PlumixCliError.unknownSubcommand({
       command: "cron",
       subcommand: sub,
       supported: ["list", "run"],
@@ -89,14 +89,14 @@ function listSchedules(app: PlumixApp): void {
 async function runSchedule(ctx: CommandContext): Promise<void> {
   const expression = ctx.argv[1];
   if (expression === undefined || expression === "") {
-    throw CliError.cronRunMissingExpression();
+    throw PlumixCliError.cronRunMissingExpression();
   }
   // Rejects before any work: a malformed expression here would otherwise match
   // nothing and exit green.
   try {
     parseCron(expression);
   } catch (cause) {
-    throw CliError.cronRunInvalidExpression({
+    throw PlumixCliError.cronRunInvalidExpression({
       detail: cause instanceof Error ? cause.message : String(cause),
     });
   }
@@ -115,7 +115,7 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
         EVERY_MINUTE
       : undefined);
   if (fired === undefined) {
-    throw CliError.cronRunUnknownSchedule({ expression, declared });
+    throw PlumixCliError.cronRunUnknownSchedule({ expression, declared });
   }
 
   // Dynamic, so `src/cli/index.ts`'s static import of this module cannot put
@@ -192,7 +192,7 @@ async function fireSchedule(
   }
 
   if (runReport?.aborted !== undefined) {
-    throw CliError.cronRunNeverStarted({
+    throw PlumixCliError.cronRunNeverStarted({
       expression: fired,
       reason: runReport.aborted,
     });
@@ -200,7 +200,7 @@ async function fireSchedule(
   // An adapter that reported nothing failed nothing.
   const failed = runReport?.failed ?? [];
   if (failed.length > 0) {
-    throw CliError.cronRunTasksFailed({ expression: fired, failed });
+    throw PlumixCliError.cronRunTasksFailed({ expression: fired, failed });
   }
 
   const ran = scheduledTasksFor(ctx.app, fired)
@@ -235,7 +235,7 @@ async function runGuarded(
       work,
     );
   } catch (cause) {
-    throw CliError.cronRunDatabaseUnavailable({
+    throw PlumixCliError.cronRunDatabaseUnavailable({
       detail: cause instanceof Error ? cause.message : String(cause),
       cause,
     });

@@ -1,7 +1,8 @@
 import type { CommandDefinition } from "plumix/cli";
-import { CliError, spawnInherit } from "plumix/cli";
+import { spawnInherit } from "plumix/cli";
 
 import { loadWranglerConfig } from "../wrangler-config.js";
+import { CloudflareCliError } from "./errors.js";
 
 export const migrateApplyCommand: CommandDefinition = {
   describe: "Apply pending D1 migrations (wrangler d1 migrations apply)",
@@ -30,7 +31,7 @@ function resolveDatabaseName(
 
   const config = migrateApplyDeps.loadWranglerConfig(cwd);
   if (config === null) {
-    throw CliError.migrateApplyMissingDb();
+    throw CloudflareCliError.migrateApplyMissingDb();
   }
 
   const [firstName, ...moreNames] = config.d1Databases
@@ -40,10 +41,10 @@ function resolveDatabaseName(
     );
 
   if (firstName === undefined) {
-    throw CliError.migrateApplyNoD1({ filename: config.filename });
+    throw CloudflareCliError.migrateApplyNoD1({ filename: config.filename });
   }
   if (moreNames.length > 0) {
-    throw CliError.migrateApplyAmbiguousDb({
+    throw CloudflareCliError.migrateApplyAmbiguousDb({
       filename: config.filename,
       names: [firstName, ...moreNames],
     });

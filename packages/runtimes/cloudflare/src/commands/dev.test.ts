@@ -1,6 +1,16 @@
+import { isCliError } from "plumix/cli";
 import { describe, expect, test } from "vitest";
 
 import { parseDevArgs } from "./dev.js";
+
+function codeThrownBy(run: () => unknown): string | false {
+  try {
+    run();
+  } catch (error) {
+    return isCliError(error) && error.code;
+  }
+  throw new Error("expected a throw");
+}
 
 describe("parseDevArgs", () => {
   test("extracts --port followed by a numeric value", () => {
@@ -16,17 +26,25 @@ describe("parseDevArgs", () => {
     expect(parseDevArgs(["--verbose"])).toEqual({});
   });
 
-  test("throws on a non-numeric --port value", () => {
-    expect(() => parseDevArgs(["--port", "abc"])).toThrow(
-      /--port.*must be a number/i,
+  test("rejects a --port that is not a port, in both forms", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--port", "abc"]))).toBe(
+      "port_flag_out_of_range",
     );
-    expect(() => parseDevArgs(["--port="])).toThrow(
-      /--port.*must be a number/i,
+    expect(codeThrownBy(() => parseDevArgs(["--port", "70000"]))).toBe(
+      "port_flag_out_of_range",
+    );
+    expect(codeThrownBy(() => parseDevArgs(["--port=abc"]))).toBe(
+      "port_flag_out_of_range",
+    );
+    expect(codeThrownBy(() => parseDevArgs(["--port="]))).toBe(
+      "port_flag_out_of_range",
     );
   });
 
-  test("throws when --port has no value following it", () => {
-    expect(() => parseDevArgs(["--port"])).toThrow(/--port.*requires a value/i);
+  test("rejects a --port given no value", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--port"]))).toBe(
+      "port_flag_missing_value",
+    );
   });
 
   test("extracts --inspector-port followed by a numeric value", () => {
@@ -51,15 +69,18 @@ describe("parseDevArgs", () => {
     ).toEqual({ port: 3020, inspectorPort: 9320 });
   });
 
-  test("throws on a non-numeric --inspector-port value", () => {
-    expect(() => parseDevArgs(["--inspector-port", "abc"])).toThrow(
-      /--inspector-port.*must be a number/i,
+  test("rejects an --inspector-port that is not a port, in both forms", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--inspector-port", "abc"]))).toBe(
+      "port_flag_out_of_range",
+    );
+    expect(codeThrownBy(() => parseDevArgs(["--inspector-port=0"]))).toBe(
+      "port_flag_out_of_range",
     );
   });
 
-  test("throws when --inspector-port has no value following it", () => {
-    expect(() => parseDevArgs(["--inspector-port"])).toThrow(
-      /--inspector-port.*requires a value/i,
+  test("rejects an --inspector-port given no value", () => {
+    expect(codeThrownBy(() => parseDevArgs(["--inspector-port"]))).toBe(
+      "port_flag_missing_value",
     );
   });
 });

@@ -9,7 +9,7 @@ import type {
   PlumixConfig,
   RuntimeAdapter,
 } from "@plumix/core";
-import { CliError, isCliError } from "@plumix/core/cli";
+import { isCliError } from "@plumix/core/cli";
 
 import type { CommandGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
@@ -18,6 +18,7 @@ import { doctorCommand } from "./commands/doctor.js";
 import { i18nCommand } from "./commands/i18n.js";
 import { metaCommand } from "./commands/meta.js";
 import { migrateCommand } from "./commands/migrate.js";
+import { PlumixCliError } from "./errors.js";
 import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
 import { badge, exitWithError, report } from "./report.js";
@@ -134,9 +135,12 @@ export async function run(argv: readonly string[]): Promise<void> {
   // No `plumix.config.ts` means no app + no runtime; dispatch directly.
   if (args.command === "i18n") {
     const command = BUILT_IN_COMMANDS.get("i18n");
-    if (!command) throw CliError.unknownCommand({ command: args.command });
+    if (!command)
+      throw PlumixCliError.unknownCommand({ command: args.command });
     await command.run({
-      app: appSentinel(() => CliError.toolingCommandNoApp({ command: "i18n" })),
+      app: appSentinel(() =>
+        PlumixCliError.toolingCommandNoApp({ command: "i18n" }),
+      ),
       cwd: args.cwd,
       configPath: "",
       argv: args.rest,
@@ -152,7 +156,7 @@ export async function run(argv: readonly string[]): Promise<void> {
   );
   const command = resolveCommand(runtimeModule.commands, args.command);
   if (!command) {
-    throw CliError.unknownCommand({ command: args.command });
+    throw PlumixCliError.unknownCommand({ command: args.command });
   }
 
   const app = await resolveCommandApp(command, loaded.config, args.command);
@@ -176,7 +180,7 @@ export async function resolveCommandApp(
 ): Promise<PlumixApp> {
   if (command.deferApp) {
     return appSentinel(() =>
-      CliError.deferredCommandNoApp({ command: commandName }),
+      PlumixCliError.deferredCommandNoApp({ command: commandName }),
     );
   }
   // Deferred so the commands that never build an app — `dev` opts out via
@@ -193,7 +197,7 @@ export async function resolveCommandApp(
 // exempt: `await resolveCommandApp(...)` probes it to detect a thenable, and the
 // sentinel must pass through promise machinery unharmed. The cast is structural
 // (`app` is non-optional on CommandContext); the throw is the guard.
-function appSentinel(makeError: () => CliError): PlumixApp {
+function appSentinel(makeError: () => PlumixCliError): PlumixApp {
   return new Proxy(
     {},
     {
@@ -256,7 +260,7 @@ async function loadRuntimeCommands(
   try {
     resolved = require.resolve(adapter.commandsModule);
   } catch (cause) {
-    throw CliError.runtimeCommandsNotFound({
+    throw PlumixCliError.runtimeCommandsNotFound({
       commandsModule: adapter.commandsModule,
       cwd,
       cause,
@@ -275,7 +279,7 @@ async function loadRuntimeCommands(
   } catch (cause) {
     // A commands module that refuses to load says why in its own terms.
     if (isCliError(cause)) throw cause;
-    throw CliError.runtimeCommandsLoadFailed({
+    throw PlumixCliError.runtimeCommandsLoadFailed({
       commandsModule: adapter.commandsModule,
       cause,
     });

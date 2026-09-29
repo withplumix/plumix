@@ -5,7 +5,8 @@ import { createJiti } from "jiti";
 import * as v from "valibot";
 
 import type { PlumixConfig } from "@plumix/core";
-import { CliError } from "@plumix/core/cli";
+
+import { PlumixCliError } from "./errors.js";
 
 const CONFIG_CANDIDATES = [
   "plumix.config.ts",
@@ -72,11 +73,11 @@ async function evaluateConfig(configPath: string): Promise<LoadedConfig> {
   try {
     imported = await jiti.import(configPath, { default: true });
   } catch (cause) {
-    throw CliError.configLoadFailed({ configPath, cause });
+    throw PlumixCliError.configLoadFailed({ configPath, cause });
   }
 
   if (!isPlumixConfig(imported)) {
-    throw CliError.configInvalid({ configPath });
+    throw PlumixCliError.configInvalid({ configPath });
   }
 
   return { config: imported, configPath };
@@ -86,7 +87,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   if (explicit) {
     const absolute = isAbsolute(explicit) ? explicit : resolve(cwd, explicit);
     if (!existsSync(absolute)) {
-      throw CliError.configNotFoundExplicit({ explicit, absolute });
+      throw PlumixCliError.configNotFoundExplicit({ explicit, absolute });
     }
     return absolute;
   }
@@ -96,7 +97,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
     if (existsSync(absolute)) return absolute;
   }
 
-  throw CliError.configNotFoundDefault({ cwd });
+  throw PlumixCliError.configNotFoundDefault({ cwd });
 }
 
 // The load-bearing corner of an evaluated config module — enough to tell a
