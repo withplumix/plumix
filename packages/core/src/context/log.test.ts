@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Logger } from "./app.js";
+import type { Logger } from "./app-context.js";
 import { silentLogger } from "../test/context.js";
 import { logErrorSafely } from "./log.js";
 

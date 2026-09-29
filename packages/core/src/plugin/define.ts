@@ -1,5 +1,5 @@
 import type { ShortcodeSpec } from "../blocks/index.js";
-import type { SchemaModule } from "../runtime/slots.js";
+import type { SchemaModule } from "../runtime/contract/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type {
   PluginAfterSetupContext,

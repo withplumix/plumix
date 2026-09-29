@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
 import type { ActionArgs } from "../hooks/types.js";
 import type { PlumixApp } from "../runtime/app.js";

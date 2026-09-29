@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { AppContext, Db } from "../context/app.js";
-import { withUser } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
+import { withUser } from "../auth/with-user.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import {

@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
-import type { Db } from "../../context/app.js";
-import type { PlumixEnv } from "../../runtime/bindings.js";
+import type { Db } from "../../context/app-context.js";
+import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { OAuthProfile, OAuthProviderClient } from "./types.js";
 import { resolveEnvInput } from "../../runtime/env-input.js";
 import { OAuthError } from "./errors.js";

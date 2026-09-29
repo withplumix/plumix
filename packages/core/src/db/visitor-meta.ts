@@ -1,6 +1,6 @@
 import { encodeHexLowerCase } from "@oslojs/encoding";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { DbError } from "./errors.js";
 import { and, eq } from "./index.js";
 import { settings } from "./schema/settings.js";

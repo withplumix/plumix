@@ -1,9 +1,9 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import {
   authenticateTraced,
   requestHasSession,
 } from "../auth/authenticator.js";
-import { withUser } from "../context/app.js";
+import { withUser } from "../auth/with-user.js";
 
 export async function loadUserForPublicRequest(
   ctx: AppContext,

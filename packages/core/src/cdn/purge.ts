@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import {

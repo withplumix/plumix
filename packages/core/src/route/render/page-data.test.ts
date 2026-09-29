@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import { definePlugin } from "../../plugin/define.js";
 import { date } from "../../plugin/fields/temporal.js";

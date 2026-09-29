@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { Label } from "../i18n/label.js";
 

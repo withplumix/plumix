@@ -2,7 +2,7 @@ import { createORPCErrorConstructorMap, ORPCError } from "@orpc/server";
 import * as v from "valibot";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AuthenticatedUser } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/registry.js";
 import type { EntryEditRow } from "./editability.js";
 import type { EntryViewer } from "./visibility.js";

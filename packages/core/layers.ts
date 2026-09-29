@@ -115,6 +115,35 @@ export const TOP_FILES: readonly string[] = [
   "hooks/public-hooks.ts",
 ];
 
+export interface CycleUnit {
+  readonly layer: Layer;
+  /** Top-level folders and root files, as the cycle rule names them. */
+  readonly members: readonly string[];
+}
+
+/**
+ * Subsystems of one layer that the cycle rule reads as a single node, keyed
+ * by the name a report gives it. `AppContext` carries the config, the hook
+ * executor and the plugin registry; the plugin, template and theme handlers
+ * those carry take an `AppContext`, and the hook registry reads one from the
+ * ambient store. The types are mutually recursive by nature (ADR 0010). A cycle between a unit and another
+ * subsystem is still a violation.
+ */
+export const CYCLE_UNITS: Readonly<Record<string, CycleUnit>> = {
+  "app-context": {
+    layer: "contracts",
+    members: [
+      "config.ts",
+      "context",
+      "hooks",
+      "plugin",
+      "template-deps.ts",
+      "template.ts",
+      "theme.ts",
+    ],
+  },
+};
+
 /**
  * The `exports` subpaths a browser bundle imports at runtime. The suite
  * resolves each through `package.json`, so a re-pointed subpath moves the

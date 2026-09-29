@@ -1,6 +1,6 @@
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry, EntryStatus } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";

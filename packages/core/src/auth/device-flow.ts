@@ -1,6 +1,6 @@
 import { encodeBase64urlNoPadding } from "@oslojs/encoding";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { DeviceCode } from "../db/schema/device_codes.js";
 import { and, eq } from "../db/index.js";
 import { deviceCodes } from "../db/schema/device_codes.js";

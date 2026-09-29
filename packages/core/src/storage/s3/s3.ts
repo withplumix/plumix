@@ -1,4 +1,3 @@
-import type { EnvInput } from "../../runtime/env-input.js";
 import type {
   ConnectedObjectStorage,
   GetResult,
@@ -12,7 +11,8 @@ import type {
   PresignPutOptions,
   PutOptions,
   UrlOptions,
-} from "../../runtime/slots.js";
+} from "../../runtime/contract/slots.js";
+import type { EnvInput } from "../../runtime/env-input.js";
 import type { SigV4Credentials } from "./sigv4.js";
 import { resolveEnvInput } from "../../runtime/env-input.js";
 import { bodyToBytes, toFreshArrayBuffer } from "../body.js";

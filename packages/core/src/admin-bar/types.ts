@@ -1,4 +1,7 @@
-import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
+import type {
+  AuthenticatedUser,
+  AuthNamespace,
+} from "../context/app-context.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.ts";
 import type { BarLocale } from "./i18n.js";

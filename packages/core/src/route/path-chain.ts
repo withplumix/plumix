@@ -15,7 +15,7 @@
  * semantics.
  */
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";

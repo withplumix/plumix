@@ -4,7 +4,7 @@ import type {
   AuthResult,
   RequestAuthenticator,
 } from "../auth/authenticator.js";
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";

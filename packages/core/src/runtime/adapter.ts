@@ -1,6 +1,6 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PlumixApp } from "./app.js";
-import type { PlumixEnv } from "./bindings.js";
+import type { PlumixEnv } from "./contract/bindings.js";
 
 /**
  * What the runtime knows about one call into the handler. An adapter builds

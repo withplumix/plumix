@@ -1,4 +1,4 @@
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import { jsonResponse } from "../../runtime/http.js";
 import { collectDevErrorContext } from "./context.js";
 import { collectDevErrorHints } from "./hints/collect.js";

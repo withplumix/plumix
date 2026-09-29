@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { DevInput } from "../../config.js";
-import type { AppContext, Db } from "../../context/app.js";
+import type { AppContext, Db } from "../../context/app-context.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { createDevRuntime } from "../../runtime/dev.js";
 import { createTestContext } from "../../test/context.js";

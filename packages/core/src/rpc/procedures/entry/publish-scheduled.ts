@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import { and, eq, isNotNull, lte } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {

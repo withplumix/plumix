@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { DebugPanelsInput } from "./config.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { createTestContext } from "../../test/context.js";

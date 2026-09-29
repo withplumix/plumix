@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../../../auth/authenticator.js";
-import type { Mailer } from "../../../auth/mailer/types.js";
+import type { Mailer } from "../../../auth/contract/mailer.js";
 import { API_TOKEN_PREFIX, createApiToken } from "../../../auth/api-tokens.js";
 import { auth } from "../../../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../../../auth/cookies.js";

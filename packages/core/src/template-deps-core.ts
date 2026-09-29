@@ -1,6 +1,6 @@
 import { inArray } from "drizzle-orm";
 
-import type { AppContext } from "./context/app.js";
+import type { AppContext } from "./context/app-context.js";
 import type { SettingsBag } from "./db/schema/settings.js";
 import type { JsonValue } from "./json.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";

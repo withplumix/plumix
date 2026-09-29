@@ -6,7 +6,7 @@
 // helper builds a `defer` implementation backed by an array plus a
 // `drainDeferred()` that waits for everything queued so far.
 
-import type { DeferFn } from "../context/app.js";
+import type { DeferFn } from "../context/app-context.js";
 
 export interface DeferQueue {
   /** Pass to `createAppContext({ defer })` so handlers route here. */

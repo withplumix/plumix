@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { Mailer } from "../auth/mailer/types.js";
+import type { Mailer } from "../auth/contract/mailer.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
   ConnectedKv,
   ConnectedObjectStorage,
-} from "../runtime/slots.js";
+} from "../runtime/contract/slots.js";
 import { createTelemetryCollector } from "./collector.js";
 import {
   traceAssets,

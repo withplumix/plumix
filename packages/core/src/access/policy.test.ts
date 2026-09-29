@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
 import { createTestContext } from "../test/context.js";

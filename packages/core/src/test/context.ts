@@ -1,10 +1,10 @@
 import type {
   AppContext,
   CoreSchema,
-  CreateAppContextArgs,
   Db,
   Logger,
-} from "../context/app.js";
+} from "../context/app-context.js";
+import type { CreateAppContextArgs } from "../context/app.js";
 import type { TestConfigInput } from "./config.js";
 import { createAppContext } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";

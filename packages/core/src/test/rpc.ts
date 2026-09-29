@@ -5,7 +5,7 @@ import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { BlockRegistry, MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
 import type {
@@ -17,14 +17,15 @@ import type {
 } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
-import type { PlumixEnv } from "../runtime/bindings.js";
+import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
+import { withUser } from "../auth/with-user.js";
 import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
-import { createAppContext, withUser } from "../context/app.js";
+import { createAppContext } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";

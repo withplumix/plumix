@@ -101,16 +101,6 @@
   },
   {
     "rule": "cycle",
-    "layer": "contracts",
-    "members": ["config.ts", "plugin"]
-  },
-  {
-    "rule": "cycle",
-    "layer": "contracts",
-    "members": ["template-deps.ts", "template.ts", "theme.ts"]
-  },
-  {
-    "rule": "cycle",
     "layer": "capabilities",
     "members": [
       "access",

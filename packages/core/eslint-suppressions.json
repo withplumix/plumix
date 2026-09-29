@@ -1,42 +1,7 @@
 {
   "src/access/gate.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/access/policy.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/admin-bar/component.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/admin-bar/types.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/api-tokens.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/authenticator.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/bearer.ts": {
-    "boundaries/dependencies": {
       "count": 2
-    }
-  },
-  "src/auth/bootstrap.ts": {
-    "boundaries/dependencies": {
-      "count": 1
     }
   },
   "src/auth/config.ts": {
@@ -46,87 +11,32 @@
   },
   "src/auth/device-flow-routes.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/device-flow.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/email-change/cancel.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/email-change/request.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/email-change/routes.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/email-change/verify.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/identity.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/invite.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/magic-link/request.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/magic-link/routes.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/magic-link/verify.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/mailer/console.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/mailer/resolve.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 2
     }
   },
   "src/auth/oauth/consumer.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 1
     }
   },
   "src/auth/oauth/routes.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/oauth/signup.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/oauth/state.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/oauth/types.ts": {
@@ -134,69 +44,24 @@
       "count": 1
     }
   },
-  "src/auth/passkey/authenticate.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/passkey/challenges.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/auth/passkey/config.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/passkey/register.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/passkey/routes.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/auth/preview-token.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/sessions.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/auth/sign-in.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/cdn/cloudflare/cloudflare.ts": {
     "boundaries/dependencies": {
-      "count": 4
-    }
-  },
-  "src/cdn/embedded-tags.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/cdn/purge.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/cdn/read-through.ts": {
-    "boundaries/dependencies": {
       "count": 2
-    }
-  },
-  "src/cdn/route-tags.ts": {
-    "boundaries/dependencies": {
-      "count": 1
     }
   },
   "src/cli/index.ts": {
@@ -206,37 +71,12 @@
   },
   "src/config.ts": {
     "boundaries/dependencies": {
-      "count": 9
-    }
-  },
-  "src/context/index.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/context/log.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/context/stores.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/context/telemetry.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/context/traced-slots.ts": {
-    "boundaries/dependencies": {
-      "count": 2
+      "count": 8
     }
   },
   "src/db/libsql.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 2
     }
   },
   "src/db/settle-meta.ts": {
@@ -244,77 +84,17 @@
       "count": 1
     }
   },
-  "src/db/visitor-meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/debug-bar/component.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/debug-panels/collect.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/debug-panels/types.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/dev/history-routes.tsx": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/dev/request-history/snapshot.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/context.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/hints/collect.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/hints/types.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/panels/collect.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/panels/types.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/dev/server/respond.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/document-merge.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/entries/authored.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/entries/change-feed.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -324,19 +104,9 @@
       "count": 1
     }
   },
-  "src/entries/query.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/entries/read-service.ts": {
     "boundaries/dependencies": {
-      "count": 6
-    }
-  },
-  "src/entries/visibility.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 5
     }
   },
   "src/i18n/index.ts": {
@@ -356,30 +126,10 @@
   },
   "src/images/role-images.ts": {
     "boundaries/dependencies": {
-      "count": 5
-    }
-  },
-  "src/mcp/dev-trust.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 4
     }
   },
   "src/mcp/dispatch.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/mcp/error-tools.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/mcp/server.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/mcp/tool.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -391,15 +141,10 @@
   },
   "src/plugin/define.ts": {
     "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/plugin/index.ts": {
-    "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/plugin/lookup.ts": {
+  "src/plugin/index.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -414,11 +159,6 @@
       "count": 3
     }
   },
-  "src/plugin/provides-context.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/plugin/register.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -426,17 +166,12 @@
   },
   "src/plugin/registry.ts": {
     "boundaries/dependencies": {
-      "count": 8
-    }
-  },
-  "src/rest/base.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 6
     }
   },
   "src/rest/build-handler.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/rest/cors.ts": {
@@ -444,52 +179,7 @@
       "count": 1
     }
   },
-  "src/rest/entries-resource.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rest/principal.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/rest/terms-resource.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/revisions/repository.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/archive-entries.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/current.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/route/index.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/route/path-chain.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/permalink.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/preview.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -499,24 +189,19 @@
       "count": 1
     }
   },
-  "src/route/render/entry-listing.ts": {
+  "src/route/render/page-data.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
-  "src/route/render/page-data.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/route/render/render-template.tsx": {
     "boundaries/dependencies": {
-      "count": 6
+      "count": 4
     }
   },
   "src/route/render/resolve-entry-list.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 3
     }
   },
   "src/route/render/resolved-entry.ts": {
@@ -526,120 +211,10 @@
   },
   "src/route/resolve.ts": {
     "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/route/single-entry.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/authenticated.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/base.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/build-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/hooks.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/meta/core.ts": {
-    "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/rpc/procedures/auth/sign-in-methods.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/dashboard.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/lifecycle.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/previewable.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/publish-scheduled.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/terms.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/entry/update.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/lookup/schemas.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/meta/sweep.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/term/helpers.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/term/meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/user/helpers.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/user/meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rpc/procedures/user/update.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/search/admin-entry-scope.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/search/admin-search.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -651,42 +226,22 @@
   },
   "src/search/entries-handler.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/search/terms-handler.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/search/users-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/seo/canonical.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/seo/site-settings.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/storage/body.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/storage/rendered-asset.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/storage/s3/s3.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 2
     }
   },
   "src/support.ts": {
@@ -699,39 +254,19 @@
       "count": 1
     }
   },
-  "src/template-deps-core.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/template-deps.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/template-registry.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/template.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/terms/read-service.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 3
     }
   },
   "src/theme.ts": {
     "boundaries/dependencies": {
       "count": 2
-    }
-  },
-  "src/users/slug.ts": {
-    "boundaries/dependencies": {
-      "count": 1
     }
   }
 }

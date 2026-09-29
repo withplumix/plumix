@@ -12,9 +12,9 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "../../blocks/index.js";
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { SettingsBag } from "../../db/schema/settings.js";
-import type { TransformOpts } from "../../runtime/slots.js";
+import type { TransformOpts } from "../../runtime/contract/slots.js";
 import type { LoadedTemplateDeps } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type {

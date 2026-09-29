@@ -1,11 +1,11 @@
-import type { PlumixEnv } from "./bindings.js";
+import type { PlumixEnv } from "./contract/bindings.js";
 import type {
   ConnectedKv,
   KV,
   KvListOptions,
   KvListResult,
   KvPutOptions,
-} from "./slots.js";
+} from "./contract/slots.js";
 
 interface MemoryEntry {
   readonly value: string;

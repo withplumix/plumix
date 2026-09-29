@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Mailer } from "../mailer/types.js";
+import type { Mailer } from "../contract/mailer.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import {

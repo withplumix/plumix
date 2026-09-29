@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { isCurrentSource } from "./current.js";
 
 function ctxWith(

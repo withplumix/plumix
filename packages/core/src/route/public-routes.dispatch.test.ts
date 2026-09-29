@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { AccessPolicy } from "../access/policy.js";
-import type { AppContext } from "../context/app.js";
-import type { CdnStore, ConnectedCdn } from "../runtime/slots.js";
+import type { AppContext } from "../context/app-context.js";
+import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
 import {
   authenticatedPolicy,
   challenge,

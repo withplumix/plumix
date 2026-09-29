@@ -8,7 +8,10 @@ import type {
 import type { ResolvedI18n } from "./i18n/locale-registry.js";
 import type { RedirectRule } from "./route/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
-import type { DatabaseAdapter, ImageDelivery } from "./runtime/slots.js";
+import type {
+  DatabaseAdapter,
+  ImageDelivery,
+} from "./runtime/contract/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";

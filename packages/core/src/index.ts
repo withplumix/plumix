@@ -11,6 +11,9 @@ export { normalizeBasePath, withBasePath } from "./base-path.js";
 export * from "./cli/index.js";
 export * from "./config.js";
 export * from "./context/index.js";
+export { consoleLogger, createAppContext } from "./context/app.js";
+export type { CreateAppContextArgs } from "./context/app.js";
+export { withUser } from "./auth/with-user.js";
 // The drizzle query operators (`./db/index.js`) and schema tables
 // (`./db/schema/index.js`) are deliberately NOT re-exported here. Direct DB
 // writes are a specialized concern with a dedicated seam: operators +
@@ -38,7 +41,7 @@ export type { ResolveReturnUrlOptions } from "./return-url.js";
 export { isCurrentSource } from "./route/current.js";
 export type { CurrentSource, ResolvedEntity } from "./route/current.js";
 export type { ResolvedRoute } from "./route/match.js";
-export type { RouteIntent, RouteRule } from "./route/intent.js";
+export type { RouteIntent, RouteRule } from "./route/contract/intent.js";
 export type {
   RedirectResolution,
   RedirectRule,
@@ -54,7 +57,7 @@ export type { PlumixApp } from "./runtime/app.js";
 // `process.env.PLUMIX_DEV` gate to serve the dev error page when app
 // construction throws; it tree-shakes out of production builds (#1601).
 export { renderDevBootErrorResponse } from "./dev/server/boot.js";
-export type * from "./runtime/bindings.js";
+export type * from "./runtime/contract/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
@@ -100,7 +103,7 @@ export {
   createScheduledRunGuard,
   scheduledLeaseScope,
 } from "./runtime/scheduled-guard.js";
-export type * from "./runtime/slots.js";
+export type * from "./runtime/contract/slots.js";
 export { slugify } from "./slugify.js";
 // The page data core renders, for a plugin serving something of its own
 // *about* a page it did not route to, such as a social card at a URL of its

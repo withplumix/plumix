@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Session } from "../../db/schema/sessions.js";
 import type { CreateDispatcherHarnessOptions } from "../../test/dispatcher.js";
-import type { Mailer } from "../mailer/types.js";
+import type { Mailer } from "../contract/mailer.js";
 import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";

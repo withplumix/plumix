@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { AuthNamespace } from "../context/app.js";
+import type { AuthNamespace } from "../context/app-context.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";

@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-import type { AuthenticatedUser, AuthNamespace } from "../context/app.js";
+import type {
+  AuthenticatedUser,
+  AuthNamespace,
+} from "../context/app-context.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";

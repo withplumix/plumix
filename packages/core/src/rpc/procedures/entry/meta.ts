@@ -2,7 +2,7 @@ import type {
   Capability,
   CapabilityNamespaces,
 } from "../../../auth/contract/capability.js";
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { CapabilityErrors } from "../../errors.js";

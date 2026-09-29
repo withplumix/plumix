@@ -6,7 +6,7 @@ import {
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import { CORE_SQL_MIGRATIONS } from "../cli/raw-migrations.js";
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";

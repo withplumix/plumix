@@ -1,6 +1,6 @@
 import { encodeBase64urlNoPadding } from "@oslojs/encoding";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { User } from "../db/schema/users.js";
 import { and, eq, gt, isNull, or } from "../db/index.js";

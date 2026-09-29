@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import { collectDebugPanels } from "../debug-panels/collect.js";
 import { DebugPanelTabs } from "../debug-panels/panels-view.js";
 import { renderDebugPanels } from "../debug-panels/render-panels.js";

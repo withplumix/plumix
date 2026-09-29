@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { DevErrorHint } from "../../ui/index.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { createTestContext } from "../../../test/context.js";

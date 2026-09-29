@@ -1,4 +1,7 @@
-import type { AppContext, AuthenticatedAppContext } from "../context/app.js";
+import type {
+  AppContext,
+  AuthenticatedAppContext,
+} from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { PluginRegistry } from "../plugin/manifest.js";

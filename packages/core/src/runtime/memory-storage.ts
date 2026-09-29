@@ -1,4 +1,4 @@
-import type { PlumixEnv } from "./bindings.js";
+import type { PlumixEnv } from "./contract/bindings.js";
 import type {
   ConnectedObjectStorage,
   GetResult,
@@ -8,7 +8,7 @@ import type {
   PresignedPutResult,
   PresignPutOptions,
   UrlOptions,
-} from "./slots.js";
+} from "./contract/slots.js";
 import { bodyToBytes, toFreshArrayBuffer } from "../storage/body.js";
 
 interface MemoryEntry {

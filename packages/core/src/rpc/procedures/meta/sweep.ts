@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../context/app.js";
+import type { AppContext } from "../../../context/app-context.js";
 import type { JsonObject, JsonValue } from "../../../json.js";
 import type { SettledMeta } from "../../meta/core.js";
 import { and, asc, eq, gt, or, sql } from "../../../db/index.js";

@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { SearchGroup, SearchResultItem } from "./admin-search.js";
 import { and, eq, not, or, sql } from "../db/index.js";

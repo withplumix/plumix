@@ -1,6 +1,6 @@
-import type { AppContext } from "../context/app.js";
-import { withUser } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import { apiTokenAuthenticator, authenticateTraced } from "./authenticator.js";
+import { withUser } from "./with-user.js";
 
 // Bearer PAT only — shared by the CSRF-exempt external surfaces (MCP, REST).
 // Deliberately NOT the request's configured authenticator (cookie/custom

@@ -1,4 +1,4 @@
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";

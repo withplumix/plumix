@@ -5,7 +5,7 @@ import type {
   MarkSpec,
   ShortcodeSpec,
 } from "../blocks/index.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
@@ -19,7 +19,7 @@ import type {
   HookOptions,
 } from "../hooks/types.js";
 import type { McpTool } from "../mcp/tool.js";
-import type { RouteIntent } from "../route/intent.js";
+import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/redirects.js";
 import type {
   RegisteredTemplateDep,

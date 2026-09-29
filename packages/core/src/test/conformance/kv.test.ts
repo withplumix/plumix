@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { ConnectedKv } from "../../runtime/slots.js";
+import type { ConnectedKv } from "../../runtime/contract/slots.js";
 import { memoryKv } from "../../runtime/memory-kv.js";
 import { failingCases } from "./case.js";
 import { kvContractCases } from "./kv.js";

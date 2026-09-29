@@ -1,4 +1,4 @@
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";

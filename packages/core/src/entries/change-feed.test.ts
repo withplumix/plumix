@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import { asc, eq, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryChanges } from "../db/schema/entry_changes.js";

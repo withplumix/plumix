@@ -16,7 +16,7 @@ import type {
   ImageDelivery,
   KV,
   ObjectStorage,
-} from "./runtime/slots.js";
+} from "./runtime/contract/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { normalizeBasePath } from "./base-path.js";
 import { ConfigError } from "./config.errors.js";

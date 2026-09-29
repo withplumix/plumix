@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 
-import type { AuthenticatedAppContext } from "../../../context/app.js";
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import { and, desc, ne, or, sql } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { readableEntryRows } from "../../../entries/visibility.js";

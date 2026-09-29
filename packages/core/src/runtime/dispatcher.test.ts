@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AnyPluginDescriptor } from "../config.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type {
   TelemetryConsumer,
   TelemetrySnapshot,
@@ -14,7 +14,7 @@ import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
-import type { CdnStore, ConnectedCdn } from "./slots.js";
+import type { CdnStore, ConnectedCdn } from "./contract/slots.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { entryCapability } from "../auth/contract/capability.js";
 import { readSessionCookie } from "../auth/cookies.js";

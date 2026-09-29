@@ -24,12 +24,12 @@ import type {
   MarkSpec,
   ShortcodeSpec,
 } from "../blocks/index.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/query.js";
 import type { Label } from "../i18n/label.js";
 import type { McpTool } from "../mcp/tool.js";
-import type { RouteIntent } from "../route/intent.js";
+import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/redirects.js";
 import type { EntryListing } from "../route/render/entry-listing.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";

@@ -42,7 +42,7 @@ declare module "./theme.js" {
   }
 }
 
-declare module "./context/app.js" {
+declare module "./context/app-context.js" {
   interface AppContextExtensions {
     testCards: { readonly list: () => readonly string[] };
   }

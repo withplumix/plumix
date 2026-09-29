@@ -1,6 +1,6 @@
 import type { Segment } from "../access/policy.js";
-import type { RouteIntent } from "../route/intent.js";
-import { PRIVATE_SEGMENT } from "../access/segments.js";
+import type { RouteIntent } from "../route/contract/intent.js";
+import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 
 // Public route intents whose anonymous render is a shared, cacheable document.
 // `search` is deliberately excluded — its unbounded query space would pollute

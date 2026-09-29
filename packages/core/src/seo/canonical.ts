@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PublicRouteTable } from "../route/public-routes.js";
 import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";

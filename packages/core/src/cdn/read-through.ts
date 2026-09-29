@@ -1,8 +1,8 @@
 import type { Segment } from "../access/policy.js";
-import type { DeferFn } from "../context/app.js";
+import type { DeferFn } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
-import type { RouteIntent } from "../route/intent.js";
-import type { ConnectedCdn } from "../runtime/slots.js";
+import type { RouteIntent } from "../route/contract/intent.js";
+import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import {
   cdnBypassReason,
   methodIsCacheable,

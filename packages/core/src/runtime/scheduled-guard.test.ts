@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import { createTestDb } from "../test/harness.js";
 import {
   createScheduledRunGuard,

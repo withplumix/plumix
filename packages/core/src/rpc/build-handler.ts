@@ -1,7 +1,7 @@
 import { RPCHandler } from "@orpc/server/fetch";
 import { ResponseHeadersPlugin } from "@orpc/server/plugins";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { PluginRpcRouter } from "../plugin/manifest.js";
 import { appRouter } from "./router.js";
 

@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../context/app.js";
+import type { AuthenticatedUser } from "../context/app-context.js";
 import type { ResolvedI18n, ResolvedLocale } from "./locale-registry.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { matchAcceptLanguage } from "./accept-language.js";

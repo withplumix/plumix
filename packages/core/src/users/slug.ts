@@ -1,6 +1,6 @@
 import { eq, like, or } from "drizzle-orm";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import { users } from "../db/schema/users.js";
 import { slugify } from "../slugify.js";
 

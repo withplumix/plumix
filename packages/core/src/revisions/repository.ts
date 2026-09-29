@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
 
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";

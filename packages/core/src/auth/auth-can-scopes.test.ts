@@ -2,12 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import type { PluginRegistry } from "../plugin/registry.js";
 import type { createTestDb } from "../test/harness.js";
-import { createAppContext, withUser } from "../context/app.js";
+import { createAppContext } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { entryCapability, termCapability } from "./contract/capability.js";
+import { withUser } from "./with-user.js";
 
 // `auth.can()` is the single gate every capability check goes through —
 // settings RPC, entry RPC, plugin route handlers all consult it. These

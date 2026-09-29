@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { Mailer } from "./types.js";
+import type { Mailer } from "../contract/mailer.js";
 import { resolveMailer } from "./resolve.js";
 
 const stubMailer = (): Mailer => ({ send: () => Promise.resolve() });

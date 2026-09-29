@@ -1,6 +1,6 @@
-import type { Db, Logger } from "../../context/app.js";
+import type { Db, Logger } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
-import type { Mailer } from "../mailer/types.js";
+import type { Mailer } from "../contract/mailer.js";
 import { and, eq, ne } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";

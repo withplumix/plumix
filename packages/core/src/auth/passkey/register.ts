@@ -14,7 +14,7 @@ import {
 } from "@oslojs/webauthn";
 import { eq } from "drizzle-orm";
 
-import type { Db } from "../../context/app.js";
+import type { Db } from "../../context/app-context.js";
 import type {
   Credential,
   CredentialTransport,

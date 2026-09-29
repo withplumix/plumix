@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import type { CdnStore, ConnectedCdn } from "../../runtime/slots.js";
+import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
 import { describeContract } from "./case.js";
 

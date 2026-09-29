@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { withUser } from "../auth/with-user.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
-import { createAppContext, withUser } from "./app.js";
+import { createAppContext } from "./app.js";
 
 describe("withUser — locale re-resolution", () => {
   test("re-resolves ctx.locale once a user is attached so user.meta.locale wins", () => {

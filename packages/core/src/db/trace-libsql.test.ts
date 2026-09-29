@@ -1,7 +1,7 @@
 import type { Client } from "@libsql/client";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
 import { requestStore } from "../context/stores.js";
 import { createTestContext } from "../test/context.js";

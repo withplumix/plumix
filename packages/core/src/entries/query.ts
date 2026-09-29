@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { SQL, SQLWrapper } from "../db/index.js";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";

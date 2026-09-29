@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { createElement } from "react";
 
-import type { AppContext } from "./context/app.js";
+import type { AppContext } from "./context/app-context.js";
 import type { DocumentManifest, TemplateData } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 

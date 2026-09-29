@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json.js";
-import type { AppContext } from "./app.js";
+import type { AppContext } from "./app-context.js";
 
 /**
  * A span's captured failure — the serialized form, never the live Error.

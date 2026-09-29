@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { DebugSnapshot } from "./request-history/snapshot.js";
 import type { DebugHistoryEntry } from "./request-history/store.js";
 import { HookRegistry } from "../hooks/registry.js";

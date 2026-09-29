@@ -1,4 +1,4 @@
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import { verifyPreviewToken } from "../auth/preview-token.js";
 

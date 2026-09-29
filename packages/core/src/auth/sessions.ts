@@ -1,6 +1,6 @@
 import { eq, lt } from "drizzle-orm";
 
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { Session } from "../db/schema/sessions.js";
 import type { User } from "../db/schema/users.js";
 import { rowsAffected } from "../db/rows-affected.js";

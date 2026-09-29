@@ -1,4 +1,4 @@
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import { eq, isUniqueConstraintError } from "../db/index.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";

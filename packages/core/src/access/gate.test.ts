@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";

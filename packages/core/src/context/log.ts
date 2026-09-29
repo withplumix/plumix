@@ -1,4 +1,4 @@
-import type { Logger, LogMeta } from "./app.js";
+import type { Logger, LogMeta } from "./app-context.js";
 
 /**
  * Report `error` as `message`, and let nothing out.

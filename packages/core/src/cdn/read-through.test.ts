@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { TelemetryCollector } from "../context/telemetry.js";
-import type { CdnStore, ConnectedCdn } from "../runtime/slots.js";
+import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
 import { createTelemetryCollector } from "../context/collector.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { responseAllowsSharedStorage, SEGMENT_KEY_PARAM } from "./decision.js";

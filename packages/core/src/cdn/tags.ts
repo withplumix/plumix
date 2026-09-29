@@ -1,5 +1,5 @@
+import type { RouteIntent } from "../route/contract/intent.js";
 import type { ResolvedEntity } from "../route/current.js";
-import type { RouteIntent } from "../route/intent.js";
 import { entryTag, typeTag } from "./contract/tags.js";
 
 interface PageTagSources {

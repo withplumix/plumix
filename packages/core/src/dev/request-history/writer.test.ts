@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext, Db } from "../../context/app.js";
+import type { AppContext, Db } from "../../context/app-context.js";
 import type { TelemetrySnapshot } from "../../context/telemetry.js";
 import type { CreateTestContextOptions } from "../../test/context.js";
 import { createTestContext } from "../../test/context.js";

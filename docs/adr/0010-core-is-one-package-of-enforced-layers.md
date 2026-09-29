@@ -49,10 +49,51 @@ could see.
 - **`top` may import anything, and nothing inside core imports `top`.** An
   internal module never reaches a public entry point.
 - **Same-layer imports are allowed if they form no cycle.** The subsystem graph
-  inside each layer must be acyclic.
+  inside each layer must be acyclic. One set of `contracts` subsystems counts
+  as a single unit for this rule: see
+  [The `AppContext` unit](#the-appcontext-unit).
 - **`import type` counts as an edge for direction.** Erasing an import is the
   cheapest way to point a layer back up the stack. Dynamic `import()` counts
   too.
+
+## The `AppContext` unit
+
+Moving `AppContext` out of `context/app.ts` into `contracts` (#2592) exposed a
+cycle that no move can break. `AppContext` carries the resolved config
+(`ctx.config`), the hook executor (`ctx.hooks`) and the plugin registry
+(`ctx.plugins`). The plugins, templates and theme those carry declare their
+handlers as `(ctx: AppContext) => …`, and the hook registry runs its handlers
+inside the request's ambient store, which holds an `AppContext`. The context
+names the registries, and the registries name the context. That is the shape of
+the thing, not a misfiled contract.
+
+> **`context/`, `plugin/`, `hooks/`, `config.ts`, `template.ts`,
+> `template-deps.ts` and `theme.ts` count as one subsystem for the same-layer
+> cycle rule. A cycle inside the unit is allowed. A cycle between the unit and
+> any other `contracts` subsystem is still a violation.**
+
+The members are the import graph's strongly connected component around
+`context/`, and nothing wider. `theme.ts` is in it because `ctx.config` carries
+the theme, whose templates take an `AppContext`. `template-registry.ts` and
+`template-deps-core.ts` each have edges in one direction only, so they stay
+separate subsystems. The unit is scoped to `contracts`: the
+`top` files under `context/` and `plugin/` are not in it.
+
+Two alternatives were rejected. Declaring `PluginRegistry`, `PlumixConfig` and
+`HookExecutor` inside `context/` moves the cycle instead of breaking it: the
+rest of the plugin vocabulary comes along. Typing the three fields against
+narrower interfaces changes `AppContext`'s shape, and ADR 0011 requires
+`ctx.config` to be the full resolved config.
+
+**The way to split it later** is to make the registries and handler types
+generic over the context: `PluginRegistry<Ctx>`, `HookExecutor<Ctx>`,
+`TemplateRenderArgs<TData, Ctx>`, with `plugin/`, `hooks/` and the template
+modules naming no concrete context and the hook registry handed the store it
+reads. Only `context/` would then instantiate them with `AppContext`, and the
+edges would run one way. That reworks every plugin-facing signature, so it
+waits until the unit gets in the way of something: a layer extraction, or a
+plugin API change that touches those types anyway. When it lands, the unit
+leaves the layer table.
 
 ## The environment axis
 

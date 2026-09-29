@@ -1,4 +1,4 @@
-import type { Db } from "../context/app.js";
+import type { Db } from "../context/app-context.js";
 import type { AuthToken } from "../db/schema/auth_tokens.js";
 import { eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";

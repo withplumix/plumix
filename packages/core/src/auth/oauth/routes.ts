@@ -1,4 +1,4 @@
-import type { AppContext } from "../../context/app.js";
+import type { AppContext } from "../../context/app-context.js";
 import type { PlumixApp } from "../../runtime/app.js";
 import type { OAuthErrorCode } from "./errors.js";
 import type { OAuthProviderClient } from "./types.js";

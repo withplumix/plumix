@@ -18,7 +18,7 @@ declare module "./provides-context.js" {
   }
 }
 
-declare module "../context/app.js" {
+declare module "../context/app-context.js" {
   interface AppContextExtensions {
     audit: { readonly log: (message: string) => void };
     metrics: { readonly inc: (name: string) => void };

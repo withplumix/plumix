@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type {
   RegisteredEntryType,
   RegisteredTermTaxonomy,

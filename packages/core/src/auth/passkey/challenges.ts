@@ -1,7 +1,7 @@
 import { and, eq, lt } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { Db } from "../../context/app.js";
+import type { Db } from "../../context/app-context.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 

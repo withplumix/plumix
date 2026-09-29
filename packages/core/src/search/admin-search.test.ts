@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext } from "../context/app-context.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { SearchGroup } from "./admin-search.js";
 import { createTestContext } from "../test/context.js";

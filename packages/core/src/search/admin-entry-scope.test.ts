@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";

@@ -1,4 +1,4 @@
-import type { AuthenticatedAppContext } from "../../../context/app.js";
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { EntryEditErrors } from "../../../entries/editability.js";
 import type { JsonValue } from "../../../json.js";
