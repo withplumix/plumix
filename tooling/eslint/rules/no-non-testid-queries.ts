@@ -48,7 +48,7 @@ export const noNonTestidQueries: Rule.RuleModule = {
     },
     messages: {
       noNonTestidQueries:
-        "`{{ name }}` binds this test to markup the component may change for unrelated reasons. Query by test id — `getByTestId` in a unit test, `page.getByTestId` or a `[data-testid=…]` locator in an e2e spec — and add a `data-testid` to the markup if none exists (AGENTS.md, issue #1807).",
+        "`{{ name }}` binds this test to markup the component may change for unrelated reasons. Query by test id — `getByTestId` in a unit test, `page.getByTestId` or a `[data-testid=…]` locator in an e2e spec — and add a `data-testid` to the markup if none exists (issue #1807).",
     },
     schema: [],
   },
