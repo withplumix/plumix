@@ -31,6 +31,30 @@ export const taggedBlock = (stdout: string, tag: string): string | null =>
   stdout.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim() ??
   null;
 
+const LOST_THE_GIT_CONFIG_LOCK = /could not lock config file/;
+const ATTEMPTS_TO_START = 5;
+
+// Sandcastle writes the sandbox's global git config as every run starts, so runs started together
+// in one sandbox race for its lock. The loser fails before its agent begins, so starting it again
+// repeats nothing.
+export const retryALostGitConfigLock = async <T>(
+  start: () => Promise<T>,
+  pause: (ms: number) => Promise<void>,
+): Promise<T> => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await start();
+    } catch (error) {
+      if (
+        attempt === ATTEMPTS_TO_START ||
+        !LOST_THE_GIT_CONFIG_LOCK.test(String(error))
+      )
+        throw error;
+      await pause(250 + Math.random() * 1_000 * attempt);
+    }
+  }
+};
+
 type Effort = NonNullable<sandcastle.ClaudeCodeOptions["effort"]>;
 
 export interface Thinker {
@@ -51,12 +75,16 @@ export const agentPhaseRunner =
     const logFile = journal.logPath(phase);
 
     try {
-      const result = await sandbox.run({
-        ...options,
-        name: phase,
-        agent: sandcastle.claudeCode(model, { effort }),
-        logging: { type: "file", path: logFile },
-      });
+      const result = await retryALostGitConfigLock(
+        () =>
+          sandbox.run({
+            ...options,
+            name: phase,
+            agent: sandcastle.claudeCode(model, { effort }),
+            logging: { type: "file", path: logFile },
+          }),
+        (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      );
       const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
         sessionFilePath ? [sessionFilePath] : [],
       );

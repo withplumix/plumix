@@ -145,49 +145,53 @@ const asFixBrief = (findings: readonly Finding[]): string =>
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
 
-const reviewAll = async (
+export const reviewAll = async (
   runAgentPhase: RunAgentPhase,
-  journal: Journal,
+  journal: Pick<Journal, "record">,
   ticket: Ticket,
   round: number,
   pullRequestBody: string,
 ): Promise<readonly Finding[]> => {
-  const collected: Finding[] = [];
+  const reviews = await Promise.all(
+    REVIEWERS.map(async (reviewer) => {
+      const phase = `review:${reviewer.name}#${round}`;
+      const { stdout } = await runAgentPhase(phase, REVIEWER, {
+        promptFile: join(PROMPT_DIR, reviewer.promptFile),
+        promptArgs: {
+          TICKET: String(ticket.number),
+          BASE: MERGE_BASE,
+          PR_BODY: pullRequestBody,
+        },
+        maxIterations: 1,
+        idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
+      });
 
-  for (const reviewer of REVIEWERS) {
-    const phase = `review:${reviewer.name}#${round}`;
-    const { stdout } = await runAgentPhase(phase, REVIEWER, {
-      promptFile: join(PROMPT_DIR, reviewer.promptFile),
-      promptArgs: {
-        TICKET: String(ticket.number),
-        BASE: MERGE_BASE,
-        PR_BODY: pullRequestBody,
-      },
-      maxIterations: 1,
-      idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
-    });
-
-    const review = readFindingsTag(stdout);
-    journal.record({
-      phase: `${phase}:findings`,
-      kind: "review",
-      model: REVIEWER.model,
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      outcome: review.emittedParseableFindings ? "ok" : "fail",
-      detail: review.emittedParseableFindings
-        ? undefined
-        : "no parseable <findings> block",
-      findings: asFindingTally(review),
-    });
-    collected.push(...review.findings);
-  }
-
-  return collected;
+      const review = readFindingsTag(stdout);
+      journal.record({
+        phase: `${phase}:findings`,
+        kind: "review",
+        model: REVIEWER.model,
+        startedAt: new Date().toISOString(),
+        durationMs: 0,
+        outcome: review.emittedParseableFindings ? "ok" : "fail",
+        detail: review.emittedParseableFindings
+          ? undefined
+          : "no parseable <findings> block",
+        findings: asFindingTally(review),
+      });
+      return review.findings;
+    }),
+  );
+  return reviews.flat();
 };
 
+interface Declined {
+  readonly reason: string;
+  readonly notThisBranch: boolean;
+}
+
 export interface Fixer {
-  readonly apply: (phase: string, brief: string) => Promise<string | null>;
+  readonly apply: (phase: string, brief: string) => Promise<Declined | null>;
 }
 
 export const fixerFor = (
@@ -206,10 +210,14 @@ export const fixerFor = (
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
       if (fixed.commits.length > 0) return null;
-      return (
-        readDeclinedTag(fixed.stdout) ??
-        "the fixer changed nothing and gave no reason"
-      );
+      const notThisBranch = taggedBlock(fixed.stdout, "not-this-branch");
+      if (notThisBranch) return { reason: notThisBranch, notThisBranch: true };
+      return {
+        reason:
+          readDeclinedTag(fixed.stdout) ??
+          "the fixer changed nothing and gave no reason",
+        notThisBranch: false,
+      };
     },
   };
 };
@@ -273,7 +281,7 @@ export const gatesUntilGreen = async (
     );
     if (declined) {
       say(`--- waived \`${failure.command}\`: CI decides ---`);
-      waived.push({ command: failure.command, reason: declined });
+      waived.push({ command: failure.command, reason: declined.reason });
     }
   }
 };
@@ -371,7 +379,7 @@ export const shipTicket = async (
       if (declined) {
         return {
           status: "blocked",
-          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined}`,
+          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined.reason}`,
         };
       }
     }
@@ -392,7 +400,7 @@ export const shipTicket = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
-    pushBranch(branch, sandbox.worktreePath);
+    await pushBranch(branch, sandbox.worktreePath);
     const advisoryNote =
       advisory.length === 0
         ? ""

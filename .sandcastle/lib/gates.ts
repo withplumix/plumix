@@ -67,6 +67,22 @@ export const GATES: readonly Gate[] = [
   { name: "i18n", command: "pnpm i18n:check" },
   { name: "knip", command: "pnpm knip" },
   {
+    name: "test",
+    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${TURBO_GATE_FLAGS}`,
+  },
+  {
+    name: "e2e",
+    command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
+    appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
+    requires:
+      "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
+  },
+];
+
+// None of these failed in 67 local runs, and CI runs them in parallel in minutes, so locally they
+// only delayed the pull request. A repair still runs the ones CI failed.
+export const GATES_LEFT_TO_CI: readonly Gate[] = [
+  {
     name: "publint",
     command: `pnpm exec turbo run publint ${TURBO_GATE_FLAGS}`,
   },
@@ -81,17 +97,6 @@ export const GATES: readonly Gate[] = [
   {
     name: "typecheck",
     command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
-  },
-  {
-    name: "test",
-    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${TURBO_GATE_FLAGS}`,
-  },
-  {
-    name: "e2e",
-    command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
-    appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
-    requires:
-      "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
   },
 ];
 
@@ -143,7 +148,9 @@ const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
 
 export const gateBehindCheck = (checkName: string): Gate | undefined => {
   const gateName = GATE_BEHIND_EACH_CI_CHECK[checkName];
-  return [...GATES, CHANGESET_GATE].find(({ name }) => name === gateName);
+  return [...GATES, CHANGESET_GATE, ...GATES_LEFT_TO_CI].find(
+    ({ name }) => name === gateName,
+  );
 };
 
 export interface GateRunOutcome {

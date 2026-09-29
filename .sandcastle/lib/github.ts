@@ -8,6 +8,7 @@ import type {
 } from "./verdict.js";
 import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
 import { blockersNamedIn } from "./named-blockers.js";
+import { retryWhatGitHubDropped } from "./outage.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -248,8 +249,15 @@ export const isTicketClosed = (ticketNumber: number): boolean =>
     "state",
   ]).state === "CLOSED";
 
-export const pushBranch = (branch: string, worktreePath: string): void => {
-  git(["push", "--force-with-lease", "-u", "origin", branch], worktreePath);
+export const pushBranch = async (
+  branch: string,
+  worktreePath: string,
+): Promise<void> => {
+  await retryWhatGitHubDropped(
+    async () =>
+      git(["push", "--force-with-lease", "-u", "origin", branch], worktreePath),
+    (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  );
 };
 
 export const openPullRequest = (
@@ -731,15 +739,32 @@ export const textsThatClaimAdrNumbers = (): readonly string[] => {
   return [onMain, ...inOpenPullRequests, ...inOpenIssues];
 };
 
-export const rerunFailedJobs = (runIds: readonly string[]): boolean =>
-  runIds.filter((runId) => {
-    try {
-      gh(["run", "rerun", runId, "-R", REPO_SLUG, "--failed"]);
-      return true;
-    } catch {
-      return false;
-    }
-  }).length > 0;
+export const rerunFailedJobs = (runId: string): boolean => {
+  try {
+    gh(["run", "rerun", runId, "-R", REPO_SLUG, "--failed"]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const runStatus = (runId: string): string => {
+  try {
+    return gh([
+      "run",
+      "view",
+      runId,
+      "-R",
+      REPO_SLUG,
+      "--json",
+      "status",
+      "--jq",
+      ".status",
+    ]).trim();
+  } catch {
+    return "";
+  }
+};
 
 export const loopPullRequestsInFlight = (): readonly Queued[] => {
   const pullRequests = ghJson<

@@ -19,6 +19,16 @@ what would.
 one or two paragraphs on the items you could not close, or nothing if you closed them all
 </declined>
 
+If you changed nothing because the failure is not this branch's — you reproduced
+it on `origin/main`, or its evidence shows it failing on another pull request that
+does not share this change — emit this block instead of `<declined>`, with that
+evidence. The harness re-runs the failed jobs rather than handing the ticket to a
+person.
+
+<not-this-branch>
+what fails, where you saw it fail without this branch, and why this diff cannot cause it
+</not-this-branch>
+
 Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
 shared with every other checkout on that machine, and your own worktree's path does not resolve
 from in here, so prune reads every one of them as gone. Compare against `origin/main` with

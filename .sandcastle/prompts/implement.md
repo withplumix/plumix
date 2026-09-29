@@ -23,9 +23,11 @@ that from what you write below.
 4. **Commit** with `sentry-skills:commit`. Use `Fixes #{{TICKET}}` when every
    criterion is met, otherwise `Refs #{{TICKET}}`.
 
-Do not run the full gate suite yourself. The harness runs typecheck, lint, format,
-test, i18n, knip, publint, attw and the changeset check after this phase and hands
-you any failure. Run single test files and targeted typechecks as you work.
+Do not run the full gate suite yourself. The harness runs format, test, e2e, i18n,
+knip and the changeset check after this phase and hands you any failure. Lint,
+typecheck, publint and attw run only in CI, after the pull request opens, so run
+single test files and a targeted typecheck and lint of the packages you touch as
+you work.
 
 Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
 shared with every other checkout on that machine, and your own worktree's path does not resolve

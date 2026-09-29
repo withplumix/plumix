@@ -305,6 +305,52 @@ describe("runShipLoop", () => {
     expect(parked[0]?.reason).toContain("a person must dismiss it");
   });
 
+  test("a failure the fixer shows is not the branch's is re-run instead of parked", async () => {
+    const seen: string[] = [];
+    let confirms = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++confirms <= 2 ? ciRed : merged),
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async () => {
+        seen.push("repair");
+        return {
+          status: "not-this-branch",
+          reason: "the Bun e2e fails the same way on main",
+        } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["rerun", "repair", "rerun"]);
+    expect(report.merged).toHaveLength(1);
+    expect(parked).toEqual([]);
+  });
+
+  test("a failure that is not the branch's but comes back after its re-run parks with the fixer's reason", async () => {
+    let repairs = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ciRed,
+      repair: async () => {
+        repairs += 1;
+        return {
+          status: "not-this-branch",
+          reason: "the Bun e2e fails the same way on main",
+        } as const;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(1);
+    expect(parked[0]?.reason).toContain("fails the same way on main");
+  });
+
   test("a repair that throws parks the ticket rather than losing the pull request", async () => {
     const { ports: p, parked } = ports({
       nextTicket: drainingFrom([ticket(1)]),

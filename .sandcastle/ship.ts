@@ -3,21 +3,25 @@ import {
   closeCompletedParent,
   firstUnblockedUnassignedTicket,
   isTicketClosed,
+  listReadyTickets,
   loopPullRequestsInFlight,
   parentsWithEveryChildClosed,
   parkTicket,
   queueForMerge,
   releaseClaim,
   rerunFailedJobs,
+  runStatus,
   syncRepoToMain,
   textsThatClaimAdrNumbers,
   ticketByNumber,
   waitForMerge,
 } from "./lib/github.js";
+import { staleClaims } from "./lib/in-flight.js";
 import { say } from "./lib/log.js";
 import { sandboxImageOrRefuse } from "./lib/preflight.js";
 import { idsInJobUrl, repairPullRequest } from "./lib/repair.js";
 import { REPO_ROOT } from "./lib/repo.js";
+import { rerunOnceTheRunsFinish } from "./lib/run-completion.js";
 import { runShipLoop } from "./lib/run.js";
 import { pinSandboxImage } from "./lib/sandbox.js";
 import { Journal } from "./lib/telemetry.js";
@@ -77,6 +81,21 @@ pinSandboxImage(sandboxImage);
 
 syncRepoToMain();
 
+if (!onlyTickets.length) {
+  const claimedEarlier = listReadyTickets()
+    .filter(({ assignees }) => assignees.length > 0)
+    .map(({ number }) => number);
+  for (const ticketNumber of staleClaims(
+    claimedEarlier,
+    loopPullRequestsInFlight(),
+  )) {
+    releaseClaim(ticketNumber);
+    say(
+      `#${ticketNumber} was claimed by a run that stopped mid-ticket; released`,
+    );
+  }
+}
+
 const report = await runShipLoop(
   {
     nextTicket: () => {
@@ -126,13 +145,21 @@ const report = await runShipLoop(
     },
     rerunFailedChecks: async (_pullRequest, refusal) =>
       refusal.status === "failed" &&
-      rerunFailedJobs([
-        ...new Set(
-          refusal.failingChecks.flatMap(
-            ({ url }) => idsInJobUrl(url)?.runId ?? [],
+      rerunOnceTheRunsFinish(
+        [
+          ...new Set(
+            refusal.failingChecks.flatMap(
+              ({ url }) => idsInJobUrl(url)?.runId ?? [],
+            ),
           ),
-        ),
-      ]),
+        ],
+        {
+          statusOf: runStatus,
+          rerun: rerunFailedJobs,
+          pause: () => new Promise((resolve) => setTimeout(resolve, 30_000)),
+          attempts: 60,
+        },
+      ),
     inFlightFromEarlierRuns: () => {
       const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
       for (const { ticket } of inFlight) claimed.add(ticket.number);

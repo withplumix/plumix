@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import type { MergeOutcome } from "./verdict.js";
 import {
   asCiEvidenceBrief,
   failedOnlyOnTheScreenshotDiff,
+  gatesARepairRuns,
   idsInJobUrl,
   SCREENSHOT_DIFF_STEP,
 } from "./repair.js";
@@ -100,5 +102,42 @@ describe("asCiEvidenceBrief", () => {
     expect(brief).toContain("coderabbitai");
     expect(brief).toContain("packages/core/src/a.ts:12");
     expect(brief).toContain("this drops the locale");
+  });
+});
+
+describe("gatesARepairRuns", () => {
+  const refused = (
+    over: Partial<Extract<MergeOutcome, { status: "failed" }>>,
+  ): Extract<MergeOutcome, { status: "failed" }> => ({
+    status: "failed",
+    reason: "refused",
+    failingChecks: [],
+    ...over,
+  });
+  const namesOf = (refusal: Extract<MergeOutcome, { status: "failed" }>) =>
+    gatesARepairRuns(refusal).map(({ name }) => name);
+
+  test("a branch refused only for conflicting is pushed once rebased, for CI to judge", () => {
+    expect(namesOf(refused({ conflicted: true }))).toEqual([]);
+  });
+
+  test("a check CI alone runs is run locally once CI has failed it, so the fix is proven before the push", () => {
+    const names = namesOf(
+      refused({ failingChecks: [{ name: "Lint" }, { name: "Typecheck" }] }),
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining(["lint", "typecheck", "test"]),
+    );
+    expect(names).not.toContain("attw");
+  });
+
+  test("a failing test is repaired against the local gates without the checks CI already passed", () => {
+    const names = namesOf(refused({ failingChecks: [{ name: "Test" }] }));
+
+    expect(names).toEqual(
+      expect.arrayContaining(["install", "test", "changeset"]),
+    );
+    expect(names).not.toContain("lint");
   });
 });

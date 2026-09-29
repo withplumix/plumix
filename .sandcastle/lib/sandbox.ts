@@ -117,7 +117,7 @@ export const closePlumixSandbox = (
 ): Promise<sandcastle.CloseResult> =>
   whileNoOtherLaneTouchesTheWorktreeRegistry(() => sandbox.close());
 
-export const createReadOnlySandbox = (
+export const createUnbuiltSandbox = (
   branch: string,
 ): Promise<sandcastle.Sandbox> =>
   whileNoOtherLaneTouchesTheWorktreeRegistry(() =>
