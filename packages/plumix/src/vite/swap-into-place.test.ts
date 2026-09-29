@@ -56,7 +56,7 @@ describe("swapIntoPlace", () => {
     const dest = await stagedCopy("admin", "seed");
 
     await Promise.all(
-      Array.from({ length: 40 }, async (_, i) =>
+      Array.from({ length: 200 }, async (_, i) =>
         swapIntoPlace(await stagedCopy(`staging-${i}`, `copy-${i}`), dest),
       ),
     );

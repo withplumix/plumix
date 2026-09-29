@@ -1,12 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { rename, rm } from "node:fs/promises";
 
-const MOVE_ASIDE_ATTEMPTS = 20;
+const ATTEMPTS = 100;
 
 const isCode = (error: unknown, ...codes: string[]): boolean =>
   error instanceof Error &&
   "code" in error &&
   codes.includes(String(error.code));
+
+const pauseBeforeRetry = (attempt: number): Promise<void> =>
+  new Promise((resolve) =>
+    setTimeout(resolve, Math.random() * Math.min(50, attempt * 2)),
+  );
 
 export const swapIntoPlace = async (
   staged: string,
@@ -27,10 +32,11 @@ export const swapIntoPlace = async (
       await rm(aside, { recursive: true, force: true });
       if (
         !isCode(error, "ENOTEMPTY", "EEXIST", "EPERM") ||
-        attempt >= MOVE_ASIDE_ATTEMPTS
+        attempt >= ATTEMPTS
       ) {
         throw error;
       }
+      await pauseBeforeRetry(attempt);
     }
   }
 };
