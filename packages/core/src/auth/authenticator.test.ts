@@ -51,8 +51,6 @@ describe("sessionAuthenticator", () => {
     const result = await sessionAuthenticator().authenticate(request, db);
     expect(result?.user.id).toBe(seeded.id);
     expect(result?.user.email).toBe("alice@example.com");
-    // Session cookie auth doesn't carry per-token scopes — the user's
-    // role caps apply unrestricted.
     expect(result?.credential).toBe("session");
   });
 });

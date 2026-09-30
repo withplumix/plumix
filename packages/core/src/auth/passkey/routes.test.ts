@@ -145,7 +145,7 @@ describe("passkey register — options", () => {
 describe("passkey register — options under a configured authenticator", () => {
   // Stands in for an SSO authenticator (cfAccess, a custom IdP) that resolves
   // the caller without minting a `plumix_session` cookie.
-  async function harnessSignedInAs(result: () => AuthResult | null) {
+  function harnessResolving(result: () => AuthResult | null) {
     return createDispatcherHarness({
       config: {
         auth: {
@@ -155,33 +155,41 @@ describe("passkey register — options under a configured authenticator", () => 
     });
   }
 
-  test("a session caller with no cookie enrols another passkey for their own email", async () => {
-    let signedIn: User | null = null;
-    const h = await harnessSignedInAs(() =>
-      signedIn ? { user: signedIn, credential: "session" } : null,
+  async function harnessSignedInAs(
+    credential: (user: User) => AuthResult,
+  ): Promise<{ h: Awaited<ReturnType<typeof harnessResolving>>; user: User }> {
+    let caller: User | null = null;
+    const h = await harnessResolving(() =>
+      caller ? credential(caller) : null,
     );
-    signedIn = await h.seedUser("editor");
+    caller = await h.seedUser("editor");
+    return { h, user: caller };
+  }
+
+  const asSession = (user: User): AuthResult => ({
+    user,
+    credential: "session",
+  });
+
+  test("a session caller with no cookie enrols another passkey for their own email", async () => {
+    const { h, user } = await harnessSignedInAs(asSession);
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
-      json: { email: signedIn.email },
+      json: { email: user.email },
     });
 
     response.assertStatus(200);
   });
 
   test("the add-device options exclude the caller's enrolled passkeys", async () => {
-    let signedIn: User | null = null;
-    const h = await harnessSignedInAs(() =>
-      signedIn ? { user: signedIn, credential: "session" } : null,
-    );
-    signedIn = await h.seedUser("editor");
+    const { h, user } = await harnessSignedInAs(asSession);
     const enrolled = await h.factory.credential.create({
-      userId: signedIn.id,
+      userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
-      json: { email: signedIn.email },
+      json: { email: user.email },
     });
 
     response.assertStatus(200);
@@ -192,11 +200,7 @@ describe("passkey register — options under a configured authenticator", () => 
   });
 
   test("a session caller asking for another email is refused with email_mismatch", async () => {
-    let signedIn: User | null = null;
-    const h = await harnessSignedInAs(() =>
-      signedIn ? { user: signedIn, credential: "session" } : null,
-    );
-    signedIn = await h.seedUser("editor");
+    const { h } = await harnessSignedInAs(asSession);
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
       json: { email: "somebody-else@example.com" },
@@ -207,16 +211,14 @@ describe("passkey register — options under a configured authenticator", () => 
   });
 
   test("an api-token caller counts as anonymous, whatever header carried it", async () => {
-    let signedIn: User | null = null;
-    const h = await harnessSignedInAs(() =>
-      signedIn
-        ? { user: signedIn, credential: "api-token", tokenScopes: null }
-        : null,
-    );
-    signedIn = await h.seedUser("admin");
+    const { h, user } = await harnessSignedInAs((u) => ({
+      user: u,
+      credential: "api-token",
+      tokenScopes: null,
+    }));
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
-      json: { email: signedIn.email },
+      json: { email: user.email },
     });
 
     response.assertStatus(403);
@@ -224,7 +226,7 @@ describe("passkey register — options under a configured authenticator", () => 
   });
 
   test("an anonymous caller is refused once a user exists", async () => {
-    const h = await harnessSignedInAs(() => null);
+    const h = await harnessResolving(() => null);
     await h.seedUser("admin");
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
@@ -236,7 +238,7 @@ describe("passkey register — options under a configured authenticator", () => 
   });
 
   test("an anonymous caller bootstraps the first user", async () => {
-    const h = await harnessSignedInAs(() => null);
+    const h = await harnessResolving(() => null);
 
     const response = await h.fetch("/_plumix/auth/passkey/register/options", {
       json: { email: "first@example.com" },
