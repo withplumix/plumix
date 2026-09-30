@@ -15,7 +15,7 @@ import {
 import { createTracedContext } from "../test/traced-context.js";
 import { projectImageRoles, resolveImageRoles } from "./role-images.js";
 
-declare module "../images/contract/role-images.js" {
+declare module "./contract/role-images.js" {
   interface ImageRoles {
     hero: true;
   }
