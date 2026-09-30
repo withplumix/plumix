@@ -1,4 +1,4 @@
-import type { EnvInput } from "../../runtime/env-input.js";
+import type { EnvInput } from "../../runtime/contract/env-input.js";
 
 export interface OAuthClientConfig {
   readonly clientId: string;

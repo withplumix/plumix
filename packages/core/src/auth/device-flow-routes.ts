@@ -3,7 +3,7 @@ import * as v from "valibot";
 import type { AppContext } from "../context/app-context.js";
 import type { PlumixApp } from "../runtime/app.js";
 import { withBasePath } from "../base-path.js";
-import { jsonResponse } from "../runtime/http.js";
+import { jsonResponse } from "../runtime/contract/http.js";
 import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
 
 // RFC 8628 §3.4 grant_type identifier.

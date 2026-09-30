@@ -10,7 +10,7 @@ import {
   notFound,
   permanentRedirect,
   redirect,
-} from "../runtime/http.js";
+} from "../runtime/contract/http.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
 import { matchRoute } from "./match.js";
 import { matchPublicRoute } from "./public-routes.js";

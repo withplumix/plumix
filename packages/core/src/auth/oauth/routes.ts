@@ -4,7 +4,7 @@ import type { OAuthErrorCode } from "./errors.js";
 import type { OAuthProviderClient } from "./types.js";
 import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
-import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
+import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";

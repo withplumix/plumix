@@ -3,7 +3,7 @@ import * as v from "valibot";
 import type { Db } from "../../context/app-context.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { OAuthProfile, OAuthProviderClient } from "./types.js";
-import { resolveEnvInput } from "../../runtime/env-input.js";
+import { resolveEnvInput } from "../../runtime/contract/env-input.js";
 import { OAuthError } from "./errors.js";
 import { computeS256Challenge, generateCodeVerifier } from "./pkce.js";
 import { issueOAuthState } from "./state.js";

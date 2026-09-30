@@ -9,6 +9,7 @@ import type { PlumixConfig } from "../config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { EnvInput } from "../runtime/contract/env-input.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
@@ -16,7 +17,6 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/contract/slots.js";
-import type { EnvInput } from "../runtime/env-input.js";
 import type {
   AppContext,
   AppContextBase,
@@ -34,7 +34,7 @@ import { createBlockRegistry } from "../blocks/index.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { resolveEnvInput } from "../runtime/env-input.js";
+import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { logErrorSafely } from "./log.js";

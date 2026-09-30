@@ -1,4 +1,4 @@
-import type { PlumixEnv } from "./contract/bindings.js";
+import type { PlumixEnv } from "./bindings.js";
 
 /**
  * A config value that's either a literal `T`, or a resolver deriving it from the

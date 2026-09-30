@@ -1,6 +1,10 @@
 import type { AppContext } from "../context/app-context.js";
 import { authenticateBearer } from "../auth/bearer.js";
-import { forbidden, methodNotAllowed, unauthorized } from "../runtime/http.js";
+import {
+  forbidden,
+  methodNotAllowed,
+  unauthorized,
+} from "../runtime/contract/http.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
 

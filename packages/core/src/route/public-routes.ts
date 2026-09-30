@@ -1,6 +1,6 @@
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RegisteredPublicRoute } from "../plugin/registry.js";
-import { AppBootError } from "../runtime/errors.js";
+import { AppBootError } from "../runtime/contract/errors.js";
 import { extractParams } from "./match.js";
 
 // The prefix core owns outright: the RPC endpoint, the sign-in flows, the admin

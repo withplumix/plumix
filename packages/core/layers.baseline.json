@@ -83,10 +83,5 @@
     "rule": "cycle",
     "layer": "capabilities",
     "members": ["access", "cdn", "entries", "route", "search", "seo"]
-  },
-  {
-    "rule": "cycle",
-    "layer": "top",
-    "members": ["context", "runtime"]
   }
 ]
