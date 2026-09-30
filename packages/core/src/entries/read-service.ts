@@ -10,6 +10,7 @@ import type {
   EntryListInput,
   EntryListOrderColumn,
 } from "../rpc/procedures/entry/schemas.js";
+import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
 import { entryTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -23,7 +24,6 @@ import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
 import { entrySearchCondition } from "../search/conditions.js";
 import { isAuthoredEntryType, loadAuthoredEntry } from "./authored.js";
-import { entryCapabilityByName } from "./capabilities.js";
 import { EntryReadError } from "./errors.js";
 import {
   canReadEntry,

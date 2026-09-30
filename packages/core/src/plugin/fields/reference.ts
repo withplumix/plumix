@@ -1,4 +1,4 @@
-import type { Capability } from "../../auth/contract/capability.js";
+import type { Capability } from "../../access/contract/capability.js";
 import type { EntryStatus } from "../../db/schema/entries.js";
 import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";

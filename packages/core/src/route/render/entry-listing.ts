@@ -1,5 +1,5 @@
 import type { AppContext } from "../../context/app-context.js";
-import type { EntryQuery } from "../../entries/query.js";
+import type { EntryQuery } from "../../entries/contract/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { EntryListing } from "../contract/entry-listing.js";
 import { typeTag } from "../../cdn/contract/tags.js";

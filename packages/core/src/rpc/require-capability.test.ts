@@ -2,7 +2,7 @@ import { createRouterClient } from "@orpc/server";
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
-import { entryCapability } from "../auth/contract/capability.js";
+import { entryCapability } from "../access/contract/capability.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { expectError } from "../test/spies.js";

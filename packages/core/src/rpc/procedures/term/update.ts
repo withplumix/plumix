@@ -1,6 +1,6 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import { spellTermCapability } from "../../../auth/contract/capability.js";
+import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";

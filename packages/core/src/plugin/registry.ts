@@ -12,12 +12,12 @@ import type {
   RouterClient,
 } from "@orpc/server";
 
-import type { AccessPolicy } from "../access/policy.js";
 import type {
   Capability,
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
-} from "../auth/contract/capability.js";
+} from "../access/contract/capability.js";
+import type { AccessPolicyFor } from "../access/contract/policy.js";
 import type {
   BlockPattern,
   BlockSpec,
@@ -27,7 +27,7 @@ import type {
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { UserRole } from "../db/schema/users.js";
-import type { EntryQuery } from "../entries/query.js";
+import type { EntryQuery } from "../entries/contract/query.js";
 import type { Label } from "../i18n/label.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RestErrors } from "../rest/contract/errors.js";
@@ -207,7 +207,7 @@ export interface EntryTypeAccess {
    * with one of {@link policies} (see {@link ACCESS_POLICY_META_KEY}). Also the
    * fallback when an entry's stored choice names a key no longer in the space.
    */
-  readonly default: AccessPolicy;
+  readonly default: AccessPolicyFor<AppContext>;
   /**
    * The closed set of policies an editor may assign per-entry. `default` is
    * always implicitly part of the space (selecting nothing ⇒ `default`); list
@@ -228,7 +228,7 @@ export interface EntryTypeAccess {
 export interface SelectableAccessPolicy {
   readonly key: string;
   readonly label: Label;
-  readonly policy: AccessPolicy;
+  readonly policy: AccessPolicyFor<AppContext>;
 }
 
 /**
@@ -605,7 +605,7 @@ export interface ArchiveTypeOptions {
    * the global `anonymous` default. A policied archive renders live (it opts
    * out of the CDN in this slice, like any other policied route).
    */
-  readonly access?: AccessPolicy;
+  readonly access?: AccessPolicyFor<AppContext>;
 }
 
 /**
@@ -825,7 +825,7 @@ export interface PublicRouteOptions {
    * live per reader: it never reads from or writes to the CDN, `cacheable`
    * notwithstanding.
    */
-  readonly access?: AccessPolicy;
+  readonly access?: AccessPolicyFor<AppContext>;
   /** `params` carries the pattern's captured groups; `{}` for a literal path. */
   readonly handler: (
     request: Request,

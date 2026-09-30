@@ -12,13 +12,13 @@ import { installPlugins } from "../plugin/register.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
+import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import {
   entryAllowsAnonymousAccess,
   gateToResponse,
   policyForMatch,
   selectEntryPolicy,
 } from "./gate.js";
-import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
 import {
   anonymousPolicy,
   authenticatedPolicy,

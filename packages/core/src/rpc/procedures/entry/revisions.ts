@@ -3,15 +3,15 @@ import * as v from "valibot";
 
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { JsonValue } from "../../../json.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
-import { users } from "../../../db/schema/users.js";
-import { loadAuthoredEntry } from "../../../entries/authored.js";
 import {
   entryCapabilityByName,
   entryCapabilityNamespace,
   namespacedEntryCapability,
-} from "../../../entries/capabilities.js";
+} from "../../../access/contract/entry-capabilities.js";
+import { eq } from "../../../db/index.js";
+import { entries } from "../../../db/schema/entries.js";
+import { users } from "../../../db/schema/users.js";
+import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
   getRevision as repoGetRevision,

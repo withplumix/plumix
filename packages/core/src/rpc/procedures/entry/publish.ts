@@ -1,10 +1,10 @@
 import * as v from "valibot";
 
 import type { JsonObject } from "../../../json.js";
+import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import {
   deleteAutosave,
   getAutosaveEdits,

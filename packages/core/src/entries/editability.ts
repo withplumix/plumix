@@ -4,7 +4,7 @@ import {
   entryCapabilityByName,
   entryCapabilityNamespace,
   namespacedEntryCapability,
-} from "./capabilities.js";
+} from "../access/contract/entry-capabilities.js";
 
 /**
  * What the edit rule reads off a row. Derived from the read side's shape so a

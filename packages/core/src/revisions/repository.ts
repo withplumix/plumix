@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, like, lt, ne, or } from "drizzle-orm";
 import type { Db } from "../context/app-context.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
-import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
+import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";

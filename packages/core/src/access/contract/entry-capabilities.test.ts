@@ -1,17 +1,17 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import { createPluginRegistry } from "../../plugin/manifest.js";
+import { toRegisteredEntryType } from "../../plugin/registry.js";
+import { pooledEntryTypeRegistry } from "../../test/pooled-entry-types.js";
 import {
   entryCapability,
   resolveCapability,
   termCapability,
-} from "../auth/contract/capability.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
-import { toRegisteredEntryType } from "../plugin/registry.js";
-import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
+} from "./capability.js";
 import {
   entryCapabilityByName,
   namespacedEntryCapability,
-} from "./capabilities.js";
+} from "./entry-capabilities.js";
 
 describe("namespacedEntryCapability", () => {
   test("spells the capability under the registered type's namespace", () => {

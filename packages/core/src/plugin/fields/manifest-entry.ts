@@ -5,7 +5,7 @@
 // manifest projection (and its block / registry graph) behind it. Re-exported
 // from the public `@plumix/core/manifest` and `@plumix/core/fields` barrels.
 
-import type { CapabilityNamespaces } from "../../auth/contract/capability.js";
+import type { CapabilityNamespaces } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { MetaFieldCondition } from "./condition.js";
 import type {

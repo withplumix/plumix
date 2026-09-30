@@ -9,6 +9,7 @@ export * from "./magic-link/index.js";
 export * from "./mailer/index.js";
 export * from "./oauth/index.js";
 export * from "./passkey/index.js";
+export * from "../access/contract/rbac.js";
 export * from "./rbac.js";
 export * from "./redirect.js";
 export * from "./sessions.js";

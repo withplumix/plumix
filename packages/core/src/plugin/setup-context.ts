@@ -1,4 +1,4 @@
-import type { DerivedCapability } from "../auth/rbac.js";
+import type { DerivedCapability } from "../access/contract/rbac.js";
 import type {
   BlockPattern,
   BlockSpec,
@@ -63,7 +63,7 @@ import type { PluginContextExtensions } from "./provides-context.js";
 import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
-} from "../auth/rbac.js";
+} from "../access/contract/rbac.js";
 import { isReservedBlockName } from "../blocks/index.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";

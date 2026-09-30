@@ -61,16 +61,6 @@
   },
   {
     "rule": "environment",
-    "from": "plugin/manifest.ts",
-    "to": "access/meta-key.ts"
-  },
-  {
-    "rule": "environment",
-    "from": "plugin/manifest.ts",
-    "to": "entries/capabilities.ts"
-  },
-  {
-    "rule": "environment",
     "from": "rpc/validation.ts",
     "to": "rpc/meta/field-messages.ts"
   },
@@ -92,15 +82,7 @@
   {
     "rule": "cycle",
     "layer": "capabilities",
-    "members": [
-      "access",
-      "cdn",
-      "entries",
-      "revisions",
-      "route",
-      "search",
-      "seo"
-    ]
+    "members": ["access", "cdn", "entries", "route", "search", "seo"]
   },
   {
     "rule": "cycle",

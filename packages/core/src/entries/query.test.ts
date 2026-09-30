@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
-import type { EntryQuery } from "./query.js";
+import type { EntryQuery } from "./contract/query.js";
 import { asc, eq, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createTestContext } from "../test/context.js";

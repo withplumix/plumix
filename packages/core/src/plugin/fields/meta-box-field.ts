@@ -4,7 +4,7 @@
 // directory depend on their variant types directly, breaking the former
 // `fields/* → manifest` import cycle. Re-exported unchanged from the public
 // `@plumix/core/manifest` barrel.
-import type { Capability } from "../../auth/contract/capability.js";
+import type { Capability } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { ImageRoleName } from "../../images/contract/role-images.js";
 import type { JsonValue } from "../../json.js";

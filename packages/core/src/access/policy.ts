@@ -17,8 +17,13 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { Access, EntitlementSegment } from "./contract/access.js";
-import { roleLevel } from "../auth/rbac.js";
+import type {
+  AccessOutcome,
+  AccessPolicyFor,
+  AccessResolverFor,
+} from "./contract/policy.js";
 import { USER_ROLES } from "../db/schema/users.js";
+import { roleLevel } from "./contract/rbac.js";
 import { PRIVATE_SEGMENT } from "./contract/segments.js";
 
 export type {
@@ -28,6 +33,7 @@ export type {
   Gate,
   Segment,
 } from "./contract/access.js";
+export type { AccessOutcome } from "./contract/policy.js";
 
 const ENTITLEMENT_PREFIX = "entitlement:";
 
@@ -35,20 +41,6 @@ const ENTITLEMENT_PREFIX = "entitlement:";
 export function entitlementSegment(label: string): EntitlementSegment {
   return `${ENTITLEMENT_PREFIX}${label}`;
 }
-
-/**
- * What a policy's `resolve` returns — the closed set of outcomes. Built via the
- * {@link grant} / {@link redirectToLogin} / {@link challenge} / {@link entitlement}
- * constructors so call sites never hand-shape the discriminated union.
- */
-export type AccessOutcome =
-  | { readonly type: "grant"; readonly segment: string }
-  | { readonly type: "redirect" }
-  | {
-      readonly type: "challenge";
-      readonly kind: string;
-      readonly soft?: boolean;
-    };
 
 /** Options for {@link challenge}. */
 export interface ChallengeOptions {
@@ -102,9 +94,7 @@ export function challenge(
   return { type: "challenge", kind, soft: options?.soft };
 }
 
-export type AccessResolver = (
-  ctx: AppContext,
-) => AccessOutcome | Promise<AccessOutcome>;
+export type AccessResolver = AccessResolverFor<AppContext>;
 
 export interface DefinePolicyInput {
   /**
@@ -116,10 +106,7 @@ export interface DefinePolicyInput {
   readonly resolve: AccessResolver;
 }
 
-export interface AccessPolicy {
-  readonly segments: readonly string[];
-  readonly resolve: AccessResolver;
-}
+export type AccessPolicy = AccessPolicyFor<AppContext>;
 
 export function definePolicy(input: DefinePolicyInput): AccessPolicy {
   return { segments: input.segments ?? [], resolve: input.resolve };

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { entryCapability } from "../../../auth/contract/capability.js";
+import { entryCapability } from "../../../access/contract/capability.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import {

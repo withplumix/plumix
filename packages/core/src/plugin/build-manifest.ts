@@ -10,7 +10,7 @@
 import type {
   Capability,
   CapabilityNamespaces,
-} from "../auth/contract/capability.js";
+} from "../access/contract/capability.js";
 import type {
   BlockSpec,
   ThemeBreakpoints,
@@ -68,9 +68,9 @@ import type {
 import {
   resolveCapability,
   spellTermCapability,
-} from "../auth/contract/capability.js";
+} from "../access/contract/capability.js";
+import { namespacedEntryCapability } from "../access/contract/entry-capabilities.js";
 import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
-import { namespacedEntryCapability } from "../entries/capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { projectMetaBoxField } from "./fields/project-field.js";

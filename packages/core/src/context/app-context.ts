@@ -1,8 +1,8 @@
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
 import type { Access } from "../access/contract/access.js";
+import type { Capability } from "../access/contract/capability.js";
 import type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
-import type { Capability } from "../auth/contract/capability.js";
 import type { Mailer } from "../auth/contract/mailer.js";
 import type {
   BlockRegistry,

@@ -1,4 +1,4 @@
-import type { CapabilityNamespaces } from "../../auth/contract/capability.js";
+import type { CapabilityNamespaces } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { MetaBoxFieldManifestEntry } from "./manifest-entry.js";
 import type {
@@ -9,7 +9,7 @@ import type {
   RepeaterLayout,
   SelectAppearance,
 } from "./meta-box-field.js";
-import { resolveCapability } from "../../auth/contract/capability.js";
+import { resolveCapability } from "../../access/contract/capability.js";
 
 // Per-variant options live on each narrowed variant of `MetaBoxField`.
 // Reading via this explicit projection lets the serializer stay

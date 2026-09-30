@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
-import type { Capability } from "../../auth/contract/capability.js";
+import type { Capability } from "../../access/contract/capability.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { ResolvedMeta } from "../../meta/contract/bags.js";

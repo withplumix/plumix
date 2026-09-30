@@ -1,6 +1,6 @@
 import type { AppContext } from "../../../context/app-context.js";
 import type { TermsPatchErrors } from "../../errors.js";
-import { spellTermCapability } from "../../../auth/contract/capability.js";
+import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { entryTerm } from "../../../db/schema/entry_term.js";
 import { terms } from "../../../db/schema/terms.js";

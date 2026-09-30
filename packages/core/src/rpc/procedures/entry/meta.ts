@@ -1,7 +1,7 @@
 import type {
   Capability,
   CapabilityNamespaces,
-} from "../../../auth/contract/capability.js";
+} from "../../../access/contract/capability.js";
 import type { AppContext } from "../../../context/app-context.js";
 import type { JsonObject } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
@@ -14,7 +14,7 @@ import type {
   SettledRow,
 } from "../../meta/core.js";
 import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
-import { resolveCapability } from "../../../auth/contract/capability.js";
+import { resolveCapability } from "../../../access/contract/capability.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
   findEntryMetaField,

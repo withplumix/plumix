@@ -1,5 +1,5 @@
-import type { Capability } from "../auth/contract/capability.js";
-import { resolveCapability } from "../auth/contract/capability.js";
+import type { Capability } from "../access/contract/capability.js";
+import { resolveCapability } from "../access/contract/capability.js";
 import { base } from "./base.js";
 
 /**

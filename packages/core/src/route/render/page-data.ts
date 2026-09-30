@@ -4,7 +4,7 @@ import { count } from "drizzle-orm";
 import type { AppContext } from "../../context/app-context.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
-import type { EntryQuery } from "../../entries/query.js";
+import type { EntryQuery } from "../../entries/contract/query.js";
 import type { EntryListing } from "../contract/entry-listing.js";
 import type {
   ArchiveData,

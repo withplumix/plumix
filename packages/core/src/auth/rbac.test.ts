@@ -1,15 +1,17 @@
 import { describe, expect, test } from "vitest";
 
-import { createPluginRegistry } from "../plugin/manifest.js";
-import { toRegisteredEntryType } from "../plugin/registry.js";
 import {
   canAccessAdmin,
-  capabilitiesForRole,
-  CORE_CAPABILITIES,
-  createCapabilityResolver,
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
   roleLevel,
+} from "../access/contract/rbac.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredEntryType } from "../plugin/registry.js";
+import {
+  capabilitiesForRole,
+  CORE_CAPABILITIES,
+  createCapabilityResolver,
 } from "./rbac.js";
 
 describe("role hierarchy", () => {
@@ -230,7 +232,7 @@ describe("deriveEntryTypeCapabilities", () => {
 
 describe("deriveTermTaxonomyCapabilities", () => {
   test("defaults match TAXONOMY_CAPABILITY_ACTIONS when no override is set", () => {
-    const caps = deriveTermTaxonomyCapabilities("category", { label: "Cats" });
+    const caps = deriveTermTaxonomyCapabilities("category", {});
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.minRole]));
     expect(byName["term:category:assign"]).toBe("contributor");
     expect(byName["term:category:manage"]).toBe("editor");
@@ -240,7 +242,6 @@ describe("deriveTermTaxonomyCapabilities", () => {
 
   test("nav_menu-shape override raises every action to admin", () => {
     const caps = deriveTermTaxonomyCapabilities("nav_menu", {
-      label: "Nav menus",
       capabilities: {
         read: "admin",
         assign: "admin",

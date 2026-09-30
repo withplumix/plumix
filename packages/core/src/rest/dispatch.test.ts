@@ -7,7 +7,7 @@ import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "../test/dispatcher.js";
-import { entryCapability } from "../auth/contract/capability.js";
+import { entryCapability } from "../access/contract/capability.js";
 import { isJsonObject } from "../json.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

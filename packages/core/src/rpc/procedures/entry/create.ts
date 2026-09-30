@@ -1,11 +1,11 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import { entries } from "../../../db/schema/entries.js";
-import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
-} from "../../../entries/capabilities.js";
+} from "../../../access/contract/entry-capabilities.js";
+import { entries } from "../../../db/schema/entries.js";
+import { isAuthoredEntryType } from "../../../entries/authored.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
