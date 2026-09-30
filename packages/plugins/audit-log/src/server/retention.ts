@@ -6,11 +6,11 @@ import { AuditLogConfigError } from "./errors.js";
 export interface AuditLogRetentionPolicy {
   readonly maxAgeDays: number;
   /**
-   * Cron expression metadata for the registered scheduled task.
-   * Informational in v1 — runtime dispatch fires every registered
-   * task on each scheduled invocation regardless of this value (see
-   * `registerScheduledTask` docs). The runtime is responsible for
-   * firing this schedule. Defaults to `"0 3 * * *"` (daily at 03:00 UTC).
+   * Cron schedule the purge task runs on. The task runs only when a
+   * trigger with exactly this schedule fires, so on Cloudflare a
+   * custom value needs a matching entry in `wrangler.jsonc`
+   * `triggers.crons` (the scaffold carries `"0 3 * * *"`) or the
+   * purge never runs. Defaults to `"0 3 * * *"` (daily at 03:00 UTC).
    */
   readonly purgeAt?: string;
 }

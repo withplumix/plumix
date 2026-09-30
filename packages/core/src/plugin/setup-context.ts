@@ -453,14 +453,13 @@ export interface PluginSetupContextBase {
 
   /**
    * Register periodic work that fires on the runtime's scheduled
-   * trigger (Cloudflare cron). The handler receives a synthetic-
-   * request `AppContext` — `user` is `null`, `request` is an internal
-   * marker, all other fields (`db`, `hooks`, `logger`, `defer`) match
-   * a normal request.
+   * trigger. The handler receives a synthetic-request `AppContext` —
+   * `user` is `null`, `request` is an internal marker, all other
+   * fields (`db`, `hooks`, `logger`, `defer`) match a normal request.
    *
-   * `id` must be unique within the plugin. v1 dispatch fires ALL
-   * registered tasks on every scheduled invocation regardless of
-   * `cron`; per-task cron filtering is a follow-up.
+   * `id` must be unique within the plugin. A task that declares a
+   * `cron` runs only when a firing's schedule matches it exactly; a
+   * task that declares none runs on every firing.
    */
   registerScheduledTask(task: ScheduledTask): void;
   /**
