@@ -1,6 +1,6 @@
 # @plumix/plugin-comments
 
-This Plumix plugin adds **threaded, moderated comments** to your entries — with a moderation queue, nesting, rate limiting, and email notifications.
+Threaded, moderated comments on Plumix entries.
 
 ## Install
 
@@ -8,92 +8,17 @@ This Plumix plugin adds **threaded, moderated comments** to your entries — wit
 pnpm add @plumix/plugin-comments
 ```
 
-Then add it to your `plumix.config.ts` and pick which entry types accept comments:
+## Documentation
 
-```ts
-import { plumix } from "plumix";
-
-import { comments } from "@plumix/plugin-comments";
-
-export default plumix({
-  // …your runtime, database, and auth
-  plugins: [comments({ entryTypes: ["post"] })],
-});
-```
-
-The plugin ships a database table. Regenerate migrations after adding it:
-
-```bash
-plumix migrate generate
-```
-
-## What you get
-
-- **A `/comments` moderation page** (under Content) — approve, mark spam, or trash, gated behind a `comment:moderate` capability.
-- **Public endpoints** — `POST /_plumix/comments/submit` and `GET /_plumix/comments/list`, plus a `{type}/{id}/comments` REST resource.
-- **A `comments` template dependency** your theme renders for the current entry.
-- **A comment form** that posts as a plain `<form method="post">`, so it works with JavaScript switched off, and is upgraded in place where there is some.
-- **Moderation hooks** — `comment:moderate` (trust policy) and `comment:created` (notify).
-
-## Configuration
-
-```ts
-comments({
-  entryTypes: ["post"], // types that accept comments
-  mode: "first_time", // "all" | "first_time" | "none" — when to hold for review
-  maxDepth: 3, // reply nesting depth
-  rootsPerPage: 20, // roots per page
-  requireEmail: true, // require an author email
-  closeAfterDays: null, // auto-close threads after N days
-  notifyEmail: "you@example.com", // moderator address for pending comments
-  rateLimit: { max: 5, windowMin: 10 }, // per-author submission limit
-});
-```
-
-Notifications use the top-level `mailer` from your Plumix config.
-
-## Rendering in a theme
-
-Load a thread without pulling in admin code via the `/server` entry:
-
-```ts
-import { loadThread } from "@plumix/plugin-comments/server";
-
-const thread = await loadThread(ctx, { type: "post", id });
-```
-
-Drop the form into a template with the component from the `/theme` entry. It
-posts as a plain `<form method="post">`, so it works before any JavaScript
-loads:
-
-```tsx
-import { defineTemplate } from "plumix/theme";
-
-import { PlumixCommentForm } from "@plumix/plugin-comments/theme";
-
-export const post = defineTemplate({
-  single: {
-    comments: ["current"],
-    render: ({ data, comments }) => (
-      <article>
-        <Thread data={comments?.current} />
-        <PlumixCommentForm entryId={data.entry.id} />
-      </article>
-    ),
-  },
-});
-```
-
-A theme writing its own controls calls `usePlumixCommentForm` from
-`@plumix/plugin-comments/hooks` instead, and posts to the same endpoint.
+Read the [documentation](https://docs.plumix.dev/plugins/comments/) on docs.plumix.dev.
 
 ## Support
 
-Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).
+Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.
 
 ## Contributing
 
-PRs and ideas welcome. The [Contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md) gets you set up — new contributors especially welcome.
+Start with the [contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md).
 
 ## License
 

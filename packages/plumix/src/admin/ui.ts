@@ -13,9 +13,9 @@
  * runtime shims — so the chunk carries only the thin wrappers (~1KB each),
  * not radix.
  *
- * Stability: these are vendored shadcn components we own and edit (via
- * `ui:add`). This surface carries no guarantee beyond plumix's repo-wide
- * pre-1.0 policy — minor versions may break it; pin `plumix`. See
- * packages/admin-ui/README.md.
+ * Stability: these are components taken from shadcn that we own and edit
+ * (ADR 0023). This surface carries no guarantee beyond plumix's repo-wide
+ * pre-1.0 policy — minor versions may break it; pin `plumix`. CONTRIBUTING.md
+ * ("UI primitives") covers how they change.
  */
 export * from "@plumix/admin-ui";

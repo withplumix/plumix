@@ -1,0 +1,202 @@
+---
+title: Form Fields
+description: The field types a form accepts, how groups and repeaters store their answers, how a condition hides a question, and how a page break splits a form into steps.
+tier: P1
+sidebar:
+  order: 62.2
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A form asks its questions with the same fluent builders a meta box uses, so the answers a submission stores are typed from the fields you declared. This page covers which builders a form accepts, what each stores, and the three ways a form's field list gains structure: groups and repeaters, conditions, and steps.
+
+## Overview
+
+A form's `fields` list is flat. It holds field builders, and optionally `pageBreak()` markers between them. Everything else about a form's shape comes from the builders themselves. A `group` or a `repeater` nests fields under one key, and `.visibleWhen()` hides a field until a sibling's answer calls for it.
+
+The answers type follows the list. `FormAnswersOf<typeof contact>` is the shape one submission of `contact` stores, with one property per field, optional unless the field is `.required()`. Renaming a field breaks the build at every reader rather than in production.
+
+Every rule on this page holds on the server, whichever way a submission arrived. The rendered form and the multi-step wizard apply the same rules in the browser, from the same code, so the two cannot disagree.
+
+## Quickstart
+
+A form with a nested group, a repeater, a conditional field and two steps:
+
+```ts no-typecheck
+import { email, group, repeater, select, text, toggle } from "plumix/fields";
+
+import type { FormAnswersOf } from "@plumix/plugin-forms";
+import { defineForm, pageBreak } from "@plumix/plugin-forms";
+import { tel } from "@plumix/plugin-forms/fields";
+
+const vegetarian = toggle("vegetarian");
+const plan = select("plan").options(["basic", "pro"]);
+
+export const rsvp = defineForm("rsvp", {
+  fields: [
+    group("contact").fields([
+      text("name").required(),
+      email("email").required(),
+      tel("phone"),
+    ]),
+    plan,
+    pageBreak("Who is coming"),
+    repeater("attendees")
+      .fields([
+        text("who").label("Name").required(),
+        vegetarian,
+        text("dietary").visibleWhen(vegetarian.isOn()),
+      ])
+      .max(6),
+  ],
+});
+
+export type RsvpAnswers = FormAnswersOf<typeof rsvp>;
+```
+
+With JavaScript, the visitor fills in the contact details and plan on one step and the attendees on the next. Without it, the same form renders as one page. Either way one submission stores something like `{ contact: { name: "Ada", email: "ada@example.test" }, plan: "basic", attendees: [{ who: "Grace", vegetarian: false }] }`.
+
+## Fields
+
+| Builder             | Control              | Stored as               |
+| ------------------- | -------------------- | ----------------------- |
+| `text` / `textarea` | text input, textarea | `string`                |
+| `email` / `url`     | typed input          | `string`                |
+| `tel`               | telephone input      | `string`                |
+| `number`            | number input         | `number`                |
+| `date`              | date input           | ISO date `string`       |
+| `select`            | dropdown             | option value, or values |
+| `toggle`            | checkbox             | `boolean`               |
+| `group`             | fieldset of fields   | object under its key    |
+| `repeater`          | rows of fields       | array of row objects    |
+
+A form refuses any other field type, such as `richtext`, `media` or `entry`, when `defineForm` runs, so the mistake fails at boot. The same list applies inside a group and a repeater row. [Field Types](/fields/field-types/) documents each builder's chain.
+
+Everything except `tel` comes from `plumix/fields`. Core has no built-in `tel`, so this plugin adds it to the field vocabulary. Import it from `@plumix/plugin-forms/fields`:
+
+```ts no-typecheck
+import { tel } from "@plumix/plugin-forms/fields";
+```
+
+It works anywhere a field does, meta boxes included, and stores and conditions exactly as `text` does. A browser shows a numeric keypad for it and the server checks no format, because phone numbers have none worth enforcing across borders.
+
+### What a stored answer looks like
+
+An answer the visitor never gave is absent from the row, not stored empty. A text answer is trimmed, and one that trims to nothing counts as unanswered. A `number` answer that does not parse as a number counts as unanswered too.
+
+Two controls always answer. An unticked checkbox reads `false`, and a multiple `select` with nothing picked reads an empty list. A `select` stores only values among its declared options, so a value the body carries that the form never offered is dropped rather than stored.
+
+A field its condition hid is absent too, whether or not it is `.required()`. So read a conditional field's answer as optional, whatever its type says.
+
+## Rows and groups
+
+A `group` puts related questions in a fieldset and stores them under one key. A `repeater` gives the visitor as many rows as they have things to say, such as referees, attendees or statements, and stores them as an array of row objects. In the quickstart, `FormAnswersOf<typeof rsvp>` types `contact` as an object and `attendees` as an array.
+
+`.fields()` comes first in both chains. It is the call that infers the row shape, so `repeater("attendees").label("Attendees")` does not compile until `.fields()` has been called.
+
+Rows carry their own conditions. The plugin judges a rule inside a row against that row's answers and nothing else's. One attendee's dietary note appears because that attendee is vegetarian, not because their neighbour is. The server applies the same rule row by row, which keeps a hidden sub-field out of that row's stored values.
+
+### Row limits
+
+A row nobody filled in is not an answer. The plugin drops it rather than storing it blank, and validates nothing inside it, a `.required()` sub-field included. So `.min()` and `.required()` count the rows the visitor actually used, and `.required()` on a repeater means at least one. `.max()` counts every row that came back, since the form never renders more than it takes. The server enforces both whatever the browser did. A repeater that declares no `.max()` still has one, 100 rows, because the visitor writes the request body.
+
+A `.required()` group must have at least one of its members answered.
+
+### With and without JavaScript
+
+With JavaScript on, the visitor adds and removes rows on the page. When a row goes, focus moves to the add button rather than disappearing with the row.
+
+With JavaScript off, the visitor gets the fewest rows the repeater accepts, and never fewer than one. Adding a row would mean asking the server for one, and the plugin's endpoint answers submissions rather than serving forms. For the same reason, a row past that floor carries no browser-side `required`. The server asks a blank row nothing, and a browser that refused to submit over a row nobody has to fill would strand a visitor who has no other way through.
+
+Nested fields post under a bracketed name, such as `contact[name]` or `attendees[0][who]`. Errors name a field the same way, and so do the [styling attributes](/plugins/forms-rendering/#styling).
+
+## Fields that only sometimes apply
+
+A field can name a condition on a sibling, exactly as it would in a meta box:
+
+```ts no-typecheck
+import { number, select } from "plumix/fields";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+const plan = select("plan").options(["basic", "pro"]);
+
+export const signup = defineForm("signup", {
+  fields: [plan, number("seats").visibleWhen(plan.is("pro"))],
+});
+```
+
+The plugin judges the same rule in the markup, the island and the server. The markup leaves out a field the form's own defaults hide, the island shows and hides it as the visitor answers, and the server drops one the submitted answers hide. So a hidden field never reaches the stored answers and is never held to its own `required`, even if something posts a value for it anyway.
+
+`defineForm` refuses a condition that names a field the form does not declare. [Field Builders](/fields/builders/) lists the rule factories each builder offers, such as `.is()`, `.isOn()` and `.gt()`.
+
+## Forms in steps
+
+A `pageBreak()` in the field list turns a long form into a wizard:
+
+```ts no-typecheck
+import { email, number, select, text, textarea } from "plumix/fields";
+
+import { defineForm, pageBreak } from "@plumix/plugin-forms";
+
+const plan = select("plan").options(["basic", "pro"]);
+
+export const survey = defineForm("survey", {
+  fields: [
+    text("name").required(),
+    email("email").required(),
+    pageBreak("Your plan"),
+    plan,
+    pageBreak("Anything else"),
+    number("seats").visibleWhen(plan.is("pro")),
+    textarea("notes"),
+  ],
+});
+```
+
+The break is an element of the same flat list, not a level of nesting, so nothing else about the form changes. The answers type, each field's condition and the stored row stay what they would be without it. A break's title, where you give one, names the step that follows it, and the progress indicator shows it. An untitled step reads as "Step 2 of 3". A break at either end of the list, or two breaks in a row, have no effect.
+
+With JavaScript, the visitor fills in one step at a time. Moving on checks only the fields that step shows, so a question further on, or one this step's own answers hide, cannot hold them up. Focus then moves to the new step's heading.
+
+The wizard keeps the visitor's position and every answer so far in session storage, for the tab they are filling the form in. It writes them whenever the visitor moves between steps and whenever a step is refused, so a reload puts them back where they were rather than at the start. The wizard clears the storage once the submission is made. If the browser refuses site data, the visitor loses only that.
+
+### Skipping a step
+
+A field can name a driver on an earlier step, which is how a step gets skipped:
+
+```ts no-typecheck
+import { number, select } from "plumix/fields";
+
+import { defineForm, pageBreak } from "@plumix/plugin-forms";
+
+const plan = select("plan").options(["basic", "pro"]);
+
+export const order = defineForm("order", {
+  fields: [
+    plan,
+    pageBreak("Seats"),
+    number("seats").visibleWhen(plan.is("pro")),
+  ],
+});
+```
+
+The wizard does not show a step whose every field is hidden. With `basic` chosen, the form above is one step and its button submits. With `pro`, it is two steps and the same button moves on. The button's label and its action read from the same answers, so the two cannot come apart as the visitor types.
+
+<Aside type="tip" title="Steps need no JavaScript to submit">
+  Switch JavaScript off and a form with breaks renders as one long form that
+  submits in one go. The wizard is an enhancement, so you can add a break to a
+  form that is already live without anyone losing the ability to send it.
+</Aside>
+
+## Related
+
+- [Forms](/plugins/forms/) covers declaring a form, validation, the submit handler and the plugin's options.
+- [Field Types](/fields/field-types/) documents each builder's chain, including `group` and `repeater`.
+- [Field Builders](/fields/builders/) covers the options every builder shares and the rule factories `.visibleWhen()` takes.
+- [Meta Boxes](/fields/meta-boxes/) uses the same builders to attach fields to entries, terms and users, and accepts the `tel` field this plugin adds.
+
+## Next steps
+
+Read [Rendering Forms](/plugins/forms-rendering/) to style what these fields render into, or to render a form from a template or your own React components. The styling section there lists the classes and attributes each group, repeater row and step carries.
+
+To see what a submission stored, read [Form Submissions](/plugins/forms-submissions/). The inbox and exports name every answer from a snapshot of the labels the form had when it was sent.

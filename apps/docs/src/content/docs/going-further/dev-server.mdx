@@ -80,6 +80,41 @@ The `process.env.PLUMIX_DEV` branch is what keeps the handler and its imports ou
   variable as the only boundary.
 </Aside>
 
+## Opening a frame in your editor
+
+Each frame on the dev error page carries an **Open in editor** link. It is a plain anchor to your editor's URL scheme, such as `vscode://file/…`, so the operating system hands the file and line to the editor with no round-trip to the server.
+
+`PLUMIX_EDITOR` picks the scheme. When it is unset, the scheme is VS Code, so the link works with no configuration:
+
+```sh
+PLUMIX_EDITOR=cursor pnpm dev
+```
+
+The built-in keys are `vscode`, `vscode-insiders`, `cursor`, `windsurf`, `zed`, `idea`, `phpstorm`, `webstorm` and `sublime`. A value that is not one of them falls back to VS Code. `off` or `none` drops the link and leaves each frame as a button that shows its source.
+
+For an editor without a key, pass a URL template carrying `{file}`, `{line}` and `{column}`. The dev server uses any value containing `{file}` verbatim, and `{column}` is 1 when a frame has none:
+
+```sh
+PLUMIX_EDITOR='myeditor://open?path={file}&line={line}&col={column}' pnpm dev
+```
+
+### Containers and remote machines
+
+A link uses the frame's path as the dev server sees it. Sometimes the server runs where your editor cannot see the same filesystem, such as in a Docker container, on a remote machine over SSH or in a devcontainer. That path then does not exist on the editor's machine, and the link opens nothing.
+
+`PLUMIX_EDITOR_PATH_MAP` takes one `from=>to` mapping. `from` is the path prefix on the server, and `to` is the matching path on the editor's machine. The dev server rewrites `from` to `to` before it builds the link:
+
+```sh
+# The server sees /workspace; the repository is at /Users/me/proj on your machine.
+PLUMIX_EDITOR_PATH_MAP='/workspace=>/Users/me/proj' pnpm dev
+```
+
+A frame at `/workspace/src/theme.tsx:12` then links to `/Users/me/proj/src/theme.tsx:12`. The prefix matches only on a path boundary, so `/workspace` rewrites `/workspace/src/a.ts` and leaves `/workspace-other/a.ts` alone. The dev server leaves a path outside the prefix as it is and ignores a trailing slash on either side. It ignores a value missing `=>` or with an empty side entirely.
+
+On a Windows editor host, write the `to` side with forward slashes, as in `/workspace=>C:/Users/me/proj`. Editors accept them, and the link would percent-escape a backslash.
+
+The dev server reads both variables when it builds its bundle, like `PLUMIX_DEV_ALLOW_REMOTE`, so restart after changing one. `plumix build` substitutes them as empty, and the dev error page is not in a production bundle at all.
+
 ## Why the host, and what it does not cover
 
 The `Host` header is the honest client's statement of what it dialled. A browser reaching an exposed dev server sends the exposed name, which is not loopback, so the surfaces stay closed. It also covers DNS rebinding, where the address resolves to `127.0.0.1` but the `Host` remains the attacker's domain.

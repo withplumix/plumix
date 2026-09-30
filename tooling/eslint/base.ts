@@ -178,7 +178,7 @@ export const baseConfig = defineConfig(
       "plumix/no-forged-app": "error",
     },
   },
-  // Test-id query convention (AGENTS.md) and the module-mocking ban (issue
+  // Test-id query convention (issue #1807) and the module-mocking ban (issue
   // #1815). Scoped as the inverse of the rules above: a query by role, text or
   // label only appears where a rendered tree is being read, and a module mock
   // only where a test runner is present — that is tests and e2e specs.

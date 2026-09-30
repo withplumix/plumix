@@ -4,12 +4,8 @@ The Plumix **documentation site**, on [Astro Starlight](https://starlight.astro.
 Docs is the one surface we deliberately don't dogfood on plumix — a general CMS
 fights a docs site's needs (search, MDX, versioning).
 
-**Status: no content yet.** The structure is in place; the pages are not. The
-[information-architecture spec](https://github.com/withplumix/plumix/issues/1829)
-settles the tree, and the remaining
-[preparation work](https://github.com/withplumix/plumix/issues/1851) — the
-frontmatter schema, the content-check suite, the screenshot pipeline — lands
-before the first page is written.
+Every user-facing guide lives here. A package README is a short card that links
+to its page, so a feature is documented once.
 
 Pages are `.mdx`, not `.md`, so every page can import components and partials.
 `src/components/` holds the site's own `.astro` components — see
@@ -166,9 +162,9 @@ It renders in a pinned container rather than in a local browser, so it needs a
 running Docker and the images do not carry the machine that took them.
 
 Adding one is two edits: the subject there, then the page that places the pair.
-[`packages/admin/README.md`](../../packages/admin/README.md) owns the rest — what
-a subject is, and what keeps a re-run byte-for-byte reproducible wherever it is
-run.
+`packages/admin/screenshots/` owns the rest: `subjects.ts` says what a subject
+is, and the comments in `capture-browser.ts` say what keeps a re-run
+byte-for-byte reproducible wherever it is run.
 
 ## Content checks
 

@@ -353,6 +353,10 @@ export function PublishButton(): React.ReactNode {
 }
 ```
 
+A destructive action takes one of three `Button` variants rather than a colour of its own. `destructive` is for a standalone or primary action, such as a confirm dialog's Delete. `destructive-ghost` is always red and sits inline among other actions. `destructive-row` stays muted until hovered, for a remove control repeated on every row.
+
+The components carry no stability promise beyond the rest of `plumix`. A minor release before 1.0 can change their markup or props. Pin `plumix` and check your admin chunk against each minor before you upgrade.
+
 ## Blocks and rendering
 
 ### plumix/blocks

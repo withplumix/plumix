@@ -1,0 +1,201 @@
+---
+title: REST API
+description: The public REST API under /_plumix/api/v1 serves published entries and terms as JSON with a generated OpenAPI 3.1 document, and it stays off until you enable it.
+tier: P1
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Plumix can serve your published content as JSON under `/_plumix/api/v1`, alongside a generated OpenAPI 3.1 document that describes every endpoint. The API is off by default. One config slot turns it on, and a second opens it to browsers on other origins.
+
+## Overview
+
+The API is read-only for core content. Every endpoint core mounts answers `GET`. Each public entry type and each public taxonomy gets a collection, named by pluralising the type or taxonomy name, so `post` becomes `/posts` and `category` becomes `/categories`. A type or taxonomy registered with `isPublic: false` has no collection, and asking for one returns 404.
+
+| Endpoint                                | What it returns                                                |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `GET /_plumix/api/v1/{collection}`      | A page of entries or terms from one collection                 |
+| `GET /_plumix/api/v1/{collection}/{id}` | One entry or term, by numeric id                               |
+| `GET /_plumix/api/v1/openapi.json`      | The OpenAPI document for every endpoint, core and plugin alike |
+
+A request without a token reads as an anonymous visitor and sees published content only. Content it may not see is a 404, never a 403, so a caller cannot probe for a draft's existence. A request carrying an API token reads as that token's user instead, as [Authenticating with an API token](#authenticating-with-an-api-token) describes.
+
+Plugins add their own endpoints to the same namespace, and those appear in `openapi.json` automatically. `@plumix/plugin-comments` is the one that ships, with `GET /_plumix/api/v1/{type}/{id}/comments`.
+
+## Quickstart
+
+<Steps>
+
+1. **Enable the API** in your config:
+
+   ```ts
+   import type { PlumixConfigInput } from "plumix";
+
+   export const api: PlumixConfigInput["api"] = { enabled: true };
+   ```
+
+   Pass it as the `api` slot of `plumix({ … })`.
+
+2. **Read a collection:**
+
+   ```sh
+   curl https://example.com/_plumix/api/v1/posts
+   ```
+
+3. **Fetch the spec** and point any OpenAPI tool at it:
+
+   ```sh
+   curl https://example.com/_plumix/api/v1/openapi.json
+   ```
+
+</Steps>
+
+## Collections and pagination
+
+A list response is an envelope around one page of results:
+
+```json
+{
+  "data": [
+    { "id": 42, "slug": "sicilian-caponata", "title": "Sicilian caponata" }
+  ],
+  "meta": { "page": 2, "per_page": 20 },
+  "links": {
+    "self": "/_plumix/api/v1/posts?page=2",
+    "next": "/_plumix/api/v1/posts?page=3",
+    "prev": "/_plumix/api/v1/posts?page=1"
+  }
+}
+```
+
+`?page` starts at 1 and `?per_page` defaults to 20, capped at 100. The API clamps a value outside the range rather than rejecting it. `links.next` is present only when another page exists, and `links.prev` only past the first page. The links are paths without an origin, so resolve them against the URL you called.
+
+Entries come newest first by publish date. An entry collection also filters by any public taxonomy, named as a query parameter and given one or more term slugs separated by commas:
+
+```sh
+curl "https://example.com/_plumix/api/v1/posts?category=baking,bread&tag=sourdough"
+```
+
+The API ignores a query key that names no public taxonomy. A taxonomy called `page` or `per_page` cannot act as a filter, because pagination owns those keys.
+
+## What an entry carries
+
+The response schemas are an allowlist. Nothing leaves the API unless the schema names it. An entry carries `id`, `type`, `slug`, `title`, `excerpt`, `content`, `status`, `publishedAt`, `createdAt`, `updatedAt`, `author` (`id`, `name` and `avatarUrl`, or `null`), `terms` keyed by taxonomy, and two default-deny maps, `meta` and `images`. Dates are ISO 8601 strings. A term carries `id`, `name` and `slug`.
+
+`meta` holds only the fields declared with `.showInApi()`. `images` holds one key for each image role a field of that entry type declares, again only when that field opted in:
+
+```json
+{
+  "id": 42,
+  "slug": "sicilian-caponata",
+  "meta": { "servings": 4 },
+  "images": {
+    "featured": {
+      "url": "https://media.example.com/caponata.jpg",
+      "alt": "Caponata in a shallow bowl",
+      "width": 1600,
+      "height": 1067
+    }
+  }
+}
+```
+
+The API addresses a role by name, not by meta key. It reads the role's gate from whichever field carries the role, including a field nested in a group. That field opts its own image in and does not inherit the group's answer. A role whose field did not opt in is absent from `images`. A role present with `null` means the field opted in but resolved to no image, because the reference is orphaned or the media adapter refused it. `width` and `height` travel together, and both are absent when the adapter does not know the size. [Field Builders](/fields/builders/) covers `.showInApi()`, and [Field Types](/fields/field-types/#image-roles) covers image roles.
+
+## Authenticating with an API token
+
+A user mints API tokens from the API tokens card on their own profile in the admin. The client sends a token as a bearer credential:
+
+```sh
+curl -H "Authorization: Bearer $PLUMIX_TOKEN" https://example.com/_plumix/api/v1/posts
+```
+
+The request then reads as that user. A token minted with scopes can do only what both its scopes and its user's role allow. A token with no scopes carries the role's full capabilities. A token that is malformed, expired or revoked, or whose user is disabled, gets a 401. The API never quietly downgrades it to an anonymous read, so a client learns that its credential failed.
+
+API tokens are for server-to-server use. A token-authenticated response never carries CORS headers, so a token embedded in browser JavaScript cannot be used from another origin.
+
+## CORS
+
+Cross-origin access is closed by default, even with the API enabled. With no `cors` block, the API never sends an `Access-Control-Allow-Origin` header and refuses a preflight with 403. List the origins allowed to make anonymous reads, or pass `"*"` for any origin:
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const api: PlumixConfigInput["api"] = {
+  enabled: true,
+  cors: { origins: ["https://app.example.com"] },
+};
+```
+
+With a list, the API echoes the allowed origin back and every response carries `Vary: origin`, so a shared cache never serves one origin's answer to another. The API never sets `Access-Control-Allow-Credentials`.
+
+## Rate limiting
+
+Core ships no rate limiter. The API sits under one stable prefix, `/_plumix/api/`, so throttle it in front of the app. On Cloudflare, add a WAF rate-limiting rule scoped to `http.request.uri.path starts_with "/_plumix/api/"`. On another host, apply the same prefix match in your reverse proxy.
+
+## Adding a resource from a plugin
+
+A plugin contributes an endpoint to the API with `registerRestResource`. Unlike `registerRoute`, which mounts a raw handler under the plugin's own prefix, a resource joins the shared `/_plumix/api/v1` namespace and appears in `openapi.json`. `path` is relative to that prefix, `method` defaults to `GET`, and the `output` schema is both the response allowlist and what the spec documents:
+
+```ts
+import { definePlugin, v } from "plumix/plugin";
+
+const statusSchema = v.object({ ok: v.boolean() });
+
+export const status = definePlugin("status", {
+  setup: (ctx) => {
+    ctx.registerRestResource({
+      path: "/status",
+      auth: "public",
+      output: statusSchema,
+      handler: () => ({ ok: true }),
+    });
+  },
+});
+```
+
+Core enforces `auth` before the handler runs. `"public"` is open, `"authenticated"` requires an API token, and a capability gate checks the token's grants. Core rejects `"development"`, because a resource is part of the published API. A path that collides with core's or another plugin's fails at boot.
+
+## A browsable reference
+
+Core serves the spec and nothing else. To browse it, serve a page that loads a reference viewer such as Scalar from a plugin route:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const apiDocs = definePlugin("api-docs", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/docs",
+      auth: "public",
+      handler: () =>
+        new Response(
+          `<!doctype html><html><head><meta charset="utf-8" /></head><body>
+            <script id="api-reference" data-url="/_plumix/api/v1/openapi.json"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+          </body></html>`,
+          { headers: { "content-type": "text/html; charset=utf-8" } },
+        ),
+    });
+  },
+});
+```
+
+A plugin route mounts under `/_plumix/<pluginId>`, so this one answers at `/_plumix/api-docs/docs`. Swagger UI works the same way.
+
+<Aside type="note" title="Not cached at the edge">
+  Every API response, errors included, declares `Cache-Control: no-store`, so a
+  CDN in front of the site never holds a copy. [CDN Caching](/deployment/cdn/)
+  covers why.
+</Aside>
+
+## Related
+
+The `api` slot sits with the rest of the site's settings in [Configuration](/getting-started/configuration/#api). [Field Builders](/fields/builders/) covers the per-field choice of what reaches `meta`. [Entry Types](/content-modelling/entry-types/#visibility) and [Taxonomies](/content-modelling/taxonomies/) define what makes an entry type or taxonomy public. The comments endpoint belongs to [Comments](/plugins/comments/).
+
+## Next steps
+
+Enable the API and open `openapi.json` to see the collections your plugins registered. For a plugin that needs its own endpoint, start from [Plugins](/plugins/overview/).

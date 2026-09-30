@@ -2,7 +2,7 @@
   "name": "@plumix/admin",
   "version": "0.23.0",
   "type": "module",
-  "description": "Plumix admin application (prebuilt SPA assets)",
+  "description": "The prebuilt Plumix admin application.",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",

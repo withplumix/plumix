@@ -2,10 +2,10 @@
   "name": "@plumix/runtime-node",
   "version": "0.2.0",
   "type": "module",
-  "description": "Node.js runtime adapter for Plumix",
+  "description": "Run a Plumix site on Node.js.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/deployment/node/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

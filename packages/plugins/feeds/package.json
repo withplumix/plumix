@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-feeds",
   "version": "0.2.0",
   "type": "module",
-  "description": "Feeds plugin for Plumix — RSS and Atom syndication for every public archive",
+  "description": "RSS and Atom feeds for every public archive of a Plumix site.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/feeds/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

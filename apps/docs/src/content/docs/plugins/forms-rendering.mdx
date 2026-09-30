@@ -1,0 +1,240 @@
+---
+title: Rendering Forms
+description: Render a declared form from a theme template, replace the form block from a theme, or drive a form from your own React with usePlumixForm, and style the markup the plugin renders.
+tier: P2
+sidebar:
+  order: 62.4
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `forms/form` block is one of three ways to put a form on screen. A theme can render a form straight from a template, replace the block's render outright, or take only the fields, a submit call and the errors and write every control itself. This page covers the three, then the class names, attributes and accessibility guarantees of the markup the plugin renders.
+
+## Overview
+
+All three surfaces render one definition and post to one endpoint, so the plugin validates, spam-checks and stores a submission the same way whichever surface sent it. Each surface gives up more of the plugin's rendering than the last:
+
+- `PlumixForm` from `@plumix/plugin-forms/theme` renders exactly what the block renders, from a template, with no block on the page.
+- A theme block named `forms/form` replaces the block's render, while editors keep inserting the same block.
+- `usePlumixForm` from `@plumix/plugin-forms/hooks` hands a `"use client"` island the form's fields, a `submit` function and the errors, and renders nothing.
+
+The plugin ships no colour, type or borders, so the markup it renders inherits your theme's input and button styling. Every part carries a stable class and a data attribute, and both are public API.
+
+## Quickstart
+
+Render the `contact` form from a theme template:
+
+```tsx no-typecheck
+import { defineTemplate } from "plumix/theme";
+
+import { PlumixForm } from "@plumix/plugin-forms/theme";
+
+export const contactPage = defineTemplate({
+  render: () => (
+    <main>
+      <h1>Get in touch</h1>
+      <PlumixForm slug="contact" />
+    </main>
+  ),
+});
+```
+
+Bind the template to a route as you would any other, and the page serves the form with the same markup, the same island and the same no-JavaScript submit the block gives it. [Templates](/themes/templates/) covers binding a template.
+
+## From a theme template
+
+`PlumixForm` renders what the block renders, with one exception. It carries no bound row, so a form that declares `bind` stores `null` for `bound` when rendered here. [Carrying the page's row](/plugins/forms/#carrying-the-pages-row) explains why. A slug nobody registered renders nothing, so a template that outlives its form does not take the page down with it.
+
+Give it an `id` when one form appears twice on a page. That includes once from a template and once from a block, because a block whose node carries no id falls back to the same default. The plugin builds control ids from the `id`, and each label points at its control by id. Without one, the second form's labels address the first form's controls, and a multi-step form shares the other's saved progress:
+
+```tsx no-typecheck
+import { PlumixForm } from "@plumix/plugin-forms/theme";
+
+export function Chrome() {
+  return (
+    <>
+      <PlumixForm slug="contact" id="header" />
+      <PlumixForm slug="contact" id="footer" />
+    </>
+  );
+}
+```
+
+## By replacing the block
+
+A theme that declares a block under the plugin's own name replaces its render outright, because a theme block wins a name collision with a plugin block. You take over the render without forking the plugin:
+
+```tsx no-typecheck
+import { defineBlock } from "plumix/blocks";
+import { defineTheme } from "plumix/theme";
+
+import { MyForm } from "./my-form";
+import { templates } from "./templates";
+
+export const theme = defineTheme({
+  blocks: [defineBlock({ name: "forms/form", title: "Form", render: MyForm })],
+  templates,
+});
+```
+
+The editor still inserts `forms/form` and still picks from the declared forms. What changes is who renders it. Your block replaces the plugin's whole spec, including the loader that signs a bound row, so a `bind` form rendered through it carries no bound row unless your block produces one. [Blocks](/blocks/overview/#where-the-registry-comes-from) covers how the registries merge.
+
+## In your own React
+
+Some forms are mostly bespoke UI, such as a subscribe bar that is one input and a button, wrapped in a sticky reveal, a dismiss control and an analytics event. For a form like that, take the fields, a submit call and the errors, and write the rest yourself.
+
+First hand the form's shape to your island from the template. `formWire` returns the half of a form that serializes, without its callbacks or its Turnstile secret:
+
+```tsx no-typecheck
+import { defineTemplate } from "plumix/theme";
+
+import { formWire } from "@plumix/plugin-forms/theme";
+
+import { SubscribeBar } from "./subscribe-bar";
+
+export const home = defineTemplate({
+  render: () => {
+    // Resolves against the app serving the request, so call it during the
+    // render. Undefined for a slug nobody registered.
+    const subscribe = formWire("subscribe");
+    return subscribe ? <SubscribeBar client="load" form={subscribe} /> : null;
+  },
+});
+```
+
+Then drive it in the island:
+
+```tsx no-typecheck
+"use client";
+
+import type { IslandProps } from "plumix/blocks";
+import { useState } from "react";
+
+import type { FormWire } from "@plumix/plugin-forms/hooks";
+import { usePlumixForm } from "@plumix/plugin-forms/hooks";
+
+import type { subscribe } from "../forms";
+
+export function SubscribeBar({ form }: IslandProps<{ form: FormWire }>) {
+  const { submit, submitting, confirmation, errorFor } =
+    usePlumixForm<typeof subscribe>(form);
+  const [email, setEmail] = useState("");
+  if (confirmation) return <p>{confirmation}</p>;
+  return (
+    <>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <button disabled={submitting} onClick={() => void submit({ email })}>
+        Subscribe
+      </button>
+      {errorFor("email") ? <small>{errorFor("email")}</small> : null}
+    </>
+  );
+}
+```
+
+The hook returns:
+
+| Property       | What it is                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fields`       | The form's questions in the order it asks them, each with its label, help text, options and whether it is required.                |
+| `submit`       | Sends the answers. A call made while another is still in flight is ignored, so a button pressed twice sends one submission.        |
+| `submitting`   | `true` from the moment a submit leaves until its answer lands.                                                                     |
+| `confirmation` | The message to show in place of the form once a submission is accepted, otherwise `null`.                                          |
+| `errors`       | The `{ field, message }` list the last submit came back with, the same list every other surface gets.                              |
+| `errorFor`     | One field's error, by its posted name. `errorFor("")` returns the error that names no field, which a failed network request gives. |
+
+The type argument is the form itself, imported with `import type` so no server-only callback ends up in the browser bundle. It makes `submit` take that form's answers, so a renamed field breaks the build here too. You may leave out fields the form does not require. Each falls back to its declared default, which is what a visitor would have posted by leaving that control alone on the blank form.
+
+The plugin supplies no markup, no class names and no stylesheet here. Half the spam floor is a honeypot field, and this hook renders no markup to hold it. The hook still fetches the timing token on mount, exactly as the plugin's own island does. So a form driven from the hook meets the timing check and no honeypot.
+
+### What the hook does not do for you
+
+`fields` is the form's questions as declared. Four things the rendered form does with the definition are yours to handle here:
+
+- **`visibleWhen` is not applied.** The hook does not hold your answers, so it cannot judge a condition. If you render a conditional field, the server drops its answer whenever the condition hides it. That is correct, but it leaves a question that appears to do nothing. Drive a form with conditions through the block or `PlumixForm`, or evaluate the rule yourself.
+- **A `pageBreak()` is not a step.** The hook exposes no wizard, so a form broken into steps is one list of questions. It still submits correctly.
+- **`bind` carries no row.** The signed token comes from the block's loader, so a bound form driven from here stores `null` for `bound`, as `PlumixForm` does.
+- **`turnstile` cannot be solved.** The widget is markup this hook does not render, so every submission of a form that declares one arrives without a challenge, and the server refuses it. Do not give a form you drive from here a `turnstile`.
+
+## Styling
+
+Every part of the rendered form carries a class and a data attribute:
+
+| Part          | Class                      | Attribute                              |
+| ------------- | -------------------------- | -------------------------------------- |
+| The form      | `plumix-form`              | `data-plumix-form="<slug>"`            |
+| Title         | `plumix-form-title`        | `data-plumix-form-title`               |
+| Field wrapper | `plumix-form-field`        | `data-plumix-form-field="<name>"`      |
+| Label         | `plumix-form-label`        | `data-plumix-form-label`               |
+| Control       | `plumix-form-control`      | `data-plumix-form-control="<name>"`    |
+| Help text     | `plumix-form-help`         | `data-plumix-form-help`                |
+| Field error   | `plumix-form-error`        | `data-plumix-form-error="<name>"`      |
+| Required mark | `plumix-form-required`     | `data-plumix-form-required`            |
+| Group         | `plumix-form-group`        | `data-plumix-form-group="<name>"`      |
+| Repeater      | `plumix-form-repeater`     | `data-plumix-form-repeater="<name>"`   |
+| Repeater row  | `plumix-form-row`          | `data-plumix-form-row="<name>"`        |
+| Fieldset name | `plumix-form-legend`       | `data-plumix-form-legend`              |
+| Add a row     | `plumix-form-row-add`      | `data-plumix-form-row-add="<name>"`    |
+| Remove a row  | `plumix-form-row-remove`   | `data-plumix-form-row-remove="<name>"` |
+| Error summary | `plumix-form-summary`      | `data-plumix-form-summary`             |
+| Captcha       | `plumix-form-captcha`      | `data-plumix-form-captcha="<siteKey>"` |
+| Actions       | `plumix-form-actions`      | `data-plumix-form-actions`             |
+| Submit button | `plumix-form-submit`       | `data-plumix-form-submit`              |
+| Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`        |
+
+`<name>` is the field's key at the top of the form, and its bracketed path below that, such as `attendees[0][who]`. The add and remove buttons are on the page only while the island drives the form. The error summary holds a `plumix-form-summary-title` heading and a `plumix-form-summary-list` list.
+
+A form broken into steps carries five more, none of which a plain form has:
+
+| Part               | Class                                   | Attribute                                         |
+| ------------------ | --------------------------------------- | ------------------------------------------------- |
+| Progress indicator | `plumix-form-steps`                     | `data-plumix-form-steps`                          |
+| One step's mark    | `plumix-form-step-marker`               | `data-plumix-form-step-marker="<n>"`              |
+| The step on screen | `plumix-form-step`                      | `data-plumix-form-step="<n>"`                     |
+| Step heading       | `plumix-form-step-title`                | `data-plumix-form-step-title`                     |
+| Back / Next        | `plumix-form-back` / `plumix-form-next` | `data-plumix-form-back` / `data-plumix-form-next` |
+
+`<n>` counts steps from zero. The mark for the step being filled in carries `aria-current="step"`.
+
+An enhanced form also carries `data-plumix-form-enhanced` on the `<form>` itself, which is how to style a form the island has taken over differently from a plain one:
+
+```css
+.plumix-form[data-plumix-form-enhanced] .plumix-form-submit {
+  min-width: 8rem;
+}
+```
+
+<Aside type="note" title="The one inline style">
+  The honeypot is the one part the plugin styles, and it hides it inline so that
+  hiding never depends on your stylesheet. A trap the visitor can see is a trap
+  they fill in.
+</Aside>
+
+## Accessibility
+
+The rendered form guarantees the following, and the block and `PlumixForm` both render it:
+
+- Every control has a label that points at it.
+- Help text and errors are wired to their control through `aria-describedby`.
+- A control that failed carries `aria-invalid`.
+- A failed submit renders a `role="alert"` summary, moves focus to it, and links each message to the control that produced it.
+- A glyph marks a required field as well as the `required` attribute, so the mark never relies on colour alone.
+- Every step change moves focus to the new step's heading, and the progress indicator marks the step being filled in with `aria-current="step"`.
+- Removing a repeater row moves focus to the add button rather than dropping it.
+- An accepted submission replaces the form with a `role="status"` confirmation and moves focus to it.
+
+A form you drive with `usePlumixForm` gets none of this from the plugin, because the markup is yours.
+
+## Related
+
+- [Forms](/plugins/forms/) covers declaring a form, validation, the submit handler and binding a form to the page's row.
+- [Form Fields](/plugins/forms-fields/) covers what each field renders as, including groups, repeater rows and steps.
+- [Templates](/themes/templates/) covers the builders that bind a template like the quickstart's to a route.
+- [Blocks](/blocks/overview/) covers how a theme block replaces a plugin block of the same name.
+- [Themes](/themes/overview/) covers the descriptor a theme's `blocks` and `templates` sit in.
+
+## Next steps
+
+Read [Form Submissions](/plugins/forms-submissions/) to see where what a visitor sends ends up: the inbox, the CSV and JSON exports, and how long the plugin keeps each submission.
+
+If the form needs a captcha, [A captcha, where one is needed](/plugins/forms/#a-captcha-where-one-is-needed) covers Turnstile, which the block and `PlumixForm` render and the hook does not.

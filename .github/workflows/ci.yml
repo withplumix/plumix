@@ -266,8 +266,8 @@ jobs:
       - run: pnpm test:e2e
 
       # Running the capture is the check: markup that moved stops resolving by
-      # test id and the command fails. No baselines, no pixel diff — see
-      # packages/admin/README.md. A step rather than its own job because it
+      # test id and the command fails. No baselines, no pixel diff — see the
+      # comments in packages/admin/screenshots/capture-browser.ts. A step rather than its own job because it
       # reuses the checkout, the build and the failure upload below; the images
       # it writes go with the runner.
       #

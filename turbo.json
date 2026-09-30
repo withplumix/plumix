@@ -251,7 +251,7 @@
       //
       // The images land in `apps/docs`, not here, so the outputs reach across
       // packages. That is safe to cache because the capture renders in a
-      // pinned container (see packages/admin/README.md) rather than on
+      // pinned container (see packages/admin/screenshots/capture-browser.ts) rather than on
       // whatever machine ran it: a remote-cache hit restores the same bytes a
       // local run would have written. The hit also skips the CI check this
       // task doubles as, which is fine — the hash covers the admin package and

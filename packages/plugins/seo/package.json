@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-seo",
   "version": "0.2.0",
   "type": "module",
-  "description": "SEO plugin for Plumix — head meta, Open Graph, structured data, robots.txt and the sitemap",
+  "description": "Head meta, Open Graph, structured data, robots.txt and the sitemap for Plumix.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/seo/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

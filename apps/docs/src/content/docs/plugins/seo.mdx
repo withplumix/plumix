@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, its structured data, `/robots.txt`, and the sitemap, plus a per-entry and per-term box where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive, no Open Graph tags and no JSON-LD, and the site serves neither `robots.txt` nor a sitemap.
+`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, its structured data, `/robots.txt`, and the sitemap, plus a per-entry and per-term box where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive, no Open Graph tags and no JSON-LD, and the site serves no `robots.txt`, sitemap or `/llms.txt`.
 
 ## Overview
 
@@ -99,7 +99,7 @@ ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {
 ```
 
 <Aside type="caution" title="The OG plugin needs this one">
-  `@plumix/plugin-og` contributes link 2 and nothing else. Installed without
+  `@plumix/plugin-og` contributes link 3 and nothing else. Installed without
   `@plumix/plugin-seo`, its cards still render at their route but nothing puts
   them in a page's head. Install both.
 </Aside>
@@ -466,7 +466,7 @@ The page carries exactly one `og:site_name`, and it is the theme's.
 
 ## Related
 
-[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. [OG Cards](/plugins/og/) contributes the generated card that sits at link 2 of the chain above, and needs this plugin installed to reach a page's head.
+[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. [OG Cards](/plugins/og/) contributes the generated card that sits at link 3 of the chain above, and needs this plugin installed to reach a page's head.
 
 The `featured` and `ogImage` roles the chain reads are filled by meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Image Roles](/fields/field-types/#image-roles) what a role is and how to add one of your own. The head this plugin writes into is the theme's: [Themes](/themes/overview/) covers the `document` declaration whose tags win, and [Template Data](/themes/template-data/) the `data` a `seo:og_image` subscriber receives.
 

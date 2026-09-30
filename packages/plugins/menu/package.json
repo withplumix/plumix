@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-menu",
   "version": "0.3.0",
   "type": "module",
-  "description": "Menu plugin for Plumix — navigation menus assembled from entries, terms, and custom URLs",
+  "description": "Navigation menus for Plumix, built from entries, terms and custom URLs.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/menu/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

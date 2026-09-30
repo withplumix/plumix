@@ -2,10 +2,10 @@
   "name": "@plumix/runtime-cloudflare",
   "version": "0.12.0",
   "type": "module",
-  "description": "Cloudflare Workers runtime adapter for Plumix",
+  "description": "Run a Plumix site on Cloudflare Workers.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/deployment/cloudflare/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

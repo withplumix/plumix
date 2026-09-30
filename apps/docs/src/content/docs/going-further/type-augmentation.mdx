@@ -1,0 +1,133 @@
+---
+title: Type Augmentation
+description: Plumix types your entry types, blocks, hooks, meta and environment through interfaces you extend with declare module "plumix", and this page lists every one of them.
+tier: P1
+sidebar:
+  order: 20
+---
+
+Plumix names what your site registers, such as an entry type, a block or a hook, through TypeScript interfaces you extend by declaration merging. Once you declare a name, the API that reads it autocompletes it, types its data, and rejects a typo at compile time.
+
+## Overview
+
+Each augmentable interface is a registry. Core seeds some of them with its own names, such as `post` and `page` in `EntryTypeRegistry` and `featured` in `ImageRoles`, and your code adds the rest. The runtime registration and the type declaration are two separate steps. `registerEntryType("recipe", …)` makes the type exist when the site runs, and the declaration makes it exist to the compiler. Each needs the other.
+
+Every augmentation targets one specifier, `plumix`, the package you install. Never augment `@plumix/core`, another internal package, or a subpath such as `plumix/plugin` or `plumix/theme`, even when the API that reads the registry lives on that subpath.
+
+## Quickstart
+
+Declare the name next to the code that registers it:
+
+```ts
+import type { ResolvedEntry } from "plumix";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    insight: { entry: ResolvedEntry };
+  }
+}
+```
+
+A theme then targets the type by name, and Plumix types `data.entry` from the projection:
+
+```tsx
+import type { ResolvedEntry } from "plumix";
+import type { EntryData } from "plumix/theme";
+import { defineTemplate, defineTheme, forEntryType } from "plumix/theme";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    insight: { entry: ResolvedEntry };
+  }
+}
+
+const insight = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>{data.entry.title}</h1>,
+});
+
+export default defineTheme({
+  templates: [forEntryType("insight").template(insight)],
+});
+```
+
+A name nothing declared is a compile error rather than a rule that never matches:
+
+```ts no-typecheck
+// Compile error: "insihgt" is not a key of EntryTypeRegistry.
+forEntryType("insihgt").template(insight);
+```
+
+The value in `EntryTypeRegistry` is the projection, the type `data.entry` narrows to in that type's templates. Declare a name with a projection that has no `entry` key and it falls back to the base `ResolvedEntry`.
+
+## Why one specifier
+
+Declaration merging joins two declarations of an interface only when both name the same module. The registries are re-exported through several packages, so augmenting `plumix` in a theme and `plumix/plugin` in a plugin builds two separate interfaces. Each keeps its own keys and misses the other's, and nothing reports it. Augmenting `@plumix/core` is worse. Your project does not depend on it directly, so the declaration targets a module your compilation never loads, and it does nothing.
+
+`plumix` re-exports every type, including the block and pattern registries whose functions live on `plumix/blocks`, so you can reach every registry through it.
+
+## The registries
+
+### Names the typed APIs read
+
+| Interface                  | Maps                                             | Read by                                                |
+| -------------------------- | ------------------------------------------------ | ------------------------------------------------------ |
+| `EntryTypeRegistry`        | entry-type name → `{ entry }` projection         | `forEntryType`, `feed.forEntryType`, `EntryMeta`       |
+| `TermTaxonomyRegistry`     | taxonomy name → `{ term }` projection            | `forTermTaxonomy`                                      |
+| `ArchiveTypeRegistry`      | plugin archive-type name → `{ data }` projection | `forArchiveType`                                       |
+| `TemplateDepRegistry`      | dep kind → key field and `result` type           | `defineTemplate`, `defineTheme`, `registerTemplateDep` |
+| `BlockTypeRegistry`        | block name → attrs shape                         | `block()`                                              |
+| `PatternCategoryRegistry`  | pattern category slug → `true`                   | `definePattern`'s `category`                           |
+| `ReferenceHydrationShapes` | reference kind → hydrated shape                  | reference fields                                       |
+| `ImageRoles`               | image role name → `true`                         | `.role()`, `registerImageRole`, `images`               |
+| `DebugPanelRegistry`       | debug panel id → `true`                          | the `dev.panels` setting                               |
+
+Core seeds `post` and `page`, `category` and `tag`, the eight default pattern categories, the `entry`, `term` and `user` reference kinds, the `featured` and `ogImage` roles and its own debug panels. `BlockTypeRegistry` accepts any name, and types the attrs of a name it has not seen as `JsonObject`.
+
+### Hooks
+
+`FilterRegistry` and `ActionRegistry` map a hook name to its handler signature. A plugin that fires a hook declares it, and TypeScript then types every `addFilter` or `addAction` call against that name. A plugin declares its hooks in its own package, so they type-check only in a project that installs it.
+
+### Meta
+
+`EntryMetaContributions`, `TermMetaContributions`, `UserMetaContributions` and `SettingsContributions` map a meta box id to the fields it contributes. `MetaOf`, `TermMetaOf`, `UserMetaOf` and `SettingsOf` fold them into one typed record. [Field Builders](/fields/builders/#from-a-fields-array-to-typed-meta) walks through it.
+
+### Context and environment
+
+`PluginContextExtensions` types what `extendPluginContext` puts on every plugin's setup context, and `AppContextExtensions` types what `extendAppContext` puts on every request's `ctx`. `PlumixEnv` types the environment a runtime binds, so a config slot reads your keys with type checking. [Secrets](/deployment/secrets/) covers it.
+
+### Registration options
+
+A plugin can add options to what other plugins register. `EntryTypeOptions`, `TermTaxonomyOptions`, `ArchiveTypeOptions`, `ListingArchiveTypeOptions` and `UnlistedArchiveTypeOptions` are the option bags of the matching `register*` calls. `@plumix/plugin-menu` adds `isShownInMenus` to the first two this way. `ThemeDescriptor` takes the same treatment for a theme slot, which is how a [rule kind](/themes/rule-kinds/) adds one.
+
+## Keeping plumix in scope
+
+A `declare module "plumix"` block only resolves when the same file also imports from `plumix`. Without it, TypeScript reports that it cannot find the module. Most files import something from `plumix` already. A file that augments `plumix` but otherwise imports only from subpaths needs one import from the root, and a type is enough:
+
+```ts
+import type { HydratedReference } from "plumix";
+
+interface ProductReference extends HydratedReference {
+  readonly sku: string;
+}
+
+declare module "plumix" {
+  interface ReferenceHydrationShapes {
+    product: ProductReference;
+  }
+}
+```
+
+## Making the declaration reachable
+
+A declaration takes effect only in a compilation that includes the file declaring it. A plugin's declaration that sits in a file your theme never imports, directly or through another import, is invisible to the theme.
+
+- **A plugin published as a package.** Put the `declare module "plumix"` block in the module that exports the types a theme imports from it, such as the result type of a template dep. Importing that type pulls the declaration in. A theme that touches only a plugin's `/server` types never loads its main entry, so the compiler misses a declaration there.
+- **A plugin defined inside your site.** The theme cannot import from your config. Put the declaration in a shared file, such as `plumix-types.d.ts`, that both the config and the theme entry import.
+
+## Related
+
+The page for each registration covers the runtime half of its registry: [Entry Types](/content-modelling/entry-types/), [Taxonomies](/content-modelling/taxonomies/), [Templates](/themes/templates/) and [Rule Kinds](/themes/rule-kinds/) for themes, [Field Builders](/fields/builders/) for meta, and [Plugins](/plugins/overview/#adding-an-image-role) for image roles and context extensions. [Project Structure](/getting-started/project-structure/) explains why `plumix` is the one import path.
+
+## Next steps
+
+Declare the entry types your plugins register, then open a theme and let `forEntryType` autocomplete them.

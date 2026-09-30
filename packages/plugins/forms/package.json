@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-forms",
   "version": "0.2.1",
   "type": "module",
-  "description": "Forms plugin for Plumix \u2014 forms declared in config, rendered as a block, with stored submissions.",
+  "description": "Forms for Plumix, declared in config, rendered as a block, with stored submissions.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/forms/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

@@ -175,6 +175,8 @@ export function ReplyBox({ entryId }: { entryId: number }) {
 
 It posts to the same endpoint the rendered form posts to, so a comment sent from a theme's own controls meets the rate limit, the trust policy and the `comment:moderate` chain exactly as one sent from the plugin's markup does. The honeypot is the one thing it does not meet — the trap is a field in markup this hook does not render, which is the trade of writing the markup yourself.
 
+`loadThread` comes from `@plumix/plugin-comments/server`, the entry that loads a thread without pulling in admin code. It takes the request context, the entry id, and the page to load, `{ maxDepth, rootsPerPage, cursor }`. It resolves to the same `ResolvedThread` the `comments` template dep hands a template. `comments` holds the page's roots newest first, each with its `replies`, and `hasMore` and `nextCursor` point at the next page over `/list`. The same entry exports the `ResolvedThread` and `ResolvedComment` types for typing a theme's own thread component. A comment carries the author's name and avatar URL and its body already rendered to HTML, never the author's email.
+
 `"use client"` belongs on the theme's own component, which is the thing that hydrates. It must never go on a module that re-exports the hook: the directive marks an island, every export of a module carrying one is replaced by a server shim, and a hook shimmed into a component returns a React element rather than the state the caller asked for.
 
 ## What decides whether a comment appears
@@ -207,6 +209,8 @@ Every option has a default, and `comments()` on its own is a complete registrati
 | `closeAfterDays` | `null`                      | Refuse comments on entries published longer ago than this.               |
 | `rateLimit`      | `{ max: 5, windowMin: 10 }` | The sliding window, per hashed source.                                   |
 | `notifyEmail`    | `null`                      | Email a moderator when a comment is held. Needs a configured mailer.     |
+
+`notifyEmail` sends through the top-level [`mailer`](/getting-started/configuration/#mailer) in the site config. With no mailer configured, the plugin ignores the address and sends no email.
 
 ## Related
 

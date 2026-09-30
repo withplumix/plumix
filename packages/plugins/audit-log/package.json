@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-audit-log",
   "version": "0.2.0",
   "type": "module",
-  "description": "Activity-feed audit log plugin for Plumix — captures entry, user, term, and settings events to a queryable feed.",
+  "description": "An activity feed for Plumix that records entry, user, term and settings events and lets you query them.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/audit-log/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

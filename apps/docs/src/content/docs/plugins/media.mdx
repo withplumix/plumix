@@ -1,0 +1,303 @@
+---
+title: Media
+description: The media plugin stores uploads as entries and their bytes in object storage, adds a Media Library page to the admin, and ships the media field builder that image roles read.
+tier: P1
+sidebar:
+  order: 40
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-media` gives a site a media library. Each upload is a row in the shared `entries` table with the type `media`, and its bytes live in whatever the `storage` slot points at. The admin gains a Media Library page, and the entry editor gains a picker for any field declared with the plugin's `media()` builder.
+
+## Overview
+
+The plugin exports a factory named `media`, so you call it. `media()` on its own is a complete registration. [Configuration](#configuration) covers its two options, `acceptedTypes` and `maxUploadSize`. It adds no database tables, so installing it needs no migration.
+
+It reads two slots from `plumix.config.ts` rather than taking them as options. `storage` is where the bytes go, and without it the plugin accepts no uploads. `imageDelivery` is how thumbnails are derived, and it is optional. The Cloudflare, Node and Bun runtimes each ship an implementation of both.
+
+Beyond the `media` entry type, installing it registers:
+
+- A two-step upload over RPC, which picks one of two [upload modes](#upload-modes) from what the storage adapter can do.
+- The Media Library admin page, in a Library group of its own in the sidebar.
+- The `media` and `mediaList` field types, plus `mediaUrl` and `focalPoint`, which the block style controls and the image block use.
+- Two blocks, `media/image` and `media/file`.
+- Two routes under `/_plumix/media/`: one that receives worker-routed uploads, and one that serves a published file when the bucket has no public URL.
+- Two read-only MCP tools, `media_list` and `media_get`.
+
+The plugin registers the `media` entry type with `isPublic: false`, so it gets no generic entries list, no sidebar item of its own and no public URL. The library page replaces all three.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-media
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-media
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-media
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-media
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Bind a bucket.** On Cloudflare the bytes go to R2, so declare a bucket binding in `wrangler.jsonc`. `MEDIA` is the conventional name, and the adapters read their env keys from it.
+
+   ```jsonc
+   {
+     "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "recipes-media" }],
+   }
+   ```
+
+2. **Fill the `storage` slot and add `media()` to the `plugins` array.** `imageDelivery` is optional, and [Image transformations](#image-transformations) covers it.
+
+   ```ts no-typecheck
+   import { plumix } from "plumix";
+   import { auth } from "plumix/auth";
+
+   import { media } from "@plumix/plugin-media";
+   import { cloudflare, d1, images, r2 } from "@plumix/runtime-cloudflare";
+
+   import { recipes } from "./plugins/recipes";
+
+   export default plumix({
+     runtime: cloudflare(),
+     database: d1({ binding: "DB", session: "auto" }),
+     storage: r2({
+       binding: "MEDIA",
+       publicUrlBase: "https://media.recipes.example",
+     }),
+     imageDelivery: images({ zone: "media.recipes.example" }),
+     auth: auth({
+       passkey: {
+         rpName: "Recipes",
+         rpId: "localhost",
+         origin: "http://localhost:5173",
+       },
+     }),
+     plugins: [recipes, media()],
+   });
+   ```
+
+3. **Restart the dev server.** The plumix Vite plugin compiles the admin bundle from the installed plugins when the dev server starts, so a new admin page appears after a restart, not a config reload.
+
+   ```sh
+   pnpm dev
+   ```
+
+4. **Upload a file.** The sidebar gains a Library group with a Media Library item, at `/_plumix/admin/pages/media`. Drop an image onto the page and it appears in the grid once the upload is confirmed.
+
+</Steps>
+
+Scaffolding with `pnpm create plumix-app my-site --plugins media` writes the `storage` slot and the bucket binding for you. On Node and Bun the scaffolder writes `diskStorage` and `images()` from the runtime package instead.
+
+## Upload modes
+
+An upload takes two RPC calls with a PUT between them. `media.createUploadUrl` checks the file's declared type and size, inserts a `draft` media entry, and returns a URL to PUT the bytes to. `media.confirm` then checks what actually landed and publishes the entry. Which URL the first call returns depends on the storage adapter, and you do not choose.
+
+**Presigned PUT.** When the adapter implements `presignPut`, the browser sends the bytes straight to the bucket over a SigV4 query-signed URL that expires after 60 seconds. The bytes never pass through the worker, so an upload costs it no CPU time. On Cloudflare, `r2()` implements `presignPut` only when it has S3 API credentials, and the bucket needs [CORS rules](#r2-cors-for-presigned-uploads).
+
+**Worker-routed.** Otherwise the URL is `/_plumix/media/upload/<id>` on the site itself, and the worker streams the request body into storage through the adapter's `put()`. It works as soon as the binding is attached, with no credentials and no CORS rules, because the request is same-origin. The runtime's request-body limit caps it. On the Workers Free and Pro plans that limit is 100 MB. Node's and Bun's `diskStorage` has no presigning, so uploads there always take this path.
+
+Either way, `media.confirm` does the same checks before publishing:
+
+- It reads the stored object's size. If the object is larger than the size the browser declared, it deletes the object and rejects the upload.
+- It reads the start of the file and compares it against the signature of the declared MIME type. When a PNG is declared as a PDF, it deletes the object and refuses the confirm. For text types it looks for HTML and SVG markers instead, and a type with no known signature passes.
+- For raster images it records the pixel width and height, which a `media` field's hydrated value carries.
+
+When the PUT or the confirm fails, the admin deletes the draft entry it created. When presigning throws after the draft was inserted, the server deletes the draft itself.
+
+<Aside type="note" title="A request, not a guarantee, before confirm">
+  `media.createUploadUrl` checks the declared size against `maxUploadSize`
+  before it mints a URL, and the worker-routed upload refuses a body larger than
+  it. A presigned PUT URL does not sign the size, so for that mode the check
+  that holds is the one `media.confirm` makes after the bytes land.
+</Aside>
+
+## Configuration
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { DEFAULT_ACCEPTED_TYPES, media } from "@plumix/plugin-media";
+
+export const plugins: PlumixConfigInput["plugins"] = [
+  media({
+    acceptedTypes: [...DEFAULT_ACCEPTED_TYPES, "image/svg+xml"],
+    maxUploadSize: 10 * 1024 * 1024,
+  }),
+];
+```
+
+| Option          | Default                  | What it does                                                                                                                                                                     |
+| --------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `acceptedTypes` | `DEFAULT_ACCEPTED_TYPES` | The MIME types `media.createUploadUrl` accepts. It strips a declared type's parameters and lowercases it before comparing, so `image/PNG; charset=binary` counts as `image/png`. |
+| `maxUploadSize` | 25 MiB                   | The largest upload in bytes. `media.createUploadUrl` refuses a file declared larger before it mints a URL.                                                                       |
+
+`DEFAULT_ACCEPTED_TYPES` is exported from the package root, so you can extend the default list rather than restate it. It covers:
+
+- **Images:** JPEG, PNG, GIF, WebP and AVIF.
+- **Documents:** PDF, Word, Excel and PowerPoint in both the legacy and the Office Open XML formats, plain text, Markdown and CSV.
+- **Audio:** MP3, WAV and Ogg.
+- **Video:** MP4, WebM and QuickTime.
+- **Archives:** ZIP.
+
+SVG is not in the list. An SVG file is XML and can carry script, and checking that the bytes start with `<svg` says nothing about whether they are safe to render. If you add `image/svg+xml`, serve uploads from a domain other than the admin's, so a script inside one cannot reach the admin's cookies. The same advice holds for the text types in the default list, which are stored byte for byte.
+
+## Capabilities
+
+Registering the `media` type derives the same eight capabilities as any entry type, with one default changed. `delete` starts at contributor rather than editor.
+
+| Capability                     | Minimum role |
+| ------------------------------ | ------------ |
+| `entry:media:read`             | subscriber   |
+| `entry:media:create`           | contributor  |
+| `entry:media:edit_own`         | contributor  |
+| `entry:media:delete`           | contributor  |
+| `entry:media:publish`          | author       |
+| `entry:media:edit_any`         | editor       |
+| `entry:media:read_revisions`   | editor       |
+| `entry:media:restore_revision` | editor       |
+
+Here is what each operation asks for:
+
+- **Opening the library and listing media** takes `read`, and so does resolving a `media` field in the editor.
+- **Uploading** takes `create`. Only the user who started an upload can PUT its bytes or confirm it, so nobody else can take over a half-finished upload, whatever their role.
+- **Editing alt text or the title** takes `edit_own` on your own uploads and `edit_any` on anyone else's.
+- **Deleting** takes `delete` on your own uploads, and `edit_any` on top of it for anyone else's. A contributor can therefore remove what they uploaded, and only an editor or above can remove someone else's.
+
+The upload does not check `publish`. Confirming an upload publishes it, and the gate on that step is `create` plus ownership. The media type does not declare revisions, so the two revision capabilities exist but nothing reads them.
+
+## Featured and share images
+
+The plugin's field builder lives on a subpath, `@plumix/plugin-media/fields`, because the package root already exports a `media` function, the plugin factory. The builder stores a media id and reads back a summary with the URL, thumbnail URL, alt text, MIME type, size and pixel dimensions. In the editor it renders a button that opens the library as a picker. [Field Types](/fields/field-types/#plugin-field-types) documents the whole chain.
+
+Two methods on it put a field in one of the [image roles](/fields/field-types/#image-roles) core ships:
+
+- `.featured()` puts the field in the `featured` role, the entry's own picture. A theme reads it as `data.entry.images.featured`, and the `og:image` chain falls back to it when no share image is set.
+- `.ogImage()` puts it in the `ogImage` role, an explicit social-share image that outranks `featured`. `@plumix/plugin-seo` and `@plumix/plugin-og` both read it.
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+import { media } from "@plumix/plugin-media/fields";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("recipe-images", {
+      label: "Images",
+      entryTypes: ["recipe"],
+      fields: [
+        media("heroImage").featured(),
+        media("shareImage").label("Share image").ogImage(),
+      ],
+    });
+  },
+});
+```
+
+Both are shorthand for `.role("featured")` and `.role("ogImage")`, and `.role()` takes any role a plugin has registered. A role field holds one image. With no `.accept()` it accepts only `image/` types, and an `.accept()` that admits anything else throws when you build the field.
+
+A theme reads the image by role, not by the meta key that holds it:
+
+```tsx
+import type { EntryData } from "plumix/theme";
+import type { ReactNode } from "react";
+
+export function Hero({ data }: { data: EntryData }): ReactNode {
+  const hero = data.entry.images.featured;
+  return hero ? <img src={hero.url} alt={hero.alt ?? ""} /> : null;
+}
+```
+
+## The Media Library
+
+The library page lists published media newest-updated first, 24 at a time, and loads the next page as you scroll to the bottom of the grid. Each card shows a thumbnail for an image and a file-type glyph for anything else, with its title, upload date and size.
+
+- **Uploading.** Drop files anywhere on the page, or use the Upload button. Uploads run four at a time behind one combined progress bar. When the `storage` slot is not configured, the page hides both.
+- **Searching.** The search box matches the title or the alt text.
+- **Details.** Clicking a card opens a details panel with the MIME type, size and upload date. The alt text field saves when it loses focus or on Enter, and Escape discards the edit.
+- **Copy and Download.** The panel shows the file's absolute URL with a Copy button. Download always goes through `/_plumix/media/serve/<id>?attachment=1`. A browser ignores the `download` attribute when the bucket is on another domain, and this route still makes it download the file.
+- **Deleting.** Delete asks for confirmation in a dialog. It removes the entry, then the stored object. If the storage delete fails, the object stays in the bucket and the entry is still gone.
+
+A `media` field's picker is the same component in picker mode. It filters the grid by the field's `.accept()`, selects on a single click, and confirms on a double click or with the Use selection button.
+
+## Serving files
+
+What URL a file gets depends on the storage adapter. When `r2()` has a public URL base, from `publicUrlBase` or the `MEDIA_PUBLIC_URL_BASE` env key, a file's URL is on that domain and the request never reaches the worker. Without one, and always with `diskStorage`, the URL is `/_plumix/media/serve/<id>`, which the plugin serves itself.
+
+That route is public, because a published image has to be embeddable in a page. It serves published media only, so a draft or a deleted entry is a 404. It always sends `X-Content-Type-Options: nosniff`. JPEG, PNG, GIF, WebP, AVIF, audio and video render inline. Every other type, SVG included, is sent as an attachment, so an HTML file disguised as text is downloaded rather than rendered. It answers `If-None-Match` with a 304 and caches for 60 seconds with `must-revalidate`.
+
+## Platform setup
+
+### R2 CORS for presigned uploads
+
+Skip this if your `r2()` has no S3 credentials. Worker-routed uploads are same-origin and need no CORS rules.
+
+A presigned PUT goes from the admin in the browser straight to R2, so the bucket has to allow the admin's origin. Without the rules, the browser blocks the request before any bytes reach R2. Apply them once per bucket:
+
+```sh
+wrangler r2 bucket cors put recipes-media --rules '[{
+  "AllowedOrigins": ["https://recipes.example"],
+  "AllowedMethods": ["PUT"],
+  "AllowedHeaders": ["Content-Type"],
+  "ExposeHeaders": ["ETag"],
+  "MaxAgeSeconds": 3600
+}]'
+```
+
+List every origin you serve the admin from: production, each preview deploy, and the local dev server's origin.
+
+The credentials themselves go in the `s3` option of `r2()`, or in four env keys the adapter reads when `s3` is absent: `CF_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `MEDIA_BUCKET`. With only some of the four set, presigned uploads stay off and uploads fall back to the worker without an error. [Cloudflare Workers](/deployment/cloudflare/#r2-and-the-storage-slot) covers both forms.
+
+### Image transformations
+
+With no `imageDelivery` slot, every card in the grid loads the full-size original. On a small library that is fine, but the grid loads more slowly as the library grows.
+
+On Cloudflare, `images({ zone })` turns an image URL into a Cloudflare Image Transformations URL on that zone, and the library asks for a 320-pixel-wide thumbnail in whatever format the browser accepts best. The zone must have Image Transformations enabled in the Cloudflare dashboard and must front the same bucket. A transform fetches the source itself, so it needs an absolute URL. An image served through the plugin's own serve route has a relative URL and gets no thumbnail, so give the bucket a public URL base to get thumbnails on Cloudflare. [Cloudflare Workers](/deployment/cloudflare/#images) covers the adapter.
+
+On Node and Bun, `images()` from the runtime package renders thumbnails in the process with `sharp`. It resolves same-origin sources itself, so files served through the plugin's route get thumbnails too. When a media item is trashed or deleted, the plugin asks the slot to drop that item's cached variants. [Node.js](/deployment/node/#images) covers the renderer and its cache.
+
+## Current limitations
+
+The plugin does not do these yet:
+
+- **Upload quotas or rate limits.** Any user with `entry:media:create` can start as many uploads as they like. On a site with many contributors, that is a way to fill the bucket.
+- **Cleaning up abandoned drafts.** The admin and the server delete a draft on the failure paths they see. A browser that closes mid-upload leaves its draft entry behind, and nothing sweeps old drafts on a schedule.
+- **Bulk actions and tags.** The library edits and deletes one item at a time, and media has no taxonomy.
+- **Replacing a file.** An upload always creates a new entry. To change a file, upload the new one and point the fields at it.
+
+## Related
+
+[Field Types](/fields/field-types/#plugin-field-types) documents the `media` and `mediaList` builders, and [Image Roles](/fields/field-types/#image-roles) covers what `.featured()` and `.ogImage()` join. [Adding an image role](/plugins/overview/#adding-an-image-role) registers a role of your own. [Template Data](/themes/template-data/) covers reading `images` in a theme. The storage and image slots are adapter configuration, covered for each runtime in [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/), and [Secrets](/deployment/secrets/#secrets-other-slots-read) covers the R2 credentials. The model in [Access & Identity](/access/overview/) enforces the capability table.
+
+## Next steps
+
+To use an uploaded image as a page's share image, install [SEO](/plugins/seo/), which reads the `ogImage` and `featured` roles into `og:image`. [OG Cards](/plugins/og/) renders a card for pages that have neither.
+
+To put a picture field on your own entry type, [Meta Boxes](/fields/meta-boxes/) covers attaching a box of fields to it.
