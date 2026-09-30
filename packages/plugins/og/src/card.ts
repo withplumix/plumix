@@ -203,9 +203,11 @@ const forDate: DateTargets<CardSelector<DateArchiveData>> = dateTargets(
 );
 
 /**
- * Builders for a theme's `ogCards`, mirroring the template builders one for
- * one: a generic tier (`card.entry()`, `card.frontPage()`, `card.fallback()`)
- * or a targeted matcher (`card.forEntryType("post")`), then `.define(...)`.
+ * Builders for a theme's `ogCards`, one per template builder: a generic tier
+ * (`card.entry()`, `card.frontPage()`, `card.fallback()`) or a targeted matcher
+ * (`card.forEntryType("post")`), then `.define(...)`. Two keep their own names:
+ * `card.archive()` is the `entryType` tier and `card.taxonomy()` the `term`
+ * tier.
  *
  * @example
  * ```ts
@@ -226,11 +228,11 @@ export const card = {
   fallback: (): CardSelector<TemplateData> => selector({ tier: "fallback" }),
   /** A single entry, any type. */
   entry: (): CardSelector<EntryData> => selector({ tier: "entry" }),
-  /** An entry type's archive listing, any type. */
-  entryType: (): CardSelector<EntryTypeArchiveData> =>
+  /** An entry type's archive listing, any type — the `entryType` tier. */
+  archive: (): CardSelector<EntryTypeArchiveData> =>
     selector({ tier: "entryType" }),
-  /** A term's archive, any taxonomy. */
-  term: (): CardSelector<TermArchiveData> => selector({ tier: "term" }),
+  /** A term's archive, any taxonomy — the `term` tier. */
+  taxonomy: (): CardSelector<TermArchiveData> => selector({ tier: "term" }),
   /** An author archive, any author. */
   author: (): CardSelector<AuthorArchiveData> => selector({ tier: "author" }),
   /** A date archive, any granularity. */

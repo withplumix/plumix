@@ -196,7 +196,7 @@ describe("a theme's own card past entries", () => {
   test("outranks the default on the page kind it declares", async () => {
     const harness = await createHarness({
       cards: [
-        card.term().define({
+        card.taxonomy().define({
           key: ({ data }) => cardKey.of("term", data.term.id, data.term.name),
           render: ({ data }) => ({
             type: "text",
@@ -240,9 +240,9 @@ describe("the card in a listing page's head", () => {
       renderer: rasterRenderer(),
       siteDefaultImage: SITE_DEFAULT,
       // Keyed on what the page lists, which is the only kind of card that can
-      // tell the two slices apart — and the kind `card.entryType()` invites.
+      // tell the two slices apart — and the kind `card.archive()` invites.
       cards: [
-        card.entryType().define({
+        card.archive().define({
           key: ({ data }) =>
             cardKey.of("posts", ...data.entries.map((entry) => entry.id)),
           render: ({ data }) => ({
@@ -276,7 +276,7 @@ describe("the card in a listing page's head", () => {
   test("renders the entry titles a listing card reads expanded", async () => {
     const harness = await createHarness({
       cards: [
-        card.entryType().define({
+        card.archive().define({
           key: ({ data }) =>
             cardKey.of("posts", ...data.entries.map((entry) => entry.id)),
           render: ({ data }) => ({
