@@ -29,10 +29,10 @@ import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/query.js";
 import type { Label } from "../i18n/label.js";
 import type { McpTool } from "../mcp/tool.js";
+import type { EntryListing } from "../route/contract/entry-listing.js";
 import type { RouteIntent } from "../route/contract/intent.js";
-import type { RedirectRule } from "../route/redirects.js";
-import type { EntryListing } from "../route/render/entry-listing.js";
-import type { CustomArchiveData } from "../route/render/resolved-entry.js";
+import type { RedirectRule } from "../route/contract/redirects.js";
+import type { CustomArchiveData } from "../route/contract/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type {
   MetaBoxField,

@@ -41,7 +41,7 @@ import type {
   TemplateData,
   TierMatchRule,
 } from "../../theme.js";
-import type { EntryData, TaxonomyData } from "./resolved-entry.js";
+import type { EntryData, TaxonomyData } from "../contract/resolved-entry.js";
 
 /**
  * How a rule kind turns a selected match into one of its rules. The selector it

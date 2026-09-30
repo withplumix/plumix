@@ -10,7 +10,7 @@ import type {
   ResolvedEntry,
   ResolvedTerm,
   TaxonomyData,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { text } from "../../plugin/fields/builder.js";
 import { date as dateField } from "../../plugin/fields/temporal.js";

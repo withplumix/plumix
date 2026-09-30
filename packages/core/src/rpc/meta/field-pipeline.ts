@@ -2,6 +2,7 @@ import { EMAIL_REGEX } from "valibot";
 
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
+import type { ResolvedMeta } from "../../meta/contract/bags.js";
 import type {
   GroupMetaBoxField,
   MetaBoxField,
@@ -11,7 +12,6 @@ import type {
   RichtextMetaBoxField,
   TemporalInputType,
 } from "../../plugin/manifest.js";
-import type { ResolvedMeta } from "./core.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import { HEX_COLOR } from "../../plugin/fields/color.js";
 import { isFieldVisible } from "../../plugin/fields/condition.js";

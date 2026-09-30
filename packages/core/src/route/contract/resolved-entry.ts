@@ -1,8 +1,8 @@
 import type { EntryContent } from "../../blocks/index.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
-import type { RoleImages } from "../../images/role-images.js";
-import type { StoredMeta, WithResolvedMeta } from "../../rpc/meta/core.js";
+import type { RoleImages } from "../../images/contract/role-images.js";
+import type { StoredMeta, WithResolvedMeta } from "../../meta/contract/bags.js";
 
 /** Public-safe author projection — query select narrows away email + auth columns. */
 export interface ResolvedAuthor {

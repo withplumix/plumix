@@ -9,7 +9,7 @@ import { definePlugin } from "./define.js";
 import { imageRoleFields } from "./image-roles.js";
 import { installPlugins } from "./register.js";
 
-declare module "./image-roles.js" {
+declare module "../images/contract/role-images.js" {
   interface ImageRoles {
     hero: true;
   }

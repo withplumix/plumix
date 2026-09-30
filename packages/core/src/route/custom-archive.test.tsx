@@ -4,7 +4,7 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import type {
   CustomArchiveData,
   ListingArchiveData,
-} from "./render/resolved-entry.js";
+} from "./contract/resolved-entry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";

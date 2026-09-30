@@ -1,5 +1,6 @@
 import type { Capability } from "../auth/contract/capability.js";
 import type { AppContext } from "../context/app-context.js";
+import type { ResolvedImage } from "../images/contract/role-images.js";
 
 // Reference fields (entry / term / user / media) share three
 // operations per target kind: write-time existence check, read-time
@@ -45,19 +46,6 @@ export interface LookupResult {
 export interface HydratedReference {
   readonly id: string;
 }
-
-/**
- * An image read off a hydrated reference by the adapter that produced it.
- * `width`/`height` travel as a pair or not at all: one axis alone tells a
- * layout nothing it can use.
- */
-export type ResolvedImage = {
-  readonly url: string;
-  readonly alt: string | null;
-} & (
-  | { readonly width: number; readonly height: number }
-  | { readonly width?: never; readonly height?: never }
-);
 
 export interface LookupHydrateOptions<TScope = unknown> {
   readonly ids: readonly string[];

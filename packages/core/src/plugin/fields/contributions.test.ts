@@ -3,7 +3,7 @@ import { describe, expectTypeOf, test } from "vitest";
 import type {
   ResolvedEntry,
   ResolvedTerm,
-} from "../../route/render/resolved-entry.js";
+} from "../../route/contract/resolved-entry.js";
 import type { PluginSetupContext } from "../setup-context.js";
 import type {
   EntryMeta,

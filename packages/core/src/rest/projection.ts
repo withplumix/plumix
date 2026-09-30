@@ -1,7 +1,7 @@
 import type { Term } from "../db/schema/terms.js";
+import type { ResolvedMeta } from "../meta/contract/bags.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { ResolvedEntry } from "../route/render/resolved-entry.js";
-import type { ResolvedMeta } from "../rpc/meta/core.js";
+import type { ResolvedEntry } from "../route/contract/resolved-entry.js";
 import type { PublicEntry, PublicTerm } from "./schemas.js";
 import { projectImageRoles } from "../images/role-images.js";
 

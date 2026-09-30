@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { TemplateData, TierMatchRule } from "../../theme.js";
-import type { ResolvedEntry, ResolvedTerm } from "./resolved-entry.js";
+import type {
+  ResolvedEntry,
+  ResolvedTerm,
+} from "../contract/resolved-entry.js";
 import { text } from "../../plugin/fields/builder.js";
 import {
   archiveTypeTargets,

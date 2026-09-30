@@ -6,8 +6,8 @@
 // `@plumix/core/manifest` barrel.
 import type { Capability } from "../../auth/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
+import type { ImageRoleName } from "../../images/contract/role-images.js";
 import type { JsonValue } from "../../json.js";
-import type { ImageRoleName } from "../image-roles.js";
 import type { MetaFieldCondition } from "./condition.js";
 import type { StringInputType, TemporalInputType } from "./roster.js";
 import { TEMPORAL_INPUT_TYPES } from "./roster.js";

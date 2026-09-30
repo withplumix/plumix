@@ -2,7 +2,7 @@ import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { EntryEditErrors } from "../../../entries/editability.js";
 import type { JsonValue } from "../../../json.js";
-import type { ResolvedMeta } from "../../meta/core.js";
+import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";

@@ -9,7 +9,7 @@ import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
 
-declare module "../plugin/image-roles.js" {
+declare module "../images/contract/role-images.js" {
   interface ImageRoles {
     backdrop: true;
   }

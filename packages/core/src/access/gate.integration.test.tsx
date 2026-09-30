@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { JsonObject } from "../json.js";
-import type { CustomArchiveData } from "../route/render/resolved-entry.js";
+import type { CustomArchiveData } from "../route/contract/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import {
   responseAllowsSharedStorage,

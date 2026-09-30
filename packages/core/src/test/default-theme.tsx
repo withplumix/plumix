@@ -1,4 +1,4 @@
-import type { ResolvedEntry } from "../route/render/resolved-entry.js";
+import type { ResolvedEntry } from "../route/contract/resolved-entry.js";
 import { fallback } from "../route/render/template-builders.js";
 import { renderTiptapContent } from "../route/render/tiptap.js";
 import { defineTheme } from "../theme.js";

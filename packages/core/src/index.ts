@@ -43,11 +43,11 @@ export type { CurrentSource, ResolvedEntity } from "./route/current.js";
 export type { ResolvedRoute } from "./route/match.js";
 export type { RouteIntent, RouteRule } from "./route/contract/intent.js";
 export type {
-  RedirectResolution,
   RedirectRule,
   RedirectStatus,
   RedirectTarget,
-} from "./route/redirects.js";
+} from "./route/contract/redirects.js";
+export type { RedirectResolution } from "./route/redirects.js";
 export type { ResolvedNode } from "./route/render/rule-resolver.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";
@@ -154,7 +154,7 @@ export type {
   ResolvedMeta,
   StoredMeta,
   WithResolvedMeta,
-} from "./rpc/meta/core.js";
+} from "./meta/contract/bags.js";
 export { readEntryType } from "./entries/read-service.js";
 // A capability named by the resource it guards (#2436): the registry spells
 // the string, so a pooled type's namespace is never written by hand.
@@ -216,10 +216,8 @@ export { canonicalUrl } from "./seo/canonical.js";
 export type { OgImage } from "./seo/og-image.js";
 // `images.<role>` — the shape every resolved entity carries it in, and the
 // options the REST projection narrows it with.
-export type {
-  ProjectImageRolesOptions,
-  RoleImages,
-} from "./images/role-images.js";
+export type { ProjectImageRolesOptions } from "./images/role-images.js";
+export type { RoleImages } from "./images/contract/role-images.js";
 // The debug bar's presentational primitives, so a plugin panel contributed
 // through `debug:panels` reads like the ones core registers instead of
 // re-spelling their class names. Dev-only in effect — nothing collects
@@ -376,7 +374,7 @@ export {
   taxonomy,
   templateRules,
 } from "./route/render/template-builders.js";
-export type { NamedTemplateChoice } from "./route/render/template-builders.js";
+export type { NamedTemplateChoice } from "./route/contract/named-template.js";
 // The selection half of the hierarchy, public for the same reason `TierMatchRule`
 // and `TargetMatcher` are: a plugin declaring its own rule kind against the node
 // hierarchy (the OG plugin's `ogCards`) builds its selectors out of these rather
@@ -463,9 +461,9 @@ export type {
   ResolvedTerm,
   SearchData,
   TaxonomyData,
-} from "./route/render/resolved-entry.js";
+} from "./route/contract/resolved-entry.js";
 // One page of an archive's entries, as a listed archive's resolver receives it.
-export type { EntryListing } from "./route/render/entry-listing.js";
+export type { EntryListing } from "./route/contract/entry-listing.js";
 export { defineTemplate } from "./template.js";
 export type {
   Template,

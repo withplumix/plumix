@@ -7,7 +7,7 @@ import type {
   FrontPageData,
   SearchData,
   TaxonomyData,
-} from "./route/render/resolved-entry.js";
+} from "./route/contract/resolved-entry.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";

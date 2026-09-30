@@ -13,7 +13,7 @@ import type {
   ResolvedTerm,
   SearchData,
   TaxonomyData,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 import { pageFacts } from "./page-facts.js";
 
 const author: ResolvedAuthor = {

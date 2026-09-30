@@ -7,7 +7,11 @@
  * (`redirects` on the descriptor) — see {@link assembleRedirects}.
  */
 
-export type RedirectStatus = 301 | 302 | 307 | 308;
+import type {
+  RedirectRule,
+  RedirectStatus,
+  RedirectTarget,
+} from "./contract/redirects.js";
 
 /** The outcome of matching a request URL against the redirect rules. */
 export type RedirectResolution =
@@ -17,30 +21,6 @@ export type RedirectResolution =
       readonly status: RedirectStatus;
     }
   | { readonly kind: "gone" };
-
-/** What a rule (static or dynamic) yields on a match, before normalization. */
-export type RedirectTarget =
-  | {
-      readonly to: string;
-      readonly status?: RedirectStatus;
-      /**
-       * Append the request's query string to `to` (unless `to` carries its own
-       * `?…`). Defaults to `true` — the migration-friendly default, matching a
-       * CDN "preserve query string" toggle. Set `false` to redirect to exactly
-       * `to`.
-       */
-      readonly preserveQuery?: boolean;
-    }
-  | { readonly gone: true };
-
-export type RedirectRule =
-  | ({ readonly from: string | RegExp } & RedirectTarget & {
-        readonly priority?: number;
-      })
-  | {
-      readonly match: (url: URL) => RedirectTarget | null;
-      readonly priority?: number;
-    };
 
 /** Status applied when a rule omits one — the SEO-conventional permanent move. */
 const DEFAULT_REDIRECT_STATUS: RedirectStatus = 301;

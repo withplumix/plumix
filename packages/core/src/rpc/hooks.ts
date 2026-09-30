@@ -5,7 +5,7 @@ import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { SettingsBag } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
-import type { WithResolvedMeta } from "./meta/core.js";
+import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import type { EntryMetaChanges } from "./procedures/entry/meta.js";
 import type {
   EntryCreateInput,

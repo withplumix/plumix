@@ -18,9 +18,10 @@ import type {
   FilterRest,
   HookOptions,
 } from "../hooks/types.js";
+import type { ImageRoleName } from "../images/contract/role-images.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/contract/intent.js";
-import type { RedirectRule } from "../route/redirects.js";
+import type { RedirectRule } from "../route/contract/redirects.js";
 import type {
   RegisteredTemplateDep,
   TemplateDepKeys,
@@ -33,7 +34,7 @@ import type {
   TermMetaBoxDrift,
   UserMetaBoxDrift,
 } from "./fields/contributions.js";
-import type { ImageRoleName, ImageRoleOptions } from "./image-roles.js";
+import type { ImageRoleOptions } from "./image-roles.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
