@@ -5,6 +5,7 @@ import { CHANGESET_GATE, GATES } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
   asReviewNote,
+  fixerFor,
   gatesUntilGreen,
   readDeclinedTag,
   readFindingsTag,
@@ -197,8 +198,11 @@ describe("gatesUntilGreen", () => {
       journal,
       {
         apply: async () => ({
-          reason: "a startup race in plumix dev that main has too",
-          notThisBranch: true,
+          declined: {
+            reason: "a startup race in plumix dev that main has too",
+            notThisBranch: true,
+          },
+          pullRequestCopy: null,
         }),
       },
       "final",
@@ -225,7 +229,7 @@ describe("gatesUntilGreen", () => {
       {
         apply: async () => {
           fixed = true;
-          return null;
+          return { declined: null, pullRequestCopy: null };
         },
       },
       "final",
@@ -239,7 +243,7 @@ describe("gatesUntilGreen", () => {
       sandbox((command) => command === "typecheck"),
       gates,
       journal,
-      { apply: async () => null },
+      { apply: async () => ({ declined: null, pullRequestCopy: null }) },
       "final",
     );
 
@@ -352,5 +356,44 @@ describe("asReviewNote", () => {
 
   test("adds nothing when the review changed nothing and left nothing", () => {
     expect(asReviewNote(["", ""], [])).toBe("");
+  });
+});
+
+describe("fixerFor", () => {
+  const fixedWith = (stdout: string, commits: number) =>
+    (async () => ({
+      stdout,
+      commits: Array.from({ length: commits }, () => ({ sha: "abc" })),
+      iterations: [{ sessionId: "s2" }],
+    })) as unknown as RunAgentPhase;
+
+  test("a fix that only corrects the PR description declines nothing and hands back the new copy", async () => {
+    const fixer = fixerFor(
+      fixedWith(
+        "<pr>\ntitle: refactor(core): lift meta\nbody:\n**Fixes #2594**\n\nThe error map stays at src/rpc-errors.ts.\n</pr>",
+        0,
+      ),
+      "s1",
+    );
+
+    const result = await fixer.apply("fix#review2", "the description is stale");
+
+    expect(result).toEqual({
+      declined: null,
+      pullRequestCopy: {
+        title: "refactor(core): lift meta",
+        body: "**Fixes #2594**\n\nThe error map stays at src/rpc-errors.ts.",
+      },
+    });
+  });
+
+  test("a fix that changes nothing and rewrites nothing is declined", async () => {
+    const fixer = fixerFor(fixedWith("I looked around.", 0), "s1");
+
+    const result = await fixer.apply("fix#review2", "gap");
+
+    expect(result.declined?.reason).toBe(
+      "the fixer changed nothing and gave no reason",
+    );
   });
 });

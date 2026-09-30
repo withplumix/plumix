@@ -7,6 +7,9 @@ Close every item below on the branch you are on, then commit.
 Each is a cycle: where it is a behaviour, a failing test first, then the fix. Use
 `mattpocock-skills:tdd`.
 
+An item that is only in the PR description is closed by the corrected `<pr>`
+block the brief asks for, with no commit.
+
 If an item cannot be closed from here — it is wrong, it needs a decision that is
 not yours, or the failure is in the environment rather than the code — do not
 force a change that hides it. Close and commit every other item anyway, then emit

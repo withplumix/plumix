@@ -300,7 +300,7 @@ export const repairPullRequest = async (
     });
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
-      const fixDeclined = await fixer.apply("repair:ci", brief);
+      const { declined: fixDeclined } = await fixer.apply("repair:ci", brief);
       if (fixDeclined?.notThisBranch) {
         return {
           status: "not-this-branch",
