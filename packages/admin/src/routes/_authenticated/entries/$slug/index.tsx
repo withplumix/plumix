@@ -907,6 +907,14 @@ function ContentListRoute(): ReactNode {
           >
             {pluralLabel}
           </h1>
+          {entryType.description ? (
+            <p
+              data-testid="content-list-description"
+              className="text-muted-foreground text-sm"
+            >
+              {renderLabel(entryType.description)}
+            </p>
+          ) : null}
         </div>
         {canCreate ? (
           <Button asChild>

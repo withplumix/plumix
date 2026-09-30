@@ -23,6 +23,10 @@ describe("@plumix/plugin-menu", () => {
     const { registry } = await install();
     const menuItem = registry.entryTypes.get("menu_item");
     expect(menuItem).toBeDefined();
+    expect(menuItem?.description).toEqual({
+      id: "plugin.menu.menuItem.description",
+      message: "Items belonging to a navigation menu",
+    });
     expect(menuItem?.isPublic).toBe(false);
     expect(menuItem?.isHierarchical).toBe(true);
     expect(menuItem?.termTaxonomies).toEqual(["menu"]);

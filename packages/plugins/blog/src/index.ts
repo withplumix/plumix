@@ -75,6 +75,11 @@ const POST_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
+const POST_DESCRIPTION = {
+  id: "plugin.blog.post.description",
+  message: "Standard blog posts",
+};
+
 const CATEGORY_LABELS = {
   singular: withContext(
     { id: "plugin.blog.category.singular", message: "Category" },
@@ -166,7 +171,7 @@ const POST_TAXONOMIES = ["category", "tag"] as const;
 const POST_DEFAULTS: EntryTypeOptions = {
   label: POST_LABELS.plural,
   labels: POST_LABELS,
-  description: "Standard blog posts",
+  description: POST_DESCRIPTION,
   supports: ["title", "editor", "excerpt", "revisions", "autosave"],
   versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
   isHierarchical: false,

@@ -20,6 +20,11 @@ msgstr "Pages"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgid "plugin.pages.page.description"
+msgstr "Hierarchical static pages"
+
+#. js-lingui-explicit-id
+#: src/index.ts
 msgid "plugin.pages.page.addNew"
 msgstr "Add New"
 

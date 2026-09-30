@@ -263,8 +263,11 @@ function TaxonomyListRoute(): ReactNode {
             {renderLabel(taxonomy.label)}
           </h1>
           {taxonomy.description ? (
-            <p className="text-muted-foreground text-sm">
-              {taxonomy.description}
+            <p
+              data-testid="taxonomy-list-description"
+              className="text-muted-foreground text-sm"
+            >
+              {renderLabel(taxonomy.description)}
             </p>
           ) : null}
         </div>

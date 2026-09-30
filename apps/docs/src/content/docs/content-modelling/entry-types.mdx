@@ -82,6 +82,8 @@ export const recipes = definePlugin("recipes", {
 
 `labels.plural` reaches further than the other keys. It is the string the sidebar renders, and the manifest build also slugifies it into the admin URL segment, so "Recipes" gives `/_plumix/admin/entries/recipes`. Leave `plural` out and the sidebar falls back to `label` while the slug falls back to the type name plus an `s`, which is fine for `recipe` and wrong for anything with an irregular plural. Two types whose plurals slugify to the same string fail the manifest build rather than shadowing each other in the admin router. A taxonomy works the other way round, and its sidebar item reads `label` rather than `labels.plural`.
 
+`description` is a label too, so it takes a string or a descriptor the same way. The admin shows it in muted text under the heading of the type's list page, and shows nothing there when it is unset.
+
 There are 19 label keys in all. The full list, with what each one renders, belongs on the entry type reference page, which is not written yet.
 
 ## Hierarchy

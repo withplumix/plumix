@@ -20,6 +20,11 @@ msgstr "Media"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgid "plugin.media.media.description"
+msgstr "Uploaded files — images, video, documents"
+
+#. js-lingui-explicit-id
+#: src/index.ts
 msgid "plugin.media.media.addNew"
 msgstr "Add New"
 
