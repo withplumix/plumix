@@ -62,7 +62,7 @@ import {
   notFound,
   redirect,
   withNoStore,
-} from "./http.js";
+} from "./contract/http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 

@@ -9,7 +9,7 @@ import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
-import { jsonResponse } from "../../runtime/http.js";
+import { jsonResponse } from "../../runtime/contract/http.js";
 import { authenticateSession } from "../authenticator.js";
 import { provisionUser } from "../bootstrap.js";
 import {

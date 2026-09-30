@@ -1,67 +1,32 @@
 {
-  "src/access/gate.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/auth/config.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/auth/device-flow-routes.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/auth/email-change/routes.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/auth/magic-link/routes.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/auth/mailer/resolve.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/auth/oauth/consumer.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/auth/oauth/routes.ts": {
     "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/auth/oauth/types.ts": {
-    "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/auth/passkey/config.ts": {
-    "boundaries/dependencies": {
-      "count": 2
     }
   },
   "src/auth/passkey/routes.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/auth/sign-in.ts": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/cdn/cloudflare/cloudflare.ts": {
-    "boundaries/dependencies": {
-      "count": 2
     }
   },
   "src/cli/index.ts": {
@@ -74,22 +39,7 @@
       "count": 7
     }
   },
-  "src/db/libsql.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/db/settle-meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/history-routes.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/dev/server/respond.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -129,11 +79,6 @@
       "count": 3
     }
   },
-  "src/mcp/dispatch.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/plugin/define.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -154,26 +99,6 @@
       "count": 1
     }
   },
-  "src/rest/build-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/rest/cors.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/index.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/route/public-routes.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/route/render/page-data.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -187,11 +112,6 @@
   "src/route/render/resolve-entry-list.ts": {
     "boundaries/dependencies": {
       "count": 2
-    }
-  },
-  "src/route/resolve.ts": {
-    "boundaries/dependencies": {
-      "count": 1
     }
   },
   "src/rpc/procedures/auth/sign-in-methods.ts": {
@@ -217,11 +137,6 @@
   "src/search/users-handler.ts": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/storage/s3/s3.ts": {
-    "boundaries/dependencies": {
-      "count": 2
     }
   },
   "src/support.ts": {

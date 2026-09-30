@@ -8,7 +8,7 @@ import {
   jsonResponse,
   loginErrorRedirect,
   redirectTo,
-} from "../../runtime/http.js";
+} from "../../runtime/contract/http.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { MagicLinkError } from "./errors.js";

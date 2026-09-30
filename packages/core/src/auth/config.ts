@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import type { UserRole } from "../db/schema/users.js";
-import type { EnvInput } from "../runtime/env-input.js";
+import type { EnvInput } from "../runtime/contract/env-input.js";
 import type { RequestAuthenticator } from "./authenticator.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";

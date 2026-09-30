@@ -6,7 +6,11 @@ import type { AppContext } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestPrincipal } from "./principal.js";
-import { jsonResponse, notFound, unauthorized } from "../runtime/http.js";
+import {
+  jsonResponse,
+  notFound,
+  unauthorized,
+} from "../runtime/contract/http.js";
 import {
   isOriginDependent,
   preflightResponse,

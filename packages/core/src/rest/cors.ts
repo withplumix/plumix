@@ -1,5 +1,5 @@
 import type { ApiCorsConfig } from "../config.js";
-import { withHeaders } from "../runtime/http.js";
+import { withHeaders } from "../runtime/contract/http.js";
 
 /**
  * Resolve the `Access-Control-Allow-Origin` value for a request, or null when

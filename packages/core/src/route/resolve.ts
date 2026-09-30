@@ -21,7 +21,7 @@ import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { canEditEntry } from "../entries/editability.js";
 import { getAutosave, overlayAutosave } from "../revisions/repository.js";
-import { notFound, permanentRedirect } from "../runtime/http.js";
+import { notFound, permanentRedirect } from "../runtime/contract/http.js";
 import { entrySearchCondition } from "../search/conditions.js";
 import { archiveEntries, termSlugParam } from "./archive-entries.js";
 import { resolveEditMode } from "./edit-mode.js";

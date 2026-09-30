@@ -23,7 +23,7 @@ import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
-import { redirectTo } from "../runtime/http.js";
+import { redirectTo } from "../runtime/contract/http.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { resolveAccess } from "./policy.js";
 

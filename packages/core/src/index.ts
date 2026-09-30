@@ -60,8 +60,8 @@ export { renderDevBootErrorResponse } from "./dev/server/boot.js";
 export type * from "./runtime/contract/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
-export type { EnvInput } from "./runtime/env-input.js";
-export { resolveEnvInput } from "./runtime/env-input.js";
+export type { EnvInput } from "./runtime/contract/env-input.js";
+export { resolveEnvInput } from "./runtime/contract/env-input.js";
 export { DRAIN_DEADLINE_MS } from "./runtime/drain.js";
 export {
   createPlumixHandler,
@@ -75,7 +75,7 @@ export {
   jsonResponse,
   methodNotAllowed,
   notFound as notFoundResponse,
-} from "./runtime/http.js";
+} from "./runtime/contract/http.js";
 export { memoryKv } from "./runtime/memory-kv.js";
 export type { MemoryKV, MemoryKvConfig } from "./runtime/memory-kv.js";
 export { memoryStorage } from "./runtime/memory-storage.js";

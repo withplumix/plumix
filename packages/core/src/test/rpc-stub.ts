@@ -29,7 +29,7 @@ import { toStandardBody } from "@orpc/standard-server-fetch";
 import { vi } from "vitest";
 
 import type { JsonValue } from "../json.js";
-import { methodNotAllowed, notFound } from "../runtime/http.js";
+import { methodNotAllowed, notFound } from "../runtime/contract/http.js";
 
 /**
  * What an untyped responder may hand back: plain JSON, plus every value

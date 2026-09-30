@@ -1,7 +1,7 @@
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
-import type { EnvInput } from "../../runtime/env-input.js";
+import type { EnvInput } from "../../runtime/contract/env-input.js";
 import type { Mailer } from "../contract/mailer.js";
-import { resolveEnvInput } from "../../runtime/env-input.js";
+import { resolveEnvInput } from "../../runtime/contract/env-input.js";
 
 /**
  * The mailer config slot: a literal {@link Mailer}, or an `(env) => Mailer`
