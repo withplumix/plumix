@@ -4,7 +4,7 @@
 
 Gives every public value one import path, picked by who writes against it. The root `plumix` now holds only what `plumix.config.ts` writes: `plumix`, `defineConfig`, `consoleMailer`, `resolveEnvInput` and `PlumixConfigError`. Everything else moved off the root:
 
-- `plumix/theme`: `defineTheme` and `defineTemplate` as before, plus the template builders (`fallback`, `entry`, `archive`, `taxonomy`, `author`, `date`, `frontPage`, `search`, `notFound`, `serverError`, `forEntryType`, `forTermTaxonomy`, `forAuthor`, `forDate`, `forArchiveType`), the `is*` data guards, `ThemeError` and `ThemeRegistrationError`.
+- `plumix/theme`: `defineTheme` and `defineTemplate` as before, plus the template builders (`fallback`, `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, `notFound`, `serverError`, `forEntryType`, `forTermTaxonomy`, `forAuthor`, `forDate`, `forArchiveType`), the `is*` data guards, `ThemeError` and `ThemeRegistrationError`.
 - `plumix/plugin`: `definePlugin` and the plugin toolkit, entry and URL helpers (`buildEntryPermalinks`, `canonicalUrl`, `loadSiteSettings`, …), the rule-kind pieces (`entryTypeTargets`, `resolveRule`, `metaEquals`, …), route responses (`jsonResponse`, `forbidden`, …), `tagCdnEntry`, `serveRenderedAsset`, and the dev panel components.
 - `plumix/auth` (new): `auth`, `github`, `google`, the authenticators, session-cookie helpers, roles and capabilities, and the access policies (`definePolicy`, `rolePolicy`, `grant`, …).
 - `plumix/runtime` (new): `buildApp`, `createPlumixHandler`, the cron and scheduled-task helpers, `traceDbQuery` and its siblings, `memoryKv`, `memoryStorage`, `isTrustedDevHost`, `renderDevBootErrorResponse` and `responseAllowsSharedStorage`.

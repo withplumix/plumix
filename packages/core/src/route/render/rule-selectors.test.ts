@@ -182,7 +182,7 @@ describe("dateTargets", () => {
 });
 
 describe("archiveTypeTargets", () => {
-  test("carries the archive-type name as the custom node's type", () => {
+  test("carries the archive-type name as the archive-type node's type", () => {
     expect(archiveTypeTargets("lookbook", probe).selected).toEqual({
       match: { nodeKind: "archiveType", type: "lookbook" },
     });

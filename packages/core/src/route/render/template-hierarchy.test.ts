@@ -72,7 +72,7 @@ describe("resolveTemplate — generic tiers", () => {
   });
 
   test("array order is cosmetic — the node's own tier wins over fallback", () => {
-    // `fallback` is declared last but a content node still resolves to `entry`.
+    // `fallback` is declared last but an entry node still resolves to `entry`.
     expect(resolveTemplate(rules, contentNode)?.tier).toBe("entry");
   });
 
@@ -215,7 +215,7 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
     databaseId: 7,
   };
 
-  test("a targeted type rule matches its content node and beats the generic tier", () => {
+  test("a targeted type rule matches its entry node and beats the generic tier", () => {
     const rules = [
       entry(() => null),
       forEntryType("post").template(() => null),
@@ -653,7 +653,7 @@ describe("resolveTemplate — forDate targeted rules", () => {
 describe("resolveTemplate — forArchiveType targeted rules", () => {
   const galleryNode: ResolvedNode = { kind: "archiveType", name: "gallery" };
 
-  test("forArchiveType matches its custom node by name", () => {
+  test("forArchiveType matches its archive-type node by name", () => {
     const rules = [
       fallback(() => null),
       forArchiveType("gallery").template(() => null),
