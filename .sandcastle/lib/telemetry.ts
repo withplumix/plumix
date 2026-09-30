@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 interface ModelRatesPerMillionTokens {
@@ -11,6 +11,12 @@ interface ModelRatesPerMillionTokens {
 const RATES_PER_MILLION_TOKENS: Record<string, ModelRatesPerMillionTokens> = {
   "claude-opus-5-5": { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 },
   "claude-opus-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
+  "claude-sonnet-5-5": {
+    input: 2,
+    output: 10,
+    cacheWrite: 2.5,
+    cacheRead: 0.2,
+  },
   "claude-sonnet-5": { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 },
   "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
 };
@@ -126,13 +132,27 @@ const readLines = (path: string): readonly string[] => {
   }
 };
 
+const subagentTranscriptsOf = (sessionPath: string): readonly string[] => {
+  const dir = join(sessionPath.replace(/\.jsonl$/, ""), "subagents");
+  try {
+    return readdirSync(dir)
+      .filter((name) => name.endsWith(".jsonl"))
+      .map((name) => join(dir, name));
+  } catch {
+    return [];
+  }
+};
+
 export const usageFromSessionTranscripts = (
   paths: readonly string[],
   linesAlreadyBilled: Map<string, number>,
 ): Usage => {
   let total = NO_USAGE;
+  const transcripts = new Set(
+    paths.flatMap((path) => [path, ...subagentTranscriptsOf(path)]),
+  );
 
-  for (const path of new Set(paths)) {
+  for (const path of transcripts) {
     const lines = readLines(path);
     const unbilled = lines.slice(linesAlreadyBilled.get(path) ?? 0);
 

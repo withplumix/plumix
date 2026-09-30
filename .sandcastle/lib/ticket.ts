@@ -9,6 +9,7 @@ import {
   agentPhaseRunner,
   parsedJsonOrNull,
   PROMPT_DIR,
+  readOrAskAgain,
   startClock,
   taggedBlock,
 } from "./agent.js";
@@ -28,52 +29,38 @@ import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
   createPlumixSandbox,
-  HALF_AN_HOUR_IN_SECONDS,
 } from "./sandbox.js";
 
 export const IMPLEMENTER: Thinker = {
   model: "claude-opus-5-5",
   effort: "medium",
 };
-const REVIEWER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
+const REVIEWER: Thinker = { model: "claude-sonnet-5-5", effort: "high" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
-const BLOCKING_SEVERITY = "high";
 const ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION = 1;
-
-const REVIEWERS = [
-  { name: "correctness", promptFile: "review-correctness.md" },
-  { name: "simplify", promptFile: "review-simplify.md" },
-  { name: "spec", promptFile: "review-spec.md" },
-] as const;
 
 const findingSchema = z.object({
   findings: z.array(
-    z
-      .object({
-        file: z.string(),
-        line: z.number().optional(),
-        severity: z.enum(["high", "medium", "low"]).catch("medium"),
-        summary: z.string(),
-        why: z.string().optional(),
-        failure_scenario: z.string().optional(),
-      })
-      .transform(({ failure_scenario, why, ...rest }) => ({
-        ...rest,
-        why: why ?? failure_scenario ?? "",
-      })),
+    z.object({
+      file: z.string(),
+      line: z.number().optional(),
+      severity: z.enum(["high", "medium", "low"]).catch("medium"),
+      summary: z.string(),
+      why: z.string().default(""),
+    }),
   ),
 });
 
 type Finding = z.infer<typeof findingSchema>["findings"][number];
 
-export interface Review {
+interface Findings {
   readonly findings: readonly Finding[];
   readonly emittedParseableFindings: boolean;
 }
 
-const NO_PARSEABLE_REVIEW: Review = {
+const NO_PARSEABLE_REVIEW: Findings = {
   findings: [],
   emittedParseableFindings: false,
 };
@@ -89,7 +76,7 @@ export type ShipOutcome =
       readonly pullRequestUrl?: string;
     };
 
-export const readFindingsTag = (stdout: string): Review => {
+export const readFindingsTag = (stdout: string): Findings => {
   const block = taggedBlock(stdout, "findings");
   if (!block) return NO_PARSEABLE_REVIEW;
 
@@ -107,82 +94,107 @@ export interface PullRequestCopy {
   readonly body: string;
 }
 
-export const readPullRequestTag = (
-  stdout: string,
-  ticket: Ticket,
-): PullRequestCopy => {
+export const readPullRequestTag = (stdout: string): PullRequestCopy | null => {
   const block = taggedBlock(stdout, "pr");
   const title = block?.match(/^title:\s*(.+)$/m)?.[1]?.trim();
   const body = block
     ?.split(/^body:\s*$/m)
     .at(1)
     ?.trim();
-
-  return {
-    title: title ?? `fix: ${ticket.title}`,
-    body:
-      body ??
-      `**Fixes #${ticket.number}**\n\nThe implementer emitted no \`<pr>\` block, so this body is a fallback.`,
-  };
+  return title && body ? { title, body } : null;
 };
 
-const asFindingTally = ({ findings, emittedParseableFindings }: Review) => ({
-  total: findings.length,
-  high: findings.filter(({ severity }) => severity === "high").length,
-  medium: findings.filter(({ severity }) => severity === "medium").length,
-  low: findings.filter(({ severity }) => severity === "low").length,
-  parsed: emittedParseableFindings,
+const fallbackPullRequestCopy = (ticket: Ticket): PullRequestCopy => ({
+  title: `fix: ${ticket.title}`,
+  body: `**Fixes #${ticket.number}**\n\nThe implementer emitted no \`<pr>\` block, so this body is a fallback.`,
 });
 
-const asFixBrief = (findings: readonly Finding[]): string =>
-  findings
+const reviewItemSchema = z.object({
+  file: z.string(),
+  line: z.number().optional(),
+  summary: z.string(),
+  why: z.string().default(""),
+});
+
+const reviewSchema = z.object({
+  summary: z.string().default(""),
+  specGaps: z.array(reviewItemSchema).default([]),
+  notes: z.array(reviewItemSchema).default([]),
+});
+
+export type Review = z.infer<typeof reviewSchema>;
+type ReviewItem = Review["notes"][number];
+
+export const readReviewTag = (stdout: string): Review | null => {
+  const block = taggedBlock(stdout, "review");
+  if (!block) return null;
+  const parsed = reviewSchema.safeParse(parsedJsonOrNull(block));
+  return parsed.success ? parsed.data : null;
+};
+
+const asLocation = ({ file, line }: ReviewItem): string =>
+  `${file}${line ? `:${line}` : ""}`;
+
+const asFixBrief = (specGaps: readonly ReviewItem[]): string =>
+  specGaps
     .map(
-      ({ severity, file, line, summary, why }, index) =>
-        `${index + 1}. [${severity}] ${file}${line ? `:${line}` : ""} — ${summary}\n   ${why}`,
+      (gap, index) =>
+        `${index + 1}. ${asLocation(gap)} — ${gap.summary}\n   ${gap.why}`,
     )
     .join("\n\n");
 
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
 
-export const reviewAll = async (
+const EMIT_THE_REVIEW =
+  "End with the <review> block the prompt describes: summary, specGaps and notes, as JSON.";
+const EMIT_THE_PULL_REQUEST =
+  "End with the <pr> block the prompt describes: a title: line, then body: and the PR description.";
+
+export const reviewBranch = async (
   runAgentPhase: RunAgentPhase,
   journal: Pick<Journal, "record">,
   ticket: Ticket,
   round: number,
   pullRequestBody: string,
-): Promise<readonly Finding[]> => {
-  const reviews = await Promise.all(
-    REVIEWERS.map(async (reviewer) => {
-      const phase = `review:${reviewer.name}#${round}`;
-      const { stdout } = await runAgentPhase(phase, REVIEWER, {
-        promptFile: join(PROMPT_DIR, reviewer.promptFile),
-        promptArgs: {
-          TICKET: String(ticket.number),
-          BASE: MERGE_BASE,
-          PR_BODY: pullRequestBody,
-        },
-        maxIterations: 1,
-        idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
-      });
-
-      const review = readFindingsTag(stdout);
-      journal.record({
-        phase: `${phase}:findings`,
-        kind: "review",
-        model: REVIEWER.model,
-        startedAt: new Date().toISOString(),
-        durationMs: 0,
-        outcome: review.emittedParseableFindings ? "ok" : "fail",
-        detail: review.emittedParseableFindings
-          ? undefined
-          : "no parseable <findings> block",
-        findings: asFindingTally(review),
-      });
-      return review.findings;
-    }),
+): Promise<Review | null> => {
+  const phase = `review#${round}`;
+  const reviewed = await runAgentPhase(phase, REVIEWER, {
+    promptFile: join(PROMPT_DIR, "review.md"),
+    promptArgs: {
+      TICKET: String(ticket.number),
+      BASE: MERGE_BASE,
+      PR_BODY: pullRequestBody,
+    },
+    maxIterations: 1,
+    idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
+  });
+  const review = await readOrAskAgain(
+    runAgentPhase,
+    phase,
+    REVIEWER,
+    reviewed,
+    readReviewTag,
+    EMIT_THE_REVIEW,
   );
-  return reviews.flat();
+
+  journal.record({
+    phase: `${phase}:findings`,
+    kind: "review",
+    model: REVIEWER.model,
+    startedAt: new Date().toISOString(),
+    durationMs: 0,
+    outcome: review ? "ok" : "fail",
+    detail: review ? undefined : "no readable <review> block",
+    findings: {
+      total: (review?.specGaps.length ?? 0) + (review?.notes.length ?? 0),
+      high: review?.specGaps.length ?? 0,
+      medium: 0,
+      low: review?.notes.length ?? 0,
+      parsed: review !== null,
+    },
+  });
+  return review;
 };
 
 interface Declined {
@@ -286,6 +298,22 @@ export const gatesUntilGreen = async (
   }
 };
 
+export const asReviewNote = (
+  summaries: readonly string[],
+  notes: readonly ReviewItem[],
+): string => {
+  const changed = summaries.filter((summary) => summary.length > 0);
+  if (changed.length === 0 && notes.length === 0) return "";
+  const lines = [
+    ...changed.map((summary) => `- ${summary}`),
+    ...notes.map(
+      (note) =>
+        `- Left \`${asLocation(note)}\` — ${note.summary}${note.why ? `: ${note.why}` : ""}`,
+    ),
+  ];
+  return `\n\n---\n\n### Review\n\n${lines.join("\n")}`;
+};
+
 export const asWaivedGatesNote = (waived: readonly WaivedGate[]): string =>
   waived.length === 0
     ? ""
@@ -335,51 +363,58 @@ export const shipTicket = async (
       };
     }
 
-    const pullRequestCopy = readPullRequestTag(implemented.stdout, ticket);
+    const pullRequestCopy =
+      (await readOrAskAgain(
+        runAgentPhase,
+        "implement",
+        IMPLEMENTER,
+        implemented,
+        readPullRequestTag,
+        EMIT_THE_PULL_REQUEST,
+      )) ?? fallbackPullRequestCopy(ticket);
     const fixer = fixerFor(
       runAgentPhase,
       implemented.iterations.at(-1)?.sessionId,
     );
-    let reviewFixes = 0;
-    let pass = 0;
-    let advisory: readonly Finding[] = [];
+    const summaries: string[] = [];
+    let notes: readonly ReviewItem[] = [];
 
-    while (true) {
-      pass += 1;
+    for (let pass = 1; ; pass += 1) {
       say(`--- review (pass ${pass}) ---`);
-      const findings = await reviewAll(
+      const review = await reviewBranch(
         runAgentPhase,
         journal,
         ticket,
         pass,
         pullRequestCopy.body,
       );
-      const blocking = findings.filter(
-        ({ severity }) => severity === BLOCKING_SEVERITY,
-      );
-      advisory = findings.filter(
-        ({ severity }) => severity !== BLOCKING_SEVERITY,
-      );
-      if (blocking.length === 0) break;
-
-      reviewFixes += 1;
-      if (reviewFixes > MAX_REVIEW_FIX_ROUNDS) {
+      if (!review) {
         return {
           status: "blocked",
-          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) still open after ${MAX_REVIEW_FIX_ROUNDS} review rounds`,
+          reason: `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
+        };
+      }
+      summaries.push(review.summary);
+      notes = review.notes;
+      if (review.specGaps.length === 0) break;
+
+      if (pass > MAX_REVIEW_FIX_ROUNDS) {
+        return {
+          status: "blocked",
+          reason: `${review.specGaps.length} spec gap(s) still open after ${MAX_REVIEW_FIX_ROUNDS} review rounds`,
         };
       }
       say(
-        `--- fix ${blocking.length} ${BLOCKING_SEVERITY} finding(s) (${reviewFixes}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
+        `--- fix ${review.specGaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
       const declined = await fixer.apply(
         `fix#review${pass}`,
-        asFixBrief(blocking),
+        asFixBrief(review.specGaps),
       );
       if (declined) {
         return {
           status: "blocked",
-          reason: `${blocking.length} ${BLOCKING_SEVERITY}-severity finding(s) stand and the fixer changed nothing:\n\n${declined.reason}`,
+          reason: `${review.specGaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}`,
         };
       }
     }
@@ -401,19 +436,12 @@ export const shipTicket = async (
       );
     }
     await pushBranch(branch, sandbox.worktreePath);
-    const advisoryNote =
-      advisory.length === 0
-        ? ""
-        : `\n\n---\n\n### Reviewer notes, not blocking\n\n${advisory
-            .map(
-              ({ severity, file, line, summary }) =>
-                `- **[${severity}]** \`${file}${line ? `:${line}` : ""}\` — ${summary}`,
-            )
-            .join("\n")}`;
     const pullRequest = openPullRequest(
       branch,
       pullRequestCopy.title,
-      pullRequestCopy.body + advisoryNote + asWaivedGatesNote(gates.waived),
+      pullRequestCopy.body +
+        asReviewNote(summaries, notes) +
+        asWaivedGatesNote(gates.waived),
     );
 
     queueForMerge(pullRequest.number);

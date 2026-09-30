@@ -4,11 +4,13 @@ import type { RunAgentPhase } from "./agent.js";
 import { CHANGESET_GATE, GATES } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
+  asReviewNote,
   gatesUntilGreen,
   readDeclinedTag,
   readFindingsTag,
   readPullRequestTag,
-  reviewAll,
+  readReviewTag,
+  reviewBranch,
 } from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
@@ -17,18 +19,7 @@ const findingsBlock = (json: string) =>
   `chatter before\n<findings>\n${json}\n</findings>\nchatter after`;
 
 describe("readFindingsTag", () => {
-  test("accepts failure_scenario, which is the vocabulary sentry-skills:code-review emits", () => {
-    const review = readFindingsTag(
-      findingsBlock(
-        '{"findings":[{"file":"a.ts","line":3,"severity":"high","summary":"s","failure_scenario":"boom"}]}',
-      ),
-    );
-
-    expect(review.emittedParseableFindings).toBe(true);
-    expect(review.findings[0]?.why).toBe("boom");
-  });
-
-  test("accepts why, which is the vocabulary the prompt asks for", () => {
+  test("reads why a finding matters", () => {
     const review = readFindingsTag(
       findingsBlock(
         '{"findings":[{"file":"a.ts","severity":"low","summary":"s","why":"because"}]}',
@@ -69,18 +60,14 @@ describe("readPullRequestTag", () => {
   test("takes the title and the body verbatim", () => {
     const copy = readPullRequestTag(
       "<pr>\ntitle: fix(core): clamp the thing\nbody:\n**Fixes #42**\n\n- [x] done\n</pr>",
-      TICKET,
     );
 
-    expect(copy.title).toBe("fix(core): clamp the thing");
-    expect(copy.body).toBe("**Fixes #42**\n\n- [x] done");
+    expect(copy?.title).toBe("fix(core): clamp the thing");
+    expect(copy?.body).toBe("**Fixes #42**\n\n- [x] done");
   });
 
-  test("falls back to a body that references the ticket when the implementer emits no block", () => {
-    const copy = readPullRequestTag("no tag here", TICKET);
-
-    expect(copy.title).toContain(TICKET.title);
-    expect(copy.body).toContain("**Fixes #42**");
+  test("reads nothing when the implementer emits no block", () => {
+    expect(readPullRequestTag("no tag here")).toBeNull();
   });
 });
 
@@ -271,37 +258,99 @@ describe("sandbox setup", () => {
   });
 });
 
-describe("reviewAll", () => {
-  test("the reviewers read the branch at the same time, and their findings keep the reviewers' order", async () => {
-    const started: string[] = [];
-    let everyoneStarted: () => void = () => {};
-    const allThree = new Promise<void>((resolve) => {
-      everyoneStarted = resolve;
-    });
-    const runAgentPhase = async (phase: string) => {
-      started.push(phase);
-      if (started.length === 3) everyoneStarted();
-      await allThree;
-      const reviewer = phase.split(":")[1]?.split("#")[0] ?? phase;
-      return {
-        stdout: findingsBlock(
-          `{"findings":[{"file":"${reviewer}.ts","severity":"high","summary":"s","why":"w"}]}`,
-        ),
-      } as unknown as Awaited<ReturnType<RunAgentPhase>>;
-    };
+const reviewBlock = (review: object) =>
+  `chatter\n<review>\n${JSON.stringify(review)}\n</review>\n`;
 
-    const findings = await reviewAll(
-      runAgentPhase,
-      { record: () => {} },
+describe("readReviewTag", () => {
+  test("reads what the reviewer changed, the spec gaps it left, and its notes", () => {
+    const review = readReviewTag(
+      reviewBlock({
+        summary: "renamed a helper",
+        specGaps: [
+          { file: "a.ts", line: 3, summary: "criterion 2 unmet", why: "w" },
+        ],
+        notes: [
+          { file: "b.ts", summary: "kept the duplicate the ticket pins" },
+        ],
+      }),
+    );
+
+    expect(review?.summary).toBe("renamed a helper");
+    expect(review?.specGaps.map(({ file }) => file)).toEqual(["a.ts"]);
+    expect(review?.notes.map(({ why }) => why)).toEqual([""]);
+  });
+
+  test("reads nothing from a message without the block", () => {
+    expect(readReviewTag("all good, nothing to add")).toBeNull();
+  });
+
+  test("reads nothing from malformed json", () => {
+    expect(readReviewTag("<review>{not json</review>")).toBeNull();
+  });
+});
+
+describe("reviewBranch", () => {
+  const ranWith = (stdout: string) =>
+    ({
+      stdout,
+      iterations: [{ sessionId: "s" }],
+      commits: [],
+    }) as unknown as Awaited<ReturnType<RunAgentPhase>>;
+
+  test("asks the reviewer again for a block it could not read, and tallies spec gaps as blocking", async () => {
+    const phases: string[] = [];
+    const recorded: { phase: string; high?: number; low?: number }[] = [];
+
+    const review = await reviewBranch(
+      async (phase) => {
+        phases.push(phase);
+        return phase === "review#2"
+          ? ranWith("I fixed two names")
+          : ranWith(
+              reviewBlock({
+                summary: "fixed two names",
+                specGaps: [{ file: "a.ts", summary: "criterion 1 unmet" }],
+                notes: [
+                  { file: "b.ts", summary: "n" },
+                  { file: "c.ts", summary: "n" },
+                ],
+              }),
+            );
+      },
+      {
+        record: ({ phase, findings }) =>
+          recorded.push({ phase, high: findings?.high, low: findings?.low }),
+      },
       TICKET,
-      1,
+      2,
       "body",
     );
 
-    expect(findings.map(({ file }) => file)).toEqual([
-      "correctness.ts",
-      "simplify.ts",
-      "spec.ts",
-    ]);
+    expect(phases).toEqual(["review#2", "review#2:ask-again1"]);
+    expect(review?.specGaps).toHaveLength(1);
+    expect(recorded).toEqual([{ phase: "review#2:findings", high: 1, low: 2 }]);
+  });
+});
+
+describe("asReviewNote", () => {
+  test("records what each review pass changed and what it chose to leave, with why", () => {
+    const note = asReviewNote(
+      ["renamed a helper", ""],
+      [
+        {
+          file: "b.ts",
+          line: 4,
+          summary: "kept the duplicate",
+          why: "the ticket pins it",
+        },
+      ],
+    );
+
+    expect(note).toContain("renamed a helper");
+    expect(note).toContain("`b.ts:4` — kept the duplicate: the ticket pins it");
+  });
+
+  test("adds nothing when the review changed nothing and left nothing", () => {
+    expect(asReviewNote(["", ""], [])).toBe("");
   });
 });

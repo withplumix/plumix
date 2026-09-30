@@ -11,7 +11,7 @@ import { say } from "./log.js";
 import { readFindingsTag } from "./ticket.js";
 
 const ASSESS: Thinker = { model: "claude-opus-5-5", effort: "medium" };
-const COLD_READER: Thinker = { model: "claude-sonnet-5", effort: "medium" };
+const COLD_READER: Thinker = { model: "claude-sonnet-5-5", effort: "medium" };
 const BLOCKING_SEVERITY = "high";
 const HALF_AN_HOUR_IN_SECONDS = 1_800;
 const ITERATIONS_ALLOWED_FOR_A_READ_ONLY_PHASE = 3;
