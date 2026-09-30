@@ -5,6 +5,7 @@ import { join } from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
+import type { Thinker } from "./lib/agent.js";
 import { PROMPT_DIR } from "./lib/agent.js";
 import {
   issueBody,
@@ -15,7 +16,10 @@ import {
 import { say } from "./lib/log.js";
 import { REPO_ROOT } from "./lib/repo.js";
 import { HALF_AN_HOUR_IN_SECONDS } from "./lib/sandbox.js";
-import { ASSESS } from "./lib/triage.js";
+
+// One run a week of ranking and checking claims, so effort is spent where a wrong
+// report would cost the maintainer a grilling session.
+const REVIEWER: Thinker = { model: "claude-opus-5-5", effort: "high" };
 
 const OUTPUT_FILE = join(
   process.env.OUTPUT_DIR ?? tmpdir(),
@@ -42,8 +46,8 @@ const explore = upstreamSection(
 const run = await sandcastle.run({
   name: "architecture-review",
   cwd: REPO_ROOT,
-  agent: sandcastle.claudeCode(ASSESS.model, {
-    effort: ASSESS.effort,
+  agent: sandcastle.claudeCode(REVIEWER.model, {
+    effort: REVIEWER.effort,
     permissionMode: "dontAsk",
   }),
   sandbox: noSandbox(),
