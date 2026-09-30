@@ -30,7 +30,7 @@
     "test": "turbo run test:unit test:build",
     "test:unit": "turbo run test:unit --concurrency=2",
     "test:build": "turbo run test:build",
-    "test:e2e": "turbo run test:e2e",
+    "test:e2e": "turbo run test:e2e --concurrency=4",
     "typecheck": "turbo run typecheck",
     "version-packages": "changeset version"
   },
