@@ -3,9 +3,8 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import { CORE_CAPABILITIES } from "../access/contract/capability.js";
 import { roleLevel } from "../access/contract/rbac.js";
 
-// The capability vocabulary lives in the contract below this layer, so the
-// plugin and context contracts can name it; re-exported here for the callers
-// that have always read it from `rbac`.
+// The capability vocabulary lives in `access/contract/` so the plugin and
+// context contracts can name it; re-exported here for existing callers.
 export {
   CORE_CAPABILITIES,
   POST_TYPE_CAPABILITY_ACTIONS,
