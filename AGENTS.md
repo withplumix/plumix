@@ -36,7 +36,6 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                              |
 | `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
 | `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
-| `i18n:ratchet:check`              | Fails when a file on the admin's unlocalized-strings denylist no longer needs to be on it.                          |
 | `knip`                            | Unused files, exports and dependencies.                                                                             |
 | `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                              |
 | `commitlint`                      | Lint commit messages.                                                                                               |

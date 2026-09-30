@@ -54,7 +54,6 @@ describe("gateBehindCheck", () => {
   test.each([
     ["Commitlint", "commitlint"],
     ["Are The Types Wrong", "attw"],
-    ["i18n ratchet", "i18n-ratchet"],
     ["Test (build)", "test"],
     ["Changesets", "changeset"],
   ])("CI's %s reproduces locally as the %s gate", (checkName, gateName) => {

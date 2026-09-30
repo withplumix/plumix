@@ -37,7 +37,6 @@
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n extract --check",
     "i18n:compile": "plumix-compile-catalogs",
     "i18n:extract": "lingui extract",
-    "i18n:ratchet:check": "node scripts/ratchet-drift-check.mjs",
     "lint": "eslint",
     "publint": "publint",
     "test:unit": "vitest run",

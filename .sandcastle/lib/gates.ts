@@ -58,7 +58,6 @@ const TURBO_GATE_FLAGS = "--filter=...[origin/main] --output-logs=errors-only";
 
 export const GATES: readonly Gate[] = [
   { name: "check-no-major", command: "pnpm check-no-major" },
-  { name: "i18n-ratchet", command: "pnpm i18n:ratchet:check" },
   {
     name: "commitlint",
     command: "pnpm commitlint --from origin/main --to HEAD --verbose",
@@ -138,7 +137,6 @@ const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
   Typecheck: "typecheck",
   Knip: "knip",
   i18n: "i18n",
-  "i18n ratchet": "i18n-ratchet",
   Test: "test",
   "Test (build)": "test",
   "Test (e2e)": "e2e",

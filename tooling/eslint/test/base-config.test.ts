@@ -4,6 +4,7 @@ import { ESLint } from "eslint";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { adminUiConfig, baseConfig, capabilityDefiners } from "../base.js";
+import { i18nStrictConfig } from "../i18n.js";
 import { pluginConfig } from "../plugin.js";
 import { reactConfig } from "../react.js";
 
@@ -628,5 +629,25 @@ describe("plumix/no-error-message-in-ui", () => {
     await expect(
       errorMessageReports(plugin, "src/error-message-in-ui.plugin-server.ts"),
     ).resolves.toEqual([]);
+  });
+});
+
+describe("lingui/no-unlocalized-strings under the strict config", () => {
+  const strict = new ESLint({
+    cwd: fixturesDir,
+    overrideConfigFile: true,
+    overrideConfig: [...baseConfig, ...i18nStrictConfig],
+  });
+  const unlocalizedLines = async (fixture: string) => {
+    const [result] = await strict.lintFiles([fixture]);
+    return (result?.messages ?? [])
+      .filter((message) => message.ruleId === "lingui/no-unlocalized-strings")
+      .map((message) => message.line);
+  };
+
+  it("exempts the strings passed to sites that never carry copy, and still reports a user-facing literal beside them", async () => {
+    await expect(
+      unlocalizedLines("src/unlocalized-strings.ts"),
+    ).resolves.toEqual([21]);
   });
 });

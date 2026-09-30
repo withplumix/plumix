@@ -143,10 +143,8 @@ export function CommandPalette({
         setOpen((prev) => !prev);
       }
     }
-    // eslint-disable-next-line lingui/no-unlocalized-strings -- DOM event name, not UI copy
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      // eslint-disable-next-line lingui/no-unlocalized-strings -- DOM event name, not UI copy
       document.removeEventListener("keydown", onKeyDown);
     };
   }, []);

@@ -28,8 +28,8 @@ export const i18nConfig = defineConfig({
 
 /**
  * Overrides that enable `no-unlocalized-strings`. Spread into a flat-
- * config block alongside `files: [...]` to scope strict mode to a
- * specific ratchet list — see `packages/admin/eslint.config.ts`.
+ * config block alongside `files: [...]` to scope strict mode — see
+ * `i18nStrictConfig` below.
  *
  * The allowlist covers attribute / function call sites whose string-
  * literal arguments are non-user-facing identifiers (test ids, route
@@ -292,6 +292,8 @@ export const i18nStrictOverrides: Linter.Config = {
           "queryKey",
           "accessorKey",
           "staleTime",
+          // Router preload strategy (`"intent"`), a TanStack enum value.
+          "defaultPreload",
           // Sortable-header column-id prop value (e.g.
           // `<SortableHeader column="title">`). The column id is the
           // picklist key, not the visible label.
@@ -362,6 +364,9 @@ export const i18nStrictOverrides: Linter.Config = {
           "Error",
           "TypeError",
           "RangeError",
+          // Admin's plugin-registry error — its messages are diagnostics
+          // for plugin authors, like core's `CliError`, never UI copy.
+          "AdminPluginRegistryError",
           // URLs / browser APIs
           "URL",
           "URLSearchParams",
@@ -370,6 +375,11 @@ export const i18nStrictOverrides: Linter.Config = {
           // `window.open(url, target, features)` — all args are protocol
           // values (URL, "_blank", "noopener"), never UI copy.
           "window.open",
+          // `window.matchMedia(query)` — a CSS media query, never copy.
+          "window.matchMedia",
+          // DOM event names (`"load"`, `"change"`) on any target.
+          "*.addEventListener",
+          "*.removeEventListener",
           // DOM queries — id / selector args, never user copy.
           "document.getElementById",
           "document.querySelectorAll",
