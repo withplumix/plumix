@@ -126,8 +126,15 @@ export function CanvasFrame({
     zoomToSelection,
     liveViewRef,
   });
-  const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
-    useCanvasDrag({ iframeRef, geometryRef, registry });
+  const {
+    dropY,
+    dropSlot,
+    refusedSlot,
+    pendingAdd,
+    setPendingAdd,
+    requestAdd,
+    rejection,
+  } = useCanvasDrag({ iframeRef, geometryRef, registry });
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
@@ -368,6 +375,28 @@ export function CanvasFrame({
                 } as CSSProperties
               }
             />
+          )}
+          {refusedSlot && (
+            <div
+              role="status"
+              data-testid="plumix-slot-refused-indicator"
+              className="plumix-canvas-overlay bg-destructive/8 outline-destructive pointer-events-none z-20 outline-2 outline-dashed"
+              style={
+                {
+                  "--box-left": px(refusedSlot.box.left - container.left),
+                  "--box-top": px(refusedSlot.box.top - container.top),
+                  "--box-width": px(refusedSlot.box.width),
+                  "--box-height": px(refusedSlot.box.height),
+                } as CSSProperties
+              }
+            >
+              <span className="sr-only">
+                {i18n._({
+                  id: "editor.canvas.slotRefusesBlock",
+                  message: "This block can't be placed in this slot.",
+                })}
+              </span>
+            </div>
           )}
           {dropY !== null && geometry.frame && (
             <div

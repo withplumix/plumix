@@ -8,23 +8,10 @@ import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
 import { overlayBox } from "./overlay.js";
 
-/**
- * The innermost slot under the pointer that accepts `draggingName`, mapped from
- * iframe-local slot geometry into screen space. Innermost (smallest box) wins so
- * a slot nested inside a slot is reachable; a slot's `allowedBlocks` gates
- * whether it lights up at all. Pure — the caller supplies the live frame offset
- * (from the iframe's `getBoundingClientRect`) and zoom.
- */
-export function resolveSlotTarget({
-  slots,
-  tree,
-  registry,
-  draggingName,
-  frame,
-  zoom,
-  clientX,
-  clientY,
-}: {
+/** The pointer hit-test inputs shared by the slot resolvers. Pure — the caller
+ *  supplies the live frame offset (from the iframe's `getBoundingClientRect`)
+ *  and zoom. */
+interface SlotHitTest {
   readonly slots: readonly SlotRect[];
   readonly tree: readonly BlockNode[];
   readonly registry: BlockRegistry;
@@ -33,9 +20,25 @@ export function resolveSlotTarget({
   readonly zoom: number;
   readonly clientX: number;
   readonly clientY: number;
-}): SlotDrop | null {
-  let best: SlotDrop | null = null;
-  let bestArea = Infinity;
+}
+
+/** A slot under the pointer, mapped into screen space, with whether its
+ *  `allowedBlocks` admits the dragged block. */
+interface SlotHit extends SlotDrop {
+  readonly accepts: boolean;
+}
+
+function slotsUnderPointer({
+  slots,
+  tree,
+  registry,
+  draggingName,
+  frame,
+  zoom,
+  clientX,
+  clientY,
+}: SlotHitTest): SlotHit[] {
+  const hits: SlotHit[] = [];
   for (const slot of slots) {
     const box = overlayBox(slot, frame, zoom);
     if (
@@ -49,14 +52,56 @@ export function resolveSlotTarget({
     const parent = findBlock(tree, slot.parentId);
     if (!parent) continue;
     const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
-    if (allowed && !allowed.includes(draggingName)) continue;
+    hits.push({
+      parentId: slot.parentId,
+      slotKey: slot.slotKey,
+      box,
+      accepts: !allowed || allowed.includes(draggingName),
+    });
+  }
+  return hits;
+}
+
+/** The smallest-area hit, or null when there are none. */
+function innermost(hits: readonly SlotHit[]): SlotDrop | null {
+  let best: SlotDrop | null = null;
+  let bestArea = Infinity;
+  for (const { parentId, slotKey, box } of hits) {
     const area = box.width * box.height;
     if (area < bestArea) {
       bestArea = area;
-      best = { parentId: slot.parentId, slotKey: slot.slotKey, box };
+      best = { parentId, slotKey, box };
     }
   }
   return best;
+}
+
+/**
+ * The innermost slot under the pointer that accepts `draggingName`, mapped from
+ * iframe-local slot geometry into screen space. Innermost (smallest box) wins so
+ * a slot nested inside a slot is reachable; a slot's `allowedBlocks` gates
+ * whether it lights up at all.
+ */
+export function resolveSlotTarget(args: SlotHitTest): SlotDrop | null {
+  return innermost(slotsUnderPointer(args).filter((hit) => hit.accepts));
+}
+
+/**
+ * The innermost slot under the pointer whose `allowedBlocks` refuses
+ * `draggingName`: the slot the drop skipped, so the canvas can mark it. It is
+ * reported only when it sits inside the accepting target `resolveSlotTarget`
+ * resolves to (a smaller box), or when there is no accepting target. A
+ * refusing container around the accepting target is not what the drop
+ * skipped. Never changes where the drop resolves.
+ */
+export function resolveRefusedSlot(args: SlotHitTest): SlotDrop | null {
+  const hits = slotsUnderPointer(args);
+  const target = innermost(hits.filter((hit) => hit.accepts));
+  const refused = innermost(hits.filter((hit) => !hit.accepts));
+  if (!refused) return null;
+  if (!target) return refused;
+  const targetArea = target.box.width * target.box.height;
+  return refused.box.width * refused.box.height < targetArea ? refused : null;
 }
 
 /**

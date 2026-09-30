@@ -565,6 +565,121 @@ describe("CanvasFrame nested drop", () => {
     ]);
   });
 
+  // Starts a catalog heading drag with the pointer over a core/buttons slot
+  // (0..100 in canvas coordinates) that refuses it, inside a 500px block.
+  const dragOverRefusingSlot = (): { clientX: number; clientY: number } => {
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: "b1", x: 0, y: 0, width: 500, height: 500 }],
+      slots: [
+        {
+          parentId: "b1",
+          slotKey: "items",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+        },
+      ],
+    });
+    act(() =>
+      storeApi?.getState().startBlockDrag({
+        name: "core/heading",
+        slug: "core/heading",
+        title: "Heading",
+        category: "text",
+      }),
+    );
+    const point = slotPoint();
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointermove", point));
+    });
+    return point;
+  };
+
+  const REFUSED = "plumix-slot-refused-indicator";
+
+  test("marks the slot under the pointer that refuses the dragged block", () => {
+    renderWith([{ id: "b1", name: "core/buttons", attrs: { items: [] } }]);
+
+    dragOverRefusingSlot();
+
+    expect(screen.getByTestId(REFUSED).textContent).toBe(
+      "This block can't be placed in this slot.",
+    );
+    expect(screen.queryByTestId("plumix-slot-drop-indicator")).toBeNull();
+  });
+
+  test("an accepting slot shows the drop indicator and no refused mark", () => {
+    renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: "g1", x: 0, y: 0, width: 500, height: 500 }],
+      slots: [
+        {
+          parentId: "g1",
+          slotKey: "content",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+        },
+      ],
+    });
+    act(() =>
+      storeApi?.getState().startBlockDrag({
+        name: "core/heading",
+        slug: "core/heading",
+        title: "Heading",
+        category: "text",
+      }),
+    );
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointermove", slotPoint()));
+    });
+
+    expect(screen.getByTestId("plumix-slot-drop-indicator")).toBeDefined();
+    expect(screen.queryByTestId(REFUSED)).toBeNull();
+  });
+
+  test("the refused mark clears once the pointer leaves the slot", () => {
+    renderWith([{ id: "b1", name: "core/buttons", attrs: { items: [] } }]);
+
+    const point = dragOverRefusingSlot();
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent("pointermove", {
+          clientX: point.clientX + 250,
+          clientY: point.clientY + 250,
+        }),
+      );
+    });
+
+    expect(screen.queryByTestId(REFUSED)).toBeNull();
+  });
+
+  test.each([
+    [
+      "pointer-up",
+      (point: MouseEventInit) => new MouseEvent("pointerup", point),
+    ],
+    ["pointercancel", () => new MouseEvent("pointercancel")],
+    [
+      "the cancel-drag shortcut",
+      () => new KeyboardEvent("keydown", { key: "Escape" }),
+    ],
+  ])("the refused mark clears when the drag ends on %s", (_, end) => {
+    renderWith([{ id: "b1", name: "core/buttons", attrs: { items: [] } }]);
+
+    const point = dragOverRefusingSlot();
+    expect(screen.getByTestId(REFUSED)).toBeDefined();
+    act(() => {
+      window.dispatchEvent(end(point));
+    });
+
+    expect(screen.queryByTestId(REFUSED)).toBeNull();
+  });
+
   // Moving an existing block over a slot, started via the toolbar handle's
   // startMove (the drag origin is host-side, so the test can drive it).
   const moveInto = (

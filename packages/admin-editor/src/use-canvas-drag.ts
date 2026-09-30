@@ -11,6 +11,7 @@ import { findBlock } from "./block-tree-ops.js";
 import {
   reorderIndex,
   resolveDrop,
+  resolveRefusedSlot,
   resolveSlotTarget,
 } from "./canvas-drop-target.js";
 import { dropPlacement } from "./drop-index.js";
@@ -34,6 +35,9 @@ export interface CanvasDrag {
   readonly dropY: number | null;
   /** Resolved nested-slot drop target, or null. */
   readonly dropSlot: SlotDrop | null;
+  /** The slot under the pointer that refuses the dragged block through its
+   *  `allowedBlocks` (the one the drop skipped), or null. */
+  readonly refusedSlot: SlotDrop | null;
   /** Open inserter-popover target; null when closed. */
   readonly pendingAdd: PendingAdd | null;
   readonly setPendingAdd: (next: PendingAdd | null) => void;
@@ -66,6 +70,7 @@ export function useCanvasDrag({
 
   const [dropY, setDropY] = useState<number | null>(null);
   const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
+  const [refusedSlot, setRefusedSlot] = useState<SlotDrop | null>(null);
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
 
@@ -129,29 +134,28 @@ export function useCanvasDrag({
       return dropPlacement(spans, clientY);
     };
 
-    // Reads the live iframe rect + store, then delegates the hit-test.
-    const slotTargetAt = (
-      clientX: number,
-      clientY: number,
-    ): SlotDrop | null => {
+    // Reads the live iframe rect + store for the slot hit-tests.
+    const hitTestAt = (clientX: number, clientY: number) => {
       const rect = iframe.getBoundingClientRect();
-      const { tree } = store.getState();
-      const zoom = camera.getState().zoom;
-      return resolveSlotTarget({
+      return {
         slots: geometryRef.current.slots,
-        tree,
+        tree: store.getState().tree,
         registry,
         draggingName,
         frame: { left: rect.left, top: rect.top },
-        zoom,
+        zoom: camera.getState().zoom,
         clientX,
         clientY,
-      });
+      };
     };
+    const slotTargetAt = (clientX: number, clientY: number): SlotDrop | null =>
+      resolveSlotTarget(hitTestAt(clientX, clientY));
 
     const onMove = (e: PointerEvent): void => {
-      const slot = slotTargetAt(e.clientX, e.clientY);
+      const hitTest = hitTestAt(e.clientX, e.clientY);
+      const slot = resolveSlotTarget(hitTest);
       setDropSlot(slot);
+      setRefusedSlot(resolveRefusedSlot(hitTest));
       // A nested slot target supersedes the top-level line indicator.
       setDropY(
         slot ? null : (placementAt(e.clientX, e.clientY)?.indicatorY ?? null),
@@ -247,6 +251,7 @@ export function useCanvasDrag({
       window.removeEventListener("keydown", onKey);
       setDropY(null);
       setDropSlot(null);
+      setRefusedSlot(null);
     };
   }, [
     dragSpec,
@@ -269,6 +274,7 @@ export function useCanvasDrag({
   return {
     dropY,
     dropSlot,
+    refusedSlot,
     pendingAdd,
     setPendingAdd,
     requestAdd,

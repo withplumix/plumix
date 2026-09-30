@@ -7,6 +7,7 @@ import { createBlockRegistry } from "@plumix/core/blocks";
 import {
   reorderIndex,
   resolveDrop,
+  resolveRefusedSlot,
   resolveSlotTarget,
 } from "./canvas-drop-target.js";
 
@@ -147,6 +148,105 @@ describe("resolveSlotTarget", () => {
     ).toBe("g1");
     expect(
       resolveSlotTarget({ ...args, clientX: 110, clientY: 60 }),
+    ).toBeNull();
+  });
+});
+
+describe("resolveRefusedSlot", () => {
+  test("reports the refusing slot under the pointer when no slot accepts", () => {
+    expect(
+      resolveRefusedSlot({
+        slots: [slot("b1", "items", 10, 10, 100, 100)],
+        tree: [node("b1", "core/buttons")],
+        registry,
+        draggingName: "core/rich-text",
+        ...IDENTITY,
+        clientX: 50,
+        clientY: 50,
+      }),
+    ).toEqual({
+      parentId: "b1",
+      slotKey: "items",
+      box: { left: 10, top: 10, width: 100, height: 100 },
+    });
+  });
+
+  test("an accepting slot nested in a refusing one is the target; nothing is refused", () => {
+    const args = {
+      slots: [
+        slot("b1", "items", 0, 0, 100, 100),
+        slot("g1", "content", 20, 20, 40, 40),
+      ],
+      tree: [node("b1", "core/buttons"), node("g1", "core/group")],
+      registry,
+      draggingName: "core/rich-text",
+      ...IDENTITY,
+      clientX: 30,
+      clientY: 30,
+    };
+    expect(resolveSlotTarget(args)?.parentId).toBe("g1");
+    expect(resolveRefusedSlot(args)).toBeNull();
+  });
+
+  test("a refusing slot nested in an accepting one is reported; the outer stays the target", () => {
+    const args = {
+      slots: [
+        slot("g1", "content", 0, 0, 100, 100),
+        slot("b1", "items", 20, 20, 40, 40),
+      ],
+      tree: [node("g1", "core/group"), node("b1", "core/buttons")],
+      registry,
+      draggingName: "core/rich-text",
+      ...IDENTITY,
+      clientX: 30,
+      clientY: 30,
+    };
+    expect(resolveSlotTarget(args)?.parentId).toBe("g1");
+    expect(resolveRefusedSlot(args)).toMatchObject({
+      parentId: "b1",
+      slotKey: "items",
+    });
+  });
+
+  test("never reports an unrestricted slot", () => {
+    expect(
+      resolveRefusedSlot({
+        slots: [slot("g1", "content", 0, 0, 100, 100)],
+        tree: [node("g1", "core/group")],
+        registry,
+        draggingName: "core/rich-text",
+        ...IDENTITY,
+        clientX: 50,
+        clientY: 50,
+      }),
+    ).toBeNull();
+  });
+
+  test("never reports a slot whose allowedBlocks includes the dragged block", () => {
+    expect(
+      resolveRefusedSlot({
+        slots: [slot("b1", "items", 0, 0, 100, 100)],
+        tree: [node("b1", "core/buttons")],
+        registry,
+        draggingName: "core/button",
+        ...IDENTITY,
+        clientX: 50,
+        clientY: 50,
+      }),
+    ).toBeNull();
+  });
+
+  test("reports nothing when the pointer is outside the refusing slot", () => {
+    expect(
+      resolveRefusedSlot({
+        slots: [slot("b1", "items", 0, 0, 100, 100)],
+        tree: [node("b1", "core/buttons")],
+        registry,
+        draggingName: "core/rich-text",
+        ...IDENTITY,
+        clientX: 200,
+        clientY: 200,
+      }),
     ).toBeNull();
   });
 });
