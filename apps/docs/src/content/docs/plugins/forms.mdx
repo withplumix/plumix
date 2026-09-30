@@ -1,0 +1,419 @@
+---
+title: Forms
+description: The forms plugin renders forms you declare in your repository as a block, validates what visitors send on the server, and stores each submission as a row you can read back.
+tier: P1
+sidebar:
+  order: 62
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-forms` covers the forms a site needs, such as a contact page, a newsletter signup or an enquiry form. You declare each form in your repository, an editor places it on a page as a block, the server validates what a visitor sends, and the answers land in a table the admin reads as an inbox.
+
+## Overview
+
+A form is a value in your code, not a row in a database. It deploys with the code that renders it, shows up in review diffs, and reverts with `git revert`, so local, staging and production cannot drift apart. There is no form builder, no form export format, and nothing to migrate between environments.
+
+The plugin exports two functions. `forms` is a factory, so you call it, and `defineForm` declares each form. The plugin owns two database tables, so installing it takes a package install, one array entry and a migration.
+
+What it registers:
+
+- A `forms/form` block an editor places on a page and points at one of the declared forms.
+- `POST /_plumix/forms/submit`, the public endpoint every submission arrives at, and `GET /_plumix/forms/token`, which hands the browser a timing token for the spam check.
+- A submissions inbox in the admin under Content, gated on the `form_submission:moderate` capability the plugin mints for the editor role, and `GET /_plumix/forms/export` behind the same capability.
+- A `tel` field type, which works in a form and in any meta box on the site.
+- A nightly scheduled task that deletes submissions older than a form's retention period.
+- A `form:validate` filter and a `form:submitted` action, which is where a spam or notification plugin attaches.
+
+This page covers declaring a form, what happens to a submission, and the options that change it. Three more pages cover the rest: [Form Fields](/plugins/forms-fields/) for the questions a form asks, [Rendering Forms](/plugins/forms-rendering/) for putting a form on screen yourself and styling it, and [Form Submissions](/plugins/forms-submissions/) for the inbox, exports and retention.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-forms
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-forms
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-forms
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-forms
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Declare a form and put the plugin in the `plugins` array.** The fields use the same builders as meta boxes.
+
+   ```ts no-typecheck
+   import { plumix } from "plumix";
+   import { email, text, textarea } from "plumix/fields";
+
+   import { defineForm, forms } from "@plumix/plugin-forms";
+
+   const contact = defineForm("contact", {
+     title: "Get in touch",
+     submitLabel: "Send",
+     fields: [
+       text("name").label("Your name").required(),
+       email("email").required(),
+       textarea("message"),
+     ],
+   });
+
+   export default plumix({
+     // …your runtime, database and auth
+     plugins: [forms({ forms: [contact] })],
+   });
+   ```
+
+2. **Generate and apply the migration.** `plumix migrate generate` picks the plugin's tables up only once the descriptor is in the array.
+
+   ```sh
+   pnpm plumix migrate generate
+   pnpm plumix migrate apply --local
+   ```
+
+   On Cloudflare, `--local` applies to the local D1 database and `--remote` to the deployed one. The Node and Bun runtimes apply to the site's SQLite file and need no flag.
+
+3. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+4. **Place the form.** In the editor, insert the Form block on a page and pick `contact` from its Form input. Publish the page, send the form, and the submission appears under Content, Form submissions.
+
+</Steps>
+
+The slug is the form's identity. Submissions carry it and nothing else links them back, so renaming a form orphans its history. Two forms that claim one slug fail at boot, and the error names both contributors.
+
+## Placing it on a page
+
+The `forms/form` block has one input, a select listing every declared form. Nothing else needs wiring. A block whose slug no longer matches a form renders nothing on the live page, and the editor shows a notice naming the slug instead.
+
+The block server-renders static markup. Every visitor gets the same bytes, so the page carrying it stays edge-cacheable. The form submits as a plain HTML `POST` and needs no JavaScript on the page.
+
+Without JavaScript, a rejected submission comes back as the form, filled in with the visitor's answers and carrying the errors against the fields that produced them. Once the visitor corrects it, an accepted submission redirects them to the page the form was on.
+
+## What JavaScript adds
+
+An island takes over the same markup. It renders the form the server already sent rather than standing in for one. While the island runs, submitting does not reload the page. The answers go over `fetch`, errors come back against the fields that produced them, and a confirmation replaces the form. Once the island drives the form, the `<form>` element carries `data-plumix-form-enhanced`, the one signal that tells an upgraded form from a plain one.
+
+The island also fetches a short-lived timing token from `/_plumix/forms/token`, an endpoint nothing caches. The token is the second half of the spam floor every form meets. The first half is a honeypot, a field a person never sees and a bot fills. The plugin files a submission that fills the honeypot, or that arrives less than a second after its token was issued, with the `spam` status. The island fetches the token instead of the server rendering it, because the page carrying the form is edge-cached. An edge-cached page can carry nothing about the visitor reading it.
+
+Both halves are a floor rather than a control, and each has a gap. The plugin does not time a submission that carries no token. Every no-JavaScript submission carries none, so a bot skips the check by leaving the field out. A token this install did not sign counts as spam. The honeypot's field name is the same on every Plumix site, so it stops undirected bots and not one aimed at your site. Both defences store what they catch with the `spam` status rather than discarding it, which keeps a false positive recoverable from the inbox.
+
+The plugin does not rate-limit submissions. It caps the request body at 64 KB. On Cloudflare, a WAF rate-limiting rule is the flood protection, and it is cheaper and better placed than counting rows in your database. Where an attacker targets one form, [a captcha](#a-captcha-where-one-is-needed) is the next step.
+
+## Validation
+
+The server checks every answer, whichever way it arrived:
+
+- A `.required()` field must be answered.
+- An `email` field must look like an address, using the same pattern a browser applies to `<input type="email">`.
+- A `url` field must be an `http://` or `https://` address.
+- A `number` field is held to its declared `.min()` and `.max()`.
+- A field that declares a maximum length is held to it.
+- A repeater is held to its row limits, which [Form Fields](/plugins/forms-fields/#rows-and-groups) covers.
+
+The server never asks about a field its condition hides, so a question the visitor was not shown cannot hold up their submission. `tel` and `date` carry no format check.
+
+The browser's own `required`, `type` and range checks still run on the plain form, so they catch most mistakes before any request. The server is what makes each rule hold. A multi-step form applies the same rules, from the same code, when the visitor moves off a step, so a step refuses what the server would have refused.
+
+Errors come back as a list of `{ field, message }` pairs. A field inside a group or a repeater row is named the way it posts, such as `contact[name]` or `attendees[0][who]`. The island renders each error beside its control and the no-JavaScript path renders the same pairs on the server.
+
+### Your own rules
+
+Checks the fields cannot express go in the form's own `validate`, beside the fields. Return one error per field you refuse, named against that field, or return nothing to accept:
+
+```ts no-typecheck
+import { number, text } from "plumix/fields";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+export const enquiry = defineForm("enquiry", {
+  fields: [text("name").required(), number("guests")],
+  validate: ({ answers }) =>
+    answers.guests !== undefined && answers.guests > 4
+      ? [{ field: "guests", message: "We seat four." }]
+      : undefined,
+});
+```
+
+`validate` runs only on the server, and only once every field-level rule has passed, so `answers` already has the shape the row stores rather than whatever the body carried. It can be `async`, and it receives `ctx`, the request context, so a check against the database is a query away. It also receives `bound`, covered in [Carrying the page's row](#carrying-the-pages-row).
+
+A meta box field's own `.validate()` and `.sanitize()` do not run on a form submission. Put that check in the form's `validate`.
+
+`validate` runs before the spam floor, so the plugin answers a trapped bot exactly as it answers a person who filled the form in badly. That means your `validate` runs for spam traffic too, on a route with no rate limit, so keep its work proportionate. Put anything expensive behind the [`form:validate` filter](#hooking-every-form), which runs after the floor has given its verdict.
+
+`answers` is the object the plugin goes on to store, not a copy. `readonly` is only a compile-time promise, so a `validate` that mutates it changes what is stored.
+
+## What happens next
+
+A form says what to do with a submission it has accepted:
+
+```ts no-typecheck
+import { email, text } from "plumix/fields";
+
+import { defineForm, formatSubmission } from "@plumix/plugin-forms";
+
+import { notify } from "./notify";
+
+export const enquiry = defineForm("enquiry", {
+  fields: [text("name").required(), email("email").required()],
+  onSubmit: async ({ ctx, ...submission }) => {
+    await notify(ctx, formatSubmission(submission));
+  },
+});
+```
+
+The plugin always runs the same order: validate, store, then the handler. The submission is on disk before your handler runs, so a handler that throws cannot lose it. When one throws, the visitor still hears that their submission was received, because it was. The plugin records the reason on the row, where the inbox marks it as failed, and logs the error. Nothing retries the handler. The row is the record that something is owed.
+
+The visitor waits for your handler, so a slow third party means a slow response. Keep the handler to what has to happen now, and hand anything else to a queue.
+
+A submission the spam floor caught does not reach `onSubmit`. Stopping the notification is the point of the floor, and labelling the row is not enough if the email goes out anyway. The plugin still stores the row, so a false positive is still there to find. Listen on [`form:submitted`](#hooking-every-form) to see the submissions the floor caught.
+
+`onSubmit` receives `answers`, the `labels` snapshot of what every field was called, `bound`, `submission` (the stored row, or `null` when the form stores nothing), and `ctx`.
+
+The confirmation the island shows in place of an accepted form is the plugin's own message, and a form cannot change it. Without JavaScript there is no confirmation, only the redirect back to the page.
+
+### Forms that own their destination
+
+A form whose handler writes somewhere else, such as your own table or a CRM, can opt out of storage and keep everything else:
+
+```ts no-typecheck
+import { email } from "plumix/fields";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+import { subscribe } from "./newsletter";
+
+export const signup = defineForm("signup", {
+  fields: [email("email").required()],
+  store: false,
+  onSubmit: ({ ctx, answers }) => subscribe(ctx, answers.email),
+});
+```
+
+The plugin still validates the submission, runs it past the spam floor and runs its handler, but writes nothing to `form_submissions`. `store: false` without an `onSubmit` throws at boot, because that form would accept submissions and discard them.
+
+This is where the spam floor costs something. A flagged submission reaches neither storage nor the handler, so on a form that stores nothing, a false positive is gone. That is the trade for opting out, and the reason storage is the default.
+
+### Formatting a submission
+
+`formatSubmission` renders a submission as readable text, so a notification email needs no hand-rolled formatting. It lists every answer under what its field was called, in the order the form asked. Choices appear as their option labels, a toggle as Yes or No, and repeater rows one at a time:
+
+```text
+Your name: Ada
+Email: ada@example.test
+Plan: Pro
+Message:
+  Two lines,
+  as given.
+```
+
+It reads the submission's own label snapshot rather than the live form, so its output stays correct after you rename a field. It leaves out a question the visitor did not answer. Pass it the stored row, or the `{ answers, labels }` your handler received.
+
+## Hooking every form
+
+Two hooks cover what belongs across all forms rather than in one, so a plugin needs no per-form wiring:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+import { index, isSpam } from "./moderation";
+
+export const moderation = definePlugin("moderation", (ctx) => {
+  ctx.addFilter("form:validate", (errors, candidate) =>
+    isSpam(candidate.answers)
+      ? [...errors, { field: "", message: "No." }]
+      : errors,
+  );
+
+  ctx.addAction("form:submitted", (submission, candidate) => {
+    if (submission) index(submission);
+  });
+});
+```
+
+`form:validate` is the last word before the plugin writes anything. It sees a submission only after every field rule, the form's own `validate`, the captcha and the spam floor have accepted it. The submission it sees carries its `status`, which is `spam` when the floor caught it. The errors it returns reject the submission exactly as a field rule's errors do. The pipeline starts empty, so a filter with nothing to say returns what it was given. An error whose `field` is `""` names no field and shows in the form's error summary.
+
+`form:submitted` fires once the plugin has stored the row and the form's own handler has run, for spam and genuine submissions alike. The row it carries is `null` only for a form that opted out of storage. A row carrying `handlerError` belongs to a submission whose handler threw.
+
+## Carrying the page's row
+
+A form placed on a page can carry the row that page resolves to. A subscribe form on a school's page then knows which school, without you wiring an id through the block, the template or the theme. Declare what the form binds, one of `"entry"`, `"term"` or `"author"`:
+
+```ts no-typecheck
+import { email } from "plumix/fields";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+import { enrol } from "./enrol";
+
+export const subscribe = defineForm("subscribe", {
+  bind: "entry",
+  fields: [email("email").required()],
+  onSubmit: ({ ctx, bound, answers }) =>
+    enrol(ctx, bound?.id ?? null, answers.email),
+});
+```
+
+The server resolves the value when it renders the block. It reads the entry the URL already matched, so binding costs no second lookup. The value travels as a token signed with a per-install secret. The plugin generates that secret the first time it needs one and keeps it in the settings table, so there is no environment variable and no binding to configure.
+
+Nothing carries the bound value in the clear. A plain hidden input would be one devtools edit away from submitting against a different entry. Here the value and its signature travel together, and the server reads the value back only out of a token it signed. Edit either half and the server refuses the submission with a `403`. The signed payload includes the form's slug and the kind, so a token minted for one form cannot be replayed against another, and entry 7's token cannot be posted as term 7.
+
+`bound` reaches `validate` and `onSubmit` as `{ type, id }`, or `null`. The plugin stores it in its own indexed `bound_type` and `bound_id` columns rather than among the answers, so every submission for one row is a query:
+
+```ts no-typecheck
+import type { AppContext } from "plumix/plugin";
+import { and, eq } from "plumix/db";
+
+import { formSubmissions } from "@plumix/plugin-forms/schema";
+
+export function enquiriesFor(ctx: AppContext, schoolId: number) {
+  return ctx.db
+    .select()
+    .from(formSubmissions)
+    .where(
+      and(
+        eq(formSubmissions.boundType, "entry"),
+        eq(formSubmissions.boundId, schoolId),
+      ),
+    );
+}
+```
+
+Query both columns together. Ids are unique only within their own table, so `bound_id` alone does not say what it names. The index is also partial and leads with the kind, so a query on `bound_type` alone, or on `bound_id` alone, falls back to a full scan.
+
+A bound form carries no token, and stores `null`, in these places:
+
+- A page of any other kind: a front page, an archive, or a term page under a form that binds an entry.
+- A form rendered through `PlumixForm` or `usePlumixForm` rather than the block. Signing is asynchronous and a template's render is not, so the token comes from the block's loader and only the block has one.
+- A page the edge still serves from before you changed the form's `bind`. The old token still verifies, but it names a kind the form no longer asks for, so the plugin accepts the submission and stores no `bound` rather than hand a handler the wrong kind of id.
+
+Read `bound` as optional wherever one form appears in more than one place.
+
+The token does not expire, because the page carrying it is edge-cached and an expiry would be about the visitor rather than the page. `bound_id` carries no foreign key, since a polymorphic pair cannot have one. A submission is a record of what someone sent, so deleting the row it was about does not delete it.
+
+## A captcha, where one is needed
+
+Every form already meets the honeypot and the timing check. Cloudflare Turnstile is a third defence, and it is opt-in per form. A captcha belongs on the form that is under attack, not on the enquiry form nobody has spammed.
+
+Give the form a site key and a secret from your Cloudflare dashboard:
+
+```ts no-typecheck
+import { email, text } from "plumix/fields";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+export const contact = defineForm("contact", {
+  fields: [text("name").required(), email("email").required()],
+  turnstile: {
+    siteKey: "0x4AAAAAAA…",
+    secret: (env) => env.TURNSTILE_SECRET,
+  },
+});
+```
+
+The site key is public, since the widget renders from it. The secret takes the same environment-input union as every other secret slot, so `(env) => env.TURNSTILE_SECRET` reads it from the per-request bindings on Cloudflare Workers. Workers evaluates the config module before any request, and secrets never appear in `process.env` there. A literal string works on a runtime where the secret is available at config time. The plugin memoizes the resolved secret per isolate, so it picks up a rotated secret when the isolate recycles rather than on the next request. [Secrets](/deployment/secrets/) covers where to keep it.
+
+The secret cannot reach a browser. `FormWire`, the shape every renderer and the island take, declares `secret?: never`, so handing a form definition straight to one is a compile error.
+
+The widget renders once, above the submit button. On a form broken into steps it renders only on the step that submits, because a challenge solved two steps early gives a token that may have expired by the time the form posts it. The block and `PlumixForm` render the widget. `usePlumixForm` renders no markup at all, so do not give a `turnstile` to a form you drive from that hook. Every submission would arrive without a challenge, and the server would refuse it.
+
+<Aside type="caution" title="A guarded form needs JavaScript">
+  Cloudflare's script draws the widget, so this is the one place the plugin's
+  no-script path stops. A visitor with JavaScript off sees a message saying so
+  where the challenge would have been, rather than a submit button the server
+  will always refuse. Every form without a `turnstile` still submits without
+  JavaScript.
+</Aside>
+
+On submit, the plugin checks the challenge with Cloudflare after the field-level rules and your own `validate` have passed, and before the spam floor. When a submission does not clear the challenge, the server refuses it with a message the visitor can act on. The island then draws a fresh challenge for the retry, because verifying a Turnstile token spends it. Your own `validate` runs before the challenge is checked, so it runs for traffic that has not solved anything. Keep it cheap, or move the expensive part into `onSubmit`.
+
+The check fails closed. A Cloudflare outage, a secret that resolves to nothing and an answer that did not decode all refuse the submission rather than letting it through. Your logs say which one happened.
+
+## Contributing a form from your own plugin
+
+A plugin can ship a form of its own through `ctx.registerForm`:
+
+```ts no-typecheck
+import { email } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+import { defineForm } from "@plumix/plugin-forms";
+
+export const newsletter = definePlugin("newsletter", (ctx) => {
+  ctx.registerForm(
+    defineForm("newsletter", { fields: [email("email").required()] }),
+  );
+});
+```
+
+Registration order does not matter. `@plumix/plugin-forms` may sit before or after your plugin in the `plugins` array. Call `registerForm` on `ctx` rather than destructuring it off, because the plugin reads the caller's id to name both contributors when two forms claim one slug. The site's own `retentionDays` default reaches a contributed form too.
+
+## Options
+
+`forms()` takes two options, and `forms()` on its own is a complete registration with no forms of its own.
+
+| Option          | Default | What it does                                                                                                                                                                                                       |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `forms`         | `[]`    | The site's own forms, each built with `defineForm`.                                                                                                                                                                |
+| `retentionDays` | `0`     | How many days a form that declares no period of its own keeps its submissions. `0` keeps them indefinitely. See [Form Submissions](/plugins/forms-submissions/#keeping-submissions-only-as-long-as-you-need-them). |
+
+`defineForm(slug, options)` takes these:
+
+| Option          | Default    | What it does                                                                                         |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| `fields`        | (required) | The questions, plus any `pageBreak()` between them. See [Form Fields](/plugins/forms-fields/).       |
+| `title`         | none       | A heading rendered above the form. A string or a translatable descriptor.                            |
+| `submitLabel`   | `"Submit"` | The submit button's text.                                                                            |
+| `validate`      | none       | [Your own rules](#your-own-rules), run on the server after the field rules pass.                     |
+| `onSubmit`      | none       | [The handler](#what-happens-next), run after the submission is stored.                               |
+| `store`         | `true`     | Whether to write the submission to `form_submissions`. `false` requires an `onSubmit`.               |
+| `bind`          | none       | `"entry"`, `"term"` or `"author"`: [the row the page resolves to](#carrying-the-pages-row).          |
+| `retentionDays` | site value | Days to keep this form's submissions. `0` keeps them indefinitely, even when the site sets a period. |
+| `turnstile`     | none       | `{ siteKey, secret }` for [Cloudflare Turnstile](#a-captcha-where-one-is-needed).                    |
+
+`defineForm` checks the definition when it runs, so a mistake fails at boot rather than at the first submission. It refuses a field type the plugin cannot render, a key under the reserved `__plumix_` prefix, two fields sharing a key, a condition naming a field the form does not declare, `store: false` without an `onSubmit`, and a `retentionDays` that is not a whole number of zero or more.
+
+## Related
+
+- [Plugins overview](/plugins/overview/) covers installing a published plugin, generating a migration for one that owns tables, and the version tracks that decide which number you pin.
+- [Field Builders](/fields/builders/) documents the builders a form's fields are written with, including `.visibleWhen()`.
+- [Blocks](/blocks/overview/) covers how the `forms/form` block reaches a page, and how a theme block replaces a plugin one.
+- [Statuses and Publishing](/content-modelling/statuses/) shows `ctx.addFilter` and `ctx.addAction` from a plugin's `setup`, the same calls the form hooks use.
+- [Secrets](/deployment/secrets/) covers the environment-input union the Turnstile secret takes.
+
+## Next steps
+
+Read [Form Fields](/plugins/forms-fields/) next. It lists the field types a form accepts, how groups and repeaters store their answers, how a condition hides a question, and how a page break turns a long form into steps.
+
+To put a form somewhere other than a block, or to style it, read [Rendering Forms](/plugins/forms-rendering/). It covers `PlumixForm` in a template, replacing the block from a theme, the `usePlumixForm` hook, and the class names and attributes the markup carries.
+
+To read what came in, read [Form Submissions](/plugins/forms-submissions/). It covers the inbox, CSV and JSON exports, and how long submissions are kept.

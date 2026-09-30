@@ -18,6 +18,8 @@ A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's car
 
 The URL is content-addressed. Its digest covers everything the card read — the entry's `updatedAt`, the card's own source, the font set, the theme's tokens — and the bytes are served `immutable`. It is also the only thing that makes X, Facebook and LinkedIn refetch an image they already hold: a purge reaches Cloudflare and stops there, while an edit publishes a _different_ URL.
 
+The route answers a request carrying a matching `If-None-Match` with `304`. With a [`cdn:`](/getting-started/configuration/#cdn) slot configured, the edge also caches a card under the same `e:<id>` tag its entry's pages carry, so the publish that clears the page clears the card with it. Drop the digest, as in `/_plumix/og/card/entry/12.png`, and the route redirects to whichever render is current, which is how you open a card by hand.
+
 `<target>` names the page a card is about — `entry/12`, `term/3`, `archive/post`, `author/7`, `date/2026-03`, `front-page` — and each of those six gets a card from the bundled template with nothing configured. See [which page kinds have a card](#which-page-kinds-have-a-card) for when each one is served.
 
 <Aside type="note" title="Two page kinds have no card">
@@ -135,7 +137,7 @@ card.forEntryType("post").define({
 });
 ```
 
-`mode: "card"` shares the card even on an entry that has a photo — the choice for a theme whose share image is branded rather than the picture itself. The default, `"auto"`, steps aside for the photo.
+`mode: "card"` shares the card even on an entry that has a photo — the choice for a theme whose share image is branded rather than the picture itself. The default, `"auto"`, steps aside for the photo. A card the page cannot advertise at all, such as one from `svgOnly()`, still yields to the photo whatever `mode` says.
 
 Cropping is a feature of this plugin, and it takes its target size from the card rule that matched. A site that wants cropped share images but no generated cards still declares a rule, to say what shape to crop to.
 
@@ -143,9 +145,11 @@ An image an earlier `seo:og_image` subscriber supplied is left exactly as it arr
 
 Two things leave a page with no card in its head, and they do not go equally far.
 
-An entry a scraper could not reach has none, and its card URL answers `404` rather than merely going unadvertised — the head and the route ask one question, so the head can never promise a URL the route refuses. Three things fail it: the entry is not published, its type is unregistered or not public, or the access layer refuses it. That last one is asked about an anonymous visitor whoever is calling, because a card carries the entry's title, sits at a sequential id and is served from a shared cache.
+An entry a scraper could not reach has none, and its card URL answers `404` rather than merely going unadvertised — the head and the route ask one question, so the head can never promise a URL the route refuses. Three things fail it: the entry is not published, its type is unregistered or not public, or the access layer refuses it. That last one is asked about an anonymous visitor whoever is calling, because a card carries the entry's title, sits at a sequential id and is served from a shared cache. A soft gate is the exception. Its page serves a public teaser at 200, so the teaser unfurls with a card like any other page.
 
 A renderer whose output scrapers do not render is the other, and it is head-only: the route still serves the card, so you can look at it, but only PNG and JPEG reach a head — an SVG `og:image` unfurls as nothing at all.
+
+A render that throws cannot take back the URL the page already advertised. The route redirects to your site-wide default image instead and logs the failure as `og_card_render_failed`, because a scraper would show an error answer as a broken image. In development the error reaches the dev error page instead, with its stack.
 
 ## The default card's palette
 
@@ -212,14 +216,40 @@ Styling is ordinary CSS against ordinary class names. Whatever your theme declar
 - `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, tagged `e:<id>` so the publish that clears the entry's pages clears its card too.
 - `cardKey.of("home", locale)` — anything else, keyed and tagged on what you name. Its tag lands in an `og:` namespace of its own, because only you know what such a card read.
 
-Three inputs fold in without being named: the card's own source, so a redesign invalidates what it replaced with no version bump; the font set; and the theme's tokens.
+Three inputs fold in without being named: the card's own source, so a redesign invalidates what it replaced with no version bump; the font set; and the theme's tokens. The source covers the card's own `render` and `styles`, not a component `render` calls out to. A card whose design lives in a child component needs the child's identity in its `key`.
 
 Two do not, and the answer to both is to name them:
 
 - `updatedAt` holds whole seconds, so two edits inside one second share a key. A card rendering entry content should name that content — `cardKey.entry(entry, entry.title)`.
-- An image is resolved during the render, so nothing about it reaches the key. A card painting one should name what identifies it, since a replaced upload lands on a new storage key.
+- An image is resolved during the render, so nothing about it reaches the key. A card painting one should name what identifies it, as in `cardKey.entry(entry, hero.url)`, since a replaced upload lands on a new storage key. Unpublishing an image moves no key, so a card already rendered keeps showing it.
 
 Two more are consequences to know rather than things a key can fix. Two renderers declaring the same content type share keys, so swapping between them serves what the previous one stored. And nothing deletes a card's predecessor: every key change leaves the old object in your bucket, and the URL it was served at redirects to the current card.
+
+### Images in a card
+
+A card paints an image with an `image` node, and the plugin resolves what it points at before anything renders:
+
+```ts no-typecheck
+card.forEntryType("post").define({
+  key: ({ data }) =>
+    cardKey.entry(data.entry, data.entry.title, data.entry.meta.hero.url),
+  render: ({ data }) => ({
+    type: "container",
+    className: "card",
+    children: [
+      {
+        type: "image",
+        src: data.entry.meta.hero.url,
+        width: 1200,
+        height: 360,
+      },
+      { type: "text", text: data.entry.title },
+    ],
+  }),
+});
+```
+
+A media reference's `url` resolves in both shapes it takes: the bucket's own public URL, and the `/_plumix/media/serve/<id>` route on a bucket with none. The media has to be published, as that route requires. Use `url` rather than `thumbnailUrl`, which points at a transformed image that is not in the bucket and so does not resolve. [A card cannot fetch an external image](#a-card-cannot-fetch-an-external-image) lists the other sources that do.
 
 ## Which page kinds have a card
 
@@ -249,9 +279,9 @@ An archive whose entry type carries an `access` policy is refused on the same te
 
 Three surfaces show what a card looks like, and why a page has none.
 
-**`/_plumix/og/preview`** renders every declared rule against invented sample data, one card per rule, listed in the order a page resolves against them rather than the order they were declared in. Storage and the CDN are both bypassed, so a refresh re-renders and an edit shows up — a served card cannot, since its URL is the immutable one described above.
+**`/_plumix/og/preview`** renders every declared rule against invented sample data, one card per rule, listed in the order a page resolves against them rather than the order they were declared in. The preview also serves each card on its own at `/_plumix/og/preview/<n>.<ext>`. Storage and the CDN are both bypassed, so a refresh re-renders and an edit shows up — a served card cannot, since its URL is the immutable one described above. The preview never looks the sample data up, so it works on a site with no content yet. A rule's matcher supplies the names it narrows on, so `card.forEntryType("recipe")` previews a recipe.
 
-**The debug bar's OG image panel** names which of the four links above produced the page's image, which rule produced a card, and the reason there is no card. "I set a featured image and nothing changed" reads back as _the card steps aside for the featured image_.
+**The debug bar's OG image panel** names which of the four links above produced the page's image, which rule produced a card, and the reason there is no card. The panel also reports a renderer whose format scrapers cannot read. There is no boot-time warning for it. "I set a featured image and nothing changed" reads back as _the card steps aside for the featured image_.
 
 **A preview in the entry editor**, for the entry types you name:
 
@@ -259,11 +289,11 @@ Three surfaces show what a card looks like, and why a page has none.
 og({ preview: ["post", "page"] });
 ```
 
-Each named type gains a Social card box in the editor rail: the image the entry will be shared with, and a line naming which link produced it. It renders on request and reads nothing back from storage, so a draft has one too, and it sees through a pending autosave. It shows what will be shared; it does not change it. There is no per-entry override. It also models this plugin's own contribution to the chain, so a `seo:og_image` subscriber registered after `og()` can change what the page advertises without changing what the box says.
+Each named type gains a Social card box in the editor rail: the image the entry will be shared with, and a line naming which link produced it. It renders on request and reads nothing back from storage, so a draft has one too, and it sees through a pending autosave. A render costs CPU, so the box fetches once and has a **Refresh** button for after you save. An entry a scraper could never reach, such as one of a private type or behind an access policy, gets no card here either. With `remote({ url })` as the renderer, every preview posts the draft's title and card content to that endpoint. It shows what will be shared; it does not change it. There is no per-entry override. It also models this plugin's own contribution to the chain, so a `seo:og_image` subscriber registered after `og()` can change what the page advertises without changing what the box says.
 
 The list is not defaulted, because a meta box is registered against entry types by name and a name nothing registered fails the boot. Leave `preview` out and neither the box, the procedure behind it, nor the plugin's admin chunk is registered at all.
 
-Both dev surfaces sit behind the same development gate core uses for its own, reached through a dynamic import, so neither leaves anything in a production build.
+Both dev surfaces sit behind the same development gate core uses for its own, reached through a dynamic import, so neither leaves anything in a production build. Both answer only over loopback. To review cards on a phone or through a tunnel, start the dev server with `PLUMIX_DEV_ALLOW_REMOTE=1`, as [The Dev Server](/going-further/dev-server/) describes.
 
 ## Fonts
 
@@ -355,6 +385,6 @@ The `featured` and `ogImage` roles that outrank a card are filled by meta-box fi
 
 Read [Blog](/plugins/blog/) if the site has no entry type yet: a card hangs off a published entry, so `post` or `page` comes first.
 
-To design a card rather than take the bundled one, [Templates](/themes/templates/) is the vocabulary `ogCards` reuses, and the package's own README carries the full builder reference — every matcher, the key helpers, and images in a card.
+To design a card rather than take the bundled one, [Templates](/themes/templates/) is the vocabulary `ogCards` reuses, and [Cards your theme declares](#cards-your-theme-declares) covers the key helpers and images in a card.
 
 To put the cropped-photo path to work on the free plan, [Configuration](/getting-started/configuration/) covers the `imageDelivery` slot that does the cropping and [Cloudflare Workers](/deployment/cloudflare/) the adapter behind it.

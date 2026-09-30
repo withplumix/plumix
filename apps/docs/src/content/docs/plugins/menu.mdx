@@ -1,0 +1,278 @@
+---
+title: Menus
+description: The menu plugin adds navigation menus built in the admin from your entries, terms and custom URLs, and the named locations a theme renders them into.
+tier: P1
+sidebar:
+  order: 50
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-menu` is site navigation. An editor builds a menu in the admin from links to entries, terms and custom URLs, nests the links into a tree, and assigns the menu to a location such as `primary` or `footer`. A theme template declares the locations it renders and receives each one's menu as a resolved tree.
+
+## Overview
+
+The plugin exports a factory named `menu`, so you call it. Its one option, `locations`, names the navigation slots your theme renders. `menu()` with no locations still installs the menu builder, but there is nowhere to assign a menu to.
+
+It adds no tables. A menu is a row in `terms` with the taxonomy `menu`, a menu item is a row in `entries` with the type `menu_item`, and membership is a row in `entry_term`. Both registrations are `isPublic: false`, so they stay out of the generic Entries and Terms screens and never get a public URL. Installing the plugin needs no migration.
+
+What it registers:
+
+- An admin page at `/menus`, under Appearance, for building menus and assigning them to locations.
+- A `menus` template dep, so a template can declare the locations it renders.
+- Server functions, `getMenuForLocation` and `getMenuByName`, for code that resolves a menu outside a template.
+- Two filters, `menu:item` and `menu:tree`, and one action, `menu:saved`.
+
+Every screen and procedure checks `term:menu:manage`, the `manage` capability the `menu` taxonomy mints. It maps to the editor role, so editors and admins can change the site's navigation.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-menu
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-menu
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-menu
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-menu
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add `menu()` to the `plugins` array with the locations your theme renders.**
+
+   ```ts no-typecheck
+   import type { PlumixConfigInput } from "plumix";
+
+   import { menu } from "@plumix/plugin-menu";
+
+   export const plugins: PlumixConfigInput["plugins"] = [
+     menu({
+       locations: {
+         primary: { label: "Primary" },
+         footer: { label: "Footer", description: "Links under every page" },
+       },
+     }),
+   ];
+   ```
+
+2. **Restart the dev server.** The plumix Vite plugin compiles the admin bundle when the dev server starts, so the new page appears only after a restart.
+
+   ```sh
+   pnpm dev
+   ```
+
+3. **Build a menu.** Open Appearance, then Menus, at `/_plumix/admin/menus`. Create a menu, add links to it, drag them into order, and save.
+
+4. **Assign it.** Switch to Manage Locations and pick the menu for `primary`.
+
+5. **Render the location** from a template, as [Rendering a menu](#rendering-a-menu) shows.
+
+</Steps>
+
+## Locations
+
+A location is a slot your theme renders, and the site declares its locations in `menu({ locations })`. The key is the location id, and the value carries a `label` and an optional `description` for the admin's Manage Locations tab.
+
+A location id starts with a lowercase letter and contains only lowercase letters, digits and hyphens, up to 64 characters. The label must not be empty. Either mistake throws at boot with an error that names the location.
+
+The admin can assign a menu only to a declared location. Each location holds at most one menu, and one menu can fill several locations. The plugin stores the binding in the site's settings, where it outlives the config. A location you remove and later declare again gets its menu back.
+
+## Building a menu
+
+The menu builder has two tabs. Edit Menus lists the site's menus and edits one at a time. Manage Locations assigns a menu to each declared location, or leaves the location unassigned.
+
+A menu item links to one of three things:
+
+- **An entry.** There is one picker tab per eligible entry type.
+- **A term.** There is one picker tab per eligible taxonomy.
+- **A custom URL.** This tab is always last.
+
+Items nest into a tree up to the menu's max depth. The depth is 5 by default, and you can set it per menu anywhere from 1 to 20. The editor refuses to lower it below the depth the menu already uses. A single save holds at most 500 items.
+
+A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto` or `tel` scheme. Saving the menu refuses anything else, including `javascript:` and protocol-relative `//host` URLs.
+
+Two editors can have the same menu open. Each save carries the version it was loaded at, so the server refuses the second save and the editor prompts a reload. It never silently overwrites the first.
+
+When an item's linked entry or term no longer resolves, the editor marks the item as a broken link and offers two fixes. Re-link points it at another entry or term. Convert to Custom URL turns it into a custom link, which needs an address before the menu can be saved.
+
+## Which entry types appear
+
+An entry type or taxonomy appears in the picker when it is public. A type registered with `isPublic: false` has no URL to link to and never appears. A public one can opt out with `isShownInMenus: false`. `menuPickerLabel` renames its picker tab, which otherwise uses the type's plural label:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      isPublic: true,
+      menuPickerLabel: "Recipe pages",
+    });
+
+    ctx.registerTermTaxonomy("diet", {
+      label: "Diets",
+      entryTypes: ["recipe"],
+      isPublic: true,
+      isShownInMenus: false,
+    });
+  },
+});
+```
+
+Both options are this plugin's additions to the registration options, so they type-check once `@plumix/plugin-menu` is a dependency.
+
+`isShownInMenus: false` does more than hide the picker tab. Links already in a menu to that type stop rendering too, because the picker, the editor and the public render all ask the same question.
+
+Lookup adapters other than entries and terms, such as a plugin's own, stay out of the picker unless their registration sets `menuPicker: { tabLabel }`.
+
+## Rendering a menu
+
+A template declares the locations it renders under `menus` and receives them keyed by location id. Each value is the menu assigned to that location, or `null` when none is:
+
+```tsx no-typecheck
+import { defineTemplate } from "plumix/theme";
+
+import type {
+  ResolvedMenu,
+  ResolvedMenuItem,
+} from "@plumix/plugin-menu/server";
+
+function MenuList({ items }: { items: readonly ResolvedMenuItem[] }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.id} className={item.cssClasses.join(" ")}>
+          <a
+            href={item.href}
+            target={item.target}
+            rel={item.rel}
+            aria-current={item.isCurrent ? "page" : undefined}
+          >
+            {item.label}
+          </a>
+          {item.children.length > 0 ? <MenuList items={item.children} /> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Nav({ menu }: { menu: ResolvedMenu | null | undefined }) {
+  return menu ? (
+    <nav>
+      <MenuList items={menu.items} />
+    </nav>
+  ) : null;
+}
+
+export const page = defineTemplate({
+  menus: ["primary", "footer"],
+  render: ({ menus }) => (
+    <>
+      <Nav menu={menus?.primary} />
+      <main />
+      <Nav menu={menus?.footer} />
+    </>
+  ),
+});
+```
+
+The type import from `@plumix/plugin-menu/server` is what the sample uses for its props. The plugin's package declares the `menus` key on the template, so installing it is enough to make the key valid.
+
+A `ResolvedMenu` carries the menu's `termId`, `name`, `slug` and `items`. Each item carries:
+
+- `label` and `href`, the text and address to render.
+- `source`, which says whether the item links to an `entry` or `term` (with its `id`) or is `custom`.
+- `isCurrent`, which is true when the item points at the page being rendered. A custom URL counts when it matches the request's path.
+- `isAncestor`, which is true when any item below it in this menu is current.
+- `target`, `rel` and `cssClasses`, from the stored item. The admin does not edit these today, and a `menu:item` filter can set them.
+- `children`, the nested items, already resolved the same way.
+
+The plugin resolves links to entries and terms when the page renders, not when you save the menu. Renaming a page renames its menu item everywhere, with no need to re-save the menu. An entry item shows only while its entry is published, so a draft added to a menu appears once it is published. The rendered menu leaves out an item whose target is unpublished, deleted, or of a type that is no longer eligible. Every item nested under it goes too.
+
+The plugin batches resolution. It reads every location a request asks for, from templates and from the functions below, in one settings query and one pass over the menus' items. Repeat calls within the request reuse that result.
+
+<Aside type="caution" title="Menu changes do not purge the CDN">
+  Saving a menu or reassigning a location does not purge cached pages. With a
+  [CDN](/deployment/cdn/) configured, pages already in its cache keep the old
+  navigation until their `ttl` runs out.
+</Aside>
+
+## Resolving a menu in server code
+
+Outside a template, the `/server` entry resolves menus from any code holding the request context, such as a route handler, a block loader or a hook listener. It imports no admin code.
+
+```ts no-typecheck
+import type { AppContext } from "plumix/plugin";
+
+import { getMenuByName, getMenuForLocation } from "@plumix/plugin-menu/server";
+
+export async function navFor(ctx: AppContext) {
+  const primary = await getMenuForLocation(ctx, "primary");
+  const legal = await getMenuByName(ctx, "legal-links");
+  return { primary, legal };
+}
+```
+
+`getMenuForLocation` returns the menu assigned to a location, or `null`. `getMenuByName` looks a menu up by its slug, not its display name, and returns `null` when no menu has that slug. Both have batched forms, `getMenusForLocations(ctx, locations)` and `getMenusByName(ctx, slugs)`, that return a record keyed by what you passed.
+
+## Hooks
+
+`menu:item` runs once for each resolved item. Children are resolved first, so a listener sees an item's subtree already filtered. Opening every external link in a new tab:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+export const externalLinks = definePlugin("external-links", {
+  setup: (ctx) => {
+    ctx.addFilter("menu:item", (item) =>
+      item.source.kind === "custom" && item.href.startsWith("http")
+        ? { ...item, target: "_blank", rel: "noopener" }
+        : item,
+    );
+  },
+});
+```
+
+`menu:tree` runs once on the whole list of top-level items after assembly. Its second argument is `{ location, termId }`, where `location` is the slot being rendered, or `null` when the menu was looked up by name. One listener can therefore treat the footer differently from the header.
+
+`menu:saved` is an action that fires after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }`. A listener that clears a cache can run on every call without inspecting the payload. A listener that throws does not undo the save.
+
+The plugin's package declares all three, so their names type-check once `@plumix/plugin-menu` is a dependency.
+
+## Related
+
+[Overview](/plugins/overview/) covers installing plugins in general and explains why a new admin page needs a restart. [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/) document the `isPublic` and label options the picker reads. [Themes](/themes/overview/) and [Templates](/themes/templates/) cover template deps and the `ctx` a template receives. [Access & Identity](/access/overview/) covers the role ladder `term:menu:manage` sits on.
+
+## Next steps
+
+Declare `menus` on the templates your theme's layout uses. [Templates](/themes/templates/) covers the builders those templates are bound with, and [Template Hierarchy](/themes/hierarchy/) covers which one a request reaches.
+
+If the site links to pages, install [Pages](/plugins/pages/) so they appear as a picker tab. [Blog](/plugins/blog/) does the same for posts and their categories and tags.

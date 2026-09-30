@@ -30,6 +30,8 @@ Dev, build, migrations and the built server all run on Bun, so a Bun-specific fa
 bun add @plumix/runtime-bun
 ```
 
+The package is unreleased. It is at version 0.0.0 and not on npm yet.
+
 Bun 1.4 or newer. On 1.3 the site does not start cleanly: the scheduler's UTC time zone is rejected, and a stopping server does not wait for in-flight requests.
 
 Install with Bun, not pnpm or npm. `bun --bun` cannot execute the shell-script shims pnpm writes into `node_modules/.bin`, which is why the scaffolder refuses `--runtime bun` beside a `--pm` naming another manager.
@@ -157,7 +159,7 @@ For a remote or shared database, `plumix/db/libsql` stays selectable on Bun: poi
 
 Two factories fill the `storage` slot, and swapping one for the other is one config line.
 
-`diskStorage({ dir })` keeps uploads under the directory, each object a file with its content type and metadata in a JSON file beside it. The media plugin serves them through its own route; there is no public URL and no presigned upload, so the site receives the bytes itself. It is the scaffold's default and a supported production setup on a single machine, as long as the directory is on a disk that outlives a redeploy — [VPS and containers](#vps-and-containers) has the shape.
+`diskStorage({ dir })` keeps uploads under the directory, each object a file under `dir/objects/` with its content type and metadata in a JSON file under `dir/meta/`. The media plugin serves them through its own route; there is no public URL and no presigned upload, so the site receives the bytes itself. It is the scaffold's default and a supported production setup on a single machine, as long as the directory is on a disk that outlives a redeploy — [VPS and containers](#vps-and-containers) has the shape.
 
 `bunS3({ bucket, endpoint?, region?, credentials, publicUrlBase? })` keeps them in any S3-compatible bucket through Bun's `S3Client`, which is what several processes sharing uploads need. `endpoint` defaults to AWS S3 in `region`, and `region` to `us-east-1`. For R2 point `endpoint` at the account's R2 host with `region: "auto"`; for MinIO, at the MinIO server.
 
@@ -200,7 +202,7 @@ export default {
 
 ## Images
 
-`images()` fills `imageDelivery` with the process itself, through `Bun.Image`, so nothing native is installed. `url()` points at `/_plumix/image`, which the server answers ahead of the site. A same-origin source, which is what a disk-stored upload has, is read through the site itself as an anonymous GET, so what the media plugin gates stays gated. A remote source must match `remotePatterns`, and every redirect it takes is checked again, ten at most. The width snaps up to the next entry in `widths` (`320` to `1920` by default) and quality is clamped.
+`images()` fills `imageDelivery` with the process itself, through `Bun.Image`, so nothing native is installed. `url()` points at `/_plumix/image`, which the server answers ahead of the site. A same-origin source, which is what a disk-stored upload has, is read through the site itself as an anonymous GET, so what the media plugin gates stays gated. A remote source must match `remotePatterns`, and every redirect it takes is checked again, ten at most. Anything else gets a 400. The server refuses a source over 32 MiB with 413, one that does not answer within fifteen seconds with 502, and bytes `Bun.Image` cannot decode with 415. The width snaps up to the next entry in `widths` (`320` to `1920` by default) and quality is clamped.
 
 ```ts no-typecheck
 import { images } from "@plumix/runtime-bun";
@@ -213,7 +215,7 @@ export default {
 };
 ```
 
-The format follows `Accept`, among the formats the host can encode, which the process probes once on connect. **Linux has no AVIF**: `Bun.Image` encodes AVIF only through the system codecs on macOS and Windows, so a browser asking for AVIF from a Linux server, which is every container, gets WebP. `Bun.Image` has no crop either, so `fit: "cover"` scales the image to cover the box and leaves the overflow to the page's `object-fit`.
+The format follows `Accept`, among the formats the host can encode, which the process probes once on connect. **Linux has no AVIF**: `Bun.Image` encodes AVIF only through the system codecs on macOS and Windows, so a browser asking for AVIF from a Linux server, which is every container, gets WebP. `Bun.Image` has no crop either, so `fit: "cover"` scales the image to cover the box and leaves the overflow to the page's `object-fit`. An animated GIF comes out as its first frame.
 
 A variant is rendered once and kept under `cacheDir` (`.cache/plumix/images`) under a hash of the request, with an immutable cache header and an `ETag` that turns a revalidation into a 304. When a media item is trashed or deleted, the media plugin asks the slot to forget its variants. The cache has no size cap, so give it room or clear the directory; losing it costs a cold cache, not data.
 
@@ -335,7 +337,7 @@ Public pages render on every request until the site sits behind a CDN with the `
 
 ## Commands the runtime adds
 
-`plumix dev` runs the site in Vite on Bun. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate apply` applies the generated migrations to the file `bunSqlite` names, through `bun:sqlite`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
+`plumix dev` runs the site in Vite on Bun and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate apply` applies the generated migrations to the file `bunSqlite` names, through `bun:sqlite`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
 
 ## Related
 

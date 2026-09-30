@@ -1,0 +1,264 @@
+---
+title: Audit Log
+description: The audit-log plugin records who changed what on your site into an activity feed in the admin, and lets your own plugins add events to it.
+tier: P2
+sidebar:
+  order: 65
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-audit-log` keeps a record of who did what on your site. It listens to the lifecycle events core already fires for entries, users, sign-ins, credentials, terms and settings, writes one row per event, and shows the rows as a filterable feed in the admin. Your own plugins can add rows to the same feed through `ctx.audit.log`.
+
+## Overview
+
+The plugin exports a factory named `auditLog`, so you call it. `auditLog()` with no arguments is a complete registration. It owns a database table, `audit_log`, so installing it is a package install, one array entry and a migration.
+
+What it registers:
+
+- An admin page at `/audit-log`, under Tools, showing the feed newest first.
+- An `audit_log:read` capability, granted to the admin role. The page and the procedure behind it both check it, so nobody below admin sees the feed.
+- One listener per audited event. Nothing needs wiring in your own code.
+- A daily scheduled task that deletes rows older than 90 days.
+- An `audit` helper on the per-request context, so any plugin's routes, hooks and RPC procedures can record their own events.
+
+Each row stores the event name, the subject acted on, the actor who did it, and a JSON `properties` object. When the plugin writes a row, it copies the labels into it. Those are the subject's title or email and the actor's email. A row therefore still reads correctly after the entry or user it names has been deleted.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-audit-log
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-audit-log
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-audit-log
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-audit-log
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add `auditLog()` to the `plugins` array.**
+
+   ```ts no-typecheck
+   import type { PlumixConfigInput } from "plumix";
+
+   import { auditLog } from "@plumix/plugin-audit-log";
+
+   import { recipes } from "./plugins/recipes";
+
+   export const plugins: PlumixConfigInput["plugins"] = [recipes, auditLog()];
+   ```
+
+2. **Generate and apply the migration.** `plumix migrate generate` rewrites `.plumix/schema.ts` from the resolved config, so it picks up the `audit_log` table only once the descriptor is in the array.
+
+   ```sh
+   pnpm plumix migrate generate
+   pnpm plumix migrate apply --local
+   ```
+
+3. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+4. **Change something and read the feed.** Edit an entry, then open Tools, then Audit log, at `/_plumix/admin/audit-log`. The edit is at the top of the feed with the fields it changed.
+
+</Steps>
+
+## What it records
+
+Every event below is one core already fires. The plugin records it under the same name.
+
+| Subject          | Events                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`          | `entry:updated`, `entry:transition`, `entry:published`, `entry:trashed`, `entry:restored`, `entry:deleted`, `entry:meta_changed`                                                                        |
+| `user`           | `user:updated`, `user:status_changed`, `user:deleted`, `user:meta_changed`, `user:invited`, `user:registered`, `user:signed_in`, `user:signed_out`, `user:email_change_requested`, `user:email_changed` |
+| `credential`     | `credential:created`, `credential:revoked`, `credential:renamed`                                                                                                                                        |
+| `session`        | `session:revoked`                                                                                                                                                                                       |
+| `api_token`      | `api_token:created`, `api_token:revoked`                                                                                                                                                                |
+| `device_code`    | `device_code:approved`, `device_code:denied`                                                                                                                                                            |
+| `term`           | `term:created`, `term:updated`, `term:deleted`, `term:meta_changed`                                                                                                                                     |
+| `settings_group` | `settings:group_changed`                                                                                                                                                                                |
+
+Core fires no event when an entry is created, so the first row an entry gets is its first save, status change or publish.
+
+An update event stores what changed as `properties.diff`, a map from each changed column to its `[old, new]` pair. The plugin compares only top-level columns. It leaves out an entry's `content` and `meta`, and the `createdAt` and `updatedAt` timestamps. The timestamps change on every save, and meta changes arrive as their own `entry:meta_changed` row. A user diff also leaves out `passwordHash` and `lastSignInAt`.
+
+A settings change records the names of the keys that changed and never their values, because a settings group can hold an SMTP password or an OAuth client secret. An invite never records the invite token.
+
+The actor is normally the signed-in user making the request. Sign-in, sign-out and self-registration run before a session exists, so those rows name the user the event is about. Events that one person can trigger for another, such as an admin revoking someone's passkey or requesting an email change on their behalf, name the person who did it. A row with no actor shows `(system)` in the feed.
+
+## The admin feed
+
+The feed shows 50 rows at a time, newest first, with a Load more button for the next page. Its columns are Time, Actor, Event, Subject and Changes, the last a preview of the fields an update changed.
+
+Four filters narrow it:
+
+- A date range: all time, today, the last 7 days, or the last 30 days.
+- An actor, by user id.
+- A subject type, from the list in the table above.
+- An event prefix, such as `entry:` or `user:`.
+
+The page keeps the filters in its query string, so reloading keeps them and a copied link opens the same view. Reset clears all four.
+
+The subject type and event prefix lists offer only the ones the plugin records itself. A row your own plugin writes under another subject type or event prefix is in the feed, but neither list offers a choice that selects it.
+
+## Recording your own events
+
+`ctx.audit.log` adds a row to the same feed. It takes the context to attribute the row to and the event to record:
+
+```ts no-typecheck
+import { authenticated, base, definePlugin } from "plumix/plugin";
+
+const publishWidget = base.use(authenticated).handler(({ context }) => {
+  const id = 42;
+  context.audit?.log(context, {
+    event: "widget:published",
+    subject: { type: "widget", id, label: "Homepage widget" },
+    properties: { placement: "sidebar" },
+  });
+  return { id };
+});
+
+export const widgets = definePlugin("widgets", {
+  setup: (ctx) => {
+    ctx.registerRpcRouter({ publish: publishWidget });
+  },
+});
+```
+
+The first argument has to be an `AuthenticatedAppContext`, a context whose `user` is known to be signed in. That rule keeps anonymous visitors out of the admin feed, and the plugin reads the row's actor from it. A procedure or route that runs behind `authenticated` already holds one.
+
+The `subject` is what the event happened to. `type` and `id` are yours to choose, and `id` is stored as a string. `label` is the text the feed shows for it, and a missing or blank label shows as `(unnamed)`. `properties` is any JSON object, and the plugin stores it on the row as it is. Write a date as a string, for example with `.toISOString()`.
+
+The context declares `audit` as optional. `ctx.audit?.log(...)` therefore compiles in a plugin that does not know whether the audit log is installed, and does nothing when it is not. The declaration comes from the plugin's package, so the call type-checks once `@plumix/plugin-audit-log` is a dependency.
+
+A hook listener receives a plain `AppContext`, whose `user` may be null because the hook can fire for a visitor. Checking `ctx.user` does not narrow the object's type, so pass a copy with the user pinned:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+export const pageWatch = definePlugin("page-watch", {
+  setup: (ctx) => {
+    ctx.addAction("entry:published", (entry, appCtx) => {
+      if (!appCtx.user) return;
+      appCtx.audit?.log(
+        { ...appCtx, user: appCtx.user },
+        {
+          event: "page-watch:published",
+          subject: { type: "entry", id: entry.id, label: entry.title },
+        },
+      );
+    });
+  },
+});
+```
+
+`ctx.audit` exists on the request context only. A plugin's `setup` runs once at boot, before any request, and cannot reach it.
+
+## When a row is written
+
+The plugin does not write rows while the request runs. It collects every row a request produces, from its own listeners and from `ctx.audit.log`, and writes them in one insert after the response has been sent. Saving an entry that fires several events costs one write, and the editor does not wait for it.
+
+The audit log never fails the request that triggered it. When a write fails, the plugin logs a warning, and the rows the write carried are lost. The plugin drops a row whose `properties` would serialize to more than 256 KiB and logs a warning instead of storing it.
+
+## Retention
+
+A scheduled task that runs daily at 03:00 UTC deletes rows older than 90 days. Change the age, the schedule, or both with `retention`:
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { auditLog } from "@plumix/plugin-audit-log";
+
+export const plugins: PlumixConfigInput["plugins"] = [
+  auditLog({
+    retention: { maxAgeDays: 365, purgeAt: "30 4 * * *" },
+  }),
+];
+```
+
+`maxAgeDays` must be zero or a positive number, and anything else throws when the config loads. `purgeAt` is a cron expression, `"0 3 * * *"` by default, and it has to stay within the [portable cron subset](/deployment/runtimes/#what-an-adapter-owes-core) every runtime accepts.
+
+Pass `retention: false` to keep every row forever. The plugin then registers no scheduled task at all.
+
+<Aside type="caution" title="A new schedule needs a Cloudflare trigger">
+  On Cloudflare Workers a scheduled task runs only when a cron trigger in
+  `wrangler.jsonc` matches its schedule exactly. The scaffolded config already
+  carries `0 3 * * *`, so the default works. A different `purgeAt` needs its own
+  entry in `triggers.crons`, or the purge never runs and nothing reports it.
+  [Cloudflare
+  Workers](/deployment/cloudflare/#scheduled-tasks-and-cron-triggers) covers the
+  matching rule. The Node.js and Bun runtimes fire every declared schedule
+  themselves.
+</Aside>
+
+To run the purge from somewhere else, such as a one-off script, the package also exports `runRetentionPurge(ctx, { storage, retention })`, which returns the number of rows it deleted.
+
+## Storage
+
+By default rows go to the `audit_log` table in the site's own database, through the `sqlite()` storage the package exports. The `storage` option replaces it:
+
+```ts no-typecheck
+import type { AuditLogStorage } from "@plumix/plugin-audit-log";
+import { auditLog } from "@plumix/plugin-audit-log";
+
+const warehouse: AuditLogStorage = {
+  kind: "warehouse",
+  async write(ctx, rows) {
+    // send the batch to your analytics store
+  },
+  async query(ctx, filter) {
+    // answer the admin feed's page request
+    return { rows: [], nextCursor: null };
+  },
+};
+
+export const audit = auditLog({ storage: warehouse });
+```
+
+A storage has four parts:
+
+- `kind`, a name used in log messages.
+- `write(ctx, rows)`, called once per request with every row that request produced.
+- `query(ctx, filter)`, which serves the admin feed. It receives the filters described above, a `limit`, and the opaque `cursor` it returned as `nextCursor` for the previous page, and returns `{ rows, nextCursor }`.
+- `purge(ctx, { cutoff })`, which is optional and deletes rows older than `cutoff`. A storage without it skips retention and logs a warning each time the task runs.
+
+A storage can also declare `schema`, naming the Drizzle tables it writes. `sqlite()` does, which is how the `audit_log` table reaches `plumix migrate generate`. A storage without `schema` adds no table to your migrations.
+
+## Related
+
+[Overview](/plugins/overview/) covers installing plugins in general, including the migration step every table-owning plugin needs. The events this plugin records are the ones core fires, and the capability model that restricts the feed to admins is [Access & Identity](/access/overview/). [Cloudflare Workers](/deployment/cloudflare/#scheduled-tasks-and-cron-triggers) and [Node.js](/deployment/node/#scheduled-tasks) cover how each runtime fires scheduled tasks, and [CLI](/deployment/cli/) covers `plumix migrate` and `plumix cron`.
+
+## Next steps
+
+If your own plugin changes content through its own tables, add a `ctx.audit?.log` call next to each change so the feed covers it too. [Content Modelling](/content-modelling/overview/) covers writing the plugin those calls live in.
+
+[Comments](/plugins/comments/) is the other plugin most sites with several editors install, and its moderation actions are candidates for `ctx.audit?.log` calls.

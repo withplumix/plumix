@@ -1,0 +1,162 @@
+---
+title: Form Submissions
+description: Read form submissions in the admin inbox, export them as CSV or JSON, set how long each form keeps them, and see what the plugin stores for each one.
+tier: P1
+sidebar:
+  order: 62.6
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Every submission a form stores lands in one table, and the admin reads that table as an inbox. This page covers reading and moderating submissions, exporting them, deleting them on a schedule, and what each stored row holds.
+
+## Overview
+
+A submission is a row in `form_submissions`. It records which form it answered, the answers, a status, and a pointer to a snapshot of what every field and option was called when the visitor sent it. The snapshot is what keeps an old submission readable after the form changes, and it is why the inbox and the exports never read the live form to name a column.
+
+Reading submissions is gated on one capability, `form_submission:moderate`, which the plugin grants to editors and above. The inbox, the export route and the plugin's agent tools all check it. Roles below editor never see what a visitor typed.
+
+The plugin keeps submissions indefinitely unless you set a retention period. You set one per form or once for the whole site, and one nightly task enforces it.
+
+## Quickstart
+
+Keep every form's submissions for three months, and one form's for a year:
+
+```ts no-typecheck
+import { plumix } from "plumix";
+import { email, text, textarea } from "plumix/fields";
+
+import { defineForm, forms } from "@plumix/plugin-forms";
+
+const contact = defineForm("contact", {
+  fields: [
+    text("name").required(),
+    email("email").required(),
+    textarea("message"),
+  ],
+});
+
+const careers = defineForm("careers", {
+  fields: [text("name").required(), email("email").required()],
+  retentionDays: 365,
+});
+
+export default plumix({
+  // …your runtime, database and auth
+  plugins: [forms({ retentionDays: 90, forms: [contact, careers] })],
+});
+```
+
+On Cloudflare, check that `wrangler.jsonc` carries the schedule the purge runs on. The scaffolded file already does, because core registers a task on the same schedule:
+
+```jsonc
+{
+  "triggers": {
+    "crons": ["0 3 * * *", "*/5 * * * *"],
+  },
+}
+```
+
+Then open the admin and go to Content, Form submissions to read what has come in.
+
+## Reading what came in
+
+The inbox lists the newest submission first and loads more as you ask. You can filter it by form and by status, and each filter option carries its own count. The form filter lists the forms the site declares now, plus any slug that still has submissions, which keeps a retired form's backlog reachable.
+
+The columns come from each row's own label snapshot, not from the live form. So a page mixing two generations of one form still names every column, and a submission whose form has since been deleted still reads under the questions it was actually asked.
+
+The list marks a submission whose `onSubmit` threw as failed, so you can find the ones that owe someone something without opening each in turn. Opening one shows every answer under its label, the envelope it arrived in (when, what the form was bound to, the IP hash and the user agent), and the reason the handler did not finish.
+
+A submission's status is one of `new`, `read`, `archived` and `spam`. Every submission arrives as `new`, or as `spam` when the [spam floor](/plugins/forms/#what-javascript-adds) caught it. You can move one to any other status. Spam is a status rather than a discard, so moving a false positive back is a click. Deleting is the one action that cannot be undone, and the only one that asks first.
+
+You can leave a private note on any submission for whoever picks it up next. The visitor never sees it, and it goes when the submission does.
+
+The inbox learns which forms exist by asking the plugin's own registry. There is no forms table to keep in step and nothing to register in the admin. A form is a value in your repository, and the inbox reads it there.
+
+### From an agent
+
+The plugin also registers three read-only MCP tools behind the same capability: `form_list` lists the declared forms, `form_describe` describes one form's questions and steps, and `form_submission_list` pages through stored submissions filtered by form, status and arrival date. There is no tool that changes a form, because a form is a value in the repository.
+
+## Taking the submissions elsewhere
+
+Both export buttons sit beside the inbox's filters. Each exports every submission under the form and status you are filtering by, not only the page you can see.
+
+**CSV** is for a spreadsheet. The envelope comes first (`Received`, `Form`, `Number`, `Status`), then a column per question, then `Note`. The answer columns come from the rows' own label snapshots, so an export spanning two generations of a form names every column. The file starts with a byte order mark, so a spreadsheet reads non-ASCII answers correctly.
+
+When an answer opens with `=`, `+`, `-`, `@`, a tab or a carriage return, the export prefixes it with an apostrophe, so the spreadsheet shows what the visitor typed rather than running it. Without the prefix, a visitor who writes `=WEBSERVICE("https://…")` into a name field writes a formula that runs on the machine of whoever opens the file. The export leaves a negative number alone, because no spreadsheet evaluates a bare number.
+
+**JSON** is for another program. It holds the whole row per submission, with answers nested as they were stored, and the envelope the CSV leaves out: the row the form was bound to, the hashed address, the user agent, and whatever the form's own handler failed at.
+
+Both come from `GET /_plumix/forms/export`, behind the same `form_submission:moderate` capability as the inbox. It takes `format` (`csv`, the default, or `json`), `form` and `status` as query parameters, and refuses a format or status it does not recognise rather than exporting everything.
+
+The envelope columns, the note column and the status values are in English whatever the admin's locale. The answer columns take their names from the form's own snapshot, in whatever language that form was written. A script reads an export as often as a person does, and it keys on a stable column name.
+
+<Aside type="caution" title="20,000 submissions per file">
+  Because the columns come from the rows, the export cannot write anything until
+  it has read the last row, so it holds the whole export in memory. Past 20,000
+  submissions it refuses rather than truncates, with a message asking you to
+  narrow the filter. A file that looks complete and is not would be the worse
+  answer.
+</Aside>
+
+## Keeping submissions only as long as you need them
+
+A form says how long to keep its submissions with `retentionDays`, beside the fields that collect them. The site says it once with the same option on `forms()`, and a form only says something when it differs, as in the quickstart.
+
+`retentionDays: 0` keeps submissions indefinitely, and it is the default for both the site and a form. It is the only default that cannot lose a submission nobody asked to lose. On a form, `0` is a declaration rather than an absence, so it is also how one form opts out of a period the site set for the rest. The site's period reaches every registered form, including one another plugin contributed.
+
+Past the period, the purge deletes a submission whatever its status. An archived enquiry is still someone's address. The purge leaves alone a slug that no form declares any more, since the retention period belongs to the form and there is no longer a form to read one from.
+
+### When the purge runs
+
+One scheduled task purges every form on the site, on `0 3 * * *`. There is no schedule per form, because a retention period is a number of days and no site needs two of them purged at different hours.
+
+On Cloudflare, the task runs only if `triggers.crons` in `wrangler.jsonc` carries `0 3 * * *`, spelled exactly that way. The scaffolded file does, as core registers its own task on that schedule. [Scheduled tasks and cron triggers](/deployment/cloudflare/#scheduled-tasks-and-cron-triggers) covers the matching rule. On [Node](/deployment/node/#scheduled-tasks) and [Bun](/deployment/bun/#scheduled-tasks) there is nothing to declare. The server process runs core's scheduler, which fires every task the site's plugins register.
+
+The purge bounds itself by `id` as well as by date, so it reads the rows it is about to delete rather than the whole backlog. Ids follow arrival order for every row the plugin writes. A row backdated by a direct write to `form_submissions` or by an import sits outside that order. The purge keeps it, and removes it once the rows stored before it have expired too.
+
+## What gets stored
+
+Each submission is a row in `form_submissions`:
+
+| Column                     | What it holds                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| `id`                       | The submission's reference, which the inbox shows and the CSV writes as `Number`.             |
+| `form`                     | The slug of the form it answered. There is no foreign key, because a form is not a row.       |
+| `status`                   | `new`, `read`, `archived` or `spam`.                                                          |
+| `answers`                  | The answers, as JSON, in the shape [the fields](/plugins/forms-fields/#fields) store.         |
+| `labels_digest`            | The snapshot of field and option labels this submission was given.                            |
+| `bound_type`, `bound_id`   | The row a [bound form](/plugins/forms/#carrying-the-pages-row) was placed on, or both `null`. |
+| `ip_hash`                  | The visitor's IP address as a salted SHA-256.                                                 |
+| `user_agent`               | The visitor's user agent.                                                                     |
+| `handler_error`            | Why the form's `onSubmit` did not finish, or `null`.                                          |
+| `note`                     | An administrator's private note.                                                              |
+| `created_at`, `updated_at` | When it arrived and when it last changed.                                                     |
+
+There is no per-form serial number. Retention deletes rows, so once a purge emptied a form, any number counted over the remaining rows would be issued again to a later submission, and a reference somebody had quoted would silently point at a different one.
+
+The label snapshot lives in `form_label_snapshots`, keyed by the digest of its own content. Submissions given the same labels share one snapshot row, and none of them can rewrite another's history. Nothing deletes snapshot rows. Each is a few hundred bytes.
+
+`bound_type` and `bound_id` are indexed together, so reading every submission for one row is a query rather than a scan. The index is partial, because nobody looks up a submission that bound nothing. `bound_id` carries no foreign key, so deleting the page a submission was about leaves the submission in place.
+
+A submission whose `onSubmit` threw keeps its answers untouched. What failed is what the site meant to do next with them, and `handler_error` holds the reason, cut to 1,000 characters.
+
+The note lives beside the answers rather than in a table of its own, because a note has no life once the submission it annotates is deleted.
+
+The plugin never writes a cleartext IP address. The plugin mints the salt per install on the first submission and keeps it in the settings table, out of reach of the admin's settings screens.
+
+A form declared with `store: false` writes nothing here. [Forms that own their destination](/plugins/forms/#forms-that-own-their-destination) covers what it still does.
+
+## Related
+
+- [Forms](/plugins/forms/) covers declaring a form, the spam floor, the submit handler and the plugin's options.
+- [Form Fields](/plugins/forms-fields/) covers what each field stores, which is the shape of `answers`.
+- [Cloudflare Workers](/deployment/cloudflare/#scheduled-tasks-and-cron-triggers) covers cron triggers, which the purge depends on there.
+- [Access & Identity](/access/overview/) covers how the `form_submission:moderate` capability is checked against a user's role.
+- [Plugins overview](/plugins/overview/#plugins-that-own-tables) covers generating the migration for a plugin that owns tables.
+
+## Next steps
+
+To query submissions from your own code, [Carrying the page's row](/plugins/forms/#carrying-the-pages-row) shows a query against `formSubmissions` from `@plumix/plugin-forms/schema`, filtered by the row a form was bound to.
+
+To act on each submission as it arrives, rather than reading it later, write an `onSubmit` for one form or listen on `form:submitted` for all of them, as [What happens next](/plugins/forms/#what-happens-next) and [Hooking every form](/plugins/forms/#hooking-every-form) describe.
