@@ -2122,7 +2122,7 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
   });
 });
 
-describe("dispatcher — custom-archive CDN (#1693)", () => {
+describe("dispatcher — archive-type CDN (#1693)", () => {
   function cdnStub(hit?: Response) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
@@ -2134,7 +2134,7 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     return { cdn, match, put };
   }
 
-  // A theme that renders any custom-archive node to a 200 so the store path
+  // A theme that renders any archiveType node to a 200 so the store path
   // is reachable; real themes narrow via `forArchiveType(name)`.
   const customTheme = defineTheme({
     templates: [
@@ -2179,7 +2179,7 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     });
   });
 
-  test("stores an opted-in custom archive's rendered response on a miss", async () => {
+  test("stores an opted-in archive type's rendered response on a miss", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       cdn,
@@ -2210,7 +2210,7 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     expect(tags).toContain("t:location");
   });
 
-  test("bypasses a custom archive that did not opt into caching", async () => {
+  test("bypasses an archive type that did not opt into caching", async () => {
     const { cdn, match, put } = cdnStub();
     const h = await createDispatcherHarness({
       cdn,

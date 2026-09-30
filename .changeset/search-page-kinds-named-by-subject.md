@@ -2,4 +2,4 @@
 "@plumix/plugin-search": patch
 ---
 
-Gives the search page's `SearchArchiveData` the `archiveType` kind, following core's rename of `custom`.
+Follows core's page-kind renames and needs `plumix` 0.24.0. `SearchArchiveData` has the `archiveType` kind where it had `custom`.

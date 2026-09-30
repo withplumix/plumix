@@ -135,7 +135,7 @@ describe("selectEntryPolicy", () => {
 });
 
 describe("policyForMatch", () => {
-  it("returns the entry type's default policy for a single intent", async () => {
+  it("returns the entry type's default policy for an entry intent", async () => {
     const c = await ctx({
       entryTypes: { post: { default: authenticatedPolicy } },
     });
@@ -153,7 +153,7 @@ describe("policyForMatch", () => {
     ).resolves.toBe(authenticatedPolicy);
   });
 
-  it("resolves a single intent's per-entry choice over the type default", async () => {
+  it("resolves an entry intent's per-entry choice over the type default", async () => {
     const editors = rolePolicy("editor");
     const c = await ctx({
       entryTypes: {
@@ -226,7 +226,7 @@ describe("policyForMatch", () => {
     ).resolves.toBe(null);
   });
 
-  it("returns the route-level policy for a custom archive", async () => {
+  it("returns the route-level policy for an archive type", async () => {
     const c = await ctx({ archiveTypes: { events: authenticatedPolicy } });
     await expect(
       policyForMatch(c, match({ kind: "archiveType", name: "events" })),

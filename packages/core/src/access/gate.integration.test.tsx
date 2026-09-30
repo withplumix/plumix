@@ -25,7 +25,7 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-// Two custom archives standing in for policied public routes: one
+// Two archive types standing in for policied public routes: one
 // authenticated-only, one gated to `editor`. The route-level `access` policy is
 // the seam under test end-to-end.
 interface GatedData extends ArchiveTypeData {
@@ -455,7 +455,7 @@ function paywallSetup() {
             ? entitlement("premium")
             : challenge("subscribe", { soft: true }),
       }),
-      // A custom archive opts into caching so the teaser/full variants persist.
+      // An archive type opts into caching so the teaser/full variants persist.
       cacheable: true,
       resolve: () => ({
         data: {

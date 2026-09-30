@@ -10,7 +10,7 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { fallback, forArchiveType } from "./render/template-builders.js";
 
-// A plugin's custom archive data, declared in the augmentable registry so
+// A plugin's archive type data, declared in the augmentable registry so
 // `forArchiveType("event-series")` types `data.series`.
 interface EventSeriesData extends ArchiveTypeData {
   readonly kind: "archiveType";
@@ -47,7 +47,7 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   });
 });
 
-// A theme templating the custom archive via the targeted builder.
+// A theme templating the archive type via the targeted builder.
 const eventsTheme = defineTheme({
   templates: [
     forArchiveType("event-series").template(({ data }) => (
@@ -59,7 +59,7 @@ const eventsTheme = defineTheme({
   ],
 });
 
-describe("custom archive types (registerArchiveType)", () => {
+describe("archive types (registerArchiveType)", () => {
   test("a plugin route dispatches to its resolver and templates the data", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [eventsPlugin], theme: eventsTheme },

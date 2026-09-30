@@ -1825,7 +1825,7 @@ describe("a feed at the edge", () => {
     expect(stored.some((tag) => purged.has(tag))).toBe(true);
   });
 
-  // Core can't see what a custom archive depends on, so it stays live unless
+  // Core can't see what an archive type depends on, so it stays live unless
   // the archive opted in; its feed reads the same things.
   test("a plugin archive that never opted into caching serves its feed live", async () => {
     const { cdn, put } = cdnStub();

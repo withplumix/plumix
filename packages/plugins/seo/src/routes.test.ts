@@ -419,7 +419,7 @@ describe("the sitemap index", () => {
     expect(direct.status).toBe(404);
   });
 
-  test("paginates a custom archive's scope by its own count", async () => {
+  test("paginates an archive type's scope by its own count", async () => {
     const h = await createHarness([eventsPlugin]);
 
     const body = await bodyOf(h, "/sitemap.xml");
@@ -510,7 +510,7 @@ describe("a sub-sitemap", () => {
     );
   });
 
-  test("serves a custom archive's provider URLs for the page", async () => {
+  test("serves an archive type's provider URLs for the page", async () => {
     const h = await createHarness([eventsPlugin]);
 
     const body = await bodyOf(h, "/sitemap-event-series-2.xml");

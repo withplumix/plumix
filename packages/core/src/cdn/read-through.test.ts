@@ -268,7 +268,7 @@ describe("readThrough", () => {
     expect(decorate).not.toHaveBeenCalled();
   });
 
-  it("stores a custom archive that opted into caching", async () => {
+  it("stores an archive type that opted into caching", async () => {
     const { cdn, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("listing", { status: 200 })),
@@ -291,7 +291,7 @@ describe("readThrough", () => {
     expect(put.mock.calls[0]?.[2]).toEqual(["t:school"]);
   });
 
-  it("bypasses a custom archive that did not opt into caching", async () => {
+  it("bypasses an archive type that did not opt into caching", async () => {
     const { cdn, match, put, decorate } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("listing", { status: 200 })),

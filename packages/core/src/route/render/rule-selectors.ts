@@ -123,7 +123,7 @@ export interface EntryTypeTargets<K extends EntryTypeName, SEntry, SArchive> {
   ): SEntry;
   /** Narrow by an arbitrary predicate over the resolved data. */
   where(predicate: (data: EntryData<ResolvedEntryFor<K>>) => boolean): SEntry;
-  /** The content-type archive listing. */
+  /** An entry type's archive listing. */
   readonly archive: SArchive;
 }
 

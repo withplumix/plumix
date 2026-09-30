@@ -91,7 +91,7 @@ describe("entryTypeTargets", () => {
     }
   });
 
-  test("archive selects the content-type-archive node, not the content one", () => {
+  test("archive selects the entryType node, not the entry one", () => {
     expect(widget.archive.selected).toEqual({
       match: { nodeKind: "entryType", type: "widget" },
     });

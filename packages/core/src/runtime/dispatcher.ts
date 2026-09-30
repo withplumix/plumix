@@ -500,7 +500,7 @@ async function dispatchPublicRoute(
 
     // `null` ⇒ un-policied: no gate, and the segment derives from today's
     // privileged signal (below), so ordinary pages behave exactly as before. A
-    // per-entry-policied single intent resolves the addressed entry here — via
+    // per-entry-policied entry intent resolves the addressed entry here — via
     // the same request memo the renderer reuses, so the gate and the render
     // share one lookup. Runs after the principal loads so any per-entry
     // resolution keys off the same memo threaded into the live render.

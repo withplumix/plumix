@@ -40,7 +40,7 @@ describe("the default card past entries", () => {
     expect(body).toContain("Example Site");
   });
 
-  test("serves a content-type archive's card under its plural label", async () => {
+  test("serves an entry type's archive card under its plural label", async () => {
     const harness = await createHarness();
     await seedEntry(harness);
 

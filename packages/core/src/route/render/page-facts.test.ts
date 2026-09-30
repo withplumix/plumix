@@ -151,7 +151,7 @@ describe("pageFacts", () => {
     });
   });
 
-  test("a custom archive's arbitrary payload is never read as another kind", () => {
+  test("an archive type's arbitrary payload is never read as another kind", () => {
     // `pagination` among them: the page an archive is on is the `page` fact it
     // states, never a listing object core would have to know the shape of.
     const data = {

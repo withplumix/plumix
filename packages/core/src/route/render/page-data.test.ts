@@ -132,7 +132,7 @@ describe("resolveListingPage", () => {
     expect(seen).toEqual([{ year: "2026", month: "03" }]);
   });
 
-  test("resolves a content-type archive and names it with its label", async () => {
+  test("resolves an entry type's archive and names it with its label", async () => {
     const h = await harness();
     await seedPost(h);
 

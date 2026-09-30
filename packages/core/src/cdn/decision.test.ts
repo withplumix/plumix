@@ -72,7 +72,7 @@ describe("cdnBypassReason", () => {
     ).toBe("intent");
   });
 
-  it("bypasses a custom archive that has not opted into caching", () => {
+  it("bypasses an archive type that has not opted into caching", () => {
     expect(
       bypassReason({
         method: "GET",
@@ -90,7 +90,7 @@ describe("cdnBypassReason", () => {
     ).toBe("intent");
   });
 
-  it("caches a custom archive that opted in via cacheable: true", () => {
+  it("caches an archive type that opted in via cacheable: true", () => {
     expect(
       bypassReason({
         method: "GET",
@@ -101,7 +101,7 @@ describe("cdnBypassReason", () => {
     ).toBe(null);
   });
 
-  it("still bypasses an opted-in custom archive for a private segment", () => {
+  it("still bypasses an opted-in archive type for a private segment", () => {
     expect(
       bypassReason({
         method: "GET",
@@ -112,7 +112,7 @@ describe("cdnBypassReason", () => {
     ).toBe("private");
   });
 
-  it("still bypasses an opted-in custom archive on a non-GET/HEAD method", () => {
+  it("still bypasses an opted-in archive type on a non-GET/HEAD method", () => {
     expect(
       bypassReason({
         method: "POST",
