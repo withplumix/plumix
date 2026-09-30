@@ -53,10 +53,12 @@ export interface AuditLogPluginOptions {
    */
   readonly storage?: AuditLogStorage;
   /**
-   * How long rows are kept. Defaults to `{ maxAgeDays: 90 }`. Pass
-   * `retention: false` to keep rows forever. Triggering the purge is
-   * a separate concern — call `runRetentionPurge(ctx, ...)` from your
-   * ops script or a scheduled handler.
+   * How long rows are kept. Defaults to `{ maxAgeDays: 90 }`. The
+   * plugin registers a scheduled task that deletes older rows, daily
+   * at 03:00 UTC unless `purgeAt` says otherwise. Pass
+   * `retention: false` to keep rows forever and register no task.
+   * `runRetentionPurge(ctx, ...)` is exported for running the purge
+   * from elsewhere, such as a one-off script.
    */
   readonly retention?: AuditLogRetentionConfig;
 }
