@@ -9,7 +9,7 @@ Issue **#{{TICKET}}** in `withplumix/plumix`:
 Implement it and commit. You do not push, open a PR, or merge — the harness does
 that from what you write below.
 
-1. **Read before designing.** The ticket, its parent, `CONTEXT.md`, and any ADR in
+1. **Read before designing.** The ticket, its parent, `GLOSSARY.md`, and any ADR in
    the area. When the change is consumed in more than one place (server, admin,
    editor, a second bundle), find out how each consumer gets it today.
 2. **Implement with `mattpocock-skills:tdd`.** The acceptance criteria are the

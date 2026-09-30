@@ -1556,7 +1556,7 @@ export interface SettledMeta {
  * Settle a stored bag into the shape its fields declare.
  *
  * Reads are literal (see `decodeFieldValue`), so a row holding an **unsettled
- * value** (`CONTEXT.md`) reads as something its declared type doesn't describe.
+ * value** (`GLOSSARY.md`) reads as something its declared type doesn't describe.
  * Settling is what makes the declared type true of the data rather than of the
  * decode.
  *

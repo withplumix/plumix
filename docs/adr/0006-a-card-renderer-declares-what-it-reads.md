@@ -92,6 +92,6 @@ today and now fails loudly instead. That is the point — a card with no text on
 it is the failure the plugin already refuses one step later — but it turns a
 working-looking site into a visibly broken one at upgrade.
 
-Nothing here is a _capability_ in this repo's sense. `CONTEXT.md` reserves that
+Nothing here is a _capability_ in this repo's sense. `GLOSSARY.md` reserves that
 word for RBAC; a renderer's declaration of what it reads is an input
 declaration and nothing more.
