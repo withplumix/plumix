@@ -21,7 +21,7 @@ What it registers:
 - A `comments` template dep, so a theme can declare `comments: ["current"]` on a template and render the approved thread for the entry it is displaying.
 - `POST /_plumix/comments/submit`, the public endpoint every comment arrives at.
 - `GET /_plumix/comments/list`, which pages older roots for a thread that has more than `rootsPerPage` of them.
-- A REST resource at `/{type}/{id}/comments`, behind the site's `api.enabled` switch.
+- A REST resource at `/{collection}/{entry}/comments`, behind the site's `api.enabled` switch. An entry that isn't a published one open to anonymous visitors, or isn't of the named collection's type, is a 404; one whose type has commenting off is an empty page.
 - A moderation queue in the admin, gated on the `comment:moderate` capability the plugin mints for the editor role.
 - A `comment:moderate` filter and a `comment:created` action, which is where a spam or notification plugin attaches.
 

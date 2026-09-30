@@ -22,7 +22,7 @@ The API is read-only for core content. Every endpoint core mounts answers `GET`.
 
 A request without a token reads as an anonymous visitor and sees published content only. Content it may not see is a 404, never a 403, so a caller cannot probe for a draft's existence. A request carrying an API token reads as that token's user instead, as [Authenticating with an API token](#authenticating-with-an-api-token) describes.
 
-Plugins add their own endpoints to the same namespace, and those appear in `openapi.json` automatically. `@plumix/plugin-comments` is the one that ships, with `GET /_plumix/api/v1/{type}/{id}/comments`.
+Plugins add their own endpoints to the same namespace, and those appear in `openapi.json` automatically. `@plumix/plugin-comments` is the one that ships, with `GET /_plumix/api/v1/{collection}/{entry}/comments`.
 
 ## Quickstart
 
@@ -157,6 +157,35 @@ export const status = definePlugin("status", {
 ```
 
 Core enforces `auth` before the handler runs. `"public"` is open, `"authenticated"` requires an API token, and a capability gate checks the token's grants. Core rejects `"development"`, because a resource is part of the published API. A path that collides with core's or another plugin's fails at boot.
+
+The handler receives `{ input, context, errors }`. `input` is what the resource's `input` schema parses from its params, query and body. `errors` is core's REST error set, so `throw errors.NOT_FOUND({ data: { kind: "entry" } })` answers in the same shape core's own routes do.
+
+### Binding a collection and an entry
+
+Two path segment names are reserved. Core binds them before the handler runs, and the handler receives what they name instead of the raw strings:
+
+- `{collection}` becomes `entryType`, the public entry type the collection names, resolved the same way core's own `/{collection}` routes resolve it. An unknown collection, a non-public type or a taxonomy's collection answers core's 404 and the handler never runs.
+- `{entry}` becomes `entry`, the entry with that id, if the requesting principal may read it. When the path also has `{collection}`, the entry must be of that type. A missing, unreadable or mismatched entry, or an id that isn't a positive integer, all answer the same 404, as `GET /{collection}/{id}` does.
+
+```ts
+import { definePlugin, v } from "plumix/plugin";
+
+export const likes = definePlugin("likes", {
+  setup: (ctx) => {
+    ctx.registerRestResource({
+      path: "/{collection}/{entry}/likes",
+      auth: "public",
+      output: v.object({ type: v.string(), id: v.number() }),
+      handler: ({ entryType, entry }) => ({
+        type: entryType.name,
+        id: entry.id,
+      }),
+    });
+  },
+});
+```
+
+`entryType` and `entry` are typed as present only when the path has the matching segment, and neither appears on `input`. Binding decides whether the entry exists for this requester. Whether the plugin will act on it, such as whether the entry takes comments, is still the handler's call.
 
 ## A browsable reference
 

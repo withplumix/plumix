@@ -25,10 +25,12 @@ import type {
   ShortcodeSpec,
 } from "../blocks/index.js";
 import type { AppContext } from "../context/app-context.js";
+import type { Entry } from "../db/schema/entries.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/query.js";
 import type { Label } from "../i18n/label.js";
 import type { McpTool } from "../mcp/tool.js";
+import type { RestErrors } from "../rest/contract/errors.js";
 import type { EntryListing } from "../route/contract/entry-listing.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
@@ -845,27 +847,86 @@ export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
  */
 export type RestResourceAuth = Exclude<PluginRouteAuth, "development">;
 
+/** Whether a REST resource path contains the reserved `{name}` segment. */
+type HasPathSegment<
+  Path extends string,
+  Name extends string,
+> = Path extends `${string}{${Name}}${string}` ? true : false;
+
+/** What core binds a resource's `{collection}` segment to. */
+interface RestResourceBoundEntryType {
+  /** The public entry type the `{collection}` segment names. */
+  readonly entryType: RegisteredEntryType;
+}
+
+/** What core binds a resource's `{entry}` segment to. */
+interface RestResourceBoundEntry {
+  /**
+   * The entry the `{entry}` segment names, readable by the requester and, when
+   * the path also has `{collection}`, of that collection's entry type.
+   */
+  readonly entry: Entry;
+}
+
+/** The bindings a handler receives for a given resource `path`. */
+type RestResourceBindings<Path extends string> = (HasPathSegment<
+  Path,
+  "collection"
+> extends true
+  ? RestResourceBoundEntryType
+  : unknown) &
+  (HasPathSegment<Path, "entry"> extends true
+    ? RestResourceBoundEntry
+    : unknown);
+
+/**
+ * What a REST resource's handler receives. `input` is the resource's own
+ * params, query and body; the reserved `{collection}` and `{entry}` segments
+ * arrive bound, as `entryType` and `entry`, only when `Path` has them.
+ * `errors` is core's REST error set, so a refusal answers in core's shape.
+ */
+export type RestResourceHandlerArgs<Path extends string = string> = {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- one registry slot holds every plugin's heterogeneous valibot schemas */
+  readonly input: any;
+  readonly context: AppContext;
+  readonly errors: RestErrors;
+} & RestResourceBindings<Path>;
+
 /**
  * A REST resource a plugin contributes into the shared `/_plumix/api/v1/`
- * namespace. `path` is relative to that prefix (e.g. `/{type}/{id}/comments`)
- * and uses `{param}` segments. `auth` reuses the declarative route model; core
- * enforces it before the handler runs. `input`/`output` are valibot schemas —
- * the `output` schema is the public allowlist and feeds the generated spec.
+ * namespace. `path` is relative to that prefix (e.g.
+ * `/{collection}/{entry}/comments`) and uses `{param}` segments. Core binds the
+ * reserved `{collection}` and `{entry}` segments before the handler runs: an
+ * unknown collection, or an entry the requester can't read or of another
+ * type, is core's `NOT_FOUND` and the handler never runs. `auth` reuses the
+ * declarative route model; core enforces it before binding. `input`/`output`
+ * are valibot schemas — the `output` schema is the public allowlist and feeds
+ * the generated spec.
  */
-export interface RestResourceOptions {
+export interface RestResourceOptions<Path extends string = string> {
   readonly method?: RestResourceMethod;
-  readonly path: string;
+  readonly path: Path;
   readonly auth: RestResourceAuth;
   /* eslint-disable @typescript-eslint/no-explicit-any -- one registry slot holds every plugin's heterogeneous valibot schemas */
   readonly input?: any;
   readonly output: any;
-  readonly handler: (args: { input: any; context: AppContext }) => any;
+  handler(args: RestResourceHandlerArgs<Path>): any;
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
-export interface RegisteredRestResource extends RestResourceOptions {
+export interface RegisteredRestResource extends Omit<
+  RestResourceOptions,
+  "handler"
+> {
   readonly pluginId: string;
   readonly method: RestResourceMethod;
+  // Method syntax on purpose: each resource's handler is typed from its own
+  // path, and core supplies exactly the bindings that path names.
+  handler(
+    args: RestResourceHandlerArgs &
+      Partial<RestResourceBoundEntryType & RestResourceBoundEntry>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the output schema, not this type, is what a resource's response is held to
+  ): any;
 }
 
 /**

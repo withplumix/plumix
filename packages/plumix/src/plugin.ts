@@ -295,6 +295,7 @@ export type {
   ResolvedNode,
   ResolvedRoute,
   RestResourceAuth,
+  RestResourceHandlerArgs,
   RestResourceMethod,
   RestResourceOptions,
   RoleImages,

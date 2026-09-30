@@ -76,7 +76,7 @@ describe("comments() plugin", () => {
     const s = captureSetup({});
     expect(s.kinds).toContain("comments");
     expect(s.routes).toContain("/submit");
-    expect(s.restResources).toContain("/{type}/{id}/comments");
+    expect(s.restResources).toContain("/{collection}/{entry}/comments");
     expect(s.capabilities).toContain("comment:moderate");
     expect(s.adminPaths).toContain("/comments");
     expect(s.rpcRouter).toBe(true);
