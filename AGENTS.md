@@ -8,7 +8,7 @@ Plumix is a CMS with pluggable runtime adapters. It is pre-1.0, so every `0.x` m
 - **Stay in scope.** One PR per issue, and every changed line traces to it. Skip drive-by refactors and bulk cleanups. Match the surrounding style, remove only what your change left unused, and mention dead code you find rather than deleting it. Ship dependent PRs one at a time. Merge one and rebase before you start the next.
 - **Investigate before building.** When a change is consumed in more than one place (server, admin, editor, a second bundle), find out how each consumer gets it today before you design. Say what you verified and where you stopped. Resolving a path is not a working render.
 - **Claims need evidence.** Back every statement about how the code behaves with a file and line, a source excerpt, or a command someone can rerun. That goes for PR bodies, review replies and declines alike.
-- **Read the READMEs on the way down.** Before editing a file, read every `README.md` from the repo root to its folder. Packages keep their local procedures there.
+- **Read the package's notes first.** Before editing a package, read its section under "Working on a package" in `CONTRIBUTING.md`, and every `README.md` from the repo root to the file's folder. Apps and tooling keep their local procedures in their READMEs.
 - **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for.
 - **Stop rather than work around.** When a test passes only with another flag, counter or copy of state, stop and consolidate who owns that state. Never get past a blocker by deleting a lockfile, `--force`, `--ignore-scripts` or disabling a check; stop and say what blocks you.
 - **A failing check is yours until shown otherwise.** Call a failure pre-existing only after reproducing it on `main`, and give that evidence.
@@ -61,7 +61,7 @@ The same holds for every task with a `dependsOn`. `test:unit` has none, so `pnpm
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 
-**Browser tier.** Run `pnpm exec playwright install chromium` once before the first `pnpm test:unit`; `*.browser.test.*` files run in headless Chromium.
+**Browser tier.** Run `pnpm --filter @plumix/admin exec playwright install chromium` once before the first `pnpm test:unit`; `*.browser.test.*` files run in headless Chromium.
 
 **Tests.** What the shared test helpers provide, and how to diagnose a slow test before reaching for a timeout, are in [`docs/agents/testing.md`](docs/agents/testing.md).
 

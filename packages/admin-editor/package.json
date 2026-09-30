@@ -2,7 +2,7 @@
   "name": "@plumix/admin-editor",
   "version": "0.23.0",
   "type": "module",
-  "description": "Plumix visual page editor for the admin",
+  "description": "The visual page editor inside the Plumix admin.",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",

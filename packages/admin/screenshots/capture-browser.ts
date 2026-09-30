@@ -63,8 +63,9 @@ export function captureBrowserRunArgs({
     "run",
     "--detach",
     "--rm",
-    // The image is multi-arch and the two rasterize differently; CI renders on
-    // amd64. packages/admin/README.md has the measurement.
+    // The image is multi-arch and the two rasterize differently: plain system
+    // text matches, a real capture does not. CI's runners are amd64, so every
+    // machine renders there, and Apple Silicon pays a few seconds of emulation.
     "--platform",
     "linux/amd64",
     // Chromium's renderers share memory through /dev/shm, which docker sizes
@@ -162,7 +163,7 @@ function runDocker(args: string[], image: string): string {
     // what was being attempted and leave the diagnosis to it.
     throw new Error(
       `\`docker run\` failed. The documentation capture renders in \`${image}\` ` +
-        `rather than in a local browser — see packages/admin/README.md.`,
+        `rather than in a local browser, so it needs a running Docker.`,
       { cause },
     );
   }

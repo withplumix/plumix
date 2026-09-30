@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-blog",
   "version": "0.2.2",
   "type": "module",
-  "description": "Blog plugin for Plumix — posts, categories, tags",
+  "description": "A blog for Plumix: posts, categories and tags.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/blog/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

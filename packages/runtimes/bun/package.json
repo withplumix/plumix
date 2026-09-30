@@ -2,10 +2,10 @@
   "name": "@plumix/runtime-bun",
   "version": "0.0.0",
   "type": "module",
-  "description": "Bun runtime adapter for Plumix",
+  "description": "Run a Plumix site on Bun.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/deployment/bun/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

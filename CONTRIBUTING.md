@@ -27,7 +27,7 @@ nvm install        # installs the Node version from .nvmrc
 nvm use            # activates it
 corepack enable    # enables pnpm through Corepack
 pnpm install
-pnpm exec playwright install chromium   # once, for the browser test tier and e2e
+pnpm --filter @plumix/admin exec playwright install chromium   # once, for the browser test tier and e2e
 ```
 
 > **Tip:** add `nvm use` to your shell's `cd` hook so it switches automatically when you enter the project. See [nvm's deeper shell integration](https://github.com/nvm-sh/nvm#deeper-shell-integration).
@@ -99,7 +99,38 @@ PLUMIX_E2E_PORT_OFFSET=100 pnpm test:e2e
 
 The repo commits some generated files rather than building them, so a pull request diff shows what a change moved. The docs screenshots and the i18n catalogs are two of them. CI regenerates them and fails when the result differs from what you committed. The failing step names the file.
 
-Regenerate it with the script that owns it and commit the result with your change. Commit only what that script produces, never a hand edit or a screenshot taken any other way. A script that needs something extra, like Docker, says so, and the owning package's README explains the rest.
+Regenerate it with the script that owns it and commit the result with your change. Commit only what that script produces, never a hand edit or a screenshot taken any other way. A script that needs something extra, like Docker, says so.
+
+## Working on a package
+
+### The admin
+
+`packages/admin` is a prebuilt React app. The plumix Vite plugin copies its `dist/` into `_plumix/admin/` under the site's Vite `publicDir` (`.plumix/public` by default), and `plumix build` carries it into `dist/client/_plumix/admin/`. Every plugin that declares an `adminEntry` compiles into one bundle, `_plumix/admin/plugins/site-bundle.js`.
+
+- `cd apps/demo && pnpm dev` serves the admin at `http://localhost:5173/_plumix/admin/` on the same origin as production. The demo signs you in automatically.
+- For hot reload, keep that running and start `cd packages/admin && pnpm dev` too. It serves the admin on `:5174` and proxies `/_plumix/rpc` and `/_plumix/auth` to `:5173`. Set `PLUMIX_BACKEND_URL` to point it at another backend. `pnpm dev` at the root runs both.
+- A new route or feature adds a spec under `packages/admin/e2e/`. The suite runs axe-core against WCAG 2.1 AA.
+
+### UI primitives
+
+`packages/admin-ui` owns the components the admin and plugin chunks render ([ADR 0023](docs/adr/0023-admin-ui-owns-the-primitives-it-took-from-shadcn.md)).
+
+- Add one with `pnpm --filter @plumix/admin-ui ui:add <component>`. It runs `shadcn add`, formats the result and regenerates the `exports` map and `src/index.ts` with `roster:sync`. Don't edit those two by hand. A module that must stay out of them goes in the exception table in `scripts/roster.ts`, with its reason.
+- A component already in `src/` is Plumix source. Take an upstream change with `pnpm dlx shadcn@latest add <name> --diff` and apply it by hand.
+- New CSS variables and keyframes go in `packages/admin/src/styles/globals.css`, which reads this package's source.
+- Plugin authors import these components through `plumix/admin/ui`, so a change to a component's markup or props is a breaking change.
+
+### Runtime adapters
+
+Each folder under `packages/runtimes/` runs a Plumix site on one runtime, using that runtime's own primitives ([ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)). The shared suites know no runtime. An adapter tells them how to run it through the `plumix` block in its `package.json`.
+
+- `plumix.scaffold` is what `create-plumix-app` writes into a new project on this runtime: imports, config slots, dependencies, files, and the `packageManager` the project installs with (pnpm by default).
+- `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
+- An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm --filter create-plumix-app smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC.
+
+### The OG card engine
+
+`@plumix/plugin-og` declares its card engine at an exact version, so the copy a site installs is the one the raster suite renders with. `src/takumi.test.ts` fails if the declared and installed versions differ, and a bump goes through that raster suite.
 
 ## Pull requests
 
@@ -156,10 +187,6 @@ Turborepo skips a task when nothing it reads has changed, so most pull requests 
 - **Everything is cached, including e2e.** Turbo skips a suite when the packages it exercises are untouched, so a change to `@plumix/core`, which everything depends on, runs them all.
 
 To see a task run that turbo wants to skip, pass `--force`. The scaffolder smoke job opts out of both caches on purpose. It asks whether _this commit_ breaks a generated project, so it can't trust a replayed artifact.
-
-### E2E and the runtimes
-
-How a runtime adapter plugs into the e2e suites and the scaffold smoke is in [`packages/runtimes/README.md`](packages/runtimes/README.md).
 
 ### Link validation
 

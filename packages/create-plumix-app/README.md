@@ -1,58 +1,24 @@
 # create-plumix-app
 
-Scaffold a new Plumix project.
+Scaffold a new Plumix site.
 
 ## Usage
 
 ```bash
-pnpm create plumix-app my-app
-cd my-app
-pnpm install
-pnpm dev
+pnpm create plumix-app
 ```
 
-The target directory must not exist (or must be empty); its parent
-directory must exist. On a terminal the scaffolder runs an interactive
-wizard; pass flags (or `-y`) to skip it.
+## Documentation
 
-See the comments in the generated `plumix.config.ts` for the few
-placeholders you'll want to edit before deploying (the passkey origin,
-and — on Cloudflare — the `wrangler.jsonc` account subdomain and D1
-database id).
-
-## Composition
-
-The scaffolder assembles a project from a runtime plus any plugins you
-pick, rather than cloning a fixed template. Choose them in the wizard, or
-non-interactively with flags:
-
-```bash
-pnpm create plumix-app my-blog --plugins blog,pages,media
-```
-
-- `--runtime <id>` — runtime to target (default: `node`; pass `cloudflare`
-  to scaffold for Cloudflare Workers + D1 instead).
-- `-p, --plugins <ids>` — comma-separated plugins to include; replaces the
-  default `seo,feeds` rather than adding to it.
-- `--auth <ids>` — comma-separated auth methods to add to passkey: `oauth`,
-  `magic-link`, and `cfAccess` on Cloudflare.
-- `--pm <name>` — package manager (npm, pnpm, yarn, bun); auto-detected.
-- `--no-install`, `--no-db`, `--no-git` — skip the matching post-scaffold step.
-- `-y, --yes` — accept defaults for whatever you did not flag.
-
-The wizard opens with `seo` and `feeds` ticked, and a run with no `--plugins`
-takes them. Untick them, or pass `--plugins=`, and you get a blank app:
-`@plumix/runtime-node` on SQLite with passkey auth and a `consoleMailer()`
-default for development. Each plugin adds its config, dependencies, and any
-runtime bindings it needs.
+Read the [documentation](https://docs.plumix.dev/getting-started/installation/) on docs.plumix.dev.
 
 ## Support
 
-Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).
+Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.
 
 ## Contributing
 
-PRs and ideas welcome. The [Contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md) gets you set up — new contributors especially welcome.
+Start with the [contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md).
 
 ## License
 

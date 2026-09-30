@@ -2,10 +2,10 @@
   "name": "create-plumix-app",
   "version": "0.6.0",
   "type": "module",
-  "description": "Scaffold a new Plumix project",
+  "description": "Scaffold a new Plumix site.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/getting-started/installation/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

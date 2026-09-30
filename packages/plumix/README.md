@@ -1,112 +1,48 @@
-```
-        _                 _
-  _ __ | |_   _ _ __ ___ (_)_  __
- | '_ \| | | | | '_ ` _ \| \ \/ /
- | |_) | | |_| | | | | | | |>  <
- | .__/|_|\__,_|_| |_| |_|_/_/\_\
- |_|
-```
+<p align="center">
+  <a href="https://docs.plumix.dev">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/withplumix/plumix/main/.github/assets/wordmark-dark.svg">
+      <img alt="Plumix" src="https://raw.githubusercontent.com/withplumix/plumix/main/.github/assets/wordmark-light.svg" width="380">
+    </picture>
+  </a>
+</p>
 
-**A modern CMS, built for the edge.** Content modeling, a block editor, auth, and a full admin UI — with a pluggable runtime, so your CMS isn't welded to a single platform.
+<p align="center"><strong>The code-first TypeScript CMS for any runtime.</strong></p>
+
+<p align="center">
+  <a href="https://github.com/withplumix/plumix/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/withplumix/plumix/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://www.npmjs.com/package/plumix"><img alt="npm" src="https://img.shields.io/npm/v/plumix.svg?label=npm"></a>
+  <a href="https://github.com/withplumix/plumix/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
+
+<p align="center">
+  <a href="https://docs.plumix.dev">Documentation</a> ·
+  <a href="https://demo.plumix.dev">Live demo</a> ·
+  <a href="https://github.com/withplumix/plumix/discussions">Discussions</a> ·
+  <a href="https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md">Contributing</a>
+</p>
+
+You describe the content model in TypeScript, and Plumix builds the admin screens, public URLs and permission checks from it. It deploys as one process on the runtime you choose, and the public site renders from a theme you own.
 
 > [!WARNING]
-> **Pre-1.0 software.** Minor versions can contain breaking changes — pin your versions.
+> Plumix is pre-1.0. A minor release can break things, so pin your versions.
 
-## Quick start
-
-The fastest way in is the scaffolder — it wires up a working app, runtime, and admin for you:
+## Install
 
 ```bash
-pnpm create plumix-app my-site
-cd my-site
-pnpm install
-pnpm dev
+pnpm create plumix-app
 ```
 
-Then open `http://localhost:5173/_plumix/admin`, create your first passkey, and you're in.
+The wizard sets up the project and prints the commands to run next. New to Plumix? Start with the [installation guide](https://docs.plumix.dev/getting-started/installation/).
 
-## What's in the box
+## Documentation
 
-- **Content modeling** — entry types, taxonomies, and meta fields, contributed by plugins.
-- **Block editor** — a bespoke visual editor backed by a React block system.
-- **Auth** — passkeys (WebAuthn) first, with optional OAuth and magic-link sign-in.
-- **Admin UI** — a precompiled SPA your worker serves at `/_plumix/admin`.
-- **Pluggable runtime** — an adapter seam, not a lock-in. Cloudflare Workers is the first (D1, R2, KV, Images, edge cache); more runtimes are on the way.
-- **Extensible** — plugins add entry types, blocks, admin pages, RPC, routes, and cron.
-
-## Configure
-
-`plumix.config.ts` is where it all comes together — pick a runtime, a database, and an auth method:
-
-```ts
-import { plumix } from "plumix";
-import { auth } from "plumix/auth";
-
-import {
-  cloudflare,
-  cloudflareDeployOrigin,
-  d1,
-} from "@plumix/runtime-cloudflare";
-
-export default plumix({
-  runtime: cloudflare(),
-  database: d1({ binding: "DB", session: "auto" }),
-  auth: auth({
-    passkey: {
-      rpName: "My Site",
-      // Spread all fields — allowedOrigins lets one passkey span preview deploys.
-      ...cloudflareDeployOrigin({
-        workerName: "my-site",
-        accountSubdomain: "my-account",
-        localOrigin: "http://localhost:5173",
-      }),
-    },
-  }),
-});
-```
-
-`passkey.origin` (and `allowedOrigins`) also accept an `(env) => string`
-resolver, so the public origin can come from a per-deploy env var
-(`origin: (env) => env.PUBLIC_ORIGIN`) instead of being hardcoded — resolved
-per request, the same way secret slots are.
-
-Add capabilities by dropping plugins into `plugins`:
-
-```ts
-import { blog } from "@plumix/plugin-blog";
-import { pages } from "@plumix/plugin-pages";
-
-// inside plumix({ ... })
-plugins: [blog(), pages()],
-```
-
-## Runtimes
-
-The runtime is pluggable — you choose where Plumix runs. Available now:
-
-- **[Cloudflare Workers](../runtimes/cloudflare)** — D1, R2, KV, Images, and edge cache.
-
-More runtimes are on the way.
-
-## Plugins
-
-Add features by dropping official plugins into your config:
-
-- **[Blog](../plugins/blog)** — posts, categories, and tags.
-- **[Pages](../plugins/pages)** — hierarchical static pages.
-- **[Menu](../plugins/menu)** — navigation menus from entries, terms, and custom URLs.
-- **[Comments](../plugins/comments)** — threaded, moderated discussion.
-- **[Media](../plugins/media)** — media library and uploads.
-- **[Audit log](../plugins/audit-log)** — an activity feed of who did what.
-
-## Support
-
-Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).
+[docs.plumix.dev](https://docs.plumix.dev) covers the content model, themes, plugins and deploying.
 
 ## Contributing
 
-PRs and ideas welcome. The [Contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md) gets you set up — new contributors especially welcome.
+Start with the [contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md), ask questions in [Discussions](https://github.com/withplumix/plumix/discussions), and report security issues privately through the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md).
 
 ## License
 
-[MIT](https://github.com/withplumix/plumix/blob/main/LICENSE) © Plumix Contributors
+[MIT](https://github.com/withplumix/plumix/blob/main/LICENSE)

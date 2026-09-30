@@ -2,10 +2,10 @@
   "name": "plumix",
   "version": "0.23.0",
   "type": "module",
-  "description": "A CMS for the edge, built on Cloudflare Workers",
+  "description": "The code-first TypeScript CMS for any runtime.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",

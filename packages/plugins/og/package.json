@@ -2,10 +2,10 @@
   "name": "@plumix/plugin-og",
   "version": "0.3.0",
   "type": "module",
-  "description": "OG card plugin for Plumix — renders and serves social cards at the edge",
+  "description": "Social cards for Plumix pages, rendered and served by the site.",
   "license": "MIT",
   "author": "Plumix Contributors",
-  "homepage": "https://github.com/withplumix/plumix#readme",
+  "homepage": "https://docs.plumix.dev/plugins/og/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withplumix/plumix.git",
