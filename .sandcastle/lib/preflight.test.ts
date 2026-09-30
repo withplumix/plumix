@@ -65,7 +65,7 @@ describe("problemsBeforeARun", () => {
     expect(machine).toEqual({ problems: [], image: "sha256:15d4f126cc91" });
   });
 
-  test("a missing image says how to build it", () => {
+  test("a missing image says how to build it, with .sandcastle as the build context its Dockerfile copies from", () => {
     const problems = check(
       probe({
         ...healthy,
@@ -74,7 +74,9 @@ describe("problemsBeforeARun", () => {
       }),
     );
 
-    expect(problems.join("\n")).toMatch(/sandcastle docker build-image/);
+    expect(problems.join("\n")).toMatch(
+      /`npx sandcastle docker build-image` from the repo root/,
+    );
   });
 
   test("docker not answering is named as such", () => {
