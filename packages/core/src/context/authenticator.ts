@@ -14,8 +14,7 @@ import type { Db } from "./app-context.js";
  *     session cookie, or an IdP assertion such as Cloudflare Access. The
  *     user's role caps apply verbatim.
  *   - `"api-token"` → a credential that carries its own scopes. A surface that
- *     creates a credential or a session treats it as anonymous
- *     (ADR 0024).
+ *     creates a credential or a session treats it as anonymous (ADR 0024).
  *
  * `tokenScopes` exists only on `"api-token"`:
  *   - `null` → unrestricted, the user's role caps apply verbatim.

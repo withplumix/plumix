@@ -371,7 +371,7 @@ describe("authenticateSession", () => {
   });
 
   test("treats a result that names no credential kind as anonymous", async () => {
-    // An untyped JS authenticator written before `credential` existed.
+    // An untyped JS authenticator that omits `credential`.
     const { resolved } = await resolveWith(
       (u) => ({ user: u }) as unknown as AuthResult,
     );
