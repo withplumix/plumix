@@ -4,7 +4,7 @@ const NO_LATER_TICKET_WILL_FARE_BETTER =
 export const looksLikeTheRunBeingOver = (reason: string): boolean =>
   NO_LATER_TICKET_WILL_FARE_BETTER.test(reason);
 
-const RESETS_AT = /resets\s+(\d{1,2}):(\d{2})\s*(am|pm)\s*\(utc\)/i;
+const RESETS_AT = /resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s*\(utc\)/i;
 
 export const whenTheLimitLifts = (
   reason: string,
@@ -22,11 +22,38 @@ export const whenTheLimitLifts = (
       now.getUTCMonth(),
       now.getUTCDate(),
       hour,
-      Number(rawMinute),
+      Number(rawMinute ?? 0),
     ),
   );
   if (lifts <= now) lifts.setUTCDate(lifts.getUTCDate() + 1);
   return lifts;
+};
+
+const TIMES_A_STEP_WAITS_OUT_A_LIMIT = 2;
+const A_MINUTE_PAST_THE_RESET_MS = 60_000;
+
+interface LimitClock {
+  readonly now: () => Date;
+  readonly pause: (ms: number) => Promise<void>;
+  readonly onWait?: (lifts: Date) => void;
+}
+
+export const waitOutALimit = async <T>(
+  start: () => Promise<T>,
+  { now, pause, onWait }: LimitClock,
+): Promise<T> => {
+  for (let waits = 0; ; waits += 1) {
+    try {
+      return await start();
+    } catch (error) {
+      const lifts = whenTheLimitLifts(String(error), now());
+      if (!lifts || waits === TIMES_A_STEP_WAITS_OUT_A_LIMIT) throw error;
+      onWait?.(lifts);
+      await pause(
+        lifts.getTime() - now().getTime() + A_MINUTE_PAST_THE_RESET_MS,
+      );
+    }
+  }
 };
 
 const GITHUB_DROPPED_IT =

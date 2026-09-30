@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   looksLikeTheRunBeingOver,
   retryWhatGitHubDropped,
+  waitOutALimit,
   whenTheLimitLifts,
 } from "./outage.js";
 
@@ -50,6 +51,15 @@ describe("whenTheLimitLifts", () => {
     ).toBe("2026-09-27T21:20:00.000Z");
   });
 
+  test("reads a reset time printed without minutes", () => {
+    expect(
+      whenTheLimitLifts(
+        "claude-code exited with code 1:\nYou've hit your session limit · resets 10pm (UTC)",
+        at("2026-09-30T21:40:00Z"),
+      )?.toISOString(),
+    ).toBe("2026-09-30T22:00:00.000Z");
+  });
+
   test("a reset time already past today is tomorrow's", () => {
     expect(
       whenTheLimitLifts(
@@ -93,6 +103,71 @@ describe("whenTheLimitLifts", () => {
         at("2026-09-27T18:00:00Z"),
       ),
     ).toBeNull();
+  });
+});
+
+describe("waitOutALimit", () => {
+  const SESSION_LIMIT =
+    "claude-code exited with code 1:\nYou've hit your session limit · resets 10pm (UTC)";
+  const clock = (iso: string) => {
+    let now = new Date(iso).getTime();
+    return {
+      now: () => new Date(now),
+      pause: async (ms: number) => {
+        now += ms;
+      },
+    };
+  };
+  const failingThen = (failures: readonly string[]) => {
+    let calls = 0;
+    return {
+      start: async () => {
+        const failure = failures[calls];
+        calls += 1;
+        if (failure !== undefined) throw new Error(failure);
+        return "ran";
+      },
+      calls: () => calls,
+    };
+  };
+
+  test("a step stopped by a session limit waits for the reset and runs again", async () => {
+    const step = failingThen([SESSION_LIMIT]);
+    const { now, pause } = clock("2026-09-30T21:40:00Z");
+    const waitedUntil: string[] = [];
+
+    await expect(
+      waitOutALimit(step.start, {
+        now,
+        pause,
+        onWait: (lifts) => waitedUntil.push(lifts.toISOString()),
+      }),
+    ).resolves.toBe("ran");
+    expect(step.calls()).toBe(2);
+    expect(waitedUntil).toEqual(["2026-09-30T22:00:00.000Z"]);
+    expect(now().getTime()).toBeGreaterThan(Date.parse("2026-09-30T22:00:00Z"));
+  });
+
+  test.each([
+    "Claude AI usage limit reached",
+    "claude-code exited with code 1: You've hit your weekly limit · resets Oct 3, 10pm (UTC)",
+    "docker: Cannot connect to the Docker daemon",
+  ])("hands on at once what it cannot wait out: %s", async (failure) => {
+    const step = failingThen([failure]);
+
+    await expect(
+      waitOutALimit(step.start, clock("2026-09-30T21:40:00Z")),
+    ).rejects.toThrow(failure.split("\n")[0]);
+    expect(step.calls()).toBe(1);
+  });
+
+  test("a limit that keeps coming back is handed on rather than waited for forever", async () => {
+    const step = failingThen(Array.from({ length: 10 }, () => SESSION_LIMIT));
+
+    await expect(
+      waitOutALimit(step.start, clock("2026-09-30T21:40:00Z")),
+    ).rejects.toThrow("session limit");
+    expect(step.calls()).toBeLessThan(10);
   });
 });
 

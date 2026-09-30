@@ -162,6 +162,23 @@ describe("runShipLoop", () => {
     expect(report.outage).toContain("session limit");
   });
 
+  test("a session limit hitting every lane is an outage, not tickets failing in a row", async () => {
+    const waiting = [1, 2, 3].map(ticket);
+    const { ports: p } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async () => {
+        throw new Error(
+          "claude-code exited with code 1:\nYou've hit your session limit · resets 10pm (UTC)",
+        );
+      },
+    });
+
+    const report = await runShipLoop(p, { lanes: 3, withinBudget: () => true });
+
+    expect(report.outage).toContain("session limit");
+    expect(report.stoppedBecause).toBeUndefined();
+  });
+
   test("three failures in a row stop the run, leaving the rest of the queue alone", async () => {
     const waiting = [1, 2, 3, 4, 5, 6, 7, 8].map(ticket);
     const attempted: number[] = [];

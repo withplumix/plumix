@@ -201,11 +201,11 @@ export const runShipLoop = async (
       } catch (error) {
         const reason = asReason(error);
         ports.releaseClaim(ticket);
-        if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
         ports.say(
           `  #${ticket.number} left as it was — the harness threw: ${reason}`,
         );
-        noteFailure(reason);
+        if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
+        else noteFailure(reason);
         return;
       }
 

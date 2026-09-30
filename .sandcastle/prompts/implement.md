@@ -16,7 +16,9 @@ that from what you write below.
    behaviours, in order, one RED then GREEN per cycle. The interfaces the ticket
    names are the agreed seams; there is no one to confirm them with.
 3. **Changeset** if a consumer of a published package would notice. AGENTS.md says
-   which package and which bump.
+   which package and which bump. The harness's changeset gate also wants a file in
+   `.changeset/` whenever a published package's files change at all; when nothing
+   is released, add an empty one (frontmatter only).
    **ADR**, if the work records one: use the number the ticket names. If it names
    none, use **{{NEXT_ADR}}**. Main, every open pull request and every open issue
    were checked for it, and no other lane of this run holds it, so do not pick a

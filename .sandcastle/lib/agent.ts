@@ -2,6 +2,8 @@ import { join } from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 
 import type { Journal } from "./telemetry.js";
+import { say } from "./log.js";
+import { waitOutALimit } from "./outage.js";
 import { notionalCostOf, usageFromSessionTranscripts } from "./telemetry.js";
 
 export const PROMPT_DIR = join(import.meta.dirname, "..", "prompts");
@@ -31,7 +33,11 @@ export const taggedBlock = (stdout: string, tag: string): string | null =>
   stdout.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim() ??
   null;
 
-const LOST_THE_GIT_CONFIG_LOCK = /could not lock config file/;
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+const LOST_THE_GIT_CONFIG_LOCK =
+  /could not lock config file|unknown error occurred while reading the configuration files/;
 const ATTEMPTS_TO_START = 5;
 
 // Sandcastle writes the sandbox's global git config as every run starts, so runs started together
@@ -75,15 +81,26 @@ export const agentPhaseRunner =
     const logFile = journal.logPath(phase);
 
     try {
-      const result = await retryALostGitConfigLock(
+      const result = await waitOutALimit(
         () =>
-          sandbox.run({
-            ...options,
-            name: phase,
-            agent: sandcastle.claudeCode(model, { effort }),
-            logging: { type: "file", path: logFile },
-          }),
-        (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+          retryALostGitConfigLock(
+            () =>
+              sandbox.run({
+                ...options,
+                name: phase,
+                agent: sandcastle.claudeCode(model, { effort }),
+                logging: { type: "file", path: logFile },
+              }),
+            sleep,
+          ),
+        {
+          now: () => new Date(),
+          pause: sleep,
+          onWait: (lifts) =>
+            say(
+              `    ${phase} hit the session limit; waiting until ${lifts.toISOString()} to run it again`,
+            ),
+        },
       );
       const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
         sessionFilePath ? [sessionFilePath] : [],
