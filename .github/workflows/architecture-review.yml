@@ -1,0 +1,111 @@
+name: Architecture Review
+
+# Once a week an agent looks for one deepening opportunity and files it as a
+# `source:architecture-review` report for the maintainer to review. No triage
+# label: nothing picks it up until the maintainer does. Runs while fewer than
+# three reports are open, so unread ones don't pile up.
+#
+# The agent runs on the runner with no container and reads issues anyone can
+# file, so its job holds only read permissions and its tools are the allow list
+# in .sandcastle/architecture-review.settings.json. Filing is a separate job.
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays, 09:00 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: architecture-review
+  cancel-in-progress: false
+
+jobs:
+  backlog:
+    name: Reports awaiting review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: read
+    outputs:
+      proceed: ${{ steps.count.outputs.proceed }}
+    steps:
+      - id: count
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          open=$(gh issue list --state open --label source:architecture-review --limit 3 --json number --jq length)
+          echo "proceed=$([ "$open" -lt 3 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          [ "$open" -lt 3 ] || echo "3 reports await review — skipped." >> "$GITHUB_STEP_SUMMARY"
+
+  review:
+    name: Review
+    needs: backlog
+    if: needs.backlog.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      result: ${{ steps.review.outputs.result }}
+    steps:
+      # History for the hot-spot walk the upstream Explore step starts with.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 500
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install Sandcastle
+        working-directory: .sandcastle
+        run: npm ci
+
+      - name: Install Claude Code and the pinned skills
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          .sandcastle/install-mattpocock-skills.sh "$RUNNER_TEMP/mattpocock-skills"
+          settings="$HOME/.claude/settings.json"
+          jq -s '.[0] * .[1]' "$settings" .sandcastle/architecture-review.settings.json > "$RUNNER_TEMP/settings.json"
+          mv "$RUNNER_TEMP/settings.json" "$settings"
+
+      - name: Review
+        id: review
+        working-directory: .sandcastle
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OUTPUT_DIR: ${{ runner.temp }}
+        run: |
+          npm run architecture-review
+          # The report is agent-written text: a random delimiter keeps it from
+          # closing the output early.
+          delimiter="EOF_$(openssl rand -hex 16)"
+          { echo "result<<$delimiter"; cat "$OUTPUT_DIR/architecture-review.json"; echo "$delimiter"; } >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: File the report
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.review.outputs.result }}
+        run: |
+          if [ "$(jq -r .status <<< "$RESULT")" = skipped ]; then
+            { echo "**Skipped.**"; echo; jq -r .reason <<< "$RESULT"; } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          jq -r .body <<< "$RESULT" > body.md
+          url=$(gh issue create --title "$(jq -r .title <<< "$RESULT")" --body-file body.md --label source:architecture-review)
+          echo "**Filed:** $url" >> "$GITHUB_STEP_SUMMARY"
