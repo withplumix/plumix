@@ -188,7 +188,7 @@
     "@sindresorhus/slugify": "^3.0.0",
     "@tiptap/core": "catalog:tiptap",
     "@valibot/to-json-schema": "^1.7.1",
-    "dompurify": "^3.4.14",
+    "dompurify": "^3.4.16",
     "drizzle-kit": "catalog:drizzle",
     "drizzle-orm": "catalog:drizzle",
     "drizzle-valibot": "catalog:drizzle",
