@@ -14,7 +14,7 @@ export type TestConfigInput = Partial<Omit<PlumixConfigInput, "auth">> & {
 
 const stubAdapter = {
   name: "test",
-  createHandler: () => ({ fetch: () => new Response("stub", { status: 500 }) }),
+  handler: {},
   generateEntry: () => "",
 };
 

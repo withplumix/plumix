@@ -944,7 +944,7 @@ type _HandlerMembersMatchSource = Assert<
 /** Source: `RuntimeAdapter`. */
 const ADAPTER_MEMBERS = [
   "name",
-  "createHandler",
+  "handler",
   "generateEntry",
   "workerExports",
   "commandsModule",

@@ -5,7 +5,7 @@ import type { PluginDescriptor } from "plumix/plugin";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
-import { buildApp } from "plumix/runtime";
+import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import * as schema from "plumix/schema";
 import { applyCoreTestSchema } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
@@ -39,7 +39,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-// Build app → `createHandler` → `fetch(request, invocation)`: the seam every
+// Build app → `createRuntimeHandler` → `fetch(request, invocation)`: the seam every
 // runtime adapter conforms to, over a real `bun:sqlite` file the app's own
 // `connect` opens a second time.
 async function handlerFor(plugins: PluginDescriptor[] = []) {
@@ -50,12 +50,12 @@ async function handlerFor(plugins: PluginDescriptor[] = []) {
   const app = await buildApp(
     plumix({ runtime: bun(), database, auth, theme, plugins }),
   );
-  return bun().createHandler(app);
+  return createRuntimeHandler(app);
 }
 
 const env = () => ({ [ASSETS_DIR_ENV]: join(dir, "client") });
 
-describe("bun adapter — createHandler().fetch", () => {
+describe("bun adapter — createRuntimeHandler().fetch", () => {
   test("renders the public route through the dispatcher", async () => {
     const handler = await handlerFor();
     const response = await handler.fetch(new Request("https://cms.example/"), {

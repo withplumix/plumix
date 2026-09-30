@@ -48,6 +48,29 @@ export interface PlumixHandlerOptions {
 const DEFAULT_DISPOSE_TIMEOUT_MS = 5_000;
 
 /**
+ * The handler an entry serves: the default handler, with what the configured
+ * runtime's `handler` spec adds.
+ */
+export function createRuntimeHandler(app: PlumixApp): PlumixHandler {
+  const { assets, disposeTimeoutMs, clientAddress, prepare, wrap } =
+    app.config.runtime.handler;
+  prepare?.(app.hooks);
+  const handler = createPlumixHandler(app, { assets, disposeTimeoutMs });
+  const addressed: PlumixHandler =
+    clientAddress === undefined
+      ? handler
+      : {
+          ...handler,
+          fetch: (request, invocation) =>
+            handler.fetch(request, {
+              ...invocation,
+              clientAddress: clientAddress(request),
+            }),
+        };
+  return wrap?.(addressed, app.config) ?? addressed;
+}
+
+/**
  * The default handler factory. An adapter wraps it and adds only the reads
  * its platform can answer.
  */

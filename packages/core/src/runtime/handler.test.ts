@@ -2,9 +2,11 @@ import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
+import type { HookRegistry } from "../hooks/registry.js";
 import type {
   Invocation,
   PlumixHandler,
+  RuntimeHandlerSpec,
   ScheduledRunReport,
 } from "./adapter.js";
 import type { DatabaseAdapter } from "./contract/slots.js";
@@ -16,7 +18,7 @@ import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
-import { createPlumixHandler } from "./handler.js";
+import { createPlumixHandler, createRuntimeHandler } from "./handler.js";
 import { memoryKv } from "./memory-kv.js";
 import { memoryStorage } from "./memory-storage.js";
 
@@ -30,7 +32,7 @@ const stubAuth = auth({
 const theme = defineTheme({ templates: [fallback(() => null)] });
 const runtime = {
   name: "test",
-  createHandler: createPlumixHandler,
+  handler: {},
   generateEntry: () => "",
 };
 
@@ -877,5 +879,72 @@ describe("createPlumixHandler — releasing the database", () => {
 
     await handler.dispose?.();
     expect(close).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createRuntimeHandler", () => {
+  async function appWith(
+    handler: RuntimeHandlerSpec,
+    plugins: Parameters<typeof plumix>[0]["plugins"] = [],
+  ) {
+    return buildApp(
+      plumix({
+        runtime: { ...runtime, handler },
+        database: stubDatabase,
+        auth: stubAuth,
+        theme,
+        plugins,
+      }),
+    );
+  }
+
+  test("runs prepare once per handler, with the app's hooks, before the first request", async () => {
+    const events: string[] = [];
+    const prepared: HookRegistry[] = [];
+    const marking = definePlugin("marking", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/mark",
+        handler: () => {
+          events.push("request");
+          return new Response("ok");
+        },
+      });
+    });
+    const app = await appWith(
+      {
+        prepare: (hooks) => {
+          events.push("prepare");
+          prepared.push(hooks);
+        },
+      },
+      [marking],
+    );
+
+    const handler = createRuntimeHandler(app);
+    await handler.fetch(new Request("https://cms.example/mark"), { env: {} });
+    await handler.fetch(new Request("https://cms.example/mark"), { env: {} });
+
+    expect(events).toEqual(["prepare", "request", "request"]);
+    expect(prepared).toEqual([app.hooks]);
+  });
+
+  test("the runtime's client address reaches the invocation, over the caller's", async () => {
+    const app = await appWith(
+      {
+        clientAddress: (request) =>
+          request.headers.get("x-edge-ip") ?? undefined,
+      },
+      [echoClientAddress],
+    );
+    const handler = createRuntimeHandler(app);
+
+    const response = await handler.fetch(
+      new Request("https://cms.example/whoami", {
+        headers: { "x-edge-ip": "203.0.113.7" },
+      }),
+      { env: {}, clientAddress: "198.51.100.9" },
+    );
+
+    expect(await response.text()).toBe("203.0.113.7");
   });
 });

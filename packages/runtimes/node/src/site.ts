@@ -17,6 +17,7 @@ import type {
 } from "plumix/runtime";
 import {
   buildApp,
+  createRuntimeHandler,
   DRAIN_DEADLINE_MS,
   renderDevBootErrorResponse,
 } from "plumix/runtime";
@@ -136,7 +137,7 @@ export function createNodeSite({
   const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
-    (built ??= config.runtime.createHandler(app));
+    (built ??= createRuntimeHandler(app));
 
   const handler: NodeSiteHandler = {
     async fetch(request, invocation = { env }) {

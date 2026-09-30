@@ -23,7 +23,7 @@ const MINUTE_MS = 60_000;
 /** What the scheduler fires when no task declares a cron of its own. */
 const EVERY_MINUTE = "* * * * *";
 
-export const cronCommand: CommandDefinition = {
+export const cronCommand: CommandDefinition<PlumixApp> = {
   describe: "List the site's scheduled tasks, or fire one schedule now",
   async run(ctx) {
     const sub = ctx.argv[0];
@@ -86,7 +86,7 @@ function listSchedules(app: PlumixApp): void {
   );
 }
 
-async function runSchedule(ctx: CommandContext): Promise<void> {
+async function runSchedule(ctx: CommandContext<PlumixApp>): Promise<void> {
   const expression = ctx.argv[1];
   if (expression === undefined || expression === "") {
     throw PlumixCliError.cronRunMissingExpression();
@@ -123,9 +123,13 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
   // building an app and must not pay for it (`cold-start.test.ts`). Here it is
   // a module-cache hit: `resolveCommandApp` already imported the barrel to
   // build `ctx.app`.
-  const { connectScheduledDb, createScheduledRunGuard, scheduledLeaseScope } =
-    await import("@plumix/core");
-  const handler = ctx.app.config.runtime.createHandler(ctx.app);
+  const {
+    connectScheduledDb,
+    createRuntimeHandler,
+    createScheduledRunGuard,
+    scheduledLeaseScope,
+  } = await import("@plumix/core");
+  const handler = createRuntimeHandler(ctx.app);
 
   // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
   // land before anything opens a database — otherwise this creates an empty one
@@ -163,7 +167,7 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
 }
 
 async function fireSchedule(
-  ctx: CommandContext,
+  ctx: CommandContext<PlumixApp>,
   guard: ScheduledRunGuard,
   fired: string,
   handler: PlumixHandler,

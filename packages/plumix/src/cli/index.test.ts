@@ -20,7 +20,7 @@ function testConfig(): PlumixConfig {
   return plumix({
     runtime: {
       name: "test",
-      createHandler: () => ({ fetch: () => new Response("", { status: 500 }) }),
+      handler: {},
       generateEntry: () => "",
     },
     database: { kind: "test", connect: () => ({ db: {} }) },

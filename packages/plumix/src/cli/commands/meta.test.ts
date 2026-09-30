@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
-import { createPlumixHandler, definePlugin } from "@plumix/core";
+import { definePlugin } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
 import { toggle } from "@plumix/core/fields";
 import { entries } from "@plumix/core/schema";
@@ -39,17 +39,13 @@ async function seeded(
     ...harness.app,
     config: {
       ...harness.app.config,
-      runtime: {
-        ...harness.app.config.runtime,
-        createHandler: (built) => createPlumixHandler(built),
-      },
       database: database ?? {
         kind: "test",
         connect: () => ({ db: harness.db }),
       },
     },
   };
-  const ctx: CommandContext = {
+  const ctx: CommandContext<PlumixApp> = {
     app,
     cwd: process.cwd(),
     configPath: `${process.cwd()}/plumix.config.ts`,

@@ -2,13 +2,14 @@ import type {
   CommandContext,
   CommandDefinition,
   MetaSweep,
+  PlumixApp,
   PlumixHandler,
 } from "@plumix/core";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
 
-export const metaCommand: CommandDefinition = {
+export const metaCommand: CommandDefinition<PlumixApp> = {
   describe:
     "Report stored field values not in their field's declared form, or settle them",
   async run(ctx) {
@@ -31,18 +32,19 @@ export const metaCommand: CommandDefinition = {
  * purges a settle enqueues are the site's, not a reimplementation of them.
  */
 async function sweep(
-  ctx: CommandContext,
+  ctx: CommandContext<PlumixApp>,
   write: boolean,
 ): Promise<Omit<MetaSweep, "next">> {
   // Dynamic, like `cron run`'s: the static graph of `src/cli/index.ts` must
   // not put core's root barrel on every `plumix` invocation.
-  const { sweepAllUnsettledMeta } = await import("@plumix/core");
+  const { createRuntimeHandler, sweepAllUnsettledMeta } =
+    await import("@plumix/core");
 
   // `nodeSqlite` resolves its path against the process cwd, so `--cwd` has to
   // land before anything opens a database.
   if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
 
-  const handler: PlumixHandler = ctx.app.config.runtime.createHandler(ctx.app);
+  const handler: PlumixHandler = createRuntimeHandler(ctx.app);
   if (handler.run === undefined) {
     throw PlumixCliError.metaDatabaseUnreachable({
       detail: "this runtime's handler can't run work outside a request",

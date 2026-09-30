@@ -21,7 +21,7 @@ import { welcomeTheme } from "./welcome-theme.js";
 
 const runtime: RuntimeAdapter = {
   name: "mock",
-  createHandler: () => ({ fetch: () => new Response("ok") }),
+  handler: {},
   generateEntry: () => "",
 };
 

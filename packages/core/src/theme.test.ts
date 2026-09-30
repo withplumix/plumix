@@ -26,7 +26,7 @@ import {
 
 const stubAdapter = {
   name: "test",
-  createHandler: () => ({ fetch: () => new Response("stub") }),
+  handler: {},
   generateEntry: () => "",
 };
 const stubDatabase = { kind: "test", connect: () => ({ db: {} }) };

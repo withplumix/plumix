@@ -42,7 +42,7 @@ const VALID_CONFIG = `
 export default {
   runtime: {
     name: "test",
-    createHandler: () => ({ fetch: () => new Response("ok") }),
+    handler: {},
     generateEntry: () => "",
   },
   database: {

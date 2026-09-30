@@ -23,7 +23,7 @@ describe("emitPlumixSources — the entry comes from the config's runtime adapte
       `export default {
         runtime: {
           name: 'x',
-          createHandler: () => ({ fetch: () => new Response('ok') }),
+          handler: {},
           generateEntry: ${generateEntry},
         },
         database: { kind: 'x' },
@@ -77,7 +77,7 @@ describe("emitPlumixSources — what a runtime command reads back", () => {
         runtime: {
           name: 'x',
           config: { build: { external: ['my-native'] } },
-          createHandler: () => ({ fetch: () => new Response('ok') }),
+          handler: {},
           generateEntry: () => '',
         },
         database: { kind: 'x' },
@@ -104,7 +104,7 @@ describe("emitPlumixSources — what a runtime command reads back", () => {
     const config = (name: string) => `export default {
         runtime: {
           name: ${JSON.stringify(name)},
-          createHandler: () => ({ fetch: () => new Response('ok') }),
+          handler: {},
           generateEntry: () => '',
         },
         database: { kind: 'x' },

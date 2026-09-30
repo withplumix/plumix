@@ -17,6 +17,7 @@ import type {
 } from "plumix/runtime";
 import {
   buildApp,
+  createRuntimeHandler,
   DRAIN_DEADLINE_MS,
   startScheduledRunner,
   trustRequest,
@@ -153,7 +154,7 @@ export function createBunSite({
   const appPromise = buildApp(config, { assetManifest, pluginCatalogs });
   let built: PlumixHandler | undefined;
   const handlerFor = (app: PlumixApp): PlumixHandler =>
-    (built ??= config.runtime.createHandler(app));
+    (built ??= createRuntimeHandler(app));
 
   const handler: BunSiteHandler = {
     async fetch(request, invocation = { env }) {

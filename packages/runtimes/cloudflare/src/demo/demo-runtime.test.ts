@@ -1,7 +1,7 @@
 import type { DatabaseAdapter } from "plumix/runtime";
 import { plumix } from "plumix";
 import { auth } from "plumix/auth";
-import { buildApp } from "plumix/runtime";
+import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { defineTheme } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
@@ -38,13 +38,13 @@ function createApp(storage?: ReturnType<typeof r2>) {
   );
 }
 
-describe("demoRuntime — createHandler", () => {
+describe("demoRuntime — the handler core builds for it", () => {
   test("refuses an app with a storage slot", async () => {
     const app = await createApp(r2({ binding: "MEDIA" }));
 
     let thrown: unknown;
     try {
-      runtime.createHandler(app);
+      createRuntimeHandler(app);
     } catch (error) {
       thrown = error;
     }
@@ -56,6 +56,18 @@ describe("demoRuntime — createHandler", () => {
   test("builds a handler for an app without one", async () => {
     const app = await createApp();
 
-    expect(runtime.createHandler(app).fetch).toBeTypeOf("function");
+    expect(createRuntimeHandler(app).fetch).toBeTypeOf("function");
+  });
+
+  test("answers its own session routes in front of the site", async () => {
+    const handler = createRuntimeHandler(await createApp());
+
+    const response = await handler.fetch(
+      new Request("https://cms.example/_demo/reset"),
+      { env: {} },
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://cms.example/demo");
   });
 });

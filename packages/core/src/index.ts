@@ -63,7 +63,10 @@ export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
 export { DRAIN_DEADLINE_MS } from "./runtime/drain.js";
-export { createPlumixHandler } from "./runtime/handler.js";
+export {
+  createPlumixHandler,
+  createRuntimeHandler,
+} from "./runtime/handler.js";
 export type { PlumixHandlerOptions } from "./runtime/handler.js";
 // `notFound` is already the template-rule builder's name on this surface, so
 // the refusal that answers a request is published under the longer one.

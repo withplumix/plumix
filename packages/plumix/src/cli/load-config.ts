@@ -107,7 +107,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
 const configShapeSchema = v.looseObject({
   runtime: v.looseObject({
     name: v.string(),
-    createHandler: v.function(),
+    handler: v.looseObject({}),
     generateEntry: v.function(),
   }),
   database: v.looseObject({ kind: v.string() }),
