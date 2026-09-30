@@ -1,7 +1,9 @@
+import { i18n } from "@lingui/core";
 import { ORPCError } from "@orpc/client";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { entryFactory } from "@plumix/core/test/browser";
 
 import { clearManifest, seedManifest } from "../../../../../test/manifest.js";
@@ -14,7 +16,27 @@ afterEach(() => {
   clearManifest();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  i18n.load({ en: {} });
+  i18n.activate("en");
 });
+
+function seedPost(description?: EntryTypeManifestEntry["description"]) {
+  seedManifest({
+    entryTypes: [
+      {
+        name: "post",
+        capabilityType: "post",
+        adminSlug: "posts",
+        label: "Posts",
+        isPublic: true,
+        showUI: true,
+        showInSidebar: true,
+        ...(description === undefined ? {} : { description }),
+      },
+    ],
+  });
+  stubRpc({ "entry/list": () => [] });
+}
 
 describe("entries list", () => {
   test("a failed load shows the entry type's localized load-failed copy", async () => {
@@ -100,5 +122,36 @@ describe("entries list", () => {
         "focus-visible:ring-[3px]",
       ]),
     );
+  });
+
+  test("a descriptor description renders its translation under the heading", async () => {
+    i18n.load({
+      de: { "test.post.description": "Gewöhnliche Blogbeiträge" },
+    });
+    i18n.activate("de");
+    seedPost({ id: "test.post.description", message: "Standard blog posts" });
+    await renderRoute(Route, {
+      path: "/entries/$slug/",
+      url: "/entries/posts",
+      capabilities: ["entry:post:read"],
+    });
+
+    expect(
+      await screen.findByTestId("content-list-description"),
+    ).toHaveTextContent("Gewöhnliche Blogbeiträge");
+  });
+
+  test("renders no description when the entry type sets none", async () => {
+    seedPost();
+    await renderRoute(Route, {
+      path: "/entries/$slug/",
+      url: "/entries/posts",
+      capabilities: ["entry:post:read"],
+    });
+
+    await screen.findByTestId("content-list-heading");
+    expect(
+      screen.queryByTestId("content-list-description"),
+    ).not.toBeInTheDocument();
   });
 });

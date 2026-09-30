@@ -149,7 +149,7 @@ export interface EntryTypeOptions {
    * string when missing.
    */
   readonly labels?: EntryTypeLabels;
-  readonly description?: string;
+  readonly description?: Label;
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
@@ -289,7 +289,7 @@ export interface TermTaxonomyLabels {
 export interface TermTaxonomyOptions {
   readonly label: Label;
   readonly labels?: TermTaxonomyLabels;
-  readonly description?: string;
+  readonly description?: Label;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
   readonly isPublic?: boolean;

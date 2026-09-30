@@ -18,6 +18,8 @@ Three tables carry the model. Every term of every taxonomy is a row in `terms`, 
 
 The choice that separates the two example taxonomies is hierarchy. `cuisine` is hierarchical, so Sicilian sits under Italian and the term URL nests. `diet` is flat, so vegetarian, vegan and gluten-free are siblings.
 
+`label`, every key of `labels` and `description` each take a plain string or a Lingui message descriptor. The admin shows `description` in muted text under the heading of the taxonomy's term list, and shows nothing there when it is unset.
+
 Registration goes through a plugin's `setup`, alongside the entry types it classifies. [Overview](/content-modelling/overview/) covers that arrangement.
 
 ## Quickstart

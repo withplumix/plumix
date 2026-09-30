@@ -30,6 +30,11 @@ msgstr "Menu items"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgid "plugin.menu.menuItem.description"
+msgstr "Items belonging to a navigation menu"
+
+#. js-lingui-explicit-id
+#: src/index.ts
 msgid "plugin.menu.menuItem.addNew"
 msgstr "Add New"
 

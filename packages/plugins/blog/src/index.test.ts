@@ -21,6 +21,10 @@ describe("@plumix/plugin-blog", () => {
       message: "Posts",
       context: "post type general name",
     });
+    expect(post?.description).toEqual({
+      id: "plugin.blog.post.description",
+      message: "Standard blog posts",
+    });
     expect(post?.isPublic).toBe(true);
     // No type archive: the front page is the post listing (avoids a
     // duplicate /posts route).

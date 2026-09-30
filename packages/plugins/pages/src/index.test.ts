@@ -22,6 +22,10 @@ describe("@plumix/plugin-pages", () => {
       id: "plugin.pages.page.plural",
       message: "Pages",
     });
+    expect(page?.description).toEqual({
+      id: "plugin.pages.page.description",
+      message: "Hierarchical static pages",
+    });
     expect(page?.isHierarchical).toBe(true);
     expect(page?.isPublic).toBe(true);
     expect(page?.hasArchive).toBe(false);

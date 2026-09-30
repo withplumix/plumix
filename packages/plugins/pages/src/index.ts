@@ -53,10 +53,15 @@ const PAGE_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
+const PAGE_DESCRIPTION = {
+  id: "plugin.pages.page.description",
+  message: "Hierarchical static pages",
+};
+
 const PAGE_DEFAULTS: EntryTypeOptions = {
   label: PAGE_LABELS.plural,
   labels: PAGE_LABELS,
-  description: "Hierarchical static pages",
+  description: PAGE_DESCRIPTION,
   supports: ["title", "editor", "excerpt", "revisions", "autosave"],
   versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
   isHierarchical: true,

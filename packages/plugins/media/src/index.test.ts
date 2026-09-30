@@ -66,6 +66,10 @@ describe("@plumix/plugin-media — registration", () => {
       id: "plugin.media.media.plural",
       message: "Media",
     });
+    expect(m?.description).toEqual({
+      id: "plugin.media.media.description",
+      message: "Uploaded files — images, video, documents",
+    });
     expect(m?.isPublic).toBe(false);
     expect(m?.hasArchive).toBe(false);
     expect(m?.registeredBy).toBe("media");

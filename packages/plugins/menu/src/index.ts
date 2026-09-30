@@ -53,6 +53,11 @@ const MENU_ITEM_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
+const MENU_ITEM_DESCRIPTION = {
+  id: "plugin.menu.menuItem.description",
+  message: "Items belonging to a navigation menu",
+};
+
 const MENU_LABELS = {
   singular: { id: "plugin.menu.menu.singular", message: "Menu" },
   plural: { id: "plugin.menu.menu.plural", message: "Menus" },
@@ -192,7 +197,7 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
       ctx.registerEntryType("menu_item", {
         label: MENU_ITEM_LABELS.plural,
         labels: MENU_ITEM_LABELS,
-        description: "Items belonging to a navigation menu",
+        description: MENU_ITEM_DESCRIPTION,
         supports: ["title"],
         termTaxonomies: ["menu"],
         isHierarchical: true,

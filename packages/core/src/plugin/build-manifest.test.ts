@@ -1076,6 +1076,35 @@ describe("buildManifest", () => {
     expect(manifest.userMetaBoxes).toEqual([]);
   });
 
+  test("entry type and taxonomy descriptions pass through as MessageDescriptors", async () => {
+    const entryDescription = {
+      id: "plugin.blog.post.description",
+      message: "Standard blog posts",
+    };
+    const taxonomyDescription = {
+      id: "plugin.blog.category.description",
+      message: "Top-level organisation for blog entries.",
+    };
+    const hooks = new HookRegistry();
+    const blog = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        description: entryDescription,
+      });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        description: taxonomyDescription,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+
+    const manifest = buildManifest(registry);
+    expect(manifest.entryTypes[0]?.description).toEqual(entryDescription);
+    expect(manifest.termTaxonomies[0]?.description).toEqual(
+      taxonomyDescription,
+    );
+  });
+
   test("projects registered termTaxonomies, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
     const blog = definePlugin("blog", (ctx) => {

@@ -16,6 +16,11 @@ msgstr "Posts"
 
 #. js-lingui-explicit-id
 #: src/index.ts
+msgid "plugin.blog.post.description"
+msgstr "Standard blog posts"
+
+#. js-lingui-explicit-id
+#: src/index.ts
 msgctxt "post type singular name"
 msgid "plugin.blog.post.singular"
 msgstr "Post"

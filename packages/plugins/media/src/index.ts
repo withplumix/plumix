@@ -73,6 +73,11 @@ const MEDIA_LABELS = {
   },
 } satisfies EntryTypeLabels;
 
+const MEDIA_DESCRIPTION = {
+  id: "plugin.media.media.description",
+  message: "Uploaded files — images, video, documents",
+};
+
 // Admin-page chrome (separate from per-type labels because the
 // "Media Library" page heading isn't an entry-type label).
 const MEDIA_LIBRARY_LABEL: Label = {
@@ -164,7 +169,7 @@ export function media(options: MediaPluginOptions = {}): PluginDescriptor {
       ctx.registerEntryType("media", {
         label: MEDIA_LABELS.plural,
         labels: MEDIA_LABELS,
-        description: "Uploaded files — images, video, documents",
+        description: MEDIA_DESCRIPTION,
         supports: ["title", "excerpt"],
         // `isPublic: false` cascades to `showUI: false` and
         // `showInSidebar: false`. Both are load-bearing here:

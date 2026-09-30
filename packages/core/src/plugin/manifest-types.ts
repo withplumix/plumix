@@ -128,7 +128,7 @@ export interface EntryTypeManifestEntry {
    *  `GENERIC_ENTRY_TYPE_LABELS[key]` when a key is unset — keeping
    *  the wire shape narrow (only author-declared keys serialize). */
   readonly labels?: EntryTypeLabels;
-  readonly description?: string;
+  readonly description?: Label;
   readonly supports?: readonly string[];
   readonly termTaxonomies?: readonly string[];
   readonly isHierarchical?: boolean;
@@ -242,7 +242,7 @@ export interface TermTaxonomyManifestEntry {
   /** Plugin-author-declared per-type labels — see
    *  `EntryTypeManifestEntry.labels` for the cascade contract. */
   readonly labels?: TermTaxonomyLabels;
-  readonly description?: string;
+  readonly description?: Label;
   readonly isHierarchical?: boolean;
   readonly entryTypes?: readonly string[];
   readonly isPublic: boolean;
