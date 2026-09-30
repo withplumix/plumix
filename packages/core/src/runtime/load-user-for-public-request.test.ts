@@ -60,7 +60,7 @@ describe("loadUserForPublicRequest", () => {
   test("authenticates once and returns ctx with user populated when the request carries a plumix_session cookie", async () => {
     const authenticate = vi.fn().mockResolvedValue({
       user: authenticatedUser,
-      tokenScopes: null,
+      credential: "session",
     });
     const ctx = await publicContext(
       new Request("https://example.com/", {
@@ -82,7 +82,7 @@ describe("loadUserForPublicRequest", () => {
   test("runs a custom authenticator that carries its session without the standard cookie", async () => {
     const authenticate = vi.fn().mockResolvedValue({
       user: authenticatedUser,
-      tokenScopes: null,
+      credential: "session",
     });
     const ctx = await publicContext(
       // No `plumix_session` cookie — only the custom guard's own signal.

@@ -1,4 +1,4 @@
-import { authenticateTraced } from "../auth/authenticator.js";
+import { authenticateTraced, tokenScopesOf } from "../auth/authenticator.js";
 import { withUser } from "../auth/with-user.js";
 import { base } from "./base.js";
 
@@ -13,7 +13,7 @@ export const authenticated = base.middleware(
     if (!result) throw errors.UNAUTHORIZED();
 
     const { id, email, role, meta } = result.user;
-    const tokenScopes = result.tokenScopes ?? null;
+    const tokenScopes = tokenScopesOf(result);
     return next({
       context: withUser(context, { id, email, role, meta }, tokenScopes),
     });

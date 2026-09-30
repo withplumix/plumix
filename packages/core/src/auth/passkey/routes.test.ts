@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import type { AuthResult } from "../../context/authenticator.js";
+import type { User } from "../../db/schema/users.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
@@ -137,6 +139,154 @@ describe("passkey register — options", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { excludeCredentials?: unknown };
     expect(body.excludeCredentials).toBeUndefined();
+  });
+});
+
+describe("passkey register — options under a configured authenticator", () => {
+  // Stands in for an SSO authenticator (cfAccess, a custom IdP) that resolves
+  // the caller without minting a `plumix_session` cookie.
+  function harnessResolving(result: () => AuthResult | null) {
+    return createDispatcherHarness({
+      config: {
+        auth: {
+          authenticator: { authenticate: () => Promise.resolve(result()) },
+        },
+      },
+    });
+  }
+
+  async function harnessSignedInAs(
+    credential: (user: User) => AuthResult,
+  ): Promise<{ h: Awaited<ReturnType<typeof harnessResolving>>; user: User }> {
+    let caller: User | null = null;
+    const h = await harnessResolving(() =>
+      caller ? credential(caller) : null,
+    );
+    caller = await h.seedUser("editor");
+    return { h, user: caller };
+  }
+
+  const asSession = (user: User): AuthResult => ({
+    user,
+    credential: "session",
+  });
+
+  test("a session caller with no cookie enrols another passkey for their own email", async () => {
+    const { h, user } = await harnessSignedInAs(asSession);
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: user.email },
+    });
+
+    response.assertStatus(200);
+  });
+
+  test("the add-device options exclude the caller's enrolled passkeys", async () => {
+    const { h, user } = await harnessSignedInAs(asSession);
+    const enrolled = await h.factory.credential.create({
+      userId: user.id,
+      publicKey: Buffer.from([1, 2, 3]),
+    });
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: user.email },
+    });
+
+    response.assertStatus(200);
+    const body = await response.json<{
+      excludeCredentials: { id: string }[];
+    }>();
+    expect(body.excludeCredentials.map((c) => c.id)).toEqual([enrolled.id]);
+  });
+
+  test("a session caller asking for another email is refused with email_mismatch", async () => {
+    const { h } = await harnessSignedInAs(asSession);
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: "somebody-else@example.com" },
+    });
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "email_mismatch" });
+  });
+
+  test("an api-token caller counts as anonymous, whatever header carried it", async () => {
+    const { h, user } = await harnessSignedInAs((u) => ({
+      user: u,
+      credential: "api-token",
+      tokenScopes: null,
+    }));
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: user.email },
+    });
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "registration_closed" });
+  });
+
+  test("an anonymous caller is refused once a user exists", async () => {
+    const h = await harnessResolving(() => null);
+    await h.seedUser("admin");
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: "stranger@example.com" },
+    });
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "registration_closed" });
+  });
+
+  test("an anonymous caller bootstraps the first user", async () => {
+    const h = await harnessResolving(() => null);
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: "first@example.com" },
+    });
+
+    response.assertStatus(200);
+  });
+});
+
+describe("passkey register — options for an api-token caller", () => {
+  test.each([
+    ["a scoped token", ["entry:post:read"]],
+    ["an unscoped token", null],
+  ])(
+    "%s is refused with registration_closed",
+    async (_label, scopes: string[] | null) => {
+      const h = await createDispatcherHarness();
+      const user = await h.seedUser("admin");
+      const { secret } = await h.factory.apiToken.create({
+        userId: user.id,
+        scopes,
+      });
+
+      const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+        json: { email: user.email },
+        headers: { authorization: `Bearer ${secret}` },
+      });
+
+      response.assertStatus(403);
+      expect(await response.json()).toEqual({ error: "registration_closed" });
+    },
+  );
+
+  test("a token sent with a junk session cookie is refused with registration_closed", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.seedUser("admin");
+    const { secret } = await h.factory.apiToken.create({ userId: user.id });
+
+    const response = await h.fetch("/_plumix/auth/passkey/register/options", {
+      json: { email: user.email },
+      headers: {
+        authorization: `Bearer ${secret}`,
+        cookie: `${SESSION_COOKIE_NAME}=not-a-real-session`,
+      },
+    });
+
+    response.assertStatus(403);
+    expect(await response.json()).toEqual({ error: "registration_closed" });
   });
 });
 

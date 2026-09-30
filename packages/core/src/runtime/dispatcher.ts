@@ -17,6 +17,7 @@ import { resolveAccess } from "../access/policy.js";
 import {
   authenticateTraced,
   requestHasSession,
+  tokenScopesOf,
 } from "../auth/authenticator.js";
 import {
   hasCsrfHeader,
@@ -926,7 +927,7 @@ async function runPluginRawRoute(
   if (!result) return jsonResponse({ error: "unauthorized" }, { status: 401 });
 
   const { id, email, name, role, meta } = result.user;
-  const tokenScopes = result.tokenScopes ?? null;
+  const tokenScopes = tokenScopesOf(result);
   const authedCtx = withUser(ctx, { id, email, name, role, meta }, tokenScopes);
 
   if (gate === "authenticated") {

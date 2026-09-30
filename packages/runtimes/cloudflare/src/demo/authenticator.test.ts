@@ -21,6 +21,7 @@ describe("demoAuthenticator", () => {
     expect(result?.user.role).toBe("admin");
     expect(result?.user.id).toBe(DEMO_ADMIN.id);
     expect(result?.user.email).toBe(DEMO_ADMIN.email);
+    expect(result?.credential).toBe("session");
   });
 
   test("stays anonymous without a session cookie", async () => {

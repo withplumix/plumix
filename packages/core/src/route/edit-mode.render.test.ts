@@ -113,7 +113,7 @@ describe("edit gate with a custom (non-cookie) authenticator", () => {
       authenticate: (request) =>
         Promise.resolve(
           hasCustomCookie(request) && holder.user
-            ? { user: holder.user }
+            ? { user: holder.user, credential: "session" }
             : null,
         ),
     };

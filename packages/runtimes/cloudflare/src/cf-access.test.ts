@@ -221,6 +221,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
     expect(result?.user.email).toBe("first-admin@enterprise.example");
     // bootstrapAllowed=true on a zero-user system → first user is admin.
     expect(result?.user.role).toBe("admin");
+    expect(result?.credential).toBe("session");
   });
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {

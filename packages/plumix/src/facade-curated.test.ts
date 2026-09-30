@@ -134,6 +134,8 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "EmailChangeError",
       "provisionUser",
       "authenticateTraced",
+      "authenticateSession",
+      "tokenScopesOf",
       "requestHasSession",
       "isSafeMethod",
       "hasCsrfHeader",

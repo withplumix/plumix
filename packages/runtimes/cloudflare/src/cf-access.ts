@@ -165,9 +165,9 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
           defaultRole: config.defaultRole,
           bootstrapAllowed: config.bootstrapAllowed,
         });
-        // No tokenScopes — CF Access carries the user's role caps
-        // unrestricted; PAT-style scoping doesn't apply here.
-        return { user };
+        // An IdP identity bound to a browser, so a session: the user's
+        // role caps apply unrestricted; PAT-style scoping doesn't apply here.
+        return { user, credential: "session" };
       } catch (error) {
         if (error instanceof ExternalIdentityError) {
           // `account_disabled` and `registration_closed` (when

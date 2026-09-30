@@ -238,7 +238,7 @@ A named permission string (`<entity>:<type>:<action>`) mapped to a minimum role.
 _Avoid_: permission, cap
 
 **Session**:
-A server-issued, cookie-carried credential binding a browser to a user.
+A credential binding a browser to a user: Plumix's own session cookie, or an identity provider's assertion such as Cloudflare Access.
 
 **hasSession**:
 The predicate answering whether a request carries a browser-session credential (as opposed to a bearer token).

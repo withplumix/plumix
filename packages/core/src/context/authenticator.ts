@@ -5,12 +5,19 @@ import type { Db } from "./app-context.js";
 // and a contract under `auth/` importing `context/` while the context names
 // the authenticator would tie the two subsystems into a cycle.
 /**
- * Resolved auth on a request — the user plus any authenticator-specific
- * narrowing of capabilities. Returned by `RequestAuthenticator`s.
+ * Resolved auth on a request — the user, the kind of credential that
+ * resolved them, and any authenticator-specific narrowing of capabilities.
+ * Returned by `RequestAuthenticator`s.
  *
- * `tokenScopes`:
- *   - `undefined` / `null` → unrestricted, the user's role caps apply
- *     verbatim (session-cookie auth, IdP authenticators like cfAccess).
+ * `credential` is required, so an authenticator has to say what it resolved:
+ *   - `"session"` → a credential binding a browser to the user: Plumix's own
+ *     session cookie, or an IdP assertion such as Cloudflare Access. The
+ *     user's role caps apply verbatim.
+ *   - `"api-token"` → a credential that carries its own scopes. A surface that
+ *     creates a credential or a session treats it as anonymous (ADR 0024).
+ *
+ * `tokenScopes` exists only on `"api-token"`:
+ *   - `null` → unrestricted, the user's role caps apply verbatim.
  *   - `readonly string[]` → capability whitelist. The effective caps
  *     are `tokenScopes ∩ roleCaps`, so a token can never escalate.
  *     Used by API-token auth where the operator scoped the token at
@@ -21,10 +28,13 @@ import type { Db } from "./app-context.js";
  * through it, so adding an authenticator that returns scopes Just Works
  * everywhere without scattered checks.
  */
-export interface AuthResult {
-  readonly user: User;
-  readonly tokenScopes?: readonly string[] | null;
-}
+export type AuthResult =
+  | { readonly user: User; readonly credential: "session" }
+  | {
+      readonly user: User;
+      readonly credential: "api-token";
+      readonly tokenScopes: readonly string[] | null;
+    };
 
 /**
  * Decides who the user is on a given request — a pluggable authenticator.
@@ -42,7 +52,8 @@ export interface AuthResult {
  * The contract is intentionally narrow:
  *   - Returns `AuthResult | null`. `null` means "no auth on this
  *     request" — the caller decides whether that's a 401 or anonymous
- *     access.
+ *     access. A result names its `credential` kind, so a surface that
+ *     creates a credential can refuse an API token.
  *   - Throws on a malformed credential (bad signature, replay, etc.)
  *     so the dispatcher can map to a typed error.
  *   - No side effects: the authenticator does NOT mint sessions or

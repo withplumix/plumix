@@ -2,6 +2,7 @@ import type { AppContext } from "../context/app-context.js";
 import {
   authenticateTraced,
   requestHasSession,
+  tokenScopesOf,
 } from "../auth/authenticator.js";
 import { withUser } from "../auth/with-user.js";
 
@@ -18,5 +19,5 @@ export async function loadUserForPublicRequest(
   if (result === null) {
     return ctx;
   }
-  return withUser(ctx, result.user, result.tokenScopes ?? null);
+  return withUser(ctx, result.user, tokenScopesOf(result));
 }
