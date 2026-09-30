@@ -44,7 +44,7 @@ export function demoAuthenticator(): RequestAuthenticator {
         createdAt: DEMO_ADMIN_TIMESTAMP,
         updatedAt: DEMO_ADMIN_TIMESTAMP,
       };
-      return Promise.resolve({ user });
+      return Promise.resolve({ user, credential: "session" });
     },
     // The demo session lives in the `plumix_demo` cookie, not `plumix_session`.
     hasSession(request) {

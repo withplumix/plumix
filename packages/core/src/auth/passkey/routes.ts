@@ -10,6 +10,7 @@ import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
 import { jsonResponse } from "../../runtime/http.js";
+import { authenticateSession } from "../authenticator.js";
 import { provisionUser } from "../bootstrap.js";
 import {
   buildSessionDeletionCookie,
@@ -161,7 +162,7 @@ export async function handlePasskeyRegisterOptions(
   const input = await parseJson(ctx.request, registerOptionsInputSchema);
   if (!input) return invalidInput();
 
-  const authed = await resolveAuthedUser(ctx, app);
+  const authed = (await authenticateSession(ctx))?.user ?? null;
   const policy = await decideRegistrationPolicy(ctx, authed, input.email);
   if (policy.outcome === "denied") {
     return jsonResponse({ error: policy.reason }, { status: 403 });
@@ -211,16 +212,6 @@ async function decideRegistrationPolicy(
   const userCount = await ctx.db.$count(users);
   if (userCount === 0) return { outcome: "bootstrap" };
   return { outcome: "denied", reason: "registration_closed" };
-}
-
-async function resolveAuthedUser(
-  ctx: AppContext,
-  app: PlumixApp,
-): Promise<User | null> {
-  const token = readSessionCookie(ctx.request);
-  if (!token) return null;
-  const validated = await validateSession(ctx.db, token, app.sessionPolicy);
-  return validated?.user ?? null;
 }
 
 export async function handlePasskeyRegisterVerify(

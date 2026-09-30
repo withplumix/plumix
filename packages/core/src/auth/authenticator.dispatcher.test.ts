@@ -144,7 +144,7 @@ function customHeaderAuth(): RequestAuthenticator {
       const user = await db.query.users.findFirst({
         where: eq(users.email, email),
       });
-      return user ? { user } : null;
+      return user ? { user, credential: "session" } : null;
     },
   };
 }

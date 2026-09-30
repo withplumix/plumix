@@ -498,7 +498,7 @@ describe("auth.sessions.revokeOthers", () => {
     await createSession(db, { userId: user.id });
 
     const headerAuth: RequestAuthenticator = {
-      authenticate: () => Promise.resolve({ user }),
+      authenticate: () => Promise.resolve({ user, credential: "session" }),
     };
     // Build a request *without* the session cookie — the cfAccess case.
     const request = new Request("https://cms.example/_plumix/rpc", {

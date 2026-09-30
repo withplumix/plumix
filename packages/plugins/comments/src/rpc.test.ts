@@ -38,7 +38,9 @@ interface Client {
 }
 
 function stubAuthenticator(user: User): RequestAuthenticator {
-  return { authenticate: () => Promise.resolve({ user, tokenScopes: null }) };
+  return {
+    authenticate: () => Promise.resolve({ user, credential: "session" }),
+  };
 }
 
 async function buildHarness(role: UserRole = "editor") {

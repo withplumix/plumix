@@ -412,7 +412,11 @@ describe("dispatcher — routing", () => {
   function tenantHeaderAuthenticator(user: User): RequestAuthenticator {
     return {
       authenticate: (request) =>
-        Promise.resolve(request.headers.has(TENANT_HEADER) ? { user } : null),
+        Promise.resolve(
+          request.headers.has(TENANT_HEADER)
+            ? { user, credential: "session" }
+            : null,
+        ),
       hasSession: (request) => request.headers.has(TENANT_HEADER),
     };
   }
@@ -1819,7 +1823,9 @@ describe("dispatcher — public read-through CDN", () => {
           authenticator: {
             authenticate: (request) =>
               Promise.resolve(
-                carriesCookie(request) ? { user: signedIn } : null,
+                carriesCookie(request)
+                  ? { user: signedIn, credential: "session" }
+                  : null,
               ),
             hasSession: carriesCookie,
           },

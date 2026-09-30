@@ -1,15 +1,19 @@
 import { describe, expect, test } from "vitest";
 
-import type { RequestAuthenticator } from "./authenticator.js";
+import type { User } from "../db/schema/users.js";
+import type { AuthResult, RequestAuthenticator } from "./authenticator.js";
+import { createTestContext } from "../test/context.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createApiToken } from "./api-tokens.js";
 import {
   apiTokenAuthenticator,
+  authenticateSession,
   chainAuthenticators,
   defaultAuthenticator,
   requestHasSession,
   sessionAuthenticator,
+  tokenScopesOf,
 } from "./authenticator.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { createSession } from "./sessions.js";
@@ -49,7 +53,7 @@ describe("sessionAuthenticator", () => {
     expect(result?.user.email).toBe("alice@example.com");
     // Session cookie auth doesn't carry per-token scopes — the user's
     // role caps apply unrestricted.
-    expect(result?.tokenScopes ?? null).toBeNull();
+    expect(result?.credential).toBe("session");
   });
 });
 
@@ -90,7 +94,10 @@ describe("apiTokenAuthenticator", () => {
     const result = await apiTokenAuthenticator().authenticate(request, db);
     expect(result?.user.id).toBe(seeded.id);
     // Default-minted token (no `scopes` arg) is unrestricted (null).
-    expect(result?.tokenScopes ?? null).toBeNull();
+    expect(result).toMatchObject({
+      credential: "api-token",
+      tokenScopes: null,
+    });
   });
 
   test("surfaces tokenScopes when the token has them", async () => {
@@ -107,7 +114,10 @@ describe("apiTokenAuthenticator", () => {
     });
 
     const result = await apiTokenAuthenticator().authenticate(request, db);
-    expect(result?.tokenScopes).toEqual(["entry:post:read", "settings:manage"]);
+    expect(result).toMatchObject({
+      credential: "api-token",
+      tokenScopes: ["entry:post:read", "settings:manage"],
+    });
   });
 
   test("returns null for an unknown token", async () => {
@@ -129,12 +139,13 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
 
     let secondCalled = false;
     const first: RequestAuthenticator = {
-      authenticate: () => Promise.resolve({ user: userA }),
+      authenticate: () =>
+        Promise.resolve({ user: userA, credential: "session" }),
     };
     const second: RequestAuthenticator = {
       authenticate: () => {
         secondCalled = true;
-        return Promise.resolve({ user: userB });
+        return Promise.resolve({ user: userB, credential: "session" });
       },
     };
 
@@ -154,7 +165,8 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       authenticate: () => Promise.resolve(null),
     };
     const fallback: RequestAuthenticator = {
-      authenticate: () => Promise.resolve({ user: seeded }),
+      authenticate: () =>
+        Promise.resolve({ user: seeded, credential: "session" }),
     };
 
     const result = await chainAuthenticators(empty, fallback).authenticate(
@@ -237,7 +249,7 @@ describe("RequestAuthenticator interface", () => {
       authenticate(request) {
         const email = request.headers.get("x-trusted-email");
         if (!email) return Promise.resolve(null);
-        return Promise.resolve({ user: seeded });
+        return Promise.resolve({ user: seeded, credential: "session" });
       },
     };
 
@@ -328,5 +340,72 @@ describe("requestHasSession", () => {
         req({ cookie: `${SESSION_COOKIE_NAME}=t` }),
       ),
     ).toBe(true);
+  });
+});
+
+describe("authenticateSession", () => {
+  async function resolveWith(result: (user: User) => AuthResult | null) {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+    const ctx = createTestContext({
+      db,
+      request: new Request("https://cms.example/admin"),
+      authenticator: { authenticate: () => Promise.resolve(result(user)) },
+    });
+    return { user, resolved: await authenticateSession(ctx) };
+  }
+
+  test("returns a session caller as resolved", async () => {
+    const { user, resolved } = await resolveWith((u) => ({
+      user: u,
+      credential: "session",
+    }));
+    expect(resolved?.user.id).toBe(user.id);
+  });
+
+  test("treats an api-token caller as anonymous", async () => {
+    const { resolved } = await resolveWith((u) => ({
+      user: u,
+      credential: "api-token",
+      tokenScopes: null,
+    }));
+    expect(resolved).toBeNull();
+  });
+
+  test("treats a result that names no credential kind as anonymous", async () => {
+    // An untyped JS authenticator written before `credential` existed.
+    const { resolved } = await resolveWith(
+      (u) => ({ user: u }) as unknown as AuthResult,
+    );
+    expect(resolved).toBeNull();
+  });
+
+  test("returns null when the authenticator resolves no one", async () => {
+    const { resolved } = await resolveWith(() => null);
+    expect(resolved).toBeNull();
+  });
+});
+
+describe("tokenScopesOf", () => {
+  const user = { id: 1 } as User;
+
+  test("a session is unrestricted", () => {
+    expect(tokenScopesOf({ user, credential: "session" })).toBeNull();
+  });
+
+  test("an api token carries its scopes", () => {
+    expect(
+      tokenScopesOf({
+        user,
+        credential: "api-token",
+        tokenScopes: ["entry:post:read"],
+      }),
+    ).toEqual(["entry:post:read"]);
+  });
+
+  test("an unscoped api token is unrestricted", () => {
+    expect(
+      tokenScopesOf({ user, credential: "api-token", tokenScopes: null }),
+    ).toBeNull();
   });
 });

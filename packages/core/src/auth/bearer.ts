@@ -1,5 +1,9 @@
 import type { AppContext } from "../context/app-context.js";
-import { apiTokenAuthenticator, authenticateTraced } from "./authenticator.js";
+import {
+  apiTokenAuthenticator,
+  authenticateTraced,
+  tokenScopesOf,
+} from "./authenticator.js";
 import { withUser } from "./with-user.js";
 
 // Bearer PAT only — shared by the CSRF-exempt external surfaces (MCP, REST).
@@ -29,5 +33,5 @@ export async function authenticateBearer(
   const result = await authenticateTraced(ctx, bearerAuthenticator);
   if (!result) return null;
   const { id, email, role, meta } = result.user;
-  return withUser(ctx, { id, email, role, meta }, result.tokenScopes ?? null);
+  return withUser(ctx, { id, email, role, meta }, tokenScopesOf(result));
 }

@@ -37,7 +37,7 @@ interface Bundle {
 
 function stubAuthenticator(user: User): RequestAuthenticator {
   return {
-    authenticate: () => Promise.resolve({ user, tokenScopes: null }),
+    authenticate: () => Promise.resolve({ user, credential: "session" }),
   };
 }
 

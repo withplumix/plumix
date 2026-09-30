@@ -54,7 +54,9 @@ const contact = defineForm("contact", {
 });
 
 function stubAuthenticator(user: User): RequestAuthenticator {
-  return { authenticate: () => Promise.resolve({ user, tokenScopes: null }) };
+  return {
+    authenticate: () => Promise.resolve({ user, credential: "session" }),
+  };
 }
 
 async function harness(role: UserRole = "editor") {

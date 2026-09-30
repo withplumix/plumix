@@ -18,8 +18,8 @@ export type {
  * the row, returns the user. Same logic the dispatcher used inline
  * before this contract existed; isolating it here makes it swappable.
  *
- * Returns no `tokenScopes` — a browser session inherits the full role
- * caps. PAT-style scoping doesn't apply here.
+ * Resolves a `"session"` credential — a browser session inherits the full
+ * role caps. PAT-style scoping doesn't apply here.
  *
  * Pass the same policy as `auth.sessions` when composing this yourself;
  * the cookie's `Max-Age` follows that setting, so a mismatch here leaves
@@ -34,7 +34,7 @@ export function sessionAuthenticator(
       if (!token) return null;
       const validated = await validateSession(db, token, policy);
       if (!validated) return null;
-      return { user: validated.user };
+      return { user: validated.user, credential: "session" };
     },
     hasSession(request) {
       return readSessionCookie(request) !== null;
@@ -58,6 +58,27 @@ export function authenticateTraced(
     if (result) s.set("auth.user.id", result.user.id);
     return result;
   });
+}
+
+/**
+ * Resolve the caller through the request's configured authenticator, but only
+ * when they hold a session. An API-token caller, or a result naming any other
+ * credential kind, reads as anonymous. A surface that creates a credential or
+ * a session for the caller resolves them here (ADR 0024).
+ */
+export async function authenticateSession(
+  ctx: AppContext,
+): Promise<AuthResult | null> {
+  const result = await authenticateTraced(ctx, ctx.authenticator);
+  return result?.credential === "session" ? result : null;
+}
+
+/**
+ * The capability narrowing a result carries: an API token's scopes, or `null`
+ * (the user's role caps verbatim) for a session.
+ */
+export function tokenScopesOf(result: AuthResult): readonly string[] | null {
+  return result.credential === "api-token" ? result.tokenScopes : null;
 }
 
 /**
@@ -97,6 +118,7 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
       if (!validated) return null;
       return {
         user: validated.user,
+        credential: "api-token",
         // null = unrestricted (token inherits role caps); array =
         // narrow to that intersection. `auth.can()` enforces.
         tokenScopes: validated.token.scopes ?? null,
