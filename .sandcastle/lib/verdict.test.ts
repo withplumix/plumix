@@ -14,6 +14,7 @@ const snapshot = (
   openCodeScanningAlerts: [],
   unresolvedReviewThreads: [],
   changesRequestedBy: [],
+  requiredChecks: [],
   ...over,
 });
 
@@ -25,6 +26,48 @@ const run = (name: string, conclusion: string, status = "COMPLETED") => ({
 });
 
 describe("judgeQueuedPullRequest", () => {
+  test("a check main requires that never ran on the pull request is named, because no repair makes it run", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        isInMergeQueue: false,
+        autoMergeEnabled: true,
+        requiredChecks: ["Lint", "i18n ratchet"],
+        statusCheckRollup: [run("Lint", "SUCCESS")],
+      }),
+    );
+
+    expect(verdict).toEqual({
+      status: "missing-required-checks",
+      checks: ["i18n ratchet"],
+    });
+  });
+
+  test("a pull request whose checks have not been created yet is waited on", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        isInMergeQueue: false,
+        autoMergeEnabled: true,
+        requiredChecks: ["Lint"],
+        statusCheckRollup: [],
+      }),
+    );
+
+    expect(verdict.status).toBe("waiting");
+  });
+
+  test("a required check that ran and was skipped is not missing", () => {
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        isInMergeQueue: false,
+        autoMergeEnabled: true,
+        requiredChecks: ["Release gate"],
+        statusCheckRollup: [run("Release gate", "SKIPPED")],
+      }),
+    );
+
+    expect(verdict.status).toBe("waiting");
+  });
+
   test("a merged pull request is merged", () => {
     expect(judgeQueuedPullRequest(snapshot({ state: "MERGED" }))).toEqual({
       status: "merged",

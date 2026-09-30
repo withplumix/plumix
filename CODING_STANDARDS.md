@@ -114,7 +114,9 @@ End-to-end tests use Playwright, live in each package's `e2e/` folder, and run w
 A test has no branches or loops of its own, because a test that branches can pass on the branch
 that checked nothing. Use `it.each` to run one case per input. Cover the requirement the change
 serves and its edge cases, not the lines it touched. Assert on what the code did, not on what it
-called. A spy that shares the code's own assumption can't fail.
+called. A spy that shares the code's own assumption can't fail. Neither can a test whose
+assertion holds whatever the code does: if breaking the rule a test names leaves it green, rewrite
+it or delete it.
 
 Never change a test just to make it pass, because the test may be the only thing that's right. When
 you can't tell which side is wrong, stop and say so.

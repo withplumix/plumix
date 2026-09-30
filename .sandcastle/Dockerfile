@@ -52,13 +52,11 @@ RUN mkdir -p /home/agent/.pnpm-bin \
   && corepack prepare pnpm@10.33.0 --activate \
   && pnpm config set store-dir /home/agent/.pnpm-store
 
-# The plugin skills /ship composes (sentry-skills, mattpocock-skills). The repo's
+# The plugin skills the prompts compose (mattpocock-skills). The repo's
 # .claude/settings.json only declares them; a fresh container has no plugin cache,
 # and a headless run cannot answer the install prompt.
 COPY --chown=${AGENT_UID}:${AGENT_GID} mattpocock-skills.ref install-mattpocock-skills.sh /home/agent/.sandcastle-setup/
-RUN claude plugin marketplace add getsentry/skills --scope user \
-  && claude plugin install sentry-skills@sentry-skills --scope user -y \
-  && /home/agent/.sandcastle-setup/install-mattpocock-skills.sh /home/agent/.mattpocock-skills
+RUN /home/agent/.sandcastle-setup/install-mattpocock-skills.sh /home/agent/.mattpocock-skills
 
 WORKDIR /home/agent
 

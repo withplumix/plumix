@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
@@ -58,6 +58,35 @@ describe("usageFromSessionTranscripts", () => {
     expect(resumedPhase.outputTokens).toBe(70);
   });
 
+  test("bills the sub-agents a session spawned, which Claude Code writes beside it", () => {
+    const path = transcriptContaining(assistantLine(100));
+    const subagents = join(path.replace(/\.jsonl$/, ""), "subagents");
+    mkdirSync(subagents, { recursive: true });
+    writeFileSync(join(subagents, "agent-standards.jsonl"), assistantLine(40));
+    writeFileSync(join(subagents, "agent-spec.jsonl"), assistantLine(2));
+
+    const usage = usageFromSessionTranscripts([path], new Map());
+
+    expect(usage.outputTokens).toBe(142);
+  });
+
+  test("bills a resumed session's sub-agents only for what they wrote since the last phase", () => {
+    const linesAlreadyBilled = new Map<string, number>();
+    const path = transcriptContaining(assistantLine(100));
+    const subagents = join(path.replace(/\.jsonl$/, ""), "subagents");
+    mkdirSync(subagents, { recursive: true });
+    writeFileSync(join(subagents, "agent-first.jsonl"), assistantLine(40));
+
+    usageFromSessionTranscripts([path], linesAlreadyBilled);
+    writeFileSync(join(subagents, "agent-second.jsonl"), assistantLine(7));
+    const resumedPhase = usageFromSessionTranscripts(
+      [path],
+      linesAlreadyBilled,
+    );
+
+    expect(resumedPhase.outputTokens).toBe(7);
+  });
+
   test("counts a transcript named twice in one phase only once", () => {
     const path = transcriptContaining(assistantLine(100));
 
@@ -97,6 +126,17 @@ describe("notionalCostOf", () => {
 
     expect(notionalCostOf(millionCacheReads, "claude-opus-5-5")).toBe(0.2);
     expect(notionalCostOf(millionFreshInput, "claude-opus-5-5")).toBe(4);
+  });
+
+  test("prices the reviewer's model", () => {
+    const millionOutput = {
+      inputTokens: 0,
+      outputTokens: 1_000_000,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+    };
+
+    expect(notionalCostOf(millionOutput, "claude-sonnet-5-5")).toBe(10);
   });
 
   test("returns undefined for a model it has no rates for", () => {

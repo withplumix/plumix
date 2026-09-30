@@ -36,33 +36,29 @@ Never take an issue number from a branch or worktree name.
    bundle), find out how each consumer gets it today before you design.
 3. **Implement** with `mattpocock-skills:tdd`. The behaviours are the acceptance criteria, in
    order, one RED then GREEN per cycle. Do not ask the user to confirm them.
-4. **Review the work in progress.** Once the shape is real and the first cycles pass, send
-   both reviewers in one message, in parallel, and keep working while they run. One is an
-   agent that loads `sentry-skills:code-review` and reviews `git diff origin/main`, findings
-   only, told that files may change under it. The other is the `sentry-skills:code-simplifier`
-   agent on the touched files. Every finding becomes a new cycle. Run the pair again before the
-   final commit, and again for any follow-up commit.
-5. **Spec review.** Run `mattpocock-skills:code-review` against `origin/main`. Its Spec axis
-   reads the issue. Close every gap as a cycle. Name any criterion you could not meet in the
-   PR body.
-6. **Changeset** if a consumer of a published package would notice. AGENTS.md says which
+4. **Review.** Once the shape is real and the first cycles pass, run
+   `mattpocock-skills:code-review` against `origin/main`. Every Spec gap and every breach of
+   a documented rule becomes a new cycle; a baseline smell is your call.
+   Run it again before the final commit, and again for any follow-up commit. Name any
+   criterion you could not meet in the PR body.
+5. **Changeset** if a consumer of a published package would notice. AGENTS.md says which
    package and which bump.
-7. **Commit** with `sentry-skills:commit`. Use `Fixes #<N>` when every criterion is met,
-   otherwise `Refs #<N>`.
-8. **Push and PR.** Run the checks AGENTS.md lists before committing, plus `pnpm knip` and
+6. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use `Fixes #<N>` when
+   every criterion is met, otherwise `Refs #<N>`.
+7. **Push and PR.** Run the checks AGENTS.md lists before committing, plus `pnpm knip` and
    `pnpm i18n:check`. Add `pnpm test:e2e` when the change touches admin, render or e2e paths.
-   Push, then run `sentry-skills:pr-writer` and put the acceptance criteria in the body as a
-   ticked checklist.
-9. **Merge.** Run `gh pr merge <PR> --squash --auto`. The message "set by the merge queue" means
+   Push, then open the PR with a body that leads with `**Fixes #<N>**`, is written with
+   `mattpocock-skills:pr`, and ends with the acceptance criteria as a ticked checklist.
+8. **Merge.** Run `gh pr merge <PR> --squash --auto`. The message "set by the merge queue" means
    the queue accepted it. Wait with the Monitor tool or a ScheduleWakeup every few minutes.
-   A failing check: fix it as cycles, reviewers included, and push. `BLOCKED` with green
+   A failing check: fix it as cycles, review included, and push. `BLOCKED` with green
    checks: an unresolved review thread, resolve it. `CONFLICTING`: rebase on `origin/main`,
    push with `--force-with-lease=refs/heads/<branch>:<sha>`, queue again.
-10. **After the merge.** Confirm the issue closed. If every sub-issue of the parent is now
-    closed, close the parent with a comment listing the PRs. Run `git fetch -p origin` and
-    delete local branches merged into `origin/main`. Anything out of scope that came up
-    becomes one `needs-triage` issue in the to-tickets shape, never a "fix later" comment.
-11. **Report** the PR link, what you verified, and anything you deferred.
+9. **After the merge.** Confirm the issue closed. If every sub-issue of the parent is now
+   closed, close the parent with a comment listing the PRs. Run `git fetch -p origin` and
+   delete local branches merged into `origin/main`. Anything out of scope that came up
+   becomes one `needs-triage` issue in the to-tickets shape, never a "fix later" comment.
+10. **Report** the PR link, what you verified, and anything you deferred.
 
 ## PRD mode
 

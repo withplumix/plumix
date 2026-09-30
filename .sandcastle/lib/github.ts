@@ -299,6 +299,14 @@ export const queueForMerge = (pullRequest: number): void => {
   ]);
 };
 
+const checksMainRequires = (): readonly string[] =>
+  ghJson<string[]>([
+    "api",
+    `repos/${REPO_SLUG}/rules/branches/main`,
+    "--jq",
+    '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context]',
+  ]);
+
 const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
   const viewed = ghJson<{
     state: string;
@@ -337,6 +345,7 @@ const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
     isInMergeQueue: held.isInMergeQueue,
     autoMergeEnabled: viewed.autoMergeRequest !== null,
     openCodeScanningAlerts: openCodeScanningAlerts(pullRequest),
+    requiredChecks: checksMainRequires(),
     unresolvedReviewThreads: held.reviewThreads.nodes.flatMap(
       ({ id, isResolved, path, line, comments }) => {
         const [first] = comments.nodes;
@@ -468,6 +477,7 @@ const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT = 2;
+const SIGHTINGS_THAT_MEAN_A_REQUIRED_CHECK_NEVER_RUNS = 3;
 
 export const waitForMerge = async (
   pullRequest: number,
@@ -483,6 +493,7 @@ export const waitForMerge = async (
 ): Promise<MergeOutcome> => {
   const deadline = Date.now() + giveUpAfterMs;
   let outOfTheQueueSightings = 0;
+  let missingCheckSightings = 0;
 
   while (Date.now() < deadline) {
     const snapshot = snapshotOf(pullRequest);
@@ -491,6 +502,21 @@ export const waitForMerge = async (
 
     if (verdict.status === "merged" || verdict.status === "failed")
       return verdict;
+    missingCheckSightings =
+      verdict.status === "missing-required-checks"
+        ? missingCheckSightings + 1
+        : 0;
+    if (
+      verdict.status === "missing-required-checks" &&
+      missingCheckSightings >= SIGHTINGS_THAT_MEAN_A_REQUIRED_CHECK_NEVER_RUNS
+    ) {
+      return {
+        status: "failed",
+        reason: `main requires ${verdict.checks.join(", ")}, which never ran on it; the ruleset or the workflow that runs it needs a person`,
+        failingChecks: [],
+        needsAPerson: true,
+      };
+    }
     if (verdict.status === "left-the-queue") {
       outOfTheQueueSightings += 1;
       if (outOfTheQueueSightings >= SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT) {

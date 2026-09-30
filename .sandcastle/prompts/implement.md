@@ -13,15 +13,16 @@ that from what you write below.
    the area. When the change is consumed in more than one place (server, admin,
    editor, a second bundle), find out how each consumer gets it today.
 2. **Implement with `mattpocock-skills:tdd`.** The acceptance criteria are the
-   behaviours, in order, one RED then GREEN per cycle.
+   behaviours, in order, one RED then GREEN per cycle. The interfaces the ticket
+   names are the agreed seams; there is no one to confirm them with.
 3. **Changeset** if a consumer of a published package would notice. AGENTS.md says
    which package and which bump.
    **ADR**, if the work records one: use the number the ticket names. If it names
    none, use **{{NEXT_ADR}}**. Main, every open pull request and every open issue
    were checked for it, and no other lane of this run holds it, so do not pick a
    number of your own.
-4. **Commit** with `sentry-skills:commit`. Use `Fixes #{{TICKET}}` when every
-   criterion is met, otherwise `Refs #{{TICKET}}`.
+4. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
+   `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
 
 Do not run the full gate suite yourself. The harness runs format, test, e2e, i18n,
 knip and the changeset check after this phase and hands you any failure. Lint,
@@ -47,9 +48,11 @@ one or two paragraphs, or nothing at all if you are committing the work
 # Done
 
 End with the PR copy the harness will use. Everything between `body:` and the
-closing tag becomes the PR description verbatim, so write it for a reviewer: lead
-with `**Fixes #{{TICKET}}**`, give the acceptance criteria as a ticked checklist,
-and name anything you deferred, could not meet, or noticed as out of scope.
+closing tag becomes the PR description verbatim. Lead with
+`**Fixes #{{TICKET}}**`, then write the body with `mattpocock-skills:pr`: its
+Evidence is the test you watched fail and then pass. After it, give the
+acceptance criteria as a ticked checklist, and name anything you deferred,
+could not meet, or noticed as out of scope.
 
 <pr>
 title: <conventional-commit subject, lowercase after the colon>

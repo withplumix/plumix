@@ -125,3 +125,29 @@ export const agentPhaseRunner =
       throw error;
     }
   };
+
+const TIMES_TO_ASK_AGAIN = 2;
+const FIVE_MINUTES_IN_SECONDS = 300;
+
+export const readOrAskAgain = async <T>(
+  runAgentPhase: RunAgentPhase,
+  phase: string,
+  thinker: Thinker,
+  produced: Pick<sandcastle.SandboxRunResult, "stdout" | "iterations">,
+  read: (stdout: string) => T | null,
+  howToEmit: string,
+): Promise<T | null> => {
+  let latest = produced;
+  for (let ask = 1; ; ask += 1) {
+    const value = read(latest.stdout);
+    if (value !== null) return value;
+    const session = latest.iterations.at(-1)?.sessionId;
+    if (!session || ask > TIMES_TO_ASK_AGAIN) return null;
+    latest = await runAgentPhase(`${phase}:ask-again${ask}`, thinker, {
+      prompt: `The harness could not read the block your last message should have ended with. Change no file and make no commit; only emit the block again.\n\n${howToEmit}`,
+      resumeSession: session,
+      maxIterations: 1,
+      idleTimeoutSeconds: FIVE_MINUTES_IN_SECONDS,
+    });
+  }
+};
