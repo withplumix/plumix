@@ -31,7 +31,7 @@ Explicit code is often better than compact code.
 - Inline an abstraction that only renames an expression (`isNotEmpty(items)` is
   `items.length > 0`). Keep one that hides real logic or names a domain concept.
 - Give each function one concern. Merging two to save lines makes both harder to change.
-- Name things with the vocabulary in [`CONTEXT.md`](./CONTEXT.md).
+- Name things with the vocabulary in [`GLOSSARY.md`](./GLOSSARY.md).
 - Declare top-level functions with `function`, and give exported ones an explicit return type.
 
 A simplification changes how code reads, never what it does. Every output and behaviour stays the

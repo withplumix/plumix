@@ -144,7 +144,7 @@ Both baselines are removed when they're empty.
 - A consumer sees none of this. The `plumix/blocks*` subpaths re-point to core.
   `@plumix/blocks` leaves the fixed changeset group and is deprecated on npm.
 - The layer names are build vocabulary, not domain vocabulary (ADR 0001). They
-  live here and in `AGENTS.md`, not in `CONTEXT.md`.
+  live here and in `AGENTS.md`, not in `GLOSSARY.md`.
 - **When to revisit.** Splitting a layer into its own package is reconsidered
   only when something outside the `plumix` façade needs that layer alone, or a
   layer needs its own version. Once the layers are acyclic, extracting one is

@@ -31,7 +31,7 @@ Never take an issue number from a branch or worktree name.
    else is, stop. Every issue listed under `issues/<N>/dependencies/blocked_by` must be
    closed. If the branch name contains "claude", rename it with
    `git branch -m <type>/<short-desc>`.
-2. **Read before designing.** The ticket, its parent, `CONTEXT.md`, and any ADR in the area.
+2. **Read before designing.** The ticket, its parent, `GLOSSARY.md`, and any ADR in the area.
    When the change is consumed in more than one place (server, admin, editor, a second
    bundle), find out how each consumer gets it today before you design.
 3. **Implement** with `mattpocock-skills:tdd`. The behaviours are the acceptance criteria, in

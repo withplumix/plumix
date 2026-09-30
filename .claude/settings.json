@@ -6,7 +6,7 @@
         "repo": "getsentry/skills"
       }
     },
-    "mattpocock-skills": {
+    "mattpocock": {
       "source": {
         "source": "github",
         "repo": "mattpocock/skills"
@@ -15,6 +15,6 @@
   },
   "enabledPlugins": {
     "sentry-skills@sentry-skills": true,
-    "mattpocock-skills@mattpocock-skills": true
+    "mattpocock-skills@mattpocock": true
   }
 }

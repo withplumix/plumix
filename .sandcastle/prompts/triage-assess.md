@@ -17,7 +17,7 @@ commit — the harness does all of that from the block you emit below.
    test is what settles the claim and reading cannot — then
    `pnpm exec vitest run <path>` in the package (test:unit resolves to source,
    so nothing needs building).
-2. **Read `CONTEXT.md`, `AGENTS.md` and any ADR in the area** before judging what
+2. **Read `GLOSSARY.md`, `AGENTS.md` and any ADR in the area** before judging what
    the fix should look like.
 3. **Honour a decision already made.** Where an earlier round posted `## Triage
    Notes` and the maintainer has replied since, that reply is the answer. Treat

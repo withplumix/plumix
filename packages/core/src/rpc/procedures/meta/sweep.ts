@@ -27,7 +27,7 @@ export type MetaStore = (typeof META_STORES)[number];
 
 /**
  * One field key's unsettled values within one scope of a store — see
- * **unsettled value** in `CONTEXT.md`.
+ * **unsettled value** in `GLOSSARY.md`.
  */
 export interface UnsettledKeyCount {
   readonly store: MetaStore;

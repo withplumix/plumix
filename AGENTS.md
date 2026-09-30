@@ -163,4 +163,4 @@ The label for each triage role is in `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-One root `CONTEXT.md`, split by subheading, holds the domain vocabulary, and `docs/adr/` holds repo-wide decisions. There is no `CONTEXT-MAP.md` and no per-package glossary. ADR 0001 rejected both, because the vocabulary means the same thing in every package. See `docs/agents/domain.md`.
+One root `GLOSSARY.md`, split by subheading, holds the domain vocabulary, and `docs/adr/` holds repo-wide decisions. There is no `GLOSSARY-MAP.md` and no per-package glossary. ADR 0001 rejected both, because the vocabulary means the same thing in every package. See `docs/agents/domain.md`.
