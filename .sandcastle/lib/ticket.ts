@@ -135,13 +135,18 @@ export const readReviewTag = (stdout: string): Review | null => {
 const asLocation = ({ file, line }: ReviewItem): string =>
   `${file}${line ? `:${line}` : ""}`;
 
-const asFixBrief = (specGaps: readonly ReviewItem[]): string =>
-  specGaps
+const asFixBrief = (
+  specGaps: readonly ReviewItem[],
+  { title, body }: PullRequestCopy,
+): string =>
+  `${specGaps
     .map(
       (gap, index) =>
         `${index + 1}. ${asLocation(gap)} — ${gap.summary}\n   ${gap.why}`,
     )
-    .join("\n\n");
+    .join(
+      "\n\n",
+    )}\n\nThe PR description the harness will publish reads:\n\n<pr>\ntitle: ${title}\nbody:\n${body}\n</pr>\n\nWhen a gap is in that description, or your fix makes it wrong, end with the whole corrected <pr> block in the same shape. The harness publishes the last one you emit.`;
 
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
@@ -202,8 +207,13 @@ interface Declined {
   readonly notThisBranch: boolean;
 }
 
+interface FixResult {
+  readonly declined: Declined | null;
+  readonly pullRequestCopy: PullRequestCopy | null;
+}
+
 export interface Fixer {
-  readonly apply: (phase: string, brief: string) => Promise<Declined | null>;
+  readonly apply: (phase: string, brief: string) => Promise<FixResult>;
 }
 
 export const fixerFor = (
@@ -221,14 +231,23 @@ export const fixerFor = (
         resumeSession: sessionToResume,
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
-      if (fixed.commits.length > 0) return null;
+      const pullRequestCopy = readPullRequestTag(fixed.stdout);
+      if (fixed.commits.length > 0 || pullRequestCopy)
+        return { declined: null, pullRequestCopy };
       const notThisBranch = taggedBlock(fixed.stdout, "not-this-branch");
-      if (notThisBranch) return { reason: notThisBranch, notThisBranch: true };
+      if (notThisBranch)
+        return {
+          declined: { reason: notThisBranch, notThisBranch: true },
+          pullRequestCopy: null,
+        };
       return {
-        reason:
-          readDeclinedTag(fixed.stdout) ??
-          "the fixer changed nothing and gave no reason",
-        notThisBranch: false,
+        declined: {
+          reason:
+            readDeclinedTag(fixed.stdout) ??
+            "the fixer changed nothing and gave no reason",
+          notThisBranch: false,
+        },
+        pullRequestCopy: null,
       };
     },
   };
@@ -287,7 +306,7 @@ export const gatesUntilGreen = async (
       };
     }
     say(`--- fix gate failure (${fixRoundsUsed}/${MAX_GATE_FIX_ROUNDS}) ---`);
-    const declined = await fixer.apply(
+    const { declined } = await fixer.apply(
       `fix#${label}.${round}`,
       asGateFailureBrief(failure),
     );
@@ -363,7 +382,7 @@ export const shipTicket = async (
       };
     }
 
-    const pullRequestCopy =
+    let pullRequestCopy =
       (await readOrAskAgain(
         runAgentPhase,
         "implement",
@@ -407,10 +426,12 @@ export const shipTicket = async (
       say(
         `--- fix ${review.specGaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
       );
-      const declined = await fixer.apply(
+      const fixed = await fixer.apply(
         `fix#review${pass}`,
-        asFixBrief(review.specGaps),
+        asFixBrief(review.specGaps, pullRequestCopy),
       );
+      pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
+      const { declined } = fixed;
       if (declined) {
         return {
           status: "blocked",
