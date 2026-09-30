@@ -29,6 +29,17 @@ describe("retryALostGitConfigLock", () => {
     expect(run.calls()).toBe(3);
   });
 
+  test("a run that read the sandbox's git config while another run was writing it starts again", async () => {
+    const run = startingAfter([
+      'Command failed (exit 128): git config --global --add safe.directory "/home/agent/workspace"\nfatal: unknown error occurred while reading the configuration files',
+    ]);
+
+    await expect(
+      retryALostGitConfigLock(run.start, async () => {}),
+    ).resolves.toBe("ran");
+    expect(run.calls()).toBe(2);
+  });
+
   test("any other failure is handed on at once", async () => {
     const run = startingAfter(["claude-code exited with code 1"]);
 
