@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { JsonObject, JsonValue } from "../json.js";
@@ -545,6 +545,149 @@ describe("REST API — plugin resource seam", () => {
       bearerGet("/_plumix/api/v1/system/diag/privileged", secret),
     );
     expect(ok.status).toBe(200);
+  });
+});
+
+describe("REST API — plugin resource binding", () => {
+  const boundHandler = vi.fn(
+    ({
+      entryType,
+      entry,
+    }: {
+      entryType: { name: string };
+      entry: { id: number };
+    }) => ({ type: entryType.name, id: entry.id }),
+  );
+  const bindingPlugin = definePlugin("test-binding", (ctx) => {
+    ctx.registerRestResource({
+      path: "/{collection}/{entry}/probe",
+      auth: "public",
+      output: v.object({ type: v.string(), id: v.number() }),
+      handler: boundHandler,
+    });
+    ctx.registerRestResource({
+      path: "/system/echo/{entry_id}/raw",
+      auth: "public",
+      input: v.object({ entry_id: v.string() }),
+      output: v.object({ input: v.record(v.string(), v.string()) }),
+      handler: ({ input }: { input: { entry_id: string } }) => ({ input }),
+    });
+  });
+
+  function bindingHarness(): Promise<DispatcherHarness> {
+    return restHarness({ config: { plugins: [blog, catalog, bindingPlugin] } });
+  }
+
+  async function publishedEntry(h: DispatcherHarness, type = "post") {
+    const author = await h.factory.user.create({ role: "author" });
+    return h.factory.entry.create({
+      type,
+      status: "published",
+      authorId: author.id,
+    });
+  }
+
+  test("binds the collection's entry type and the entry to the handler", async () => {
+    const h = await bindingHarness();
+    const post = await publishedEntry(h);
+
+    const res = await h.dispatch(
+      apiGet(`/_plumix/api/v1/posts/${String(post.id)}/probe`),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ type: "post", id: post.id });
+  });
+
+  test("an unknown collection is core's 404 and the handler never runs", async () => {
+    const h = await bindingHarness();
+    const post = await publishedEntry(h);
+    boundHandler.mockClear();
+
+    const res = await h.dispatch(
+      apiGet(`/_plumix/api/v1/bogus/${String(post.id)}/probe`),
+    );
+    const core = await h.dispatch(apiGet("/_plumix/api/v1/bogus"));
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual(await core.json());
+    expect(boundHandler).not.toHaveBeenCalled();
+  });
+
+  test("a taxonomy's collection name does not bind an entry type", async () => {
+    const h = await bindingHarness();
+    const post = await publishedEntry(h);
+
+    const res = await h.dispatch(
+      apiGet(`/_plumix/api/v1/categories/${String(post.id)}/probe`),
+    );
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ data: { kind: "collection" } });
+  });
+
+  test("an entry of another collection's type answers as a missing one", async () => {
+    const h = await bindingHarness();
+    const book = await publishedEntry(h, "book");
+    boundHandler.mockClear();
+
+    const mismatched = await h.dispatch(
+      apiGet(`/_plumix/api/v1/posts/${String(book.id)}/probe`),
+    );
+    const missing = await h.dispatch(
+      apiGet("/_plumix/api/v1/posts/999999/probe"),
+    );
+
+    expect(mismatched.status).toBe(404);
+    expect(await mismatched.json()).toEqual(await missing.json());
+    expect(boundHandler).not.toHaveBeenCalled();
+  });
+
+  test("an entry binds for a principal that may read it, and only that one", async () => {
+    const h = await bindingHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const draft = await h.factory.entry.create({
+      type: "post",
+      status: "draft",
+      authorId: author.id,
+    });
+    const { secret } = await mintPat(h, { role: "editor" });
+    const path = `/_plumix/api/v1/posts/${String(draft.id)}/probe`;
+
+    const anonymous = await h.dispatch(apiGet(path));
+    const editor = await h.dispatch(bearerGet(path, secret));
+
+    expect(anonymous.status).toBe(404);
+    expect(editor.status).toBe(200);
+    expect(await editor.json()).toEqual({ type: "post", id: draft.id });
+  });
+
+  test("a path without reserved segments hands its input over untouched", async () => {
+    const h = await bindingHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/system/echo/42/raw"));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ input: { entry_id: "42" } });
+  });
+
+  test("the spec documents both bound segments as path params", async () => {
+    const h = await bindingHarness();
+
+    const spec = (await (
+      await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"))
+    ).json()) as {
+      paths: Record<
+        string,
+        { get?: { parameters?: { name: string; in: string }[] } }
+      >;
+    };
+
+    const params = spec.paths["/{collection}/{entry}/probe"]?.get?.parameters;
+    expect(params?.filter((p) => p.in === "path").map((p) => p.name)).toEqual([
+      "collection",
+      "entry",
+    ]);
   });
 });
 

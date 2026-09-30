@@ -362,10 +362,13 @@ export interface PluginSetupContextBase {
    * Unlike `registerRoute` (a raw Request handler under the plugin's own
    * prefix), this is an oRPC resource that merges into the public REST router
    * and appears automatically in `openapi.json`. `path` is relative to the API
-   * prefix; core enforces `auth` before the handler runs. Path collisions
+   * prefix; core enforces `auth` before the handler runs, then binds the
+   * reserved `{collection}` and `{entry}` segments (ADR 0020). Path collisions
    * (plugin↔plugin or plugin↔core) are rejected at boot.
    */
-  registerRestResource(options: RestResourceOptions): void;
+  registerRestResource<Path extends string>(
+    options: RestResourceOptions<Path>,
+  ): void;
 
   registerAdminPage(options: AdminPageOptions): void;
   /**

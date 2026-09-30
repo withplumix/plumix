@@ -14,7 +14,7 @@ import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
 import {
-  commentCollectionParamsSchema,
+  COMMENTS_REST_PATH,
   commentsEnvelopeSchema,
   createCommentsRestHandler,
 } from "./server/rest.js";
@@ -122,9 +122,8 @@ export function comments(options: CommentsConfig = {}) {
         handler: createListHandler(config),
       });
       ctx.registerRestResource({
-        path: "/{type}/{id}/comments",
+        path: COMMENTS_REST_PATH,
         auth: "public",
-        input: commentCollectionParamsSchema,
         output: commentsEnvelopeSchema,
         handler: createCommentsRestHandler(config),
       });

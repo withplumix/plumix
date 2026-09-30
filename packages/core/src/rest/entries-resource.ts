@@ -1,7 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { RegisteredEntryType } from "../plugin/manifest.js";
-import type { RestErrors } from "./errors.js";
+import type { RestErrors } from "./contract/errors.js";
 import type { PublicEntry } from "./schemas.js";
 import { EntryReadError } from "../entries/errors.js";
 import { findReadableEntry, listEntryRows } from "../entries/read-service.js";
@@ -15,7 +15,7 @@ import { readPagination } from "./schemas.js";
 // existence of unreadable content stays hidden. `undefined` for a
 // non-EntryReadError, which is unexpected: the caller rethrows it for the
 // dispatcher to surface as a 500.
-function entryNotFound(error: unknown, errors: RestErrors): Error | undefined {
+export function entryNotFound(error: unknown, errors: RestErrors): Error | undefined {
   if (error instanceof EntryReadError) {
     return errors.NOT_FOUND({ data: { kind: "entry" } });
   }

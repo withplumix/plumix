@@ -1,6 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RegisteredTermTaxonomy } from "../plugin/manifest.js";
-import type { RestErrors } from "./errors.js";
+import type { RestErrors } from "./contract/errors.js";
 import type { PublicTerm } from "./schemas.js";
 import { TermReadError } from "../terms/errors.js";
 import { getTerm, listTerms } from "../terms/read-service.js";

@@ -34,6 +34,10 @@ A single classification value inside a taxonomy (one category, one tag).
 The named grouping a term belongs to (`category`, `tag`, …), scoped to entry types.
 _Avoid_: termTaxonomy (that is the code identifier; the domain word is taxonomy)
 
+**Collection**:
+The plural name by which the REST API addresses a public entry type or taxonomy (`posts`, `categories`).
+_Avoid_: rest_base, type (for the URL segment)
+
 **Slug**:
 The URL-safe identifier of an entry (unique per type) or term (unique per taxonomy).
 A term is addressed by its slug alone; the ancestors in a nested term URL are

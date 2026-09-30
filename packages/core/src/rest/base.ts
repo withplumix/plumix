@@ -1,7 +1,7 @@
 import { os } from "@orpc/server";
 
 import type { AppContext } from "../context/app-context.js";
-import { REST_ERRORS } from "./errors.js";
+import { REST_ERRORS } from "./contract/errors.js";
 
 /**
  * The REST request context: the resolved principal context plus whether it came

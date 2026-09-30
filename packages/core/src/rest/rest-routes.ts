@@ -30,7 +30,7 @@ export function routesOverlap(a: RestRoute, b: RestRoute): boolean {
 }
 
 // Core's reserved routes. Core owns the entire 1- and 2-segment collection
-// space, so plugin resources must nest deeper (e.g. `/{type}/{id}/comments`).
+// space, so plugin resources must nest deeper (e.g. `/{collection}/{entry}/comments`).
 export const CORE_REST_ROUTES: readonly RestRoute[] = [
   { method: "GET", path: "/{collection}" },
   { method: "GET", path: "/{collection}/{id}" },

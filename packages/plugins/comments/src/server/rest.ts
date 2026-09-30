@@ -1,4 +1,4 @@
-import type { AppContext } from "plumix/plugin";
+import type { RestResourceHandlerArgs } from "plumix/plugin";
 import { sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -15,10 +15,8 @@ import { renderCommentBody } from "./render-body.js";
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 20;
 
-export const commentCollectionParamsSchema = v.object({
-  type: v.string(),
-  id: v.string(),
-});
+/** Where the resource sits; core binds both segments before the handler runs. */
+export const COMMENTS_REST_PATH = "/{collection}/{entry}/comments";
 
 // Output schema = the public allowlist. Author email, IP, user-agent, the
 // moderation status, and meta never appear — only these fields leave.
@@ -65,19 +63,22 @@ function pageUrl(url: URL, page: number): string {
 }
 
 /**
- * `GET /_plumix/api/v1/{type}/{id}/comments` — a flat, offset-paginated list of
- * the entry's displayed thread (the comments the site shows, bounded by
- * `maxDepth`), each carrying `parentId` so clients build the thread. Comments of an entry that isn't a published, comment-enabled one
- * resolve to an empty page (existence stays hidden, no 403/404 to probe).
+ * `GET /_plumix/api/v1/{collection}/{entry}/comments` — a flat, offset-paginated
+ * list of the entry's displayed thread (the comments the site shows, bounded by
+ * `maxDepth`), each carrying `parentId` so clients build the thread. Core binds
+ * the entry, so a collection or id that names no readable entry of that
+ * collection's type never reaches here. An entry that isn't published and open
+ * to anonymous visitors answers the same `NOT_FOUND`, so existence stays
+ * hidden; one whose type has commenting off resolves to an empty page.
  */
 export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
   return async ({
-    input,
     context,
-  }: {
-    input: v.InferOutput<typeof commentCollectionParamsSchema>;
-    context: AppContext;
-  }): Promise<CommentsEnvelope> => {
+    entry,
+    errors,
+  }: RestResourceHandlerArgs<
+    typeof COMMENTS_REST_PATH
+  >): Promise<CommentsEnvelope> => {
     const url = new URL(context.request.url);
     const page = clampInt(
       url.searchParams.get("page"),
@@ -104,11 +105,14 @@ export function createCommentsRestHandler(config: ResolvedCommentsConfig) {
       },
     });
 
-    const entryId = Number(input.id);
-    if (!Number.isInteger(entryId) || entryId < 1) return envelope([], false);
-
+    const entryId = entry.id;
     const resolved = await resolveCommentableEntry(context, entryId, config);
-    if (!resolved.ok) return envelope([], false);
+    if (!resolved.ok) {
+      if (resolved.reason === "entry_not_found") {
+        throw errors.NOT_FOUND({ data: { kind: "entry" } });
+      }
+      return envelope([], false);
+    }
 
     // Over-fetch one to detect a next page without a separate COUNT.
     const rows = await context.db.all<DisplayedCommentRow>(sql`

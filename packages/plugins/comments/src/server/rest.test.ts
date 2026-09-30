@@ -1,3 +1,4 @@
+import { definePlugin } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
@@ -13,6 +14,22 @@ import {
   testBlog,
 } from "../test/harness.js";
 import { loadThread } from "./load-thread.js";
+
+/** {@link testBlog} plus a second public type, so `pages` is a known collection. */
+const blogWithPages = definePlugin("test_blog_pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      rewrite: { slug: "posts" },
+    });
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      rewrite: { slug: "pages" },
+    });
+  },
+});
 
 function restHarness(blog = testBlog): Promise<Harness> {
   return harnessWith(
@@ -35,8 +52,16 @@ interface Envelope {
   readonly links: { self: string; next?: string; prev?: string };
 }
 
-function commentsUrl(entryId: number, query = ""): string {
-  return `https://cms.example/_plumix/api/v1/posts/${entryId}/comments${query}`;
+function commentsUrl(entryId: number | string, query = ""): string {
+  return collectionCommentsUrl("posts", entryId, query);
+}
+
+function collectionCommentsUrl(
+  collection: string,
+  entryId: number | string,
+  query = "",
+): string {
+  return `https://cms.example/_plumix/api/v1/${collection}/${String(entryId)}/comments${query}`;
 }
 
 describe("comments REST resource", () => {
@@ -67,6 +92,20 @@ describe("comments REST resource", () => {
     expect(body.meta).toMatchObject({ page: 1, per_page: 20 });
   });
 
+  test("a collection that doesn't match the entry's type is 404", async () => {
+    const h = await restHarness(blogWithPages);
+    const { id: entryId } = await seedPost(h);
+    await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId, status: "approved", bodyMd: "on a post" });
+
+    const res = await h.dispatch(
+      new Request(collectionCommentsUrl("pages", entryId)),
+    );
+
+    expect(res.status).toBe(404);
+  });
+
   test("serves a comment's createdAt as an ISO-8601 string", async () => {
     const h = await restHarness();
     const { id: entryId } = await seedPost(h);
@@ -82,24 +121,44 @@ describe("comments REST resource", () => {
     expect(new Date(served).getTime()).toBe(comment.createdAt.getTime());
   });
 
-  test("returns nothing for an entry whose type gates anonymous readers", async () => {
+  // What a request naming no entry a stranger may see answers, whichever way
+  // it fails, so the answers can be compared for sameness.
+  async function notFoundAnswer(h: Harness, url: string) {
+    const res = await h.dispatch(new Request(url));
+    return { status: res.status, body: (await res.json()) as unknown };
+  }
+
+  test("an entry a stranger can't see answers exactly as a missing one", async () => {
+    const h = await restHarness();
+    const { id: draftId } = await seedPost(h, { status: "draft" });
+    await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId: draftId, status: "approved", bodyMd: "hidden" });
+
+    const missing = await notFoundAnswer(h, commentsUrl(999_999));
+
+    expect(missing.status).toBe(404);
+    expect(await notFoundAnswer(h, commentsUrl(draftId))).toEqual(missing);
+    expect(await notFoundAnswer(h, commentsUrl("abc"))).toEqual(missing);
+    expect(await notFoundAnswer(h, commentsUrl(0))).toEqual(missing);
+  });
+
+  test("an entry whose type gates anonymous readers answers as a missing one", async () => {
     // The REST resource is public and default-deny reaches only as far as
-    // the route; the entry behind it carries its own gate, and an empty
-    // envelope is the same answer a missing entry gets.
+    // the route; the entry behind it carries its own gate.
     const h = await restHarness(gatedBlog);
     const { id: entryId } = await seedPost(h);
     await commentFactory
       .transient({ db: h.db })
       .create({ entryId, status: "approved", bodyMd: "members only" });
 
-    const res = await h.dispatch(new Request(commentsUrl(entryId)));
+    const gated = await notFoundAnswer(h, commentsUrl(entryId));
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as Envelope;
-    expect(body.data).toEqual([]);
+    expect(gated.status).toBe(404);
+    expect(gated).toEqual(await notFoundAnswer(h, commentsUrl(999_999)));
   });
 
-  test("returns nothing for a published revision row's id", async () => {
+  test("a published revision row's id answers as a missing one", async () => {
     const h = await harnessWith(
       { entryTypes: REVISION_TYPES_ENABLED },
       { config: { api: { enabled: true } } },
@@ -109,11 +168,46 @@ describe("comments REST resource", () => {
       .transient({ db: h.db })
       .create({ entryId: revision.id, status: "approved", bodyMd: "snap" });
 
-    const res = await h.dispatch(new Request(commentsUrl(revision.id)));
+    const answer = await notFoundAnswer(h, commentsUrl(revision.id));
+
+    expect(answer.status).toBe(404);
+    expect(answer).toEqual(await notFoundAnswer(h, commentsUrl(999_999)));
+  });
+
+  test("an unknown collection is core's unknown-collection 404", async () => {
+    const h = await restHarness();
+    const { id: entryId } = await seedPost(h);
+
+    const res = await h.dispatch(
+      new Request(collectionCommentsUrl("bogus", entryId)),
+    );
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({
+      code: "NOT_FOUND",
+      data: { kind: "collection" },
+    });
+  });
+
+  test("an entry whose type has commenting off resolves to an empty page", async () => {
+    const h = await restHarness(blogWithPages);
+    const user = await h.factory.user.create({});
+    const page = await h.factory.entry.create({
+      type: "page",
+      title: "Page",
+      authorId: user.id,
+      status: "published",
+    });
+    await commentFactory
+      .transient({ db: h.db })
+      .create({ entryId: page.id, status: "approved", bodyMd: "off" });
+
+    const res = await h.dispatch(
+      new Request(collectionCommentsUrl("pages", page.id)),
+    );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Envelope;
-    expect(body.data).toEqual([]);
+    expect(((await res.json()) as Envelope).data).toEqual([]);
   });
 
   test("strips comment PII and moderation fields", async () => {
@@ -315,19 +409,6 @@ describe("comments REST resource", () => {
     expect(page2.links.next).toBeUndefined();
   });
 
-  test("comments of an unpublished entry resolve to an empty page", async () => {
-    const h = await restHarness();
-    const { id: entryId } = await seedPost(h, { status: "draft" });
-    await commentFactory
-      .transient({ db: h.db })
-      .create({ entryId, status: "approved", bodyMd: "hidden" });
-
-    const res = await h.dispatch(new Request(commentsUrl(entryId)));
-
-    expect(res.status).toBe(200);
-    expect(((await res.json()) as Envelope).data).toEqual([]);
-  });
-
   test("the resource appears in the generated openapi.json", async () => {
     const h = await restHarness();
 
@@ -335,8 +416,17 @@ describe("comments REST resource", () => {
       new Request("https://cms.example/_plumix/api/v1/openapi.json"),
     );
 
-    const doc = (await res.json()) as { paths: Record<string, unknown> };
-    expect(doc.paths).toHaveProperty("/{type}/{id}/comments");
+    const doc = (await res.json()) as {
+      paths: Record<
+        string,
+        { get?: { parameters?: { name: string; in: string }[] } }
+      >;
+    };
+    const params = doc.paths["/{collection}/{entry}/comments"]?.get?.parameters;
+    expect(params?.filter((p) => p.in === "path").map((p) => p.name)).toEqual([
+      "collection",
+      "entry",
+    ]);
   });
 
   test("the spec documents a comment's createdAt as a date-time string", async () => {
@@ -364,9 +454,8 @@ describe("comments REST resource", () => {
       >;
     };
     const envelope =
-      doc.paths["/{type}/{id}/comments"]?.get?.responses?.["200"]?.content?.[
-        "application/json"
-      ]?.schema;
+      doc.paths["/{collection}/{entry}/comments"]?.get?.responses?.["200"]
+        ?.content?.["application/json"]?.schema;
     expect(envelope?.properties?.data?.items?.properties?.createdAt).toEqual({
       type: "string",
       format: "date-time",
