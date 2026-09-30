@@ -20,10 +20,11 @@ same check right again.
 ## What this means
 
 - **Implicit, by reserved name.** A resource opts in by naming the segment
-  `{collection}` or `{entry}` in its `path`; there is no `bind:` option. The
-  names are the ones core's routes and the GLOSSARY already use, so a path
-  that says `{entry}` and receives something other than an entry would be the
-  surprise. A plugin that wants a raw id names the segment anything else.
+  `{collection}` or `{entry}` in its `path`; there is no `bind:` option.
+  `{collection}` is the name core's own routes give that segment
+  (`rest/router.ts`) and `{entry}` is the GLOSSARY's word for what it names, so
+  a path that says `{entry}` and receives something other than an entry would
+  be the surprise. A plugin that wants a raw id names the segment anything else.
 - **Scoped, with one answer.** When the path has both segments, the entry must
   be of the collection's type. A missing entry, an unreadable one, one of
   another type, and an id that isn't a positive integer all answer the same

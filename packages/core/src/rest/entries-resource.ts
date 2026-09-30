@@ -15,7 +15,10 @@ import { readPagination } from "./schemas.js";
 // existence of unreadable content stays hidden. `undefined` for a
 // non-EntryReadError, which is unexpected: the caller rethrows it for the
 // dispatcher to surface as a 500.
-export function entryNotFound(error: unknown, errors: RestErrors): Error | undefined {
+export function entryNotFound(
+  error: unknown,
+  errors: RestErrors,
+): Error | undefined {
   if (error instanceof EntryReadError) {
     return errors.NOT_FOUND({ data: { kind: "entry" } });
   }
