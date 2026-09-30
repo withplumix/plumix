@@ -551,7 +551,7 @@ async function dispatchPublicRoute(
       request: ctx.request,
       segment,
       intentKind: intent?.kind ?? null,
-      // A custom archive caches only when it opted in via `registerArchiveType
+      // An archive type caches only when it opted in via `registerArchiveType
       // ({ cacheable: true })`. Resolved here so the pure decision layer stays
       // free of the registry lookup.
       customArchiveCacheable:

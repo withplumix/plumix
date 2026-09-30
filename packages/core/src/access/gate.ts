@@ -1,8 +1,8 @@
 /**
  * The hard gate — wiring the pure access resolution into the public render
  * path. {@link policyForMatch} finds the policy attached to a matched route
- * (the entry's per-entry choice for a single intent, the entry-type default for
- * an archive, the route-level policy for a custom archive, else none); the
+ * (the entry's per-entry choice for an `entry` intent, the entry-type default for
+ * an `entryType` intent, the route-level policy for an archive type, else none); the
  * dispatcher resolves it against the loaded principal once (reading the segment
  * for the cache key), and
  * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302

@@ -25,8 +25,8 @@ interface CacheableRequest {
   readonly intentKind: RouteIntent["kind"];
   /**
    * For an `archiveType` (plugin-registered) archive, whether it opted into CDN
-   * caching via `registerArchiveType({ cacheable: true })`. Core can't know a
-   * custom archive's content dependencies, so it caches only on this opt-in.
+   * caching via `registerArchiveType({ cacheable: true })`. Core can't know an
+   * archive type's content dependencies, so it caches only on this opt-in.
    * Ignored for the built-in intents, whose cacheability is fixed by
    * {@link CACHEABLE_INTENTS}.
    */
@@ -152,7 +152,7 @@ export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
   if (req.segment !== "anonymous" && !req.canKeySegments) {
     return "segment-unsupported";
   }
-  // A custom archive caches only on its explicit opt-in; the built-in intents
+  // An archive type caches only on its explicit opt-in; the built-in intents
   // are fixed by CACHEABLE_INTENTS.
   const cacheable =
     req.intentKind === "archiveType"

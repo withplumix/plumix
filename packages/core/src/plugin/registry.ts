@@ -527,7 +527,7 @@ export interface RegisteredRewriteRule {
   readonly registeredBy: string | null;
 }
 
-/** The render payload a custom-archive resolver produces, or `null` for a 404. */
+/** The render payload an archive-type resolver produces, or `null` for a 404. */
 export interface CustomArchiveResolution {
   readonly data: ArchiveTypeData;
   readonly title: string;
@@ -593,7 +593,7 @@ export interface ArchiveTypeOptions {
   readonly priority?: number;
   /**
    * Opt this archive's anonymous GET renders into the built-in CDN.
-   * Off by default: core can't know a custom archive's content dependencies,
+   * Off by default: core can't know an archive type's content dependencies,
    * so caching without a tag contribution would risk stale pages. An archive
    * that declares `entries` needs nothing further — core tags it with the
    * types its query can list. One that resolves its own payload pairs this
