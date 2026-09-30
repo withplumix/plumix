@@ -5,8 +5,10 @@ Review the work on this branch and improve it. You did not write it.
 Run `mattpocock-skills:code-review` with fixed point `{{BASE}}`. Its spec is
 issue #{{TICKET}}, below, together with the PR description the harness will
 publish for this branch. No PR exists yet, so a criterion about what the PR
-records is met in that description or nowhere. The skill only reports; its
-findings are your worklist.
+records is met in that description or nowhere. Follow the skill as written:
+its Standards and Spec reviews run as two sub-agents in parallel, so neither
+axis sees the other's reasoning, and you wait for both before reading the diff
+yourself. The skill only reports; its findings are your worklist.
 
 !`gh issue view {{TICKET}} --json number,title,body,comments`
 
@@ -24,15 +26,19 @@ as the ticket pins it, and put your disagreement in `notes`.
 - **Anything that looks breakable** — a tricky condition, an unchecked
   assumption, an edge the tests skip: write a test that tries to break it. If it
   breaks, fix it.
-- **Standards findings:** fix every breach of a documented rule. A baseline
-  smell is a judgement call: fix it, or leave it and say why in `notes`. Never
-  change what the code does, only how it does it.
-- **Spec findings:** do not fix them. A missing criterion or scope the ticket
-  did not ask for goes in `specGaps`; the implementer closes it and you review
-  again.
+- **Standards findings:** fix every breach of a documented rule, even one the
+  PR description admits. A baseline smell is a judgement call: fix it, or leave
+  it and say why in `notes`. Never change what the code does, only how it does
+  it.
+- **Spec findings:** do not fix them. A missing criterion, one met in form but
+  not in effect, or scope the ticket did not ask for goes in `specGaps`; the
+  implementer closes it and you review again.
 
-A rule about how the work was done, such as test-first order, leaves nothing in
-a diff, so it is never a finding.
+`notes` hold only the smells you left and your disagreements with a pinned
+decision. A rule about how the work was done, such as test-first order, leaves
+nothing in a diff, so it is never a finding. Nor is an empty changeset: the
+harness requires one whenever a published package's files change, and empty
+means no release.
 
 Run the test files you touched and a targeted typecheck of their packages. The
 harness runs every gate after this phase. Commit your changes as one commit, by
