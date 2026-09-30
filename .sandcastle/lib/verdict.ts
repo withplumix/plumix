@@ -39,12 +39,17 @@ export interface PullRequestSnapshot {
   readonly openCodeScanningAlerts: readonly string[];
   readonly unresolvedReviewThreads: readonly ReviewThread[];
   readonly changesRequestedBy: readonly string[];
+  readonly requiredChecks: readonly string[];
 }
 
 export type QueueVerdict =
   | MergeOutcome
   | { readonly status: "waiting" }
-  | { readonly status: "left-the-queue" };
+  | { readonly status: "left-the-queue" }
+  | {
+      readonly status: "missing-required-checks";
+      readonly checks: readonly string[];
+    };
 
 export const judgeQueuedPullRequest = (
   pullRequest: PullRequestSnapshot,
@@ -86,6 +91,14 @@ export const judgeQueuedPullRequest = (
   if (checksStillRunning) return { status: "waiting" };
 
   if (pullRequest.isInMergeQueue) return { status: "waiting" };
+
+  const ran = new Set(pullRequest.statusCheckRollup.map(({ name }) => name));
+  const neverRan = pullRequest.requiredChecks.filter(
+    (check) => !ran.has(check),
+  );
+  if (pullRequest.statusCheckRollup.length > 0 && neverRan.length > 0) {
+    return { status: "missing-required-checks", checks: neverRan };
+  }
 
   const byPeople = pullRequest.unresolvedReviewThreads.filter(
     ({ byABot }) => !byABot,
