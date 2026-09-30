@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
-import type { EntryQuery } from "../../entries/query.js";
+import type { EntryQuery } from "../../entries/contract/query.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { EntryPage } from "./entry-listing.js";
 import { entryQuery } from "../../entries/query.js";

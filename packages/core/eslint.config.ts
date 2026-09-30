@@ -108,5 +108,5 @@ export default defineConfig(
   layerDirection(),
   // The capability vocabulary — core's baked-in `entry:post:*` set and the
   // spellers every reference resolves through.
-  capabilityDefiners(["src/auth/contract/capability.ts"]),
+  capabilityDefiners(["src/access/contract/capability.ts"]),
 );

@@ -1,5 +1,5 @@
 import type { AppContext } from "../context/app-context.js";
-import type { EntryQuery } from "../entries/query.js";
+import type { EntryQuery } from "../entries/contract/query.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RouteIntent, RouteRule } from "./contract/intent.js";
 import {

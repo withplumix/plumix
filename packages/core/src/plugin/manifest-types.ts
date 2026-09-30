@@ -10,7 +10,7 @@
 import type {
   PostCapabilityAction,
   TermTaxonomyCapabilityAction,
-} from "../auth/contract/capability.js";
+} from "../access/contract/capability.js";
 import type {
   BlockNode,
   BlockVariation,
@@ -35,7 +35,7 @@ import type {
 import {
   spellEntryCapability,
   spellTermCapability,
-} from "../auth/contract/capability.js";
+} from "../access/contract/capability.js";
 import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
 
 // Wire shape intentionally equals DashboardWidgetOptions (minus

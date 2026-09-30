@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
+import { entryCapability } from "../../../access/contract/capability.js";
+import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
 import {
   anonymousPolicy,
   authenticatedPolicy,
 } from "../../../access/policy.js";
-import { entryCapability } from "../../../auth/contract/capability.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";

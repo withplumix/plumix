@@ -3,7 +3,7 @@ import * as v from "valibot";
 import type { AppContext } from "../../../context/app-context.js";
 import type { RegisteredLookupAdapter } from "../../../plugin/lookup.js";
 import type { GatedLookupErrors } from "../../errors.js";
-import { resolveCapability } from "../../../auth/contract/capability.js";
+import { resolveCapability } from "../../../access/contract/capability.js";
 
 // `kind` matches the discriminator a reference field carries on its
 // `referenceTarget.kind`. Valid kinds are checked against the

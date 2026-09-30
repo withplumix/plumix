@@ -5,7 +5,7 @@ import type {
   TermGetInput,
   TermListInput,
 } from "../rpc/procedures/term/schemas.js";
-import { spellTermCapability } from "../auth/contract/capability.js";
+import { spellTermCapability } from "../access/contract/capability.js";
 import { and, asc, eq, isNull, like } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { resolveTermMeta } from "../rpc/procedures/term/meta.js";

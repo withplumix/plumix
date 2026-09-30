@@ -3,11 +3,11 @@ import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { EntryEditErrors } from "../../../entries/editability.js";
 import type { JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
+import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
+import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import {

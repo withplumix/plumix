@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { Entry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
-import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
+import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";

@@ -1,4 +1,4 @@
-import { spellTermCapability } from "../../../auth/contract/capability.js";
+import { spellTermCapability } from "../../../access/contract/capability.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";

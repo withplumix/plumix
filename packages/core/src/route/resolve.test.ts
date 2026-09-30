@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
-import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
+import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { eq, ne } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";

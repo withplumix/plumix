@@ -1,7 +1,7 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
+import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { canReadEntry } from "../../../entries/visibility.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";

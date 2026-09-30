@@ -47,4 +47,4 @@ export type {
   EntryOrderColumn,
   EntryOrderDirection,
   EntryQuery,
-} from "../entries/query.js";
+} from "../entries/contract/query.js";

@@ -7,13 +7,13 @@ import type {
   EntryMenuIcon,
   InfrastructureSlot,
 } from "./manifest.js";
+import { entryCapability } from "../access/contract/capability.js";
 import {
   anonymousPolicy,
   definePolicy,
   grant,
   redirectToLogin,
 } from "../access/policy.js";
-import { entryCapability } from "../auth/contract/capability.js";
 import { defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";

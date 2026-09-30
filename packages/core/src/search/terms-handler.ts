@@ -4,7 +4,7 @@ import type {
   SearchGroup,
   SearchResultItem,
 } from "./admin-search.js";
-import { spellTermCapability } from "../auth/contract/capability.js";
+import { spellTermCapability } from "../access/contract/capability.js";
 import { and, asc, inArray } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";

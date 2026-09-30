@@ -1,12 +1,12 @@
+import type { Capability } from "../access/contract/capability.js";
 import type {
   AppContext,
   AuthenticatedAppContext,
   AuthenticatedUser,
 } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { Capability } from "./contract/capability.js";
+import { resolveCapability } from "../access/contract/capability.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { resolveCapability } from "./contract/capability.js";
 import { getCapabilityResolver } from "./rbac.js";
 
 export function makeAuthCan(

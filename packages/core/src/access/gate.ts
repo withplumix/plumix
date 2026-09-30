@@ -24,7 +24,7 @@ import { withBasePath } from "../base-path.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
 import { redirectTo } from "../runtime/http.js";
-import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
+import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { resolveAccess } from "./policy.js";
 
 // Where `redirectToLogin()` sends a visitor when the operator sets no override.

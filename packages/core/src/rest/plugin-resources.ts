@@ -8,7 +8,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestErrors } from "./contract/errors.js";
-import { resolveCapability } from "../auth/contract/capability.js";
+import { resolveCapability } from "../access/contract/capability.js";
 import { findReadableEntry } from "../entries/read-service.js";
 import { base } from "./base.js";
 import { entryNotFound } from "./entries-resource.js";

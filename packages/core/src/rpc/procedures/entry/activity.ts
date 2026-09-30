@@ -1,9 +1,9 @@
 import { inArray } from "drizzle-orm";
 import * as v from "valibot";
 
+import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { users } from "../../../db/schema/users.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { entryCapabilityByName } from "../../../entries/capabilities.js";
 import { listActiveAutosaves } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";

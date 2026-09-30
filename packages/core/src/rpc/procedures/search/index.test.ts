@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AuthenticatedRpcHarness } from "../../../test/rpc.js";
-import { deriveTermTaxonomyCapabilities } from "../../../auth/rbac.js";
+import { deriveTermTaxonomyCapabilities } from "../../../access/contract/rbac.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import {
   toRegisteredEntryType,

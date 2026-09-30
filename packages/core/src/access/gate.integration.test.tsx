@@ -12,7 +12,7 @@ import { fallback, forArchiveType } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
-import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
+import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import {
   anonymousPolicy,
   authenticatedPolicy,

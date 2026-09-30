@@ -5,6 +5,8 @@ import type { AppContext } from "../context/app-context.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
+import { resolveCapability } from "../access/contract/capability.js";
+import { canAccessAdmin } from "../access/contract/rbac.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 import {
   gateToResponse,
@@ -16,14 +18,12 @@ import {
   authenticateTraced,
   requestHasSession,
 } from "../auth/authenticator.js";
-import { resolveCapability } from "../auth/contract/capability.js";
 import {
   hasCsrfHeader,
   hasMatchingOrigin,
   isLoopbackOrigin,
 } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
-import { canAccessAdmin } from "../auth/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import {

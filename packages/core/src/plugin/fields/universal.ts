@@ -1,4 +1,4 @@
-import type { Capability } from "../../auth/contract/capability.js";
+import type { Capability } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonValue } from "../../json.js";
 import type { MetaFieldCondition } from "./condition.js";

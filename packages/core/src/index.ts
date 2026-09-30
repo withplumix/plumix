@@ -165,13 +165,13 @@ export {
   entryCapability,
   resolveCapability,
   termCapability,
-} from "./auth/contract/capability.js";
+} from "./access/contract/capability.js";
 export type {
   Capability,
   CapabilityNamespaces,
   EntryCapability,
   TermCapability,
-} from "./auth/contract/capability.js";
+} from "./access/contract/capability.js";
 // The entry edit gate (#2416), so a plugin asks whether a caller may edit a
 // row instead of assembling an `entry:<type>:*` string and missing the
 // namespace a pooled type gates under.

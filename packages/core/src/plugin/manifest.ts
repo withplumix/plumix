@@ -30,4 +30,4 @@ export { isFieldVisible } from "./fields/condition.js";
 // request-scoped runtime and crashes at admin module-init).
 export type { NamedTemplateChoice } from "../route/contract/named-template.js";
 export { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
-export { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
+export { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";

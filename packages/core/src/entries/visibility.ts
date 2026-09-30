@@ -5,13 +5,13 @@ import type {
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import { and, eq, inArray, isNotNull, or, sql } from "../db/index.js";
-import { entries } from "../db/schema/entries.js";
-import { publicEntryTypeNames } from "../plugin/registry.js";
 import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
-} from "./capabilities.js";
+} from "../access/contract/entry-capabilities.js";
+import { and, eq, inArray, isNotNull, or, sql } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
+import { publicEntryTypeNames } from "../plugin/registry.js";
 
 export type EntryViewer = Pick<AppContext, "user" | "auth" | "plugins">;
 
