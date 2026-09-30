@@ -4,31 +4,14 @@ import { adminUiConfig, baseConfig } from "@plumix/eslint-config/base";
 import { i18nStrictConfig } from "@plumix/eslint-config/i18n";
 import { reactConfig } from "@plumix/eslint-config/react";
 
-// `lingui/no-unlocalized-strings` is on for `src/**` by default. The
-// list below opts surfaces out until their strings are wrapped — wrap
-// a surface, drop its entry. The list lives in `.mjs` so
-// `scripts/ratchet-drift-check.mjs` can import it without a TS
-// compile step; both consumers stay in lockstep.
-import { STRICT_UNWRAPPED_FILES } from "./scripts/strict-unwrapped-files.mjs";
-
+// `lingui/no-unlocalized-strings` is on for all of `src/**`. A string that
+// is never copy is exempted by its call site or property name in
+// `i18nStrictOverrides`, not by file.
 export default defineConfig(
   baseConfig,
   adminUiConfig,
   reactConfig,
   i18nStrictConfig,
-  // ESLint flat config rejects `files: []`; the conditional spread
-  // omits the override block when the seed shrinks to empty.
-  ...(STRICT_UNWRAPPED_FILES.length > 0
-    ? [
-        {
-          // Only `no-unlocalized-strings` relaxes here; macro-misuse
-          // rules from `i18nStrictConfig` (no-trans-inside-trans, …)
-          // still apply.
-          files: STRICT_UNWRAPPED_FILES,
-          rules: { "lingui/no-unlocalized-strings": "off" },
-        },
-      ]
-    : []),
   {
     // Vendored shadcn/ui primitives — kept verbatim so `shadcn diff` upgrades
     // don't merge-conflict. Lint these like we lint node_modules: we don't.

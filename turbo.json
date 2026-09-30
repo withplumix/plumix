@@ -303,16 +303,6 @@
       // pull — the floor under every commit, including README-only ones.
       // Verified: deleting a msgid from every locale still fails on a warm cache.
       "dependsOn": ["plumix#build"]
-    },
-    "i18n:ratchet:check": {
-      // Re-runs eslint over `STRICT_UNWRAPPED_FILES` with
-      // `lingui/no-unlocalized-strings` forced back to error, so a file that
-      // has since been wrapped fails until it leaves the denylist.
-      //
-      // `^topo` is load-bearing, not ordering: the verdict depends on the
-      // shared eslint config, which lives in another package. Without it a
-      // cached pass would survive a rule change that should have moved it.
-      "dependsOn": ["^topo"]
     }
   },
   "globalPassThroughEnv": [
