@@ -51,6 +51,17 @@ session; the report only has to make the case.
 
 # The report
 
+The maintainer starts a grilling session from this report, so every claim you
+have not checked costs them time to undo.
+
+- A difference between call sites is not a defect until you have looked for a
+  reason it is deliberate: a comment beside it, a test that pins it, the commit
+  that introduced it, or WordPress behaving the same way. Report a deliberate
+  difference as a question for the maintainer, not as evidence.
+- Before you claim a consequence ("the audit log never records X"), follow it to
+  every subscriber that could handle it, and say what does happen as well as
+  what does not.
+
 Markdown, in this order:
 
 ```markdown
@@ -63,7 +74,8 @@ The modules involved, with paths.
 ### Problem
 
 The friction, in `GLOSSARY.md` and `codebase-design` vocabulary. Include the
-deletion test's result.
+deletion test's result. Keep what you can show is broken apart from differences
+that may be intended, and list the second kind as questions.
 
 ### Solution
 
@@ -79,7 +91,8 @@ A fenced `mermaid` diagram showing the shallow modules and the deepened one.
 
 ### Recommendation strength
 
-`Strong`, `Worth exploring` or `Speculative`, and why.
+`Strong`, `Worth exploring` or `Speculative`, and why, weighed on what you can
+show is broken, not on the questions.
 
 ## Candidates considered
 
