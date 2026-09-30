@@ -1,5 +1,5 @@
 # The mattpocock/skills commit that Sandcastle, the architecture review and
-# `pnpm skills:sync` install, through install-mattpocock-skills.sh.
+# `npm run skills:sync` install, through install-mattpocock-skills.sh.
 #
 # Before bumping it, read upstream's diff since this commit and check:
 # - skills removed or renamed, against the names this repo references;

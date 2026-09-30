@@ -7,6 +7,7 @@
     "ship": "tsx ship.ts",
     "triage": "tsx triage.ts",
     "architecture-review": "tsx architecture-review.ts",
+    "skills:sync": "./install-mattpocock-skills.sh \"$HOME/.cache/plumix/mattpocock-skills\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
