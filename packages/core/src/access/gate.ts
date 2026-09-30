@@ -16,9 +16,9 @@
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
+import type { ResolvedMeta } from "../meta/contract/bags.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
-import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";

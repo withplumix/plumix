@@ -1,7 +1,7 @@
 {
   "src/access/gate.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/auth/config.ts": {
@@ -71,7 +71,7 @@
   },
   "src/config.ts": {
     "boundaries/dependencies": {
-      "count": 8
+      "count": 7
     }
   },
   "src/db/libsql.ts": {
@@ -106,7 +106,7 @@
   },
   "src/entries/read-service.ts": {
     "boundaries/dependencies": {
-      "count": 5
+      "count": 4
     }
   },
   "src/i18n/index.ts": {
@@ -126,7 +126,7 @@
   },
   "src/images/role-images.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 3
     }
   },
   "src/mcp/dispatch.ts": {
@@ -136,7 +136,7 @@
   },
   "src/plugin/build-manifest.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/plugin/define.ts": {
@@ -149,14 +149,9 @@
       "count": 1
     }
   },
-  "src/plugin/manifest-types.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/plugin/manifest.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 1
     }
   },
   "src/plugin/register.ts": {
@@ -166,7 +161,7 @@
   },
   "src/plugin/registry.ts": {
     "boundaries/dependencies": {
-      "count": 6
+      "count": 3
     }
   },
   "src/rest/build-handler.ts": {
@@ -201,12 +196,7 @@
   },
   "src/route/render/resolve-entry-list.ts": {
     "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/route/render/resolved-entry.ts": {
-    "boundaries/dependencies": {
-      "count": 1
+      "count": 2
     }
   },
   "src/route/resolve.ts": {
@@ -254,17 +244,7 @@
       "count": 1
     }
   },
-  "src/template-registry.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/terms/read-service.ts": {
-    "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/theme.ts": {
     "boundaries/dependencies": {
       "count": 2
     }

@@ -5,7 +5,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
 import type { EntryQuery } from "../../entries/query.js";
-import type { EntryListing } from "./entry-listing.js";
+import type { EntryListing } from "../contract/entry-listing.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
@@ -14,7 +14,7 @@ import type {
   FrontPageData,
   ResolvedAuthor,
   TaxonomyData,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { desc, eq } from "../../db/index.js";
 import { entries } from "../../db/schema/entries.js";

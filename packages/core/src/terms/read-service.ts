@@ -1,6 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type { Term } from "../db/schema/terms.js";
-import type { WithResolvedMeta } from "../rpc/meta/core.js";
+import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import type {
   TermGetInput,
   TermListInput,

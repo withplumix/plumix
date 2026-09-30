@@ -7,10 +7,13 @@ export * from "./register.js";
 export * from "./setup-context.js";
 export type {
   ImageRoleField,
-  ImageRoleName,
   ImageRoleOptions,
-  ImageRoles,
   ImageRoleScope,
   RegisteredImageRole,
 } from "./image-roles.js";
+export type {
+  ImageRoleName,
+  ImageRoles,
+  ResolvedImage,
+} from "../images/contract/role-images.js";
 export { imageRoleFields } from "./image-roles.js";

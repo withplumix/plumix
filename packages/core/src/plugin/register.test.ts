@@ -31,7 +31,7 @@ declare module "../template.js" {
   }
 }
 
-declare module "./image-roles.js" {
+declare module "../images/contract/role-images.js" {
   interface ImageRoles {
     "dup-role": true;
   }

@@ -22,8 +22,8 @@ import type {
 import type { PlumixConfig } from "../config.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
-import type { NamedTemplateChoice } from "../route/render/template-builders.js";
-import type { ResolvedMeta } from "../rpc/meta/core.js";
+import type { ResolvedMeta } from "../meta/contract/bags.js";
+import type { NamedTemplateChoice } from "../route/contract/named-template.js";
 import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
 import type {
   EntryMenuIcon,

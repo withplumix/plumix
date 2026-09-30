@@ -16,6 +16,7 @@ import type {
   ThemeDescriptor,
   TierMatchRule,
 } from "../../theme.js";
+import type { NamedTemplateChoice } from "../contract/named-template.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
@@ -25,14 +26,14 @@ import type {
   FrontPageData,
   SearchData,
   TaxonomyData,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 import type {
   AuthorTargets,
   DateTargets,
   EntryTypeTargets,
   TermTaxonomyTargets,
 } from "./rule-selectors.js";
-import { NAMED_TEMPLATE_META_KEY } from "../contract/named-template-meta-key.js";
+import { NAMED_TEMPLATE_META_KEY } from "../contract/named-template.js";
 import {
   archiveTypeTargets,
   authorTargets,
@@ -144,12 +145,6 @@ export function templateRules(
   return Array.isArray(templates)
     ? (templates as readonly TemplateRule[])
     : [fallback(templates as TemplateEntry<TemplateData>)];
-}
-
-/** An author-selectable `named` template, surfaced to the editor picker. */
-export interface NamedTemplateChoice {
-  readonly id: string;
-  readonly label: string;
 }
 
 /**

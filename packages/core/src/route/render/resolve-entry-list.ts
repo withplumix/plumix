@@ -4,13 +4,13 @@ import type { AppContext } from "../../context/app-context.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
 import type { User } from "../../db/schema/users.js";
-import type { RoleImages } from "../../images/role-images.js";
-import type { ResolvedMeta } from "../../rpc/meta/core.js";
+import type { RoleImages } from "../../images/contract/role-images.js";
+import type { ResolvedMeta } from "../../meta/contract/bags.js";
 import type {
   ResolvedAuthor,
   ResolvedEntry,
   ResolvedTerm,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 import { expandShortcodes, isEntryContent } from "../../blocks/index.js";
 import { userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";

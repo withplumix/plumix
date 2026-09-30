@@ -6,7 +6,7 @@ import type { JsonObject } from "../json.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
-import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template-meta-key.js";
+import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
 import { RevisionRepositoryError } from "./errors.js";
 import {
   AUTOSAVE_TYPE,

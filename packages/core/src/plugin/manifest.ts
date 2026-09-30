@@ -28,6 +28,6 @@ export { isFieldVisible } from "./fields/condition.js";
 // Re-exported on the manifest subpath so the precompiled admin editor can read
 // the reserved key without reaching through the root barrel (which pulls the
 // request-scoped runtime and crashes at admin module-init).
-export type { NamedTemplateChoice } from "../route/render/template-builders.js";
-export { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
+export type { NamedTemplateChoice } from "../route/contract/named-template.js";
+export { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
 export { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";

@@ -8,7 +8,7 @@ import type { DebugPanelsInput } from "./dev/debug-panels/config.js";
 import type { DebugHistoryStoreOptions } from "./dev/request-history/store.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
-import type { RedirectRule } from "./route/redirects.js";
+import type { RedirectRule } from "./route/contract/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
   CdnProvider,

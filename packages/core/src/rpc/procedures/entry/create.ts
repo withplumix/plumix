@@ -1,5 +1,5 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
-import type { ResolvedMeta } from "../../meta/core.js";
+import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
 import {

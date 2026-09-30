@@ -4,7 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry, EntryStatus } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
-import type { WithResolvedMeta } from "../rpc/meta/core.js";
+import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import type {
   EntryGetInput,
   EntryListInput,

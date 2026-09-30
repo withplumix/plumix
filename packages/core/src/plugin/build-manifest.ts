@@ -18,7 +18,7 @@ import type {
 } from "../blocks/index.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n } from "../i18n/locale-registry.js";
-import type { NamedTemplateChoice } from "../route/render/template-builders.js";
+import type { NamedTemplateChoice } from "../route/contract/named-template.js";
 import type { PluginI18nSlot } from "./define.js";
 import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
 import type { MetaBoxField } from "./fields/meta-box-field.js";

@@ -5,33 +5,24 @@ import * as v from "valibot";
 
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
+import type { ResolvedMeta } from "../meta/contract/bags.js";
 import type {
   MetaBoxField,
   ReferenceTarget,
 } from "../plugin/fields/meta-box-field.js";
 import type {
   ImageRoleField,
-  ImageRoleName,
   ImageRoleScope,
   ImageRoleScopeIndex,
 } from "../plugin/image-roles.js";
-import type { HydratedReference, ResolvedImage } from "../plugin/lookup.js";
+import type { HydratedReference } from "../plugin/lookup.js";
 import type { PluginRegistry } from "../plugin/registry.js";
-import type { ResolvedMeta } from "../rpc/meta/core.js";
+import type { ResolvedImage, RoleImages } from "./contract/role-images.js";
 import { nonEmpty } from "../non-empty.js";
 import { imageRolesInScope } from "../plugin/image-roles.js";
 import { extractStringId } from "../rpc/meta/coerce.js";
 import { hydrateReferenceGroup, referenceGroupKey } from "../rpc/meta/core.js";
 import { referenceTargetOf } from "../rpc/meta/field-pipeline.js";
-
-/**
- * Every image role an entity carries, keyed by role name. A role is present
- * when the entity's scope declares a field in it, and `null` when no field in
- * it resolved to an image — an orphaned reference, or one the adapter refuses.
- */
-export type RoleImages = Readonly<
-  Partial<Record<ImageRoleName, ResolvedImage | null>>
->;
 
 export interface ProjectImageRolesOptions {
   /**

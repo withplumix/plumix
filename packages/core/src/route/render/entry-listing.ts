@@ -1,7 +1,7 @@
 import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
-import type { Pagination, ResolvedEntry } from "./resolved-entry.js";
+import type { EntryListing } from "../contract/entry-listing.js";
 import { typeTag } from "../../cdn/contract/tags.js";
 import { sql } from "../../db/index.js";
 import {
@@ -37,12 +37,6 @@ export function listingCdnTags(
 ): readonly string[] {
   const types = entryQueryTypeNames(query) ?? publicEntryTypeNames(plugins);
   return types.map(typeTag);
-}
-
-/** One page of an archive's entries, resolved the way a theme reads them. */
-export interface EntryListing {
-  readonly entries: readonly ResolvedEntry[];
-  readonly pagination: Pagination;
 }
 
 /** A listing, plus the one thing only the reader can say about the page asked for. */

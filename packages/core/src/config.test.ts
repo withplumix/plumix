@@ -6,7 +6,7 @@ import type {
   PlumixConfigInput,
 } from "./config.js";
 import type { ResolvedI18n } from "./i18n/locale-registry.js";
-import type { RedirectRule } from "./route/redirects.js";
+import type { RedirectRule } from "./route/contract/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
   DatabaseAdapter,

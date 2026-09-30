@@ -71,16 +71,6 @@
   },
   {
     "rule": "environment",
-    "from": "plugin/manifest.ts",
-    "to": "route/render/rule-selectors.ts"
-  },
-  {
-    "rule": "environment",
-    "from": "plugin/manifest.ts",
-    "to": "route/render/template-builders.ts"
-  },
-  {
-    "rule": "environment",
     "from": "rpc/validation.ts",
     "to": "rpc/meta/field-messages.ts"
   },

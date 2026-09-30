@@ -2,27 +2,10 @@
 // so a reader asks for "the entry's featured image" instead of walking meta
 // boxes for it. See ADR 0004.
 
+import type { ImageRoleName } from "../images/contract/role-images.js";
 import type { MetaBoxField } from "./fields/meta-box-field.js";
 import type { PluginRegistry } from "./registry.js";
 import { PluginDefinitionError } from "./errors.js";
-
-/**
- * The image roles a field may carry, keyed by name. Core declares `featured`
- * and `ogImage`; a plugin or theme that registers another with
- * `registerImageRole` augments this interface so `.role()` accepts the name:
- *
- * ```ts
- * declare module "plumix" {
- *   interface ImageRoles { hero: true }
- * }
- * ```
- */
-export interface ImageRoles {
-  featured: true;
-  ogImage: true;
-}
-
-export type ImageRoleName = keyof ImageRoles;
 
 export interface ImageRoleOptions {
   /** Whether a scope may carry at most one field in this role. */

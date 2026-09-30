@@ -14,7 +14,7 @@ import { messages as ukMessages } from "@plumix/core/locales/admin-bar-uk";
 import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
 
 import type { CompiledCatalog } from "../blocks/index.js";
-import type { ResolvedMeta } from "../rpc/meta/core.js";
+import type { ResolvedMeta } from "../meta/contract/bags.js";
 import { resolveMessage } from "../blocks/index.js";
 
 export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";

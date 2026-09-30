@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import type { Capability } from "../../auth/contract/capability.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { JsonObject, JsonValue } from "../../json.js";
+import type { ResolvedMeta } from "../../meta/contract/bags.js";
 import type { MetaFieldValues } from "../../plugin/fields/condition.js";
 import type {
   HydratedReference,
@@ -55,38 +56,11 @@ import {
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
 /**
- * A meta bag on the read side. Not JSON: `decodeMetaBag` hands a
- * `.returns("date")` field back as a `Date`, and `resolveMetaBags` hydrates a
- * reference's stored id into whatever its lookup adapter returns, so the bag
- * stays open. The stored counterpart is {@link StoredMeta}.
- */
-export type ResolvedMeta = Record<string, unknown>;
-
-/**
- * A meta bag on the stored side — the `meta` JSON column as the row holds it.
- * Not JSON: the values are, but a targeted rule replaces this property with
- * `StoredMetaOf`, which is not. That fold types a field the author did not
- * mark `.required()` as `T | undefined`, and a `json()` or `richtext()` field
- * as `unknown` — neither has an arm in `JsonValue`, so it cannot narrow a
- * `JsonObject`. Open here is what buys the typed read there, as
- * {@link ResolvedMeta} does for `meta`.
- */
-export type StoredMeta = Record<string, unknown>;
-
-/**
  * Meta as a caller sends it: object-shaped and nothing more. Not JSON — not
  * yet: values stay unproven until the field pipeline normalizes them, and it
  * is that pass which turns the bag into the stored `JsonObject`.
  */
 export type MetaInput = Readonly<Record<string, unknown>>;
-
-/**
- * A row as a read surface hands it back: the stored row with `meta` replaced
- * by its {@link ResolvedMeta} counterpart.
- */
-export type WithResolvedMeta<T> = Omit<T, "meta"> & {
-  readonly meta: ResolvedMeta;
-};
 
 /**
  * Validated meta patch produced by `sanitizeMetaInput`. Values in

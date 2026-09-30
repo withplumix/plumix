@@ -3,7 +3,7 @@ import type {
   ResolvedAuthor,
   ResolvedEntry,
   ResolvedTerm,
-} from "./resolved-entry.js";
+} from "../contract/resolved-entry.js";
 
 /**
  * What a page *is*, normalized across every render payload: a consumer that

@@ -1,5 +1,5 @@
 import type { AppContext } from "../context/app-context.js";
-import type { ImageRoleName } from "../plugin/image-roles.js";
+import type { ImageRoleName } from "../images/contract/role-images.js";
 import type { LookupAdapter } from "../plugin/lookup.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
 import { inArray } from "../db/index.js";

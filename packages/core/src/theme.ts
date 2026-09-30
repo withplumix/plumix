@@ -6,7 +6,7 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "./blocks/index.js";
-import type { RedirectRule } from "./route/redirects.js";
+import type { RedirectRule } from "./route/contract/redirects.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
@@ -17,7 +17,7 @@ import type {
   FrontPageData,
   SearchData,
   TaxonomyData,
-} from "./route/render/resolved-entry.js";
+} from "./route/contract/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
 import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";

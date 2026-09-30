@@ -2,7 +2,7 @@ import type {
   CustomArchiveData,
   ResolvedEntry,
   ResolvedTerm,
-} from "./route/render/resolved-entry.js";
+} from "./route/contract/resolved-entry.js";
 
 /**
  * Augmentable map of registered entry-type names to their projection types.
