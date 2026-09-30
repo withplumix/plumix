@@ -32,7 +32,6 @@ import { emitBlockStyleCss } from "./styles/style-emitter.js";
 export interface BlockContext {
   readonly entry: HydratedEntry | null;
   readonly siteSettings: SiteSettings;
-  readonly theme: { readonly id: string } | null;
   /** Name of the immediate parent block, or `null` at the document root. */
   readonly parent: string | null;
   /** 0 at root, incremented for each container traversal. */
@@ -200,7 +199,6 @@ const ENGLISH_ONLY = createMessageResolver({});
 export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   entry: null,
   siteSettings: Object.freeze({}),
-  theme: null,
   parent: null,
   depth: 0,
   locale: "en",

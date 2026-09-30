@@ -18,7 +18,6 @@ export { validateEntryContent as validateContent } from "../validate-content.js"
 const EMPTY_CONTEXT: BlockContext = {
   entry: null,
   siteSettings: {},
-  theme: null,
   parent: null,
   depth: 0,
   locale: "en",
