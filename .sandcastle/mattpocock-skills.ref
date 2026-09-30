@@ -1,0 +1,9 @@
+# The mattpocock/skills commit that Sandcastle, the architecture review and
+# `pnpm skills:sync` install, through install-mattpocock-skills.sh.
+#
+# Before bumping it, read upstream's diff since this commit and check:
+# - skills removed or renamed, against the names this repo references;
+# - conventions renamed (e.g. CONTEXT.md became GLOSSARY.md), against our docs;
+# - the "### 1. Explore" section of improve-codebase-architecture, in full,
+#   since the architecture review runs it word for word.
+d81f3a183412e71a5b1e84ca21bc1a35eea03a60

@@ -6,6 +6,7 @@
   "scripts": {
     "ship": "tsx ship.ts",
     "triage": "tsx triage.ts",
+    "architecture-review": "tsx architecture-review.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

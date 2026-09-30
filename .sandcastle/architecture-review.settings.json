@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Agent",
+      "Skill",
+      "Bash(git log:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)"
+    ]
+  }
+}

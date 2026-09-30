@@ -160,6 +160,10 @@ AI tools are welcome here; much of Plumix is written with them. Two rules hold f
 
 Coding agents working in this repo follow [`AGENTS.md`](AGENTS.md) and [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
+The agent skills from [mattpocock/skills](https://github.com/mattpocock/skills) are pinned to one commit in [`.sandcastle/mattpocock-skills.ref`](.sandcastle/mattpocock-skills.ref), which Sandcastle and CI install. Run `pnpm skills:sync` to use the same commit locally, and again after the pin moves. To move it, open a pull request that changes the ref, after working through the checklist in that file.
+
+Once a week the [architecture review](.github/workflows/architecture-review.yml) files one report labelled `source:architecture-review`. Nothing acts on it until a maintainer does; the report ends with how to take it forward or decline it.
+
 ## Dependencies and third-party code
 
 ### Adding a dependency

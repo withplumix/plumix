@@ -27,6 +27,7 @@
     "postinstall": "sherif",
     "publint": "turbo run publint",
     "release": "pnpm run build && changeset publish",
+    "skills:sync": ".sandcastle/install-mattpocock-skills.sh \"$HOME/.cache/plumix/mattpocock-skills\"",
     "smoke": "node .github/scripts/smoke.mjs",
     "test": "turbo run test:unit test:build",
     "test:unit": "turbo run test:unit --concurrency=2",

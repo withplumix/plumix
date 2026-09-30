@@ -55,17 +55,10 @@ RUN mkdir -p /home/agent/.pnpm-bin \
 # The plugin skills /ship composes (sentry-skills, mattpocock-skills). The repo's
 # .claude/settings.json only declares them; a fresh container has no plugin cache,
 # and a headless run cannot answer the install prompt.
-# mattpocock-skills installs from a clone at a pinned commit: a marketplace ref
-# must be a branch or tag, its main ships between tags without bumping the
-# plugin version, and a changed pin is what rebuilds this layer.
-ARG MATTPOCOCK_SKILLS_REF=d81f3a183412e71a5b1e84ca21bc1a35eea03a60
-RUN git init -q /home/agent/.mattpocock-skills \
-  && git -C /home/agent/.mattpocock-skills fetch -q --depth 1 https://github.com/mattpocock/skills.git $MATTPOCOCK_SKILLS_REF \
-  && git -C /home/agent/.mattpocock-skills checkout -q FETCH_HEAD \
-  && claude plugin marketplace add getsentry/skills --scope user \
-  && claude plugin marketplace add /home/agent/.mattpocock-skills --scope user \
+COPY --chown=${AGENT_UID}:${AGENT_GID} mattpocock-skills.ref install-mattpocock-skills.sh /home/agent/.sandcastle-setup/
+RUN claude plugin marketplace add getsentry/skills --scope user \
   && claude plugin install sentry-skills@sentry-skills --scope user -y \
-  && claude plugin install mattpocock-skills@mattpocock --scope user -y
+  && /home/agent/.sandcastle-setup/install-mattpocock-skills.sh /home/agent/.mattpocock-skills
 
 WORKDIR /home/agent
 
