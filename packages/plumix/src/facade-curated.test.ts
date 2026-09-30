@@ -802,6 +802,22 @@ test("plumix/plugin offers core's page-data resolvers, not the row assembler", (
   expect("buildResolvedEntries" in plugin).toBe(false);
 });
 
+// ADR 0025: a page kind is named by its subject, and a theme's generic tier
+// builders and guards are spelled with it.
+test("plumix/theme names its tier builders and guards by page kind", () => {
+  const theme = loaded(facade, "./theme");
+  expect(
+    ["entryType", "term", "isEntryType", "isTerm", "isArchiveType"].filter(
+      (name) => !(name in theme),
+    ),
+  ).toEqual([]);
+  expect(
+    ["archive", "taxonomy", "isArchive", "isTaxonomy", "isCustom"].filter(
+      (name) => name in theme,
+    ),
+  ).toEqual([]);
+});
+
 describe("core's barrel", () => {
   const withheld = CORE_WITHHELD.flatMap((group) => group.names);
   const core = loaded(sources, "@plumix/core");

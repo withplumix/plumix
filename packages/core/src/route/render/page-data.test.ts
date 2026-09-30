@@ -1,7 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
+import type { ResolvedNode } from "../contract/resolved-node.js";
+import type { ListingPageTarget } from "./page-data.js";
 import { definePlugin } from "../../plugin/define.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { createTestContext } from "../../test/context.js";
@@ -98,10 +100,10 @@ describe("resolveListingPage", () => {
     await seedPost(h, { title: "Front matter" });
 
     const page = await resolveListingPage(contextFor(h), {
-      kind: "front-page",
+      kind: "frontPage",
     });
 
-    expect(page?.node).toEqual({ kind: "front-page" });
+    expect(page?.node).toEqual({ kind: "frontPage" });
     expect(page?.data.kind).toBe("frontPage");
     expect(page?.data.pagination.total).toBe(1);
   });
@@ -135,12 +137,12 @@ describe("resolveListingPage", () => {
     await seedPost(h);
 
     const page = await resolveListingPage(contextFor(h), {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 
     expect(page?.node).toEqual({
-      kind: "content-type-archive",
+      kind: "entryType",
       entryType: "post",
     });
     expect(page?.title).toBe("Posts");
@@ -151,7 +153,7 @@ describe("resolveListingPage", () => {
 
     expect(
       await resolveListingPage(contextFor(h), {
-        kind: "archive",
+        kind: "entryType",
         entryType: "note",
       }),
     ).toBeNull();
@@ -162,7 +164,7 @@ describe("resolveListingPage", () => {
 
     expect(
       await resolveListingPage(contextFor(h), {
-        kind: "archive",
+        kind: "entryType",
         entryType: "secret",
       }),
     ).toBeNull();
@@ -208,7 +210,7 @@ describe("resolveListingPage", () => {
       kind: "term",
       id: term.id,
     });
-    if (page?.data.kind !== "taxonomy") throw new Error("expected a term page");
+    if (page?.data.kind !== "term") throw new Error("expected a term page");
 
     expect(page.data.term.meta.launchedOn).toEqual(
       new Date("2026-01-01T00:00:00.000Z"),
@@ -404,7 +406,7 @@ describe("resolveListingPage", () => {
     await seedPost(h);
 
     const page = await resolveListingPage(contextFor(h), {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 
@@ -463,11 +465,17 @@ describe("resolveListingPage", () => {
       kind: "term",
       id: term.id,
     });
-    if (page?.data.kind !== "taxonomy") throw new Error("expected a term page");
+    if (page?.data.kind !== "term") throw new Error("expected a term page");
 
     expect(page.data.term.images.featured).toEqual({
       url: photoUrl(photoId),
       alt: null,
     });
+  });
+});
+
+describe("ListingPageTarget", () => {
+  test("names its pages with the resolved-node kinds", () => {
+    expectTypeOf<ListingPageTarget["kind"]>().toExtend<ResolvedNode["kind"]>();
   });
 });

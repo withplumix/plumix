@@ -7,7 +7,7 @@ function rule(pathname: string, priority = 50): RouteRule {
   return {
     pattern: new URLPattern({ pathname }),
     rawPattern: pathname,
-    intent: { kind: "single", entryType: "post" },
+    intent: { kind: "entry", entryType: "post" },
     priority,
     isPermalinkRoute: true,
   };
@@ -31,6 +31,6 @@ describe("matchRoute", () => {
   test("first match wins — iteration order is the caller's responsibility", () => {
     const rules = [rule("/a/:slug"), rule("/a/:slug")];
     const result = matchRoute(new URL("https://cms.example/a/hello"), rules);
-    expect(result?.intent).toEqual({ kind: "single", entryType: "post" });
+    expect(result?.intent).toEqual({ kind: "entry", entryType: "post" });
   });
 });

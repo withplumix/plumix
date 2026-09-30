@@ -17,7 +17,7 @@ A rule is `{ template, tier }` or `{ template, match }`, never both. The generic
 
 Every sample below ends in an `export const rules` array. `rules` is not an API name. The array is what you hand `defineTheme` as its `templates` slot, and [Overview](/themes/overview/) shows the whole descriptor it sits in.
 
-Each builder types the template it accepts. `archive()` takes a template written against `ArchiveData`, so `data.pagination` is there and `data.entry` is not. The rule that comes back erases that type, and the erasure keeps `templates` a single array rather than a tuple of ten shapes.
+Each builder types the template it accepts. `entryType()` takes a template written against `EntryTypeArchiveData`, so `data.pagination` is there and `data.entry` is not. The rule that comes back erases that type, and the erasure keeps `templates` a single array rather than a tuple of ten shapes.
 
 The targeted builders go further and read the registries. `forEntryType` autocompletes against `EntryTypeRegistry`, rejects a name nothing registered, and types `data.entry` from that type's projection, including its folded meta. You declare the projection next to the plugin that registers the type, and every sample below assumes this one:
 
@@ -98,15 +98,15 @@ export const rules = [entry(single)];
 
 `data.entry` is a `ResolvedEntry`. That is the stored row with its meta decoded and its references hydrated, plus `storedMeta` (the undecoded meta JSON, which is what `.whereMeta()` compares against), `terms`, `author`, `contentBlocks` and a pre-resolved `url`.
 
-### `archive`
+### `entryType`
 
 The listing for one entry type, at `/recipes` and its `/page/2` variants.
 
 ```tsx
-import type { ArchiveData } from "plumix/theme";
-import { archive, defineTemplate } from "plumix/theme";
+import type { EntryTypeArchiveData } from "plumix/theme";
+import { defineTemplate, entryType } from "plumix/theme";
 
-const listing = defineTemplate<ArchiveData>({
+const listing = defineTemplate<EntryTypeArchiveData>({
   render: ({ data }) => (
     <ol>
       {data.entries.map((item) => (
@@ -116,20 +116,20 @@ const listing = defineTemplate<ArchiveData>({
   ),
 });
 
-export const rules = [archive(listing)];
+export const rules = [entryType(listing)];
 ```
 
 `data.contentType` names the type being listed, so one template can serve every archive on the site. `data.pagination` carries `page`, `perPage`, `total` and `pageCount`; a page number past the end 404s before the template runs.
 
-### `taxonomy`
+### `term`
 
-A term archive, in any taxonomy. Both `/cuisine/italian/sicilian` and `/diet/vegetarian` reach it.
+A term's archive, in any taxonomy. Both `/cuisine/italian/sicilian` and `/diet/vegetarian` reach it.
 
 ```tsx
-import type { TaxonomyData } from "plumix/theme";
-import { defineTemplate, taxonomy } from "plumix/theme";
+import type { TermArchiveData } from "plumix/theme";
+import { defineTemplate, term } from "plumix/theme";
 
-const terms = defineTemplate<TaxonomyData>({
+const terms = defineTemplate<TermArchiveData>({
   render: ({ data }) => (
     <section>
       <h1>{data.term.name}</h1>
@@ -140,7 +140,7 @@ const terms = defineTemplate<TaxonomyData>({
   ),
 });
 
-export const rules = [taxonomy(terms)];
+export const rules = [term(terms)];
 ```
 
 `data.term` is the resolved term and `data.taxonomy` is its taxonomy name. `data.entries` stays the base entry shape, because a taxonomy can span several entry types.
@@ -277,7 +277,7 @@ export const rules = [serverError(failed)];
 Targets one registered entry type, and is the busiest builder on this page.
 
 ```tsx
-import type { ArchiveData, EntryData } from "plumix/theme";
+import type { EntryData, EntryTypeArchiveData } from "plumix/theme";
 import { defineTemplate, forEntryType } from "plumix/theme";
 
 const single = defineTemplate<EntryData>({
@@ -288,7 +288,7 @@ const caponata = defineTemplate<EntryData>({
   render: ({ data }) => <h1>Featured: {data.entry.title}</h1>,
 });
 
-const index = defineTemplate<ArchiveData>({
+const index = defineTemplate<EntryTypeArchiveData>({
   render: ({ data }) => <h1>{data.entries.length} recipes</h1>,
 });
 
@@ -315,10 +315,10 @@ A predicate rule only matches when the resolver has data in hand. The walk compa
 Targets one registered taxonomy, with the same selectors as `forEntryType` minus the archive.
 
 ```tsx
-import type { TaxonomyData } from "plumix/theme";
+import type { TermArchiveData } from "plumix/theme";
 import { defineTemplate, forTermTaxonomy } from "plumix/theme";
 
-const cuisinePage = defineTemplate<TaxonomyData>({
+const cuisinePage = defineTemplate<TermArchiveData>({
   render: ({ data }) => <h1>{data.term.name}</h1>,
 });
 
@@ -375,11 +375,11 @@ Each match is exact at its own granularity. `forDate(2026)` matches the year arc
 Targets an archive a plugin registered with `registerArchiveType`. Core knows nothing about that archive, and it still dispatches and templates like a built-in one.
 
 ```tsx
-import type { CustomArchiveData } from "plumix";
+import type { ArchiveTypeData } from "plumix";
 import { defineTemplate, forArchiveType } from "plumix/theme";
 
-interface SeasonalData extends CustomArchiveData {
-  readonly kind: "custom";
+interface SeasonalData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "seasonal";
   readonly season: string;
 }

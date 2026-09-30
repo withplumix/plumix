@@ -29,14 +29,14 @@ export function feedUnder(path: string): string {
  */
 function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
   switch (archive.kind) {
-    case "archive":
+    case "entryType":
       return isSyndicatableEntryType(plugins.entryTypes.get(archive.entryType));
-    case "custom": {
+    case "archiveType": {
       const registered = plugins.archiveTypes.get(archive.name);
       return registered?.feed !== undefined && registered.access === undefined;
     }
-    case "front-page":
-    case "taxonomy":
+    case "frontPage":
+    case "term":
     case "author":
     case "date":
       return true;
@@ -46,13 +46,13 @@ function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
 // One archive's identity, whichever of its routes named it.
 function archiveKey(archive: EntryArchive): string {
   switch (archive.kind) {
-    case "archive":
-      return `archive:${archive.entryType}`;
-    case "taxonomy":
-      return `taxonomy:${archive.taxonomy}`;
-    case "custom":
-      return `custom:${archive.name}`;
-    case "front-page":
+    case "entryType":
+      return `entryType:${archive.entryType}`;
+    case "term":
+      return `term:${archive.taxonomy}`;
+    case "archiveType":
+      return `archiveType:${archive.name}`;
+    case "frontPage":
     case "author":
     case "date":
       return archive.kind;
@@ -101,7 +101,7 @@ function feedRoutesOver(
       path,
       archive,
       cacheable:
-        archive.kind !== "custom" ||
+        archive.kind !== "archiveType" ||
         plugins.archiveTypes.get(archive.name)?.cacheable === true,
     });
   }

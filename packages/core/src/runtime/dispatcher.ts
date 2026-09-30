@@ -555,7 +555,7 @@ async function dispatchPublicRoute(
       // ({ cacheable: true })`. Resolved here so the pure decision layer stays
       // free of the registry lookup.
       customArchiveCacheable:
-        intent?.kind === "custom"
+        intent?.kind === "archiveType"
           ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
           : undefined,
       cdn,

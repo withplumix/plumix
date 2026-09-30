@@ -93,11 +93,11 @@ function trailBelowHome(
       const self: BreadcrumbItem = { url: null, name: data.entry.title };
       return parent ? [parent, self] : [self];
     }
-    case "archive": {
+    case "entryType": {
       const step = archiveStep(ctx, data.contentType);
       return step ? [step] : null;
     }
-    case "taxonomy":
+    case "term":
       return [{ url: null, name: data.term.name }];
     case "author":
       return [{ url: null, name: data.author.name ?? data.author.slug }];
@@ -106,7 +106,7 @@ function trailBelowHome(
     case "search":
       return [{ url: null, name: `Search: ${data.query}` }];
     case "frontPage":
-    case "custom":
+    case "archiveType":
     case "error":
       return null;
   }

@@ -59,7 +59,7 @@ describe("the assertion chain, arm by arm", () => {
 
     const term = termOf("category", { [SEO_META_KEYS.noindex]: true });
     expect(
-      indexable(facts({ kind: "taxonomy", entry: null, term }), settings()),
+      indexable(facts({ kind: "term", entry: null, term }), settings()),
     ).toEqual({ indexable: false, reason: "entry_override" });
   });
 
@@ -72,7 +72,7 @@ describe("the assertion chain, arm by arm", () => {
   test("type_default — and on that type's own archive", () => {
     expect(
       indexable(
-        facts({ kind: "archive", entry: null, contentType: "post" }),
+        facts({ kind: "entryType", entry: null, contentType: "post" }),
         settings({ noindexTypes: new Set(["post"]) }),
       ),
     ).toEqual({ indexable: false, reason: "type_default" });
@@ -90,7 +90,7 @@ describe("the assertion chain, arm by arm", () => {
   test("taxonomy_default — a whole taxonomy's archives held out", () => {
     expect(
       indexable(
-        facts({ kind: "taxonomy", entry: null, term: termOf("tag") }),
+        facts({ kind: "term", entry: null, term: termOf("tag") }),
         settings({ noindexTaxonomies: new Set(["tag"]) }),
       ),
     ).toEqual({ indexable: false, reason: "taxonomy_default" });
@@ -108,7 +108,7 @@ describe("the assertion chain, arm by arm", () => {
   });
 
   test("search_results — a plugin archive answering a query is one too", () => {
-    const archive = facts({ kind: "custom", entry: null, query: "hello" });
+    const archive = facts({ kind: "archiveType", entry: null, query: "hello" });
     expect(indexable(archive, settings())).toEqual({
       indexable: false,
       reason: "search_results",
@@ -120,12 +120,12 @@ describe("the assertion chain, arm by arm", () => {
 
   test("search_results — a plugin archive that answers none is untouched", () => {
     expect(
-      indexable(facts({ kind: "custom", entry: null }), settings()).reason,
+      indexable(facts({ kind: "archiveType", entry: null }), settings()).reason,
     ).toBe("default");
   });
 
   test("paginated — page two and beyond, by default", () => {
-    const page2 = facts({ kind: "archive", entry: null, page: 2 });
+    const page2 = facts({ kind: "entryType", entry: null, page: 2 });
     expect(indexable(page2, settings())).toEqual({
       indexable: false,
       reason: "paginated",
@@ -134,7 +134,7 @@ describe("the assertion chain, arm by arm", () => {
       "default",
     );
     expect(
-      indexable(facts({ kind: "archive", entry: null, page: 1 }), settings())
+      indexable(facts({ kind: "entryType", entry: null, page: 1 }), settings())
         .reason,
     ).toBe("default");
   });

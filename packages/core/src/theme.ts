@@ -8,16 +8,17 @@ import type {
 } from "./blocks/index.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
 import type {
-  ArchiveData,
+  ArchiveTypeData,
   AuthorArchiveData,
-  CustomArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   ErrorData,
   FrontPageData,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "./route/contract/resolved-entry.js";
+import type { ResolvedNode } from "./route/contract/resolved-node.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
 import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
@@ -52,18 +53,18 @@ declare module "./hooks/types.js" {
 
 /**
  * Discriminated union of every data shape a template can receive. Per-kind
- * templates (`single`, `archive`, …) narrow via the registry; a template that
+ * templates (`entry`, `entryType`, …) narrow via the registry; a template that
  * receives the whole union (like `index`) discriminates on the `kind` field —
- * a `switch (data.kind)` gets exhaustiveness, or use the `isEntry`/`isArchive`/…
+ * a `switch (data.kind)` gets exhaustiveness, or use the `isEntry`/`isTerm`/…
  * guards below for single-branch checks.
  */
 export type TemplateData =
   | EntryData
-  | ArchiveData
-  | TaxonomyData
+  | EntryTypeArchiveData
+  | TermArchiveData
   | AuthorArchiveData
   | DateArchiveData
-  | CustomArchiveData
+  | ArchiveTypeData
   | FrontPageData
   | SearchData
   | ErrorData;
@@ -71,11 +72,11 @@ export type TemplateData =
 export function isEntry(data: TemplateData): data is EntryData {
   return data.kind === "entry";
 }
-export function isArchive(data: TemplateData): data is ArchiveData {
-  return data.kind === "archive";
+export function isEntryType(data: TemplateData): data is EntryTypeArchiveData {
+  return data.kind === "entryType";
 }
-export function isTaxonomy(data: TemplateData): data is TaxonomyData {
-  return data.kind === "taxonomy";
+export function isTerm(data: TemplateData): data is TermArchiveData {
+  return data.kind === "term";
 }
 export function isAuthor(data: TemplateData): data is AuthorArchiveData {
   return data.kind === "author";
@@ -83,8 +84,8 @@ export function isAuthor(data: TemplateData): data is AuthorArchiveData {
 export function isDate(data: TemplateData): data is DateArchiveData {
   return data.kind === "date";
 }
-export function isCustom(data: TemplateData): data is CustomArchiveData {
-  return data.kind === "custom";
+export function isArchiveType(data: TemplateData): data is ArchiveTypeData {
+  return data.kind === "archiveType";
 }
 export function isFrontPage(data: TemplateData): data is FrontPageData {
   return data.kind === "frontPage";
@@ -107,16 +108,16 @@ export type TemplateEntry<Data extends TemplateData> =
 
 /**
  * The fixed set of generic tiers a theme's `templates` array can declare. Each
- * matches one resolved-node kind (`entry`→content, `archive`→content-type
- * archive, `taxonomy`→term, `frontPage`/`search`), plus `fallback`
+ * page-kind tier (`entry`, `entryType`, `term`, `author`, `date`, `frontPage`,
+ * `search`) serves the resolved node of the same kind, plus `fallback`
  * (the universal catch-all) and the `notFound`/`serverError` condition handlers.
  * Type/term-specific matchers arrive in a later slice.
  */
 export type GenericTier =
   | "fallback"
   | "entry"
-  | "archive"
-  | "taxonomy"
+  | "entryType"
+  | "term"
   | "author"
   | "date"
   | "frontPage"
@@ -131,8 +132,7 @@ export type GenericTier =
  * `"date"` and narrow by `year`/`month`/`day` instead of `slug`/`id`.
  */
 export interface TargetMatcher {
-  readonly nodeKind:
-    "content" | "content-type-archive" | "term" | "author" | "date" | "custom";
+  readonly nodeKind: Exclude<ResolvedNode["kind"], "frontPage" | "search">;
   readonly type: string;
   readonly slug?: string;
   readonly id?: number;

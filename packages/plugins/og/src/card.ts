@@ -1,20 +1,20 @@
 import type {
-  ArchiveData,
   ArchiveDataOf,
   ArchiveTypeName,
   AuthorArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   EntryTypeName,
   FrontPageData,
   ResolvedEntryFor,
   ResolvedTermFor,
   SearchData,
-  TaxonomyData,
   TemplateData,
   TemplateDepKey,
   TemplateDepRegistry,
   TemplateRenderArgs,
+  TermArchiveData,
   TermTaxonomyName,
 } from "plumix";
 import type { ResolvedThemeTokens } from "plumix/blocks";
@@ -153,11 +153,11 @@ type CardEntrySelector<K extends EntryTypeName> = CardSelector<
 >;
 
 type CardEntryArchiveSelector<K extends EntryTypeName> = CardSelector<
-  ArchiveData<ResolvedEntryFor<K>>
+  EntryTypeArchiveData<ResolvedEntryFor<K>>
 >;
 
 type CardTaxonomySelector<K extends TermTaxonomyName> = CardSelector<
-  TaxonomyData<ResolvedTermFor<K>>
+  TermArchiveData<ResolvedTermFor<K>>
 >;
 
 interface CardEntryTypeBuilder<K extends EntryTypeName>
@@ -171,7 +171,7 @@ function forEntryType<K extends EntryTypeName>(
   return entryTypeTargets(
     name,
     selector<EntryData<ResolvedEntryFor<K>>>,
-    selector<ArchiveData<ResolvedEntryFor<K>>>,
+    selector<EntryTypeArchiveData<ResolvedEntryFor<K>>>,
   );
 }
 
@@ -183,7 +183,10 @@ interface CardTermTaxonomyBuilder<K extends TermTaxonomyName>
 function forTermTaxonomy<K extends TermTaxonomyName>(
   name: K,
 ): CardTermTaxonomyBuilder<K> {
-  return termTaxonomyTargets(name, selector<TaxonomyData<ResolvedTermFor<K>>>);
+  return termTaxonomyTargets(
+    name,
+    selector<TermArchiveData<ResolvedTermFor<K>>>,
+  );
 }
 
 interface CardAuthorBuilder
@@ -223,10 +226,11 @@ export const card = {
   fallback: (): CardSelector<TemplateData> => selector({ tier: "fallback" }),
   /** A single entry, any type. */
   entry: (): CardSelector<EntryData> => selector({ tier: "entry" }),
-  /** A content-type archive listing, any type. */
-  archive: (): CardSelector<ArchiveData> => selector({ tier: "archive" }),
-  /** A term archive, any taxonomy. */
-  taxonomy: (): CardSelector<TaxonomyData> => selector({ tier: "taxonomy" }),
+  /** An entry type's archive listing, any type. */
+  entryType: (): CardSelector<EntryTypeArchiveData> =>
+    selector({ tier: "entryType" }),
+  /** A term's archive, any taxonomy. */
+  term: (): CardSelector<TermArchiveData> => selector({ tier: "term" }),
   /** An author archive, any author. */
   author: (): CardSelector<AuthorArchiveData> => selector({ tier: "author" }),
   /** A date archive, any granularity. */

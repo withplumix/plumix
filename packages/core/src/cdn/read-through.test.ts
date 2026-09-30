@@ -62,7 +62,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -91,7 +91,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "front-page",
+      intentKind: "frontPage",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -116,7 +116,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -137,7 +137,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "private",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -162,7 +162,7 @@ describe("readThrough", () => {
         headers: { cookie: "plumix_session=alice" },
       }),
       segment: "authenticated",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -194,7 +194,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET("https://site.test/members"),
       segment: "authenticated",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry,
@@ -228,7 +228,7 @@ describe("readThrough", () => {
     await readThrough({
       request: GET("https://site.test/members"),
       segment: "authenticated",
-      intentKind: "single",
+      intentKind: "entry",
       cdn: { ...cdn, segmentVary: (response) => response },
       defer: immediateDefer,
       telemetry,
@@ -277,7 +277,7 @@ describe("readThrough", () => {
     await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "custom",
+      intentKind: "archiveType",
       customArchiveCacheable: true,
       cdn,
       defer: immediateDefer,
@@ -300,7 +300,7 @@ describe("readThrough", () => {
     await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "custom",
+      intentKind: "archiveType",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -325,7 +325,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -349,7 +349,7 @@ describe("readThrough", () => {
     const result = await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -369,7 +369,7 @@ describe("readThrough", () => {
     await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn: spies().cdn,
       defer: immediateDefer,
       telemetry,
@@ -393,7 +393,7 @@ describe("readThrough", () => {
     await readThrough({
       request: GET(),
       segment: "anonymous",
-      intentKind: "single",
+      intentKind: "entry",
       cdn: spies({ storeless: true }).cdn,
       defer: immediateDefer,
       telemetry,

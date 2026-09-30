@@ -69,7 +69,7 @@ function collectHeaders(headers: Headers): DevErrorFact[] {
 
 function describeEntity(entity: ResolvedEntity | null): string | undefined {
   if (entity === null) return undefined;
-  if (entity.kind === "archive") return `archive: ${entity.entryType}`;
+  if (entity.kind === "entryType") return `archive: ${entity.entryType}`;
   return `${entity.kind} #${entity.id}`;
 }
 

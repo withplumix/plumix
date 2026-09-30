@@ -33,7 +33,10 @@ const site = definePlugin("site", (ctx) => {
   });
   ctx.registerArchiveType("legacy", {
     routes: ["/legacy/:x"],
-    resolve: () => ({ data: { kind: "custom", name: "legacy" }, title: "L" }),
+    resolve: () => ({
+      data: { kind: "archiveType", name: "legacy" },
+      title: "L",
+    }),
   });
 });
 
@@ -45,24 +48,24 @@ beforeEach(async () => {
 
 describe("archiveAtPath", () => {
   test.each([
-    ["/", { kind: "front-page" }, {}],
-    ["/page/2", { kind: "front-page" }, { page: "2" }],
-    ["/post", { kind: "archive", entryType: "post" }, {}],
-    ["/all-pages", { kind: "archive", entryType: "page" }, {}],
+    ["/", { kind: "frontPage" }, {}],
+    ["/page/2", { kind: "frontPage" }, { page: "2" }],
+    ["/post", { kind: "entryType", entryType: "post" }, {}],
+    ["/all-pages", { kind: "entryType", entryType: "page" }, {}],
     [
       "/all-pages/page/3",
-      { kind: "archive", entryType: "page" },
+      { kind: "entryType", entryType: "page" },
       { page: "3" },
     ],
-    ["/topic/news", { kind: "taxonomy", taxonomy: "topic" }, { term: "news" }],
+    ["/topic/news", { kind: "term", taxonomy: "topic" }, { term: "news" }],
     [
       "/region/europe/france",
-      { kind: "taxonomy", taxonomy: "region" },
+      { kind: "term", taxonomy: "region" },
       { path: "europe/france" },
     ],
     ["/authors/jane", { kind: "author" }, { slug: "jane" }],
     ["/2026/04", { kind: "date" }, { year: "2026", month: "04" }],
-    ["/talks/news", { kind: "custom", name: "talks" }, { track: "news" }],
+    ["/talks/news", { kind: "archiveType", name: "talks" }, { track: "news" }],
   ])("%s is its archive", (path, archive, params) => {
     const found = archiveAtPath(h.app, path);
     expect(found?.archive).toEqual(archive);
@@ -137,20 +140,20 @@ describe("archiveBaseRoutes", () => {
   test("lists every entry-query archive's unpaginated routes", () => {
     expect(archiveBaseRoutes(h.app.plugins)).toEqual(
       expect.arrayContaining([
-        { archive: { kind: "front-page" }, pattern: "/" },
+        { archive: { kind: "frontPage" }, pattern: "/" },
         { archive: { kind: "author" }, pattern: "/authors/:slug" },
         { archive: { kind: "date" }, pattern: "/:year(\\d{4})" },
         {
-          archive: { kind: "taxonomy", taxonomy: "topic" },
+          archive: { kind: "term", taxonomy: "topic" },
           pattern: "/topic/:term",
         },
-        { archive: { kind: "archive", entryType: "post" }, pattern: "/post" },
+        { archive: { kind: "entryType", entryType: "post" }, pattern: "/post" },
         {
-          archive: { kind: "archive", entryType: "page" },
+          archive: { kind: "entryType", entryType: "page" },
           pattern: "/all-pages",
         },
         {
-          archive: { kind: "custom", name: "talks" },
+          archive: { kind: "archiveType", name: "talks" },
           pattern: "/talks/:track",
         },
       ]),
@@ -160,7 +163,7 @@ describe("archiveBaseRoutes", () => {
   test("names no front page at the root a rule claims for another archive", async () => {
     const rooted = definePlugin("rooted", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
+      ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
     });
     const { app } = await createDispatcherHarness({
       config: { plugins: [rooted] },
@@ -169,10 +172,10 @@ describe("archiveBaseRoutes", () => {
     expect(
       archiveBaseRoutes(app.plugins).filter((route) => route.pattern === "/"),
     ).toEqual([
-      { archive: { kind: "archive", entryType: "post" }, pattern: "/" },
+      { archive: { kind: "entryType", entryType: "post" }, pattern: "/" },
     ]);
     expect(archiveAtPath(app, "/")?.archive).toEqual({
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
   });

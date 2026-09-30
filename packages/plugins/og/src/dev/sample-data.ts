@@ -72,8 +72,8 @@ function targetFor(rule: TierMatchRule): SampleTarget {
       : targetForMatch(rule.match);
   }
   switch (rule.tier) {
-    case "archive":
-    case "taxonomy":
+    case "entryType":
+    case "term":
     case "author":
     case "date":
     case "frontPage":
@@ -87,8 +87,8 @@ function targetFor(rule: TierMatchRule): SampleTarget {
   }
 }
 
-// A matcher's `nodeKind` is the resolved-node vocabulary, not the page-data
-// one, so this is a translation rather than a copy of the tier switch above.
+// A matcher's `nodeKind` names the same page kinds the page data does; what
+// differs per kind is which of the matcher's narrowings the sample takes.
 function targetForMatch(match: TargetMatcher): SampleTarget {
   const named = {
     ...DEFAULT_TARGET,
@@ -96,20 +96,13 @@ function targetForMatch(match: TargetMatcher): SampleTarget {
     slug: match.slug ?? DEFAULT_TARGET.slug,
   };
   switch (match.nodeKind) {
-    case "content":
-      return { ...named, kind: "entry" };
-    case "content-type-archive":
-      return { ...named, kind: "archive" };
-    case "term":
-      return {
-        ...named,
-        kind: "taxonomy",
-        slug: match.slug ?? SAMPLE_TERM_SLUG,
-      };
+    case "entry":
+    case "entryType":
     case "author":
-      return { ...named, kind: "author" };
-    case "custom":
-      return { ...named, kind: "custom" };
+    case "archiveType":
+      return { ...named, kind: match.nodeKind };
+    case "term":
+      return { ...named, kind: "term", slug: match.slug ?? SAMPLE_TERM_SLUG };
     case "date":
       return {
         ...named,
@@ -124,11 +117,11 @@ function targetForMatch(match: TargetMatcher): SampleTarget {
 function pageFor(target: SampleTarget): TemplateData {
   const listing = { entries: [sampleEntry(target)], pagination: PAGINATION };
   switch (target.kind) {
-    case "archive":
-      return { kind: "archive", contentType: target.type, ...listing };
-    case "taxonomy":
+    case "entryType":
+      return { kind: "entryType", contentType: target.type, ...listing };
+    case "term":
       return {
-        kind: "taxonomy",
+        kind: "term",
         taxonomy: target.type,
         term: sampleTerm(target),
         ...listing,
@@ -147,8 +140,8 @@ function pageFor(target: SampleTarget): TemplateData {
       return { kind: "frontPage", ...listing };
     case "search":
       return { kind: "search", query: SAMPLE_QUERY, ...listing };
-    case "custom":
-      return { kind: "custom", name: target.type };
+    case "archiveType":
+      return { kind: "archiveType", name: target.type };
     default:
       return { kind: "entry", entry: sampleEntry(target) };
   }

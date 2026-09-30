@@ -2,17 +2,17 @@ import { describe, expect, test } from "vitest";
 
 import type { TemplateData } from "../../theme.js";
 import type {
-  ArchiveData,
+  ArchiveTypeData,
   AuthorArchiveData,
-  CustomArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   ErrorData,
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,
   ResolvedTerm,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "../contract/resolved-entry.js";
 import { pageFacts } from "./page-facts.js";
 
@@ -41,8 +41,8 @@ const pagination = (page: number): Pagination => ({
 
 describe("pageFacts", () => {
   test("an entry-type archive names the type it lists", () => {
-    const data: ArchiveData = {
-      kind: "archive",
+    const data: EntryTypeArchiveData = {
+      kind: "entryType",
       contentType: "post",
       entries: [],
       pagination: pagination(1),
@@ -54,7 +54,7 @@ describe("pageFacts", () => {
     expect(pageFacts({ kind: "entry", entry }).contentType).toBeNull();
     expect(
       pageFacts({
-        kind: "taxonomy",
+        kind: "term",
         taxonomy: "category",
         term,
         entries: [],
@@ -86,15 +86,15 @@ describe("pageFacts", () => {
   });
 
   test("a term archive carries its term and pagination index", () => {
-    const data: TaxonomyData = {
-      kind: "taxonomy",
+    const data: TermArchiveData = {
+      kind: "term",
       taxonomy: "category",
       term,
       entries: [],
       pagination: pagination(2),
     };
     const facts = pageFacts(data);
-    expect(facts.kind).toBe("taxonomy");
+    expect(facts.kind).toBe("term");
     expect(facts.page).toBe(2);
     expect(facts.term).toBe(term);
     expect(facts.entry).toBeNull();
@@ -116,7 +116,7 @@ describe("pageFacts", () => {
 
   test("every listing kind keeps its own name and pagination index", () => {
     const listings = [
-      { kind: "archive", contentType: "post" },
+      { kind: "entryType", contentType: "post" },
       { kind: "date", year: 2026, month: null, day: null },
       { kind: "frontPage" },
       { kind: "search", query: "hello" },
@@ -155,15 +155,15 @@ describe("pageFacts", () => {
     // `pagination` among them: the page an archive is on is the `page` fact it
     // states, never a listing object core would have to know the shape of.
     const data = {
-      kind: "custom",
+      kind: "archiveType",
       name: "shop",
       entry,
       term,
       author,
       pagination: pagination(5),
-    } as unknown as CustomArchiveData;
+    } as unknown as ArchiveTypeData;
     expect(pageFacts(data)).toEqual({
-      kind: "custom",
+      kind: "archiveType",
       page: 1,
       published: null,
       modified: null,
@@ -176,8 +176,8 @@ describe("pageFacts", () => {
   });
 
   test("a plugin archive states the page it is on and the query it answers", () => {
-    const data: CustomArchiveData = {
-      kind: "custom",
+    const data: ArchiveTypeData = {
+      kind: "archiveType",
       name: "search",
       page: 4,
       query: "hello",

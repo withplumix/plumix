@@ -141,11 +141,11 @@ function pageTitle(data: TemplateData, ctx: AppContext): string {
   switch (data.kind) {
     case "entry":
       return data.entry.title;
-    case "taxonomy":
+    case "term":
       return data.term.name;
     case "author":
       return data.author.name ?? data.author.slug;
-    case "archive": {
+    case "entryType": {
       const type = ctx.plugins.entryTypes.get(data.contentType);
       return type
         ? labelSourceText(type.labels?.plural ?? type.label)

@@ -45,7 +45,7 @@ describe("the default card past entries", () => {
     await seedEntry(harness);
 
     const response = await fetchCard(harness, {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 
@@ -87,7 +87,7 @@ describe("the default card past entries", () => {
       value: "Words about things",
     });
 
-    const response = await fetchCard(harness, { kind: "front-page" });
+    const response = await fetchCard(harness, { kind: "frontPage" });
 
     const body = await response.assertStatus(200).text();
     expect(body).toContain("Example Site");
@@ -119,7 +119,7 @@ describe("which pages are shareable", () => {
     ["a term nothing is filed under", { kind: "term", id: 1 }],
     [
       "an archive with nothing published",
-      { kind: "archive", entryType: "post" },
+      { kind: "entryType", entryType: "post" },
     ],
     ["an author who has published nothing", { kind: "author", id: 1 }],
     [
@@ -143,7 +143,7 @@ describe("which pages are shareable", () => {
     // card — public, immutable and shared-cached — must not answer for it.
     (await harness.fetch("/memo")).assertStatus(302);
     (
-      await fetchCard(harness, { kind: "archive", entryType: "memo" })
+      await fetchCard(harness, { kind: "entryType", entryType: "memo" })
     ).assertStatus(404);
   });
 
@@ -165,7 +165,7 @@ describe("which pages are shareable", () => {
     await seedEntry(harness, { type: "column", slug: "col" });
 
     (
-      await fetchCard(harness, { kind: "archive", entryType: "column" })
+      await fetchCard(harness, { kind: "entryType", entryType: "column" })
     ).assertStatus(404);
   });
 
@@ -181,7 +181,7 @@ describe("which pages are shareable", () => {
   test("serves the front page's card on a site with nothing published", async () => {
     const harness = await createHarness();
 
-    (await fetchCard(harness, { kind: "front-page" })).assertStatus(200);
+    (await fetchCard(harness, { kind: "frontPage" })).assertStatus(200);
   });
 
   test("has no card URL for a search page", async () => {
@@ -196,7 +196,7 @@ describe("a theme's own card past entries", () => {
   test("outranks the default on the page kind it declares", async () => {
     const harness = await createHarness({
       cards: [
-        card.taxonomy().define({
+        card.term().define({
           key: ({ data }) => cardKey.of("term", data.term.id, data.term.name),
           render: ({ data }) => ({
             type: "text",
@@ -240,9 +240,9 @@ describe("the card in a listing page's head", () => {
       renderer: rasterRenderer(),
       siteDefaultImage: SITE_DEFAULT,
       // Keyed on what the page lists, which is the only kind of card that can
-      // tell the two slices apart — and the kind `card.archive()` invites.
+      // tell the two slices apart — and the kind `card.entryType()` invites.
       cards: [
-        card.archive().define({
+        card.entryType().define({
           key: ({ data }) =>
             cardKey.of("posts", ...data.entries.map((entry) => entry.id)),
           render: ({ data }) => ({
@@ -276,7 +276,7 @@ describe("the card in a listing page's head", () => {
   test("renders the entry titles a listing card reads expanded", async () => {
     const harness = await createHarness({
       cards: [
-        card.archive().define({
+        card.entryType().define({
           key: ({ data }) =>
             cardKey.of("posts", ...data.entries.map((entry) => entry.id)),
           render: ({ data }) => ({
@@ -292,7 +292,7 @@ describe("the card in a listing page's head", () => {
     );
 
     const response = await fetchCard(harness, {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 

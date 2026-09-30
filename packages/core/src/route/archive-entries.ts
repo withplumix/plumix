@@ -18,7 +18,7 @@ import { publicEntriesQuery } from "./render/entry-listing.js";
  */
 export type EntryArchive = Exclude<
   RouteIntent,
-  { readonly kind: "single" | "search" }
+  { readonly kind: "entry" | "search" }
 >;
 
 declare module "../hooks/types.js" {
@@ -112,11 +112,11 @@ function definedEntries(
   params: Record<string, string>,
 ): EntryQuery | null {
   switch (archive.kind) {
-    case "front-page":
+    case "frontPage":
       return frontPageEntries(plugins);
-    case "archive":
+    case "entryType":
       return entryTypeEntries(plugins, archive.entryType);
-    case "taxonomy": {
+    case "term": {
       const slug = termSlugParam(params);
       return slug === null
         ? null
@@ -133,7 +133,7 @@ function definedEntries(
         params.month === undefined ? null : Number(params.month),
         params.day === undefined ? null : Number(params.day),
       );
-    case "custom": {
+    case "archiveType": {
       const registered = plugins.archiveTypes.get(archive.name);
       if (registered?.entries === undefined) return null;
       return registered.entries(publicEntriesQuery(plugins), params);
@@ -185,9 +185,9 @@ function isEntryArchive(
   plugins: PluginRegistry,
   intent: RouteIntent,
 ): intent is EntryArchive {
-  if (intent.kind === "single" || intent.kind === "search") return false;
+  if (intent.kind === "entry" || intent.kind === "search") return false;
   return (
-    intent.kind !== "custom" ||
+    intent.kind !== "archiveType" ||
     plugins.archiveTypes.get(intent.name)?.entries !== undefined
   );
 }
@@ -221,7 +221,7 @@ export function archiveAtPath(
   );
   if (match === null) {
     return pathname === FRONT_PAGE_ROOT
-      ? archiveWithQuery(reader, { kind: "front-page" }, {})
+      ? archiveWithQuery(reader, { kind: "frontPage" }, {})
       : null;
   }
   if (!isEntryArchive(plugins, match.intent)) return null;
@@ -258,7 +258,7 @@ export function archiveBaseRoutes(
   if (
     !routeMap.some((rule) => rule.pattern.test({ pathname: FRONT_PAGE_ROOT }))
   ) {
-    routes.push({ archive: { kind: "front-page" }, pattern: FRONT_PAGE_ROOT });
+    routes.push({ archive: { kind: "frontPage" }, pattern: FRONT_PAGE_ROOT });
   }
   return routes;
 }

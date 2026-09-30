@@ -196,11 +196,15 @@ The site-specific presentation layer, defined statically (no setup hook): templa
 **Template**:
 A theme render unit bound to a route or data kind. See the disambiguation note — distinct from a stored page-template choice.
 
+**Page kind**:
+What a public page is about, named by its subject: `entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `frontPage` or `search`.
+_Avoid_: single, content, content-type-archive, taxonomy (for a term's page), custom, front-page
+
 **Template data**:
-The discriminated union of data shapes a template can receive, keyed by kind (`entry`, `archive`, `taxonomy`, `author`, `date`, `frontPage`, `search`, `error`, `custom`).
+The discriminated union of data shapes a template can receive, keyed by page kind (`entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `frontPage`, `search`) plus `error`.
 
 **Generic tier**:
-The fixed set of catch-all template slots a theme declares (`fallback`, `entry`, `archive`, `taxonomy`, `author`, `date`, `frontPage`, `search`, `notFound`, `serverError`).
+The fixed set of catch-all template slots a theme declares: one per page kind (`entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`) except `archiveType`, plus `fallback`, `notFound` and `serverError`.
 
 **Target matcher**:
 A targeted template rule that binds a template to a specific node (by kind, type, and slug/id/predicate), taking precedence over the generic tier.
@@ -210,6 +214,10 @@ A public page listing many entries, described by one entry query — the front
 page, an entry type, a term, an author, a date, or one a plugin registers. Its
 listing and its feed read that same query, so the two cannot disagree about
 what the archive contains.
+
+**Archive type**:
+An archive a plugin registers with `registerArchiveType`, which core routes and
+templates by name without knowing what it lists.
 
 **Listing**:
 One page of an archive's entries: its entry query run by core, paged, and
@@ -278,7 +286,7 @@ The membership-gating scenario a challenge implements. A scenario label, not a t
 ## Runtime & rendering
 
 **Route intent**:
-What a matched URL represents — `single`, `archive`, `taxonomy`, `author`, `date`, `front-page`, `search`, or `custom`.
+What a matched URL represents, named by its page kind — `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, or `archiveType`.
 
 **Resolved route**:
 The content route the current public request matched — the pattern as it was declared and the params it captured — read from `ctx.resolvedRoute` by anything rendering the page that has to address the page's own URL space. `null` on every path the content router did not match.
@@ -374,7 +382,7 @@ The single normalized source-of-truth URL driving `<link rel="canonical">`, the 
 
 **Sitemap**:
 The generated XML URL set, paged into scoped sub-sitemaps per entry type,
-taxonomy, or custom archive. Served by `@plumix/plugin-seo` rather than by core,
+taxonomy, or archive type. Served by `@plumix/plugin-seo` rather than by core,
 alongside `/robots.txt`.
 
 ## Syndication

@@ -1,5 +1,5 @@
 /**
- * The one lookup that turns a `single`-intent match into the entry that will
+ * The one lookup that turns an `entry`-intent match into the entry that will
  * render — shared, and request-memoized, so the access gate and the renderer
  * resolve the *same* row from one query.
  *
@@ -22,7 +22,7 @@ import { findEntryByPath } from "./path-chain.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 
 /**
- * Resolve the entry a `single` intent addresses (flat `slug` or hierarchical
+ * Resolve the entry an `entry` intent addresses (flat `slug` or hierarchical
  * `path`), honouring a `?preview=` token for drafts. `null` when nothing
  * matches. Memoized per request per `(entryType, slug|path)`.
  */

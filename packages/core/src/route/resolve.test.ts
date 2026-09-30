@@ -1908,7 +1908,7 @@ describe("resolvePublicRoute — taxonomy", () => {
       });
       if (options.places === true) {
         ctx.registerRewriteRule("/places/:term", {
-          kind: "taxonomy",
+          kind: "term",
           taxonomy: "region",
         });
       }
@@ -2283,7 +2283,7 @@ describe("resolvePublicRoute — resolved route", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Series",
         }),
       });
@@ -2299,7 +2299,7 @@ describe("resolvePublicRoute — resolved route", () => {
       {
         pattern: "/events/:series",
         params: { series: "summer" },
-        intent: { kind: "custom", name: "event-series" },
+        intent: { kind: "archiveType", name: "event-series" },
       },
     ]);
   });
@@ -2329,14 +2329,14 @@ describe("resolvePublicRoute — resolved route", () => {
       {
         pattern: "/shop",
         params: {},
-        intent: { kind: "archive", entryType: "product" },
+        intent: { kind: "entryType", entryType: "product" },
       },
       {
         pattern: "/shop/:slug",
         params: { slug: "mug" },
-        intent: { kind: "single", entryType: "product" },
+        intent: { kind: "entry", entryType: "product" },
       },
-      { pattern: "/", params: {}, intent: { kind: "front-page" } },
+      { pattern: "/", params: {}, intent: { kind: "frontPage" } },
     ]);
   });
 

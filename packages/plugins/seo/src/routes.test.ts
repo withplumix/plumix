@@ -61,7 +61,7 @@ const gatedArchivePlugin = definePlugin("gated-archive", (ctx) => {
     routes: ["/members/:series"],
     access: membersOnlyPolicy,
     resolve: () => ({
-      data: { kind: "custom", name: "member-series" },
+      data: { kind: "archiveType", name: "member-series" },
       title: "Members",
     }),
     sitemap: {
@@ -98,7 +98,7 @@ const eventsPlugin = definePlugin("events", (ctx) => {
   ctx.registerArchiveType("event-series", {
     routes: ["/events/:series"],
     resolve: (_ctx, params) => ({
-      data: { kind: "custom", name: "event-series" },
+      data: { kind: "archiveType", name: "event-series" },
       title: `Series: ${params.series}`,
     }),
     sitemap: {

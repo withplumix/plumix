@@ -2139,7 +2139,7 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
   const customTheme = defineTheme({
     templates: [
       fallback(({ data }) =>
-        data.kind === "custom"
+        data.kind === "archiveType"
           ? createElement("h1", null, `${data.name} archive`)
           : null,
       ),
@@ -2153,7 +2153,11 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
       routes: ["/schools/:location"],
       cacheable: true,
       resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "schools", location: params.location },
+        data: {
+          kind: "archiveType",
+          name: "schools",
+          location: params.location,
+        },
         title: `Schools in ${params.location}`,
         tags: ["t:school", "t:location"],
       }),
@@ -2165,7 +2169,11 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     ctx.registerArchiveType("schools", {
       routes: ["/schools/:location"],
       resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "schools", location: params.location },
+        data: {
+          kind: "archiveType",
+          name: "schools",
+          location: params.location,
+        },
         title: `Schools in ${params.location}`,
       }),
     });
@@ -2596,7 +2604,7 @@ describe("dispatcher — telemetry consumers", () => {
       200,
     );
     const resolve = byName("resolve");
-    expect(resolve?.attributes["route.intent"]).toBe("single");
+    expect(resolve?.attributes["route.intent"]).toBe("entry");
     expect(resolve?.attributes["resolve.entity"]).toEqual({
       kind: "entry",
       id: entry.id,
@@ -2637,7 +2645,7 @@ describe("dispatcher — telemetry consumers", () => {
     // still carry what had resolved before the throw.
     const resolve = spans.find((span) => span.name === "resolve");
     expect(resolve?.status).toBe("error");
-    expect(resolve?.attributes["route.intent"]).toBe("front-page");
+    expect(resolve?.attributes["route.intent"]).toBe("frontPage");
     expect(resolve?.attributes["template.matched"]).toBe("fallback");
   });
 

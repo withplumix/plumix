@@ -53,15 +53,15 @@ function formatPeriod(
 /** How many entries the page lists in total, or "" where it lists none. */
 function resultCount(data: TemplateData): string {
   switch (data.kind) {
-    case "archive":
-    case "taxonomy":
+    case "entryType":
+    case "term":
     case "author":
     case "date":
     case "frontPage":
     case "search":
       return String(data.pagination.total);
     case "entry":
-    case "custom":
+    case "archiveType":
     case "error":
       return "";
   }

@@ -16,20 +16,20 @@ There is no routes file and no directory of URL handlers. Registering `recipe` a
 
 A match produces a **route intent**, which is what the matched URL represents. There are eight kinds.
 
-| Intent       | What it means                            | Example URL                   |
-| ------------ | ---------------------------------------- | ----------------------------- |
-| `single`     | One entry of a named type                | `/recipes/sicilian-caponata`  |
-| `archive`    | The paginated listing for one entry type | `/recipes`, `/recipes/page/2` |
-| `taxonomy`   | The entries carrying one term            | `/cuisine/italian/sicilian`   |
-| `author`     | One author's published entries           | `/authors/marco`              |
-| `date`       | A year, month or day of entries          | `/2026`, `/2026/04/18`        |
-| `front-page` | The site root and its later pages        | `/`, `/page/2`                |
-| `search`     | A search result set                      | `/search/caponata`            |
-| `custom`     | An archive a plugin registered whole     | whatever the plugin declared  |
+| Intent        | What it means                            | Example URL                   |
+| ------------- | ---------------------------------------- | ----------------------------- |
+| `entry`       | One entry of a named type                | `/recipes/sicilian-caponata`  |
+| `entryType`   | The paginated listing for one entry type | `/recipes`, `/recipes/page/2` |
+| `term`        | The entries carrying one term            | `/cuisine/italian/sicilian`   |
+| `author`      | One author's published entries           | `/authors/marco`              |
+| `date`        | A year, month or day of entries          | `/2026`, `/2026/04/18`        |
+| `frontPage`   | The site root and its later pages        | `/`, `/page/2`                |
+| `search`      | A search result set                      | `/search/caponata`            |
+| `archiveType` | An archive a plugin registered whole     | whatever the plugin declared  |
 
 The intent carries only the route shape. The slug, term path and page number ride alongside it as the parameters URLPattern captured. A resolver per kind reads both, loads the data, and hands a typed payload to the theme, which picks a template for it.
 
-`front-page` is the intent whose listing core defines outright rather than deriving from a registration, so its rule lives here. It selects published entries from every public non-hierarchical entry type, orders them newest publish time first, and pages them twenty at a time. That page size is a core constant, so `archivePerPage` does not move it the way it moves an entry-type or taxonomy archive. Hierarchical types are excluded on purpose, which is why the pages plugin's `page` entries never appear in the front feed.
+`frontPage` is the intent whose listing core defines outright rather than deriving from a registration, so its rule lives here. It selects published entries from every public non-hierarchical entry type, orders them newest publish time first, and pages them twenty at a time. That page size is a core constant, so `archivePerPage` does not move it the way it moves an entry-type or taxonomy archive. Hierarchical types are excluded on purpose, which is why the pages plugin's `page` entries never appear in the front feed.
 
 `search` is the one intent that rewrites its own URL. A plain HTML form submitting `GET /search?q=caponata` 301s to `/search/caponata`, so the result page is shareable rather than query-string bound. It borrows the same twenty-per-page listing and matches on entry title or excerpt.
 
@@ -75,10 +75,10 @@ Only `GET` and `HEAD` reach the public site. Any other method on a public URL re
 
    | URL                          | Intent                                             |
    | ---------------------------- | -------------------------------------------------- |
-   | `/recipes`                   | `archive` for `recipe`                             |
+   | `/recipes`                   | `entryType` for `recipe`                           |
    | `/recipes/page/2`            | the same archive, page two                         |
-   | `/recipes/sicilian-caponata` | `single` for `recipe`                              |
-   | `/cuisine/italian`           | `taxonomy` for `cuisine`                           |
+   | `/recipes/sicilian-caponata` | `entry` for `recipe`                               |
+   | `/cuisine/italian`           | `term` for `cuisine`                               |
    | `/cuisine/italian/sicilian`  | the nested term, because `cuisine` is hierarchical |
    | `/cuisine/italian/page/2`    | that term archive, page two                        |
 
@@ -144,14 +144,14 @@ import { definePlugin } from "plumix/plugin";
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
     ctx.registerRewriteRule("/kitchen/:slug", {
-      kind: "single",
+      kind: "entry",
       entryType: "recipe",
     });
   },
 });
 ```
 
-`registerArchiveType(name, options)` registers a whole archive: its URL patterns, what the archive contains, and an optional `priority`. It compiles to the `custom` intent, and the theme targets it by name. `@plumix/plugin-seo` augments the same options with an optional `sitemap` and `@plumix/plugin-feeds` with an optional `feed`, so an installed plugin can index or syndicate the archive too. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
+`registerArchiveType(name, options)` registers a whole archive: its URL patterns, what the archive contains, and an optional `priority`. It compiles to the `archiveType` intent, and the theme targets it by name. `@plumix/plugin-seo` augments the same options with an optional `sitemap` and `@plumix/plugin-feeds` with an optional `feed`, so an installed plugin can index or syndicate the archive too. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
 
 `entries` is what the archive contains, and declaring it is what hands the listing to core. It receives an entry query already holding nothing but public entries, narrows it, and returns it — or `null` for params that name no archive, which is a 404. It is synchronous and runs no queries; the term slug below is resolved when the page is served.
 
@@ -196,7 +196,7 @@ export const rooms = definePlugin("rooms", {
         const room = await loadRoom(appCtx, params.room);
         if (room === null) return null;
         return {
-          data: { kind: "custom", name: "rooms", room: room.name },
+          data: { kind: "archiveType", name: "rooms", room: room.name },
           title: `${room.name} (${String(listing.pagination.total)})`,
         };
       },
@@ -222,13 +222,13 @@ const notAnAside = sql`${entries.id} not in (select ${entryTerm.entryId} from ${
 export const quietFrontPage = definePlugin("quiet-front-page", {
   setup: (ctx) => {
     ctx.addFilter("archive:entries", (query, archive) =>
-      archive.kind === "front-page" ? query.where(notAnAside) : query,
+      archive.kind === "frontPage" ? query.where(notAnAside) : query,
     );
   },
 });
 ```
 
-`archive` names the archive as the router does — `front-page`, `archive` (with its `entryType`), `taxonomy` (with its `taxonomy`), `author`, `date`, or `custom` (with the plugin archive's `name`). No term or author is loaded for it; read the slug off the params. A query only narrows, and core applies the public-entries rule again when it compiles one, so a handler can hide entries but never reveal one — even returning a fresh `entryQuery()` lists no draft. A handler can change the order too, and a feed still reads newest first. Like `entries`, the handler is synchronous and runs no queries. The search page is not an entry-query archive and does not pass through it.
+`archive` names the archive as the router does — `frontPage`, `entryType` (with its `entryType`), `term` (with its `taxonomy`), `author`, `date`, or `archiveType` (with the plugin archive's `name`). No term or author is loaded for it; read the slug off the params. A query only narrows, and core applies the public-entries rule again when it compiles one, so a handler can hide entries but never reveal one — even returning a fresh `entryQuery()` lists no draft. A handler can change the order too, and a feed still reads newest first. Like `entries`, the handler is synchronous and runs no queries. The search page is not an entry-query archive and does not pass through it.
 
 `registerPublicRoute(options)` skips the route map entirely and answers a path at the site root itself, which is how a plugin owns a machine-readable endpoint like `/robots.txt`, a sitemap or a feed. `path` is an exact pathname or a URLPattern pathname whose captured groups reach the handler as its third argument, and `cacheable: true` opts the response into the CDN on the same terms as a `/_plumix/` plugin route. Two plugins claiming one path throws at boot naming both owners; a path inside `/_plumix/` throws too, since core owns that prefix — mount those with `registerRoute`.
 

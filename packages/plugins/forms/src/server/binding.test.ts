@@ -330,7 +330,10 @@ describe("a bound token this install did not sign", () => {
     await seedPageWithForm(harness, "subscribe");
     const token = await mintParts(harness);
 
-    const response = await post(harness, spell({ ...token, type: "archive" }));
+    const response = await post(
+      harness,
+      spell({ ...token, type: "entryType" }),
+    );
 
     response.assertStatus(403);
     expect(await rows(harness)).toHaveLength(0);

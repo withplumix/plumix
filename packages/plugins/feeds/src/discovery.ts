@@ -19,7 +19,7 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
   // The route the dispatcher resolved already names the archive, so the page
   // is not matched against the route table a second time.
   const archive = route.intent;
-  if (archive.kind === "single" || archive.kind === "search") return null;
+  if (archive.kind === "entry" || archive.kind === "search") return null;
   const pathname = new URL(ctx.request.url).pathname;
   const feedPath = feedUnder(listingPath(route, pathname));
   return servesFeed(ctx.plugins, archive, feedPath)

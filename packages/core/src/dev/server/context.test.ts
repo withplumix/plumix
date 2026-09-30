@@ -67,7 +67,7 @@ describe("collectDevErrorContext", () => {
 
   test("describes an archive entity by its entry type", () => {
     const context = collectDevErrorContext(
-      ctxWith({ resolvedEntity: { kind: "archive", entryType: "post" } }),
+      ctxWith({ resolvedEntity: { kind: "entryType", entryType: "post" } }),
     );
 
     expect(context.route.entity).toBe("archive: post");

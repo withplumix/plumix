@@ -25,7 +25,7 @@ import type {
   ThemeDescriptor,
 } from "plumix";
 import type {
-  CustomArchiveData,
+  ArchiveTypeData,
   ResolvedEntry,
   ResolvedTerm,
 } from "plumix/theme";
@@ -34,8 +34,8 @@ import { forArchiveType, forEntryType, forTermTaxonomy } from "plumix/theme";
 import type { BlockPattern } from "@plumix/core/blocks";
 import { block } from "@plumix/core/blocks";
 
-interface GuardArchiveData extends CustomArchiveData {
-  readonly kind: "custom";
+interface GuardArchiveData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "guard_archive";
 }
 

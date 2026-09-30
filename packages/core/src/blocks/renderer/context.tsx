@@ -51,7 +51,7 @@ export type RendererQueriedEntry =
   | { readonly kind: "entry"; readonly id: number; readonly preview: boolean }
   | { readonly kind: "term"; readonly id: number }
   | { readonly kind: "author"; readonly id: number }
-  | { readonly kind: "archive"; readonly entryType: string };
+  | { readonly kind: "entryType"; readonly entryType: string };
 
 export type PlumixRenderMode = "live" | "preview" | "edit";
 

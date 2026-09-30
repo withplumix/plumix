@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { TemplateData, TierMatchRule } from "../../theme.js";
+import type { GenericTier, TemplateData, TierMatchRule } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { resolveErrorRule, resolveRule } from "./rule-resolver.js";
 
@@ -18,7 +18,7 @@ const card = (cardKey: string, rule: TierMatchRule): CardRule => ({
 });
 
 const postNode: ResolvedNode = {
-  kind: "content",
+  kind: "entry",
   entryType: "post",
   slug: "hello",
   databaseId: 42,
@@ -27,12 +27,12 @@ const postNode: ResolvedNode = {
 describe("resolveRule — a non-template rule kind", () => {
   test("walks targeted, then the node's tier, then fallback, then nothing", () => {
     const targeted = card("targeted", {
-      match: { nodeKind: "content", type: "post" },
+      match: { nodeKind: "entry", type: "post" },
     });
     const tier = card("tier", { tier: "entry" });
     const universal = card("fallback", { tier: "fallback" });
-    // An "archive" tier is unreachable from a content node at every step.
-    const unreachable = card("archive", { tier: "archive" });
+    // An "entryType" tier is unreachable from an entry node at every step.
+    const unreachable = card("entryType", { tier: "entryType" });
 
     expect(
       resolveRule([unreachable, universal, tier, targeted], postNode)?.cardKey,
@@ -48,13 +48,13 @@ describe("resolveRule — a non-template rule kind", () => {
 
   test("first matching targeted rule wins, and a miss falls through to the tier", () => {
     const broad = card("broad", {
-      match: { nodeKind: "content", type: "post" },
+      match: { nodeKind: "entry", type: "post" },
     });
     const narrow = card("narrow", {
-      match: { nodeKind: "content", type: "post", slug: "hello" },
+      match: { nodeKind: "entry", type: "post", slug: "hello" },
     });
     const miss = card("miss", {
-      match: { nodeKind: "content", type: "post", slug: "other" },
+      match: { nodeKind: "entry", type: "post", slug: "other" },
     });
     expect(resolveRule([broad, narrow], postNode)).toBe(broad);
     expect(resolveRule([narrow, broad], postNode)).toBe(narrow);
@@ -68,7 +68,7 @@ describe("resolveRule — a non-template rule kind", () => {
     const rules = [
       card("featured", {
         match: {
-          nodeKind: "content",
+          nodeKind: "entry",
           type: "post",
           predicate: (data) => data.kind === "entry",
         },
@@ -99,5 +99,35 @@ describe("resolveRule — a non-template rule kind", () => {
     expectTypeOf(resolveErrorRule(rules, "notFound")).toEqualTypeOf<
       CardRule | undefined
     >();
+  });
+});
+
+describe("resolveRule — a node's generic tier", () => {
+  const nodes: readonly ResolvedNode[] = [
+    { kind: "entry", entryType: "post", slug: "hello", databaseId: 42 },
+    { kind: "entryType", entryType: "post" },
+    { kind: "term", taxonomy: "tag", slug: "news", databaseId: 3 },
+    { kind: "author", slug: "ada", databaseId: 7 },
+    { kind: "date", year: 2026, month: null, day: null },
+    { kind: "frontPage" },
+    { kind: "search" },
+  ];
+
+  test.each(nodes)(
+    "a $kind node is served by the tier of the same name",
+    (node) => {
+      const rules = [
+        card("fallback", { tier: "fallback" }),
+        card(node.kind, { tier: node.kind as GenericTier }),
+      ];
+      expect(resolveRule(rules, node)?.cardKey).toBe(node.kind);
+    },
+  );
+
+  test("an archiveType node has no generic tier and falls back", () => {
+    const rules = [card("fallback", { tier: "fallback" })];
+    expect(
+      resolveRule(rules, { kind: "archiveType", name: "events" })?.cardKey,
+    ).toBe("fallback");
   });
 });

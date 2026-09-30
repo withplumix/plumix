@@ -816,7 +816,7 @@ describe("every built permalink routes back to its own intent", () => {
             { ancestorSlugs },
           );
           expect(resolve(url), `${type} ${String(url)}`).toEqual({
-            kind: "single",
+            kind: "entry",
             entryType: type,
           });
           checked++;
@@ -828,7 +828,7 @@ describe("every built permalink routes back to its own intent", () => {
             { ancestorSlugs },
           );
           expect(resolve(url), `${taxonomy} ${String(url)}`).toEqual({
-            kind: "taxonomy",
+            kind: "term",
             taxonomy,
           });
           checked++;

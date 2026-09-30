@@ -6,10 +6,10 @@ import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 // `search` is deliberately excluded — its unbounded query space would pollute
 // the CDN with one entry per distinct query string.
 const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
-  "single",
-  "archive",
-  "taxonomy",
-  "front-page",
+  "entry",
+  "entryType",
+  "term",
+  "frontPage",
 ]);
 
 interface CacheableRequest {
@@ -24,7 +24,7 @@ interface CacheableRequest {
   readonly segment: Segment;
   readonly intentKind: RouteIntent["kind"];
   /**
-   * For a `custom` (plugin-registered) archive, whether it opted into CDN
+   * For an `archiveType` (plugin-registered) archive, whether it opted into CDN
    * caching via `registerArchiveType({ cacheable: true })`. Core can't know a
    * custom archive's content dependencies, so it caches only on this opt-in.
    * Ignored for the built-in intents, whose cacheability is fixed by
@@ -155,7 +155,7 @@ export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
   // A custom archive caches only on its explicit opt-in; the built-in intents
   // are fixed by CACHEABLE_INTENTS.
   const cacheable =
-    req.intentKind === "custom"
+    req.intentKind === "archiveType"
       ? req.customArchiveCacheable === true
       : CACHEABLE_INTENTS.has(req.intentKind);
   return cacheable ? null : "intent";

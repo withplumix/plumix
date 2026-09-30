@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type {
-  CustomArchiveData,
+  ArchiveTypeData,
   ListingArchiveData,
 } from "./contract/resolved-entry.js";
 import { definePlugin } from "../plugin/define.js";
@@ -12,8 +12,8 @@ import { fallback, forArchiveType } from "./render/template-builders.js";
 
 // A plugin's custom archive data, declared in the augmentable registry so
 // `forArchiveType("event-series")` types `data.series`.
-interface EventSeriesData extends CustomArchiveData {
-  readonly kind: "custom";
+interface EventSeriesData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "event-series";
   readonly series: string;
   // A field whose name collides with a built-in data sentinel (`"year" in data`
@@ -36,7 +36,7 @@ const eventsPlugin = definePlugin("events", (ctx) => {
       if (params.series === "missing") return null;
       return {
         data: {
-          kind: "custom",
+          kind: "archiveType",
           name: "event-series",
           series: params.series,
           year: 2026,
@@ -130,7 +130,7 @@ describe("custom archive types (registerArchiveType)", () => {
 // An archive that declares its entries and lets core list them: no resolver,
 // no paginated route of its own, no hand-written pagination.
 interface TalkArchiveData extends ListingArchiveData {
-  readonly kind: "custom";
+  readonly kind: "archiveType";
   readonly name: "talks";
 }
 declare module "../template-registry.js" {
@@ -219,7 +219,7 @@ describe("an archive that declares its entries", () => {
 // A second listed archive, this one with a subject to load: `resolve` gets the
 // finished page and adds to it rather than building one.
 interface RoomArchiveData extends ListingArchiveData {
-  readonly kind: "custom";
+  readonly kind: "archiveType";
   readonly name: "rooms";
   readonly room: string;
   readonly showing: number;
@@ -240,7 +240,7 @@ const roomsPlugin = definePlugin("rooms", (ctx) => {
       if (params.room === "closed") return null;
       return {
         data: {
-          kind: "custom",
+          kind: "archiveType",
           name: "rooms",
           room: params.room ?? "",
           showing: listing.entries.length,

@@ -105,7 +105,7 @@ describe("compileRouteMap", () => {
     ]);
     const map = compileRouteMap(registry);
     const bare = map.find((r) => r.rawPattern === "/category/:term");
-    expect(bare?.intent).toEqual({ kind: "taxonomy", taxonomy: "category" });
+    expect(bare?.intent).toEqual({ kind: "term", taxonomy: "category" });
     expect(bare?.priority).toBe(50);
   });
 
@@ -123,7 +123,7 @@ describe("compileRouteMap", () => {
       (r) => r.rawPattern === "/category/:term/page/:page(\\d+)",
     );
     expect(paginated?.intent).toEqual({
-      kind: "taxonomy",
+      kind: "term",
       taxonomy: "category",
     });
     expect(paginated?.priority).toBe(50);
@@ -178,7 +178,7 @@ describe("compileRouteMap", () => {
       "/r/:term",
     ]);
     const bare = map.find((r) => r.rawPattern === "/r/:term");
-    expect(bare?.intent).toEqual({ kind: "taxonomy", taxonomy: "region" });
+    expect(bare?.intent).toEqual({ kind: "term", taxonomy: "region" });
   });
 
   test("taxonomy isPublic defaults to true — omitting it still generates a route", async () => {
@@ -240,7 +240,7 @@ describe("compileRouteMap", () => {
     expect(patterns).toContain("/page/:path+");
     expect(patterns).not.toContain("/page/:slug");
     const single = map.find((r) => r.rawPattern === "/page/:path+");
-    expect(single?.intent).toEqual({ kind: "single", entryType: "page" });
+    expect(single?.intent).toEqual({ kind: "entry", entryType: "page" });
   });
 
   test("entry type with rewrite.isHierarchical:false keeps flat :slug even when data is hierarchical", async () => {
@@ -269,7 +269,7 @@ describe("compileRouteMap", () => {
     const map = pluginRoutes(registry);
     expect(map).toHaveLength(1);
     expect(map[0]?.rawPattern).toBe("/post/:slug");
-    expect(map[0]?.intent).toEqual({ kind: "single", entryType: "post" });
+    expect(map[0]?.intent).toEqual({ kind: "entry", entryType: "post" });
     expect(map[0]?.priority).toBe(50);
   });
 
@@ -292,7 +292,7 @@ describe("compileRouteMap", () => {
       (r) => r.rawPattern === "/shop/page/:page(\\d+)",
     );
     expect(paginated?.intent).toEqual({
-      kind: "archive",
+      kind: "entryType",
       entryType: "product",
     });
     expect(paginated?.priority).toBe(50);
@@ -316,9 +316,9 @@ describe("compileRouteMap", () => {
       "/shop",
       "/shop/:slug",
     ]);
-    expect(map[0]?.intent).toEqual({ kind: "archive", entryType: "product" });
-    expect(map[1]?.intent).toEqual({ kind: "archive", entryType: "product" });
-    expect(map[2]?.intent).toEqual({ kind: "single", entryType: "product" });
+    expect(map[0]?.intent).toEqual({ kind: "entryType", entryType: "product" });
+    expect(map[1]?.intent).toEqual({ kind: "entryType", entryType: "product" });
+    expect(map[2]?.intent).toEqual({ kind: "entry", entryType: "product" });
   });
 
   test("hasArchive: string overrides the auto archive slug", async () => {
@@ -360,7 +360,7 @@ describe("compileRouteMap", () => {
           rewrite: { slug: "docs" },
         });
         ctx.registerRewriteRule("/docs/:category/:slug", {
-          kind: "single",
+          kind: "entry",
           entryType: "doc",
         });
       }),
@@ -374,8 +374,8 @@ describe("compileRouteMap", () => {
   test("duplicate explicit pattern within one plugin throws at compile", async () => {
     const registry = await buildRegistry([
       definePlugin("a", (ctx) => {
-        ctx.registerRewriteRule("/cart", { kind: "single", entryType: "x" });
-        ctx.registerRewriteRule("/cart", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
+        ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -388,7 +388,7 @@ describe("compileRouteMap", () => {
       definePlugin("conflict", (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
         ctx.registerRewriteRule("/post/:slug", {
-          kind: "single",
+          kind: "entry",
           entryType: "post",
         });
       }),
@@ -415,7 +415,10 @@ describe("compileRouteMap", () => {
     // Core's rule stays compiled — it is what answers once the plugin is
     // uninstalled — but the plugin's sorts ahead of it, so it wins the match.
     expect(matching).toHaveLength(2);
-    expect(matching[0]?.intent).toEqual({ kind: "custom", name: "search" });
+    expect(matching[0]?.intent).toEqual({
+      kind: "archiveType",
+      name: "search",
+    });
     expect(matching[1]?.intent).toEqual({ kind: "search" });
   });
 
@@ -423,7 +426,7 @@ describe("compileRouteMap", () => {
     const registry = await buildRegistry([
       definePlugin("careless", (ctx) => {
         ctx.registerRewriteRule(FRAMEWORK_SEARCH_QUERY_PATTERN, {
-          kind: "single",
+          kind: "entry",
           entryType: "x",
         });
       }),
@@ -438,10 +441,10 @@ describe("compileRouteMap", () => {
   test("cross-plugin collisions name both plugin ids", async () => {
     const registry = await buildRegistry([
       definePlugin("plugin-a", (ctx) => {
-        ctx.registerRewriteRule("/x", { kind: "single", entryType: "a" });
+        ctx.registerRewriteRule("/x", { kind: "entry", entryType: "a" });
       }),
       definePlugin("plugin-b", (ctx) => {
-        ctx.registerRewriteRule("/x", { kind: "single", entryType: "b" });
+        ctx.registerRewriteRule("/x", { kind: "entry", entryType: "b" });
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(/"plugin-a".*"plugin-b"/);
@@ -450,8 +453,8 @@ describe("compileRouteMap", () => {
   test("stable sort preserves registration order on equal priorities", async () => {
     const registry = await buildRegistry([
       definePlugin("a", (ctx) => {
-        ctx.registerRewriteRule("/a", { kind: "single", entryType: "x" });
-        ctx.registerRewriteRule("/b", { kind: "single", entryType: "x" });
+        ctx.registerRewriteRule("/a", { kind: "entry", entryType: "x" });
+        ctx.registerRewriteRule("/b", { kind: "entry", entryType: "x" });
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -479,7 +482,7 @@ describe("compileRouteMap", () => {
       definePlugin("overrider", (ctx) => {
         ctx.registerRewriteRule(
           "/post/featured",
-          { kind: "archive", entryType: "post" },
+          { kind: "entryType", entryType: "post" },
           { priority: 5 },
         );
       }),
@@ -493,7 +496,7 @@ describe("compileRouteMap", () => {
     const registry = await buildRegistry([]);
     const map = compileRouteMap(registry);
     expect(map[0]?.rawPattern).toBe(FRAMEWORK_PAGINATION_SUFFIX);
-    expect(map[0]?.intent).toEqual({ kind: "front-page" });
+    expect(map[0]?.intent).toEqual({ kind: "frontPage" });
     expect(map[0]?.priority).toBeLessThan(10);
   });
 

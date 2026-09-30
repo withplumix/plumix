@@ -5,17 +5,17 @@
  * intent describes the *route shape*, the match carries the request.
  */
 export type RouteIntent =
-  | { readonly kind: "single"; readonly entryType: string }
-  | { readonly kind: "archive"; readonly entryType: string }
-  | { readonly kind: "taxonomy"; readonly taxonomy: string }
+  | { readonly kind: "entry"; readonly entryType: string }
+  | { readonly kind: "entryType"; readonly entryType: string }
+  | { readonly kind: "term"; readonly taxonomy: string }
   | { readonly kind: "author" }
   | { readonly kind: "date" }
-  | { readonly kind: "front-page" }
+  | { readonly kind: "frontPage" }
   | { readonly kind: "search" }
   // A plugin-registered archive type (`registerArchiveType`); `name` looks the
   // resolver up on the registry. This is the open seam — new archive types are
   // registered, not added to this union.
-  | { readonly kind: "custom"; readonly name: string };
+  | { readonly kind: "archiveType"; readonly name: string };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

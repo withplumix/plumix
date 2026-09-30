@@ -358,10 +358,10 @@ export type { AutosavePairInput } from "./revisions/repository.js";
 // rule core does when it decides whether to store at all.
 export { responseAllowsSharedStorage } from "./cdn/decision.js";
 export {
-  archive,
   author,
   date,
   entry,
+  entryType,
   collectNamedTemplates,
   fallback,
   forArchiveType,
@@ -374,7 +374,7 @@ export {
   notFound,
   search,
   serverError,
-  taxonomy,
+  term,
   templateRules,
 } from "./route/render/template-builders.js";
 export type { NamedTemplateChoice } from "./route/contract/named-template.js";
@@ -450,11 +450,11 @@ export {
 export { pageFacts } from "./route/render/page-facts.js";
 export type { PageFacts } from "./route/render/page-facts.js";
 export type {
-  ArchiveData,
+  ArchiveTypeData,
   AuthorArchiveData,
-  CustomArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   ErrorData,
   FrontPageData,
   ListingArchiveData,
@@ -463,7 +463,7 @@ export type {
   ResolvedEntry,
   ResolvedTerm,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "./route/contract/resolved-entry.js";
 // One page of an archive's entries, as a listed archive's resolver receives it.
 export type { EntryListing } from "./route/contract/entry-listing.js";
@@ -479,15 +479,15 @@ export { loadTemplateDeps } from "./template-deps.js";
 export type { TemplateDepLoader } from "./template-deps.js";
 export {
   defineTheme,
-  isArchive,
+  isArchiveType,
   isAuthor,
-  isCustom,
   isDate,
   isEntry,
+  isEntryType,
   isError,
   isFrontPage,
   isSearch,
-  isTaxonomy,
+  isTerm,
 } from "./theme.js";
 export type {
   DocumentLink,

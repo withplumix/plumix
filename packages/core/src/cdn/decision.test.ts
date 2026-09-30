@@ -27,13 +27,13 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "anonymous",
-        intentKind: "single",
+        intentKind: "entry",
       }),
     ).toBe(null);
   });
 
-  it("caches anonymous GETs to archive, taxonomy, and front-page intents", () => {
-    for (const intentKind of ["archive", "taxonomy", "front-page"] as const) {
+  it("caches anonymous GETs to entryType, term, and frontPage intents", () => {
+    for (const intentKind of ["entryType", "term", "frontPage"] as const) {
       expect(
         bypassReason({ method: "GET", segment: "anonymous", intentKind }),
       ).toBe(null);
@@ -47,7 +47,7 @@ describe("cdnBypassReason", () => {
       "members",
     ] as const) {
       expect(
-        bypassReason({ method: "GET", segment, intentKind: "single" }),
+        bypassReason({ method: "GET", segment, intentKind: "entry" }),
       ).toBe(null);
     }
   });
@@ -57,7 +57,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "private",
-        intentKind: "single",
+        intentKind: "entry",
       }),
     ).toBe("private");
   });
@@ -77,14 +77,14 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "anonymous",
-        intentKind: "custom",
+        intentKind: "archiveType",
       }),
     ).toBe("intent");
     expect(
       bypassReason({
         method: "GET",
         segment: "anonymous",
-        intentKind: "custom",
+        intentKind: "archiveType",
         customArchiveCacheable: false,
       }),
     ).toBe("intent");
@@ -95,7 +95,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "anonymous",
-        intentKind: "custom",
+        intentKind: "archiveType",
         customArchiveCacheable: true,
       }),
     ).toBe(null);
@@ -106,7 +106,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "private",
-        intentKind: "custom",
+        intentKind: "archiveType",
         customArchiveCacheable: true,
       }),
     ).toBe("private");
@@ -117,7 +117,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "POST",
         segment: "anonymous",
-        intentKind: "custom",
+        intentKind: "archiveType",
         customArchiveCacheable: true,
       }),
     ).toBe("method");
@@ -129,7 +129,7 @@ describe("cdnBypassReason", () => {
         bypassReason({
           method: "GET",
           segment,
-          intentKind: "single",
+          intentKind: "entry",
           canKeySegments: false,
         }),
       ).toBe("segment-unsupported");
@@ -141,7 +141,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "anonymous",
-        intentKind: "single",
+        intentKind: "entry",
         canKeySegments: false,
       }),
     ).toBe(null);
@@ -152,7 +152,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "GET",
         segment: "private",
-        intentKind: "single",
+        intentKind: "entry",
         canKeySegments: false,
       }),
     ).toBe("private");
@@ -163,7 +163,7 @@ describe("cdnBypassReason", () => {
       bypassReason({
         method: "POST",
         segment: "anonymous",
-        intentKind: "single",
+        intentKind: "entry",
       }),
     ).toBe("method");
   });

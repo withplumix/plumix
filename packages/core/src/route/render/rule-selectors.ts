@@ -41,7 +41,7 @@ import type {
   TemplateData,
   TierMatchRule,
 } from "../../theme.js";
-import type { EntryData, TaxonomyData } from "../contract/resolved-entry.js";
+import type { EntryData, TermArchiveData } from "../contract/resolved-entry.js";
 
 /**
  * How a rule kind turns a selected match into one of its rules. The selector it
@@ -68,7 +68,7 @@ export function entryTypeMatch(
   name: EntryTypeName,
   extra?: MatchNarrowing,
 ): TierMatchRule {
-  return { match: { nodeKind: "content", type: name, ...extra } };
+  return { match: { nodeKind: "entry", type: name, ...extra } };
 }
 
 /** The match a taxonomy selector narrows from. */
@@ -139,7 +139,9 @@ export interface TermTaxonomyTargets<K extends TermTaxonomyName, STerm> {
     value: StoredTermMetaOf<K>[M],
   ): STerm;
   /** Narrow by an arbitrary predicate over the resolved taxonomy data. */
-  where(predicate: (data: TaxonomyData<ResolvedTermFor<K>>) => boolean): STerm;
+  where(
+    predicate: (data: TermArchiveData<ResolvedTermFor<K>>) => boolean,
+  ): STerm;
 }
 
 /** Narrowings an author selector accepts. */
@@ -191,7 +193,7 @@ export function entryTypeTargets<
         predicate: predicate as unknown as (d: TemplateData) => boolean,
       }),
     archive: bindArchive({
-      match: { nodeKind: "content-type-archive", type: name },
+      match: { nodeKind: "entryType", type: name },
     }),
   };
 }
@@ -209,7 +211,9 @@ export function termTaxonomyTargets<
     id: (id: number) => term({ id }),
     whereMeta: (key: keyof StoredTermMetaOf<K>, value: unknown) =>
       term({ predicate: termMetaEquals(String(key), value) }),
-    where: (predicate: (data: TaxonomyData<ResolvedTermFor<K>>) => boolean) =>
+    where: (
+      predicate: (data: TermArchiveData<ResolvedTermFor<K>>) => boolean,
+    ) =>
       term({
         // Safety: the surrounding matcher pins `nodeKind` and `type`, so the
         // resolver only calls this predicate with the term data it was written
@@ -248,5 +252,5 @@ export function dateTargets<S>(bind: BindRule<S>): DateTargets<S> {
 
 /** One plugin-registered archive type (`registerArchiveType`). */
 export function archiveTypeTargets<S>(name: string, bind: BindRule<S>): S {
-  return bind({ match: { nodeKind: "custom", type: name } });
+  return bind({ match: { nodeKind: "archiveType", type: name } });
 }

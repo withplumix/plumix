@@ -34,7 +34,7 @@ import type { RestErrors } from "../rest/contract/errors.js";
 import type { EntryListing } from "../route/contract/entry-listing.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
-import type { CustomArchiveData } from "../route/contract/resolved-entry.js";
+import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type {
   MetaBoxField,
@@ -183,7 +183,7 @@ export interface EntryTypeOptions {
   readonly archivePerPage?: number;
   /**
    * Access-control policy space for entries of this type. `default` gates
-   * every entry's own routes (its `single` and `archive` intents); `policies`
+   * every entry's own routes (its `entry` and `entryType` intents); `policies`
    * is the closed set an editor may later assign per-entry. Absent ⇒ the global
    * `anonymous` default (un-policied — cached and rendered exactly as today).
    *
@@ -529,7 +529,7 @@ export interface RegisteredRewriteRule {
 
 /** The render payload a custom-archive resolver produces, or `null` for a 404. */
 export interface CustomArchiveResolution {
-  readonly data: CustomArchiveData;
+  readonly data: ArchiveTypeData;
   readonly title: string;
   /**
    * CDN tags for the content this archive lists — typically `t:<type>`
@@ -552,7 +552,7 @@ export interface CustomArchiveResolution {
  * theme was promised.
  */
 export interface ListingArchiveResolution {
-  readonly data?: CustomArchiveData;
+  readonly data?: ArchiveTypeData;
 }
 
 /**

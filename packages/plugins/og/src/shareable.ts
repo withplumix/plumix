@@ -28,17 +28,17 @@ export async function isShareablePage(
     case "frontPage":
       return true;
     // An archive is the one listing kind core itself gates: `policyForMatch`
-    // resolves an `archive` intent against the entry type's `access.default`,
+    // resolves an `entryType` intent against the entry type's `access.default`,
     // so a type whose own archive redirects an anonymous visitor to sign-in
     // must not have a card either — the card is public, immutable and edge
     // cached, and a theme card rendering `data.entries` would put gated titles
     // on it. The other three have no policy attached, so nothing to ask.
-    case "archive":
+    case "entryType":
       return (
         data.pagination.total > 0 &&
         (await entryAllowsAnonymousAccess(ctx, { type: data.contentType }))
       );
-    case "taxonomy":
+    case "term":
     case "author":
     case "date":
       return data.pagination.total > 0;

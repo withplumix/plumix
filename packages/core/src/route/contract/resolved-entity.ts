@@ -4,7 +4,7 @@
  * the menu plugin's `isCurrent` detection) read it via `AppContext` to
  * answer "is this the page we're currently rendering."
  *
- * Archive routes set the `archive` variant carrying the entry type
+ * Entry-type archive routes set the `entryType` variant carrying the entry type
  * being listed. Single routes set the `entry` variant with the resolved
  * row id, and `preview` when a preview token's autosave was overlaid onto
  * it — the page then renders data no public URL serves, so anything
@@ -16,4 +16,4 @@ export type ResolvedEntity =
   | { readonly kind: "entry"; readonly id: number; readonly preview: boolean }
   | { readonly kind: "term"; readonly id: number }
   | { readonly kind: "author"; readonly id: number }
-  | { readonly kind: "archive"; readonly entryType: string };
+  | { readonly kind: "entryType"; readonly entryType: string };

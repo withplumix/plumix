@@ -28,7 +28,7 @@ describe("isCurrentSource", () => {
     });
 
     test("does not match an archive resolvedEntity", () => {
-      const ctx = ctxWith({ kind: "archive", entryType: "post" });
+      const ctx = ctxWith({ kind: "entryType", entryType: "post" });
       expect(isCurrentSource(ctx, { kind: "entry", id: 1 })).toBe(false);
     });
 

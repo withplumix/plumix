@@ -298,7 +298,7 @@ describe("whereMeta against a real row", () => {
     });
 
     const node: ResolvedNode = {
-      kind: "content",
+      kind: "entry",
       entryType: "post",
       slug: row.slug,
       databaseId: row.id,
@@ -346,7 +346,7 @@ describe("whereMeta against a real row", () => {
       resolveTemplate(
         [sealed],
         {
-          kind: "content",
+          kind: "entry",
           entryType: "post",
           slug: row.slug,
           databaseId: row.id,
@@ -430,7 +430,7 @@ describe("whereMeta against a real row", () => {
       const row = resolved.find((candidate) => candidate.id === id);
       if (!row) throw new Error(`no resolved entry for ${String(id)}`);
       const node: ResolvedNode = {
-        kind: "content",
+        kind: "entry",
         entryType: "post",
         slug: row.slug,
         databaseId: row.id,

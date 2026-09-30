@@ -14,76 +14,24 @@ import type {
   TemplateData,
   TierMatchRule,
 } from "../../theme.js";
+import type { ResolvedNode } from "../contract/resolved-node.js";
 
-export type ResolvedNode =
-  | ResolvedTermNode
-  | ResolvedContentNode
-  | ResolvedContentTypeArchive
-  | ResolvedAuthorNode
-  | ResolvedDateNode
-  | ResolvedCustomNode
-  | ResolvedFrontPage
-  | ResolvedSearch;
+export type { ResolvedNode } from "../contract/resolved-node.js";
 
-interface ResolvedTermNode {
-  readonly kind: "term";
-  readonly taxonomy: string;
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedAuthorNode {
-  readonly kind: "author";
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedDateNode {
-  readonly kind: "date";
-  readonly year: number;
-  readonly month: number | null;
-  readonly day: number | null;
-}
-
-interface ResolvedCustomNode {
-  readonly kind: "custom";
-  /** The registered archive-type name (`registerArchiveType`). */
-  readonly name: string;
-}
-
-interface ResolvedContentNode {
-  readonly kind: "content";
-  readonly entryType: string;
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedContentTypeArchive {
-  readonly kind: "content-type-archive";
-  readonly entryType: string;
-}
-
-interface ResolvedFrontPage {
-  readonly kind: "front-page";
-}
-
-interface ResolvedSearch {
-  readonly kind: "search";
-}
-
-// Maps each resolved-node kind to the generic tier that serves it. `fallback`
-// (universal) and the `notFound`/`serverError` handlers are not node-matched —
-// the former is the terminal, the latter fire on a condition, not a node.
+// Maps each resolved-node kind to the generic tier that serves it: the tier of
+// the same name, but for the archive types. `fallback` (universal) and the
+// `notFound`/`serverError` handlers are not node-matched — the former is the
+// terminal, the latter fire on a condition, not a node.
 const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
-  content: "entry",
-  "content-type-archive": "archive",
-  term: "taxonomy",
+  entry: "entry",
+  entryType: "entryType",
+  term: "term",
   author: "author",
   date: "date",
   // Plugin archives have no dedicated generic tier — they match via a
   // `forArchiveType(name)` targeted rule, else the universal `fallback`.
-  custom: "fallback",
-  "front-page": "frontPage",
+  archiveType: "fallback",
+  frontPage: "frontPage",
   search: "search",
 };
 
@@ -97,9 +45,9 @@ export function matchesIdentity(
 ): boolean {
   if (match.nodeKind !== node.kind) return false;
   switch (node.kind) {
-    case "content-type-archive":
+    case "entryType":
       return match.type === node.entryType;
-    case "content":
+    case "entry":
       return (
         match.type === node.entryType &&
         (match.slug === undefined || match.slug === node.slug) &&
@@ -130,7 +78,7 @@ export function matchesIdentity(
         (match.month ?? null) === node.month &&
         (match.day ?? null) === node.day
       );
-    case "custom":
+    case "archiveType":
       // A `forArchiveType(name)` matcher carries the archive-type name as `type`.
       return match.type === node.name;
     default:
@@ -201,6 +149,6 @@ export function ruleLabel(rule: TierMatchRule): string {
   let sel = "";
   if (m.slug !== undefined) sel = `:${m.slug}`;
   else if (m.id !== undefined) sel = `#${m.id}`;
-  const prefix = m.nodeKind === "content-type-archive" ? "archive:" : "";
+  const prefix = m.nodeKind === "entryType" ? "archive:" : "";
   return `${prefix}${m.type}${sel}`;
 }

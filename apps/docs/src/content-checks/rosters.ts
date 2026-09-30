@@ -89,11 +89,11 @@
 
 import type {
   ActionName,
-  ArchiveData,
+  ArchiveTypeData,
   AuthorArchiveData,
-  CustomArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   EntryTypeLabels,
   EntryTypeOptions,
   ErrorData,
@@ -107,8 +107,8 @@ import type {
   RuntimeAdapter,
   SearchData,
   TargetMatcher,
-  TaxonomyData,
   TemplateData,
+  TermArchiveData,
 } from "plumix";
 import type { PlumixPrefetch, PlumixStrategy } from "plumix/blocks";
 import type { CANONICAL_INPUT_TYPES } from "plumix/fields";
@@ -453,8 +453,8 @@ type PluginExport = keyof typeof PlumixPlugin;
 const GENERIC_TIERS = [
   "fallback",
   "entry",
-  "archive",
-  "taxonomy",
+  "entryType",
+  "term",
   "author",
   "date",
   "frontPage",
@@ -485,11 +485,11 @@ type _GenericTiersAreThemeExports = Assert<
  * checked against what each builder does.
  */
 const TARGETED_MATCHERS = {
-  forEntryType: ["content", "content-type-archive"],
+  forEntryType: ["entry", "entryType"],
   forTermTaxonomy: ["term"],
   forAuthor: ["author"],
   forDate: ["date"],
-  forArchiveType: ["custom"],
+  forArchiveType: ["archiveType"],
 } as const satisfies Partial<
   Record<ThemeExport, readonly TargetMatcher["nodeKind"][]>
 >;
@@ -582,11 +582,11 @@ const MATCH_CONSTRUCTORS = [
  */
 interface TemplateDataShapes {
   EntryData: EntryData;
-  ArchiveData: ArchiveData;
-  TaxonomyData: TaxonomyData;
+  EntryTypeArchiveData: EntryTypeArchiveData;
+  TermArchiveData: TermArchiveData;
   AuthorArchiveData: AuthorArchiveData;
   DateArchiveData: DateArchiveData;
-  CustomArchiveData: CustomArchiveData;
+  ArchiveTypeData: ArchiveTypeData;
   FrontPageData: FrontPageData;
   SearchData: SearchData;
   ErrorData: ErrorData;
@@ -598,11 +598,11 @@ type _TemplateDataShapesMatchSource = Assert<
 
 const TEMPLATE_DATA = [
   "EntryData",
-  "ArchiveData",
-  "TaxonomyData",
+  "EntryTypeArchiveData",
+  "TermArchiveData",
   "AuthorArchiveData",
   "DateArchiveData",
-  "CustomArchiveData",
+  "ArchiveTypeData",
   "FrontPageData",
   "SearchData",
   "ErrorData",

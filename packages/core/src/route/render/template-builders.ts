@@ -18,14 +18,14 @@ import type {
 } from "../../theme.js";
 import type { NamedTemplateChoice } from "../contract/named-template.js";
 import type {
-  ArchiveData,
   AuthorArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   ErrorData,
   FrontPageData,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "../contract/resolved-entry.js";
 import type {
   AuthorTargets,
@@ -89,14 +89,16 @@ export function entry(template: TemplateEntry<EntryData>): TemplateRule {
   return tierRule("entry", template);
 }
 
-/** A content-type archive listing. */
-export function archive(template: TemplateEntry<ArchiveData>): TemplateRule {
-  return tierRule("archive", template);
+/** An entry type's archive listing (any entry type). */
+export function entryType(
+  template: TemplateEntry<EntryTypeArchiveData>,
+): TemplateRule {
+  return tierRule("entryType", template);
 }
 
-/** A term archive (any taxonomy). */
-export function taxonomy(template: TemplateEntry<TaxonomyData>): TemplateRule {
-  return tierRule("taxonomy", template);
+/** A term's archive (any taxonomy). */
+export function term(template: TemplateEntry<TermArchiveData>): TemplateRule {
+  return tierRule("term", template);
 }
 
 /** An author archive (any author). */
@@ -159,7 +161,7 @@ export function collectNamedTemplates(
   const out: Record<string, NamedTemplateChoice[]> = {};
   for (const rule of templateRules(templates)) {
     const match = rule.match;
-    if (!match?.named || match.nodeKind !== "content" || !match.type) continue;
+    if (!match?.named || match.nodeKind !== "entry" || !match.type) continue;
     const named = match.named;
     const list = (out[match.type] ??= []);
     if (list.some((c) => c.id === named.id)) continue;
@@ -179,11 +181,11 @@ type EntrySelector<K extends EntryTypeName> = TemplateSelector<
 >;
 
 type EntryArchiveSelector<K extends EntryTypeName> = TemplateSelector<
-  ArchiveData<ResolvedEntryFor<K>>
+  EntryTypeArchiveData<ResolvedEntryFor<K>>
 >;
 
 type TaxonomySelector<K extends TermTaxonomyName> = TemplateSelector<
-  TaxonomyData<ResolvedTermFor<K>>
+  TermArchiveData<ResolvedTermFor<K>>
 >;
 
 interface EntryTypeBuilder<K extends EntryTypeName>
@@ -206,7 +208,7 @@ export function forEntryType<K extends EntryTypeName>(
     ...entryTypeTargets(
       name,
       selector<EntryData<ResolvedEntryFor<K>>>,
-      selector<ArchiveData<ResolvedEntryFor<K>>>,
+      selector<EntryTypeArchiveData<ResolvedEntryFor<K>>>,
     ),
     named: (id, label) =>
       selector<EntryData<ResolvedEntryFor<K>>>(
@@ -232,9 +234,9 @@ export function forTermTaxonomy<K extends TermTaxonomyName>(
   name: K,
 ): TermTaxonomyBuilder<K> {
   return {
-    ...termTaxonomyTargets(name, selector<TaxonomyData<ResolvedTermFor<K>>>),
+    ...termTaxonomyTargets(name, selector<TermArchiveData<ResolvedTermFor<K>>>),
     named: (id, label) =>
-      selector<TaxonomyData<ResolvedTermFor<K>>>(
+      selector<TermArchiveData<ResolvedTermFor<K>>>(
         termTaxonomyMatch(name, {
           named: { id, label },
           predicate: termMetaEquals(NAMED_TEMPLATE_META_KEY, id),

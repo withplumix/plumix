@@ -85,19 +85,19 @@ export async function resolvePublicRoute(
     intent: match.intent,
   };
   switch (match.intent.kind) {
-    case "single":
+    case "entry":
       return resolveSingle(ctx, match.intent, match.params, renderEnv);
-    case "archive":
+    case "entryType":
       return resolveArchive(ctx, match.intent, match.params, renderEnv);
-    case "taxonomy":
+    case "term":
       return resolveTaxonomy(ctx, match, match.intent, renderEnv);
-    case "front-page":
+    case "frontPage":
       return resolveFrontPage(ctx, match.params, renderEnv);
     case "author":
       return resolveAuthor(ctx, match.params, renderEnv);
     case "date":
       return resolveDate(ctx, match.params, renderEnv);
-    case "custom":
+    case "archiveType":
       return resolveCustom(ctx, match.intent, match.params, renderEnv);
     case "search":
       return resolveSearch(ctx, match.params, renderEnv);
@@ -187,7 +187,7 @@ async function resolveSearch(
 async function resolveTaxonomy(
   ctx: AppContext,
   match: RouteMatch,
-  intent: Extract<RouteIntent, { kind: "taxonomy" }>,
+  intent: Extract<RouteIntent, { kind: "term" }>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
   const { params } = match;
@@ -267,7 +267,7 @@ async function resolveDate(
 // `null` → 404), and templates via a `forArchiveType(name)` rule or `fallback`.
 async function resolveCustom(
   ctx: AppContext,
-  intent: Extract<RouteIntent, { kind: "custom" }>,
+  intent: Extract<RouteIntent, { kind: "archiveType" }>,
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
@@ -292,7 +292,7 @@ async function resolveCustom(
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
-    node: { kind: "custom", name: intent.name },
+    node: { kind: "archiveType", name: intent.name },
     data: result.data,
     title: result.title,
   });
@@ -317,7 +317,7 @@ async function resolveListingArchive(
 ): Promise<Response> {
   const query = archiveEntries(
     ctx,
-    { kind: "custom", name: archive.name },
+    { kind: "archiveType", name: archive.name },
     params,
   );
   if (query === null) return notFound("public-custom-archive-no-entries");
@@ -346,7 +346,7 @@ async function resolveListingArchive(
   // not fields a resolver gets to restate differently.
   const data: ListingArchiveData = {
     ...resolution.data,
-    kind: "custom",
+    kind: "archiveType",
     name: archive.name,
     page,
     entries: listing.entries,
@@ -355,7 +355,7 @@ async function resolveListingArchive(
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
-    node: { kind: "custom", name: archive.name },
+    node: { kind: "archiveType", name: archive.name },
     data,
     title: resolution.title,
   });
@@ -385,7 +385,7 @@ async function nameListingPage(
 
 async function resolveSingle(
   ctx: AppContext,
-  intent: Extract<RouteIntent, { kind: "single" }>,
+  intent: Extract<RouteIntent, { kind: "entry" }>,
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
@@ -413,7 +413,7 @@ async function resolveSingle(
     ctx,
     renderEnv,
     node: {
-      kind: "content",
+      kind: "entry",
       entryType: row.type,
       slug: row.slug,
       databaseId: row.id,
@@ -427,14 +427,14 @@ async function resolveSingle(
 
 async function resolveArchive(
   ctx: AppContext,
-  intent: Extract<RouteIntent, { kind: "archive" }>,
+  intent: Extract<RouteIntent, { kind: "entryType" }>,
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
   // Set before the listing resolves, as the taxonomy and author routes set
   // theirs: a `resolve:archive:data` subscriber reads the entity off ctx, and
   // it is this route's own intent rather than anything the query returns.
-  ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
+  ctx.resolvedEntity = { kind: "entryType", entryType: intent.entryType };
 
   const page = await archiveData(
     ctx,

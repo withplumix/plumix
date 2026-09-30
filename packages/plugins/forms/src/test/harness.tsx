@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
-import { archive, defineTheme, entry, fallback } from "plumix/theme";
+import { defineTheme, entry, entryType, fallback } from "plumix/theme";
 
 import { applyFormsSchema } from "./db.js";
 
@@ -37,7 +37,7 @@ const themeWith = (blocks: readonly BlockSpec[], entryTemplate = entryBlocks) =>
       // The same blocks on a page that is not one entry's — what a listing
       // rendering an excerpt does, and the only way to reach the form block
       // where there is no entry to bind.
-      archive(({ data }) =>
+      entryType(({ data }) =>
         data.entries.map((one) =>
           one.contentBlocks ? (
             <BlockRenderer key={one.id} content={one.contentBlocks} />
