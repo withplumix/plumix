@@ -1,13 +1,20 @@
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { beforeEach, describe, expect, test } from "vitest";
+import type { ChildProcess } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   CLOUDFLARE_E2E,
   runtimePackage,
   usePlaygrounds,
 } from "./playground-fixture.js";
-import { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
+import {
+  definePlumixE2EConfig,
+  resolveE2EPort,
+  superviseWebServer,
+} from "./playwright-config.js";
 
 const playground = usePlaygrounds();
 
@@ -96,7 +103,9 @@ describe("definePlumixE2EConfig", () => {
 
     const cmd = webServerCommandOf(config);
     expect(cmd).toBe(
-      "cd .. && rm -rf .wrangler/state drizzle && pnpm exec plumix migrate generate && pnpm exec plumix migrate apply && pnpm exec plumix dev --port 3040",
+      superviseWebServer(
+        "cd .. && rm -rf .wrangler/state drizzle && pnpm exec plumix migrate generate && pnpm exec plumix migrate apply && pnpm exec plumix dev --port 3040",
+      ),
     );
     // The runtime's paths may name its tooling; no step may invoke it.
     expect(
@@ -138,7 +147,9 @@ describe("definePlumixE2EConfig", () => {
     });
 
     expect(webServerCommandOf(config)).toBe(
-      "cd . && rm -rf data drizzle && bun --bun node_modules/plumix/bin/plumix.mjs migrate generate && bun --bun node_modules/plumix/bin/plumix.mjs migrate apply && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
+      superviseWebServer(
+        "cd . && rm -rf data drizzle && bun --bun node_modules/plumix/bin/plumix.mjs migrate generate && bun --bun node_modules/plumix/bin/plumix.mjs migrate apply && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
+      ),
     );
   });
 
@@ -464,5 +475,73 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
         "plumix dev --port 3010 --inspector-port 9310",
       );
     });
+  });
+});
+
+// Playwright starts the web server as its own process group and kills that
+// group only from its own teardown. A runner that dies some other way — a
+// SIGTERM, or a SIGKILL from turbo stopping a sibling task — leaves the server
+// holding the port, and the next run on it refuses to start (#2808).
+describe("the web server's lifetime", () => {
+  let server: ChildProcess | undefined;
+
+  afterEach(() => {
+    if (server?.pid === undefined) return;
+    try {
+      process.kill(-server.pid, "SIGKILL");
+    } catch {
+      // Already gone, which is what the test wants.
+    }
+  });
+
+  // Spawned the way Playwright spawns `webServer.command`: through a shell,
+  // as the leader of a new process group, with a pipe on stdin that only the
+  // runner holds.
+  async function startServer(pidFile: string): Promise<ChildProcess> {
+    const config = definePlumixE2EConfig({
+      port: 3990,
+      webServerCommand: `sleep 300 & echo $! > ${pidFile}; wait`,
+    });
+    const child = spawn(webServerCommandOf(config), {
+      shell: true,
+      detached: true,
+      stdio: ["pipe", "ignore", "ignore"],
+    });
+    await vi.waitFor(() => readFileSync(pidFile, "utf8").trim() !== "", {
+      timeout: 5000,
+    });
+    return child;
+  }
+
+  const isRunning = (pid: number): boolean => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  test("stops when the runner that started it goes away", async () => {
+    const pidFile = join(configDir, "server.pid");
+    server = await startServer(pidFile);
+    const pid = Number(readFileSync(pidFile, "utf8"));
+
+    // The runner's end of the pipe closes however the runner died.
+    server.stdin?.destroy();
+
+    await vi.waitFor(() => expect(isRunning(pid)).toBe(false), {
+      timeout: 5000,
+    });
+  });
+
+  test("keeps serving while the runner is alive", async () => {
+    const pidFile = join(configDir, "server.pid");
+    server = await startServer(pidFile);
+    const pid = Number(readFileSync(pidFile, "utf8"));
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(isRunning(pid)).toBe(true);
   });
 });

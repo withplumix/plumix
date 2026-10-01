@@ -283,16 +283,19 @@ export const gatesUntilGreen = async (
         stopAtFirstFailure: true,
         retryAFailureOnce: true,
         onResult: (result) =>
-          journal.record({
-            phase: `gate:${result.name}#${label}.${round}`,
-            kind: "gate",
-            startedAt: result.startedAt,
-            durationMs: result.durationMs,
-            outcome: result.outcome,
-            detail: result.skippedBecause,
-            command: result.command,
-            exitCode: result.exitCode,
-          }),
+          journal.record(
+            {
+              phase: `gate:${result.name}#${label}.${round}`,
+              kind: "gate",
+              startedAt: result.startedAt,
+              durationMs: result.durationMs,
+              outcome: result.outcome,
+              detail: result.skippedBecause,
+              command: result.command,
+              exitCode: result.exitCode,
+            },
+            result.output,
+          ),
       },
     );
     const [failure] = failures;

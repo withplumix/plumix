@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
+import type { PhaseRecord } from "./telemetry.js";
 import {
   Journal,
   notionalCostOf,
@@ -161,3 +162,43 @@ describe("Journal.runId", () => {
     expect(new Set(opened.map(({ runId }) => runId)).size).toBe(opened.length);
   });
 });
+
+// A gate retried after a failure records two runs under one phase name; the
+// output of each failed run is what tells a port collision from a flaky spec
+// once the retry has passed (#2808).
+describe("Journal.record with a gate run's output", () => {
+  const gateRun = {
+    phase: "gate:e2e#final.1",
+    kind: "gate",
+    startedAt: "2026-10-01T00:00:00.000Z",
+    durationMs: 1,
+    outcome: "fail",
+  } as const;
+
+  test("keeps every failed run's output in the phase log the record names", () => {
+    const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));
+
+    journal.record(gateRun, "http://localhost:3070 is already used");
+    journal.record(gateRun, "menu.spec.ts:259 failed");
+
+    const log = readFileSync(journal.logPath(gateRun.phase), "utf8");
+    expect(log).toContain("3070 is already used");
+    expect(log).toContain("menu.spec.ts:259 failed");
+    expect(readJournal(journal).phases[0]?.logFile).toBe(
+      journal.logPath(gateRun.phase),
+    );
+  });
+
+  test("names no log for a run that printed nothing worth keeping", () => {
+    const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));
+
+    journal.record({ ...gateRun, outcome: "ok" });
+
+    expect(readJournal(journal).phases[0]?.logFile).toBeUndefined();
+  });
+});
+
+const readJournal = (journal: Journal): { phases: PhaseRecord[] } =>
+  JSON.parse(readFileSync(join(journal.dir, "run.json"), "utf8")) as {
+    phases: PhaseRecord[];
+  };

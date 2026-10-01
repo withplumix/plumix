@@ -133,6 +133,29 @@ export function resolveE2EPort(base: number): number {
   return base + offset;
 }
 
+// Runs the server command as a child and stays in the process group Playwright
+// made for it. Playwright holds the only writer of its stdin, so the pipe ends
+// however the runner dies — a SIGTERM or a SIGKILL skips the teardown that
+// would kill the group — and the group goes with it, port and all (#2808).
+// No single quotes inside: the script travels single-quoted.
+const SUPERVISOR = [
+  `const { spawn } = require("node:child_process");`,
+  `const server = spawn(process.argv[1], { shell: true, stdio: ["ignore", "inherit", "inherit"] });`,
+  `server.on("exit", (code) => process.exit(code ?? 1));`,
+  `process.stdin.on("end", () => process.kill(0, "SIGKILL"));`,
+  `process.stdin.resume();`,
+].join(" ");
+
+const shellQuote = (value: string): string =>
+  `'${value.replaceAll("'", `'\\''`)}'`;
+
+/** `command` wrapped so it stops when the Playwright runner does. */
+export function superviseWebServer(command: string): string {
+  return [process.execPath, "-e", SUPERVISOR, command]
+    .map(shellQuote)
+    .join(" ");
+}
+
 interface PlaygroundCommand {
   readonly playground: string;
   /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
@@ -287,7 +310,7 @@ export function definePlumixE2EConfig(
     },
     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
     webServer: {
-      command: webServerCommand,
+      command: superviseWebServer(webServerCommand),
       ...(options.webServerPort !== undefined
         ? { port: resolveE2EPort(options.webServerPort) }
         : {

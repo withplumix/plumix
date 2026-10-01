@@ -1,4 +1,10 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 interface ModelRatesPerMillionTokens {
@@ -273,7 +279,19 @@ export class Journal {
     this.#persist("running");
   }
 
-  record(phase: PhaseRecord): void {
+  /**
+   * `output` is what a gate run printed; it is appended to the phase's log,
+   * so a gate retried under one phase name keeps every failed run's output.
+   */
+  record(phase: PhaseRecord, output?: string): void {
+    if (output !== undefined) {
+      const logFile = this.logPath(phase.phase);
+      appendFileSync(
+        logFile,
+        `--- ${phase.startedAt} exit ${String(phase.exitCode)}\n${output}\n`,
+      );
+      phase = { ...phase, logFile };
+    }
     this.#phases.push(phase);
     this.#persist("running");
 
