@@ -70,6 +70,10 @@ function purgeTags(tags: readonly string[]): Promise<void> {
   return purge(tags);
 }
 
+function entryTags(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `e:${String(i)}`);
+}
+
 describe("cloudflare().connect", () => {
   it("is inert when either credential resolves to nothing", () => {
     const config = { ttl: 60, ...CREDS };
@@ -212,7 +216,7 @@ describe("connected cdn purgeTags", () => {
   });
 
   it("splits more than 100 tags into calls of at most 100", async () => {
-    const tags = Array.from({ length: 101 }, (_, i) => `e:${String(i)}`);
+    const tags = entryTags(101);
 
     await purgeTags(tags);
 
@@ -226,7 +230,7 @@ describe("connected cdn purgeTags", () => {
   });
 
   it("sends exactly 100 tags in one call", async () => {
-    await purgeTags(Array.from({ length: 100 }, (_, i) => `e:${String(i)}`));
+    await purgeTags(entryTags(100));
 
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -241,9 +245,7 @@ describe("connected cdn purgeTags", () => {
       .mockResolvedValueOnce(new Response(null, { status: 403 }));
     let settled = false;
 
-    const purge = purgeTags(
-      Array.from({ length: 101 }, (_, i) => `e:${String(i)}`),
-    ).finally(() => {
+    const purge = purgeTags(entryTags(101)).finally(() => {
       settled = true;
     });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
