@@ -611,6 +611,57 @@ describe("menu RPC", () => {
     });
   });
 
+  describe("menu.delete hooks", () => {
+    test("fires menu:deleted with the term id, slug and request context", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "ghost");
+      const calls: { payload: unknown; sameHooks: boolean }[] = [];
+      h.hooks.addAction("menu:deleted", (payload, ctx) => {
+        calls.push({ payload, sameHooks: ctx.hooks === h.hooks });
+      });
+
+      await h.client.menu.delete({ termId: m.id });
+
+      expect(calls).toEqual([
+        { payload: { termId: m.id, slug: "ghost" }, sameHooks: true },
+      ]);
+    });
+
+    test("fires settings:group_changed with the unbound keys", async () => {
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "ghost");
+      await h.factories.setting.create({
+        group: "menu_locations",
+        key: "primary",
+        value: m.slug,
+      });
+      await h.factories.setting.create({
+        group: "menu_locations",
+        key: "footer",
+        value: m.slug,
+      });
+      const other = await seedMenu(h.db, h.factories, "other");
+      await h.factories.setting.create({
+        group: "menu_locations",
+        key: "sidebar",
+        value: other.slug,
+      });
+      const calls: unknown[] = [];
+      h.hooks.addAction("settings:group_changed", (payload) => {
+        calls.push({
+          group: payload.group,
+          removed: [...payload.removed].sort(),
+        });
+      });
+
+      await h.client.menu.delete({ termId: m.id });
+
+      expect(calls).toEqual([
+        { group: "menu_locations", removed: ["footer", "primary"] },
+      ]);
+    });
+  });
+
   describe("menu.assignLocation", () => {
     test("upserts a binding for the location", async () => {
       const h = await buildHarness("editor", { primary: { label: "Primary" } });
@@ -655,6 +706,33 @@ describe("menu RPC", () => {
           ),
         );
       expect(rows).toEqual([]);
+    });
+
+    test("fires settings:group_changed for the bound key, then for the unbound key", async () => {
+      const h = await buildHarness("editor", { primary: { label: "Primary" } });
+      await seedMenu(h.db, h.factories, "main");
+      const calls: unknown[] = [];
+      h.hooks.addAction("settings:group_changed", (payload) => {
+        calls.push({
+          group: payload.group,
+          set: payload.set,
+          removed: payload.removed,
+        });
+      });
+
+      await h.client.menu.assignLocation({
+        location: "primary",
+        termSlug: "main",
+      });
+      await h.client.menu.assignLocation({
+        location: "primary",
+        termSlug: null,
+      });
+
+      expect(calls).toEqual([
+        { group: "menu_locations", set: { primary: "main" }, removed: [] },
+        { group: "menu_locations", set: {}, removed: ["primary"] },
+      ]);
     });
 
     test("rejects when bound termSlug doesn't match a menu", async () => {

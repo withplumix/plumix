@@ -30,6 +30,8 @@ interface TestBundle {
   readonly db: Awaited<ReturnType<typeof createTestDb>>;
   readonly factories: ReturnType<typeof factoriesFor>;
   readonly ctx: AppContext;
+  /** A context for a further request, with its own request memo. */
+  readonly nextRequest: () => AppContext;
   readonly load: MenuLoader;
   readonly authorId: number;
 }
@@ -53,15 +55,24 @@ async function bundle(): Promise<TestBundle> {
   const author = await adminUser
     .transient({ db })
     .create({ email: "menu-loader@example.test" });
-  const ctx = createTestContext({
-    db,
-    plugins: registry,
-    hooks,
-    request: new Request("https://test.example/"),
-  });
+  const nextRequest = () =>
+    createTestContext({
+      db,
+      plugins: registry,
+      hooks,
+      request: new Request("https://test.example/"),
+    });
+  const ctx = nextRequest();
   const dep = registry.templateDeps.get("menus");
   if (!dep) throw new Error("menus template dep not registered");
-  return { db, factories, ctx, load: dep.load, authorId: author.id };
+  return {
+    db,
+    factories,
+    ctx,
+    nextRequest,
+    load: dep.load,
+    authorId: author.id,
+  };
 }
 
 async function seedMenuItem(
@@ -176,11 +187,11 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
     }
 
     const select = vi.spyOn(b.ctx.db, "select");
-    await b.load(["primary"], b.ctx);
+    await b.load(["primary"], b.nextRequest());
     const singleCount = select.mock.calls.length;
     select.mockClear();
 
-    await b.load(["primary", "footer", "aside"], b.ctx);
+    await b.load(["primary", "footer", "aside"], b.nextRequest());
     expect(select.mock.calls.length).toBe(singleCount);
     select.mockRestore();
   });
