@@ -136,10 +136,14 @@ function purged(s: Site): readonly string[] {
   return s.purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
 }
 
+function firstStoredTags(s: Site): readonly string[] {
+  return s.put.mock.calls[0]?.[2] ?? [];
+}
+
 async function storedTags(s: Site): Promise<readonly string[]> {
   await s.h.dispatch(new Request("https://cms.example/post/hello"));
   await s.h.drainDeferred();
-  return s.put.mock.calls[0]?.[2] ?? [];
+  return firstStoredTags(s);
 }
 
 describe("@plumix/plugin-menu — CDN tags", () => {
@@ -179,7 +183,7 @@ describe("@plumix/plugin-menu — CDN tags", () => {
     await s.h.dispatch(plumixRequest("/_plumix/nav/nav", { method: "GET" }));
     await s.h.drainDeferred();
 
-    expect(s.put.mock.calls[0]?.[2]).toContain(`menu:${String(termId)}`);
+    expect(firstStoredTags(s)).toContain(`menu:${String(termId)}`);
   });
 
   test("deleting a menu purges its tag", async () => {

@@ -147,8 +147,7 @@ declare module "plumix" {
    * `menu.save` commit — including no-op saves — so cache
    * invalidators don't need to sniff the payload to decide whether
    * to run. `menu:deleted` fires after `menu.delete` removes the menu
-   * and its items. Both actions take the request context last, which
-   * is what the plugin's own listeners purge the menu's CDN tag with.
+   * and its items. Both actions take the request context last.
    */
   interface FilterRegistry {
     "menu:tree": (

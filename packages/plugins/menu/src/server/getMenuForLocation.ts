@@ -10,8 +10,7 @@ const MENU_LOCATIONS_GROUP = "menu_locations";
  * Resolve the menu currently bound to a theme-registered location.
  *
  * The slot → term-slug binding lives in the `settings` table under group
- * `menu_locations`, with `key = location` and `value = '<term slug>'`, and is
- * read through core's settings loader.
+ * `menu_locations`, with `key = location` and `value = '<term slug>'`.
  * Reads the binding, then defers to the shared menu resolver. Returns
  * `null` when no binding exists for this location, or when the bound
  * menu has been deleted.
