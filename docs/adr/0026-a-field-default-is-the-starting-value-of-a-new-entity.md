@@ -44,7 +44,7 @@ default on their first save, and the entry editor never did.
   keys is stored as sent.
 - **Every reader sees the same value.** The page, REST, feeds, conditions, the
   publish gate, search, rule selectors and image roles all read storage, so
-  they agree. The admin forms seed what is stored and nothing else.
+  they agree. The entry, term and user forms seed what is stored and nothing else.
 - **A settings group is created on its first save.** Until then it has no
   settings: server-side reads (a theme's `settings` dep, `loadSettingsGroups`)
   answer what storage holds, as for any entity not yet created, and only the
@@ -53,8 +53,8 @@ default on their first save, and the entry editor never did.
   not stored with their starting values, plus a reserved `__plumix_created`
   row. After that, storage is the truth. Only the marker counts: a group saved
   before this decision, or written without the form, has rows but no marker,
-  so until its next save a setting cleared there reads its default again, and
-  that save stores it. The marker row never appears in a settings read.
+  so until its next save the settings form shows a setting cleared there at its
+  default again, and that save stores it. The marker row never appears in a settings read.
 - **No backfill.** An entity that existed before a field gained its default
   stays empty for that field. The field docs give the one-line SQL that fills
   it, and so does the release note.

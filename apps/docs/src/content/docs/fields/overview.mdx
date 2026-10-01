@@ -112,7 +112,7 @@ Reference fields resolve. A `user` field stores a user id, and a read hands you 
 
 Temporal fields keep their stored ISO string unless you asked otherwise. `.returns("date")` projects the stored string into a JS `Date` whose wall-clock components are anchored to UTC, and the write contract stays the ISO string either way.
 
-Defaults do not apply on read. A field's `.default("medium")` is written into the entity's meta when the entity is created, so a key storage lacks is one the author cleared, or one on an entity older than the default, and it reads as absent at every depth. The page, search, a rule predicate and the publish gate all see the same stored value. A settings group reads its fields' defaults until its first save, which writes them. [Field Builders](/fields/builders/) has the statement that fills a default into entities created before it.
+Defaults do not apply on read. A field's `.default("medium")` is written into the entity's meta when the entity is created, so a key storage lacks is one the author cleared, or one on an entity older than the default, and it reads as absent at every depth. The page, search, a rule predicate and the publish gate all see the same stored value. A settings group comes into existence on its first save, which writes its fields' defaults; until then only the settings form shows them. [Field Builders](/fields/builders/) has the statement that fills a default into entities created before it.
 
 Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
 

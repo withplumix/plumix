@@ -52,9 +52,9 @@ export interface SettingsRow {
 }
 
 /**
- * A settings group as every reader sees it. A group counts as created once its
- * first save has written the `__plumix_created` marker (ADR 0026). Until then
- * its fields' starting values stand in where storage has no key; after it,
+ * A settings group as the settings form loads it. A group counts as created
+ * once its first save has written the `__plumix_created` marker (ADR 0026).
+ * Until then its fields' starting values stand in where storage has no key; after it,
  * storage alone is the truth and a cleared setting stays absent. The marker
  * itself is never part of the bag.
  */
@@ -113,16 +113,13 @@ export async function settingsLoader(
     (group) => [settingsTag(group)],
   );
   const grouped: Record<string, SettingsBag> = {};
-  // Storage alone: a group never saved has no settings yet. Only the settings
-  // form pre-fills its starting values (`settingsGroupBag`).
+  // Storage alone: a group never saved has no settings yet, and only the
+  // settings form pre-fills its starting values. Handed no fields,
+  // `settingsGroupBag` adds none and just drops the marker.
   unique.forEach((group, i) => {
     const rows = bags[i];
     if (!rows) return;
-    const bag: Record<string, JsonValue> = {};
-    for (const row of rows) {
-      if (row.key !== SETTINGS_CREATED_KEY) bag[row.key] = row.value;
-    }
-    grouped[group] = bag;
+    grouped[group] = settingsGroupBag(rows, []);
   });
   return grouped;
 }
