@@ -1,7 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
 import type { ActionArgs } from "../hooks/types.js";
-import type { PlumixApp } from "../runtime/app.js";
+import type { AuthFlowApp } from "./flow-app.js";
 import { withBasePath } from "../base-path.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
 import { createSession, readClientMeta } from "./sessions.js";
@@ -25,7 +25,7 @@ interface MintedSession {
  */
 export async function mintSessionAndCookie(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
   userId: number,
 ): Promise<MintedSession> {
   const { token } = await createSession(

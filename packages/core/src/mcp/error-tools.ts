@@ -1,12 +1,12 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../context/app-context.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import type {
   TelemetrySpan,
   TelemetrySpanError,
 } from "../context/telemetry.js";
 import type { DevErrorFrame } from "../dev/ui/index.js";
-import type { McpTool } from "./tool.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 
 // The dev-only error surface: server 5xx failures (projected from the same

@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { auth } from "../auth/config.js";
 import { defineBlock } from "../blocks/index.js";
-import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
+import { plumix } from "./define-config.js";
 
 const stubAdapter = {
   name: "test" as const,

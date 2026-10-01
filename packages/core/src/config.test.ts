@@ -4,18 +4,18 @@ import type {
   AnyPluginDescriptor,
   PlumixConfig,
   PlumixConfigInput,
+  ResolvedI18n,
 } from "./config.js";
-import type { ResolvedI18n } from "./i18n/locale-registry.js";
+import type { RuntimeAdapter } from "./context/runtime-adapter.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
-import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
   DatabaseAdapter,
   ImageDelivery,
 } from "./runtime/contract/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
-import { plumix } from "./config.js";
 import { fallback } from "./route/render/template-builders.js";
+import { plumix } from "./runtime/define-config.js";
 import { defineTheme } from "./theme.js";
 import { welcomeTheme } from "./welcome-theme.js";
 
@@ -56,7 +56,7 @@ test("plumix() defaults missing plugins to an empty array", () => {
 });
 
 test("plumix() exposes defineConfig as an alias", async () => {
-  const { defineConfig } = await import("./config.js");
+  const { defineConfig } = await import("./runtime/define-config.js");
   expect(defineConfig).toBe(plumix);
 });
 

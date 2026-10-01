@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { installPlugins } from "../plugin/register.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import {
   compileRouteMap,
   FRAMEWORK_AUTHOR_PAGINATED_PATTERN,

@@ -10,10 +10,10 @@ import type {
   TermArchiveData,
 } from "./route/contract/resolved-entry.js";
 import { auth } from "./auth/config.js";
-import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
 import { buildApp } from "./runtime/app.js";
+import { plumix } from "./runtime/define-config.js";
 import { createDispatcherHarness, plumixRequest } from "./test/dispatcher.js";
 import {
   defineTheme,

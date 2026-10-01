@@ -3,11 +3,11 @@ import { describe, expect, test } from "vitest";
 import { createAppContext } from "../context/app.js";
 import { getContext, requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import { definePlugin } from "./define.js";
-import { installPlugins } from "./register.js";
 
 declare module "./provides-context.js" {
   interface PluginContextExtensions {

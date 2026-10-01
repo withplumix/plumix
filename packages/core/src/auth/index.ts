@@ -12,6 +12,7 @@ export * from "./passkey/index.js";
 export * from "../access/contract/rbac.js";
 export * from "./rbac.js";
 export * from "./redirect.js";
+export type { SessionPolicy } from "./contract/sessions.js";
 export * from "./sessions.js";
 export * from "./sign-in.js";
 export * from "./tokens.js";

@@ -5,6 +5,7 @@ import { collectDebugPanels } from "../debug-panels/collect.js";
 import { DebugPanelTabs } from "../debug-panels/panels-view.js";
 import { renderDebugPanels } from "../debug-panels/render-panels.js";
 import { projectDebugSnapshot } from "../request-history/snapshot.js";
+import { isTrustedDevRequest } from "../trust.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
 import {
   buildSwitcherEntries,
@@ -12,6 +13,15 @@ import {
   switcherEndpoint,
   switcherOptionLabel,
 } from "./switcher.js";
+
+/**
+ * The bar as a page's chrome; see `RenderChrome.debugBar`. Off-loopback it
+ * renders nothing: the bar's SQL and span tree would go to whoever reached
+ * the dev server rather than to the developer running it (#2007).
+ */
+export function debugBarChrome(ctx: AppContext): ReactNode {
+  return isTrustedDevRequest(ctx.request) ? <PlumixDebugBar ctx={ctx} /> : null;
+}
 
 /**
  * The development-only debug bar. Standalone and auth-independent (unlike the

@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { McpTool } from "./tool.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import { EntryReadError } from "../entries/errors.js";
 import { getEntry, listEntries } from "../entries/read-service.js";
 import { entryListInputSchema } from "../rpc/procedures/entry/schemas.js";

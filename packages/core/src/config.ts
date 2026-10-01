@@ -1,15 +1,22 @@
-import type { PlumixAuthConfig } from "./auth/config.js";
-import type { MailerInput } from "./auth/mailer/resolve.js";
+import type { MailerInput } from "./auth/contract/mailer.js";
 import type { HtmlAllowlistOverride } from "./blocks/index.js";
 import type { RemotePattern } from "./blocks/renderer/index.js";
+import type { AuthenticatedUser } from "./context/app-context.js";
+import type { PlumixAuthConfig } from "./context/auth-config.js";
+import type {
+  DebugBarInput,
+  DebugHistoryStoreOptions,
+  DebugPanelsInput,
+} from "./context/dev-runtime.js";
+import type { RuntimeAdapter } from "./context/runtime-adapter.js";
 import type { TelemetryConfig } from "./context/telemetry.js";
-import type { DebugBarInput } from "./dev/debug-bar/config.js";
-import type { DebugPanelsInput } from "./dev/debug-panels/config.js";
-import type { DebugHistoryStoreOptions } from "./dev/request-history/store.js";
-import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
+import type {
+  I18nInputFor,
+  LocaleResolverOverrideFor,
+  ResolvedI18nFor,
+} from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
-import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
   CdnProvider,
   DatabaseAdapter,
@@ -18,10 +25,6 @@ import type {
   ObjectStorage,
 } from "./runtime/contract/slots.js";
 import type { ThemeDescriptor } from "./theme.js";
-import { normalizeBasePath } from "./base-path.js";
-import { ConfigError } from "./config.errors.js";
-import { resolveLocales } from "./i18n/locale-registry.js";
-import { welcomeTheme } from "./welcome-theme.js";
 
 /**
  * Re-exported from `./theme.js` so existing `import { Theme } from
@@ -36,6 +39,12 @@ export type Theme = ThemeDescriptor;
 export type AnyPluginDescriptor = PluginDescriptor<any>;
 export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+// The locale config with its override handed the request's user.
+export type I18nInput = I18nInputFor<AuthenticatedUser>;
+export type LocaleResolverOverride =
+  LocaleResolverOverrideFor<AuthenticatedUser>;
+export type ResolvedI18n = ResolvedI18nFor<AuthenticatedUser>;
 
 /**
  * A Vite config object as the consumer's `vite.config.ts` writes it, kept
@@ -131,7 +140,7 @@ export interface PlumixConfigInput {
   readonly mailer?: MailerInput;
   /**
    * The site's theme. Optional: a site that registers none falls back to
-   * the built-in {@link welcomeTheme}, which renders a self-contained
+   * the built-in `welcomeTheme`, which renders a self-contained
    * welcome screen on the public site until a real theme is added.
    */
   readonly theme?: ThemeDescriptor;
@@ -218,24 +227,3 @@ interface ResolvedSlots {
 
 export interface PlumixConfig
   extends Omit<PlumixConfigInput, keyof ResolvedSlots>, ResolvedSlots {}
-
-export function plumix(config: PlumixConfigInput): PlumixConfig {
-  // Cross-field invariant: features that require email (magic-link
-  // today) need a configured mailer at the top level. Surface this at
-  // app build time rather than letting it crash on the first request.
-  if (config.auth.magicLink && !config.mailer) {
-    throw ConfigError.magicLinkRequiresMailer();
-  }
-  return {
-    ...config,
-    theme: config.theme ?? welcomeTheme,
-    plugins: config.plugins ?? [],
-    redirects: config.redirects ?? [],
-    i18n: resolveLocales(
-      config.i18n ?? { defaultLocale: "en", locales: ["en"] },
-    ),
-    basePath: normalizeBasePath(config.basePath),
-  };
-}
-
-export { plumix as defineConfig };

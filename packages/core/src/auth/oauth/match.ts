@@ -1,4 +1,4 @@
-import { OAUTH_PROVIDER_KEY_PATTERN } from "./types.js";
+import { OAUTH_PROVIDER_KEY_PATTERN } from "../contract/oauth.js";
 
 interface OAuthRouteParams {
   readonly providerKey: string;

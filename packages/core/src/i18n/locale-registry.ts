@@ -1,4 +1,3 @@
-import type { AuthenticatedUser } from "../context/app-context.js";
 import { I18nConfigError } from "./errors.js";
 
 export type LocaleDirection = "ltr" | "rtl";
@@ -10,18 +9,21 @@ export interface LocaleInput {
   readonly enabled?: boolean;
 }
 
-export interface I18nInput {
+// Generic over the user an override is handed: `i18n/` sits below the
+// context and cannot name `AuthenticatedUser`, so `config.ts` instantiates
+// these as `I18nInput`, `LocaleResolverOverride` and `ResolvedI18n`.
+export interface I18nInputFor<TUser> {
   readonly defaultLocale: string;
   readonly locales: readonly (string | LocaleInput)[];
-  readonly resolveLocale?: LocaleResolverOverride;
+  readonly resolveLocale?: LocaleResolverOverrideFor<TUser>;
 }
 
 // Escape hatch for sites that want Accept-Language detection, URL-prefix
 // routing, or any other resolution model WP doesn't do natively. Return
 // `null` to fall through; out-of-registry / disabled returns are also ignored.
-export type LocaleResolverOverride = (
+export type LocaleResolverOverrideFor<TUser> = (
   request: Request,
-  user: AuthenticatedUser | null,
+  user: TUser | null,
 ) => ResolvedLocale | null;
 
 export interface ResolvedLocale {
@@ -31,10 +33,14 @@ export interface ResolvedLocale {
   readonly enabled: boolean;
 }
 
-export interface ResolvedI18n {
+/** The resolved locales a lookup reads, without the override. */
+export interface LocaleRegistry {
   readonly defaultLocale: ResolvedLocale;
   readonly locales: readonly ResolvedLocale[];
-  readonly resolveLocale?: LocaleResolverOverride;
+}
+
+export interface ResolvedI18nFor<TUser> extends LocaleRegistry {
+  readonly resolveLocale?: LocaleResolverOverrideFor<TUser>;
 }
 
 // `Intl.Locale.prototype.getTextInfo()` shipped in V8/Node/Workers but the
@@ -44,7 +50,9 @@ interface LocaleWithTextInfo {
   getTextInfo(): { direction: LocaleDirection };
 }
 
-export function resolveLocales(input: I18nInput): ResolvedI18n {
+export function resolveLocales<TUser>(
+  input: I18nInputFor<TUser>,
+): ResolvedI18nFor<TUser> {
   const locales = input.locales.map((entry) => normalizeEntry(entry));
   const defaultCode = canonicalizeLocaleCode(input.defaultLocale);
   const defaultLocale = locales.find((l) => l.code === defaultCode);
@@ -106,7 +114,7 @@ function canonicalizeLocaleCode(raw: string): string {
  * an `"en-US"` entry. Returns the registry entry only if it's enabled.
  */
 export function findEnabledLocale(
-  i18n: ResolvedI18n,
+  i18n: LocaleRegistry,
   rawCode: string,
 ): ResolvedLocale | null {
   let code: string;

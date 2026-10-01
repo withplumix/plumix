@@ -2,7 +2,7 @@ import type { AnyPluginDescriptor } from "../config.js";
 import type { PluginRegistry } from "../plugin/registry.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
-import { installPlugins } from "../plugin/register.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 
 /**
  * Registers `news` pooling its permissions with `post`: a role holding

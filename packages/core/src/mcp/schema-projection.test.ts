@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
-import type { McpTool } from "./tool.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import { toToolInputJsonSchema } from "./schema-projection.js";
 
 function toolWith(partial: Partial<McpTool>): McpTool {

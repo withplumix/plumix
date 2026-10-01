@@ -1,4 +1,4 @@
-import type { DocumentAttrs, DocumentManifest } from "./theme.js";
+import type { DocumentAttrs, DocumentManifest } from "./document-manifest.js";
 
 /**
  * Merge a template's per-template document fragment onto the theme's

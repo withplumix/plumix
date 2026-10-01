@@ -3,7 +3,7 @@ import type {
   AuthResult,
   RequestAuthenticator,
 } from "../context/authenticator.js";
-import type { SessionPolicy } from "./sessions.js";
+import type { SessionPolicy } from "./contract/sessions.js";
 import { validateApiToken } from "./api-tokens.js";
 import { readSessionCookie } from "./cookies.js";
 import { DEFAULT_SESSION_POLICY, validateSession } from "./sessions.js";

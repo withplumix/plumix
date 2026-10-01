@@ -14,36 +14,29 @@ import type {
 } from "../../blocks/index.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { SettingsBag } from "../../db/schema/settings.js";
-import type { TransformOpts } from "../../runtime/contract/slots.js";
-import type { LoadedTemplateDeps } from "../../template-deps.js";
-import type { Template } from "../../template.js";
 import type {
   DocumentAttrs,
   DocumentLink,
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
-  TemplateData,
-} from "../../theme.js";
+} from "../../document-manifest.js";
+import type { TransformOpts } from "../../runtime/contract/slots.js";
+import type { LoadedTemplateDeps } from "../../template-deps.js";
+import type { Template } from "../../template.js";
+import type { TemplateData } from "../../theme.js";
 import type { ErrorData } from "../contract/resolved-entry.js";
 import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
-import type { RenderEnv } from "./render-env.js";
+import type { RenderChrome, RenderEnv } from "./render-env.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import type { TemplateResolution } from "./template-hierarchy.js";
-import { PlumixAdminBar } from "../../admin-bar/component.js";
 import {
   BlockLoaderError,
   HtmlAllowlistProvider,
   resolveBlockLoaders,
 } from "../../blocks/index.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
-import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
-import {
-  TEMPLATE_PANEL_ID,
-  templateNodeLabel,
-} from "../../dev/debug-panels/template-node-label.js";
-import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { canEditEntry } from "../../entries/editability.js";
 import { escapeHtml } from "../../escape-html.js";
@@ -71,6 +64,7 @@ import {
   resolveErrorTemplate,
   resolveTemplate,
 } from "./template-hierarchy.js";
+import { TEMPLATE_PANEL_ID, templateNodeLabel } from "./template-node-label.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -141,6 +135,7 @@ async function renderThroughThemeInner({
     assetManifest,
     htmlAllowlist,
     blockCatalogs,
+    chrome,
   } = renderEnv;
   const rules = templateRules(theme.templates);
   // The resolution walk is a `template` span (nested under `render`) carrying
@@ -197,6 +192,7 @@ async function renderThroughThemeInner({
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
+    chrome,
     catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
     editMode,
@@ -264,6 +260,7 @@ async function renderErrorThroughThemeInner({
     assetManifest,
     htmlAllowlist,
     blockCatalogs,
+    chrome,
   } = renderEnv;
   const variant = ERROR_VARIANTS[kind];
   const raw =
@@ -317,6 +314,7 @@ async function renderErrorThroughThemeInner({
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
     htmlAllowlist,
+    chrome,
     catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
     editMode: LIVE_EDIT_MODE,
@@ -449,6 +447,7 @@ interface RenderTreeArgs {
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly htmlAllowlist: HtmlAllowlist;
+  readonly chrome: RenderChrome;
   readonly catalog: CompiledCatalog;
   // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
   readonly themeCss: readonly string[];
@@ -472,6 +471,7 @@ function renderTree({
   tokens,
   breakpoints,
   htmlAllowlist,
+  chrome,
   catalog,
   loaderData,
   siteSettings,
@@ -551,26 +551,16 @@ function renderTree({
     // own toolbar, and its injected `body { padding-top }` ratchets the
     // auto-sized canvas iframe against the theme's `min-h-screen` into a
     // runaway height loop. Live/preview renders keep it.
-    editMode.mode === "edit"
-      ? null
-      : createElement(PlumixAdminBar, {
-          hooks: ctx.hooks,
-          request: ctx.request,
-          siteName: ctx.config.auth.magicLink?.siteName ?? "Site",
-          auth: ctx.auth,
-          queriedEntryDetails,
-          entryTypes: ctx.plugins.entryTypes,
-        }),
+    editMode.mode === "edit" ? null : chrome.adminBar(ctx, queriedEntryDetails),
     // Dev-only debug bar — standalone and auth-independent (unlike the admin
     // bar it never gates on a user). `process.env.PLUMIX_DEV` is Vite-empty
-    // in prod builds, so this branch and the whole debug-bar module tree-shake
-    // out. Dropped in edit mode alongside the admin bar, and off-loopback,
-    // where the bar's SQL and span tree would go to whoever reached the dev
-    // server rather than to the developer running it (#2007).
+    // in prod builds, so this branch tree-shakes out, and the composition root
+    // leaves `debugBar` unset under the same gate. Dropped in edit mode
+    // alongside the admin bar.
     process.env.PLUMIX_DEV &&
-      isTrustedDevRequest(ctx.request) &&
+      chrome.debugBar !== undefined &&
       editMode.mode !== "edit"
-      ? createElement(PlumixDebugBar, { ctx })
+      ? chrome.debugBar(ctx)
       : null,
     createElement(TemplateAdapter),
   );

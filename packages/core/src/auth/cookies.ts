@@ -1,3 +1,5 @@
+import { readCookie } from "../read-cookie.js";
+
 export const SESSION_COOKIE_NAME = "plumix_session";
 
 export interface SessionCookieOptions {
@@ -65,27 +67,12 @@ export function buildSessionDeletionCookie(
   return parts.join("; ");
 }
 
-/**
- * Parse a single named cookie out of a request's Cookie header. We accept
- * the cookie ONLY from the Cookie header — never from URL or form (Copenhagen
- * Book explicit rule: session IDs must not be readable from form submissions
- * or query parameters).
- */
+/** The session cookie (or the one named) from the request's Cookie header. */
 export function readSessionCookie(
   request: Request,
   name: string = SESSION_COOKIE_NAME,
 ): string | null {
-  const header = request.headers.get("cookie");
-  if (!header) return null;
-  for (const part of header.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq < 0) continue;
-    const key = part.slice(0, eq).trim();
-    if (key !== name) continue;
-    const value = part.slice(eq + 1).trim();
-    return value === "" ? null : value;
-  }
-  return null;
+  return readCookie(request, name);
 }
 
 /** True when the request was served over HTTPS — controls the Secure flag. */

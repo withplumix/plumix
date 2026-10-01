@@ -1,9 +1,9 @@
 import type { AppContext } from "../context/app-context.js";
-import type { ScheduledRunReport } from "./adapter.js";
+import type { ScheduledRunReport } from "../context/runtime-adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cdn/purge.js";
 import { logErrorSafely } from "../context/log.js";
-import { scheduledTasksFor } from "./schedules.js";
+import { scheduledTasksFor } from "./contract/schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 /**

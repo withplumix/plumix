@@ -1,5 +1,5 @@
+import type { McpTool } from "../context/mcp-tool.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { McpTool } from "./tool.js";
 import { contentGetTool, contentListTool } from "./content-tools.js";
 import { errorMcpTools } from "./error-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";

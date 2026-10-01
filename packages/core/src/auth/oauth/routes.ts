@@ -1,7 +1,7 @@
 import type { AppContext } from "../../context/app-context.js";
-import type { PlumixApp } from "../../runtime/app.js";
+import type { OAuthProviderClient } from "../contract/oauth.js";
+import type { AuthFlowApp } from "../flow-app.js";
 import type { OAuthErrorCode } from "./errors.js";
-import type { OAuthProviderClient } from "./types.js";
 import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
@@ -24,7 +24,7 @@ const MAX_CODE_LENGTH = 4096;
 
 export async function handleOAuthStart(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
@@ -75,7 +75,7 @@ export async function handleOAuthStart(
 
 export async function handleOAuthCallback(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
@@ -157,7 +157,10 @@ export async function handleOAuthCallback(
   }
 }
 
-function pickProvider(app: PlumixApp, key: string): OAuthProviderClient | null {
+function pickProvider(
+  app: AuthFlowApp,
+  key: string,
+): OAuthProviderClient | null {
   // `OAUTH_PROVIDER_KEY_PATTERN` rejects most prototype-chain keys at the
   // path layer (`__proto__`, `hasOwnProperty`, …), but `constructor`
   // matches the regex. `Object.hasOwn` keeps the lookup confined to the

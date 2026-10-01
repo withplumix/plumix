@@ -1,4 +1,4 @@
-import type { ResolvedI18n, ResolvedLocale } from "./locale-registry.js";
+import type { LocaleRegistry, ResolvedLocale } from "./locale-registry.js";
 import { findEnabledLocale } from "./locale-registry.js";
 
 // Real Accept-Language headers carry 1–4 entries; cap defensively so a
@@ -10,7 +10,7 @@ const MAX_ACCEPT_LANGUAGE_ENTRIES = 16;
 // so first-match-wins over iteration order is enough.
 export function matchAcceptLanguage(
   request: Request,
-  i18n: ResolvedI18n,
+  i18n: LocaleRegistry,
 ): ResolvedLocale | null {
   const header = request.headers.get("accept-language");
   if (!header) return null;
@@ -27,7 +27,7 @@ export function matchAcceptLanguage(
 
 function matchTag(
   raw: string,
-  i18n: ResolvedI18n,
+  i18n: LocaleRegistry,
   scriptMap: Map<string, ResolvedLocale>,
   baseMap: Map<string, ResolvedLocale>,
 ): ResolvedLocale | null {
@@ -48,7 +48,7 @@ function matchTag(
   return baseMap.get(locale.language) ?? null;
 }
 
-function buildFallbackMaps(i18n: ResolvedI18n): {
+function buildFallbackMaps(i18n: LocaleRegistry): {
   scriptMap: Map<string, ResolvedLocale>;
   baseMap: Map<string, ResolvedLocale>;
 } {

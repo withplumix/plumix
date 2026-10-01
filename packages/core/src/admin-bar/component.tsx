@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 
 import type {
+  AppContext,
   AuthenticatedUser,
   AuthNamespace,
 } from "../context/app-context.js";
 import type { HookExecutor } from "../hooks/registry.js";
+import type { QueriedEntryDetails } from "../route/render/render-env.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
 import { useQueriedEntry, useUser } from "../blocks/renderer/index.js";
@@ -85,6 +87,23 @@ export function PlumixAdminBar({
         </nav>
       </header>
     </>
+  );
+}
+
+/** The bar as a page's chrome; see `RenderChrome.adminBar`. */
+export function adminBarChrome(
+  ctx: AppContext,
+  queriedEntryDetails: QueriedEntryDetails | undefined,
+): ReactNode {
+  return (
+    <PlumixAdminBar
+      hooks={ctx.hooks}
+      request={ctx.request}
+      siteName={ctx.config.auth.magicLink?.siteName ?? "Site"}
+      auth={ctx.auth}
+      queriedEntryDetails={queriedEntryDetails}
+      entryTypes={ctx.plugins.entryTypes}
+    />
   );
 }
 

@@ -25,11 +25,11 @@ import type {
   ShortcodeSpec,
 } from "../blocks/index.js";
 import type { AppContext } from "../context/app-context.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { EntryQuery } from "../entries/contract/query.js";
 import type { Label } from "../i18n/label.js";
-import type { McpTool } from "../mcp/tool.js";
 import type { RestErrors } from "../rest/contract/errors.js";
 import type { EntryListing } from "../route/contract/entry-listing.js";
 import type { RouteIntent } from "../route/contract/intent.js";

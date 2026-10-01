@@ -1,25 +1,31 @@
-import type { AuthenticatedUser } from "../context/app-context.js";
-import type { ResolvedI18n, ResolvedLocale } from "./locale-registry.js";
-import { readSessionCookie } from "../auth/cookies.js";
+import type { JsonObject } from "../json.js";
+import type { ResolvedI18nFor, ResolvedLocale } from "./locale-registry.js";
+import { readCookie } from "../read-cookie.js";
 import { matchAcceptLanguage } from "./accept-language.js";
 import { ADMIN_LOCALE_COOKIE } from "./cookie.js";
 import { findEnabledLocale } from "./locale-registry.js";
 
-interface ResolveLocaleArgs {
+// The user is whatever the site's override is handed; this reads only the
+// stored `meta` bag, for `meta.locale`.
+interface LocaleUser {
+  readonly meta: JsonObject;
+}
+
+interface ResolveLocaleArgs<TUser extends LocaleUser> {
   readonly request: Request;
-  readonly user: AuthenticatedUser | null;
-  readonly i18n: ResolvedI18n;
+  readonly user: TUser | null;
+  readonly i18n: ResolvedI18nFor<TUser>;
 }
 
 // Single source of truth for admin SSR, RPC, and public-route surfaces.
 // The override now fires on admin SSR too (pre-merge admin-shell skipped
 // it); operators who want admin to ignore the override should narrow it
 // on the request path themselves.
-export function resolveLocale({
+export function resolveLocale<TUser extends LocaleUser>({
   request,
   user,
   i18n,
-}: ResolveLocaleArgs): ResolvedLocale {
+}: ResolveLocaleArgs<TUser>): ResolvedLocale {
   const resolveCode = (
     code: string | null | undefined,
   ): ResolvedLocale | null =>
@@ -42,7 +48,7 @@ export function resolveLocale({
     resolveCode(override?.code) ??
     resolveCode(url.searchParams.get("lang")) ??
     resolveCode(userLocale) ??
-    resolveCode(readSessionCookie(request, ADMIN_LOCALE_COOKIE)) ??
+    resolveCode(readCookie(request, ADMIN_LOCALE_COOKIE)) ??
     (onInternalPath ? matchAcceptLanguage(request, i18n) : null) ??
     i18n.defaultLocale
   );

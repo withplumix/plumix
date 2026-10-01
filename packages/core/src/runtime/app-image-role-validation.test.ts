@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import type { MetaBoxField } from "../plugin/manifest.js";
-import type { PluginSetupContext } from "../plugin/setup-context.js";
+import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 import { auth } from "../auth/config.js";
-import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
+import { plumix } from "./define-config.js";
 
 declare module "../images/contract/role-images.js" {
   interface ImageRoles {

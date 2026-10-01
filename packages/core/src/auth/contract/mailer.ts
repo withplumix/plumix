@@ -1,3 +1,5 @@
+import type { EnvInput } from "../../runtime/contract/env-input.js";
+
 /**
  * Outbound email message — the payload `Mailer.send` is invoked with.
  * Plain text required; HTML optional. Subject + recipient are the two
@@ -23,3 +25,11 @@ export interface EmailMessage {
 export interface Mailer {
   send(message: EmailMessage): Promise<void>;
 }
+
+/**
+ * The mailer config slot: a literal {@link Mailer}, or an `(env) => Mailer`
+ * resolver for a transport whose API key only exists in the per-request `env`
+ * (the Workers case). See {@link EnvInput} for the shared union + the typed
+ * `env`; resolution is memoized per resolver.
+ */
+export type MailerInput = EnvInput<Mailer>;

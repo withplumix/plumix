@@ -2,13 +2,29 @@ import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
 import type { TelemetryRecord, TelemetrySpan } from "./telemetry.js";
 
 // The dev runtime every request carries as `ctx.dev`, with the capture shapes
-// it names. Declared here, not under `dev/`, so the context type can name them
-// without reaching up into a surface; `dev/` implements them.
+// it names, and the `config.dev` input it resolves from. Declared here, not
+// under `dev/`, so the context and config types can name them without reaching
+// up into a surface; `dev/` implements them.
 
-// Exported only for `DebugBarInput`; users write the position as a string
-// literal, so it needs no public name.
-export type DebugBarPosition =
+// Users write the position as a string literal, so it needs no public name.
+type DebugBarPosition =
   "bottom-right" | "bottom-left" | "top-right" | "top-left";
+
+/**
+ * `dev.bar`: the overlay itself. Only what the bar alone reads lives here —
+ * which panels it shows is `dev.panels`, read identically by the history read
+ * routes, a surface with no bar in it.
+ *
+ * `false` is the only spelling of off; there is no `enabled` key, because two
+ * spellings of one thing is how the slot this replaced grew four settings with
+ * three meanings.
+ */
+export type DebugBarInput =
+  | boolean
+  | {
+      readonly position?: DebugBarPosition;
+      readonly defaultOpen?: boolean;
+    };
 
 export interface NormalizedDebugBar {
   readonly enabled: boolean;
@@ -79,6 +95,15 @@ export interface DebugHistoryEntry {
   readonly snapshot: DebugSnapshot;
 }
 
+export interface DebugHistoryStoreOptions {
+  /** Ring capacity; drop-oldest past it. */
+  readonly maxEntries?: number;
+  /** Total-byte budget across the ring; evict oldest past it (newest kept). */
+  readonly maxTotalBytes?: number;
+  /** Individual string cap; longer values are truncated at capture. */
+  readonly maxStringLength?: number;
+}
+
 /**
  * A bounded, transport-agnostic store of the most recent requests. Four
  * readers share it unchanged — the debug bar, the HTTP read routes and the two
@@ -98,6 +123,55 @@ export interface DebugHistoryStore {
   /** Every stored entry, newest first. */
   get(): readonly DebugHistoryEntry[];
 }
+
+/**
+ * Every debug panel a site can name in `dev.panels`. Core seeds its five;
+ * a plugin adds its own from the module that registers the panel:
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface DebugPanelRegistry {
+ *     og: true;
+ *   }
+ * }
+ * ```
+ *
+ * The extension point is open and the configuration surface is closed:
+ * {@link DebugPanel.id} stays `string`, so anyone may contribute a panel
+ * through the `debug:panels` filter, but only a registered id is *nameable*
+ * in config — which is what turns a mistyped panel name from a silent no-op
+ * into a compile error. A panel whose plugin ships no augmentation is still
+ * removable through the filter.
+ *
+ * The value type carries nothing; the key is the whole declaration.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
+export interface DebugPanelRegistry extends Record<CoreDebugPanelId, true> {}
+
+/**
+ * The ids of the panels core registers. A runtime list rather than five
+ * interface members so a test can hold it equal to what `registerCoreDebugPanels`
+ * actually contributes — a registry key with no panel behind it would be the
+ * same silent no-op this registry exists to rule out.
+ */
+export const CORE_DEBUG_PANEL_IDS = [
+  "app",
+  "request",
+  "database",
+  "template",
+  "timeline",
+] as const;
+
+type CoreDebugPanelId = (typeof CORE_DEBUG_PANEL_IDS)[number];
+
+type DebugPanelId = keyof DebugPanelRegistry;
+
+/**
+ * `dev.panels`: which panels this site shows. An absent key shows the panel,
+ * so the default is every panel a plugin contributed rather than a list the
+ * author has to maintain as they install things.
+ */
+export type DebugPanelsInput = Partial<Readonly<Record<DebugPanelId, boolean>>>;
 
 /**
  * `config.dev`, resolved once when the app is built: the same keys, each in

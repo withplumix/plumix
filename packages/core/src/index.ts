@@ -10,6 +10,7 @@ export * from "./auth/index.js";
 export { normalizeBasePath, withBasePath } from "./base-path.js";
 export * from "./cli/index.js";
 export * from "./config.js";
+export { defineConfig, plumix } from "./runtime/define-config.js";
 export * from "./context/index.js";
 export { consoleLogger, createAppContext } from "./context/app.js";
 export type { CreateAppContextArgs } from "./context/app.js";
@@ -36,6 +37,11 @@ export type { JsonObject, JsonValue } from "./json.js";
 export { isJsonArray, isJsonObject } from "./json.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";
+export {
+  createPluginAfterSetupContext,
+  createPluginSetupContext,
+} from "./plugin/setup-context.js";
+export * from "./runtime/install-plugins.js";
 export { resolveReturnUrl } from "./return-url.js";
 export type { ResolveReturnUrlOptions } from "./return-url.js";
 export { isCurrentSource } from "./route/current.js";
@@ -50,7 +56,7 @@ export type {
 export type { RedirectResolution } from "./route/redirects.js";
 export type { ResolvedNode } from "./route/render/rule-resolver.js";
 export * from "./rpc/index.js";
-export type * from "./runtime/adapter.js";
+export type * from "./context/runtime-adapter.js";
 export { buildApp } from "./runtime/app.js";
 export type { PlumixApp } from "./runtime/app.js";
 // Dev-only: the generated worker entry references this under its
@@ -116,9 +122,12 @@ export type {
   TrustedRequest,
 } from "./runtime/request-trust.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
-export { declaredSchedules, scheduledTasksFor } from "./runtime/schedules.js";
-export type { CronSchedule } from "./runtime/cron.js";
-export { CronSyntaxError, parseCron } from "./runtime/cron.js";
+export {
+  declaredSchedules,
+  scheduledTasksFor,
+} from "./runtime/contract/schedules.js";
+export type { CronSchedule } from "./runtime/contract/cron.js";
+export { CronSyntaxError, parseCron } from "./runtime/contract/cron.js";
 export type {
   ConnectedScheduledDb,
   ScheduledRunGuard,
@@ -241,11 +250,11 @@ export type { DebugPanel } from "./dev/debug-panels/types.js";
 export type {
   DebugPanelRegistry,
   DebugPanelsInput,
-} from "./dev/debug-panels/config.js";
+} from "./context/dev-runtime.js";
 export type {
   DebugBarInput,
   NormalizedDebugBar,
-} from "./dev/debug-bar/config.js";
+} from "./context/dev-runtime.js";
 // `config.dev` resolved: what `PlumixApp.dev` and `AppContext.dev` hold.
 export type { DevRuntime } from "./runtime/dev.js";
 // Named by `DevRuntime.history` and `DevInput.history`, so a consumer
@@ -253,7 +262,7 @@ export type { DevRuntime } from "./runtime/dev.js";
 export type {
   DebugHistoryStore,
   DebugHistoryStoreOptions,
-} from "./dev/request-history/store.js";
+} from "./context/dev-runtime.js";
 export type { DebugSnapshot } from "./dev/request-history/snapshot.js";
 // The dev error page's equivalents, for `error_page:hints` and
 // `error_page:panels`: the contribution shapes and the pieces a panel body is
@@ -284,7 +293,7 @@ export { nonEmpty } from "./non-empty.js";
 // XML element-text escaping, for a plugin serializing a feed or a sitemap.
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.
-export { xmlEscape } from "./seo/xml.js";
+export { xmlEscape } from "./seo/contract/xml.js";
 // HTML element-content escaping, for a plugin putting text it did not author
 // into a page — a search snippet, most of all, since FTS5 splices highlight
 // markers into indexed content without escaping anything around them. Safe for
@@ -494,6 +503,8 @@ export type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+} from "./document-manifest.js";
+export type {
   GenericTier,
   TargetMatcher,
   TemplateComponent,

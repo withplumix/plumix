@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
-import type { SessionPolicy } from "./sessions.js";
+import type { SessionPolicy } from "./contract/sessions.js";
 import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
 import { userFactory } from "../test/factories.js";

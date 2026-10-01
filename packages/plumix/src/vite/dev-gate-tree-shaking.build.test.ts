@@ -20,6 +20,7 @@ const GATED_DEV_MODULES = [
   "dev/history-routes.js",
   "dev/request-history/writer.js",
   "dev/debug-bar/consumer.js",
+  "dev/debug-bar/component.js",
   "dev/debug-panels/core-panels.js",
   "dev/server/hints/core-hints.js",
   "dev/server/respond.js",

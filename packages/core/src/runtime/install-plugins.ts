@@ -1,15 +1,18 @@
 import type { AnyPluginDescriptor } from "../config.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import type { MutablePluginRegistry, PluginRegistry } from "./manifest.js";
-import type { ContextExtensionEntry } from "./provides-context.js";
-import { assertValidPluginId } from "./define.js";
-import { PluginDefinitionError } from "./errors.js";
-import { createPluginRegistry } from "./manifest.js";
-import { createPluginProvidesContext } from "./provides-context.js";
+import type {
+  MutablePluginRegistry,
+  PluginRegistry,
+} from "../plugin/manifest.js";
+import type { ContextExtensionEntry } from "../plugin/provides-context.js";
+import { assertValidPluginId } from "../plugin/define.js";
+import { PluginDefinitionError } from "../plugin/errors.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { createPluginProvidesContext } from "../plugin/provides-context.js";
 import {
   createPluginAfterSetupContext,
   createPluginSetupContext,
-} from "./setup-context.js";
+} from "../plugin/setup-context.js";
 
 export interface PluginInstallResult {
   readonly hooks: HookRegistry;

@@ -1,12 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
-import type { DebugPanelsInput } from "./config.js";
+import type { DebugPanelsInput } from "../../context/dev-runtime.js";
+import { CORE_DEBUG_PANEL_IDS } from "../../context/dev-runtime.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { createTestContext } from "../../test/context.js";
 import { createTestDb } from "../../test/harness.js";
 import { collectDebugPanels } from "./collect.js";
-import { CORE_DEBUG_PANEL_IDS, disabledPanelIds } from "./config.js";
+import { disabledPanelIds } from "./config.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
 
 // The point of the registry, and the reason this is a type and not a runtime

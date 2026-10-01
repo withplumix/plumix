@@ -8,7 +8,7 @@ import type { AccessPolicy } from "./policy.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { installPlugins } from "../plugin/register.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";

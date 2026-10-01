@@ -7,7 +7,7 @@ import { entries } from "../db/schema/entries.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { installPlugins } from "../plugin/register.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { testConfig } from "../test/config.js";
 import { adminUser, createTestDb, factoriesFor } from "../test/index.js";
 import { compileRouteMap } from "./compile.js";

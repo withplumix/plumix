@@ -4,7 +4,7 @@ import type { PluginProvidesContext } from "./provides-context.js";
 import type {
   PluginAfterSetupContext,
   PluginSetupContext,
-} from "./setup-context.js";
+} from "./setup-context-types.js";
 import { PluginDefinitionError } from "./errors.js";
 
 export type PluginSetup<TConfig> = (

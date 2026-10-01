@@ -4,7 +4,7 @@ import type {
   ResolvedEntry,
   ResolvedTerm,
 } from "../../route/contract/resolved-entry.js";
-import type { PluginSetupContext } from "../setup-context.js";
+import type { PluginSetupContext } from "../setup-context-types.js";
 import type {
   EntryMeta,
   InferFields,

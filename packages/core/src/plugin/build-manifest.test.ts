@@ -17,6 +17,7 @@ import {
 import { defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import { buildManifest, deriveAdminSlug } from "./build-manifest.js";
@@ -24,7 +25,6 @@ import { definePlugin } from "./define.js";
 import { DuplicateAdminSlugError } from "./errors.js";
 import { text } from "./fields/builder.js";
 import { configuredSlotsOf, createPluginRegistry } from "./manifest.js";
-import { installPlugins } from "./register.js";
 
 describe("buildManifest", () => {
   test("carries theme.tokens through to the admin manifest channel", () => {

@@ -9,7 +9,7 @@ import { DebugSection, DebugTable } from "../debug-panels/primitives.js";
 
 // What a plugin shipping a panel writes, spelled against the internal module
 // here rather than the `plumix` façade a real plugin augments.
-declare module "../debug-panels/config.js" {
+declare module "../../context/dev-runtime.js" {
   interface DebugPanelRegistry {
     "debug-demo": true;
   }

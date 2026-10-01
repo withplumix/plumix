@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { McpTool } from "./tool.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import { McpToolError } from "./errors.js";
 
 // Both tools read the dev request-history ring the debug bar already writes to

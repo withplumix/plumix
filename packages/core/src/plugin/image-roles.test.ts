@@ -2,12 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import type { ImageRoleScope } from "./image-roles.js";
 import type { MetaBoxField } from "./manifest.js";
-import type { PluginSetupContext } from "./setup-context.js";
+import type { PluginSetupContext } from "./setup-context-types.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { buildManifest } from "./build-manifest.js";
 import { definePlugin } from "./define.js";
 import { imageRoleFields } from "./image-roles.js";
-import { installPlugins } from "./register.js";
 
 declare module "../images/contract/role-images.js" {
   interface ImageRoles {

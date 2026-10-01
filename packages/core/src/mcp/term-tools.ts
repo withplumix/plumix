@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { McpTool } from "./tool.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import { labelSourceText } from "../i18n/label.js";
 import { termListInputSchema } from "../rpc/procedures/term/schemas.js";
 import { idParam } from "../rpc/validation.js";

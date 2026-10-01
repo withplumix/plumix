@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { buildManifest } from "../plugin/manifest.js";
-import { installPlugins } from "../plugin/register.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 
 function install(plugins: Parameters<typeof installPlugins>[0]["plugins"]) {
   return installPlugins({ hooks: new HookRegistry(), plugins });

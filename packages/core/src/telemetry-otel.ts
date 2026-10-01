@@ -1,9 +1,9 @@
+import type { JsonObject, JsonValue } from "./json.js";
 import type {
-  TelemetryConsumer,
+  TelemetryConsumerFor,
   TelemetrySnapshot,
   TelemetrySpan,
-} from "./context/telemetry.js";
-import type { JsonObject, JsonValue } from "./json.js";
+} from "./telemetry-snapshot.js";
 import { isJsonObject } from "./json.js";
 
 /** OTLP/JSON `AnyValue` — the primitive subset the exporter emits. */
@@ -204,13 +204,22 @@ function scrubUrl(url: string): string {
   }
 }
 
+// What the exporter reads off the request's context: the inbound
+// `traceparent`, and where to report a failed export.
+interface ExportContext {
+  readonly request: Request;
+  readonly logger: { error(message: string): void };
+}
+
 /**
  * OTel trace exporter as a telemetry consumer: projects each collected
  * snapshot onto an OTLP/HTTP JSON `ExportTraceServiceRequest` and POSTs it
  * per request (from `waitUntil`, so export latency never blocks a response).
  * Core spans carry no ids — trace/span ids are minted here at export time.
  */
-export function otelConsumer(options: OtelConsumerOptions): TelemetryConsumer {
+export function otelConsumer(
+  options: OtelConsumerOptions,
+): TelemetryConsumerFor<ExportContext> {
   const { sample, tailSample } = options;
   return {
     id: "otel",

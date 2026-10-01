@@ -11,17 +11,12 @@ export {
   GENERIC_TERM_TAXONOMY_LABELS,
 } from "./generic-type-labels.js";
 export { labelSourceText, resolveLabel, type Label } from "./label.js";
-// Re-exported for the admin's extraction-mirror lockstep test. The source
-// module is runtime-safe (type-only imports), so the browser i18n barrel
-// stays clean.
-export { SITE_SETTINGS_DESCRIPTORS } from "../settings-core.js";
+// Exported for the admin's extraction-mirror lockstep test.
+export { SITE_SETTINGS_DESCRIPTORS } from "./site-settings-descriptors.js";
 export { resolveLocales } from "./locale-registry.js";
 export type {
-  I18nInput,
   LocaleDirection,
   LocaleInput,
-  LocaleResolverOverride,
-  ResolvedI18n,
   ResolvedLocale,
 } from "./locale-registry.js";
 export { resolveLocale } from "./resolve-locale.js";

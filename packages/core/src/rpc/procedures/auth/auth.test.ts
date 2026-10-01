@@ -17,7 +17,7 @@ import { apiTokens } from "../../../db/schema/api_tokens.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
-import { installPlugins } from "../../../plugin/register.js";
+import { installPlugins } from "../../../runtime/install-plugins.js";
 import { userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { createRpcHarness } from "../../../test/rpc.js";

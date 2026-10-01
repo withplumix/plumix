@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { definePlugin } from "./define.js";
 import { buildManifest } from "./manifest.js";
-import { installPlugins } from "./register.js";
 
 describe("registerDashboardWidget", () => {
   test("registers a widget and projects it into the manifest", async () => {

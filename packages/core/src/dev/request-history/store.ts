@@ -1,6 +1,7 @@
 import type {
   DebugHistoryEntry,
   DebugHistoryStore,
+  DebugHistoryStoreOptions,
   DebugSnapshot,
 } from "../../context/dev-runtime.js";
 import type { JsonValue } from "../../json.js";
@@ -9,15 +10,6 @@ export type {
   DebugHistoryEntry,
   DebugHistoryStore,
 } from "../../context/dev-runtime.js";
-
-export interface DebugHistoryStoreOptions {
-  /** Ring capacity; drop-oldest past it. */
-  readonly maxEntries?: number;
-  /** Total-byte budget across the ring; evict oldest past it (newest kept). */
-  readonly maxTotalBytes?: number;
-  /** Individual string cap; longer values are truncated at capture. */
-  readonly maxStringLength?: number;
-}
 
 // Small fixed defaults: ~10 requests is enough to compare a short sequence,
 // and the byte budget guards a pathological single request (a huge SQL dump)

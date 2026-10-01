@@ -2,7 +2,8 @@ import type { ComponentType, ReactNode } from "react";
 import { createElement } from "react";
 
 import type { AppContext } from "./context/app-context.js";
-import type { DocumentManifest, TemplateData } from "./theme.js";
+import type { DocumentManifest } from "./document-manifest.js";
+import type { TemplateData } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 
 // Module-local brand — not `Symbol.for(...)`. The global registry
