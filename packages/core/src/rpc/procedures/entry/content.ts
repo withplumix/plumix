@@ -1,6 +1,9 @@
 import type { BlockRegistry } from "../../../blocks/index.js";
 import type { EntryContent } from "../../../db/schema/entries.js";
-import type { BlockContentErrors, ConflictErrors } from "../../errors.js";
+import type {
+  BlockContentErrors,
+  ConflictErrors,
+} from "../../contract/errors.js";
 import { isEntryContent, validateEntryContent } from "../../../blocks/index.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
 

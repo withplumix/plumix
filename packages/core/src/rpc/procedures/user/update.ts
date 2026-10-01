@@ -9,9 +9,9 @@ import {
   isUniqueConstraintErrorOn,
 } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
+import { isEmptyMetaPatch } from "../../../meta/core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { isEmptyMetaPatch } from "../../meta/core.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import {

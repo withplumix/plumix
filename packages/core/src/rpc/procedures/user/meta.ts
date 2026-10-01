@@ -2,19 +2,15 @@ import type { Capability } from "../../../access/contract/capability.js";
 import type { AppContext } from "../../../context/app-context.js";
 import type { JsonObject } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { CapabilityErrors } from "../../errors.js";
 import type {
   MetaInput,
   MetaPatch,
   MetaPatchTarget,
   SettledRow,
-} from "../../meta/core.js";
+} from "../../../meta/core.js";
+import type { PluginRegistry } from "../../../plugin/manifest.js";
+import type { CapabilityErrors } from "../../contract/errors.js";
 import { users } from "../../../db/schema/users.js";
-import {
-  findUserMetaField,
-  listUserMetaFields,
-} from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -26,10 +22,14 @@ import {
   settleStoredMeta,
   validateMetaReferencesForRpc,
   writeSettledMeta,
-} from "../../meta/core.js";
-import { assertMetaCapabilities } from "../entry/meta.js";
+} from "../../../meta/core.js";
+import { assertMetaCapabilities } from "../../../meta/entry.js";
+import {
+  findUserMetaField,
+  listUserMetaFields,
+} from "../../../plugin/manifest.js";
 
-export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
+export type { MetaChanges as UserMetaChanges } from "../../../meta/core.js";
 
 /** RPC-facing sanitizer for a user's meta input. User meta is a flat
  *  keyspace — no scope argument. The target's `stored` is the meta the patch

@@ -1,5 +1,4 @@
-import type { AppContext } from "../context/app-context.js";
-import { normalizeTag } from "./contract/tags.js";
+import { normalizeTag } from "./tags.js";
 
 // Per-request accumulator of cache tags for entities embedded into a page
 // via read-time reference resolution (#1508). When resolution materializes
@@ -16,7 +15,7 @@ import { normalizeTag } from "./contract/tags.js";
 const pending = new WeakMap<Request, Set<string>>();
 
 export function accumulateEmbeddedTags(
-  ctx: Pick<AppContext, "request">,
+  ctx: { readonly request: Request },
   tags: readonly string[],
 ): void {
   if (tags.length === 0) return;
@@ -29,9 +28,9 @@ export function accumulateEmbeddedTags(
 }
 
 /** The de-duplicated tags accumulated for this request, in insertion order. */
-export function embeddedPageTags(
-  ctx: Pick<AppContext, "request">,
-): readonly string[] {
+export function embeddedPageTags(ctx: {
+  readonly request: Request;
+}): readonly string[] {
   const set = pending.get(ctx.request);
   return set === undefined ? [] : [...set];
 }

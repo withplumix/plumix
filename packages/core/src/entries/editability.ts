@@ -1,4 +1,4 @@
-import type { CapabilityErrors } from "../rpc/errors.js";
+import type { CapabilityErrors } from "../rpc/contract/errors.js";
 import type { EntryRow, EntryViewer } from "./visibility.js";
 import {
   entryCapabilityByName,

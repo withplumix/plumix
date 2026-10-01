@@ -1,20 +1,17 @@
-import type { Capability } from "../../../access/contract/capability.js";
-import type { AppContext } from "../../../context/app-context.js";
-import type { JsonObject } from "../../../json.js";
-import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { CapabilityErrors } from "../../errors.js";
+import type { Capability } from "../access/contract/capability.js";
+import type { AppContext } from "../context/app-context.js";
+import type { JsonObject } from "../json.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
+import type { CapabilityErrors } from "../rpc/contract/errors.js";
+import type { ResolvedMeta } from "./contract/bags.js";
 import type {
   MetaInput,
   MetaPatch,
   MetaPatchTarget,
   SettledRow,
-} from "../../meta/core.js";
-import { terms } from "../../../db/schema/terms.js";
-import {
-  findTermMetaField,
-  listTermMetaFields,
-} from "../../../plugin/manifest.js";
+} from "./core.js";
+import { terms } from "../db/schema/terms.js";
+import { findTermMetaField, listTermMetaFields } from "../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -28,10 +25,10 @@ import {
   settleStoredMeta,
   validateMetaReferencesForRpc,
   writeSettledMeta,
-} from "../../meta/core.js";
-import { assertMetaCapabilities } from "../entry/meta.js";
+} from "./core.js";
+import { assertMetaCapabilities } from "./entry.js";
 
-export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
+export type { MetaChanges as TermMetaChanges } from "./core.js";
 
 /**
  * RPC-facing sanitizer for a term's meta input, scoped by taxonomy. The

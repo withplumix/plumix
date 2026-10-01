@@ -1,25 +1,22 @@
 import type {
   Capability,
   CapabilityNamespaces,
-} from "../../../access/contract/capability.js";
-import type { AppContext } from "../../../context/app-context.js";
-import type { JsonObject } from "../../../json.js";
-import type { ResolvedMeta } from "../../../meta/contract/bags.js";
-import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { CapabilityErrors } from "../../errors.js";
+} from "../access/contract/capability.js";
+import type { AppContext } from "../context/app-context.js";
+import type { JsonObject } from "../json.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
+import type { CapabilityErrors } from "../rpc/contract/errors.js";
+import type { ResolvedMeta } from "./contract/bags.js";
 import type {
   MetaInput,
   MetaPatch,
   MetaPatchTarget,
   SettledRow,
-} from "../../meta/core.js";
-import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
-import { resolveCapability } from "../../../access/contract/capability.js";
-import { entries } from "../../../db/schema/entries.js";
-import {
-  findEntryMetaField,
-  listEntryMetaFields,
-} from "../../../plugin/manifest.js";
+} from "./core.js";
+import type { FieldPipelineMode } from "./field-pipeline.js";
+import { resolveCapability } from "../access/contract/capability.js";
+import { entries } from "../db/schema/entries.js";
+import { findEntryMetaField, listEntryMetaFields } from "../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -36,9 +33,9 @@ import {
   validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
   writeSettledMeta,
-} from "../../meta/core.js";
+} from "./core.js";
 
-export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
+export type { MetaChanges as EntryMetaChanges } from "./core.js";
 
 /**
  * RPC-facing sanitizer for an entry's meta input, scoped by entry type. The

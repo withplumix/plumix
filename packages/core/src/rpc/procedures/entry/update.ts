@@ -9,7 +9,20 @@ import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";
+import {
+  applyTermPatch,
+  assertTermsPatchValid,
+  buildTermsPatchGuards,
+} from "../../../entries/terms.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
+import { isEmptyMetaPatch } from "../../../meta/core.js";
+import {
+  assertPromotedEntryMetaValid,
+  loadEntryMeta,
+  resolveEntryMeta,
+  sanitizeAndValidateEntryMeta,
+  writeEntryMeta,
+} from "../../../meta/entry.js";
 import {
   getAutosaveEdits,
   upsertAutosave,
@@ -23,7 +36,6 @@ import {
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { isEmptyMetaPatch } from "../../meta/core.js";
 import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
@@ -45,20 +57,8 @@ import {
   publishedAtForTransition,
   wouldCreateParentCycle,
 } from "./lifecycle.js";
-import {
-  assertPromotedEntryMetaValid,
-  loadEntryMeta,
-  resolveEntryMeta,
-  sanitizeAndValidateEntryMeta,
-  writeEntryMeta,
-} from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryUpdateInputSchema } from "./schemas.js";
-import {
-  applyTermPatch,
-  assertTermsPatchValid,
-  buildTermsPatchGuards,
-} from "./terms.js";
 
 interface ParentGuards {
   readonly notFound: (parentId: number) => never;

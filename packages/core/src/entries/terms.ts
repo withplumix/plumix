@@ -1,9 +1,9 @@
-import type { AppContext } from "../../../context/app-context.js";
-import type { TermsPatchErrors } from "../../errors.js";
-import { spellTermCapability } from "../../../access/contract/capability.js";
-import { and, eq, inArray } from "../../../db/index.js";
-import { entryTerm } from "../../../db/schema/entry_term.js";
-import { terms } from "../../../db/schema/terms.js";
+import type { AppContext } from "../context/app-context.js";
+import type { TermsPatchErrors } from "../rpc/contract/errors.js";
+import { spellTermCapability } from "../access/contract/capability.js";
+import { and, eq, inArray } from "../db/index.js";
+import { entryTerm } from "../db/schema/entry_term.js";
+import { terms } from "../db/schema/terms.js";
 
 // Errors a `terms` patch can raise. Helpers receive callable throwers
 // so the orpc-typed `errors` map at the handler call-site doesn't have

@@ -18,11 +18,11 @@ import type {
 import type { HydratedReference } from "../plugin/lookup.js";
 import type { PluginRegistry } from "../plugin/registry.js";
 import type { ResolvedImage, RoleImages } from "./contract/role-images.js";
+import { extractStringId } from "../meta/coerce.js";
+import { hydrateReferenceGroup, referenceGroupKey } from "../meta/core.js";
+import { referenceTargetOf } from "../meta/field-pipeline.js";
 import { nonEmpty } from "../non-empty.js";
 import { imageRolesInScope } from "../plugin/image-roles.js";
-import { extractStringId } from "../rpc/meta/coerce.js";
-import { hydrateReferenceGroup, referenceGroupKey } from "../rpc/meta/core.js";
-import { referenceTargetOf } from "../rpc/meta/field-pipeline.js";
 
 export interface ProjectImageRolesOptions {
   /**

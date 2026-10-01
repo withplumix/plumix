@@ -1,5 +1,5 @@
 import type { LookupUserCodeResult } from "../../../../auth/device-flow.js";
-import type { DeviceCodeLookupErrors } from "../../../errors.js";
+import type { DeviceCodeLookupErrors } from "../../../contract/errors.js";
 
 // Map a `lookupDeviceCodeByUserCode` outcome to the right RPC error
 // and narrow the result type for callers that only want the `ok`

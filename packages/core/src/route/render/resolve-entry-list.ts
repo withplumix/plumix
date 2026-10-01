@@ -21,8 +21,8 @@ import {
   projectImageRoles,
   resolveImageRoles,
 } from "../../images/role-images.js";
-import { resolveEntriesMeta } from "../../rpc/procedures/entry/meta.js";
-import { resolveTermsMeta } from "../../rpc/procedures/term/meta.js";
+import { resolveEntriesMeta } from "../../meta/entry.js";
+import { resolveTermsMeta } from "../../meta/term.js";
 import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   buildEntryPermalinkSync,

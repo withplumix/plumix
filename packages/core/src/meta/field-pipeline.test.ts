@@ -16,8 +16,8 @@ import {
   time,
   toggle,
   url,
-} from "../../plugin/fields/index.js";
-import { META_FIELD_MESSAGES } from "./field-messages.js";
+} from "../plugin/fields/index.js";
+import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 import { runFieldPipeline } from "./field-pipeline.js";
 
 // The per-value write pipeline: coercion → `.sanitize()` → declarative

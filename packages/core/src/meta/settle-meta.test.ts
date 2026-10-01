@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { eq, settleMeta } from "../db/public.js";
+import { entries } from "../db/schema/index.js";
 import { definePlugin } from "../plugin/define.js";
 import {
   group,
@@ -9,8 +11,6 @@ import {
   toggle,
 } from "../plugin/fields/index.js";
 import { createTracedContext } from "../test/traced-context.js";
-import { eq, settleMeta } from "./public.js";
-import { entries } from "./schema/index.js";
 
 const plugin = definePlugin("test-settle-meta", (ctx) => {
   ctx.registerEntryMetaBox("entry-box", {

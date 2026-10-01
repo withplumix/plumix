@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../../db/schema/users.js";
-import { and, asc, eq } from "../../../db/index.js";
-import { entryTerm } from "../../../db/schema/entry_term.js";
-import { terms } from "../../../db/schema/terms.js";
-import { createPluginRegistry } from "../../../plugin/manifest.js";
-import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+import type { UserRole } from "../db/schema/users.js";
+import { and, asc, eq } from "../db/index.js";
+import { entryTerm } from "../db/schema/entry_term.js";
+import { terms } from "../db/schema/terms.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
+import { createRpcHarness } from "../test/rpc.js";
 
 function taxonomyRegistry(
   opts: {

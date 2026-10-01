@@ -5,6 +5,7 @@ import { entryCapabilityByName } from "../../../access/contract/entry-capabiliti
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
+import { sanitizePromotedEntryMeta } from "../../../meta/entry.js";
 import {
   deleteAutosave,
   getAutosaveEdits,
@@ -24,7 +25,6 @@ import {
   fireEntryTransition,
   fireEntryUpdated,
 } from "./lifecycle.js";
-import { sanitizePromotedEntryMeta } from "./meta.js";
 
 const publishInput = v.object({
   id: idParam,

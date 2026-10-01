@@ -5,7 +5,7 @@ import { defineMessage } from "@lingui/core/macro";
 // `core-validation-i18n.ts` for the pattern). The wire ships the
 // descriptor (`{ id, message, values }`); `useMetaFieldMessage`
 // resolves it against the catalog these `defineMessage` calls feed.
-// Lockstep with `packages/core/src/rpc/meta/field-messages.ts` is
+// Lockstep with `packages/core/src/meta/contract/field-messages.ts` is
 // test-guarded.
 
 export const META_FIELD_DESCRIPTORS = {

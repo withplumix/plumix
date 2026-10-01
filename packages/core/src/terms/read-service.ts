@@ -1,15 +1,28 @@
 import type { AppContext } from "../context/app-context.js";
 import type { Term } from "../db/schema/terms.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
-import type {
-  TermGetInput,
-  TermListInput,
-} from "../rpc/procedures/term/schemas.js";
 import { spellTermCapability } from "../access/contract/capability.js";
 import { and, asc, eq, isNull, like } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import { resolveTermMeta } from "../rpc/procedures/term/meta.js";
+import { resolveTermMeta } from "../meta/term.js";
 import { TermReadError } from "./errors.js";
+
+/**
+ * What {@link listTerms} filters and pages by: what the `term.list` input
+ * schema parses to, defaults filled in.
+ */
+export interface ListTermsInput {
+  readonly taxonomy: string;
+  readonly parentId?: number | null | undefined;
+  readonly search?: string | undefined;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+/** The term {@link getTerm} reads. */
+export interface GetTermInput {
+  readonly id: number;
+}
 
 /**
  * List terms in a taxonomy the caller may read. The taxonomy must be
@@ -18,7 +31,7 @@ import { TermReadError } from "./errors.js";
  */
 export async function listTerms(
   ctx: AppContext,
-  input: TermListInput,
+  input: ListTermsInput,
 ): Promise<readonly Term[]> {
   if (!ctx.plugins.termTaxonomies.has(input.taxonomy)) {
     throw TermReadError.taxonomyNotFound(input.taxonomy);
@@ -52,7 +65,7 @@ export async function listTerms(
  */
 export async function getTerm(
   ctx: AppContext,
-  input: TermGetInput,
+  input: GetTermInput,
 ): Promise<WithResolvedMeta<Term>> {
   const row = await findReadableTerm(ctx, input);
   return { ...row, meta: await resolveTermMeta(ctx, row.taxonomy, row.meta) };
@@ -64,7 +77,7 @@ export async function getTerm(
  */
 export async function findReadableTerm(
   ctx: AppContext,
-  input: TermGetInput,
+  input: GetTermInput,
 ): Promise<Term> {
   const row = await ctx.db.query.terms.findFirst({
     where: eq(terms.id, input.id),

@@ -74,7 +74,6 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "*/contract/": client("contracts"),
 
   "db/": server("capabilities"),
-  // Matches nothing until #2594 lifts the meta pipeline out of `rpc/meta/`.
   "meta/": server("capabilities"),
   "access/": server("capabilities"),
   "auth/": server("capabilities"),

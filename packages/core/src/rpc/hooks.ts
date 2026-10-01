@@ -6,7 +6,8 @@ import type { SettingsBag } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
-import type { EntryMetaChanges } from "./procedures/entry/meta.js";
+import type { EntryMetaChanges } from "../meta/entry.js";
+import type { TermMetaChanges } from "../meta/term.js";
 import type {
   EntryCreateInput,
   EntryListInput,
@@ -16,7 +17,6 @@ import type {
   SettingsGetInput,
   SettingsUpsertInput,
 } from "./procedures/settings/schemas.js";
-import type { TermMetaChanges } from "./procedures/term/meta.js";
 import type {
   TermCreateInput,
   TermListInput,

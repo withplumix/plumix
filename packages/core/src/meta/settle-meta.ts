@@ -6,7 +6,7 @@ import {
   listTermMetaFields,
   listUserMetaFields,
 } from "../plugin/registry.js";
-import { metaScope, settleStoredMeta } from "../rpc/meta/core.js";
+import { metaScope, settleStoredMeta } from "./core.js";
 
 /**
  * Who a meta bag belongs to: an entry type, a taxonomy, a settings group, or

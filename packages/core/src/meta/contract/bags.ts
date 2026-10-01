@@ -1,5 +1,5 @@
-// The meta bag shapes a read surface hands back, apart from the pipeline under
-// `rpc/meta/` that fills them, so a contract can name them.
+// The meta bag shapes a read surface hands back, apart from the pipeline in
+// `meta/` that fills them, so a contract can name them.
 
 /**
  * A meta bag on the read side. Not JSON: `decodeMetaBag` hands a

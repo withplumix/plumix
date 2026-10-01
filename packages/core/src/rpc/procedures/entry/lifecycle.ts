@@ -7,7 +7,7 @@ import type {
   EntryStatus,
   NewEntry,
 } from "../../../db/schema/entries.js";
-import type { GatedLookupErrors } from "../../errors.js";
+import type { GatedLookupErrors } from "../../contract/errors.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {

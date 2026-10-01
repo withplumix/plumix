@@ -152,7 +152,7 @@ export type {
   ListingPageTarget,
   ResolvedListingPage,
 } from "./route/render/page-data.js";
-export { resolveReferences } from "./rpc/meta/core.js";
+export { resolveReferences } from "./meta/core.js";
 export type {
   ResolvedMeta,
   StoredMeta,

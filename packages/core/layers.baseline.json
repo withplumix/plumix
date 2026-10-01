@@ -62,11 +62,6 @@
   {
     "rule": "environment",
     "from": "rpc/validation.ts",
-    "to": "rpc/meta/field-messages.ts"
-  },
-  {
-    "rule": "environment",
-    "from": "rpc/validation.ts",
     "to": "rpc/validation.ts"
   },
   {
@@ -75,13 +70,8 @@
     "to": "rpc/vmessage.ts"
   },
   {
-    "rule": "environment",
-    "from": "support.ts",
-    "to": "rpc/procedures/entry/search-terms.ts"
-  },
-  {
     "rule": "cycle",
     "layer": "capabilities",
-    "members": ["access", "cdn", "entries", "route", "search", "seo"]
+    "members": ["entries", "route", "search", "seo"]
   }
 ]

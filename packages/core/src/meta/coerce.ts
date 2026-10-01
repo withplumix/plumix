@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
-import type { JsonValue } from "../../json.js";
-import type { MetaScalarType } from "../../plugin/manifest.js";
+import type { JsonValue } from "../json.js";
+import type { MetaScalarType } from "../plugin/manifest.js";
 
 // The admin form sends native-input strings and direct RPC callers send
 // whatever they like; both funnel into the declared scalar or fail.

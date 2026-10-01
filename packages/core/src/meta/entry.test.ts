@@ -1,24 +1,24 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { JsonValue } from "../../../json.js";
+import type { JsonValue } from "../json.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
-} from "../../../plugin/manifest.js";
-import { eq } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+} from "../plugin/manifest.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import {
   createPluginRegistry,
   findEntryMetaField,
-} from "../../../plugin/manifest.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+} from "../plugin/manifest.js";
+import { createRpcHarness } from "../test/rpc.js";
 import {
   applyMetaPatch,
   MetaValidationError,
   sanitizeMetaInput,
   writeSettledMeta,
-} from "../../meta/core.js";
-import { loadEntryMeta } from "./meta.js";
+} from "./core.js";
+import { loadEntryMeta } from "./entry.js";
 
 // Each test declares its meta fields via this helper — one 1-field box
 // per key so the `entryTypes` scope can differ per key (useful for

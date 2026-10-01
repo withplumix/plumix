@@ -2,12 +2,12 @@ import type { NewEntry } from "../../../db/schema/entries.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
+import { applyTermPatch, loadEntryTerms } from "../../../entries/terms.js";
 import { canReadEntry } from "../../../entries/visibility.js";
+import { resolveEntryMeta } from "../../../meta/entry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { resolveEntryMeta } from "./meta.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
-import { applyTermPatch, loadEntryTerms } from "./terms.js";
 
 // Bounded retry so two duplicates of the same source don't collide on
 // the `(type, slug)` unique index: "original-copy", "original-copy-2", …

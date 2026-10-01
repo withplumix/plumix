@@ -1,6 +1,6 @@
+import type { MetaPatch } from "../../../meta/core.js";
 import type { SelectableAccessPolicy } from "../../../plugin/manifest.js";
-import type { BadRequestErrors } from "../../errors.js";
-import type { MetaPatch } from "../../meta/core.js";
+import type { BadRequestErrors } from "../../contract/errors.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 

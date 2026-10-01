@@ -1,8 +1,7 @@
 import { EMAIL_REGEX } from "valibot";
 
-import type { Label } from "../../i18n/label.js";
-import type { JsonValue } from "../../json.js";
-import type { ResolvedMeta } from "../../meta/contract/bags.js";
+import type { Label } from "../i18n/label.js";
+import type { JsonValue } from "../json.js";
 import type {
   GroupMetaBoxField,
   MetaBoxField,
@@ -11,22 +10,23 @@ import type {
   RepeaterMetaBoxField,
   RichtextMetaBoxField,
   TemporalInputType,
-} from "../../plugin/manifest.js";
-import { isJsonArray, isJsonObject } from "../../json.js";
-import { HEX_COLOR } from "../../plugin/fields/color.js";
-import { isFieldVisible } from "../../plugin/fields/condition.js";
-import { parseLinkValue } from "../../plugin/fields/link.js";
+} from "../plugin/manifest.js";
+import type { ResolvedMeta } from "./contract/bags.js";
+import { isJsonArray, isJsonObject } from "../json.js";
+import { HEX_COLOR } from "../plugin/fields/color.js";
+import { isFieldVisible } from "../plugin/fields/condition.js";
+import { parseLinkValue } from "../plugin/fields/link.js";
 import {
   SAFE_HREF_RE,
   walkRichtextDoc,
-} from "../../plugin/fields/richtext-validate.js";
+} from "../plugin/fields/richtext-validate.js";
 import {
   formatTemporalValue,
   isTemporalInputType,
   isValidTemporalValue,
-} from "../../plugin/manifest.js";
+} from "../plugin/manifest.js";
 import { coerceValue, decodeJsonValue, extractStringId } from "./coerce.js";
-import { META_FIELD_MESSAGES } from "./field-messages.js";
+import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 
 /**
  * A single write-rejection addressed to the exact field input — `path`

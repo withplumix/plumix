@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { JsonObject } from "../../json.js";
-import type { MetaBoxField } from "../../plugin/manifest.js";
+import type { JsonObject } from "../json.js";
+import type { MetaBoxField } from "../plugin/manifest.js";
 import {
   color,
   date,
@@ -14,7 +14,8 @@ import {
   time,
   toggle,
   url,
-} from "../../plugin/fields/index.js";
+} from "../plugin/fields/index.js";
+import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 import {
   decodeMetaBag,
   MetaSanitizationError,
@@ -24,7 +25,6 @@ import {
   settleStoredMeta,
   validateAndPromoteMetaBag,
 } from "./core.js";
-import { META_FIELD_MESSAGES } from "./field-messages.js";
 
 // The write path funnels every value through the field pipeline and
 // aggregates `{ path, message }` rejections across the whole patch into

@@ -1,16 +1,16 @@
 import { sql } from "drizzle-orm";
 
 import type { JsonValue } from "../../../json.js";
-import type { ConflictErrors } from "../../errors.js";
-import type { MetaFieldError } from "../../meta/field-pipeline.js";
+import type { MetaFieldError } from "../../../meta/field-pipeline.js";
+import type { ConflictErrors } from "../../contract/errors.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
+import { decodeJsonValue } from "../../../meta/coerce.js";
+import { runFieldPipeline } from "../../../meta/field-pipeline.js";
 import { isConditionHidden } from "../../../plugin/fields/condition.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { decodeJsonValue } from "../../meta/coerce.js";
-import { runFieldPipeline } from "../../meta/field-pipeline.js";
 import { requireCapability } from "../../require-capability.js";
 import {
   MAX_SETTINGS_VALUE_BYTES,
