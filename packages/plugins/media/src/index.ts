@@ -101,9 +101,9 @@ interface MediaPluginOptions {
    * `media.createUploadUrl` is rejected up front if it exceeds this
    * cap. A presigned PUT is signed for exactly that `size` as
    * `Content-Length`, so the bucket refuses a body of any other length;
-   * the worker-routed upload counts actual bytes streamed and aborts
-   * past the cap. `media.confirm` then checks the stored size against
-   * the declared one. Defaults to 25 MiB.
+   * the worker-routed upload refuses a request with no `Content-Length`
+   * or one above the declared `size`. `media.confirm` then checks the
+   * stored size against the declared one. Defaults to 25 MiB.
    */
   readonly maxUploadSize?: number;
 }

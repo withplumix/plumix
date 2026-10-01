@@ -200,8 +200,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
 
         // Worker-routed fallback — when the runtime has the binding
         // but no S3 credentials. Bytes flow through `env.MEDIA.put()`
-        // and the upload-route enforces the size cap on the actual
-        // stream, not just the Content-Length header.
+        // and the upload-route refuses a missing Content-Length or one
+        // above the declared size.
         return {
           uploadUrl: withBasePath(
             `/_plumix/media/upload/${String(created.id)}`,
