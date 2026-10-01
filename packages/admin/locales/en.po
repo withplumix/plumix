@@ -1812,6 +1812,18 @@ msgstr "Inviting…"
 msgid "type.generic.singular"
 msgstr "Item"
 
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.dropped"
+msgstr "Item dropped at position {position} of {total}."
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.movedTo"
+msgstr "Item moved to position {position} of {total}."
+
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.plural"
@@ -2038,6 +2050,12 @@ msgstr "Move to trash?"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.toast.trashed"
 msgstr "Moved to trash."
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.cancelled"
+msgstr "Moving cancelled. Item returned to position {position} of {total}."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2490,6 +2508,12 @@ msgstr "Pick a parent to nest this term, or leave empty for a root-level term."
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.pick"
 msgstr "Pick entry"
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.pickedUp"
+msgstr "Picked up item {position} of {total}."
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3613,6 +3637,11 @@ msgstr "Title"
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.title"
 msgstr "Title"
+
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.instructions"
+msgstr "To pick up an item, press space or enter. Use the arrow keys to move it. Press space or enter again to drop it, or escape to cancel."
 
 #. js-lingui-explicit-id
 #: src/components/shell/shell-header.tsx

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
+import { useSortableAnnouncements } from "@/lib/use-sortable-announcements.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
@@ -86,11 +87,11 @@ export function RepeaterField({
   readonly testId: string;
 }): ReactNode {
   const renderLabel = useLabel();
+  const announcements = useSortableAnnouncements();
   const subFields = field.subFields ?? [];
   const max = typeof field.max === "number" ? field.max : undefined;
   const min = typeof field.min === "number" ? field.min : undefined;
   const collapsedKey = field.collapsed;
-  const idPrefix = useId();
   // Which row's editor dialog is open (index into `rows`), or null.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -114,7 +115,7 @@ export function RepeaterField({
 
   const atMax = max !== undefined && rows.length >= max;
   const items: readonly RepeaterRow[] = rows.map((_, i) => ({
-    id: `${idPrefix}-r${i}`,
+    id: String(i),
     index: i,
   }));
 
@@ -185,6 +186,7 @@ export function RepeaterField({
           onRemove={disabled ? undefined : handleRemove}
           reorderLabel={renderLabel(REORDER_ROW_LABEL)}
           removeLabel={renderLabel(REMOVE_ROW_LABEL)}
+          announcements={announcements}
           disabled={disabled}
           testId={`${testId}-list`}
           renderItem={(item) => (

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { DIALOG_CLOSE_LABEL } from "@/lib/dialog-labels.js";
 import { useLabel } from "@/lib/use-label.js";
+import { useSortableAnnouncements } from "@/lib/use-sortable-announcements.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
@@ -111,6 +112,7 @@ export function MultiReferencePicker({
 }: MultiReferencePickerProps): ReactNode {
   const { i18n } = useLingui();
   const labelFn = useLabel();
+  const announcements = useSortableAnnouncements();
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
 
@@ -197,6 +199,7 @@ export function MultiReferencePicker({
           onRemove={required && value.length === 1 ? undefined : handleRemove}
           reorderLabel={labelFn(M.reorder)}
           removeLabel={labelFn(M.remove)}
+          announcements={announcements}
           renderItem={(item) => {
             if (item.result) {
               return (

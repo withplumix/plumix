@@ -1812,6 +1812,18 @@ msgstr "Запрошення…"
 msgid "type.generic.singular"
 msgstr "Елемент"
 
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.dropped"
+msgstr ""
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.movedTo"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.plural"
@@ -2038,6 +2050,12 @@ msgstr "Перемістити в кошик?"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.toast.trashed"
 msgstr "Переміщено в кошик."
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.cancelled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2490,6 +2508,12 @@ msgstr "Виберіть батьківський, щоб укласти цей 
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.pick"
 msgstr "Вибрати запис"
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.pickedUp"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3612,6 +3636,11 @@ msgstr "Назва"
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.instructions"
 msgstr ""
 
 #. js-lingui-explicit-id

@@ -7,7 +7,7 @@ import {
 import { createQueryClient } from "@/providers/query-client.js";
 import { i18n } from "@lingui/core";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm, useWatch } from "react-hook-form";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -540,6 +540,85 @@ describe("MetaBoxField dispatcher", () => {
       "aria-label",
       "Farbwähler öffnen",
     );
+  });
+
+  // English renders "Reorder" / "Remove" for both pickers, so only a catalog
+  // with a distinct string per id catches a caller that swaps or drops one.
+  const sortableCatalog = {
+    "metaBox.repeater.reorderRow": "Zeile verschieben",
+    "metaBox.repeater.removeRow": "Zeile entfernen",
+    "metaBox.multiReference.reorder": "Verweis verschieben",
+    "metaBox.multiReference.remove": "Verweis entfernen",
+    "sortable.instructions": "Leertaste drückt, Pfeile bewegen",
+    "sortable.pickedUp": "Element {position} von {total} aufgenommen",
+  };
+
+  test("repeater: the row handle, remove button and drag announcements come from the active catalog", async () => {
+    i18n.load({ de: sortableCatalog });
+    i18n.activate("de");
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          key: "links",
+          type: "json",
+          inputType: "repeater",
+          subFields: [
+            { key: "label", label: "Label", type: "string", inputType: "text" },
+          ],
+        })}
+        initial={[{ label: "One" }, { label: "Two" }]}
+      />,
+    );
+    const handle = screen.getByTestId(
+      "meta-box-field-links-input-list-row-0-handle",
+    );
+    expect(handle).toHaveAttribute("aria-label", "Zeile verschieben");
+    expect(handle).toHaveAccessibleDescription(
+      "Leertaste drückt, Pfeile bewegen",
+    );
+    expect(
+      screen.getByTestId("meta-box-field-links-input-list-row-0-remove"),
+    ).toHaveAttribute("aria-label", "Zeile entfernen");
+
+    handle.focus();
+    await userEvent.keyboard("[Space]");
+    await waitFor(() => {
+      expect(document.body).toHaveTextContent("Element 1 von 2 aufgenommen");
+    });
+  });
+
+  test("multi reference: the row handle, remove button and drag announcements come from the active catalog", async () => {
+    i18n.load({ de: sortableCatalog });
+    i18n.activate("de");
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "userList",
+          type: "json",
+          referenceTarget: { kind: "user", multiple: true },
+        })}
+        initial={[
+          { id: "1", name: "Ada", slug: "ada", avatarUrl: null },
+          { id: "2", name: "Bo", slug: "bo", avatarUrl: null },
+        ]}
+      />,
+    );
+    const handle = screen.getByTestId(
+      "meta-box-field-k-input-list-row-1-handle",
+    );
+    expect(handle).toHaveAttribute("aria-label", "Verweis verschieben");
+    expect(handle).toHaveAccessibleDescription(
+      "Leertaste drückt, Pfeile bewegen",
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-list-row-1-remove"),
+    ).toHaveAttribute("aria-label", "Verweis entfernen");
+
+    handle.focus();
+    await userEvent.keyboard("[Space]");
+    await waitFor(() => {
+      expect(document.body).toHaveTextContent("Element 1 von 2 aufgenommen");
+    });
   });
 
   test("range: slider exposes value via the inline display + carries bounds on root", () => {
