@@ -1,5 +1,5 @@
 import type { ConnectedObjectStorage, PlumixEnv } from "plumix";
-import { describeObjectStorageContract } from "plumix/test/conformance";
+import { describeObjectStorageContract, fakeS3 } from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
 import type { R2Config } from "./r2.js";
@@ -311,6 +311,7 @@ describe("r2 presignPut", () => {
 
     const result = await store.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
       expiresIn: 600,
     });
 
@@ -324,6 +325,33 @@ describe("r2 presignPut", () => {
     // `host` is set automatically by the browser; we must NOT include it
     // among the headers the browser is told to send back.
     expect(result.headers).not.toHaveProperty("host");
+  });
+
+  test("signs the contentLength, so the bucket refuses a body of another length", async () => {
+    const store = connectR2({ s3: S3_CREDENTIALS });
+    if (!store.presignPut) throw new Error("r2 should expose presignPut");
+    const bucket = fakeS3({
+      bucket: S3_CREDENTIALS.bucket,
+      region: "auto",
+      credentials: {
+        accessKeyId: S3_CREDENTIALS.accessKeyId,
+        secretAccessKey: S3_CREDENTIALS.secretAccessKey,
+      },
+    });
+
+    const presigned = await store.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      contentLength: 10,
+    });
+    const put = (body: string) =>
+      bucket.fetch(presigned.url, {
+        method: presigned.method,
+        headers: presigned.headers,
+        body,
+      });
+
+    expect((await put("jpeg bytes, and more")).status).toBe(403);
+    expect((await put("jpeg bytes")).status).toBe(200);
   });
 
   test("resolves an (env) => s3 credentials block from the connect env", async () => {
@@ -342,6 +370,7 @@ describe("r2 presignPut", () => {
 
     const result = await store.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
       expiresIn: 600,
     });
 
@@ -368,6 +397,7 @@ describe("r2 conventional env credentials", () => {
 
     const result = await store.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
       expiresIn: 600,
     });
 
@@ -396,6 +426,7 @@ describe("r2 conventional env credentials", () => {
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
     const result = await store.presignPut("x.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
     });
     expect(result.url).toContain("/assets-bucket/x.jpg");
   });
@@ -415,6 +446,7 @@ describe("r2 conventional env credentials", () => {
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
     const result = await store.presignPut("x.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
     });
     expect(result.url).toContain(
       "https://explicit-acct.r2.cloudflarestorage.com/",

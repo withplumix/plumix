@@ -79,7 +79,7 @@ async function verifyHeaderAuth(
   ) {
     return { ok: false, reason: "the session token is not signed" };
   }
-  const canonicalHeaders = canonicalHeadersOf(
+  const canonicalHeaders = await canonicalHeadersOf(
     request,
     url,
     signedHeaders ?? "",
@@ -144,7 +144,11 @@ async function verifyQueryAuth(
   if (!Number.isFinite(expires) || now.getTime() > issued + expires * 1000) {
     return { ok: false, reason: "the presigned URL has expired" };
   }
-  const canonicalHeaders = canonicalHeadersOf(request, url, signedHeaders);
+  const canonicalHeaders = await canonicalHeadersOf(
+    request,
+    url,
+    signedHeaders,
+  );
   if (canonicalHeaders === undefined) {
     return { ok: false, reason: "a signed header is missing from the request" };
   }
@@ -185,19 +189,33 @@ function checkScope(
   return undefined;
 }
 
-function canonicalHeadersOf(
+async function canonicalHeadersOf(
   request: Request,
   url: URL,
   signedHeaders: string,
-): string | undefined {
+): Promise<string | undefined> {
   const lines: string[] = [];
   for (const name of signedHeaders.split(";")) {
-    const value = name === "host" ? url.host : request.headers.get(name);
+    const value =
+      name === "host"
+        ? url.host
+        : name === "content-length"
+          ? await contentLengthOf(request)
+          : request.headers.get(name);
     if (value === null) return undefined;
     // AWS: trim, then fold runs of whitespace inside the value to one space.
     lines.push(`${name}:${value.trim().split(/\s+/).join(" ")}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+// `fetch` puts `Content-Length` on the wire from the body rather than on the
+// `Request`, so the length the bucket would see is the body's when it is unset.
+async function contentLengthOf(request: Request): Promise<string> {
+  const declared = request.headers.get("content-length");
+  if (declared !== null) return declared;
+  const body = await request.clone().arrayBuffer();
+  return String(body.byteLength);
 }
 
 // Each segment URI-encoded exactly once, from the decoded form.

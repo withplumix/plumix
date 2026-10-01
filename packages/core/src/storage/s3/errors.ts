@@ -3,18 +3,26 @@ export class SigV4Error extends Error {
     SigV4Error.prototype.name = "SigV4Error";
   }
 
-  readonly code: "expires_in_out_of_range" | "key_not_addressable";
+  readonly code:
+    | "expires_in_out_of_range"
+    | "content_length_invalid"
+    | "key_not_addressable";
   readonly expiresIn: number | undefined;
+  readonly contentLength: number | undefined;
   readonly key: string | undefined;
 
   private constructor(
-    code: "expires_in_out_of_range" | "key_not_addressable",
+    code:
+      | "expires_in_out_of_range"
+      | "content_length_invalid"
+      | "key_not_addressable",
     message: string,
-    fields: { expiresIn?: number; key?: string },
+    fields: { expiresIn?: number; contentLength?: number; key?: string },
   ) {
     super(message);
     this.code = code;
     this.expiresIn = fields.expiresIn;
+    this.contentLength = fields.contentLength;
     this.key = fields.key;
   }
 
@@ -22,6 +30,14 @@ export class SigV4Error extends Error {
     return new SigV4Error(
       "expires_in_out_of_range",
       `presignPutUrl: expiresIn must be in [1..604800] seconds, got ${String(ctx.expiresIn)}`,
+      ctx,
+    );
+  }
+
+  static contentLengthInvalid(ctx: { contentLength: number }): SigV4Error {
+    return new SigV4Error(
+      "content_length_invalid",
+      `presignPutUrl: contentLength must be a non-negative safe integer, got ${String(ctx.contentLength)}`,
       ctx,
     );
   }

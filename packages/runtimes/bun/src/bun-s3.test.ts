@@ -82,6 +82,7 @@ describe("bunS3", () => {
     if (!storage.presignPut) throw new Error("bunS3 should expose presignPut");
     const presigned = await storage.presignPut("uploads/cat.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
     });
     const send = (contentType: string) =>
       fetch(presigned.url, {
@@ -97,6 +98,25 @@ describe("bunS3", () => {
       size: 10,
       contentType: "image/jpeg",
     });
+  });
+
+  test("a presigned PUT is signed for its content length, and refused with another", async () => {
+    const { fake, storage } = bind();
+    if (!storage.presignPut) throw new Error("bunS3 should expose presignPut");
+    const presigned = await storage.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      contentLength: 10,
+    });
+    const send = (body: string) =>
+      fetch(presigned.url, {
+        method: presigned.method,
+        headers: presigned.headers,
+        body,
+      });
+
+    expect((await send("jpeg bytes, and more")).status).toBe(403);
+    expect(fake.store.has("uploads/cat.jpg")).toBe(false);
+    expect((await send("jpeg bytes")).status).toBe(200);
   });
 
   test("reads credentials given as an (env) => resolver from the connect env, for Bun's client and core's signer alike", async () => {
