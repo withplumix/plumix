@@ -5,7 +5,7 @@ import type {
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { CapabilityErrors } from "../rpc/contract/errors.js";
+import type { CapabilityErrors } from "../rpc-errors.js";
 import type { ResolvedMeta } from "./contract/bags.js";
 import type {
   MetaInput,

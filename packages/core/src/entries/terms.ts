@@ -1,5 +1,5 @@
 import type { AppContext } from "../context/app-context.js";
-import type { TermsPatchErrors } from "../rpc/contract/errors.js";
+import type { TermsPatchErrors } from "../rpc-errors.js";
 import { spellTermCapability } from "../access/contract/capability.js";
 import { and, eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";

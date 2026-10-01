@@ -69,6 +69,8 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   // `template-deps-core.ts` queries through drizzle.
   "template*": server("contracts"),
   "settings-core": client("contracts"),
+  // The RPC error map: capabilities throw through its constructors.
+  "rpc-errors": client("contracts"),
   support: client("contracts"),
   "db/schema/": server("contracts"),
   "*/contract/": client("contracts"),

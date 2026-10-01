@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 
 import { withUser } from "../../../auth/with-user.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
+import { RPC_ERRORS } from "../../../rpc-errors.js";
 import { createRpcHarness } from "../../../test/rpc.js";
-import { RPC_ERRORS } from "../../contract/errors.js";
 import { previewableEntry } from "./previewable.js";
 
 const errors = createORPCErrorConstructorMap(RPC_ERRORS);

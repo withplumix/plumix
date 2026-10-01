@@ -17,7 +17,7 @@ import type {
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../plugin/manifest.js";
-import type { ConflictErrors } from "../rpc/contract/errors.js";
+import type { ConflictErrors } from "../rpc-errors.js";
 import type { ResolvedMeta } from "./contract/bags.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../cdn/contract/embedded-tags.js";

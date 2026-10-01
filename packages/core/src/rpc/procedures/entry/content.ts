@@ -3,7 +3,7 @@ import type { EntryContent } from "../../../db/schema/entries.js";
 import type {
   BlockContentErrors,
   ConflictErrors,
-} from "../../contract/errors.js";
+} from "../../../rpc-errors.js";
 import { isEntryContent, validateEntryContent } from "../../../blocks/index.js";
 import { MAX_CONTENT_BYTES } from "./schemas.js";
 

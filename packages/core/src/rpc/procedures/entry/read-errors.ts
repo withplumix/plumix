@@ -1,4 +1,4 @@
-import type { EntryReadErrors } from "../../contract/errors.js";
+import type { EntryReadErrors } from "../../../rpc-errors.js";
 import { EntryReadError } from "../../../entries/errors.js";
 
 /**

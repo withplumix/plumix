@@ -1,8 +1,8 @@
 import { createORPCErrorConstructorMap } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
+import { RPC_ERRORS } from "../../../rpc-errors.js";
 import { TermReadError } from "../../../terms/errors.js";
-import { RPC_ERRORS } from "../../contract/errors.js";
 import { toRpcTermReadError } from "./read-errors.js";
 
 const errors = createORPCErrorConstructorMap(RPC_ERRORS);

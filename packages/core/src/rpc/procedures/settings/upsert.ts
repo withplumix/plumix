@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 
 import type { JsonValue } from "../../../json.js";
 import type { MetaFieldError } from "../../../meta/field-pipeline.js";
-import type { ConflictErrors } from "../../contract/errors.js";
+import type { ConflictErrors } from "../../../rpc-errors.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";

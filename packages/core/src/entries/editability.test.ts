@@ -7,7 +7,7 @@ import type { PluginRegistry } from "../plugin/registry.js";
 import type { EntryEditRow } from "./editability.js";
 import type { EntryViewer } from "./visibility.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
-import { RPC_ERRORS } from "../rpc/contract/errors.js";
+import { RPC_ERRORS } from "../rpc-errors.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
 import {
   assertCanDeleteEntry,

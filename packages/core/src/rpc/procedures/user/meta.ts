@@ -9,7 +9,7 @@ import type {
   SettledRow,
 } from "../../../meta/core.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { CapabilityErrors } from "../../contract/errors.js";
+import type { CapabilityErrors } from "../../../rpc-errors.js";
 import { users } from "../../../db/schema/users.js";
 import {
   applyMetaPatch,

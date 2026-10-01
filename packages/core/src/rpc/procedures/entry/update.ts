@@ -17,6 +17,11 @@ import {
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { isEmptyMetaPatch } from "../../../meta/core.js";
 import {
+  assertAccessChoiceDeclared,
+  withAccessChoice,
+  withTemplateChoice,
+} from "../../../meta/entry-choices.js";
+import {
   assertPromotedEntryMetaValid,
   loadEntryMeta,
   resolveEntryMeta,
@@ -41,12 +46,7 @@ import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
 } from "./content.js";
-import {
-  assertAccessChoiceDeclared,
-  stripUndefined,
-  withAccessChoice,
-  withTemplateChoice,
-} from "./helpers.js";
+import { stripUndefined } from "./helpers.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,

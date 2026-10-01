@@ -3,7 +3,7 @@ export { registerCoreLookupAdapters } from "./procedures/lookup-adapters.js";
 export { requireCapability } from "./require-capability.js";
 export { base } from "./base.js";
 export type { Base } from "./base.js";
-export { RPC_ERRORS } from "./contract/errors.js";
+export { RPC_ERRORS } from "../rpc-errors.js";
 export { authRouter } from "./procedures/auth/index.js";
 export type { AuthRouter } from "./procedures/auth/index.js";
 export { authSessionOutputSchema } from "./procedures/auth/schemas.js";
