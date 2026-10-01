@@ -1220,8 +1220,8 @@ async function resolveGroup(
       byId.set(id, payload);
       // Fold this embedded entity's cache tag into the page's tags so a
       // change to it purges the page that hydrated it (#1508). Runs on
-      // every read surface; only the public read-through reads the
-      // accumulator back, so admin/REST reads populate it harmlessly.
+      // every read surface; only the read-throughs read the accumulator
+      // back, so admin/REST reads populate it harmlessly.
       // Folded here rather than at the hydrate, so a batch answered from
       // the memo tags the page exactly as the batch that loaded it did.
       declarePageTags(ctx, tagsFor(id));

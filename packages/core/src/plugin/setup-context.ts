@@ -270,8 +270,8 @@ export interface PluginSetupContextBase {
    *
    *  Freshness is the handler's: it keeps a `cache-control` it set, and a
    *  response that set none takes the site's page TTL. So are the tags: the
-   *  entry stores untagged unless the handler calls `tagCdnEntry` while it
-   *  runs, and `immutable` belongs only on a content-addressed URL, since a
+   *  entry stores under what the handler names with `tagCdnEntry` while it
+   *  runs, plus the settings groups core saw it read, and `immutable` belongs only on a content-addressed URL, since a
    *  purge reaches Cloudflare but never a browser or a scraper. A response
    *  answering a request that carried a session, an `Authorization` header or
    *  a `?preview=` token is never stored, nor is one that sets a cookie or

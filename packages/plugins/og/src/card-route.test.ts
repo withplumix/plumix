@@ -530,7 +530,9 @@ describe("a card at the edge", () => {
     // settings group's tag core declared when the card read it.
     const stored = [...(put.mock.calls[0]?.[2] ?? [])];
     expect(stored).toEqual(["s:site", entryTag(id)]);
-    expect(entryPurgeTags("post", id)).toContain(entryTag(id));
+    expect(entryPurgeTags("post", id)).toEqual(
+      expect.arrayContaining(stored.filter((tag) => !tag.startsWith("s:"))),
+    );
   });
 
   test("renders once, then answers the next request from the edge", async () => {

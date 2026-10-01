@@ -128,7 +128,7 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onTerm(term, ctx),
   );
 
-  // A page that printed a settings group is stored under its tag.
+  // A response that printed a settings group is stored under its tag.
   hooks.addAction("settings:group_changed", (changes, ctx) => {
     enqueuePurgeTags(ctx, [settingsTag(changes.group)]);
   });
