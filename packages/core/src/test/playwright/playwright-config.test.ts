@@ -478,10 +478,8 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
   });
 });
 
-// Playwright starts the web server as its own process group and kills that
-// group only from its own teardown. A runner that dies some other way — a
-// SIGTERM, or a SIGKILL from turbo stopping a sibling task — leaves the server
-// holding the port, and the next run on it refuses to start (#2808).
+// Playwright kills the web server's process group only from its own teardown,
+// which a runner stopped by SIGTERM or SIGKILL never reaches.
 describe("the web server's lifetime", () => {
   let server: ChildProcess | undefined;
 
@@ -500,7 +498,7 @@ describe("the web server's lifetime", () => {
   async function startServer(pidFile: string): Promise<ChildProcess> {
     const config = definePlumixE2EConfig({
       port: 3990,
-      webServerCommand: `sleep 300 & echo $! > ${pidFile}; wait`,
+      webServerCommand: `sleep 300 & echo $! > '${pidFile}'; wait`,
     });
     const child = spawn(webServerCommandOf(config), {
       shell: true,

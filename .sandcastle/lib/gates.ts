@@ -21,7 +21,6 @@ export interface GateResult {
   readonly outcome: "ok" | "fail" | "skipped";
   readonly exitCode?: number;
   readonly skippedBecause?: string;
-  /** The tail of what a failed run printed; a run that passed keeps none. */
   readonly output?: string;
 }
 

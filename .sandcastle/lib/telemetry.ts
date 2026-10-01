@@ -279,10 +279,6 @@ export class Journal {
     this.#persist("running");
   }
 
-  /**
-   * `output` is what a gate run printed; it is appended to the phase's log,
-   * so a gate retried under one phase name keeps every failed run's output.
-   */
   record(phase: PhaseRecord, output?: string): void {
     if (output !== undefined) {
       const logFile = this.logPath(phase.phase);

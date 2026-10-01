@@ -123,8 +123,6 @@ describe("a gate that fails once", () => {
     expect(seen).toEqual(["typecheck:ok", "lint:fail", "lint:ok", "knip:ok"]);
   });
 
-  // Without it, a retry that passes leaves no trace of why the first run
-  // failed, so a port collision and a flaky spec look the same (#2808).
   test("the failed run keeps its output even when the retry passes", async () => {
     const results: GateResult[] = [];
     await runGates(sandboxWhereACommandFailsOnce("lint"), THREE_GATES, {

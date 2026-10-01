@@ -137,7 +137,6 @@ export function resolveE2EPort(base: number): number {
 // made for it. Playwright holds the only writer of its stdin, so the pipe ends
 // however the runner dies — a SIGTERM or a SIGKILL skips the teardown that
 // would kill the group — and the group goes with it, port and all (#2808).
-// No single quotes inside: the script travels single-quoted.
 const SUPERVISOR = [
   `const { spawn } = require("node:child_process");`,
   `const server = spawn(process.argv[1], { shell: true, stdio: ["ignore", "inherit", "inherit"] });`,

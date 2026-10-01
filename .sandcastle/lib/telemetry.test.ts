@@ -163,9 +163,6 @@ describe("Journal.runId", () => {
   });
 });
 
-// A gate retried after a failure records two runs under one phase name; the
-// output of each failed run is what tells a port collision from a flaky spec
-// once the retry has passed (#2808).
 describe("Journal.record with a gate run's output", () => {
   const gateRun = {
     phase: "gate:e2e#final.1",
