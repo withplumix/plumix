@@ -31,6 +31,9 @@ export const whenTheLimitLifts = (
 
 const TIMES_A_STEP_WAITS_OUT_A_LIMIT = 2;
 const A_MINUTE_PAST_THE_RESET_MS = 60_000;
+const MODEL_WENT_MISSING = /unrecognized_model/;
+const POLL_FOR_THE_MODEL_EVERY_MS = 15 * 60_000;
+const TIMES_A_STEP_POLLS_FOR_THE_MODEL = 20;
 
 interface LimitClock {
   readonly now: () => Date;
@@ -42,12 +45,24 @@ export const waitOutALimit = async <T>(
   start: () => Promise<T>,
   { now, pause, onWait }: LimitClock,
 ): Promise<T> => {
-  for (let waits = 0; ; waits += 1) {
+  let polls = 0;
+  let waits = 0;
+  for (;;) {
     try {
       return await start();
     } catch (error) {
+      if (
+        MODEL_WENT_MISSING.test(String(error)) &&
+        polls < TIMES_A_STEP_POLLS_FOR_THE_MODEL
+      ) {
+        polls += 1;
+        onWait?.(new Date(now().getTime() + POLL_FOR_THE_MODEL_EVERY_MS));
+        await pause(POLL_FOR_THE_MODEL_EVERY_MS);
+        continue;
+      }
       const lifts = whenTheLimitLifts(String(error), now());
       if (!lifts || waits === TIMES_A_STEP_WAITS_OUT_A_LIMIT) throw error;
+      waits += 1;
       onWait?.(lifts);
       await pause(
         lifts.getTime() - now().getTime() + A_MINUTE_PAST_THE_RESET_MS,
