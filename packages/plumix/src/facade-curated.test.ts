@@ -398,18 +398,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
   },
   // Whole by value, not by `export *`: `Db` is typed over every key of core's
   // schema module, so a client built from this subpath needs each one.
-  "./schema": {
-    mirrors: "@plumix/core/schema",
-    withheld: [
-      {
-        reason:
-          "the key of the row that marks a settings group created (ADR " +
-          "0026). Core's settings reads and writes own it, and no read " +
-          "hands it over.",
-        names: ["SETTINGS_CREATED_KEY"],
-      },
-    ],
-  },
+  "./schema": { mirrors: "@plumix/core/schema", withheld: [] },
   "./db": {
     mirrors: "@plumix/core/db",
     withheld: [

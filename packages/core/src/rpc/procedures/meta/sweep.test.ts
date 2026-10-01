@@ -2,12 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { settings, SETTINGS_CREATED_KEY } from "../../../db/schema/settings.js";
+import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, toggle } from "../../../plugin/fields/index.js";
 import { AUTOSAVE_TYPE } from "../../../revisions/slug-codec.js";
+import { SETTINGS_CREATED_KEY } from "../../../template-deps-core.js";
 import { createTracedContext } from "../../../test/traced-context.js";
 import { sweepUnsettledMeta } from "./sweep.js";
 

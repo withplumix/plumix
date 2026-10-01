@@ -17,7 +17,7 @@ UPDATE terms SET meta = json_set(meta, '$.color', '#000000') WHERE taxonomy = 'c
 UPDATE users SET meta = json_set(meta, '$.newsletter', json('true')) WHERE json_type(meta, '$.newsletter') IS NULL;
 ```
 
-**Breaking — settings.** A settings group reads its fields' defaults until its first save, which writes every field; after that, a cleared setting stays cleared. Themes reading settings through the `settings` template dep or `loadSettingsGroups` see the same values as the settings screen. A group saved before this release has not had that first save yet: until its next save, a setting cleared in it reads its default again.
+**Breaking — settings.** A settings group reads its fields' defaults until its first save, which writes every field; after that, a cleared setting stays cleared. Before that save the settings form pre-fills those defaults, while themes reading through the `settings` template dep or `loadSettingsGroups` see only what is stored, as before. A group saved before this release has not had that first save yet: until its next save, a setting cleared in it reads its default again.
 
 **Breaking — authenticators.** `RequestAuthenticator.authenticate` now receives a third argument, `{ startingUserMeta }` (`AuthenticateScope` in `plumix/auth`), and an authenticator that provisions users stores it as the new user's meta. `provisionUser`, `resolveExternalIdentity` and `verifyMagicLink` now require that meta. An authenticator that never creates users needs no change; code that calls `authenticate` itself passes `{ startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)) }`.
 

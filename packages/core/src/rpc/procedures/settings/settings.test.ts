@@ -531,12 +531,14 @@ describe("settings groups: created on first save", () => {
     expect(groups.blog).toEqual({ tagline: "Hello", perPage: 10 });
   });
 
-  test("the server-side read of a group never saved answers its starting values", async () => {
+  // The group comes into existence on its first save; only the settings form
+  // pre-fills its starting values before then.
+  test("the server-side read of a group never saved answers nothing", async () => {
     const h = await harnessWithDefaults();
 
     const groups = await loadSettingsGroups(h.context, ["blog"]);
 
-    expect(groups.blog).toEqual({ tagline: "Hello", perPage: 10 });
+    expect(groups.blog).toBeUndefined();
   });
 
   test("the server-side read of a created group answers storage alone", async () => {

@@ -313,6 +313,7 @@ export type {
   SettingsOf,
   SettingsPageManifestEntry,
   SettingsPageOptions,
+  StartingMetaField,
   StoredMeta,
   StoredMetaOf,
   StoredTermMetaOf,

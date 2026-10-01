@@ -45,9 +45,11 @@ default on their first save, and the entry editor never did.
 - **Every reader sees the same value.** The page, REST, feeds, conditions, the
   publish gate, search, rule selectors and image roles all read storage, so
   they agree. The admin forms seed what is stored and nothing else.
-- **A settings group is created on its first save.** Until then
-  `settings.get` answers with its fields' starting values laid under whatever
-  is stored. The first save writes every field, filling unsent keys that are
+- **A settings group is created on its first save.** Until then it has no
+  settings: server-side reads (a theme's `settings` dep, `loadSettingsGroups`)
+  answer what storage holds, as for any entity not yet created, and only the
+  settings form pre-fills it, through `settings.get`, with its fields' starting
+  values laid under whatever is stored. The first save writes every field, filling unsent keys that are
   not stored with their starting values, plus a reserved `__plumix_created`
   row. After that, storage is the truth. Only the marker counts: a group saved
   before this decision, or written without the form, has rows but no marker,

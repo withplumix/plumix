@@ -8,7 +8,7 @@ import type { MutablePluginRegistry } from "./plugin/manifest.js";
 import { declarePageTags } from "./cdn/contract/page-tags.js";
 import { settingsTag } from "./cdn/contract/tags.js";
 import { memoBatch } from "./context/memo.js";
-import { settings, SETTINGS_CREATED_KEY } from "./db/schema/settings.js";
+import { settings } from "./db/schema/settings.js";
 import { startingMeta } from "./plugin/fields/starting-meta.js";
 
 // Augment the registry with the core `settings` dep — themes declare
@@ -35,6 +35,15 @@ export function registerCoreTemplateDeps(
     load: settingsLoader,
   });
 }
+
+/**
+ * The row a settings group's first save writes, marking the group as created
+ * (ADR 0026). Until it exists, `settings.get` answers with the group fields'
+ * starting values under whatever is stored; once it does, storage alone holds
+ * the group. Part of the framework-reserved `__plumix_*` namespace, and no read
+ * hands it over.
+ */
+export const SETTINGS_CREATED_KEY = "__plumix_created";
 
 /** One stored row of a settings group. */
 export interface SettingsRow {
@@ -104,13 +113,16 @@ export async function settingsLoader(
     (group) => [settingsTag(group)],
   );
   const grouped: Record<string, SettingsBag> = {};
+  // Storage alone: a group never saved has no settings yet. Only the settings
+  // form pre-fills its starting values (`settingsGroupBag`).
   unique.forEach((group, i) => {
     const rows = bags[i];
-    const bag = settingsGroupBag(
-      rows ?? [],
-      ctx.plugins.settingsGroups.get(group)?.fields ?? [],
-    );
-    if (rows || Object.keys(bag).length > 0) grouped[group] = bag;
+    if (!rows) return;
+    const bag: Record<string, JsonValue> = {};
+    for (const row of rows) {
+      if (row.key !== SETTINGS_CREATED_KEY) bag[row.key] = row.value;
+    }
+    grouped[group] = bag;
   });
   return grouped;
 }
