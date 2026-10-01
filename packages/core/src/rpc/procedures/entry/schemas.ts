@@ -157,7 +157,6 @@ export const ENTRY_LIST_ORDER_COLUMNS = [
   "title",
   "sort_order",
 ] as const;
-export type EntryListOrderColumn = (typeof ENTRY_LIST_ORDER_COLUMNS)[number];
 
 export const entryListInputSchema = v.object({
   type: v.optional(trimmedText(100)),
