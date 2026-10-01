@@ -25,8 +25,6 @@ const GATED_DEV_MODULES = [
   "dev/server/respond.js",
   "runtime/dev.js",
 ];
-// A real Vite build — give it room beyond vitest's 5s default.
-const BUILD_TIMEOUT_MS = 60_000;
 
 const require = createRequire(import.meta.url);
 const coreEntry = realpathSync(require.resolve("@plumix/core"));
@@ -68,21 +66,13 @@ async function bundledCoreModules(plumixDev: string): Promise<Set<string>> {
 }
 
 describe("the dev-server gate in a bundle of core", () => {
-  test(
-    "a dev build (PLUMIX_DEV set) includes every gated dev module",
-    async () => {
-      const modules = await bundledCoreModules('"1"');
-      expect(GATED_DEV_MODULES.filter((m) => !modules.has(m))).toEqual([]);
-    },
-    BUILD_TIMEOUT_MS,
-  );
+  test("a dev build (PLUMIX_DEV set) includes every gated dev module", async () => {
+    const modules = await bundledCoreModules('"1"');
+    expect(GATED_DEV_MODULES.filter((m) => !modules.has(m))).toEqual([]);
+  });
 
-  test(
-    "a production build (PLUMIX_DEV empty) includes no gated dev module",
-    async () => {
-      const modules = await bundledCoreModules('""');
-      expect(GATED_DEV_MODULES.filter((m) => modules.has(m))).toEqual([]);
-    },
-    BUILD_TIMEOUT_MS,
-  );
+  test("a production build (PLUMIX_DEV empty) includes no gated dev module", async () => {
+    const modules = await bundledCoreModules('""');
+    expect(GATED_DEV_MODULES.filter((m) => modules.has(m))).toEqual([]);
+  });
 });
