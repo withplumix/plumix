@@ -99,7 +99,7 @@ function authorKey(slug: string): string {
   return `core:author-at:${slug}`;
 }
 
-// Keyed by slug for the reason the term lookup is keyed by path: a miss has
+// Keyed by slug for the reason the term lookup is: a miss has
 // no user id, so the entry carries what any user write announces.
 function authorAtTags(ctx: AppContext): readonly string[] {
   return usersPurgeTags(publicEntryTypeNames(ctx.plugins));
