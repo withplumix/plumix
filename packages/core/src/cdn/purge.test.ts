@@ -10,7 +10,7 @@ import {
 } from "../plugin/registry.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
-import { settingsTag, userTag } from "./contract/tags.js";
+import { userTag } from "./contract/tags.js";
 import {
   enqueuePurgeTags,
   flushPurgeTags,
@@ -225,12 +225,26 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
+  // A page that printed a settings group is stored under its tag, so saving
+  // the group has to reach the CDN, not only this request's memo.
+  it("settings:group_changed enqueues the group's tag", async () => {
+    const hooks = new HookRegistry();
+    registerCorePurgeInvalidator(hooks);
+    const { ctx, purgeTags } = fakeCtx();
+
+    await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
+    flushPurgeTags(ctx);
+
+    expect(purgeTags).toHaveBeenCalledWith(["s:site"]);
+  });
+
   const jane = { id: 4, name: "Jane", slug: "jane" };
   const PURGING_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
     ...ENTRY_EVENTS,
     ...TERM_EVENTS,
     ["user:updated", [jane, jane]],
     ["user:deleted", [jane, { reassignedTo: 1 }]],
+    ["settings:group_changed", [{ group: "site" }]],
   ];
 
   // A memo that loads each key on a miss and records which keys it loaded.
@@ -278,11 +292,10 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
-  // Tags no page is stored under: the memo drops them, the CDN never hears.
+  // A tag no page is stored under: the memo drops it, the CDN never hears.
   it.each([
     ["user:updated", [jane, jane], userTag(jane.id)],
     ["user:deleted", [jane, { reassignedTo: 1 }], userTag(jane.id)],
-    ["settings:group_changed", [{ group: "site" }], settingsTag("site")],
   ] as const)(
     "%s drops its memo-only tag without purging it",
     async (event, payload, tag) => {

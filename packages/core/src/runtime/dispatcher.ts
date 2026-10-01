@@ -27,14 +27,13 @@ import {
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
-import { embeddedPageTags } from "../cdn/contract/embedded-tags.js";
+import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import {
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
 } from "../cdn/decision.js";
 import { flushPurgeTags } from "../cdn/purge.js";
 import { readThrough, readThroughRoute } from "../cdn/read-through.js";
-import { cdnTagsFor } from "../cdn/route-tags.js";
 import { pageTags } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { requestStore } from "../context/stores.js";
@@ -579,10 +578,12 @@ async function dispatchPublicRoute(
                 taxonomyEntryTypes: (taxonomy) =>
                   termPageEntryTypeNames(ctx.plugins, taxonomy),
               });
-        const embedded = embeddedPageTags(ctx);
-        return embedded.length === 0
+        // What the render declared it read: embedded references, a custom
+        // archive's types, settings groups, a plugin's `tagCdnEntry`.
+        const declared = declaredPageTags(ctx);
+        return declared.length === 0
           ? routeTags
-          : [...new Set([...routeTags, ...embedded])];
+          : [...new Set([...routeTags, ...declared])];
       },
     });
   } catch (err) {
@@ -808,7 +809,7 @@ function servePublicRoute(
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: run,
-    tags: () => cdnTagsFor(ctx),
+    tags: () => declaredPageTags(ctx),
   });
 }
 
@@ -898,7 +899,7 @@ function serveRawRoute(
     render: () => runPluginRawRoute(route, ctx),
     // Read after the handler ran: a route resolves the entity it answers for
     // mid-request, and `tagCdnEntry` is where it names what that was.
-    tags: () => cdnTagsFor(ctx),
+    tags: () => declaredPageTags(ctx),
   });
 }
 

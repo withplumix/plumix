@@ -16,7 +16,7 @@ import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
-import { accumulateEmbeddedTags } from "../cdn/contract/embedded-tags.js";
+import { declarePageTags } from "../cdn/contract/page-tags.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entrySearchCondition } from "../db/search-conditions.js";
@@ -287,7 +287,7 @@ async function resolveCustom(
   // tags (#1508). A publish of any listed type then purges this page — the
   // coarse invalidation the built-in archives get. Only consumed when the
   // archive opted into caching (`cacheable`); harmless otherwise.
-  if (result.tags) accumulateEmbeddedTags(ctx, result.tags);
+  if (result.tags) declarePageTags(ctx, result.tags);
 
   const html = await renderThroughTheme({
     ctx,
@@ -340,7 +340,7 @@ async function resolveListingArchive(
   const resolution = await nameListingPage(ctx, archive, params, listing);
   if (resolution === null) return notFound("public-custom-archive-not-found");
 
-  accumulateEmbeddedTags(ctx, listingCdnTags(ctx.plugins, query));
+  declarePageTags(ctx, listingCdnTags(ctx.plugins, query));
 
   // Core's half last: the archive's name and page are facts about the request,
   // not fields a resolver gets to restate differently.

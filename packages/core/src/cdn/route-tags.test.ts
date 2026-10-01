@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import { createRequestMemo } from "../context/memo.js";
-import { cdnTagsFor, tagCdnEntry } from "./route-tags.js";
+import { declaredPageTags } from "./contract/page-tags.js";
+import { tagCdnEntry } from "./route-tags.js";
 
 // Only the two fields the accumulator reads: the memo it keys on, and the
 // cdn slot whose absence means nothing will ever be stored.
@@ -20,14 +21,14 @@ describe("tagCdnEntry", () => {
     tagCdnEntry(ctx, ["e:7"]);
     tagCdnEntry(ctx, ["t:post", "e:7"]);
 
-    expect(cdnTagsFor(ctx)).toEqual(["e:7", "t:post"]);
+    expect(declaredPageTags(ctx)).toEqual(["e:7", "t:post"]);
   });
 
   it("keeps one request's tags out of the next request's entry", () => {
     const first = context();
     tagCdnEntry(first, ["e:7"]);
 
-    expect(cdnTagsFor(context())).toEqual([]);
+    expect(declaredPageTags(context())).toEqual([]);
   });
 
   // Core derives contexts by spreading — the base-path strip and `withUser`
@@ -39,7 +40,7 @@ describe("tagCdnEntry", () => {
 
     tagCdnEntry(derived, ["e:7"]);
 
-    expect(cdnTagsFor(ctx)).toEqual(["e:7"]);
+    expect(declaredPageTags(ctx)).toEqual(["e:7"]);
   });
 
   it("accumulates nothing on a deploy that bound no cdn", () => {
@@ -47,6 +48,6 @@ describe("tagCdnEntry", () => {
 
     tagCdnEntry(ctx, ["e:7"]);
 
-    expect(cdnTagsFor(ctx)).toEqual([]);
+    expect(declaredPageTags(ctx)).toEqual([]);
   });
 });

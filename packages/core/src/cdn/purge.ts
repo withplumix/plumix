@@ -68,15 +68,15 @@ export function flushPurgeTags(ctx: AppContext): void {
  * Register core's roster of writes: each lifecycle action becomes the tags of
  * what it changed. Each entry mutation enqueues `t:<type>` + `e:<id>`, each
  * term mutation `t:<type>` for the taxonomy's entry types, each user mutation
- * every public type's tag.
+ * every public type's tag, each settings write its group's `s:<group>`.
  *
  * One roster, two consumers: the CDN purge and the request memo both read what
  * {@link enqueuePurgeTags} is handed, so they cannot disagree about which
- * write means which tag. A user write also names `u:<id>` and a settings write
- * `s:<group>` — tags no page is stored under, so they go to the memo alone
- * rather than costing a site a purge that could clear nothing. Registered at
- * every boot, CDN or not — the memo needs it everywhere, and without a CDN the
- * purge half accumulates nothing. Every handler is synchronous for the memo's
+ * write means which tag. A user write also names `u:<id>`, a tag no page is
+ * stored under, so it goes to the memo alone rather than costing a site a
+ * purge that could clear nothing. Registered at every boot, CDN or not — the
+ * memo needs it everywhere, and without a CDN the purge half accumulates
+ * nothing. Every handler is synchronous for the memo's
  * sake; see `RequestMemo.invalidate`.
  */
 export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
@@ -128,7 +128,8 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     onTerm(term, ctx),
   );
 
+  // A response that printed a settings group is stored under its tag.
   hooks.addAction("settings:group_changed", (changes, ctx) => {
-    ctx.memo.invalidate([settingsTag(changes.group)]);
+    enqueuePurgeTags(ctx, [settingsTag(changes.group)]);
   });
 }

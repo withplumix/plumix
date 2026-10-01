@@ -4,6 +4,7 @@ import type { AppContext } from "./context/app-context.js";
 import type { SettingsBag } from "./db/schema/settings.js";
 import type { JsonValue } from "./json.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";
+import { declarePageTags } from "./cdn/contract/page-tags.js";
 import { settingsTag } from "./cdn/contract/tags.js";
 import { memoBatch } from "./context/memo.js";
 import { settings } from "./db/schema/settings.js";
@@ -39,6 +40,10 @@ export async function settingsLoader(
 ): Promise<Record<string, SettingsBag>> {
   const unique = [...new Set(groups)];
   if (unique.length === 0) return {};
+  // A response that printed a group is stored under its tag, so saving the
+  // group purges it — a group with no rows included, since its first save
+  // changes what the page shows.
+  declarePageTags(ctx, unique.map(settingsTag));
   // Per-group memo (#1493): head defaults, SEO surfaces, and the template
   // dep all read `group='site'` in one request — only the first pays a
   // query. The lazy batch queries every requested group in one `IN(...)`;
@@ -66,8 +71,8 @@ export async function settingsLoader(
       }
       return byGroup;
     },
-    // A settings write announces its group, so a read after it in the same
-    // request sees it — a group that had no rows included.
+    // The same tag drops the memo entry: a read after a settings write in
+    // the same request sees it — a group that had no rows included.
     (group) => [settingsTag(group)],
   );
   const grouped: Record<string, SettingsBag> = {};

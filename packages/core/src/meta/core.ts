@@ -20,7 +20,7 @@ import type {
 import type { ConflictErrors } from "../rpc-errors.js";
 import type { ResolvedMeta } from "./contract/bags.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
-import { accumulateEmbeddedTags } from "../cdn/contract/embedded-tags.js";
+import { declarePageTags } from "../cdn/contract/page-tags.js";
 import { memoBatch } from "../context/memo.js";
 import { and, chunkForD1, eq } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
@@ -1220,11 +1220,11 @@ async function resolveGroup(
       byId.set(id, payload);
       // Fold this embedded entity's cache tag into the page's tags so a
       // change to it purges the page that hydrated it (#1508). Runs on
-      // every read surface; only the public read-through reads the
-      // accumulator back, so admin/REST reads populate it harmlessly.
+      // every read surface; only the read-throughs read the accumulator
+      // back, so admin/REST reads populate it harmlessly.
       // Folded here rather than at the hydrate, so a batch answered from
       // the memo tags the page exactly as the batch that loaded it did.
-      accumulateEmbeddedTags(ctx, tagsFor(id));
+      declarePageTags(ctx, tagsFor(id));
     }
     return { kind: "hydrated", byId };
   }

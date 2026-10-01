@@ -887,12 +887,12 @@ const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 // --- Deployment ------------------------------------------------------------
 
 /**
- * The whole cache-tag vocabulary, coarse by design. Sources: `typeTag` and
- * `entryTag`, the only tag minters the façade exports.
+ * The content cache-tag vocabulary, coarse by design. Sources: `typeTag` and
+ * `entryTag`, the only tag minters the façade exports. Core's settings tag
+ * (`s:<group>`) is internal and stays in the page's prose.
  *
- * A third tag kind would need a third minter, and adding one without a heading
- * here is the drift a reader would feel — the page promises the vocabulary is
- * these two.
+ * A third minter on the façade without a heading here is the drift a reader
+ * would feel — the page promises the content vocabulary is these two.
  */
 const CACHE_TAGS = ["t:*", "e:*"] as const;
 

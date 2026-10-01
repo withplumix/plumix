@@ -138,7 +138,9 @@ RPC also answers anything but POST with a 405. oRPC reads a GET's input from `?d
 
 ## Cache tags
 
-A cached page is stored under tags, and a publish purges by tag rather than by URL. The vocabulary is these two and nothing else — coarse by design, since a page that lists content cannot enumerate what it will list next week. Both are lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
+A cached page is stored under tags, and a publish purges by tag rather than by URL. The content vocabulary is these two — coarse by design, since a page that lists content cannot enumerate what it will list next week. Every tag is lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
+
+A page is stored under the tags its route implies plus every tag its render declared. Core declares the entries it embedded and the settings groups it read, as `s:<group>`; every render reads the `site` group, so every page carries `s:site`. A plugin declares its own with `tagCdnEntry`, from a template dep's loader, a component or a hook.
 
 ### t:\*
 
@@ -150,7 +152,7 @@ A cached page is stored under tags, and a publish purges by tag rather than by U
 
 ## Purging
 
-Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues the `t:<type>` of every entry type its taxonomy lists. A plugin's own cacheable route stores untagged unless its handler calls `tagCdnEntry` while it runs, which is how it puts its entry under the same tags the entry's pages carry and clears it on the same publish.
+Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues the `t:<type>` of every entry type its taxonomy lists; saving a settings group enqueues its `s:<group>`. A plugin's own cacheable route is stored under what was declared while its handler ran, so it stays untagged unless the handler calls `tagCdnEntry` or reads something core tags. That call is how a route puts its entry under the same tags the entry's pages carry and clears it on the same publish.
 
 The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
 

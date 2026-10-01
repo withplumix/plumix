@@ -524,11 +524,15 @@ describe("a card at the edge", () => {
     // The card key emits the URL hash and this tag from one call, so a card
     // keyed on an entry lands under the entry tag. Asserted against core's own
     // purge vocabulary rather than a spelled-out string: what makes this one
-    // caching story is that the set an `entry:published` sweeps covers what
-    // the card stored under, and either side moving has to break this.
+    // caching story is that the set an `entry:published` sweeps covers the
+    // entry tag the card stored under, and either side moving has to break
+    // this. The card also prints the site's name, so it carries the `site`
+    // settings group's tag core declared when the card read it.
     const stored = [...(put.mock.calls[0]?.[2] ?? [])];
-    expect(stored).toEqual([entryTag(id)]);
-    expect(entryPurgeTags("post", id)).toEqual(expect.arrayContaining(stored));
+    expect(stored).toEqual(["s:site", entryTag(id)]);
+    expect(entryPurgeTags("post", id)).toEqual(
+      expect.arrayContaining(stored.filter((tag) => !tag.startsWith("s:"))),
+    );
   });
 
   test("renders once, then answers the next request from the edge", async () => {
