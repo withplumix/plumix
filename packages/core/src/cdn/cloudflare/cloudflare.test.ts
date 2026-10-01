@@ -220,11 +220,10 @@ describe("connected cdn purgeTags", () => {
 
     await purgeTags(tags);
 
-    const sent = fetchMock.mock.calls.map(
-      ([, init]) =>
-        (JSON.parse((init as RequestInit).body as string) as { tags: string[] })
-          .tags,
-    );
+    const sent = fetchMock.mock.calls.map(([, init]) => {
+      const body = (init as RequestInit).body as string;
+      return (JSON.parse(body) as { tags: string[] }).tags;
+    });
     expect(sent.map((group) => group.length)).toEqual([100, 1]);
     expect(sent.flat()).toEqual(tags);
   });

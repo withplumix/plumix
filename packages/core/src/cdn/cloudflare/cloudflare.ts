@@ -157,8 +157,8 @@ async function purgeGroup(
 }
 
 // Rejections bubble to the caller, which defers the purge, so a zone that
-// refuses one is logged rather than failing the publish. The groups go out
-// together.
+// refuses a call is logged rather than failing the publish. The groups are
+// sent concurrently.
 async function purgeByTag(
   zoneId: string,
   purgeToken: string,
