@@ -130,7 +130,7 @@ const MCP_READERS = ["mcp/telemetry-tools.ts", "mcp/error-tools.ts"] as const;
 
 describe("the dev MCP tools read the capture layer only", () => {
   // The whole reachable graph, not the tool's own import list: a reach that
-  // goes through `mcp/tool.js` or any other intermediate costs the same and
+  // goes through `context/mcp-tool.js` or any other intermediate costs the same and
   // would pass a one-level check.
   test.each(MCP_READERS)("%s reaches no panel or surface module", (reader) => {
     const closure = staticClosureOf([path.join(SRC, reader)]);
