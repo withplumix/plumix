@@ -778,13 +778,12 @@ describe("a sitemap at the edge", () => {
   });
 
   test("names only its own tags, not one per picture it lists", async () => {
-    // Resolving image roles hydrates through the path that folds an embedded
-    // cache tag per payload into the *page* accumulator — bounded by a page
-    // for the render, and not for a sitemap. A registered public route is
-    // stored under what its handler declared with `tagCdnEntry` instead, which
-    // never reads that accumulator, so a page of 1,000 entries still carries
-    // the two tags a publish purges the scope by. #2511 owns whether the bulk
-    // primitive should stop accumulating at all.
+    // Resolving image roles hydrates media, whose lookup adapter declares no
+    // embedded cache tag, so nothing per picture reaches the accumulator a
+    // registered public route is stored under. A page of 1,000 entries still
+    // carries the two tags a publish purges the scope by, plus the settings
+    // groups the sitemap read. #2511 owns whether the bulk primitive should
+    // stop accumulating at all.
     const { cdn, put } = cdnStub();
     const h = await createHarness([picturePlugin], { cdn });
     await seedPost(h, { meta: { appearance: { hero: "m1" } } });
@@ -795,6 +794,8 @@ describe("a sitemap at the edge", () => {
     expect(tagsFor(put, "/sitemap-post-1.xml")).toEqual([
       SITEMAP_TAG,
       typeTag("post"),
+      "s:seo",
+      "s:site",
     ]);
   });
 
@@ -822,7 +823,8 @@ describe("a sitemap at the edge", () => {
 
   // Every SEO group rewrites something a cached response already says, so a
   // save retires the sitemap set and the content pages of every registered
-  // type — the latter by type tag, since the cdn has no site-wide one.
+  // type — the latter by type tag, since the cdn has no site-wide one. Core
+  // purges the group's own tag on every save, whichever group it was.
   test.each([
     ["the plugin's own group", "seo", true],
     ["the verification group", "seo_verification", true],
@@ -841,7 +843,7 @@ describe("a sitemap at the edge", () => {
       await h.drainDeferred();
 
       expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
-        purged ? [SITEMAP_TAG, typeTag("post")] : [],
+        purged ? [`s:${group}`, SITEMAP_TAG, typeTag("post")] : [`s:${group}`],
       );
     },
   );

@@ -1878,6 +1878,7 @@ describe("a feed at the edge", () => {
     await h.drainDeferred();
 
     expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual([
+      "s:site",
       FEED_TAG,
     ]);
     expect(tagsFor(put, "/post/feed")).toContain(FEED_TAG);

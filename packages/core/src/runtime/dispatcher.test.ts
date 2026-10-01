@@ -18,6 +18,7 @@ import type { CdnStore, ConnectedCdn } from "./contract/slots.js";
 import { entryCapability } from "../access/contract/capability.js";
 import { requestHasSession } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
+import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
 import { useAuthMethods } from "../blocks/renderer/index.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
@@ -1864,8 +1865,72 @@ describe("dispatcher — public read-through CDN", () => {
     // origin had nothing to act on.
     expect(response.headers.get("cache-control")).toBe("public, s-maxage=60");
     expect(response.headers.get("cache-tag")).toBe(
-      `t:post,e:${String(entry.id)}`,
+      `t:post,e:${String(entry.id)},s:site`,
     );
+  });
+
+  // A render reads things the route intent cannot name, and a plugin is the
+  // one that knows it read them. It is usually handed a derived context — a
+  // sessioned render runs through `withUser` — so the tag has to reach the
+  // stored page from there too.
+  test("a page render's tagCdnEntry from a derived context tags the stored page", async () => {
+    const { cdn, put } = cdnStub();
+    const author = { id: 1, email: "a@example.com", role: "admin" } as const;
+    const tagging = definePlugin("tagging", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.addFilter("render:document", (document, _data, appCtx) => {
+        tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
+        return document;
+      });
+    });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [tagging] },
+    });
+    const seeded = await h.seedUser("admin");
+    const entry = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: seeded.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello"),
+    );
+    await h.drainDeferred();
+
+    const tags = put.mock.calls[0]?.[2];
+    expect(tags).toContain("x:1");
+    expect(tags).toContain(`e:${String(entry.id)}`);
+    expect(response.headers.get("cache-tag")?.split(",")).toContain("x:1");
+  });
+
+  // Every render reads the `site` group for its `<title>` fallback, through the
+  // same loader as the `settings` template dep — so saving the group has to
+  // reach every page that printed it.
+  test("a page that read a settings group is stored under that group's tag", async () => {
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blog] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/hello"));
+    await h.drainDeferred();
+
+    expect(put.mock.calls[0]?.[2]).toContain("s:site");
   });
 
   // Stored under no tags, the archive would outlive every purge until its TTL.
@@ -1898,6 +1963,7 @@ describe("dispatcher — public read-through CDN", () => {
     expect(put).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
       "t:post",
       "t:page",
+      "s:site",
     ]);
   });
 
@@ -2124,7 +2190,9 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
 
     expect(put).toHaveBeenCalledOnce();
     const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
-    expect(tags).toEqual(["t:post", `e:${String(plain.id)}`]);
+    // No embedded tag: the route's own, and the `site` group every render
+    // reads for its `<title>` fallback.
+    expect(tags).toEqual(["t:post", `e:${String(plain.id)}`, "s:site"]);
   });
 });
 

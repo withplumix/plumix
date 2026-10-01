@@ -10,7 +10,7 @@ import type {
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PhotoReference } from "../test/photo-lookup.js";
 import { withUser } from "../auth/with-user.js";
-import { embeddedPageTags } from "../cdn/contract/embedded-tags.js";
+import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { readEntryType } from "../entries/read-service.js";
@@ -1375,7 +1375,7 @@ describe("embedded cache tags (resolution tag accounting)", () => {
       featured: String(target.id),
     });
 
-    expect(embeddedPageTags(h.context)).toEqual([`e:${String(target.id)}`]);
+    expect(declaredPageTags(h.context)).toEqual([`e:${String(target.id)}`]);
   });
 
   test("resolving a multi entry reference accumulates a tag per live target", async () => {
@@ -1393,7 +1393,7 @@ describe("embedded cache tags (resolution tag accounting)", () => {
     });
 
     // Orphan `999999` hydrates to nothing, so it contributes no tag.
-    expect([...embeddedPageTags(h.context)].sort()).toEqual(
+    expect([...declaredPageTags(h.context)].sort()).toEqual(
       [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
     );
   });
@@ -1407,7 +1407,7 @@ describe("embedded cache tags (resolution tag accounting)", () => {
       owner: String(owner.id),
     });
 
-    expect(embeddedPageTags(h.context)).toEqual([]);
+    expect(declaredPageTags(h.context)).toEqual([]);
   });
 
   test("a page that resolves nothing accumulates no tags", async () => {
@@ -1420,7 +1420,7 @@ describe("embedded cache tags (resolution tag accounting)", () => {
       count: 3,
     });
 
-    expect(embeddedPageTags(h.context)).toEqual([]);
+    expect(declaredPageTags(h.context)).toEqual([]);
   });
 });
 
@@ -1445,7 +1445,7 @@ describe("resolveReferences (theme-facing id-only helper)", () => {
 
     // Dense, in requested order, orphans dropped.
     expect(resolved.map((r) => r.id)).toEqual([String(a.id), String(b.id)]);
-    expect([...embeddedPageTags(h.context)].sort()).toEqual(
+    expect([...declaredPageTags(h.context)].sort()).toEqual(
       [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
     );
   });
@@ -1627,8 +1627,8 @@ describe("reference hydration memo (request-scoped)", () => {
     await resolveMetaBags(rebound, bags);
 
     const tag = `e:${String(target.id)}`;
-    expect([...embeddedPageTags(h.context)]).toEqual([tag]);
-    expect([...embeddedPageTags(rebound)]).toEqual([tag]);
+    expect([...declaredPageTags(h.context)]).toEqual([tag]);
+    expect([...declaredPageTags(rebound)]).toEqual([tag]);
   });
 
   test("batches racing on one id hydrate it once between them", async () => {

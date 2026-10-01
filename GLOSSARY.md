@@ -363,7 +363,7 @@ The declarative `<head>`/`<html>` descriptor (title, meta, link, script tags) a 
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
 
 **Cache tag**:
-A coarse label a stored response carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`). A page is tagged from its resolved intent; a plugin route that opted into the CDN names its own with `tagCdnEntry`, in the same vocabulary or in a namespace of its own that nothing purges.
+A coarse label a stored response carries for invalidation — a type tag (`t:<type>`), an entry tag (`e:<id>`), or a settings tag (`s:<group>`). A page is stored under its resolved intent's tags plus the tags its render declared: the entities it embedded (`embeddedCacheTags`), the settings groups it read (`s:<group>`), and whatever a plugin named with `tagCdnEntry` from a loader, a component or a hook. A plugin route that opted into the CDN is stored under the tags its handler declared with `tagCdnEntry` alone. A plugin tags in the same vocabulary or in a namespace of its own that nothing purges.
 
 **Purge**:
 Invalidation of stored responses by tag, or of a source's variants by its URL.

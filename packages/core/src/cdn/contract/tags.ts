@@ -14,8 +14,8 @@ export function typeTag(entryType: string): string {
  * case-insensitively, so `t:Post` and `t:post` would be two tags on one vendor
  * and one on another — a collision that only ever appears on the vendor the
  * site did not develop against. Applied wherever a tag enters the system:
- * `typeTag` below, a plugin's own `tagCdnEntry`, the embedded-reference and
- * purge accumulators, and the request memo — so a plugin's stored tag and its
+ * `typeTag` below, the page-tag accumulator (`tagCdnEntry`, embedded
+ * references, settings) and the purge accumulator, and the request memo — so a plugin's stored tag and its
  * purge cannot disagree, and neither can a memo entry and the write that
  * invalidates it.
  * `entryTag` needs no call: its input is a number.
@@ -63,8 +63,9 @@ export function userTag(userId: number): string {
 }
 
 /**
- * A settings group's tag. No page is stored under it either, so it never
- * reaches a purge: a settings write drops it from the request memo alone.
+ * A settings group's tag. The settings loader declares it on the response
+ * that read the group and on the memo entry it loads, so a settings write
+ * purges the pages that printed the group and drops it from the request memo.
  */
 export function settingsTag(group: string): string {
   return normalizeTag(`s:${group}`);
