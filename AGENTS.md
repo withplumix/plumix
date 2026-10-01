@@ -117,7 +117,7 @@ catalog** under `catalogs:`, so a bump is a single-line change.
 
 ### Env & secrets
 
-Gate dev-only code on `import.meta.env.DEV`, a compile-time constant, not on `process.env`, so a dev endpoint fails closed in production. A secret config slot takes an `EnvInput<T>`, and `resolveEnvInput` reads it. Local secrets live in `.env` (gitignored) on every runtime, and a variable set in the environment wins over it. Never paste secret values into commits, logs, or chat.
+Gate dev-only code on a compile-time constant, `import.meta.env.DEV` or the `process.env.PLUMIX_DEV` core uses (the `plumix` Vite plugin's `define` replaces it, `""` on build), never on a runtime `process.env` read, so a dev endpoint fails closed in production. Write the constant inline at each gate (`process.env.PLUMIX_DEV && dev !== undefined`): a helper or an exported constant does not fold across modules, and the dev code ships. `packages/plumix/src/vite/dev-gate-tree-shaking.build.test.ts` fails when it does. A secret config slot takes an `EnvInput<T>`, and `resolveEnvInput` reads it. Local secrets live in `.env` (gitignored) on every runtime, and a variable set in the environment wins over it. Never paste secret values into commits, logs, or chat.
 
 ## Commits, branches, PRs
 

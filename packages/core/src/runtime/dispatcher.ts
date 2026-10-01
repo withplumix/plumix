@@ -311,8 +311,10 @@ async function dispatchMcp(app: PlumixApp, ctx: AppContext): Promise<Response> {
   // Default-off in production; auto-enabled in dev so a connected coding
   // agent reaches it with no config flag. The env check is statically false
   // in production builds, so the auto-enable never applies there.
-  const devServer = Boolean(process.env.PLUMIX_DEV) && app.dev !== undefined;
-  if (!interfaceEnabled(app.config.mcp) && !devServer) {
+  if (
+    !interfaceEnabled(app.config.mcp) &&
+    (!process.env.PLUMIX_DEV || app.dev === undefined)
+  ) {
     return notFound("mcp-disabled");
   }
   const handleMcpRequest = await app.loadMcpHandler();
