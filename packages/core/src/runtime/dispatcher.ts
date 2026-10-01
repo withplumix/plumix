@@ -27,11 +27,11 @@ import {
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { embeddedPageTags } from "../cdn/contract/embedded-tags.js";
 import {
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
 } from "../cdn/decision.js";
-import { embeddedPageTags } from "../cdn/embedded-tags.js";
 import { flushPurgeTags } from "../cdn/purge.js";
 import { readThrough, readThroughRoute } from "../cdn/read-through.js";
 import { cdnTagsFor } from "../cdn/route-tags.js";

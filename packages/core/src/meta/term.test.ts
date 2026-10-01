@@ -1,17 +1,17 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../../db/schema/users.js";
-import type { ActionArgs } from "../../../hooks/types.js";
+import type { UserRole } from "../db/schema/users.js";
+import type { ActionArgs } from "../hooks/types.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
-} from "../../../plugin/manifest.js";
-import type { ActionSpy } from "../../../test/spies.js";
-import { eq } from "../../../db/index.js";
-import { terms } from "../../../db/schema/terms.js";
-import { createPluginRegistry } from "../../../plugin/manifest.js";
-import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+} from "../plugin/manifest.js";
+import type { ActionSpy } from "../test/spies.js";
+import { eq } from "../db/index.js";
+import { terms } from "../db/schema/terms.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
+import { createRpcHarness } from "../test/rpc.js";
 
 function taxonomyRegistry(): MutablePluginRegistry {
   const registry = createPluginRegistry();

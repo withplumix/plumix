@@ -5,26 +5,18 @@ import type { SQL } from "../db/index.js";
 import type { Entry, EntryStatus } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
-import type {
-  EntryGetInput,
-  EntryListInput,
-  EntryListOrderColumn,
-} from "../rpc/procedures/entry/schemas.js";
 import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
 import { entryTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
-import {
-  resolveEntriesMeta,
-  resolveEntryMeta,
-} from "../rpc/procedures/entry/meta.js";
-import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
-import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
+import { resolveEntriesMeta, resolveEntryMeta } from "../meta/entry.js";
 import { entrySearchCondition } from "../search/conditions.js";
+import { tokenizeSearchQuery } from "../search/contract/search-terms.js";
 import { isAuthoredEntryType, loadAuthoredEntry } from "./authored.js";
 import { EntryReadError } from "./errors.js";
+import { loadEntryTerms } from "./terms.js";
 import {
   canReadEntry,
   canReadUnpublished,
@@ -56,6 +48,29 @@ export async function readEntryType(
   );
 }
 
+/**
+ * What {@link listEntries} filters, orders and pages by: what the `entry.list`
+ * input schema parses to, defaults filled in.
+ */
+export interface ListEntriesInput {
+  readonly type?: string | undefined;
+  readonly status?: StatusInput;
+  readonly authorId?: number | undefined;
+  readonly parentId?: number | null | undefined;
+  readonly search?: string | undefined;
+  readonly termTaxonomies?:
+    Readonly<Record<string, readonly string[]>> | undefined;
+  readonly orderBy: "updated_at" | "published_at" | "title" | "sort_order";
+  readonly order: "asc" | "desc";
+  readonly limit: number;
+  readonly offset: number;
+}
+
+/** The entry {@link getEntry} reads. */
+export interface GetEntryInput {
+  readonly id: number;
+}
+
 type EntryRead = WithResolvedMeta<Entry> & {
   readonly terms: Record<string, number[]>;
 };
@@ -71,7 +86,7 @@ type EntryRead = WithResolvedMeta<Entry> & {
  */
 export async function listEntries(
   ctx: AppContext,
-  input: EntryListInput,
+  input: ListEntriesInput,
 ): Promise<readonly WithResolvedMeta<Entry>[]> {
   const rows = await listEntryRows(ctx, input);
   const bags = await resolveEntriesMeta(ctx, rows);
@@ -85,7 +100,7 @@ export async function listEntries(
  */
 export async function listEntryRows(
   ctx: AppContext,
-  input: EntryListInput,
+  input: ListEntriesInput,
 ): Promise<readonly Entry[]> {
   const type = input.type ?? "post";
   if (!isAuthoredEntryType(type)) throw EntryReadError.reservedType(type);
@@ -158,7 +173,7 @@ export async function listEntryRows(
  */
 export async function getEntry(
   ctx: AppContext,
-  input: EntryGetInput,
+  input: GetEntryInput,
 ): Promise<EntryRead> {
   const row = await findReadableEntry(ctx, input);
   return resolveEntryRead(ctx, row, row.meta);
@@ -171,7 +186,7 @@ export async function getEntry(
  */
 export async function findReadableEntry(
   ctx: AppContext,
-  input: EntryGetInput,
+  input: GetEntryInput,
 ): Promise<Entry> {
   const row = await loadAuthoredEntry(ctx.db, input.id);
   if (!row) throw EntryReadError.notFound(input.id);
@@ -191,7 +206,7 @@ export async function resolveEntryRead(
 }
 
 // Kept here, not in schemas.ts, so schemas.ts stays free of drizzle imports.
-const ORDER_COLUMNS: Record<EntryListOrderColumn, AnySQLiteColumn> = {
+const ORDER_COLUMNS: Record<ListEntriesInput["orderBy"], AnySQLiteColumn> = {
   updated_at: entries.updatedAt,
   published_at: entries.publishedAt,
   title: entries.title,

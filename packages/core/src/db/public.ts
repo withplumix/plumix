@@ -23,12 +23,12 @@ export { enqueuePurgeTags } from "../cdn/purge.js";
 // page can degrade to core's own query rather than restate it and disagree
 // about the details (#2127).
 export { entrySearchCondition } from "../search/conditions.js";
-export { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
-export type { SearchTerm } from "../rpc/procedures/entry/search-terms.js";
+export { tokenizeSearchQuery } from "../search/contract/search-terms.js";
+export type { SearchTerm } from "../search/contract/search-terms.js";
 // Settling meta is a direct writer's other obligation: a raw write skips the
 // field pipeline that stores a value in its declared form (#2433).
-export { settleMeta } from "./settle-meta.js";
-export type { MetaOwner } from "./settle-meta.js";
+export { settleMeta } from "../meta/settle-meta.js";
+export type { MetaOwner } from "../meta/settle-meta.js";
 export { readVisitorMeta } from "./visitor-meta.js";
 export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
 // A description of a set of entries that composes by narrowing, built from the

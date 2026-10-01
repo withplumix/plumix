@@ -1,6 +1,6 @@
 import type { AppContext } from "../../../context/app-context.js";
 import type { JsonObject, JsonValue } from "../../../json.js";
-import type { SettledMeta } from "../../meta/core.js";
+import type { SettledMeta } from "../../../meta/core.js";
 import { and, asc, eq, gt, or, sql } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { settings } from "../../../db/schema/settings.js";
@@ -8,17 +8,17 @@ import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { authoredEntryRows } from "../../../entries/authored.js";
 import {
+  metaScope,
+  metaScopeCache,
+  settleStoredMeta,
+} from "../../../meta/core.js";
+import { writeSettledEntryMeta } from "../../../meta/entry.js";
+import { writeSettledTermMeta } from "../../../meta/term.js";
+import {
   listEntryMetaFields,
   listTermMetaFields,
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
-import {
-  metaScope,
-  metaScopeCache,
-  settleStoredMeta,
-} from "../../meta/core.js";
-import { writeSettledEntryMeta } from "../entry/meta.js";
-import { writeSettledTermMeta } from "../term/meta.js";
 import { writeSettledUserMeta } from "../user/meta.js";
 
 /** Where a meta value is stored, in the order a sweep walks them. */

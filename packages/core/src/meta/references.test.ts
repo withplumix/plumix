@@ -1,33 +1,33 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { AppContext } from "../../context/app-context.js";
-import type { Entry } from "../../db/schema/entries.js";
-import type { JsonValue } from "../../json.js";
+import type { AppContext } from "../context/app-context.js";
+import type { Entry } from "../db/schema/entries.js";
+import type { JsonValue } from "../json.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
-} from "../../plugin/manifest.js";
-import type { DispatcherHarness } from "../../test/dispatcher.js";
-import type { PhotoReference } from "../../test/photo-lookup.js";
-import { withUser } from "../../auth/with-user.js";
-import { embeddedPageTags } from "../../cdn/embedded-tags.js";
-import { eq } from "../../db/index.js";
-import { entries } from "../../db/schema/entries.js";
-import { readEntryType } from "../../entries/read-service.js";
-import { createPluginRegistry } from "../../plugin/manifest.js";
+} from "../plugin/manifest.js";
+import type { DispatcherHarness } from "../test/dispatcher.js";
+import type { PhotoReference } from "../test/photo-lookup.js";
+import { withUser } from "../auth/with-user.js";
+import { embeddedPageTags } from "../cdn/contract/embedded-tags.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
+import { readEntryType } from "../entries/read-service.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { fireEntryPublished } from "../rpc/procedures/entry/lifecycle.js";
+import { publishDueScheduledEntries } from "../rpc/procedures/entry/publish-scheduled.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import {
   adminUser,
   categoryTerm,
   entryFactory,
   tagTerm,
   userFactory,
-} from "../../test/factories.js";
-import { photoField, photoProfilePlugin } from "../../test/photo-lookup.js";
-import { authedCtx, createRpcHarness } from "../../test/rpc.js";
-import { createTracedContext } from "../../test/traced-context.js";
-import { fireEntryPublished } from "../procedures/entry/lifecycle.js";
-import { publishDueScheduledEntries } from "../procedures/entry/publish-scheduled.js";
-import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
+} from "../test/factories.js";
+import { photoField, photoProfilePlugin } from "../test/photo-lookup.js";
+import { authedCtx, createRpcHarness } from "../test/rpc.js";
+import { createTracedContext } from "../test/traced-context.js";
 import {
   MetaSanitizationError,
   resolveMetaBags,

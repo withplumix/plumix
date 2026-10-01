@@ -69,12 +69,13 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   // `template-deps-core.ts` queries through drizzle.
   "template*": server("contracts"),
   "settings-core": client("contracts"),
+  // The RPC error map: capabilities throw through its constructors.
+  "rpc-errors": client("contracts"),
   support: client("contracts"),
   "db/schema/": server("contracts"),
   "*/contract/": client("contracts"),
 
   "db/": server("capabilities"),
-  // Matches nothing until #2594 lifts the meta pipeline out of `rpc/meta/`.
   "meta/": server("capabilities"),
   "access/": server("capabilities"),
   "auth/": server("capabilities"),

@@ -1,4 +1,4 @@
-import type { GatedLookupErrors } from "../../errors.js";
+import type { GatedLookupErrors } from "../../../rpc-errors.js";
 import { TermReadError } from "../../../terms/errors.js";
 
 /**

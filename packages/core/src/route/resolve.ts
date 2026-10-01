@@ -16,7 +16,7 @@ import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
-import { accumulateEmbeddedTags } from "../cdn/embedded-tags.js";
+import { accumulateEmbeddedTags } from "../cdn/contract/embedded-tags.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { canEditEntry } from "../entries/editability.js";

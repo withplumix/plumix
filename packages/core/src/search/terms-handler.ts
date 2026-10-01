@@ -7,8 +7,8 @@ import type {
 import { spellTermCapability } from "../access/contract/capability.js";
 import { and, asc, inArray } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { termSearchCondition } from "./conditions.js";
+import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
 // Max rows scanned across all taxonomies for one query; bucketed per
 // group afterward. Terms carry no draft/trash status — visibility is

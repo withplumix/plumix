@@ -33,7 +33,7 @@ could see.
 | Layer          | Holds                                                                                                                                                                                              |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `foundation`   | `blocks/`, `i18n/`, and the pure utilities (`json`, `base-path`, `slugify`, `escape-html`, `css-tag`, `non-empty`, `return-url`, `document-merge`, `telemetry-otel`)                               |
-| `contracts`    | `plugin/`, `hooks/`, `context/`, `config*`, `theme*`, `template*`, `settings-core`, `support`, `db/schema/`, and every `<subsystem>/contract/`                                                     |
+| `contracts`    | `plugin/`, `hooks/`, `context/`, `config*`, `theme*`, `template*`, `settings-core`, `rpc-errors`, `support`, `db/schema/`, and every `<subsystem>/contract/`                                       |
 | `capabilities` | `db/`, `meta/`, `access/`, `auth/`, `entries/`, `terms/`, `users/`, `revisions/`, `search/`, `seo/`, `images/`, `storage/`, `cdn/`, `route/`                                                       |
 | `surfaces`     | `rpc/`, `rest/`, `mcp/`, `admin-bar/`, `admin/`, `dev/`, `dev-client/`, `cli/`, `welcome/`, `welcome-theme`                                                                                        |
 | `top`          | The composition root and the assembled façades: `runtime/`, plus five single files named by role: `index.ts`, `context/app.ts`, `plugin/setup-context.ts`, `db/public.ts`, `hooks/public-hooks.ts` |

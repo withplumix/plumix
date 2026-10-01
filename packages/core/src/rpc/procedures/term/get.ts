@@ -1,7 +1,7 @@
+import { resolveTermMeta, settleTermMeta } from "../../../meta/term.js";
 import { findReadableTerm } from "../../../terms/read-service.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { resolveTermMeta, settleTermMeta } from "./meta.js";
 import { toRpcTermReadError } from "./read-errors.js";
 import { termGetInputSchema } from "./schemas.js";
 

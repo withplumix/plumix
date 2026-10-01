@@ -3,10 +3,10 @@ import {
   findReadableEntry,
   resolveEntryRead,
 } from "../../../entries/read-service.js";
+import { resolveEntryMeta, settleEntryMeta } from "../../../meta/entry.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { resolveEntryMeta, settleEntryMeta } from "./meta.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
 

@@ -39,24 +39,9 @@
       "count": 7
     }
   },
-  "src/db/settle-meta.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/document-merge.ts": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/entries/editability.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/entries/read-service.ts": {
-    "boundaries/dependencies": {
-      "count": 4
     }
   },
   "src/i18n/index.ts": {
@@ -72,11 +57,6 @@
   "src/i18n/resolve-locale.ts": {
     "boundaries/dependencies": {
       "count": 2
-    }
-  },
-  "src/images/role-images.ts": {
-    "boundaries/dependencies": {
-      "count": 3
     }
   },
   "src/plugin/define.ts": {
@@ -99,19 +79,9 @@
       "count": 1
     }
   },
-  "src/route/render/page-data.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/route/render/render-template.tsx": {
     "boundaries/dependencies": {
       "count": 4
-    }
-  },
-  "src/route/render/resolve-entry-list.ts": {
-    "boundaries/dependencies": {
-      "count": 2
     }
   },
   "src/rpc/procedures/auth/sign-in-methods.ts": {
@@ -119,39 +89,14 @@
       "count": 1
     }
   },
-  "src/search/conditions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/search/entries-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/search/terms-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/search/users-handler.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/support.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/telemetry-otel.ts": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/terms/read-service.ts": {
-    "boundaries/dependencies": {
-      "count": 2
     }
   }
 }

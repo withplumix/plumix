@@ -3,11 +3,7 @@ import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { authenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
-import { isEmptyMetaPatch } from "../../meta/core.js";
-import { stripUndefined } from "../entry/helpers.js";
-import { parentWouldCreateCycle } from "./helpers.js";
+import { isEmptyMetaPatch } from "../../../meta/core.js";
 import {
   assertTermMetaCapabilities,
   loadTermMeta,
@@ -15,7 +11,11 @@ import {
   sanitizeMetaForRpc,
   validateTermMetaReferences,
   writeTermMeta,
-} from "./meta.js";
+} from "../../../meta/term.js";
+import { authenticated } from "../../authenticated.js";
+import { base } from "../../base.js";
+import { stripUndefined } from "../entry/helpers.js";
+import { parentWouldCreateCycle } from "./helpers.js";
 import { termUpdateInputSchema } from "./schemas.js";
 
 export const update = base

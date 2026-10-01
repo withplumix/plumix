@@ -2,39 +2,39 @@ import type { SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
-import type { Capability } from "../../access/contract/capability.js";
-import type { AppContext } from "../../context/app-context.js";
-import type { JsonObject, JsonValue } from "../../json.js";
-import type { ResolvedMeta } from "../../meta/contract/bags.js";
-import type { MetaFieldValues } from "../../plugin/fields/condition.js";
+import type { Capability } from "../access/contract/capability.js";
+import type { AppContext } from "../context/app-context.js";
+import type { JsonObject, JsonValue } from "../json.js";
+import type { MetaFieldValues } from "../plugin/fields/condition.js";
 import type {
   HydratedReference,
   LookupAdapter,
   ReferenceHydrationShapes,
-} from "../../plugin/lookup.js";
+} from "../plugin/lookup.js";
 import type {
   MetaBoxField,
   ReferenceTarget,
   TemporalInputType,
   TemporalMetaBoxField,
-} from "../../plugin/manifest.js";
-import type { ConflictErrors } from "../errors.js";
+} from "../plugin/manifest.js";
+import type { ConflictErrors } from "../rpc-errors.js";
+import type { ResolvedMeta } from "./contract/bags.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
-import { accumulateEmbeddedTags } from "../../cdn/embedded-tags.js";
-import { memoBatch } from "../../context/memo.js";
-import { and, chunkForD1, eq } from "../../db/index.js";
-import { metaJsonPath } from "../../db/meta-path.js";
-import { isJsonArray, isJsonObject } from "../../json.js";
+import { accumulateEmbeddedTags } from "../cdn/contract/embedded-tags.js";
+import { memoBatch } from "../context/memo.js";
+import { and, chunkForD1, eq } from "../db/index.js";
+import { metaJsonPath } from "../db/meta-path.js";
+import { isJsonArray, isJsonObject } from "../json.js";
 import {
   conditionReadsAny,
   isConditionHidden,
   isFieldVisible,
   structurallyEqual,
-} from "../../plugin/fields/condition.js";
-import { anchorTemporalUtc } from "../../plugin/manifest.js";
+} from "../plugin/fields/condition.js";
+import { anchorTemporalUtc } from "../plugin/manifest.js";
 import { coerceValue, extractStringId } from "./coerce.js";
+import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 import { MetaReferenceError } from "./errors.js";
-import { META_FIELD_MESSAGES } from "./field-messages.js";
 import {
   healReferenceValue,
   isGroupField,

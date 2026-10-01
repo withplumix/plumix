@@ -6,7 +6,7 @@ import {
   decodeMetaBag,
   metaScope,
   sanitizeMetaInput,
-} from "../../rpc/meta/core.js";
+} from "../../meta/core.js";
 import { link } from "./index.js";
 
 describe("link field builder", () => {

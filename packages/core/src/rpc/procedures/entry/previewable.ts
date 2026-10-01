@@ -1,6 +1,6 @@
 import type { AuthenticatedAppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
-import type { GatedLookupErrors } from "../../errors.js";
+import type { GatedLookupErrors } from "../../../rpc-errors.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { assertCanEditEntry } from "../../../entries/editability.js";

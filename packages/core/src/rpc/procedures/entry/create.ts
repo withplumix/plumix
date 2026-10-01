@@ -6,7 +6,19 @@ import {
 } from "../../../access/contract/entry-capabilities.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
+import {
+  applyTermPatch,
+  assertTermsPatchValid,
+  buildTermsPatchGuards,
+} from "../../../entries/terms.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
+import {
+  assertPromotedEntryMetaValid,
+  loadEntryMeta,
+  resolveEntryMeta,
+  sanitizeAndValidateEntryMeta,
+  writeEntryMeta,
+} from "../../../meta/entry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -18,20 +30,8 @@ import {
   fireEntryPublished,
   fireEntryTransition,
 } from "./lifecycle.js";
-import {
-  assertPromotedEntryMetaValid,
-  loadEntryMeta,
-  resolveEntryMeta,
-  sanitizeAndValidateEntryMeta,
-  writeEntryMeta,
-} from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryCreateInputSchema } from "./schemas.js";
-import {
-  applyTermPatch,
-  assertTermsPatchValid,
-  buildTermsPatchGuards,
-} from "./terms.js";
 
 export const create = base
   .use(authenticated)
