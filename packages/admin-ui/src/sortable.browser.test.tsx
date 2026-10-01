@@ -86,6 +86,19 @@ describe("SortableList", () => {
     expect(onReorder).toHaveBeenCalledWith([{ id: "b" }, { id: "a" }]);
   });
 
+  test("a keyboard drag announces each slot it moves to, including the one it started from", async () => {
+    renderList();
+    const body = page.elementLocator(document.body);
+    page.getByTestId("list-row-a-handle").element().focus();
+
+    await userEvent.keyboard("[Space]");
+    await userEvent.keyboard("[ArrowDown]");
+    await expect.element(body).toMatchTextContent("moved-to 2/2");
+
+    await userEvent.keyboard("[ArrowUp]");
+    await expect.element(body).toMatchTextContent("moved-to 1/2");
+  });
+
   test("a drag cancelled with escape announces the position the item returns to", async () => {
     renderList();
     const body = page.elementLocator(document.body);
