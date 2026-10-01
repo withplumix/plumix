@@ -1,5 +1,15 @@
 # @plumix/plugin-pages
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2580](https://github.com/withplumix/plumix/pull/2580) [`b10f3ce`](https://github.com/withplumix/plumix/commit/b10f3cea512bd8f5385d49a87e991578b010c917) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes `pages` from a descriptor to a factory that accepts `{ page }`: an override for the `page` entry type (`pages({ page: { rewrite: { slug: "p" } } })`), or `false` to skip it. **Breaking:** replace `pages` with `pages()` in your `plugins` array.
+
+### Patch Changes
+
+- [#2787](https://github.com/withplumix/plumix/pull/2787) [`fdffe27`](https://github.com/withplumix/plumix/commit/fdffe272781a3ff8182dc43559e68c6cd18e72c2) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the page entry type's description being untranslatable English. It is now a catalog message, and the admin shows it under the list heading. Raises the `plumix` peer floor to 0.24.0, the release that accepts and renders a descriptor there.
+
 ## 0.1.2
 
 ### Patch Changes

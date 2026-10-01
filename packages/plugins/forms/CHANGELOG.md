@@ -1,5 +1,25 @@
 # @plumix/plugin-forms
 
+## 0.2.2
+
+### Patch Changes
+
+- [#2746](https://github.com/withplumix/plumix/pull/2746) [`ee0d65e`](https://github.com/withplumix/plumix/commit/ee0d65ef3f9bae3e2ad223d5141c6485d47ffa30) Thanks [@nasyrov](https://github.com/nasyrov)! - Styles the admin, the editor canvas's overlays and toolbar, and the forms, media, menu and seo admin screens through classes and CSS custom properties instead of inline styles. The canvas outlines now use a `canvas-selection` theme token, and the editor's "can't place here" notice uses the admin's standard small text and shadow.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2644](https://github.com/withplumix/plumix/pull/2644) [`7c8bc60`](https://github.com/withplumix/plumix/commit/7c8bc60872537082919f0168afd7933671a87ed3) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the site's subdirectory mount through `plumix/admin`'s `basePath()` instead of its own `window.plumix` cast.
+
+- [#2584](https://github.com/withplumix/plumix/pull/2584) [`19be05b`](https://github.com/withplumix/plumix/commit/19be05b4d12591a4bea6ba0df523325e65b3a523) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the form block posting one submission twice when it is submitted twice in the same tick, such as Enter pressed twice. The block now blocks a second submit while one is pending, the same way `usePlumixForm` does.
+
+- [#2790](https://github.com/withplumix/plumix/pull/2790) [`a0566cc`](https://github.com/withplumix/plumix/commit/a0566cc6766e4084ba6220cb757b5eb9f2a0f343) Thanks [@nasyrov](https://github.com/nasyrov)! - Follows core's page-kind renames when a form block decides whether the current page can bind it, and needs `plumix` 0.24.0.
+
+- [#2659](https://github.com/withplumix/plumix/pull/2659) [`3e27950`](https://github.com/withplumix/plumix/commit/3e27950e5b2b44a8f7370709bbb438506a4c62f9) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the form submissions screen showing a failure's raw error text instead of localized copy.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
 ## 0.2.1
 
 ### Patch Changes

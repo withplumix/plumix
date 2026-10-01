@@ -1,5 +1,39 @@
 # @plumix/plugin-og
 
+## 0.4.0
+
+### Minor Changes
+
+- [#2522](https://github.com/withplumix/plumix/pull/2522) [`b1287f9`](https://github.com/withplumix/plumix/commit/b1287f9adbb6551dd1a3e81d56ef203f731e4642) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a font declaration to `CardRenderer`: a renderer now says which font formats it reads beside the content type it writes, and the plugin fetches — and digests — only the faces that renderer will actually receive.
+
+  `remote()` declares that it reads no fonts, so a site rendering off-box no longer reads its font set on every card, and now serves cards on a runtime that exposes no asset layer at all. An endpoint that wants the site's own faces takes them with `remote({ url, fonts: { formats: ["woff2"] } })`, base64 in the request body.
+
+  Three things to expect on upgrade, all of them one-time.
+
+  Cards re-digest — so each is re-rendered at a new URL and its predecessor is left in the bucket — on any site where the connected renderer does not read the whole configured font set. That covers a renderer reading no fonts at all, and it also covers a mixed set such as `["/fonts/Inter.woff2", "/fonts/Inter.ttf"]` against the bundled engine, where the WOFF2 face was always dead weight and now leaves the digest with the rest of the render untouched.
+
+  A site configuring _only_ paths the renderer cannot read ships textless cards today. That now fails with an error naming both the formats the renderer reads and the faces turned away, because which formats can be read is the renderer's business and the bundled engine cannot read WOFF2 — what most font packages ship.
+
+  A path carrying no file extension is read by no renderer, since the format is named by the path and there is nothing else to read before a face is fetched.
+
+### Patch Changes
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2643](https://github.com/withplumix/plumix/pull/2643) [`932e7c3`](https://github.com/withplumix/plumix/commit/932e7c3af735e527f3263122f90105b29914650c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an entry's social card redirecting away from the URL its page's head advertises when the title contains a shortcode such as `[year]` or a `resolve:single:data` subscriber rewrites it. The card and the card preview now render the title the page shows.
+
+- [#2515](https://github.com/withplumix/plumix/pull/2515) [`77abfb3`](https://github.com/withplumix/plumix/commit/77abfb3aa61c24b15ed88eccf95c38b55c3c681c) Thanks [@nasyrov](https://github.com/nasyrov)! - Keeps a featured photo's alt text on the crop the card's shape produces, so the page still describes the picture it published.
+
+- [#2790](https://github.com/withplumix/plumix/pull/2790) [`a0566cc`](https://github.com/withplumix/plumix/commit/a0566cc6766e4084ba6220cb757b5eb9f2a0f343) Thanks [@nasyrov](https://github.com/nasyrov)! - Follows core's page-kind renames and needs `plumix` 0.24.0. `CardTarget` and `CardIdentity` use the new kinds (`frontPage`, `entryType`), and `card.archive()` and `card.taxonomy()` keep their names while binding the renamed `entryType` and `term` tiers. Card URLs and storage keys don't change: the front page's card is still at `front-page` and an entry type's at `archive/<type>`, so stored cards and shared `og:image` links keep working.
+
+- [#2653](https://github.com/withplumix/plumix/pull/2653) [`467eb4d`](https://github.com/withplumix/plumix/commit/467eb4dfa42ef6b7bf5364b2ed8f1e73cb8c91c3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a page rendered through a preview link advertising an `og:image` card URL the card route answered with a redirect. The card is now computed from the published entry on a preview render too, so a shared preview link unfurls with the image the public page carries.
+
+- [#2512](https://github.com/withplumix/plumix/pull/2512) [`e09638d`](https://github.com/withplumix/plumix/commit/e09638d06e6574949e96a8aa2f3f7228336d4975) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the editor's card preview missing a `.featured()` or `.ogImage()` field nested in a group. The preview reads the entry's role images rather than walking its meta box for them, so it names the same picture the page's head does.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
 ## 0.3.0
 
 ### Minor Changes

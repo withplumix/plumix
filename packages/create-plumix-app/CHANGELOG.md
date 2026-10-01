@@ -1,5 +1,19 @@
 # create-plumix-app
 
+## 0.7.0
+
+### Minor Changes
+
+- [#2747](https://github.com/withplumix/plumix/pull/2747) [`89f131d`](https://github.com/withplumix/plumix/commit/89f131dcac07c00f6c32442ae32dd2d66826699f) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `create-plumix-app --runtime bun`: a project on `bun()` with `bunSqlite` under `data/`, uploads through `diskStorage`, `@types/bun`, a `bunfig.toml` that leaves `.env` to the runtime, and `bun --bun plumix` scripts for `dev`, `build` and `migrate:apply`. It installs with Bun whichever package manager invoked the scaffolder, pins `packageManager` to the Bun the runtime is tested on, and exits with an error when `--pm` names another manager.
+
+- [#2718](https://github.com/withplumix/plumix/pull/2718) [`3ae979f`](https://github.com/withplumix/plumix/commit/3ae979fa04c199682dfbb27cd5fd847e7a875208) Thanks [@nasyrov](https://github.com/nasyrov)! - Scaffolds `.env` as the local secrets file on every runtime, beside a committed `.env.example`, and lists `.env` in `.gitignore`. A Cloudflare project used to get `.dev.vars`; rename `.dev.vars` to `.env` in an existing one. The dev error page's missing-secret hint now names `.env`.
+
+### Patch Changes
+
+- [#2710](https://github.com/withplumix/plumix/pull/2710) [`807868e`](https://github.com/withplumix/plumix/commit/807868eddb5e223333dae81465ee46ec45f8b0e2) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `pnpm create`, `yarn create` and `bun create` scaffolding with npm: the CLI now reads `npm_config_user_agent`, so dependencies install, local migrations run and next steps print with the package manager that invoked it. An explicit `--pm` still wins.
+
+- [#2717](https://github.com/withplumix/plumix/pull/2717) [`ba15370`](https://github.com/withplumix/plumix/commit/ba153702afecfb1f80f8c75cfee029a34d411a6c) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `start` to each runtime's `plumix.e2e` block, the command that serves its built output, and an optional `packageManager` to a runtime's scaffold block. The scaffold smoke reads both to install each runtime with its own package manager and to start every built server.
+
 ## 0.6.0
 
 ### Minor Changes

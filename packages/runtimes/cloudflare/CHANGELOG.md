@@ -1,5 +1,37 @@
 # @plumix/runtime-cloudflare
 
+## 0.13.0
+
+### Minor Changes
+
+- [#2656](https://github.com/withplumix/plumix/pull/2656) [`06f8311`](https://github.com/withplumix/plumix/commit/06f831157961b054da35ac9419993b2656932a8e) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the demo gate's media blocks: in a demo, media procedures act only on the per-session database. `demoRuntime` now throws `DemoError` (code `storage_not_supported`) at boot for an app with a `storage` slot. A demo shares one bucket across every session, so it must run without `storage:`.
+
+- [#2718](https://github.com/withplumix/plumix/pull/2718) [`3ae979f`](https://github.com/withplumix/plumix/commit/3ae979fa04c199682dfbb27cd5fd847e7a875208) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes `.env` the local secrets file for `plumix dev`, in place of `.dev.vars`: wrangler reads `.env` when no `.dev.vars` exists, and the scaffold now ships a `.env.example`. Rename `.dev.vars` to `.env` in an existing project. Production is unchanged: a deployed Worker still takes its secrets from `wrangler secret` or the dashboard.
+
+- [#2759](https://github.com/withplumix/plumix/pull/2759) [`567a0cf`](https://github.com/withplumix/plumix/commit/567a0cf65e2561c9c8697c4e12d9e8f8e617a35f) Thanks [@nasyrov](https://github.com/nasyrov)! - Moves the Cloudflare adapter and `demoRuntime` to the `handler` spec, and has the generated Worker entry build its handler with `createRuntimeHandler(app)`. Assets, the `cf-connecting-ip` client address and the dev error hints behave as before. Requires the `plumix` release that adds `createRuntimeHandler`.
+
+- [#2632](https://github.com/withplumix/plumix/pull/2632) [`ebcc400`](https://github.com/withplumix/plumix/commit/ebcc400aa517b7cfd7e8d6076cac2c063e046091) Thanks [@nasyrov](https://github.com/nasyrov)! - Passes each installed plugin's compiled catalogs to the app from the generated entry, so plugin block strings render in the request's locale. `createNodeSite` accepts a matching `pluginCatalogs` option.
+
+### Patch Changes
+
+- [#2788](https://github.com/withplumix/plumix/pull/2788) [`fc1cd14`](https://github.com/withplumix/plumix/commit/fc1cd14d1a886a527b8b79a12c6caf77757c3a64) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `cfAccess` and the demo authenticator to declare their callers as `credential: "session"`, so a Cloudflare Access user can enrol a backup passkey.
+
+- [#2809](https://github.com/withplumix/plumix/pull/2809) [`c0e9bc4`](https://github.com/withplumix/plumix/commit/c0e9bc42b37bcc199f18fc05156c77faf06c2779) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a user `cfAccess` provisions skipping the defaults of the registered user fields; it now stores the starting meta core hands every authenticator, like a user created any other way.
+
+- [#2731](https://github.com/withplumix/plumix/pull/2731) [`922c790`](https://github.com/withplumix/plumix/commit/922c7909b68d80e022dcd5ef9722072cace47d08) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix dev`'s `--port` and `--inspector-port` errors surfacing as an unexpected crash: a missing or out-of-range value is now reported through the CLI's `code: message` report. `plumix migrate apply`'s D1 errors keep their codes and wording.
+
+- [#2715](https://github.com/withplumix/plumix/pull/2715) [`12b9f2f`](https://github.com/withplumix/plumix/commit/12b9f2f30e212e886add5beb88edfbf4a7cf385a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes two D1 differences from the other database adapters. `rowsAffected` on an update or delete now counts only the statement's own rows, so a one-row `UPDATE` of an entry reports 1 rather than 2 once its change-feed trigger fires. A Date passed into a raw `sql` template now binds as epoch milliseconds instead of being refused.
+
+- [#2538](https://github.com/withplumix/plumix/pull/2538) [`c0cc0e6`](https://github.com/withplumix/plumix/commit/c0cc0e672368692bf3974a00a808ed953a858e9f) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@libsql/client` to `^0.18.0` (keeps in-memory databases intact across transactions), `lucide-react` to `^1.46.0`, `jose` to `^6.2.12` and `markdown-it` to `^15.0.2`.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2800](https://github.com/withplumix/plumix/pull/2800) [`2434fbd`](https://github.com/withplumix/plumix/commit/2434fbd390b270f4e7e2d92605b93f7f2124c4ca) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes presigned uploads from `r2()` accepting a body of any size. The URL is now signed for the exact `contentLength` it is asked for, so R2 refuses a PUT of any other length.
+
+- [#2717](https://github.com/withplumix/plumix/pull/2717) [`ba15370`](https://github.com/withplumix/plumix/commit/ba153702afecfb1f80f8c75cfee029a34d411a6c) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `start` to each runtime's `plumix.e2e` block, the command that serves its built output, and an optional `packageManager` to a runtime's scaffold block. The scaffold smoke reads both to install each runtime with its own package manager and to start every built server.
+
 ## 0.12.0
 
 ### Minor Changes
