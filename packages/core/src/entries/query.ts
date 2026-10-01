@@ -9,9 +9,9 @@ import { and, asc, desc, eq, gte, inArray, lt, sql } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
-import { dateRange } from "../route/date-range.js";
-import { findAuthorBySlug, findTermBySlug } from "../route/path-chain.js";
+import { dateRange } from "./date-range.js";
 import { EntryQueryError } from "./errors.js";
+import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 
 /**
  * One recorded narrowing. Intent, not SQL: a query is built where the caller

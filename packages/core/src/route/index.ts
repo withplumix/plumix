@@ -12,8 +12,8 @@ import {
   redirect,
 } from "../runtime/contract/http.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
+import { matchPublicRoute } from "./contract/public-route-table.js";
 import { matchRoute } from "./match.js";
-import { matchPublicRoute } from "./public-routes.js";
 import { matchRedirect } from "./redirects.js";
 import { resolvePublicRoute } from "./resolve.js";
 

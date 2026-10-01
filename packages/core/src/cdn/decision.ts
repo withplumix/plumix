@@ -1,4 +1,4 @@
-import type { Segment } from "../access/policy.js";
+import type { Segment } from "../access/contract/access.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 

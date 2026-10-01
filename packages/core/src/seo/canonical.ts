@@ -1,8 +1,8 @@
 import type { AppContext } from "../context/app-context.js";
-import type { PublicRouteTable } from "../route/public-routes.js";
+import type { PublicRouteTableFor } from "../route/contract/public-route-table.js";
 import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";
-import { matchPublicRoute } from "../route/public-routes.js";
+import { matchPublicRoute } from "../route/contract/public-route-table.js";
 
 type CanonicalContext = Pick<AppContext, "request" | "origin" | "config">;
 
@@ -45,7 +45,7 @@ export function canonicalUrl(ctx: CanonicalContext): string {
  */
 export function isCanonicalExempt(
   pathname: string,
-  publicRoutes: PublicRouteTable,
+  publicRoutes: PublicRouteTableFor<unknown>,
 ): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/_plumix/")) return true;
@@ -71,7 +71,7 @@ export function isCanonicalExempt(
  */
 export function canonicalRedirectTarget(
   ctx: CanonicalContext,
-  publicRoutes: PublicRouteTable,
+  publicRoutes: PublicRouteTableFor<unknown>,
 ): string | null {
   // Request path is already root-relative (base stripped at the dispatcher
   // edge), so `/` — the base prefix's own front page — is exempt as usual.

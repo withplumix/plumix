@@ -2,7 +2,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { AdminSearchInput, SearchGroup } from "./admin-search.js";
 import { and, asc } from "../db/index.js";
 import { users } from "../db/schema/users.js";
-import { userSearchCondition } from "./conditions.js";
+import { userSearchCondition } from "../db/search-conditions.js";
 import { tokenizeSearchQuery } from "./contract/search-terms.js";
 
 // Group priority base, after entries (10..) and terms (100..).
