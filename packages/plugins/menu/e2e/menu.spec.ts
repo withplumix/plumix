@@ -7,7 +7,8 @@
 import { resolve } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { eq } from "plumix/db";
-import { entries, entryTerm, terms, users } from "plumix/schema";
+import { entries } from "plumix/schema";
+import { factoriesFor } from "plumix/test";
 import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
 // MenuItemEditor.tsx — must match the constant in the component
@@ -261,38 +262,29 @@ test("a trashed entry's item keeps its label, and Convert to Custom URL fills in
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),
   });
-  const [author] = await db.select({ id: users.id }).from(users).limit(1);
-  if (!author) throw new Error("globalSetup seeded no user");
-  const [post] = await db
-    .insert(entries)
-    .values({
-      type: "post",
-      title: "About us",
-      slug: "about-us",
-      status: "published",
-      authorId: author.id,
-    })
-    .returning({ id: entries.id });
-  const [linked] = await db
-    .insert(terms)
-    .values({ taxonomy: "menu", slug: "linked", name: "Linked" })
-    .returning({ id: terms.id });
-  if (!post || !linked) throw new Error("seed insert returned no row");
-  const [item] = await db
-    .insert(entries)
-    .values({
-      type: "menu_item",
-      title: "",
-      slug: "mi-linked-about-us",
-      status: "published",
-      authorId: author.id,
-      meta: { kind: "entry", entryId: post.id },
-    })
-    .returning({ id: entries.id });
-  if (!item) throw new Error("seed insert returned no row");
-  await db
-    .insert(entryTerm)
-    .values({ entryId: item.id, termId: linked.id, sortOrder: 0 });
+  const factories = factoriesFor(db);
+  const author = await factories.admin.create({});
+  const post = await factories.entry.create({
+    type: "post",
+    title: "About us",
+    slug: "about-us",
+    status: "published",
+    authorId: author.id,
+  });
+  const linked = await factories.term.create({
+    taxonomy: "menu",
+    slug: "linked",
+    name: "Linked",
+  });
+  const item = await factories.entry.create({
+    type: "menu_item",
+    title: "",
+    slug: "mi-linked-about-us",
+    status: "published",
+    authorId: author.id,
+    meta: { kind: "entry", entryId: post.id },
+  });
+  await factories.entryTerm.create({ entryId: item.id, termId: linked.id });
 
   await page.goto("pages/menus");
   await page.getByTestId("menus-selector-option-linked").click();

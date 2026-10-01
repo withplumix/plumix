@@ -150,6 +150,47 @@ async function readItemMeta(db: Db, id: number): Promise<unknown> {
   return row?.meta;
 }
 
+function itemIdAt(saved: unknown, index: number): number {
+  const id = (saved as { itemIds: readonly number[] }).itemIds[index];
+  if (id === undefined) throw new Error(`save returned no item id at ${index}`);
+  return id;
+}
+
+type RegisteredLookupAdapter = NonNullable<
+  ReturnType<PluginRegistry["lookupAdapters"]["get"]>
+>;
+
+function replaceLookupAdapter(
+  registry: PluginRegistry,
+  kind: string,
+  replace: (registered: RegisteredLookupAdapter) => RegisteredLookupAdapter,
+): void {
+  const lookupAdapters = registry.lookupAdapters as Map<
+    string,
+    RegisteredLookupAdapter
+  >;
+  const registered = lookupAdapters.get(kind);
+  if (!registered) throw new Error(`${kind} adapter not registered`);
+  lookupAdapters.set(kind, replace(registered));
+}
+
+function countListCalls(
+  registry: PluginRegistry,
+  kind: string,
+  calls: Map<string, number>,
+): void {
+  replaceLookupAdapter(registry, kind, (registered) => ({
+    ...registered,
+    adapter: {
+      ...registered.adapter,
+      list: (ctx, options) => {
+        calls.set(kind, (calls.get(kind) ?? 0) + 1);
+        return registered.adapter.list(ctx, options);
+      },
+    },
+  }));
+}
+
 describe("menu RPC", () => {
   describe("menu.list", () => {
     test("returns all menu terms with item counts", async () => {
@@ -567,7 +608,7 @@ describe("menu RPC", () => {
         ],
       })) as { itemIds: number[] };
 
-      expect(await readItemMeta(h.db, result.itemIds[0] ?? 0)).toEqual({
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
         kind: "entry",
         entryId: post.id,
         lastLabel: "About us",
@@ -597,7 +638,7 @@ describe("menu RPC", () => {
         ],
       })) as { itemIds: number[] };
 
-      expect(await readItemMeta(h.db, result.itemIds[0] ?? 0)).toEqual({
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
         kind: "term",
         termId: news.id,
         lastLabel: "News",
@@ -627,7 +668,7 @@ describe("menu RPC", () => {
           },
         ],
       })) as { itemIds: number[] };
-      const itemId = first.itemIds[0] ?? 0;
+      const itemId = itemIdAt(first, 0);
       await h.db
         .update(entries)
         .set({ status: "trash" })
@@ -681,7 +722,7 @@ describe("menu RPC", () => {
           },
         ],
       })) as { itemIds: number[] };
-      const itemId = first.itemIds[0] ?? 0;
+      const itemId = itemIdAt(first, 0);
       expect(await readItemMeta(h.db, itemId)).toMatchObject({
         lastLabel: "About us",
       });
@@ -735,13 +776,11 @@ describe("menu RPC", () => {
           },
         ],
       })) as { itemIds: number[] };
-      const aboutItemId = first.itemIds[0] ?? 0;
-      const entryAdapter = h.registry.lookupAdapters.get("entry");
-      if (!entryAdapter) throw new Error("entry adapter not registered");
-      (h.registry.lookupAdapters as Map<string, typeof entryAdapter>).set(
-        "entry",
-        { ...entryAdapter, capability: "entry:post:secret" },
-      );
+      const aboutItemId = itemIdAt(first, 0);
+      replaceLookupAdapter(h.registry, "entry", (registered) => ({
+        ...registered,
+        capability: "entry:post:secret",
+      }));
 
       const second = (await h.client.menu.save({
         termId: m.id,
@@ -769,7 +808,7 @@ describe("menu RPC", () => {
         lastLabel: "About us",
         lastHref: "/post/about-us",
       });
-      expect(await readItemMeta(h.db, second.itemIds[1] ?? 0)).toEqual({
+      expect(await readItemMeta(h.db, itemIdAt(second, 1))).toEqual({
         kind: "entry",
         entryId: contact.id,
       });
@@ -809,13 +848,13 @@ describe("menu RPC", () => {
         ],
       })) as { itemIds: number[] };
 
-      expect(await readItemMeta(h.db, result.itemIds[0] ?? 0)).toEqual({
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
         kind: "entry",
         entryId: post.id,
         lastLabel: "About us",
         lastHref: "/post/about-us",
       });
-      expect(await readItemMeta(h.db, result.itemIds[1] ?? 0)).toEqual({
+      expect(await readItemMeta(h.db, itemIdAt(result, 1))).toEqual({
         kind: "entry",
         entryId: 99999,
       });
@@ -825,43 +864,23 @@ describe("menu RPC", () => {
       const h = await buildHarness("editor", {}, [contentHost]);
       const m = await seedMenu(h.db, h.factories, "main");
       const calls = new Map<string, number>();
-      const lookupAdapters = h.registry.lookupAdapters as Map<
-        string,
-        NonNullable<ReturnType<typeof h.registry.lookupAdapters.get>>
-      >;
-      for (const kind of ["entry", "term"]) {
-        const registered = lookupAdapters.get(kind);
-        if (!registered) throw new Error(`${kind} adapter not registered`);
-        lookupAdapters.set(kind, {
-          ...registered,
-          adapter: {
-            ...registered.adapter,
-            list: (ctx, options) => {
-              calls.set(kind, (calls.get(kind) ?? 0) + 1);
-              return registered.adapter.list(ctx, options);
-            },
-          },
-        });
-      }
-      const items = [];
-      for (const slug of ["a", "b", "c"]) {
-        const post = await entryFactory.transient({ db: h.db }).create({
-          type: "post",
-          title: slug,
-          slug,
-          status: "published",
-          authorId: h.user.id,
-        });
-        const category = await h.factories.term.create({
-          taxonomy: "category",
-          slug,
-          name: slug,
-        });
-        items.push(
-          { kind: "entry", entryId: post.id },
-          { kind: "term", termId: category.id },
-        );
-      }
+      countListCalls(h.registry, "entry", calls);
+      countListCalls(h.registry, "term", calls);
+      const posts = await entryFactory.transient({ db: h.db }).createList(3, {
+        type: "post",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const categories = await h.factories.term.createList(3, {
+        taxonomy: "category",
+      });
+      const items = [
+        ...posts.map((post) => ({ kind: "entry", entryId: post.id })),
+        ...categories.map((category) => ({
+          kind: "term",
+          termId: category.id,
+        })),
+      ];
 
       await h.client.menu.save({
         termId: m.id,
@@ -875,6 +894,44 @@ describe("menu RPC", () => {
       });
 
       expect(Object.fromEntries(calls)).toEqual({ entry: 1, term: 1 });
+    });
+
+    test("a lookup that throws fails the save without bumping the menu's version", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        status: "published",
+        authorId: h.user.id,
+      });
+      replaceLookupAdapter(h.registry, "entry", (registered) => ({
+        ...registered,
+        adapter: {
+          ...registered.adapter,
+          list: () => Promise.reject(new Error("lookup backend down")),
+        },
+      }));
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 0,
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: null,
+              meta: { kind: "entry", entryId: post.id },
+            },
+          ],
+        }),
+      ).rejects.toThrow();
+
+      const [term] = await h.db
+        .select({ version: terms.version })
+        .from(terms)
+        .where(eq(terms.id, m.id));
+      expect(term?.version).toBe(0);
     });
 
     test("rejects claimed-id that doesn't belong to this menu", async () => {

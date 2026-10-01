@@ -263,6 +263,14 @@ export function createMenuRouter(
         }
       }
 
+      // Look the linked items' targets up before the CAS bump below: a
+      // lookup that throws then leaves the menu's version alone, so the
+      // editor can retry the save.
+      const targets = await lookupMenuTargets(
+        context,
+        flat.items.map((item) => item.meta),
+      );
+
       // Atomic CAS version bump. Both concurrent saves passing the
       // earlier `term.version === input.version` check would otherwise
       // race and silently overwrite each other. With CAS, only the
@@ -322,10 +330,6 @@ export function createMenuRouter(
       // Snapshot each linked item's label and href, so the editor can
       // still show it after the target is trashed or deleted. A target
       // that doesn't resolve keeps the snapshot its row already stores.
-      const targets = await lookupMenuTargets(
-        context,
-        flat.items.map((item) => item.meta),
-      );
       const storedMetas = new Map(
         existingRows.map((r) => [r.id, parseMenuItemMeta(r.meta)]),
       );
