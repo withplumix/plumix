@@ -132,14 +132,14 @@ function originStore(
   };
 }
 
-// Rejections bubble to the caller, which defers the purge, so a zone that
-// refuses one is logged rather than failing the publish.
-async function purgeByTag(
+// Cloudflare refuses a `purge_cache` call carrying more than this many tags.
+const PURGE_TAG_LIMIT = 100;
+
+async function purgeGroup(
   zoneId: string,
   purgeToken: string,
   tags: readonly string[],
 ): Promise<void> {
-  if (tags.length === 0) return;
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`,
     {
@@ -154,6 +154,27 @@ async function purgeByTag(
   if (!response.ok) {
     throw CloudflareCdnError.purgeFailed({ status: response.status });
   }
+}
+
+// Rejections bubble to the caller, which defers the purge, so a zone that
+// refuses one is logged rather than failing the publish. The groups go out
+// together.
+async function purgeByTag(
+  zoneId: string,
+  purgeToken: string,
+  tags: readonly string[],
+): Promise<void> {
+  const groups: (readonly string[])[] = [];
+  for (let start = 0; start < tags.length; start += PURGE_TAG_LIMIT) {
+    groups.push(tags.slice(start, start + PURGE_TAG_LIMIT));
+  }
+  // One refused group must not cut the others short, so every call settles
+  // before the first refusal is rethrown.
+  const results = await Promise.allSettled(
+    groups.map((group) => purgeGroup(zoneId, purgeToken, group)),
+  );
+  const refused = results.find((result) => result.status === "rejected");
+  if (refused !== undefined) throw refused.reason;
 }
 
 // A var declared and left blank is the same deploy as one never set.

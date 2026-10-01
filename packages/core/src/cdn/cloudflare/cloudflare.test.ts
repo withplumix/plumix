@@ -211,6 +211,50 @@ describe("connected cdn purgeTags", () => {
     });
   });
 
+  it("splits more than 100 tags into calls of at most 100", async () => {
+    const tags = Array.from({ length: 101 }, (_, i) => `e:${String(i)}`);
+
+    await purgeTags(tags);
+
+    const sent = fetchMock.mock.calls.map(
+      ([, init]) =>
+        (JSON.parse((init as RequestInit).body as string) as { tags: string[] })
+          .tags,
+    );
+    expect(sent.map((group) => group.length)).toEqual([100, 1]);
+    expect(sent.flat()).toEqual(tags);
+  });
+
+  it("sends exactly 100 tags in one call", async () => {
+    await purgeTags(Array.from({ length: 100 }, (_, i) => `e:${String(i)}`));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("lets every group finish before rejecting for a refused one", async () => {
+    let releaseFirst = (): void => undefined;
+    const firstAnswer = new Promise<Response>((resolve) => {
+      releaseFirst = () => resolve(new Response(null, { status: 200 }));
+    });
+    fetchMock
+      .mockReturnValueOnce(firstAnswer)
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    let settled = false;
+
+    const purge = purgeTags(
+      Array.from({ length: 101 }, (_, i) => `e:${String(i)}`),
+    ).finally(() => {
+      settled = true;
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The refused group answered first; the other is still in flight.
+    expect(settled).toBe(false);
+
+    releaseFirst();
+    await expect(purge).rejects.toThrow(/purge_cache responded 403/);
+  });
+
   it("does not call the API for an empty tag list", async () => {
     await purgeTags([]);
     expect(fetchMock).not.toHaveBeenCalled();
