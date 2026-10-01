@@ -1812,6 +1812,18 @@ msgstr "邀请中…"
 msgid "type.generic.singular"
 msgstr "项目"
 
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.dropped"
+msgstr ""
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.movedTo"
+msgstr ""
+
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.plural"
@@ -2038,6 +2050,12 @@ msgstr "移至回收站？"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.toast.trashed"
 msgstr "已移至回收站。"
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.cancelled"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -2490,6 +2508,12 @@ msgstr "选择父术语将此术语嵌套其下，或留空以创建根级别术
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.pick"
 msgstr "选择条目"
+
+#. position: 1-based place of the item in the list; total: items
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.pickedUp"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3612,6 +3636,11 @@ msgstr "标题"
 #. js-lingui-explicit-id
 #: src/components/editor/document-settings.tsx
 msgid "editor.document.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/use-sortable-announcements.ts
+msgid "sortable.instructions"
 msgstr ""
 
 #. js-lingui-explicit-id
