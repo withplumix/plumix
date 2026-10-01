@@ -81,7 +81,7 @@ export interface MetaBoxFieldBase {
    * declarative constraints.
    */
   readonly validate?: MetaBoxFieldValidate;
-  /** Default surfaced in the admin form when the key has no saved value. */
+  /** The value a new entity starts with — see `startingMeta` (ADR 0026). */
   readonly default?: unknown;
   /** Optional help text rendered under the label on every input type. */
   readonly description?: Label;

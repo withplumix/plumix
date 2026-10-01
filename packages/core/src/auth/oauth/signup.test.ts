@@ -37,6 +37,7 @@ describe("resolveOAuthUser — dangling oauth_accounts row", () => {
 
     await expect(
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         profile: { ...PROFILE, providerAccountId: "ghost-1" },
       }),
@@ -58,6 +59,7 @@ describe("resolveOAuthUser — link existing oauth account", () => {
     });
 
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
     });
@@ -80,7 +82,7 @@ describe("resolveOAuthUser — link existing oauth account", () => {
     });
 
     await expect(
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ).rejects.toMatchObject({ code: "account_disabled" });
   });
 });
@@ -94,6 +96,7 @@ describe("resolveOAuthUser — link by email (existing user, no oauth row)", () 
     });
 
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
     });
@@ -116,6 +119,7 @@ describe("resolveOAuthUser — link by email (existing user, no oauth row)", () 
 
     await expect(
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         profile: { ...PROFILE, emailVerified: false },
       }),
@@ -130,7 +134,7 @@ describe("resolveOAuthUser — link by email (existing user, no oauth row)", () 
       disabledAt: new Date(),
     });
     await expect(
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ).rejects.toMatchObject({ code: "account_disabled" });
   });
 });
@@ -147,6 +151,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     });
 
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
     });
@@ -168,6 +173,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     // No allowed_domains row — domain-gated signup would reject, but open
     // self-signup provisions the user and writes the oauth link regardless.
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
       selfSignup: { defaultRole: "subscriber" },
@@ -191,6 +197,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     });
 
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
       selfSignup: { defaultRole: "subscriber" },
@@ -207,7 +214,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
       isEnabled: false,
     });
     await expect(
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ).rejects.toMatchObject({ code: "domain_not_allowed" });
   });
 
@@ -215,7 +222,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
     await expect(
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ).rejects.toMatchObject({ code: "domain_not_allowed" });
   });
 
@@ -229,6 +236,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     });
     await expect(
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         profile: { ...PROFILE, emailVerified: false },
       }),
@@ -243,7 +251,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
       isEnabled: true,
     });
     await expect(
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ).rejects.toMatchObject({ code: "registration_closed" });
     expect(await db.$count(users)).toBe(0);
   });
@@ -256,6 +264,7 @@ describe("resolveOAuthUser — domain-gated signup", () => {
       isEnabled: true,
     });
     const result = await resolveOAuthUser(db, {
+      meta: {},
       provider: "github",
       profile: PROFILE,
       bootstrapAllowed: true,
@@ -271,6 +280,7 @@ describe("resolveOAuthUser — error type", () => {
     const db = await createTestDb();
     await expect(
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         profile: { ...PROFILE, emailVerified: false },
       }),
@@ -290,10 +300,12 @@ describe("resolveOAuthUser — race on concurrent inserts", () => {
 
     const [a, b] = await Promise.all([
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         profile: { ...PROFILE, providerAccountId: "race-1" },
       }),
       resolveOAuthUser(db, {
+        meta: {},
         provider: "github",
         // Identical email but a *different* providerAccountId — both
         // would normally try to insert a new user row keyed by that
@@ -327,8 +339,8 @@ describe("resolveOAuthUser — race on concurrent inserts", () => {
     });
 
     const [a, b] = await Promise.all([
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
-      resolveOAuthUser(db, { provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
+      resolveOAuthUser(db, { meta: {}, provider: "github", profile: PROFILE }),
     ]);
 
     expect(a.user.id).toBe(seeded.id);

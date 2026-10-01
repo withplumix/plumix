@@ -1,5 +1,4 @@
 import type { JWTPayload } from "jose";
-import type { Db } from "plumix";
 import type { RequestAuthenticator } from "plumix/auth";
 import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
@@ -133,7 +132,7 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
     hasSession(request: Request): boolean {
       return request.headers.has(CF_ACCESS_HEADER);
     },
-    async authenticate(request: Request, db: Db) {
+    async authenticate(request, db, scope) {
       const token = request.headers.get(CF_ACCESS_HEADER);
       if (!token) return null;
 
@@ -164,6 +163,7 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
           allowedDomainsGate: false,
           defaultRole: config.defaultRole,
           bootstrapAllowed: config.bootstrapAllowed,
+          meta: scope.startingUserMeta,
         });
         // An IdP identity bound to a browser, so a session: the user's
         // role caps apply unrestricted; PAT-style scoping doesn't apply here.

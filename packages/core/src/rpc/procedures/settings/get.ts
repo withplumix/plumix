@@ -1,7 +1,7 @@
-import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
+import { settingsGroupBag } from "../../../template-deps-core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
@@ -14,13 +14,11 @@ const CAPABILITY = "settings:manage";
 // left by uninstalled plugins while still bounding response size.
 const MAX_GROUP_ROWS_PER_READ = 500;
 
-// Returns the full key → value bag for one group, with each registered
-// field's `.default()` standing in where storage has no key — `SettingsOf`
-// narrows a defaulted read the same way the entity meta helpers do.
+// Returns the full key → value bag for one group, as `settingsGroupBag` reads
+// it — so the form of a group never saved opens on its starting values.
 //
-// Settings have no decode pass of their own, so unlike entity meta this is a
-// fill and nothing more: a `.returns("date")` settings field still reads back
-// its stored ISO string, and a reference its stored id.
+// Settings have no decode pass of their own: a `.returns("date")` settings
+// field reads back its stored ISO string, and a reference its stored id.
 export const get = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
@@ -40,14 +38,10 @@ export const get = base
       .where(eq(settings.group, filtered.group))
       .limit(MAX_GROUP_ROWS_PER_READ);
 
-    const bag: Record<string, JsonValue> = {};
-    for (const row of rows) bag[row.key] = row.value;
-    for (const field of context.plugins.settingsGroups.get(filtered.group)
-      ?.fields ?? []) {
-      if (field.default === undefined) continue;
-      if (Object.hasOwn(bag, field.key)) continue;
-      bag[field.key] = field.default as JsonValue;
-    }
+    const bag = settingsGroupBag(
+      rows,
+      context.plugins.settingsGroups.get(filtered.group)?.fields ?? [],
+    );
 
     return context.hooks.applyFilter(
       "rpc:settings.get:output",

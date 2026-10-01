@@ -1,5 +1,6 @@
 import type { Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
+import type { JsonObject } from "../json.js";
 import { isUniqueConstraintErrorOn, sql } from "../db/index.js";
 import { users } from "../db/schema/users.js";
 import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../users/slug.js";
@@ -17,6 +18,8 @@ export async function provisionUser(
     readonly avatarUrl?: string | null;
     readonly defaultRole?: UserRole;
     readonly emailVerified?: boolean;
+    /** The meta the new user starts with — `startingMeta` of the user fields. */
+    readonly meta: JsonObject;
   },
 ): Promise<BootstrappedUser> {
   const defaultRole: UserRole = input.defaultRole ?? "subscriber";
@@ -39,6 +42,7 @@ export async function provisionUser(
           avatarUrl: input.avatarUrl ?? null,
           role: sql<UserRole>`CASE WHEN (SELECT COUNT(*) FROM ${users}) = 0 THEN 'admin' ELSE ${defaultRole} END`,
           emailVerifiedAt: input.emailVerified ? new Date() : null,
+          meta: input.meta,
         })
         .returning();
     } catch (error) {

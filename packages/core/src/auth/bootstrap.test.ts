@@ -7,6 +7,7 @@ describe("first-user-admin bootstrap", () => {
   test("first user becomes admin regardless of requested defaultRole", async () => {
     const db = await createTestDb();
     const result = await provisionUser(db, {
+      meta: {},
       email: "first@example.com",
       defaultRole: "subscriber",
     });
@@ -16,8 +17,9 @@ describe("first-user-admin bootstrap", () => {
 
   test("subsequent users get the supplied defaultRole, never admin", async () => {
     const db = await createTestDb();
-    await provisionUser(db, { email: "first@example.com" });
+    await provisionUser(db, { meta: {}, email: "first@example.com" });
     const result = await provisionUser(db, {
+      meta: {},
       email: "second@example.com",
       defaultRole: "author",
     });
@@ -28,9 +30,9 @@ describe("first-user-admin bootstrap", () => {
   test("concurrent first-user provisions with different emails elect exactly one admin", async () => {
     const db = await createTestDb();
     const results = await Promise.all([
-      provisionUser(db, { email: "a@example.com" }),
-      provisionUser(db, { email: "b@example.com" }),
-      provisionUser(db, { email: "c@example.com" }),
+      provisionUser(db, { meta: {}, email: "a@example.com" }),
+      provisionUser(db, { meta: {}, email: "b@example.com" }),
+      provisionUser(db, { meta: {}, email: "c@example.com" }),
     ]);
     const admins = results.filter((r) => r.user.role === "admin");
     expect(admins).toHaveLength(1);
@@ -40,5 +42,14 @@ describe("first-user-admin bootstrap", () => {
     // must still hand each a distinct slug.
     const slugs = results.map((r) => r.user.slug);
     expect(new Set(slugs).size).toBe(3);
+  });
+
+  test("the new user stores the meta it starts with", async () => {
+    const db = await createTestDb();
+    const { user } = await provisionUser(db, {
+      email: "first@example.com",
+      meta: { pronouns: "they/them" },
+    });
+    expect(user.meta).toEqual({ pronouns: "they/them" });
   });
 });

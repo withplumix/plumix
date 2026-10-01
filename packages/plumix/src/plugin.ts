@@ -44,6 +44,7 @@ export {
   registerCoreLookupAdapters,
   requireCapability,
   resolveCapability,
+  startingMeta,
   TAXONOMY_MENU_ICONS,
   termCapability,
 } from "@plumix/core";
@@ -312,6 +313,7 @@ export type {
   SettingsOf,
   SettingsPageManifestEntry,
   SettingsPageOptions,
+  StartingMetaField,
   StoredMeta,
   StoredMetaOf,
   StoredTermMetaOf,

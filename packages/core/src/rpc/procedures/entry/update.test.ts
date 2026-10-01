@@ -716,10 +716,10 @@ describe("entry.update", () => {
     expect(updated.title).toBe("fixed a typo");
   });
 
-  // A default applies on read and is never stored, so a driver resting on its
-  // default is absent from the row. Judged without it, the field it shows
-  // would read as hidden and the write to it would be dropped unannounced.
-  test("meta: a field shown by its driver's default is written", async () => {
+  // A default is written when the entity is created, not filled on read
+  // (ADR 0026). A row that predates the default lacks the driver, and
+  // conditions judge what is stored, as the page and search do.
+  test("meta: a driver storage lacks is not stood in for by its default", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
       id: "layout-box",
@@ -756,10 +756,10 @@ describe("entry.update", () => {
       meta: { video_url: "https://example.com/v" },
     });
 
-    expect(updated.meta.video_url).toBe("https://example.com/v");
+    expect(updated.meta).toEqual({});
   });
 
-  // A default shows on read but is never stored, and the publish gate judges
+  // The publish gate judges storage, and a default on an existing row is not
   // storage — so a required field resting on its default is still missing.
   // Switching it visible has to be held to the same rule the gate will apply.
   test("meta: a required field the edit switches visible is not satisfied by its default", async () => {
@@ -797,10 +797,9 @@ describe("entry.update", () => {
     });
   });
 
-  // A driver never stored reads as its default, so sending it at that default
-  // shows nothing that was not already shown — the admin sends full form state,
-  // which does exactly this on the first save after a field is added.
-  test("meta: sending a driver at the default it already reads as is not a change", async () => {
+  // A driver never stored reads as absent, default or not, so sending it at
+  // its default switches its dependent visible like any other value.
+  test("meta: sending a driver storage lacks at its default is a change", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
       id: "layout-box",
@@ -833,20 +832,22 @@ describe("entry.update", () => {
       meta: {},
     });
 
-    const updated = await h.client.entry.update({
-      id: post.id,
-      title: "fixed a typo",
-      meta: { layout: "video" },
+    await expect(
+      h.client.entry.update({
+        id: post.id,
+        title: "fixed a typo",
+        meta: { layout: "video" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "video_url" },
     });
-
-    expect(updated.title).toBe("fixed a typo");
   });
 
-  // The publish gate has to see a field the way the editor does. The admin
-  // hides `video_url` here — `layout` reads as its default — so a gate that
-  // treated the absent driver as "shown" would demand a field the author can
-  // neither see nor, since a write to a hidden field is dropped, supply.
-  test("meta: publishing does not demand a field its driver's default hides", async () => {
+  // The publish gate sees a field the way the editor does, and both read
+  // storage alone: `layout` is absent, so `video_url` is hidden and not
+  // demanded.
+  test("meta: publishing does not demand a field a driver storage lacks hides", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("layout-box", {
       id: "layout-box",

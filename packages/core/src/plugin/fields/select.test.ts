@@ -141,7 +141,7 @@ describe("select().multiple() — cardinality axis", () => {
     select("size").options(["s", "m"]).max(2);
   });
 
-  test(".default() takes an array after .multiple(); cardinality precedes narrowing", () => {
+  test(".default() takes an array after .multiple(); cardinality precedes .default()", () => {
     const field = select("tags")
       .options(["a", "b"])
       .multiple()
@@ -153,11 +153,11 @@ describe("select().multiple() — cardinality axis", () => {
     select("tags").options(["a", "b"]).multiple().default("a");
     // @ts-expect-error — "z" is not in the option list.
     select("tags").options(["a", "b"]).multiple().default(["z"]);
-    // @ts-expect-error — cardinality must be declared before narrowing calls.
+    // @ts-expect-error — cardinality must be declared before `.default()`.
     select("tags").options(["a", "b"]).default("a").multiple();
   });
 
-  test("phantom value flips to a readonly array; .required()/.default() narrow", () => {
+  test("phantom value flips to a readonly array; .required() narrows", () => {
     const _multi = select("tags").options(["a", "b"]).multiple();
     expectTypeOf<(typeof _multi)["_value"]>().toEqualTypeOf<
       readonly ("a" | "b")[] | undefined
@@ -226,7 +226,7 @@ describe("select().multiple() — cardinality axis", () => {
 });
 
 describe("select() phantom value typing — single value", () => {
-  test(".options() infers the option literal union; .required()/.default() narrow", () => {
+  test(".options() infers the option literal union; .required() narrows, .default() does not", () => {
     const _unadorned = select("size").options(["s", "m", "l"]);
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
       "s" | "m" | "l" | undefined
@@ -244,7 +244,9 @@ describe("select() phantom value typing — single value", () => {
     expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<"s" | "m">();
 
     const _defaulted = select("size").options(["s", "m"]).default("s");
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<"s" | "m">();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      "s" | "m" | undefined
+    >();
 
     // .default() only accepts a declared option value.
     // @ts-expect-error — "xl" is not in the option list.
@@ -253,9 +255,8 @@ describe("select() phantom value typing — single value", () => {
 
   test("phantom key + stored shape feed the contribution fold", () => {
     // `_key` carries the literal; `_stored` mirrors the chassis rules —
-    // `.default()` applies on read but nothing enforces it on write (so
-    // storage can still lack the key), `.required()` is write-enforced so
-    // storage narrows too.
+    // `.default()` narrows nothing (a cleared field is stored absent),
+    // `.required()` is write-enforced so storage narrows too.
     const _plain = select("size").options(["s", "m"]);
     expectTypeOf<(typeof _plain)["_key"]>().toEqualTypeOf<"size">();
     expectTypeOf<(typeof _plain)["_stored"]>().toEqualTypeOf<
@@ -263,7 +264,9 @@ describe("select() phantom value typing — single value", () => {
     >();
 
     const _defaulted = select("size").options(["s", "m"]).default("s");
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<"s" | "m">();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      "s" | "m" | undefined
+    >();
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       "s" | "m" | undefined
     >();

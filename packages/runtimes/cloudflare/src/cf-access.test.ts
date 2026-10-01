@@ -129,6 +129,7 @@ describe("cfAccess.authenticate — header missing or malformed", () => {
     const result = await guard.authenticate(
       new Request("https://cms.example/"),
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });
@@ -144,6 +145,7 @@ describe("cfAccess.authenticate — header missing or malformed", () => {
         headers: { "cf-access-jwt-assertion": "not-a-real-jwt" },
       }),
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });
@@ -194,6 +196,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
         headers: { "cf-access-jwt-assertion": wrongAud },
       }),
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });
@@ -216,12 +219,37 @@ describe("cfAccess.authenticate — full crypto path", () => {
         headers: { "cf-access-jwt-assertion": jwt },
       }),
       db,
+      { startingUserMeta: {} },
     );
     expect(result).not.toBeNull();
     expect(result?.user.email).toBe("first-admin@enterprise.example");
     // bootstrapAllowed=true on a zero-user system → first user is admin.
     expect(result?.user.role).toBe("admin");
     expect(result?.credential).toBe("session");
+  });
+
+  // A user CF Access provisions is a new entity, so it stores the starting
+  // meta core hands the authenticator (ADR 0026).
+  test("a user it provisions stores the starting user meta", async () => {
+    const db = await createTestDb();
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+    const jwt = await mintJwt(material.privateKey, material.kid, {
+      email: "new@enterprise.example",
+    });
+
+    const result = await guard.authenticate(
+      new Request("https://cms.example/", {
+        headers: { "cf-access-jwt-assertion": jwt },
+      }),
+      db,
+      { startingUserMeta: { pronouns: "they/them" } },
+    );
+    expect(result?.user.meta).toEqual({ pronouns: "they/them" });
   });
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {
@@ -243,6 +271,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
         headers: { "cf-access-jwt-assertion": jwt },
       }),
       db,
+      { startingUserMeta: {} },
     );
     expect(user).toBeNull();
   });
@@ -266,6 +295,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
           headers: { "cf-access-jwt-assertion": jwt },
         }),
         db,
+        { startingUserMeta: {} },
       );
     }
 
@@ -300,6 +330,7 @@ describe("cfAccess.authenticate — full crypto path", () => {
         headers: { "cf-access-jwt-assertion": jwt },
       }),
       db,
+      { startingUserMeta: {} },
     );
     expect(user).toBeNull();
   });

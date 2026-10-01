@@ -10,6 +10,8 @@ import {
   validateTermMetaReferences,
   writeTermMeta,
 } from "../../../meta/term.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
+import { listTermMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { termCreateInputSchema } from "./schemas.js";
@@ -46,13 +48,19 @@ export const create = base
       }
     }
 
+    // A new term starts from its fields' defaults (ADR 0026); the meta the
+    // caller sends lands on top of them.
+    const starting = startingMeta(
+      listTermMetaFields(context.plugins, filtered.taxonomy),
+    );
+
     // Validate meta up-front so a bad key fails before the term insert —
     // keeps the DB clean when the client sends a typo in a meta key.
     const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       filtered.taxonomy,
       filtered.meta,
-      { stored: {}, auth: context.auth },
+      { stored: starting, auth: context.auth },
       errors,
     );
     if (metaPatch) {
@@ -81,6 +89,7 @@ export const create = base
           slug: filtered.slug,
           description: filtered.description ?? null,
           parentId: filtered.parentId ?? null,
+          meta: starting,
         })
         .returning();
     } catch (error) {

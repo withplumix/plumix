@@ -4,6 +4,8 @@ import type { AuthFlowApp } from "../flow-app.js";
 import type { OAuthErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
+import { startingMeta } from "../../plugin/fields/starting-meta.js";
+import { listUserMetaFields } from "../../plugin/manifest.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
@@ -123,6 +125,7 @@ export async function handleOAuthCallback(
       profile,
       bootstrapAllowed: ctx.bootstrapAllowed,
       selfSignup: app.config.auth.selfSignup,
+      meta: startingMeta(listUserMetaFields(ctx.plugins)),
     });
 
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);

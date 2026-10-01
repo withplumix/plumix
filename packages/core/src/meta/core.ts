@@ -221,33 +221,13 @@ export async function sanitizeMetaInput(
 
 /**
  * Where a patch lands and who is writing it. A condition cannot be judged from
- * a patch alone — a driver it omits is whatever the stored meta holds, or its
- * default when nothing is stored — and `auth` limits which of those fields the
- * author can be held to.
+ * a patch alone — a driver it omits is whatever the stored meta holds — and
+ * `auth` limits which of those fields the author can be held to.
  */
 export interface MetaPatchTarget {
   readonly stored: JsonObject;
   readonly fields: readonly MetaBoxField[];
   readonly auth: { can(capability: Capability): boolean };
-}
-
-/**
- * A bag as conditions see it: each declared default stands in for a key the bag
- * lacks. The decoded read and the editor's form both apply defaults, and
- * storage never holds them, so judging a condition against storage alone would
- * disagree with what the editor shows.
- * Defaults stay in their stored shape, which is what condition comparands use.
- */
-export function withDeclaredDefaults(
-  fields: readonly MetaBoxField[],
-  bag: MetaFieldValues,
-): MetaFieldValues {
-  const next: Record<string, unknown> = { ...bag };
-  for (const field of fields) {
-    if (field.default === undefined || Object.hasOwn(next, field.key)) continue;
-    next[field.key] = field.default;
-  }
-  return next;
 }
 
 // The stored meta with the patch laid over it, as conditions will see it; a null
@@ -261,7 +241,7 @@ function overlayMetaPatch(
     if (value === null || value === undefined) delete next[key];
     else next[key] = value;
   }
-  return withDeclaredDefaults(target.fields, next);
+  return next;
 }
 
 /**
@@ -349,8 +329,7 @@ async function validateConditionDependents(
 ): Promise<MetaFieldError[]> {
   // Judged by what the edit stores, not by what it sent: a write to a hidden
   // field is dropped, so it switches nothing on. Each key is compared as it
-  // reads before and after, defaults included — a driver never stored already
-  // reads as its default, so sending that value switches nothing on either.
+  // reads before and after.
   const written: Record<string, unknown> = Object.fromEntries(outcome.upserts);
   for (const key of outcome.deletes) written[key] = null;
   const before = overlayMetaPatch(target, {});
@@ -371,8 +350,7 @@ async function validateConditionDependents(
     if (field.capability && !target.auth.can(field.capability)) continue;
     if (!conditionReadsAny(field, changed)) continue;
     if (!isFieldVisible(field, after)) continue;
-    // Visibility reads defaults, as a read does; the value is judged as stored,
-    // as the publish gate judges it — a default is shown, never saved.
+    // The value is judged as stored, as the publish gate judges it.
     const result = await runFieldPipeline(
       field,
       target.stored[field.key],
@@ -456,17 +434,12 @@ export async function sanitizeMetaForRpc(
  * as stored: the pipeline decodes input, and the rest of the bag is not input
  * (ADR 0003). Pass every key the caller is promoting to get the whole bag
  * settled.
- *
- * `scope` is every field of the box, not just the `fields` the caller can
- * write: a driver the publisher may not edit still decides what is visible.
  */
 export async function validateAndPromoteMetaBag(
   fields: readonly MetaBoxField[],
   bag: JsonObject,
   touched: ReadonlySet<string>,
-  scope: readonly MetaBoxField[] = fields,
 ): Promise<JsonObject> {
-  const shown = withDeclaredDefaults(scope, bag);
   const out: Record<string, JsonValue> = {};
   const owned = new Set<string>();
   const fieldErrors: MetaFieldError[] = [];
@@ -475,9 +448,8 @@ export async function validateAndPromoteMetaBag(
     // A hidden field is inactive, so it can't be required — but its stored
     // value is kept untouched (not validated, not dropped), or the value a
     // driver hides would be lost on publish and gone when the driver flips
-    // back. Judged against `shown`, not the raw bag: a driver storage lacks
-    // reads as its default, as it does in the editor.
-    if (!isFieldVisible(field, shown)) {
+    // back. Judged against the stored bag, as the editor and the page read it.
+    if (!isFieldVisible(field, bag)) {
       const stored = bag[field.key];
       if (stored !== undefined) out[field.key] = stored;
       continue;
@@ -1375,13 +1347,10 @@ function referenceCandidateIds(
 }
 
 /**
- * A scope's field list paired with a key lookup over it. Decode needs both —
- * the lookup for the keys storage holds, the list for the `.default()`s it
- * does not — and the reference pass needs the lookup, so the two travel
- * together rather than each rebuilding its own.
+ * A key lookup over a scope's field list, built once so decode and the
+ * reference pass share it rather than each rebuilding its own.
  */
 export interface MetaScope {
-  readonly fields: readonly MetaBoxField[];
   readonly findField: (key: string) => MetaBoxField | undefined;
 }
 
@@ -1392,7 +1361,7 @@ export function metaScope(fields: readonly MetaBoxField[]): MetaScope {
   for (const field of fields) {
     if (!byKey.has(field.key)) byKey.set(field.key, field);
   }
-  return { fields, findField: (key) => byKey.get(key) };
+  return { findField: (key) => byKey.get(key) };
 }
 
 /**
@@ -1421,11 +1390,8 @@ export function metaScopeCache(
  * that wrote it is no longer installed; we don't pretend to know its
  * shape.
  *
- * Takes the scope's whole field list rather than a lookup because a
- * `.default()` has to stand in where the bag has no key, which needs
- * the fields storage never mentioned. That is also why a row with no
- * saved meta at all still decodes to a bag rather than short-circuiting
- * to `{}`.
+ * Reads storage alone: a key storage lacks reads as absent, whatever the
+ * field's `.default()` (ADR 0026).
  */
 export function decodeMetaBag(
   scope: MetaScope,
@@ -1446,25 +1412,7 @@ function decodeBag(scope: MetaScope, raw: JsonObject): ResolvedMeta {
     const field = scope.findField(key);
     out[key] = field ? decodeFieldValue(field, value) : value;
   }
-  applyDefaults(scope.fields, out);
   return out;
-}
-
-/**
- * Absence is the only trigger: storage cannot hold `undefined`, so a stored
- * `null` is a value someone chose and keeps its place. The default travels
- * `decodeFieldValue` like a stored value would — it is declared in the
- * stored shape, so `.returns("date")` must still hand back a `Date`.
- */
-function applyDefaults(
-  fields: readonly MetaBoxField[],
-  bag: ResolvedMeta,
-): void {
-  for (const field of fields) {
-    if (field.default === undefined) continue;
-    if (Object.hasOwn(bag, field.key)) continue;
-    bag[field.key] = decodeFieldValue(field, field.default as JsonValue);
-  }
 }
 
 // Reference storage is plain ids, but bags written before the
@@ -1493,8 +1441,6 @@ function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
       isJsonObject(row) ? decodeBag(rowScope, row) : row,
     );
   }
-  // Only when the container is present — an absent one reads `undefined`,
-  // which is what its own read type says, so there is nothing to fill.
   if (isGroupField(field) && isJsonObject(value)) {
     return decodeBag(metaScope(field.fields), value);
   }
@@ -1754,7 +1700,7 @@ export async function writeSettledMeta(
 /**
  * Load + decode the full meta bag for a single row. A missing row
  * (deleted mid-flight) or one with no saved meta decodes from an empty
- * bag, so the result still carries every declared default.
+ * bag.
  */
 export async function loadMeta(
   ctx: AppContext,

@@ -1262,6 +1262,48 @@ describe("MetaBoxField — repeater dispatch", () => {
     expect(onChange).toHaveBeenLastCalledWith([{ label: null, href: null }]);
   });
 
+  test("Add row starts the row from the subfields' starting values", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({
+          subFields: [
+            {
+              key: "label",
+              label: "Label",
+              type: "string",
+              inputType: "text",
+              default: "Read more",
+            },
+            { key: "href", label: "URL", type: "string", inputType: "url" },
+            {
+              key: "seo",
+              label: "SEO",
+              type: "json",
+              inputType: "group",
+              subFields: [
+                {
+                  key: "rel",
+                  label: "Rel",
+                  type: "string",
+                  inputType: "text",
+                  default: "nofollow",
+                },
+              ],
+            },
+          ],
+        })}
+        initial={[]}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("meta-box-field-links-input-add"));
+    await screen.findByTestId("meta-box-field-label-input");
+    expect(onChange).toHaveBeenLastCalledWith([
+      { label: "Read more", href: null, seo: { rel: "nofollow" } },
+    ]);
+  });
+
   test("editing a row's subfield writes to the form's nested path", async () => {
     const onChange = vi.fn();
     renderWithI18n(

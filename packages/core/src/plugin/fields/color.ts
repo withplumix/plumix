@@ -63,13 +63,12 @@ export class ColorFieldBuilder<
   }
 
   /**
-   * Default for absent keys — a hex string `#xxxxxx` (or `#xxx`
-   * shorthand), applied at read decode (and seeded into the admin
-   * form). Narrows the read type to `string`; the stored shape stays
-   * optional.
+   * The value a new entity starts with — a hex string `#xxxxxx` (or
+   * `#xxx` shorthand), written into its meta when it is created; a cleared field stays empty. Leaves the read
+   * type as it is; `.required()` narrows it.
    */
-  default(value: string): ColorFieldBuilder<K, string, S> {
-    return this.#fork<string>({ default: value });
+  default(value: string): ColorFieldBuilder<K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `string`. */

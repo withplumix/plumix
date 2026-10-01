@@ -21,7 +21,7 @@ import {
 } from "@plumix/admin-ui/dialog";
 import { Pencil, PlusIcon, TriangleAlert } from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
-import { isFieldVisible } from "@plumix/core/manifest";
+import { isFieldVisible, startingMeta } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 import { useVisibleFields } from "./use-visible-fields.js";
@@ -150,11 +150,10 @@ export function RepeaterField({
 
   const handleAdd = (): void => {
     if (atMax) return;
+    // Every subfield gets a slot, starting from its starting value.
     const blank: Record<string, unknown> = {};
-    for (const sf of subFields) {
-      blank[sf.key] = sf.default ?? null;
-    }
-    commit([...rows, blank]);
+    for (const sf of subFields) blank[sf.key] = null;
+    commit([...rows, { ...blank, ...startingMeta(subFields) }]);
     // Open the editor on the row we just appended so authoring is one click.
     setEditingIndex(rows.length);
   };

@@ -9,6 +9,8 @@ import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
+import { startingMeta } from "../../plugin/fields/starting-meta.js";
+import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
 import { authenticateSession } from "../authenticator.js";
 import { provisionUser } from "../bootstrap.js";
@@ -143,6 +145,7 @@ async function findOrProvisionUser(
       email,
       name,
       emailVerified: true,
+      meta: startingMeta(listUserMetaFields(ctx.plugins)),
     });
     return user;
   } catch (error) {

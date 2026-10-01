@@ -23,7 +23,9 @@ describe("sessionAuthenticator", () => {
     const db = await createTestDb();
     const request = new Request("https://cms.example/admin");
 
-    const user = await sessionAuthenticator().authenticate(request, db);
+    const user = await sessionAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(user).toBeNull();
   });
 
@@ -33,7 +35,9 @@ describe("sessionAuthenticator", () => {
       headers: { cookie: `${SESSION_COOKIE_NAME}=not-a-real-token` },
     });
 
-    const user = await sessionAuthenticator().authenticate(request, db);
+    const user = await sessionAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(user).toBeNull();
   });
 
@@ -48,7 +52,9 @@ describe("sessionAuthenticator", () => {
       headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
     });
 
-    const result = await sessionAuthenticator().authenticate(request, db);
+    const result = await sessionAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result?.user.id).toBe(seeded.id);
     expect(result?.user.email).toBe("alice@example.com");
     expect(result?.credential).toBe("session");
@@ -60,7 +66,9 @@ describe("apiTokenAuthenticator", () => {
     const db = await createTestDb();
     const request = new Request("https://cms.example/admin");
 
-    const user = await apiTokenAuthenticator().authenticate(request, db);
+    const user = await apiTokenAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(user).toBeNull();
   });
 
@@ -70,7 +78,9 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: "Basic dXNlcjpwYXNz" },
     });
 
-    const user = await apiTokenAuthenticator().authenticate(request, db);
+    const user = await apiTokenAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(user).toBeNull();
   });
 
@@ -89,7 +99,9 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db);
+    const result = await apiTokenAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result?.user.id).toBe(seeded.id);
     // Default-minted token (no `scopes` arg) is unrestricted (null).
     expect(result).toMatchObject({
@@ -111,7 +123,9 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db);
+    const result = await apiTokenAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result).toMatchObject({
       credential: "api-token",
       tokenScopes: ["entry:post:read", "settings:manage"],
@@ -124,7 +138,9 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: "Bearer pl_pat_unknownsecret" },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db);
+    const result = await apiTokenAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result).toBeNull();
   });
 });
@@ -150,6 +166,7 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
     const result = await chainAuthenticators(first, second).authenticate(
       new Request("https://cms.example/"),
       db,
+      { startingUserMeta: {} },
     );
     expect(result?.user.id).toBe(userA.id);
     expect(secondCalled).toBe(false);
@@ -170,6 +187,7 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
     const result = await chainAuthenticators(empty, fallback).authenticate(
       new Request("https://cms.example/"),
       db,
+      { startingUserMeta: {} },
     );
     expect(result?.user.id).toBe(seeded.id);
   });
@@ -211,7 +229,9 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
     });
 
-    const result = await defaultAuthenticator().authenticate(request, db);
+    const result = await defaultAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result?.user.id).toBe(seeded.id);
   });
 
@@ -227,7 +247,9 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await defaultAuthenticator().authenticate(request, db);
+    const result = await defaultAuthenticator().authenticate(request, db, {
+      startingUserMeta: {},
+    });
     expect(result?.user.id).toBe(seeded.id);
   });
 });
@@ -256,12 +278,14 @@ describe("RequestAuthenticator interface", () => {
         headers: { "x-trusted-email": "trusted@enterprise.example" },
       }),
       db,
+      { startingUserMeta: {} },
     );
     expect(ok?.user.id).toBe(seeded.id);
 
     const empty = await headerAuth.authenticate(
       new Request("https://cms.example/"),
       db,
+      { startingUserMeta: {} },
     );
     expect(empty).toBeNull();
   });

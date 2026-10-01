@@ -3,7 +3,10 @@ import { and, count, eq, inArray, sql } from "plumix/db";
 import {
   authenticated,
   base,
+  listEntryMetaFields,
+  listTermMetaFields,
   requireCapability,
+  startingMeta,
   termCapability,
 } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
@@ -369,6 +372,11 @@ export function createMenuRouter(
       // `menu_item` rows, slugs must be unique. Generate per-save with
       // termId + index suffix to avoid collisions across menus.
       const slugBase = `mi-t${term.id}-${Date.now()}-${cryptoRandom()}`;
+      // A new item starts from the fields registered on `menu_item` (ADR
+      // 0026); its own meta lands on top.
+      const starting = startingMeta(
+        listEntryMetaFields(context.plugins, MENU_ITEM_ENTRY_TYPE),
+      );
 
       const itemIds: number[] = [];
       const added: number[] = [];
@@ -414,7 +422,7 @@ export function createMenuRouter(
               status: "published",
               authorId,
               sortOrder: item.sortOrder,
-              meta: metas[i],
+              meta: { ...starting, ...metas[i] },
             })
             .returning({ id: entries.id });
           if (!inserted) {
@@ -601,6 +609,11 @@ export function createMenuRouter(
             taxonomy: MENU_TAXONOMY,
             slug,
             name: input.name,
+            // A new menu starts from the fields registered on the `menu`
+            // taxonomy (ADR 0026).
+            meta: startingMeta(
+              listTermMetaFields(context.plugins, MENU_TAXONOMY),
+            ),
           })
           .returning({ id: terms.id, version: terms.version });
         if (!row) {

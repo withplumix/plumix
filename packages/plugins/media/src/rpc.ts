@@ -5,8 +5,10 @@ import {
   assertCanEditEntry,
   authenticated,
   base,
+  listEntryMetaFields,
   requireCapability,
   resolveCapability,
+  startingMeta,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { withBasePath } from "plumix/support";
@@ -162,7 +164,12 @@ export function createMediaRouter(options: MediaRpcOptions) {
             slug: id,
             status: "draft",
             authorId: context.user.id,
+            // A new media entry starts from the fields registered on
+            // `media` (ADR 0026); the file's own meta lands on top.
             meta: {
+              ...startingMeta(
+                listEntryMetaFields(context.plugins, MEDIA_ENTRY_TYPE),
+              ),
               mime: normalizedMime,
               size: input.size,
               originalName: input.filename,

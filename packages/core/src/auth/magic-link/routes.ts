@@ -4,6 +4,8 @@ import type { AppContext } from "../../context/app-context.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { MagicLinkErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
+import { startingMeta } from "../../plugin/fields/starting-meta.js";
+import { listUserMetaFields } from "../../plugin/manifest.js";
 import {
   jsonResponse,
   loginErrorRedirect,
@@ -136,6 +138,7 @@ export async function handleMagicLinkVerify(
     const { user, created } = await verifyMagicLink(ctx.db, token, {
       bootstrapAllowed: ctx.bootstrapAllowed,
       selfSignup: app.config.auth.selfSignup,
+      meta: startingMeta(listUserMetaFields(ctx.plugins)),
     });
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
     await announceSignIn(ctx, user, {

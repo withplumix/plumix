@@ -192,7 +192,7 @@ ctx.registerEntryMetaBox("extras", {
 
 Default-deny, the way [`.showInApi()`](/fields/builders/) is. Meta holds plugin bookkeeping and internal keys at least as often as it holds prose, and indexing all of it is the mistake ElasticPress spent a decade on before reversing it in 5.0 — the same failure this plugin already avoids for entry content.
 
-`.searchable()` is honored on the text-shaped inputs: `text`, `textarea`, `email` and `url`, plus `richtext`, whose stored document is flattened to its prose. The chain compiles on a `password` field and on a repeater row or group member and is ignored on all three — nothing else carries text a visitor would search for. A field's `.default()` is not indexed either, since the default is not in the bag and would put the same string in every document.
+`.searchable()` is honored on the text-shaped inputs: `text`, `textarea`, `email` and `url`, plus `richtext`, whose stored document is flattened to its prose. The chain compiles on a `password` field and on a repeater row or group member and is ignored on all three — nothing else carries text a visitor would search for. A field's `.default()` is indexed like any other stored value, since core writes it into the entry when the entry is created.
 
 Marking an existing field searchable needs nothing else. The extractor version hashes the field roster beside the block roster, so every affected document is stale from that moment and the scheduled run re-projects it — no version to bump and no entry to re-save.
 

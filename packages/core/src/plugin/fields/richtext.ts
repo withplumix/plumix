@@ -60,8 +60,8 @@ export class RichtextFieldBuilder<
     return this.#fork({ description });
   }
 
-  /** Default for absent keys — a ProseMirror doc JSON value, applied
-   * at read decode (and seeded into the admin form). */
+  /** The value a new entity starts with — a ProseMirror doc JSON value,
+   * written into its meta when it is created; a cleared field stays empty. */
   default(value: unknown): RichtextFieldBuilder<K> {
     return this.#fork({ default: value });
   }

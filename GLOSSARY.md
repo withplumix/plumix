@@ -123,6 +123,10 @@ A composite field holding one keyed object of members, stored nested under the g
 **Repeater**:
 A composite field holding a list of structured rows that share one fixed subfield schema.
 
+**Field default**:
+The value a meta-box field starts with on a new entity. It is written into the entity's meta when the entity is created, so from then on storage alone holds the field's value. It is not a fallback: once an author clears the field, the field stays empty. Whether a field may be empty is decided by _required_, not by having a default.
+_Avoid_: fallback value
+
 **Image role**:
 A named purpose an entry, term or user scope assigns to one of its media reference fields, so a reader asks for "the entry's featured image" rather than for a meta key. Core ships `featured` and `ogImage`; a plugin or theme declares any other. Each role declares whether a scope may carry more than one field in it. A role field may sit inside a group, never inside a repeater: a role names the entry's image, not a row's.
 _Avoid_: role (bare — that is the user tier), featured field (a featured field is one image role, not the concept)

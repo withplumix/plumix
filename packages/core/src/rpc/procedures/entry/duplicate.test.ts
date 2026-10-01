@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { UserRole } from "../../../db/schema/users.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -180,5 +181,30 @@ describe("entry.duplicate", () => {
     await expect(
       h.client.entry.duplicate({ id: revision.id }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  // A copy is not a new entity in the ADR 0026 sense: it carries the
+  // source's meta as stored, so a key the source lacks stays absent.
+  test("the copy applies no field defaults", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("box", {
+      id: "box",
+      label: "Box",
+      entryTypes: ["post"],
+      fields: [text("tone").default("warm").build()],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const source = await h.factory.published.create({
+      authorId: h.user.id,
+      meta: { other: "kept" },
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    const persisted = await h.db.query.entries.findFirst({
+      where: eq(entries.id, copy.id),
+    });
+    expect(persisted?.meta).toEqual({ other: "kept" });
   });
 });

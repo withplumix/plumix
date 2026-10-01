@@ -25,7 +25,7 @@ describe("verifyMagicLink", () => {
         .create({ userId: user.id, email: "alice@example.com" })
     ).token;
 
-    const result = await verifyMagicLink(db, token);
+    const result = await verifyMagicLink(db, token, { meta: {} });
     expect(result.user.id).toBe(user.id);
     expect(result.created).toBe(false);
 
@@ -37,7 +37,7 @@ describe("verifyMagicLink", () => {
   test("rejects an unknown token with token_invalid", async () => {
     const db = await createTestDb();
     await expect(
-      verifyMagicLink(db, "definitely-not-a-token"),
+      verifyMagicLink(db, "definitely-not-a-token", { meta: {} }),
     ).rejects.toMatchObject({ code: "token_invalid" });
   });
 
@@ -55,7 +55,9 @@ describe("verifyMagicLink", () => {
       })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "token_expired",
     });
 
@@ -76,7 +78,9 @@ describe("verifyMagicLink", () => {
         .create({ userId: user.id, email: "x@y.z" })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "account_disabled",
     });
   });
@@ -95,7 +99,7 @@ describe("verifyMagicLink", () => {
         role: "subscriber",
       });
 
-    await expect(verifyMagicLink(db, raw)).rejects.toMatchObject({
+    await expect(verifyMagicLink(db, raw, { meta: {} })).rejects.toMatchObject({
       code: "token_invalid",
     });
 
@@ -108,7 +112,7 @@ describe("verifyMagicLink", () => {
 
   test("throws MagicLinkError instances for all reject paths", async () => {
     const db = await createTestDb();
-    await expect(verifyMagicLink(db, "x")).rejects.toBeInstanceOf(
+    await expect(verifyMagicLink(db, "x", { meta: {} })).rejects.toBeInstanceOf(
       MagicLinkError,
     );
   });
@@ -129,7 +133,7 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@example.com" })
     ).token;
 
-    const result = await verifyMagicLink(db, token);
+    const result = await verifyMagicLink(db, token, { meta: {} });
     expect(result.user.email).toBe("newcomer@example.com");
     expect(result.user.role).toBe("author");
     expect(result.user.emailVerifiedAt).not.toBeNull();
@@ -157,7 +161,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@example.com" })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "domain_not_allowed",
     });
     // No user was provisioned.
@@ -179,6 +185,7 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     ).token;
 
     const result = await verifyMagicLink(db, token, {
+      meta: {},
       selfSignup: { defaultRole: "subscriber" },
     });
     expect(result.user.email).toBe("newcomer@anywhere.test");
@@ -203,6 +210,7 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     ).token;
 
     const result = await verifyMagicLink(db, token, {
+      meta: {},
       selfSignup: { defaultRole: "subscriber" },
     });
     expect(result.user.role).toBe("subscriber");
@@ -217,7 +225,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@anywhere.test" })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "domain_not_allowed",
     });
   });
@@ -234,7 +244,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     // and verify, or the row never existed (defensive: token was hand-
     // rolled).
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "domain_not_allowed",
     });
   });
@@ -255,7 +267,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@example.com" })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "registration_closed",
     });
   });
@@ -274,6 +288,7 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     ).token;
 
     const result = await verifyMagicLink(db, token, {
+      meta: {},
       bootstrapAllowed: true,
     });
     // provisionUser auto-promotes the very first user to admin.
@@ -299,7 +314,7 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@example.com" })
     ).token;
 
-    const result = await verifyMagicLink(db, token);
+    const result = await verifyMagicLink(db, token, { meta: {} });
     expect(result.user.id).toBe(raced.id);
     expect(result.user.role).toBe("subscriber");
     // The race-retry path links an existing user, not a fresh provision.
@@ -320,7 +335,9 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
         .create({ userId: null, email: "newcomer@example.com" })
     ).token;
 
-    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+    await expect(
+      verifyMagicLink(db, token, { meta: {} }),
+    ).rejects.toMatchObject({
       code: "account_disabled",
     });
   });

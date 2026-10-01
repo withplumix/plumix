@@ -4,6 +4,7 @@ import type { PluginRegistry } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { and, eq } from "plumix/db";
+import { text } from "plumix/fields";
 import {
   createPluginRegistry,
   definePlugin,
@@ -470,6 +471,40 @@ describe("menu RPC", () => {
         .where(eq(terms.id, m.id))
         .limit(1);
       expect(term?.version).toBe(1);
+    });
+
+    // A new menu item is a new entry, so it starts from the fields a plugin
+    // registered on `menu_item` (ADR 0026); the item's own meta lands on top.
+    test("a new item stores the menu-item fields' defaults under its own meta", async () => {
+      const h = await buildHarness("editor", {}, [
+        definePlugin("menu-extras", (ctx) => {
+          ctx.registerEntryMetaBox("menu-extras", {
+            label: "Extras",
+            entryTypes: ["menu_item"],
+            fields: [text("cssClass").default("nav"), text("url")],
+          });
+        }),
+      ]);
+      const m = await seedMenu(h.db, h.factories, "main");
+
+      const result = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: "Home",
+            meta: { kind: "custom", url: "/" },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      const [row] = await h.db
+        .select({ meta: entries.meta })
+        .from(entries)
+        .where(eq(entries.id, result.itemIds[0] ?? -1));
+      expect(row?.meta).toEqual({ cssClass: "nav", kind: "custom", url: "/" });
     });
 
     test("concurrency: stale version is rejected", async () => {
@@ -1171,6 +1206,28 @@ describe("menu RPC", () => {
   });
 
   describe("menu.create", () => {
+    // A new menu is a new term, so it starts from the fields a plugin
+    // registered on the `menu` taxonomy (ADR 0026).
+    test("a new menu stores the menu taxonomy fields' defaults", async () => {
+      const h = await buildHarness("editor", {}, [
+        definePlugin("menu-term-extras", (ctx) => {
+          ctx.registerTermMetaBox("menu-term-extras", {
+            label: "Extras",
+            termTaxonomies: ["menu"],
+            fields: [text("ariaLabel").default("Site navigation")],
+          });
+        }),
+      ]);
+
+      const result = await h.client.menu.create({ name: "Header Nav" });
+
+      const [row] = await h.db
+        .select({ meta: terms.meta })
+        .from(terms)
+        .where(eq(terms.id, result.termId));
+      expect(row?.meta).toEqual({ ariaLabel: "Site navigation" });
+    });
+
     test("mints a new menu term with a slug derived from the name", async () => {
       const h = await buildHarness();
 

@@ -1,5 +1,6 @@
 import type { Db } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
+import type { JsonObject } from "../../json.js";
 import type { PlumixSelfSignupConfig } from "../config.js";
 import type { OAuthProfile } from "../contract/oauth.js";
 import { and, eq, isUniqueConstraintError } from "../../db/index.js";
@@ -24,6 +25,8 @@ interface ResolveOAuthUserInput {
    * allowlist and grants `defaultRole`; absent keeps domain-gated signup.
    */
   readonly selfSignup?: PlumixSelfSignupConfig;
+  /** The meta a user this callback signs up starts with — see `resolveExternalIdentity`. */
+  readonly meta: JsonObject;
 }
 
 interface ResolvedOAuthUser {
@@ -87,6 +90,7 @@ export async function resolveOAuthUser(
       // `oauth_accounts` link row is written below.
       allowedDomainsGate: input.selfSignup === undefined,
       defaultRole: input.selfSignup?.defaultRole,
+      meta: input.meta,
     });
   } catch (error) {
     if (error instanceof ExternalIdentityError) {

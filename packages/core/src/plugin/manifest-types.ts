@@ -2,7 +2,7 @@
 // precompiled admin and admin-editor read: the `PlumixManifest` payload and
 // its `*ManifestEntry` types, the core nav-group roster, the `<script>` id the
 // payload travels under, and the pure helpers the admin shares with the build
-// (`emptyManifest`, `byPriorityThen`, `seedFromMetaBoxes`,
+// (`emptyManifest`, `byPriorityThen`, `seedFromMetaBoxes`, `startingMeta`,
 // `configuredSlotsOf`). Kept free of registry projection and HTML handling so
 // neither ships to the admin.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
@@ -37,6 +37,9 @@ import {
   spellTermCapability,
 } from "../access/contract/capability.js";
 import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
+
+export { startingMeta } from "./fields/starting-meta.js";
+export type { StartingMetaField } from "./fields/starting-meta.js";
 
 // Wire shape intentionally equals DashboardWidgetOptions (minus
 // registeredBy) — unlike e.g. FieldTypeManifestEntry, a widget's options
@@ -526,17 +529,15 @@ export function byPriorityThen<T extends { readonly priority?: number }>(
 }
 
 /**
- * Seed per-field values from a server meta bag, falling back to each
- * field's registered `default`. Shared by every admin form that owns
- * meta state (entry editor, term edit route, user edit route, settings
- * group card) — one shape, one behaviour.
+ * Seed per-field values from a server meta bag: the stored value of each
+ * registered key, and nothing for a key storage lacks, whatever the field's
+ * `.default()` (ADR 0026). Shared by every admin form that owns meta state
+ * (term edit route, user edit route, settings group card) — one shape, one
+ * behaviour.
  */
 export function seedFromMetaBoxes(
   boxes: readonly {
-    readonly fields: readonly {
-      readonly key: string;
-      readonly default?: unknown;
-    }[];
+    readonly fields: readonly { readonly key: string }[];
   }[],
   stored: ResolvedMeta | null | undefined,
 ): ResolvedMeta {
@@ -544,7 +545,7 @@ export function seedFromMetaBoxes(
   const seed: Record<string, unknown> = {};
   for (const box of boxes) {
     for (const field of box.fields) {
-      seed[field.key] = bag[field.key] ?? field.default;
+      seed[field.key] = bag[field.key];
     }
   }
   return seed;

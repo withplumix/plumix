@@ -7,7 +7,6 @@ import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
 import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
@@ -55,13 +54,10 @@ export function PlainFormRouteInner({
   );
   const queryClient = useQueryClient();
   const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
-  // Defaults for display: the form and diff baseline share this value — see
-  // `seedEntryMetaForm`.
-  const seededMeta = seedEntryMetaForm(metaBoxes, entry.meta);
   const initialSnapshot: PlainFormSnapshot = {
     title: entry.title,
     status: entry.status,
-    meta: seededMeta,
+    meta: entry.meta,
   };
   const valuesRef = useRef<PlainFormSnapshot>(initialSnapshot);
   const [isSaving, setIsSaving] = useState(false);
@@ -139,7 +135,7 @@ export function PlainFormRouteInner({
     content: entry.content,
     excerpt: entry.excerpt ?? "",
     status: entry.status,
-    meta: seededMeta,
+    meta: entry.meta,
     terms: {},
     parentId: entry.parentId,
   };

@@ -5,6 +5,8 @@ import {
 } from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
+import { listUserMetaFields } from "../../../plugin/manifest.js";
 import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../../../users/slug.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -41,6 +43,8 @@ export const invite = base
             slug,
             name: filtered.name ?? null,
             role: filtered.role,
+            // A new user starts from the user fields' defaults (ADR 0026).
+            meta: startingMeta(listUserMetaFields(context.plugins)),
           })
           .returning();
         break;

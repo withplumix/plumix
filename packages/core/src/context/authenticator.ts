@@ -1,4 +1,5 @@
 import type { User } from "../db/schema/users.js";
+import type { JsonObject } from "../json.js";
 import type { Db } from "./app-context.js";
 
 // Declared beside the context rather than in `auth/contract/`: it names `Db`,
@@ -37,6 +38,14 @@ export type AuthResult =
     };
 
 /**
+ * What an authenticator is handed beside the request and database. One that
+ * provisions a user stores `startingUserMeta` as the new user's meta (ADR 0026).
+ */
+export interface AuthenticateScope {
+  readonly startingUserMeta: JsonObject;
+}
+
+/**
  * Decides who the user is on a given request — a pluggable authenticator.
  *
  * Default: read the session cookie, look up the row. Override at config
@@ -60,7 +69,11 @@ export type AuthResult =
  *     set cookies. Login flows do that. An authenticator only reads.
  */
 export interface RequestAuthenticator {
-  authenticate(request: Request, db: Db): Promise<AuthResult | null>;
+  authenticate(
+    request: Request,
+    db: Db,
+    scope: AuthenticateScope,
+  ): Promise<AuthResult | null>;
   /**
    * Optional. Does this request carry a credential this authenticator would
    * resolve to a browser session? Public renders consult it to skip

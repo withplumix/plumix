@@ -1,5 +1,6 @@
 import type { Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
+import type { JsonObject } from "../json.js";
 import { eq, isUniqueConstraintError } from "../db/index.js";
 import { allowedDomains } from "../db/schema/allowed_domains.js";
 import { users } from "../db/schema/users.js";
@@ -89,6 +90,11 @@ export interface ExternalIdentityInput {
    * the same mechanism (e.g. CF Access JWT mints the first admin).
    */
   readonly bootstrapAllowed?: boolean;
+  /**
+   * The meta a provisioned user starts with — `startingMeta` of the
+   * registered user fields (ADR 0026). Ignored for an existing user.
+   */
+  readonly meta: JsonObject;
 }
 
 export interface ResolvedExternalUser {
@@ -191,6 +197,7 @@ async function resolveOnce(
     avatarUrl: input.avatarUrl,
     defaultRole: role,
     emailVerified: true,
+    meta: input.meta,
   });
   return { user, created: true };
 }

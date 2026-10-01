@@ -1479,12 +1479,18 @@ describe("dispatcher — form-post routes (#2018)", () => {
         const ambient = getContext();
         return Response.json({
           userId:
-            (await appCtx.authenticator.authenticate(request, appCtx.db))?.user
-              .id ?? null,
+            (
+              await appCtx.authenticator.authenticate(request, appCtx.db, {
+                startingUserMeta: {},
+              })
+            )?.user.id ?? null,
           hasSession: requestHasSession(appCtx.authenticator, request),
           ambientUserId:
-            (await ambient.authenticator.authenticate(request, ambient.db))
-              ?.user.id ?? null,
+            (
+              await ambient.authenticator.authenticate(request, ambient.db, {
+                startingUserMeta: {},
+              })
+            )?.user.id ?? null,
         });
       },
     });

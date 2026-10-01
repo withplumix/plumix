@@ -4,11 +4,14 @@ import type {
   RequestAuthenticator,
 } from "../context/authenticator.js";
 import type { SessionPolicy } from "./contract/sessions.js";
+import { startingMeta } from "../plugin/fields/starting-meta.js";
+import { listUserMetaFields } from "../plugin/manifest.js";
 import { validateApiToken } from "./api-tokens.js";
 import { readSessionCookie } from "./cookies.js";
 import { DEFAULT_SESSION_POLICY, validateSession } from "./sessions.js";
 
 export type {
+  AuthenticateScope,
   AuthResult,
   RequestAuthenticator,
 } from "../context/authenticator.js";
@@ -53,7 +56,9 @@ export function authenticateTraced(
   authenticator: RequestAuthenticator,
 ): Promise<AuthResult | null> {
   return ctx.telemetry.span("auth", async (s) => {
-    const result = await authenticator.authenticate(ctx.request, ctx.db);
+    const result = await authenticator.authenticate(ctx.request, ctx.db, {
+      startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
+    });
     s.set("auth.authenticated", result !== null);
     if (result) s.set("auth.user.id", result.user.id);
     return result;
@@ -148,9 +153,9 @@ export function chainAuthenticators(
   ...authenticators: readonly RequestAuthenticator[]
 ): RequestAuthenticator {
   return {
-    async authenticate(request, db) {
+    async authenticate(request, db, scope) {
       for (const auth of authenticators) {
-        const result = await auth.authenticate(request, db);
+        const result = await auth.authenticate(request, db, scope);
         if (result) return result;
       }
       return null;
