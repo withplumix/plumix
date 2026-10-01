@@ -196,17 +196,22 @@ async function canonicalHeadersOf(
 ): Promise<string | undefined> {
   const lines: string[] = [];
   for (const name of signedHeaders.split(";")) {
-    const value =
-      name === "host"
-        ? url.host
-        : name === "content-length"
-          ? await contentLengthOf(request)
-          : request.headers.get(name);
+    const value = await signedHeaderValue(request, url, name);
     if (value === null) return undefined;
     // AWS: trim, then fold runs of whitespace inside the value to one space.
     lines.push(`${name}:${value.trim().split(/\s+/).join(" ")}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+async function signedHeaderValue(
+  request: Request,
+  url: URL,
+  name: string,
+): Promise<string | null> {
+  if (name === "host") return url.host;
+  if (name === "content-length") return contentLengthOf(request);
+  return request.headers.get(name);
 }
 
 // `fetch` puts `Content-Length` on the wire from the body rather than on the

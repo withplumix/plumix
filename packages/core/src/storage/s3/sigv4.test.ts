@@ -90,8 +90,6 @@ describe("presignPutUrl", () => {
     ).rejects.toThrow(/expiresIn must be in/);
   });
 
-  // `undefined` stands for a caller still on the old contract, which sent
-  // `maxBytes` and no length.
   test.each<[string, number]>([
     ["undefined", undefined as unknown as number],
     ["negative", -1],
@@ -148,19 +146,20 @@ describe("presignPutUrl against a server recomputing the signature", () => {
     expect(await verifySigV4(request, VERIFIER)).toMatchObject({ ok: false });
   });
 
-  test("a body of a different length than the one signed is rejected", async () => {
+  test.each([
+    ["one byte longer", `${BODY}!`],
+    ["one byte shorter", BODY.slice(1)],
+  ])("a body %s than the one signed is rejected", async (_, body) => {
     const presigned = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
-    for (const body of [`${BODY}!`, BODY.slice(1)]) {
-      const request = new Request(presigned.url, {
-        method: "PUT",
-        headers: presigned.headers,
-        body,
-      });
-      expect(await verifySigV4(request, VERIFIER)).toEqual({
-        ok: false,
-        reason: "signature mismatch",
-      });
-    }
+    const request = new Request(presigned.url, {
+      method: "PUT",
+      headers: presigned.headers,
+      body,
+    });
+    expect(await verifySigV4(request, VERIFIER)).toEqual({
+      ok: false,
+      reason: "signature mismatch",
+    });
   });
 
   test("a session token rides along in the query and is covered by the signature", async () => {
