@@ -45,6 +45,10 @@ harness runs every gate after this phase. Commit your changes as one commit, by
 the rules in AGENTS.md's "Commits, branches, PRs". Commit nothing if the code is
 already right.
 
+Commit on the branch you are on. Never create, switch or rename a branch, even when the
+ticket names one: the harness owns this branch, and a commit anywhere else never reaches the
+pull request.
+
 Never run `git worktree` — add, remove or prune. The registry you would write to
 is the host's, shared with every other checkout on that machine, and your own
 worktree's path does not resolve from in here, so prune reads every one of them
