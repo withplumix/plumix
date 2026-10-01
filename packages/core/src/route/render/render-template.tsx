@@ -14,17 +14,17 @@ import type {
 } from "../../blocks/index.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { SettingsBag } from "../../db/schema/settings.js";
-import type { TransformOpts } from "../../runtime/contract/slots.js";
-import type { LoadedTemplateDeps } from "../../template-deps.js";
-import type { Template } from "../../template.js";
 import type {
   DocumentAttrs,
   DocumentLink,
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
-  TemplateData,
-} from "../../theme.js";
+} from "../../document-manifest.js";
+import type { TransformOpts } from "../../runtime/contract/slots.js";
+import type { LoadedTemplateDeps } from "../../template-deps.js";
+import type { Template } from "../../template.js";
+import type { TemplateData } from "../../theme.js";
 import type { ErrorData } from "../contract/resolved-entry.js";
 import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";

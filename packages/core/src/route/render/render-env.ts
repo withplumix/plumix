@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 
 import type { HtmlAllowlist } from "../../blocks/index.js";
 import type { AppContext } from "../../context/app-context.js";
+import type { DocumentManifest } from "../../document-manifest.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
-import type { DocumentManifest, ThemeDescriptor } from "../../theme.js";
+import type { ThemeDescriptor } from "../../theme.js";
 import type { AssetManifest } from "./asset-manifest.js";
 import type { BlockCatalogs } from "./block-catalog.js";
 

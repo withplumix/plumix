@@ -1,6 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
+import type { DocumentManifest } from "../document-manifest.js";
 import type { PublicRouteTableFor } from "../route/contract/public-route-table.js";
-import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";
 import { matchPublicRoute } from "../route/contract/public-route-table.js";
 

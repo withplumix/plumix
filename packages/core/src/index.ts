@@ -503,6 +503,8 @@ export type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+} from "./document-manifest.js";
+export type {
   GenericTier,
   TargetMatcher,
   TemplateComponent,

@@ -58,6 +58,10 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "non-empty": client("foundation"),
   "return-url": client("foundation"),
   "read-cookie": client("foundation"),
+  "document-manifest": client("foundation"),
+  "document-merge": client("foundation"),
+  "telemetry-snapshot": client("foundation"),
+  "telemetry-otel": client("foundation"),
 
   "plugin/": client("contracts"),
   "hooks/": client("contracts"),
@@ -71,10 +75,6 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   // The RPC error map: capabilities throw through its constructors.
   "rpc-errors": client("contracts"),
   support: client("contracts"),
-  // Built on the contracts they name: the theme's document manifest, and the
-  // telemetry consumer.
-  "document-merge": client("contracts"),
-  "telemetry-otel": client("contracts"),
   "db/schema/": server("contracts"),
   "*/contract/": client("contracts"),
 

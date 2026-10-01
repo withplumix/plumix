@@ -14,6 +14,7 @@ import type {
 } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
+import type { DocumentManifest } from "../document-manifest.js";
 import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
@@ -29,7 +30,6 @@ import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { RenderEnv } from "../route/render/render-env.js";
-import type { DocumentManifest } from "../theme.js";
 import type { EnvInput } from "./contract/env-input.js";
 import type { SchemaModule } from "./contract/slots.js";
 import type { DevRuntime } from "./dev.js";
