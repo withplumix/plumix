@@ -80,11 +80,11 @@ export class NumberFieldBuilder<
     return this.#fork({ append });
   }
 
-  /** Default for absent keys, applied at read decode (and seeded into
-   * the admin form) — narrows the read type to `number`; the stored
-   * shape stays optional. */
-  default(value: number): NumberFieldBuilder<K, number, S> {
-    return this.#fork<number>({ default: value });
+  /** The value a new entity starts with — written into its meta when it
+   * is created, not filled in on read, so a cleared field stays empty.
+   * Leaves the read type as it is; `.required()` narrows it. */
+  default(value: number): NumberFieldBuilder<K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `number`. */

@@ -1,5 +1,7 @@
 import type { Db } from "plumix";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { text } from "plumix/fields";
+import { createPluginRegistry } from "plumix/plugin";
 import { createTestDb } from "plumix/test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -222,6 +224,37 @@ describe("cfAccess.authenticate — full crypto path", () => {
     // bootstrapAllowed=true on a zero-user system → first user is admin.
     expect(result?.user.role).toBe("admin");
     expect(result?.credential).toBe("session");
+  });
+
+  // A user CF Access provisions is a new entity, so it starts from the user
+  // fields' defaults (ADR 0026), read off the registry core hands over.
+  test("a user it provisions stores the user fields' defaults", async () => {
+    const db = await createTestDb();
+    const plugins = createPluginRegistry();
+    plugins.userMetaBoxes.set("profile", {
+      id: "profile",
+      label: "Profile",
+      fields: [text("pronouns").default("they/them").build()],
+      registeredBy: "test",
+    });
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+    const jwt = await mintJwt(material.privateKey, material.kid, {
+      email: "new@enterprise.example",
+    });
+
+    const result = await guard.authenticate(
+      new Request("https://cms.example/", {
+        headers: { "cf-access-jwt-assertion": jwt },
+      }),
+      db,
+      { plugins },
+    );
+    expect(result?.user.meta).toEqual({ pronouns: "they/them" });
   });
 
   test("returns null when bootstrap is disabled and zero users exist", async () => {

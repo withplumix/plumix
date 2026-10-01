@@ -181,7 +181,7 @@ describe("link registers and round-trips the manifest", () => {
 });
 
 describe("link phantom value typing", () => {
-  test("unadorned reads `LinkValue | undefined`; .required()/.default() narrow", () => {
+  test("unadorned reads `LinkValue | undefined`; .required() narrows, .default() does not", () => {
     const _unadorned = link("cta");
     expectTypeOf<(typeof _unadorned)["_key"]>().toEqualTypeOf<"cta">();
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
@@ -192,7 +192,9 @@ describe("link phantom value typing", () => {
     expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<LinkValue>();
 
     const _defaulted = link("cta").default({ url: "/pricing" });
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<LinkValue>();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      LinkValue | undefined
+    >();
 
     // Narrowing survives later chained calls.
     const _chained = link("cta").required().span(6).label("CTA");
@@ -205,7 +207,7 @@ describe("link phantom value typing", () => {
       LinkValue | undefined
     >();
 
-    // `.default()` applies on read, not on write — storage stays optional.
+    // `.default()` seeds a new entity, so storage stays optional.
     const _defaulted = link("cta").default({ url: "/pricing" });
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       LinkValue | undefined

@@ -1,7 +1,8 @@
 import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
-import { settings } from "../../../db/schema/settings.js";
+import { settings, SETTINGS_CREATED_KEY } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
@@ -14,13 +15,14 @@ const CAPABILITY = "settings:manage";
 // left by uninstalled plugins while still bounding response size.
 const MAX_GROUP_ROWS_PER_READ = 500;
 
-// Returns the full key → value bag for one group, with each registered
-// field's `.default()` standing in where storage has no key — `SettingsOf`
-// narrows a defaulted read the same way the entity meta helpers do.
+// Returns the full key → value bag for one group. A group counts as created on
+// its first save (ADR 0026), which writes the `__plumix_created` marker. Until
+// then its fields' starting values stand in where storage has no key, so the
+// form opens on them and the first save writes them. After it, storage alone
+// is the truth and a cleared setting stays absent.
 //
-// Settings have no decode pass of their own, so unlike entity meta this is a
-// fill and nothing more: a `.returns("date")` settings field still reads back
-// its stored ISO string, and a reference its stored id.
+// Settings have no decode pass of their own: a `.returns("date")` settings
+// field reads back its stored ISO string, and a reference its stored id.
 export const get = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
@@ -40,14 +42,20 @@ export const get = base
       .where(eq(settings.group, filtered.group))
       .limit(MAX_GROUP_ROWS_PER_READ);
 
-    const bag: Record<string, JsonValue> = {};
-    for (const row of rows) bag[row.key] = row.value;
-    for (const field of context.plugins.settingsGroups.get(filtered.group)
-      ?.fields ?? []) {
-      if (field.default === undefined) continue;
-      if (Object.hasOwn(bag, field.key)) continue;
-      bag[field.key] = field.default as JsonValue;
+    const stored: Record<string, JsonValue> = {};
+    let created = false;
+    for (const row of rows) {
+      if (row.key === SETTINGS_CREATED_KEY) created = true;
+      else stored[row.key] = row.value;
     }
+    const bag = created
+      ? stored
+      : {
+          ...startingMeta(
+            context.plugins.settingsGroups.get(filtered.group)?.fields ?? [],
+          ),
+          ...stored,
+        };
 
     return context.hooks.applyFilter(
       "rpc:settings.get:output",

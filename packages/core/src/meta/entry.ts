@@ -176,12 +176,11 @@ export async function sanitizePromotedEntryMeta(
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
   touched: ReadonlySet<string>,
 ): Promise<JsonObject> {
-  const all = listEntryMetaFields(ctx.plugins, entryType);
-  const fields = all.filter(
+  const fields = listEntryMetaFields(ctx.plugins, entryType).filter(
     (field) => !field.capability || ctx.auth.can(field.capability),
   );
   try {
-    return await validateAndPromoteMetaBag(fields, bag, touched, all);
+    return await validateAndPromoteMetaBag(fields, bag, touched);
   } catch (error) {
     if (error instanceof MetaValidationError) {
       throw metaValidationConflict(error, errors);

@@ -1,4 +1,5 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
+import type { JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import {
   entryCapabilityNamespace,
@@ -19,6 +20,8 @@ import {
   sanitizeAndValidateEntryMeta,
   writeEntryMeta,
 } from "../../../meta/entry.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
+import { listEntryMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -90,6 +93,12 @@ export const create = base
       errors,
     );
 
+    // A new entry starts from its fields' defaults (ADR 0026); the meta the
+    // caller sends lands on top of them.
+    const starting = startingMeta(
+      listEntryMetaFields(context.plugins, filtered.type),
+    );
+
     // Validate meta up-front so a bad key fails before the entry insert —
     // keeps the DB clean when the client sends a typo in a meta key.
     // Creating a draft is lenient (business rules deferred to publish);
@@ -98,7 +107,7 @@ export const create = base
       context,
       filtered.type,
       filtered.meta,
-      {},
+      starting,
       errors,
       requiresPublishCap ? "strict" : "draft",
     );
@@ -107,10 +116,16 @@ export const create = base
     // only the keys it was sent and the fields they switch on, and a required
     // field it omits is missing.
     if (requiresPublishCap) {
+      const resultingMeta: Record<string, JsonValue> = { ...starting };
+      if (metaPatch) {
+        for (const [key, value] of metaPatch.upserts)
+          resultingMeta[key] = value;
+        for (const key of metaPatch.deletes) delete resultingMeta[key];
+      }
       await assertPromotedEntryMetaValid(
         context,
         filtered.type,
-        Object.fromEntries(metaPatch?.upserts ?? []),
+        resultingMeta,
         errors,
       );
     }
@@ -148,6 +163,7 @@ export const create = base
       sortOrder: filtered.sortOrder,
       authorId: context.user.id,
       publishedAt,
+      meta: starting,
     };
 
     const prepared = await applyEntryBeforeSave(
@@ -177,7 +193,7 @@ export const create = base
       await writeEntryMeta(context, created, metaPatch);
       meta = await loadEntryMeta(context, created);
     } else {
-      // No write path — `created.meta` is the default `{}`. Decode inline
+      // No write path — `created.meta` is the starting meta. Decode inline
       // to save the round trip.
       meta = await resolveEntryMeta(context, created, created.meta);
     }

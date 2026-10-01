@@ -4,11 +4,12 @@ import type { JsonValue } from "../../../json.js";
 import type { MetaFieldError } from "../../../meta/field-pipeline.js";
 import type { ConflictErrors } from "../../../rpc-errors.js";
 import { and, eq, inArray } from "../../../db/index.js";
-import { settings } from "../../../db/schema/settings.js";
+import { settings, SETTINGS_CREATED_KEY } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
 import { decodeJsonValue } from "../../../meta/coerce.js";
 import { runFieldPipeline } from "../../../meta/field-pipeline.js";
 import { isConditionHidden } from "../../../plugin/fields/condition.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
@@ -40,11 +41,32 @@ export const upsert = base
     // pipeline as entry/term meta — coercion, `.sanitize()`, declared
     // constraints. Condition-hidden fields are dropped before that: a
     // value the editor cannot see must not persist.
-    const groupFields = new Map(
-      (context.plugins.settingsGroups.get(filtered.group)?.fields ?? []).map(
-        (f) => [f.key, f],
-      ),
-    );
+    const group = context.plugins.settingsGroups.get(filtered.group);
+    const groupFields = new Map((group?.fields ?? []).map((f) => [f.key, f]));
+
+    // A registered group counts as created on its first save (ADR 0026). That
+    // save writes every field: a key neither sent nor already stored takes its
+    // starting value, and a marker row records that the group exists, so from
+    // then on a cleared setting stays absent.
+    let values = filtered.values;
+    let creating = false;
+    if (group) {
+      const storedKeys = new Set(
+        (
+          await context.db
+            .select({ key: settings.key })
+            .from(settings)
+            .where(eq(settings.group, filtered.group))
+        ).map((row) => row.key),
+      );
+      if (!storedKeys.has(SETTINGS_CREATED_KEY)) {
+        creating = true;
+        const starting = Object.entries(startingMeta(group.fields)).filter(
+          ([key]) => !storedKeys.has(key),
+        );
+        values = { ...Object.fromEntries(starting), ...filtered.values };
+      }
+    }
 
     const deletes: string[] = [];
     // Not `NewSetting`: the insert type leaves `value` optional and
@@ -52,9 +74,11 @@ export const upsert = base
     // `SettingsBag`, which admits neither.
     const upsertRows: { group: string; key: string; value: JsonValue }[] = [];
     const fieldErrors: MetaFieldError[] = [];
-    for (const [key, value] of Object.entries(filtered.values)) {
+    for (const [key, value] of Object.entries(values)) {
+      // Reserved: only the first save writes it.
+      if (key === SETTINGS_CREATED_KEY) continue;
       const field = groupFields.get(key);
-      if (field && isConditionHidden(field, filtered.values)) continue;
+      if (field && isConditionHidden(field, values)) continue;
 
       let stored: JsonValue | undefined;
       if (field) {
@@ -119,10 +143,16 @@ export const upsert = base
           ),
         );
     }
-    if (upsertRows.length > 0) {
+    const writtenRows = creating
+      ? [
+          ...upsertRows,
+          { group: filtered.group, key: SETTINGS_CREATED_KEY, value: true },
+        ]
+      : upsertRows;
+    if (writtenRows.length > 0) {
       await context.db
         .insert(settings)
-        .values(upsertRows)
+        .values(writtenRows)
         .onConflictDoUpdate({
           target: [settings.group, settings.key],
           set: { value: sql`excluded.value` },
@@ -137,7 +167,9 @@ export const upsert = base
       .where(eq(settings.group, filtered.group));
     const bag: Record<string, JsonValue> = {};
     // `null` is a value the column can hold, so it stays in the bag.
-    for (const row of fresh) bag[row.key] = row.value;
+    for (const row of fresh) {
+      if (row.key !== SETTINGS_CREATED_KEY) bag[row.key] = row.value;
+    }
 
     // Fire only when the call actually changed state — an empty
     // `values: {}` payload is a no-op and shouldn't wake up

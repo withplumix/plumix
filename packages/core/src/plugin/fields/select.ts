@@ -81,8 +81,8 @@ export class SelectFieldSeed<K extends string = string> {
  * the chosen appearance, tracked so cardinality-illegal combinations
  * (radio + multiple) fail to compile in either call order; `V` is the
  * phantom read type — `O | undefined` unadorned, an array after
- * `.multiple()`, narrowed by `.required()` / `.default()`. All purely
- * type-level — nothing at runtime carries them.
+ * `.multiple()`, narrowed by `.required()`; `D` records that
+ * `.default()` ran. All purely type-level — nothing at runtime carries them.
  */
 export class SelectFieldBuilder<
   O extends string,
@@ -91,19 +91,22 @@ export class SelectFieldBuilder<
   A extends SelectAppearance | undefined = undefined,
   V = O | undefined,
   S = O | undefined,
+  D extends boolean = false,
 > implements FieldBuilder<SelectMetaBoxField> {
   /** Phantom literal key of the field — type-level only, never assigned. */
   declare readonly _key: K;
   /** Phantom read type of the field — type-level only, never assigned. */
   declare readonly _value: V;
   /** Phantom stored shape — `.required()` narrows it (write-enforced);
-   *  `.default()` does not — it applies on read, but nothing enforces it
-   *  on write, so storage can still lack the key. */
+   *  `.default()` does not — a cleared field is stored absent. */
   declare readonly _stored: S;
   /** Phantom cardinality/appearance markers backing the compile-time
    *  gating of `.multiple()`, `.max()`, and `.appearance()`. */
   declare readonly _multiple: Multiple;
   declare readonly _appearance: A;
+  /** Phantom marker that `.default()` ran — its value is in the single
+   *  shape, so `.multiple()` is closed after it. */
+  declare readonly _defaulted: D;
 
   readonly #key: string;
   readonly #state: SelectFieldState;
@@ -118,10 +121,11 @@ export class SelectFieldBuilder<
     A2 extends SelectAppearance | undefined = A,
     V2 = V,
     S2 = S,
+    D2 extends boolean = D,
   >(
     patch: Partial<SelectFieldState>,
-  ): SelectFieldBuilder<O, K, Multiple2, A2, V2, S2> {
-    return new SelectFieldBuilder<O, K, Multiple2, A2, V2, S2>(this.#key, {
+  ): SelectFieldBuilder<O, K, Multiple2, A2, V2, S2, D2> {
+    return new SelectFieldBuilder<O, K, Multiple2, A2, V2, S2, D2>(this.#key, {
       ...this.#state,
       ...patch,
     });
@@ -135,10 +139,11 @@ export class SelectFieldBuilder<
    * `.appearance()` (`"select"` / `"radio"`).
    */
   multiple(
-    // `undefined extends V` proves no narrowing call ran yet — the
-    // stored default/read shapes are still scalar, so flipping to an
-    // array is safe. `_value` is covariant, so a plain `O | undefined`
-    // this-type alone wouldn't reject a narrowed receiver.
+    // `undefined extends V` proves `.required()` has not run, and a `false`
+    // `D` that `.default()` has not — the stored default/read shapes are
+    // still scalar, so flipping to an array is safe. `_value` is covariant,
+    // so a plain `O | undefined` this-type alone wouldn't reject a narrowed
+    // receiver.
     this: undefined extends V
       ? SelectFieldBuilder<O, K, false, "buttons" | undefined, V, S>
       : never,
@@ -170,9 +175,9 @@ export class SelectFieldBuilder<
    * the generic constraint walker.
    */
   max(
-    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     max: number,
-  ): SelectFieldBuilder<O, K, true, A, V, S> {
+  ): SelectFieldBuilder<O, K, true, A, V, S, D> {
     return this.#fork<true>({ max });
   }
 
@@ -185,25 +190,29 @@ export class SelectFieldBuilder<
    */
   appearance<A2 extends AppearanceFor<Multiple>>(
     appearance: A2,
-  ): SelectFieldBuilder<O, K, Multiple, A2, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A2, V, S, D> {
     return this.#fork<Multiple, A2>({ appearance });
   }
 
   /** Override the derived (humanized-key) label. */
-  label(label: Label): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  label(label: Label): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ label });
   }
 
   /** Help text rendered under the label. */
-  description(description: Label): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  description(
+    description: Label,
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ description });
   }
 
-  /** Admin-form prefill for unsaved keys — narrows away `undefined`. */
+  /** The value a new entity starts with — written into its meta when it
+   * is created, not filled in on read, so a cleared field stays empty.
+   * Leaves the read type as it is; `.required()` narrows it. */
   default(
     value: Multiple extends true ? readonly O[] : O,
-  ): SelectFieldBuilder<O, K, Multiple, A, NonNullable<V>, S> {
-    return this.#fork<Multiple, A, NonNullable<V>>({ default: value });
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, true> {
+    return this.#fork<Multiple, A, V, S, true>({ default: value });
   }
 
   /** Mark the field required — narrows away `undefined`. */
@@ -213,7 +222,8 @@ export class SelectFieldBuilder<
     Multiple,
     A,
     NonNullable<V>,
-    NonNullable<S>
+    NonNullable<S>,
+    D
   > {
     return this.#fork<Multiple, A, NonNullable<V>, NonNullable<S>>({
       required: true,
@@ -224,19 +234,19 @@ export class SelectFieldBuilder<
    * Column span within the box's 12-column grid — a universal layout
    * hint; surfaces that can't honor it (the entry editor rail) ignore it.
    */
-  span(span: MetaBoxFieldSpan): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  span(span: MetaBoxFieldSpan): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ span });
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
   capability(
     capability: Capability,
-  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ capability });
   }
 
   /** Opt this field's value into public REST responses (default-deny). */
-  showInApi(): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  showInApi(): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ showInApi: true });
   }
 
@@ -265,7 +275,7 @@ export class SelectFieldBuilder<
 
   /** Rule factory: the selection includes `value` — multi-value only. */
   contains(
-    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     value: O,
   ): MetaFieldConditionRule {
     return { key: this.#key, op: "contains", value };
@@ -273,7 +283,7 @@ export class SelectFieldBuilder<
 
   /** Rule factory: the selection does not include `value` — multi-value only. */
   notContains(
-    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     value: O,
   ): MetaFieldConditionRule {
     return { key: this.#key, op: "not_contains", value };
@@ -281,7 +291,7 @@ export class SelectFieldBuilder<
 
   /** Rule factory: more than `count` options selected — multi-value only. */
   countGt(
-    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     count: number,
   ): MetaFieldConditionRule {
     return { key: this.#key, op: "count_gt", value: count };
@@ -289,7 +299,7 @@ export class SelectFieldBuilder<
 
   /** Rule factory: fewer than `count` options selected — multi-value only. */
   countLt(
-    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    this: SelectFieldBuilder<O, K, true, A, V, S, D>,
     count: number,
   ): MetaFieldConditionRule {
     return { key: this.#key, op: "count_lt", value: count };
@@ -303,14 +313,14 @@ export class SelectFieldBuilder<
    */
   visibleWhen(
     ...rules: MetaFieldConditionRule[]
-  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ visibleWhen: [rules] });
   }
 
   /** Add an OR alternative — one more AND group of rules. */
   orVisibleWhen(
     ...rules: MetaFieldConditionRule[]
-  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({
       visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
     });
@@ -319,7 +329,7 @@ export class SelectFieldBuilder<
   /** Normalising transform, applied after coercion and before persistence. */
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
-  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
@@ -330,7 +340,7 @@ export class SelectFieldBuilder<
    */
   validate(
     validate: (value: NonNullable<V>) => true | Label | Promise<true | Label>,
-  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S, D> {
     return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 

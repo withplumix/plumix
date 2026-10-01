@@ -35,6 +35,7 @@ const _dossierFields = [
   toggle("sealed"),
   text("codename"),
   number("clearance"),
+  text("tone").default("warm"),
 ];
 // The same two decode moves, on a term. Before the render path decoded
 // term meta these read back as the raw ISO string and the raw id.
@@ -506,7 +507,30 @@ describe("term meta on the render path", () => {
     });
   });
 
-  test("a `.default()` key absent from storage reads back the declared default", async () => {
+  // `resolveEntryList` is the reader behind both a template's entries and a
+  // feed's items. A default is written when the entry is created (ADR 0026),
+  // so an entry whose stored meta lacks the key reads it as absent.
+  test("an entry's `.default()` key absent from storage reads as absent", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [dossierPlugin] },
+    });
+    const author = await harness.factory.user.create({});
+    const row = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      meta: { codename: "heron" },
+    });
+
+    const [entry] = await run(() => resolveEntryList(ctx, [row]));
+
+    expect(entry?.meta).toEqual({ codename: "heron" });
+    expect(entry?.storedMeta).toEqual({ codename: "heron" });
+  });
+
+  // A default is written when the entity is created (ADR 0026); a term that
+  // predates it reads the key as absent, as a rule predicate sees it.
+  test("a `.default()` key absent from storage reads as absent", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [dossierPlugin] },
     });
@@ -529,8 +553,7 @@ describe("term meta on the render path", () => {
     const [resolved] = entry?.terms ?? [];
     if (!resolved) throw new Error("resolveEntryList returned no term");
 
-    expect(resolved.meta.termTone).toBe("warm");
-    // The column itself is untouched — a rule predicate still sees no key.
+    expect(resolved.meta).not.toHaveProperty("termTone");
     expect(resolved.storedMeta).toEqual({});
   });
 

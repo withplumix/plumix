@@ -21,8 +21,8 @@ interface ToggleFieldState extends UniversalFieldState {
  * Fluent chain for the boolean switch field. Immutable — every call
  * returns a fresh instance, so a shared base chain can be forked
  * without aliasing. `V` is the phantom read type: `boolean |
- * undefined` unadorned, narrowed to `boolean` by `.required()` /
- * `.default()`. Purely type-level — nothing at runtime carries it.
+ * undefined` unadorned, narrowed to `boolean` by `.required()`.
+ * Purely type-level — nothing at runtime carries it.
  */
 export class ToggleFieldBuilder<
   K extends string = string,
@@ -34,8 +34,7 @@ export class ToggleFieldBuilder<
   /** Phantom read type of the field — type-level only, never assigned. */
   declare readonly _value: V;
   /** Phantom stored shape — `.required()` narrows it (write-enforced);
-   *  `.default()` does not — it applies on read, but nothing enforces it
-   *  on write, so storage can still lack the key. */
+   *  `.default()` does not — a cleared field is stored absent. */
   declare readonly _stored: S;
 
   readonly #key: K;
@@ -75,9 +74,11 @@ export class ToggleFieldBuilder<
     return this.#fork({ description });
   }
 
-  /** Admin-form prefill for unsaved keys — narrows the read type to `boolean`. */
-  default(value: boolean): ToggleFieldBuilder<K, boolean, S> {
-    return this.#fork<boolean>({ default: value });
+  /** The value a new entity starts with — written into its meta when it
+   * is created, not filled in on read, so a cleared field stays empty.
+   * Leaves the read type as it is; `.required()` narrows it. */
+  default(value: boolean): ToggleFieldBuilder<K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read type to `boolean`. */
@@ -186,8 +187,7 @@ export class ToggleFieldBuilder<
 
 /**
  * Boolean switch field — `toggle("featured").onText("Yes").offText("No")`.
- * Reads as `boolean | undefined`, narrowed by `.required()` /
- * `.default()`.
+ * Reads as `boolean | undefined`, narrowed by `.required()`.
  */
 export function toggle<K extends string>(key: K): ToggleFieldBuilder<K> {
   return new ToggleFieldBuilder(key);

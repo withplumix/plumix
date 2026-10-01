@@ -44,6 +44,7 @@ export {
   registerCoreLookupAdapters,
   requireCapability,
   resolveCapability,
+  startingMeta,
   TAXONOMY_MENU_ICONS,
   termCapability,
 } from "@plumix/core";

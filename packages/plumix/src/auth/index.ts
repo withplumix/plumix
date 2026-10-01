@@ -50,6 +50,7 @@ export type {
   AccessPolicy,
   AccessResolver,
   AuthenticationOptions,
+  AuthenticateScope,
   AuthenticationResponse,
   AuthResult,
   BootstrappedUser,

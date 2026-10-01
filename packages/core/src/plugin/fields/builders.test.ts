@@ -10,7 +10,7 @@ import type { MetaBoxField, NumberMetaBoxField } from "./meta-box-field.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
-import { seedFromMetaBoxes } from "../manifest-types.js";
+import { seedFromMetaBoxes, startingMeta } from "../manifest-types.js";
 import { buildManifest } from "../manifest.js";
 import { isFieldVisible } from "./condition.js";
 import {
@@ -102,7 +102,7 @@ describe("number() builder", () => {
     expectTypeOf(number("n")).not.toHaveProperty("options");
   });
 
-  test("phantom typing: unadorned reads number | undefined; .required()/.default() narrow", () => {
+  test("phantom typing: unadorned reads number | undefined; .required() narrows, .default() does not", () => {
     const _unadorned = number("n");
     expectTypeOf<(typeof _unadorned)["_key"]>().toEqualTypeOf<"n">();
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
@@ -111,9 +111,11 @@ describe("number() builder", () => {
     const _required = number("n").required();
     expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<number>();
     expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<number>();
-    // `.default()` narrows the read type only — storage can lack the key.
+    // `.default()` narrows neither shape — a cleared field is stored absent.
     const _defaulted = number("n").default(3);
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<number>();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      number | undefined
+    >();
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       number | undefined
     >();
@@ -213,7 +215,9 @@ describe('.returns("date") on temporal builders', () => {
     expectTypeOf<(typeof _returnsFirst)["_value"]>().toEqualTypeOf<Date>();
 
     const _defaulted = date("d").default("2026-01-01").returns("date");
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<Date>();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      Date | undefined
+    >();
   });
 
   test("phantom stored shape stays the ISO string through .returns('date')", () => {
@@ -635,8 +639,8 @@ describe("reference builder phantom typing", () => {
   });
 });
 
-describe("composite defaults reach the admin form", () => {
-  test("the manifest carries a composite default through to the seed", async () => {
+describe("composite defaults reach the admin through the manifest", () => {
+  test("the manifest carries a composite default to startingMeta", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("blog", {
@@ -653,28 +657,47 @@ describe("composite defaults reach the admin form", () => {
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const fields = buildManifest(registry).settingsGroups[0]?.fields ?? [];
-    expect(fields.map((f) => f.default)).toEqual([
-      { title: "Untitled" },
-      [{ q: "What is this?" }],
-    ]);
-    expect(seedFromMetaBoxes([{ fields }], null)).toEqual({
+    expect(startingMeta(fields)).toEqual({
       seo: { title: "Untitled" },
       faq: [{ q: "What is this?" }],
     });
   });
+});
 
-  test("a stored value wins over the default", () => {
-    const fields = [
-      group("seo")
-        .fields([text("title")])
-        .default({ title: "Untitled" })
-        .build(),
-    ];
-    expect(seedFromMetaBoxes([{ fields }], { seo: { title: "Real" } })).toEqual(
-      {
+describe("seedFromMetaBoxes", () => {
+  const fields = [
+    text("tone").default("warm").build(),
+    group("seo")
+      .fields([text("title")])
+      .default({ title: "Untitled" })
+      .build(),
+    repeater("faq")
+      .fields([text("q")])
+      .default([{ q: "What is this?" }])
+      .build(),
+  ];
+
+  test("projects the stored values onto the registered keys", () => {
+    expect(
+      seedFromMetaBoxes([{ fields }], {
+        tone: "cool",
         seo: { title: "Real" },
-      },
-    );
+        foreign: 1,
+      }),
+    ).toEqual({ tone: "cool", seo: { title: "Real" }, faq: undefined });
+  });
+
+  test("a key storage lacks stays empty, whatever its default", () => {
+    expect(seedFromMetaBoxes([{ fields }], {})).toEqual({
+      tone: undefined,
+      seo: undefined,
+      faq: undefined,
+    });
+    expect(seedFromMetaBoxes([{ fields }], null)).toEqual({
+      tone: undefined,
+      seo: undefined,
+      faq: undefined,
+    });
   });
 });
 

@@ -9,6 +9,7 @@ import type {
 import type { ActionSpy } from "../test/spies.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
+import { number, text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
 import { createRpcHarness } from "../test/rpc.js";
@@ -284,5 +285,30 @@ describe("term.get settles an unsettled row", () => {
       where: eq(terms.id, term.id),
     });
     expect(stored?.meta).toEqual({ rank: 3, featured: true });
+  });
+});
+
+describe("term meta: starting meta", () => {
+  test("a new term stores its fields' defaults, overlaid by the meta sent", async () => {
+    const plugins = taxonomyRegistry();
+    registerTermMetaFields(plugins, "category", [
+      text("color").default("#000").build(),
+      number("weight").default(1).build(),
+      text("icon").default("tag").build(),
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const created = await h.client.term.create({
+      taxonomy: "category",
+      name: "Travel",
+      slug: "travel",
+      meta: { weight: 5, icon: null },
+    });
+
+    const [row] = await h.db
+      .select({ meta: terms.meta })
+      .from(terms)
+      .where(eq(terms.id, created.id));
+    expect(row?.meta).toEqual({ color: "#000", weight: 5 });
+    expect(created.meta).toEqual({ color: "#000", weight: 5 });
   });
 });

@@ -1,4 +1,5 @@
 import type { User } from "../db/schema/users.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
 import type { Db } from "./app-context.js";
 
 // Declared beside the context rather than in `auth/contract/`: it names `Db`,
@@ -37,6 +38,16 @@ export type AuthResult =
     };
 
 /**
+ * What core hands an authenticator beside the request and database: the
+ * plugin registry, so one that provisions users can give them their starting
+ * meta (ADR 0026). Core passes it on every call it makes; it is optional so an
+ * authenticator called directly, as in a test, needs none.
+ */
+export interface AuthenticateScope {
+  readonly plugins: PluginRegistry;
+}
+
+/**
  * Decides who the user is on a given request — a pluggable authenticator.
  *
  * Default: read the session cookie, look up the row. Override at config
@@ -60,7 +71,11 @@ export type AuthResult =
  *     set cookies. Login flows do that. An authenticator only reads.
  */
 export interface RequestAuthenticator {
-  authenticate(request: Request, db: Db): Promise<AuthResult | null>;
+  authenticate(
+    request: Request,
+    db: Db,
+    scope?: AuthenticateScope,
+  ): Promise<AuthResult | null>;
   /**
    * Optional. Does this request carry a credential this authenticator would
    * resolve to a browser session? Public renders consult it to skip

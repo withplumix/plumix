@@ -6,6 +6,7 @@ import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, select, text, url } from "../../../plugin/fields/index.js";
 import { installPlugins } from "../../../runtime/install-plugins.js";
+import { loadSettingsGroups } from "../../../seo/site-settings.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("settings.get", () => {
@@ -425,5 +426,165 @@ describe("settings private groups", () => {
         .from(settings)
         .where(eq(settings.group, "comments_internal")),
     ).toEqual([]);
+  });
+});
+
+// A settings group counts as created on its first save (ADR 0026): until then
+// it reads its fields' starting values, and after it storage alone is the
+// truth. The first save leaves a reserved marker row nobody reads back.
+describe("settings groups: created on first save", () => {
+  async function harnessWithDefaults(): Promise<
+    Awaited<ReturnType<typeof createRpcHarness>>
+  > {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          text("tagline").default("Hello"),
+          number("perPage").default(10),
+          text("footer"),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    return createRpcHarness({ authAs: "admin", plugins: registry, hooks });
+  }
+
+  async function storedRows(h: Awaited<ReturnType<typeof createRpcHarness>>) {
+    const rows = await h.db
+      .select({ key: settings.key, value: settings.value })
+      .from(settings)
+      .where(eq(settings.group, "blog"));
+    return Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  }
+
+  test("a group never saved reads its fields' starting values", async () => {
+    const h = await harnessWithDefaults();
+    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+      tagline: "Hello",
+      perPage: 10,
+    });
+  });
+
+  test("the first save writes every field, filling unsent keys with their starting values", async () => {
+    const h = await harnessWithDefaults();
+    const bag = await h.client.settings.upsert({
+      group: "blog",
+      values: { tagline: "Mine" },
+    });
+
+    expect(bag).toEqual({ tagline: "Mine", perPage: 10 });
+    expect(await storedRows(h)).toEqual({
+      tagline: "Mine",
+      perPage: 10,
+      __plumix_created: true,
+    });
+  });
+
+  test("a setting cleared in the first save stays cleared", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { perPage: null },
+    });
+
+    expect(await storedRows(h)).toEqual({
+      tagline: "Hello",
+      __plumix_created: true,
+    });
+    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+      tagline: "Hello",
+    });
+  });
+
+  test("after the first save a cleared setting stays cleared", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { perPage: null },
+    });
+
+    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+      tagline: "Hello",
+    });
+  });
+
+  test("the marker never reaches settings.get or its output filter", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+    const spy = h.spyFilter("rpc:settings.get:output");
+
+    const bag = await h.client.settings.get({ group: "blog" });
+
+    expect(bag).not.toHaveProperty("__plumix_created");
+    expect(spy.lastInput).not.toHaveProperty("__plumix_created");
+  });
+
+  test("the marker never reaches the server-side settings read", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+
+    const groups = await loadSettingsGroups(h.context, ["blog"]);
+
+    expect(groups.blog).toEqual({ tagline: "Hello", perPage: 10 });
+  });
+
+  // Only the marker makes a group created. A group whose rows were written
+  // without one (written by a version without the marker, or directly) has not
+  // had its first save: it reads its starting values under what is stored, and
+  // that save fills the rest and adds the marker.
+  test("a group with rows but no marker is not created until its first save", async () => {
+    const h = await harnessWithDefaults();
+    await h.factory.setting.create({
+      group: "blog",
+      key: "tagline",
+      value: "Legacy",
+    });
+
+    expect(await h.client.settings.get({ group: "blog" })).toEqual({
+      tagline: "Legacy",
+      perPage: 10,
+    });
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { footer: "(c)" },
+    });
+    expect(await storedRows(h)).toEqual({
+      tagline: "Legacy",
+      perPage: 10,
+      footer: "(c)",
+      __plumix_created: true,
+    });
+  });
+
+  test("a save cannot clear or overwrite the marker", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { __plumix_created: null, perPage: null },
+    });
+    expect((await storedRows(h)).__plumix_created).toBe(true);
+
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { __plumix_created: "x" },
+    });
+    expect((await storedRows(h)).__plumix_created).toBe(true);
+  });
+
+  // The marker is what keeps a group created once every setting in it has
+  // been cleared.
+  test("a group whose every setting was cleared stays created", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { tagline: null, perPage: null },
+    });
+
+    expect(await h.client.settings.get({ group: "blog" })).toEqual({});
   });
 });

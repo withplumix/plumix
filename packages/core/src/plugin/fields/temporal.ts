@@ -85,13 +85,13 @@ export class TemporalFieldBuilder<
   }
 
   /**
-   * Default for absent keys — an ISO string in the field's stored
-   * shape, applied at read decode (and seeded into the admin form).
-   * Narrows the read type to non-optional; the stored shape stays
-   * optional.
+   * The value a new entity starts with — an ISO string in the field's
+   * stored shape, written into its meta when it is created, not filled
+   * in on read, so a cleared field stays empty. Leaves the read type as
+   * it is; `.required()` narrows it.
    */
-  default(value: string): TemporalFieldBuilder<Input, K, NonNullable<V>, S> {
-    return this.#fork<NonNullable<V>>({ default: value });
+  default(value: string): TemporalFieldBuilder<Input, K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to non-optional. */

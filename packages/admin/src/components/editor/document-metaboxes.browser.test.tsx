@@ -74,10 +74,9 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
   });
 
   // The route seeds `initialMeta`, `metaRef`, and the diff baseline from the
-  // same `seedEntryMetaForm` value, so a freshly-opened entry (defaults shown,
-  // no user edit) must produce an empty diff — otherwise opening an entry would
-  // autosave a spurious "change".
-  test("mounting with seeded defaults emits them unchanged, so the diff is empty", () => {
+  // same stored bag, so a freshly-opened entry (no user edit) must produce an
+  // empty diff — otherwise opening an entry would autosave a spurious "change".
+  test("mounting with the stored meta emits it unchanged, so the diff is empty", () => {
     const seeded = { subtitle: "old", accent: "#3366ff" };
     const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
 

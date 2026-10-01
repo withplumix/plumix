@@ -41,4 +41,13 @@ describe("first-user-admin bootstrap", () => {
     const slugs = results.map((r) => r.user.slug);
     expect(new Set(slugs).size).toBe(3);
   });
+
+  test("the new user stores the meta it starts with", async () => {
+    const db = await createTestDb();
+    const { user } = await provisionUser(db, {
+      email: "first@example.com",
+      meta: { pronouns: "they/them" },
+    });
+    expect(user.meta).toEqual({ pronouns: "they/them" });
+  });
 });

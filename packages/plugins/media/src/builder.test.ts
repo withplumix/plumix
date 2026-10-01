@@ -96,6 +96,26 @@ describe("media() builder", () => {
     >();
   });
 
+  // A default is a new entity's starting value, not a read fallback (ADR
+  // 0026), so it narrows nothing; only `.required()` does.
+  test(".default() leaves the read type optional", () => {
+    const _defaulted = media("hero").default("1");
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      MediaReference | undefined
+    >();
+    const _multi = media("gallery").multiple().default(["1"]);
+    expectTypeOf<(typeof _multi)["_value"]>().toEqualTypeOf<
+      readonly MediaReference[] | undefined
+    >();
+    const _requiredMulti = media("gallery")
+      .multiple()
+      .required()
+      .default(["1"]);
+    expectTypeOf<(typeof _requiredMulti)["_value"]>().toEqualTypeOf<
+      readonly MediaReference[]
+    >();
+  });
+
   test("manifest round-trip preserves the referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
     const userPlugin = definePlugin("test", (ctx) => {

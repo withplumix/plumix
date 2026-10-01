@@ -99,16 +99,14 @@ export class GroupFieldBuilder<
   }
 
   /**
-   * Member values the admin form seeds when the key has no stored value.
-   * Typed against the declared members in their STORED spelling — an ISO
-   * string, a bare reference id — because the seed lands in the form bag
-   * with no conversion. Partial by design; a misspelled key is a compile
-   * error.
+   * The value a new entity starts with — written into its meta when it is
+   * created, not filled in on read, so a cleared group stays empty. Typed
+   * against the declared members in their STORED spelling — an ISO string,
+   * a bare reference id — because it is stored with no conversion. Partial
+   * by design; a misspelled key is a compile error. Without one, the group
+   * starts from its members' defaults.
    *
-   * Applies on read only, and a partial default leaves the rest absent,
-   * so this does not narrow the read type the way `.required()` does. It
-   * also reseeds after the group is cleared: an emptied group deletes its
-   * key, and a key with no stored value is exactly what a default answers.
+   * Leaves the read type as it is; `.required()` narrows it.
    */
   default(value: Partial<InferStoredFields<F>>): GroupFieldBuilder<F, K, V, S> {
     return this.#fork({ default: value });

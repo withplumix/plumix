@@ -546,105 +546,36 @@ describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   });
 });
 
-// `.default()` narrows the read type (`_value`), so the decoder has to make
-// that true: a declared default stands in wherever the bag has no key.
-describe("decodeMetaBag (.default() application)", () => {
+// A field default is written when the entity is created (ADR 0026), so the
+// decoder reads storage alone: a key storage lacks reads as absent, at any
+// depth, whatever its field declares.
+describe("decodeMetaBag (.default() is not a read fallback)", () => {
   const fields = [
     text("tone").default("warm").build(),
-    text("badge").build(),
     number("rating").default(3).build(),
     date("launchedOn").default("2026-01-01").returns("date").build(),
   ];
 
-  test("a defaulted key absent from storage reads back the default", () => {
+  test("a defaulted key absent from storage reads as absent", () => {
     const decoded = decodeMetaBag(metaScope(fields), {});
-    expect(decoded.tone).toBe("warm");
-    expect(decoded.rating).toBe(3);
+    expect(decoded).toEqual({});
   });
 
-  test("a stored value wins over the default", () => {
-    expect(decodeMetaBag(metaScope(fields), { tone: "cool" }).tone).toBe(
-      "cool",
-    );
+  test("a row with no stored meta at all reads empty", () => {
+    expect(decodeMetaBag(metaScope(fields), null)).toEqual({});
   });
 
-  // The never-saved row `loadMeta` reads when the meta column is NULL — the
-  // case the whole change exists for.
-  test("a row with no stored meta at all still gets its defaults", () => {
-    expect(decodeMetaBag(metaScope(fields), null).tone).toBe("warm");
-  });
-
-  test("a field with no default stays absent", () => {
-    const decoded = decodeMetaBag(metaScope(fields), {});
-    expect("badge" in decoded).toBe(false);
+  test("a stored value reads back", () => {
+    expect(decodeMetaBag(metaScope(fields), { tone: "cool" })).toEqual({
+      tone: "cool",
+    });
   });
 
   test("a stored null is a value, not an absence", () => {
     expect(decodeMetaBag(metaScope(fields), { tone: null }).tone).toBeNull();
   });
 
-  test("a default is decoded like a stored value", () => {
-    expect(decodeMetaBag(metaScope(fields), {}).launchedOn).toEqual(
-      new Date("2026-01-01T00:00:00.000Z"),
-    );
-  });
-});
-
-describe("decodeMetaBag (.default() inside containers)", () => {
-  const rowsField = repeater("rows")
-    .fields([text("label").default("untitled"), text("href")])
-    .build();
-
-  test("a row missing a defaulted subfield gets the default", () => {
-    const decoded = decodeMetaBag(metaScope([rowsField]), {
-      rows: [{ href: "/a" }, { label: "Set", href: "/b" }],
-    });
-    expect(decoded.rows).toEqual([
-      { label: "untitled", href: "/a" },
-      { label: "Set", href: "/b" },
-    ]);
-  });
-
-  // An absent repeater reads `undefined` — the read type says so, and there
-  // are no rows to carry subfield defaults.
-  test("an absent repeater is not synthesized from its subfield defaults", () => {
-    const decoded = decodeMetaBag(metaScope([rowsField]), {});
-    expect("rows" in decoded).toBe(false);
-  });
-
-  // A row is decoded, not just filled: the default takes the same
-  // `.returns("date")` projection a stored value in that slot would.
-  test("a defaulted subfield is decoded inside the row", () => {
-    const field = repeater("events")
-      .fields([text("name"), date("on").returns("date").default("2026-01-01")])
-      .build();
-    const decoded = decodeMetaBag(metaScope([field]), {
-      events: [{ name: "launch" }],
-    });
-    expect(decoded.events).toEqual([
-      { name: "launch", on: new Date("2026-01-01T00:00:00.000Z") },
-    ]);
-  });
-
-  const seoField = group("seo")
-    .fields([text("title"), text("robots").default("index")])
-    .build();
-
-  test("a group member missing a defaulted key gets the default", () => {
-    const decoded = decodeMetaBag(metaScope([seoField]), {
-      seo: { title: "Home" },
-    });
-    expect(decoded.seo).toEqual({ title: "Home", robots: "index" });
-  });
-
-  // Same rule as the top level — an absent group reads `undefined`.
-  test("an absent group is not synthesized from its member defaults", () => {
-    expect("seo" in decodeMetaBag(metaScope([seoField]), {})).toBe(false);
-  });
-
-  // Nesting is the case a one-level fill misses: both builders permit
-  // arbitrary depth and `InferFields` recurses, so the fill has to as well.
-  test("defaults fill at any depth", () => {
+  test("a row or group member storage lacks reads as absent", () => {
     const nested = group("outer")
       .fields([
         group("inner").fields([text("tone").default("warm")]),
@@ -653,9 +584,22 @@ describe("decodeMetaBag (.default() inside containers)", () => {
       .build();
     expect(
       decodeMetaBag(metaScope([nested]), { outer: { inner: {}, rows: [{}] } }),
-    ).toEqual({
-      outer: { inner: { tone: "warm" }, rows: [{ label: "untitled" }] },
+    ).toEqual({ outer: { inner: {}, rows: [{}] } });
+  });
+
+  // A row is still decoded: a stored value takes the `.returns("date")`
+  // projection.
+  test("a stored subfield is decoded inside the row", () => {
+    const field = repeater("events")
+      .fields([text("name"), date("on").returns("date").default("2026-01-01")])
+      .build();
+    const decoded = decodeMetaBag(metaScope([field]), {
+      events: [{ name: "launch", on: "2026-02-01" }, { name: "later" }],
     });
+    expect(decoded.events).toEqual([
+      { name: "launch", on: new Date("2026-02-01T00:00:00.000Z") },
+      { name: "later" },
+    ]);
   });
 });
 

@@ -8,6 +8,8 @@ import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { definePlugin } from "../../plugin/define.js";
+import { text } from "../../plugin/fields/index.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 
 interface CapturedSend {
@@ -721,6 +723,44 @@ describe("magic-link verify route", () => {
     });
     expect(created?.role).toBe("subscriber");
     expect(created?.emailVerifiedAt).not.toBeNull();
+  });
+
+  test("a user signing up stores the user fields' defaults", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      config: {
+        mailer,
+        auth: {
+          magicLink: { siteName: "Plumix Test" },
+          selfSignup: { defaultRole: "subscriber" },
+        },
+        plugins: [
+          definePlugin("profiles", (ctx) => {
+            ctx.registerUserMetaBox("profile", {
+              label: "Profile",
+              fields: [text("pronouns").default("they/them"), text("bio")],
+            });
+          }),
+        ],
+      },
+    });
+
+    await h.factory.user.create({ role: "admin" });
+    await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "visitor@anywhere.test",
+      }),
+    );
+    const token = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "")?.[1];
+    if (!token) throw new Error("expected token in email");
+    await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "visitor@anywhere.test"),
+    });
+    expect(created?.meta).toEqual({ pronouns: "they/them" });
   });
 
   test("without self-signup an unlisted email is refused (no leak, no token)", async () => {

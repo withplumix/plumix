@@ -234,10 +234,10 @@ const _driftChecks = (ctx: PluginSetupContext) => {
 };
 
 describe("InferFields / InferStoredFields", () => {
-  test("read shape narrows per chain; stored shape only narrows on .required()", () => {
+  test("read and stored shapes narrow on .required() only", () => {
     type Read = InferFields<typeof _articleFields>;
     expectTypeOf<Read["subtitle"]>().toEqualTypeOf<string | undefined>();
-    expectTypeOf<Read["badge"]>().toEqualTypeOf<string>();
+    expectTypeOf<Read["badge"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<Read["heroCredit"]>().toEqualTypeOf<string>();
 
     type Stored = InferStoredFields<typeof _articleFields>;
@@ -275,7 +275,7 @@ describe("MetaOf fold", () => {
     expectTypeOf<keyof Recipe>().toEqualTypeOf<
       "subtitle" | "badge" | "heroCredit" | "seoTitle"
     >();
-    expectTypeOf<Recipe["badge"]>().toEqualTypeOf<string>();
+    expectTypeOf<Recipe["badge"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<Recipe["seoTitle"]>().toEqualTypeOf<string | undefined>();
 
     type Landing = MetaOf<"landing">;
@@ -323,7 +323,9 @@ describe("term / user / settings folds", () => {
   });
 
   test("SettingsOf types one group by name", () => {
-    expectTypeOf<SettingsOf<"cxBranding">["tagline"]>().toEqualTypeOf<string>();
+    expectTypeOf<SettingsOf<"cxBranding">["tagline"]>().toEqualTypeOf<
+      string | undefined
+    >();
     expectTypeOf<keyof SettingsOf<"cxBranding">>().toEqualTypeOf<"tagline">();
   });
 });

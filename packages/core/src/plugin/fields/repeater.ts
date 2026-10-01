@@ -1,6 +1,6 @@
 import type { Capability } from "../../access/contract/capability.js";
 import type { Label } from "../../i18n/label.js";
-import type { JsonValue } from "../../json.js";
+import type { JsonObject, JsonValue } from "../../json.js";
 import type { MetaFieldConditionRule } from "./condition.js";
 import type { InferFields, InferStoredFields } from "./contributions.js";
 import type {
@@ -16,6 +16,7 @@ import type {
 import type { UniversalFieldState } from "./universal.js";
 import { humanizeFieldKey } from "./builder.js";
 import { compileMetaBoxFields } from "./meta-box-field.js";
+import { startingMeta } from "./starting-meta.js";
 import { assertSubFields } from "./sub-fields.js";
 
 interface RepeaterFieldState extends UniversalFieldState {
@@ -110,17 +111,14 @@ export class RepeaterFieldBuilder<
   }
 
   /**
-   * Rows the admin form seeds when the key has no stored value. Typed
-   * against the declared row schema in its STORED spelling — an ISO
-   * string, a bare reference id — because the seed lands in the form bag
-   * with no conversion. Rows are partial by design; a misspelled
-   * sub-field key is a compile error.
+   * The rows a new entity starts with — written into its meta when it is
+   * created, not filled in on read, so a cleared repeater stays empty.
+   * Typed against the declared row schema in its STORED spelling — an ISO
+   * string, a bare reference id — because they are stored with no
+   * conversion. Rows are partial by design, and each is completed with the
+   * subfield defaults; a misspelled sub-field key is a compile error.
    *
-   * Applies on read only, and a seeded row is not a stored one, so this
-   * does not narrow the read type the way `.required()` does. It also
-   * reseeds after the repeater is cleared: an emptied repeater deletes
-   * its key, and a key with no stored value is exactly what a default
-   * answers.
+   * Leaves the read type as it is; `.required()` narrows it.
    */
   default(
     rows: readonly Partial<InferStoredFields<F>>[],
@@ -274,11 +272,19 @@ export class RepeaterFieldBuilder<
     return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 
-  /** Compile the chain into the wire/manifest field definition. */
+  /**
+   * Compile the chain into the wire/manifest field definition. Each default
+   * row is completed here with the subfield defaults, so it starts the way a
+   * row added in the admin does.
+   */
   build(): RepeaterMetaBoxField {
-    const { subFields, ...state } = this.#state;
+    const { subFields, default: rows, ...state } = this.#state;
+    const blank = startingMeta(subFields);
     return {
       ...state,
+      ...(Array.isArray(rows) && {
+        default: rows.map((row: JsonObject) => ({ ...blank, ...row })),
+      }),
       key: this.#key,
       label: state.label ?? humanizeFieldKey(this.#key),
       type: "json",

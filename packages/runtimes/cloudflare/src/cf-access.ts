@@ -1,9 +1,10 @@
 import type { JWTPayload } from "jose";
 import type { Db } from "plumix";
-import type { RequestAuthenticator } from "plumix/auth";
+import type { AuthenticateScope, RequestAuthenticator } from "plumix/auth";
 import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ExternalIdentityError, resolveExternalIdentity } from "plumix/auth";
+import { listUserMetaFields, startingMeta } from "plumix/plugin";
 
 import { CfAccessError } from "./errors.js";
 
@@ -133,7 +134,7 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
     hasSession(request: Request): boolean {
       return request.headers.has(CF_ACCESS_HEADER);
     },
-    async authenticate(request: Request, db: Db) {
+    async authenticate(request: Request, db: Db, scope?: AuthenticateScope) {
       const token = request.headers.get(CF_ACCESS_HEADER);
       if (!token) return null;
 
@@ -164,6 +165,11 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
           allowedDomainsGate: false,
           defaultRole: config.defaultRole,
           bootstrapAllowed: config.bootstrapAllowed,
+          // A user this provisions starts from the user fields' defaults
+          // (ADR 0026); core hands over the registry that declares them.
+          ...(scope && {
+            meta: startingMeta(listUserMetaFields(scope.plugins)),
+          }),
         });
         // An IdP identity bound to a browser, so a session: the user's
         // role caps apply unrestricted; PAT-style scoping doesn't apply here.

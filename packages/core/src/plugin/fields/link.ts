@@ -22,11 +22,8 @@ type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
 /**
  * Fluent chain for the `link` field — see `StringFieldBuilder` for the
  * chassis conventions (immutability, phantom `K`/`V`/`S`, `build()`
- * seam). `V` is `LinkValue | undefined` unadorned, narrowed to
- * `LinkValue` by `.required()` / `.default()`; `S` is the stored shape,
- * narrowed by `.required()` only — `.default()` applies on read, so a key
- * storage lacks decodes to the declared default, but nothing enforces it
- * on write.
+ * seam). `V` is `LinkValue | undefined` unadorned and `S` is the stored
+ * shape; `.required()` narrows both to `LinkValue`, `.default()` neither.
  */
 export class LinkFieldBuilder<
   K extends string = string,
@@ -83,11 +80,11 @@ export class LinkFieldBuilder<
     return this.#fork({ append });
   }
 
-  /** Default for absent keys, applied at read decode (and seeded into
-   * the admin form) — narrows the read type to `LinkValue`; the stored
-   * shape stays optional. */
-  default(value: LinkValue): LinkFieldBuilder<K, LinkValue, S> {
-    return this.#fork<LinkValue>({ default: value });
+  /** The value a new entity starts with — written into its meta when it
+   * is created, not filled in on read, so a cleared field stays empty.
+   * Leaves the read type as it is; `.required()` narrows it. */
+  default(value: LinkValue): LinkFieldBuilder<K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `LinkValue`. */

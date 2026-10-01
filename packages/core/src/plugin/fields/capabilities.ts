@@ -174,11 +174,6 @@ export const CAPABILITY_CAVEATS = [
       "text-like builders only — `.searchable()` feeds the search index, and nothing but text has anything to put in it",
   },
   {
-    subject: "reference .default()",
-    reason:
-      "a reference default does not make the value non-optional: it applies at read decode, where a key storage lacks resolves to it, and nothing enforces it on write",
-  },
-  {
     subject: "media / mediaList builders",
     reason:
       "no row here because they are plugin-contributed — `@plumix/plugin-media` ships their builders, so they self-register and stay unreserved, the same reason the field-type roster leaves them out",

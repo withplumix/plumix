@@ -42,10 +42,9 @@ export interface StringFieldState extends UniversalFieldState {
  * plugin-contributed string input registered through `registerFieldType`.
  * `K` is the literal field key; `V` is the phantom value type the
  * field reads as: `string | undefined` unadorned, narrowed to `string`
- * by `.required()` / `.default()`; `S` is the phantom stored shape —
- * `.required()` narrows it (write-enforced) but `.default()` does not
- * (`.default()` applies on read — a key storage lacks decodes to the
- * declared default — but nothing enforces it on write).
+ * by `.required()`; `S` is the phantom stored shape, which `.required()`
+ * narrows too (write-enforced). `.default()` narrows neither: it is a new
+ * entity's starting value, and a cleared field stays empty.
  * Purely type-level — nothing at runtime carries them.
  */
 export class StringFieldBuilder<
@@ -108,11 +107,11 @@ export class StringFieldBuilder<
     return this.#fork({ append });
   }
 
-  /** Default for absent keys, applied at read decode (and seeded into
-   * the admin form) — narrows the read type to `string`; the stored
-   * shape stays optional. */
-  default(value: string): StringFieldBuilder<Input, K, string, S> {
-    return this.#fork<string>({ default: value });
+  /** The value a new entity starts with — written into its meta when it
+   * is created, not filled in on read, so a cleared field stays empty.
+   * Leaves the read type as it is; `.required()` narrows it. */
+  default(value: string): StringFieldBuilder<Input, K, V, S> {
+    return this.#fork({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `string`. */

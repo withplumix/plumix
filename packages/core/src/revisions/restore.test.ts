@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { entries } from "../db/schema/entries.js";
+import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
@@ -394,5 +395,34 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     await expect(
       subscriber.client.entry.revisions.restore({ revisionId: revision.id }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  // Restoring copies the revision's meta as stored; it creates nothing, so no
+  // field default lands (ADR 0026).
+  test("restoring applies no field defaults", async () => {
+    const plugins = registryWithRevisions();
+    plugins.entryMetaBoxes.set("box", {
+      id: "box",
+      label: "Box",
+      entryTypes: ["post"],
+      fields: [text("tone").default("warm").build()],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const created = await h.client.entry.create({ title: "First", slug: "a" });
+    await h.client.entry.update({ id: created.id, meta: { tone: null } });
+    await h.client.entry.update({ id: created.id, title: "Second" });
+    const revisions = await h.db.query.entries.findMany({
+      where: eq(entries.type, REVISION_TYPE),
+    });
+    const revision = revisions.at(-1);
+    if (!revision) throw new Error("expected a captured revision");
+
+    await h.client.entry.revisions.restore({ revisionId: revision.id });
+
+    const live = await h.db.query.entries.findFirst({
+      where: eq(entries.id, created.id),
+    });
+    expect(live?.meta).toEqual({});
   });
 });

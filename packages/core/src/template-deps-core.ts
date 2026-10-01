@@ -7,7 +7,7 @@ import type { MutablePluginRegistry } from "./plugin/manifest.js";
 import { declarePageTags } from "./cdn/contract/page-tags.js";
 import { settingsTag } from "./cdn/contract/tags.js";
 import { memoBatch } from "./context/memo.js";
-import { settings } from "./db/schema/settings.js";
+import { settings, SETTINGS_CREATED_KEY } from "./db/schema/settings.js";
 
 // Augment the registry with the core `settings` dep — themes declare
 // `defineTemplate({ settings: ["site-info", ...], render })` and the
@@ -65,6 +65,7 @@ export async function settingsLoader(
         .where(inArray(settings.group, unique));
       const byGroup = new Map<string, Record<string, JsonValue>>();
       for (const row of rows) {
+        if (row.key === SETTINGS_CREATED_KEY) continue;
         const bag = byGroup.get(row.group) ?? {};
         bag[row.key] = row.value;
         byGroup.set(row.group, bag);

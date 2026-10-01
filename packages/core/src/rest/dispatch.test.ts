@@ -59,6 +59,14 @@ const blog = definePlugin("test-blog", (ctx) => {
         inputType: "text",
         type: "string",
       },
+      {
+        key: "tone",
+        label: "Tone",
+        inputType: "text",
+        type: "string",
+        showInApi: true,
+        default: "warm",
+      },
     ],
   });
 });
@@ -1063,6 +1071,18 @@ describe("REST API — meta visibility (default-deny)", () => {
     const body = (await res.json()) as { meta: Record<string, unknown> };
     expect(body.meta).toEqual({ featured: true });
     expect(body.meta).not.toHaveProperty("internal_note");
+  });
+
+  // A default is written when the entry is created, not filled on read (ADR
+  // 0026), so an entry whose stored meta lacks the key reads it as absent.
+  test("a defaulted key storage lacks is absent", async () => {
+    const h = await restHarness();
+    const id = await seedWithMeta(h, { featured: true });
+
+    const res = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+
+    const body = (await res.json()) as { meta: Record<string, unknown> };
+    expect(body.meta).toEqual({ featured: true });
   });
 
   test("an unregistered meta key is never exposed (default-deny)", async () => {

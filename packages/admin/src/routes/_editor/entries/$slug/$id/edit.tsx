@@ -16,7 +16,6 @@ import {
 import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
-import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
@@ -351,12 +350,10 @@ function EntryEditor({
       entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
     [entryTypeName, capabilities],
   );
-  // Defaults for display: the form, `metaRef`, and the diff baseline all seed
-  // from this identical value — see `seedEntryMetaForm`.
-  const seededMeta = useMemo(
-    () => seedEntryMetaForm(metaBoxes, entry.meta),
-    [metaBoxes, entry.meta],
-  );
+  // The form, `metaRef`, and the diff baseline all seed from the stored bag,
+  // foreign keys included (e.g. `featuredImage` written by another plugin),
+  // so a freshly-opened entry diffs empty and autosaves nothing.
+  const seededMeta = entry.meta;
   const metaRef = useRef<Record<string, unknown>>(seededMeta);
   // Named-template pick — a reserved meta key, but sent as the dedicated
   // `template` field (the meta bag sanitizer rejects reserved keys). `null`

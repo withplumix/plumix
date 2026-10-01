@@ -73,7 +73,15 @@ Eleven methods appear on nearly every builder, and the type of the argument chan
 
 `.label()` and `.description()` set what the admin prints above and below the input. Both take a string or a `Label` descriptor for translation.
 
-`.default()` stands in wherever the stored key is absent. The decoder fills it on every read, so a key nobody has saved still reads back the declared value — which is what lets the read type drop `undefined`. Storage is untouched: the default reaches the column the first time someone saves the form it prefilled, and until then `storedMeta` has no key at all.
+`.default()` is the value a new entity starts with. Core writes it into the entry's, term's or user's meta when the entity is created, so from then on storage alone holds the field's value, and search, `.whereMeta()` and conditions see it the way the page does. It is not a fallback: nothing fills it in on read, so once an author clears the field it stays empty, and the read type keeps its `undefined`. A group without a default of its own starts from its members' defaults, and each row of a repeater's default is completed with the subfield defaults. A settings group writes its defaults on its first save and reads them until then.
+
+An entity that existed before a field gained its default stays empty for that field. To fill those, run one statement against the database, for example for a `difficulty` field on `recipe` entries:
+
+```sql
+UPDATE entries SET meta = json_set(meta, '$.difficulty', 'medium') WHERE type = 'recipe' AND json_type(meta, '$.difficulty') IS NULL;
+```
+
+Terms and users take the same statement against `terms` (scoped by `taxonomy`) and `users`. A default that is not a string goes in through `json('…')`, as in `json_set(meta, '$.tags', json('["a"]'))`.
 
 `.required()` marks the field required. The write pipeline enforces it in `strict` mode only, so a save landing on a draft status does not fail on it and the publish does.
 
@@ -134,7 +142,7 @@ user("testers").required().multiple();
 // '.multiple()' after '.required()' would widen a shape already narrowed.
 ```
 
-`.max()` wants an array to cap, so it waits for `.multiple()`. `.roles()` and `.includeDisabled()` belong to `user`, `.status()` and `.includeTrashed()` to `entry`. `.multiple()` has to come before `.required()`, because required narrows the value and the stored shape, and flipping to an array afterwards would leave the declared type lying about what is stored. On a `select`, `.default()` closes the same door.
+`.max()` wants an array to cap, so it waits for `.multiple()`. `.roles()` and `.includeDisabled()` belong to `user`, `.status()` and `.includeTrashed()` to `entry`. `.multiple()` has to come before `.required()`, because required narrows the value and the stored shape, and flipping to an array afterwards would leave the declared type lying about what is stored. On a `select`, `.default()` closes the same door, because its value is in the single-value shape.
 
 **An inferred literal union closes the value set.** `.options()` reads its argument as literals, so the option list types everything downstream of it.
 
@@ -148,15 +156,13 @@ select("difficulty").options(["easy", "medium", "hard"]).default("simple");
 
 The same inference gates `.appearance()`. A single-value field takes `select`, `radio` or `buttons`, and a multi-value field takes `buttons` or `checkboxes`. The chain tracks both halves, so `.appearance("radio").multiple()` and `.multiple().appearance("radio")` both fail.
 
-<Aside type="tip" title="Two shapes, not one">
-  `.required()` and `.default()` look alike and are not. `.required()` narrows
-  both what you read and what is stored, and the server enforces the write to
-  match. `.default()` narrows only the read type: the decoder supplies the
-  value, so a read never sees `undefined`, but nothing puts it in the column. A
-  row saved before you added the field reads the default and stores nothing.
-  That split is why a builder tracks the two separately, and why `.whereMeta()`
-  — which compares against the stored bag — will not match a defaulted key until
-  something saves it.
+<Aside type="tip" title="Required and default answer different questions">
+  `.required()` decides whether a field may be empty. It narrows both what you
+  read and what is stored, and the server enforces the write to match.
+  `.default()` decides only what a new entity starts with and narrows nothing:
+  an author can clear a defaulted field, and a row saved before you added the
+  field has no value for it. For a field that always reads a value, chain both:
+  `.required().default("medium")`.
 </Aside>
 
 ## From a fields array to typed meta
@@ -207,7 +213,7 @@ export function summarise(meta: MetaOf<"recipe">): string {
 }
 ```
 
-`meta.servings` is `number` because the field is required. `meta.difficulty` is `"easy" | "medium" | "hard"` because a default removes the `undefined` from the read type, which is a type-level narrowing rather than a runtime guarantee. `meta.prepMinutes` is `number | undefined`. The record is closed, with no index signature, so `meta.serving` is an error rather than `unknown`.
+`meta.servings` is `number` because the field is required. `meta.difficulty` is `"easy" | "medium" | "hard" | undefined`, because a default is only where a new recipe starts and an author can clear it. `meta.prepMinutes` is `number | undefined`. The record is closed, with no index signature, so `meta.serving` is an error rather than `unknown`.
 
 The declaration and the registration check each other. `registerEntryMetaBox` intersects a drift type onto its options, so an `entryTypes` list or a fields array that disagrees with the declaration fails the call with a message naming the mismatch. A box with no declaration registers as normal and reads as absent, and any package downstream can supply the missing declaration by merging the interface.
 

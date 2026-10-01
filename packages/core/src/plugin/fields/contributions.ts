@@ -147,7 +147,7 @@ type InferShape<
 /**
  * The read-shape record a fields array declares: one property per
  * fluent field, keyed by the literal key, typed by the phantom read
- * type (defaults applied, references hydrated).
+ * type (optional unless `.required()`, references hydrated).
  */
 export type InferFields<F extends readonly MetaBoxFieldInput[]> = InferShape<
   F,
@@ -156,9 +156,9 @@ export type InferFields<F extends readonly MetaBoxFieldInput[]> = InferShape<
 
 /**
  * The stored-shape record a fields array declares — what actually sits
- * in the meta JSON. Distinct from {@link InferFields}: `.default()`
- * narrows only the read shape (decode-time), and reference/temporal
- * fields store ids / ISO strings rather than hydrated values.
+ * in the meta JSON. Distinct from {@link InferFields}: reference/temporal
+ * fields store ids / ISO strings rather than hydrated values. Both narrow
+ * on `.required()` alone.
  */
 export type InferStoredFields<F extends readonly MetaBoxFieldInput[]> =
   InferShape<F, "_stored">;
@@ -236,8 +236,7 @@ export type SettingsOf<Name extends keyof SettingsContributions> = FoldRecords<
 >;
 
 // Mutual assignability of both extractions. Read shapes alone would
-// miss stored-only drift (`.default()` and `.required()` read the same
-// but store differently).
+// miss stored-only drift.
 type FieldsMatch<
   A extends readonly MetaBoxFieldInput[],
   B extends readonly MetaBoxFieldInput[],

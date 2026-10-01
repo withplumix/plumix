@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { settings } from "../../../db/schema/settings.js";
+import { settings, SETTINGS_CREATED_KEY } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { definePlugin } from "../../../plugin/define.js";
@@ -78,6 +78,22 @@ async function storedMeta<T extends { meta: unknown }>(
 }
 
 describe("sweepUnsettledMeta", () => {
+  test("leaves a settings group's created marker alone and out of the report", async () => {
+    const { ctx, harness } = await seeded();
+    await harness.db
+      .insert(settings)
+      .values({ group: "reading", key: SETTINGS_CREATED_KEY, value: true });
+
+    const sweep = await sweepUnsettledMeta(ctx, { write: true });
+
+    expect(sweep.keys.map((k) => k.key)).not.toContain(SETTINGS_CREATED_KEY);
+    const [marker] = await harness.db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, SETTINGS_CREATED_KEY));
+    expect(marker?.value).toBe(true);
+  });
+
   test("reports settleable and unconvertible values per store, scope and key", async () => {
     const { ctx, post } = await seeded();
 

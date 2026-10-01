@@ -160,9 +160,9 @@ declare module "../../template-registry.js" {
 const _productFields = [text("badge").default("none"), text("tier").required()];
 const _editorialFields = [text("featured"), text("premium")];
 // `brandTone` and `launchedOn` are the fixture's canaries for the term
-// read shape. `.default()` narrows the read type while storage may lack
-// the key — repo-wide, entries included — and `.returns("date")` reads
-// back as a `Date` only because the render path now decodes term meta.
+// read shape. `.default()` leaves the read type optional, as storage may lack
+// the key, and `.returns("date")` reads back as a `Date` only because the
+// render path now decodes term meta.
 const _brandFields = [
   text("brandBadge"),
   text("brandTone").default("warm"),
@@ -294,8 +294,8 @@ describe("targeted builders — name checking and data typing", () => {
     });
     forEntryType("product").template(({ data }) => {
       expectTypeOf(data.entry.price).toEqualTypeOf<number>();
-      // Read shape: .default() and .required() both narrow away undefined.
-      expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string>();
+      // Read shape: .required() narrows away undefined, .default() does not.
+      expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string | undefined>();
       expectTypeOf(data.entry.meta.tier).toEqualTypeOf<string>();
       // @ts-expect-error - "nope" is not a declared meta field of product
       void data.entry.meta.nope;
@@ -304,7 +304,9 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("product").archive.template(({ data: _data }) => {
       type ArchiveEntry = (typeof _data.entries)[number];
       expectTypeOf<ArchiveEntry["price"]>().toEqualTypeOf<number>();
-      expectTypeOf<ArchiveEntry["meta"]["badge"]>().toEqualTypeOf<string>();
+      expectTypeOf<ArchiveEntry["meta"]["badge"]>().toEqualTypeOf<
+        string | undefined
+      >();
       return null;
     });
   });
@@ -327,11 +329,11 @@ describe("targeted builders — name checking and data typing", () => {
         expectTypeOf(data.term.meta.launchedOn).toEqualTypeOf<
           Date | undefined
         >();
-        // `.default()` narrows the read shape and nothing applies it on
-        // read, so this one key is typed above what storage guarantees —
-        // the same on a term as on an entry, and the reason `.whereMeta()`
-        // below still accepts `undefined` for it.
-        expectTypeOf(data.term.meta.brandTone).toEqualTypeOf<string>();
+        // `.default()` is a new term's starting value, not a read fallback,
+        // so the key reads optional — the same on a term as on an entry.
+        expectTypeOf(data.term.meta.brandTone).toEqualTypeOf<
+          string | undefined
+        >();
         // @ts-expect-error - "nope" is not a declared meta field of brand
         void data.term.meta.nope;
         return null;
@@ -349,8 +351,8 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("product")
       .whereMeta("tier", "gold")
       .template(() => null);
-    // Stored shape, not read shape: `.default()` applies on read, so storage
-    // can still lack the key.
+    // `.default()` does not narrow the stored shape: a cleared field is
+    // stored absent.
     forEntryType("product")
       .whereMeta("badge", undefined)
       .template(() => null);
@@ -365,11 +367,11 @@ describe("targeted builders — name checking and data typing", () => {
   test("where reads storedMeta at the stored meta shape", () => {
     forEntryType("product")
       .where((data) => {
-        // Stored, not read: `.default()` narrows the decoded value only.
+        // `.default()` narrows neither the stored nor the decoded value.
         expectTypeOf(data.entry.storedMeta.badge).toEqualTypeOf<
           string | undefined
         >();
-        expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string>();
+        expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string | undefined>();
         // @ts-expect-error - "nope" is not a declared meta field of product
         void data.entry.storedMeta.nope;
         return data.entry.storedMeta.tier === "gold";
@@ -381,8 +383,8 @@ describe("targeted builders — name checking and data typing", () => {
     forTermTaxonomy("brand")
       .whereMeta("brandBadge", "gold")
       .template(() => null);
-    // Stored shape, not read shape: `.default()` applies on read, so storage
-    // can still lack the key.
+    // `.default()` does not narrow the stored shape: a cleared field is
+    // stored absent.
     forTermTaxonomy("brand")
       .whereMeta("brandTone", undefined)
       .template(() => null);

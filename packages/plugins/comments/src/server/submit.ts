@@ -150,7 +150,9 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     // session here to give logged-in commenters the trust fast path. On a
     // request that took the `formPost` exemption this resolves nobody, by
     // design; reading the session back another way would defeat the guard.
-    const auth = await ctx.authenticator.authenticate(request, ctx.db);
+    const auth = await ctx.authenticator.authenticate(request, ctx.db, {
+      plugins: ctx.plugins,
+    });
     const authUser = auth?.user ?? null;
     const isAuthenticated = authUser !== null;
     // Lowercase so the trust lookup and Gravatar agree on one identity.

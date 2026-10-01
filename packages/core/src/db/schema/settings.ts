@@ -24,6 +24,15 @@ export const settings = sqliteTable(
 );
 
 /**
+ * The row a settings group's first save writes, marking the group as created
+ * (ADR 0026). Until it exists, `settings.get` answers with the group fields'
+ * starting values under whatever is stored; once it does, storage alone holds
+ * the group. Part of the framework-reserved `__plumix_*` namespace, and no read
+ * hands it over.
+ */
+export const SETTINGS_CREATED_KEY = "__plumix_created";
+
+/**
  * A settings group as the RPC hands it over: one flat `key → value` bag of
  * the `settings.value` column verbatim.
  */

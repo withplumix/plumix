@@ -149,7 +149,7 @@ describe("string field builder chassis", () => {
 });
 
 describe("phantom value typing", () => {
-  test("unadorned fields read as `string | undefined`; .required()/.default() narrow", () => {
+  test("unadorned fields read as `string | undefined`; .required() narrows, .default() does not", () => {
     const _unadorned = text("subtitle");
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
       string | undefined
@@ -159,7 +159,9 @@ describe("phantom value typing", () => {
     expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<string>();
 
     const _defaulted = text("subtitle").default("none");
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<string>();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      string | undefined
+    >();
 
     // Narrowing survives later chained calls.
     const _chained = text("subtitle").required().maxLength(10).label("S");
@@ -181,10 +183,9 @@ describe("phantom value typing", () => {
       string | undefined
     >();
 
-    // `.default()` applies on read, so the read type narrows while the
-    // stored shape stays optional — nothing enforces it on write.
+    // `.default()` is a new entity's starting value; a cleared field is
+    // stored absent, so neither shape narrows.
     const _defaulted = text("subtitle").default("none");
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<string>();
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       string | undefined
     >();

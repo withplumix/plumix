@@ -1,5 +1,13 @@
-import { buildManifest, HookRegistry, installPlugins } from "plumix/plugin";
+import { eq } from "plumix/db";
+import { text } from "plumix/fields";
+import {
+  buildManifest,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+} from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
+import { entries } from "plumix/schema";
 import {
   createDispatcherHarness,
   createTestContext,
@@ -287,6 +295,41 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       expect.any(String),
       expect.objectContaining({ contentType: "image/png", contentLength: 5 }),
     );
+  });
+
+  // An upload creates a media entry, so it starts from the fields registered
+  // on `media` (ADR 0026); the file's own meta lands on top.
+  test("the new media entry stores the media fields' defaults", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({
+      storage,
+      config: {
+        plugins: [
+          media(),
+          definePlugin("media-extras", (ctx) => {
+            ctx.registerEntryMetaBox("media-extras", {
+              label: "Extras",
+              entryTypes: ["media"],
+              fields: [text("credit").default("Staff")],
+            });
+          }),
+        ],
+      },
+    });
+    const user = await h.seedUser("contributor");
+
+    const { output } = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "cat.png", contentType: "image/png", size: 5 },
+      user.id,
+    );
+
+    const [row] = await h.db
+      .select({ meta: entries.meta })
+      .from(entries)
+      .where(eq(entries.id, output?.mediaId ?? -1));
+    expect(row?.meta).toMatchObject({ credit: "Staff", mime: "image/png" });
   });
 
   test("rejects unsupported mime types with UNSUPPORTED_MEDIA_TYPE (415)", async () => {

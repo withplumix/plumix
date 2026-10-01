@@ -53,14 +53,16 @@ describe("toggle() fluent builder", () => {
     expect(base.build().offText).toBeUndefined();
   });
 
-  test("reads as boolean | undefined; .required()/.default() narrow", () => {
+  test("reads as boolean | undefined; .required() narrows, .default() does not", () => {
     const _unadorned = toggle("featured");
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
       boolean | undefined
     >();
 
     const _defaulted = toggle("featured").default(false);
-    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
 
     const _required = toggle("featured").required();
     expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<boolean>();

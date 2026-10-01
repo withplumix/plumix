@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type {
+  AuthenticateScope,
   AuthResult,
   RequestAuthenticator,
 } from "../context/authenticator.js";
@@ -9,6 +10,7 @@ import { readSessionCookie } from "./cookies.js";
 import { DEFAULT_SESSION_POLICY, validateSession } from "./sessions.js";
 
 export type {
+  AuthenticateScope,
   AuthResult,
   RequestAuthenticator,
 } from "../context/authenticator.js";
@@ -53,7 +55,9 @@ export function authenticateTraced(
   authenticator: RequestAuthenticator,
 ): Promise<AuthResult | null> {
   return ctx.telemetry.span("auth", async (s) => {
-    const result = await authenticator.authenticate(ctx.request, ctx.db);
+    const result = await authenticator.authenticate(ctx.request, ctx.db, {
+      plugins: ctx.plugins,
+    });
     s.set("auth.authenticated", result !== null);
     if (result) s.set("auth.user.id", result.user.id);
     return result;
@@ -148,9 +152,9 @@ export function chainAuthenticators(
   ...authenticators: readonly RequestAuthenticator[]
 ): RequestAuthenticator {
   return {
-    async authenticate(request, db) {
+    async authenticate(request, db, scope?: AuthenticateScope) {
       for (const auth of authenticators) {
-        const result = await auth.authenticate(request, db);
+        const result = await auth.authenticate(request, db, scope);
         if (result) return result;
       }
       return null;

@@ -55,8 +55,9 @@ export class JsonFieldBuilder<
     return this.#fork({ description });
   }
 
-  /** Default for absent keys — any JSON-serialisable value, applied at
-   * read decode (and seeded into the admin form). */
+  /** The value a new entity starts with — any JSON-serialisable value,
+   * written into its meta when it is created, not filled in on read, so
+   * a cleared field stays empty. */
   default(value: unknown): JsonFieldBuilder<K> {
     return this.#fork({ default: value });
   }

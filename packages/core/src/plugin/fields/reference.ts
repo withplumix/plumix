@@ -264,10 +264,10 @@ export class ReferenceFieldBuilder<
   }
 
   /**
-   * Prefill for absent keys — a stored id (or id array for multi
-   * fields), seeded into the admin form. Purely a form/decode seed:
-   * a reference read stays optional regardless (the default id can
-   * itself orphan).
+   * The value a new entity starts with — a stored id (or id array for
+   * multi fields), written into its meta when it is created, not filled
+   * in on read, so a cleared field stays empty. Leaves the read type as
+   * it is; `.required()` narrows it.
    */
   default(
     value: Multiple extends true ? readonly string[] : string,

@@ -6,6 +6,7 @@ import type {
 } from "../../../plugin/manifest.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
+import { text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { loadUserMeta } from "./meta.js";
@@ -212,5 +213,26 @@ describe("user.get settles an unsettled row", () => {
     });
     expect(stored?.meta).toEqual({ age: 30, newsletter: true });
     expect(stored?.updatedAt).toEqual(lastEdited);
+  });
+});
+
+describe("user meta: starting meta", () => {
+  test("an invited user stores the user fields' defaults", async () => {
+    const plugins = createPluginRegistry();
+    registerUserFields(plugins, [
+      text("pronouns").default("they/them").build(),
+      text("bio").build(),
+    ]);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const { user } = await h.client.user.invite({
+      email: "new@example.com",
+      role: "author",
+    });
+
+    const [row] = await h.db
+      .select({ meta: users.meta })
+      .from(users)
+      .where(eq(users.id, user.id));
+    expect(row?.meta).toEqual({ pronouns: "they/them" });
   });
 });
