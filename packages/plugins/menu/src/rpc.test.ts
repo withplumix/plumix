@@ -11,7 +11,7 @@ import {
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
-import { settings, terms } from "plumix/schema";
+import { entries, settings, terms } from "plumix/schema";
 import {
   adminUser,
   createTestContext,
@@ -126,6 +126,69 @@ async function seedMenu(
     name,
   });
   return { id: term.id, version: term.version, slug: term.slug };
+}
+
+// A public `post` entry type and `category` taxonomy, both menu-eligible, so
+// the core lookup adapters resolve the items a save links to them.
+const contentHost: ReturnType<typeof definePlugin> = definePlugin(
+  "content-host",
+  (setup) => {
+    setup.registerEntryType("post", { label: "Posts", isPublic: true });
+    setup.registerTermTaxonomy("category", {
+      label: "Categories",
+      isPublic: true,
+    });
+  },
+);
+
+async function readItemMeta(db: Db, id: number): Promise<unknown> {
+  const [row] = await db
+    .select({ meta: entries.meta })
+    .from(entries)
+    .where(eq(entries.id, id))
+    .limit(1);
+  return row?.meta;
+}
+
+function itemIdAt(saved: unknown, index: number): number {
+  const id = (saved as { itemIds: readonly number[] }).itemIds[index];
+  if (id === undefined) throw new Error(`save returned no item id at ${index}`);
+  return id;
+}
+
+type RegisteredLookupAdapter = NonNullable<
+  ReturnType<PluginRegistry["lookupAdapters"]["get"]>
+>;
+
+function replaceLookupAdapter(
+  registry: PluginRegistry,
+  kind: string,
+  replace: (registered: RegisteredLookupAdapter) => RegisteredLookupAdapter,
+): void {
+  const lookupAdapters = registry.lookupAdapters as Map<
+    string,
+    RegisteredLookupAdapter
+  >;
+  const registered = lookupAdapters.get(kind);
+  if (!registered) throw new Error(`${kind} adapter not registered`);
+  lookupAdapters.set(kind, replace(registered));
+}
+
+function countListCalls(
+  registry: PluginRegistry,
+  kind: string,
+  calls: Map<string, number>,
+): void {
+  replaceLookupAdapter(registry, kind, (registered) => ({
+    ...registered,
+    adapter: {
+      ...registered.adapter,
+      list: (ctx, options) => {
+        calls.set(kind, (calls.get(kind) ?? 0) + 1);
+        return registered.adapter.list(ctx, options);
+      },
+    },
+  }));
 }
 
 describe("menu RPC", () => {
@@ -519,6 +582,356 @@ describe("menu RPC", () => {
       expect(second.itemIds).toEqual([keepId]);
       expect(second.removed).toEqual([dropId]);
       expect(second.modified).toEqual([keepId]);
+    });
+
+    test("stores the linked entry's label and href as the item's snapshot", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: "about-us",
+        status: "published",
+        authorId: h.user.id,
+      });
+
+      const result = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: post.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
+        kind: "entry",
+        entryId: post.id,
+        lastLabel: "About us",
+        lastHref: "/post/about-us",
+      });
+    });
+
+    test("stores the linked term's label and href as the item's snapshot", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const news = await h.factories.term.create({
+        taxonomy: "category",
+        slug: "news",
+        name: "News",
+      });
+
+      const result = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "term", termId: news.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
+        kind: "term",
+        termId: news.id,
+        lastLabel: "News",
+        lastHref: "/category/news",
+      });
+    });
+
+    test("keeps the stored snapshot when a later save can't resolve the trashed entry", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: "about-us",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const first = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: post.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+      const itemId = itemIdAt(first, 0);
+      await h.db
+        .update(entries)
+        .set({ status: "trash" })
+        .where(eq(entries.id, post.id));
+
+      await h.client.menu.save({
+        termId: m.id,
+        version: 1,
+        items: [
+          {
+            id: itemId,
+            parentIndex: null,
+            sortOrder: 1,
+            title: null,
+            meta: { kind: "entry", entryId: post.id },
+          },
+        ],
+      });
+
+      const menu = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly {
+          resolved: { state: string; label: string; lastHref: string | null };
+        }[];
+      };
+      expect(menu.items[0]?.resolved).toMatchObject({
+        state: "broken",
+        label: "About us",
+        lastHref: "/post/about-us",
+      });
+    });
+
+    test("a re-linked item that doesn't resolve keeps no snapshot of its previous target", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: "about-us",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const first = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: post.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+      const itemId = itemIdAt(first, 0);
+      expect(await readItemMeta(h.db, itemId)).toMatchObject({
+        lastLabel: "About us",
+      });
+
+      await h.client.menu.save({
+        termId: m.id,
+        version: 1,
+        items: [
+          {
+            id: itemId,
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: 99999 },
+          },
+        ],
+      });
+
+      expect(await readItemMeta(h.db, itemId)).toEqual({
+        kind: "entry",
+        entryId: 99999,
+      });
+    });
+
+    test("a save by a user without the adapter's capability keeps the stored snapshot and writes no new one", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const about = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: "about-us",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const contact = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "Contact",
+        slug: "contact",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const first = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: about.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+      const aboutItemId = itemIdAt(first, 0);
+      replaceLookupAdapter(h.registry, "entry", (registered) => ({
+        ...registered,
+        capability: "entry:post:secret",
+      }));
+
+      const second = (await h.client.menu.save({
+        termId: m.id,
+        version: 1,
+        items: [
+          {
+            id: aboutItemId,
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: about.id },
+          },
+          {
+            parentIndex: null,
+            sortOrder: 1,
+            title: null,
+            meta: { kind: "entry", entryId: contact.id },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      expect(await readItemMeta(h.db, aboutItemId)).toEqual({
+        kind: "entry",
+        entryId: about.id,
+        lastLabel: "About us",
+        lastHref: "/post/about-us",
+      });
+      expect(await readItemMeta(h.db, itemIdAt(second, 1))).toEqual({
+        kind: "entry",
+        entryId: contact.id,
+      });
+    });
+
+    test("doesn't persist a snapshot sent in the save input", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: "about-us",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const spoofed = {
+        lastLabel: "Spoofed",
+        lastHref: "https://evil.example/",
+      };
+
+      const result = (await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: [
+          {
+            parentIndex: null,
+            sortOrder: 0,
+            title: null,
+            meta: { kind: "entry", entryId: post.id, ...spoofed },
+          },
+          {
+            parentIndex: null,
+            sortOrder: 1,
+            title: null,
+            meta: { kind: "entry", entryId: 99999, ...spoofed },
+          },
+        ],
+      })) as { itemIds: number[] };
+
+      expect(await readItemMeta(h.db, itemIdAt(result, 0))).toEqual({
+        kind: "entry",
+        entryId: post.id,
+        lastLabel: "About us",
+        lastHref: "/post/about-us",
+      });
+      expect(await readItemMeta(h.db, itemIdAt(result, 1))).toEqual({
+        kind: "entry",
+        entryId: 99999,
+      });
+    });
+
+    test("looks each kind up with one adapter call, whatever the number of items", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const calls = new Map<string, number>();
+      countListCalls(h.registry, "entry", calls);
+      countListCalls(h.registry, "term", calls);
+      const posts = await entryFactory.transient({ db: h.db }).createList(3, {
+        type: "post",
+        status: "published",
+        authorId: h.user.id,
+      });
+      const categories = await h.factories.term.createList(3, {
+        taxonomy: "category",
+      });
+      const items = [
+        ...posts.map((post) => ({ kind: "entry", entryId: post.id })),
+        ...categories.map((category) => ({
+          kind: "term",
+          termId: category.id,
+        })),
+      ];
+
+      await h.client.menu.save({
+        termId: m.id,
+        version: 0,
+        items: items.map((meta, sortOrder) => ({
+          parentIndex: null,
+          sortOrder,
+          title: null,
+          meta,
+        })),
+      });
+
+      expect(Object.fromEntries(calls)).toEqual({ entry: 1, term: 1 });
+    });
+
+    test("a lookup that throws fails the save without bumping the menu's version", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "main");
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        status: "published",
+        authorId: h.user.id,
+      });
+      replaceLookupAdapter(h.registry, "entry", (registered) => ({
+        ...registered,
+        adapter: {
+          ...registered.adapter,
+          list: () => Promise.reject(new Error("lookup backend down")),
+        },
+      }));
+
+      await expect(
+        h.client.menu.save({
+          termId: m.id,
+          version: 0,
+          items: [
+            {
+              parentIndex: null,
+              sortOrder: 0,
+              title: null,
+              meta: { kind: "entry", entryId: post.id },
+            },
+          ],
+        }),
+      ).rejects.toThrow();
+
+      const [term] = await h.db
+        .select({ version: terms.version })
+        .from(terms)
+        .where(eq(terms.id, m.id));
+      expect(term?.version).toBe(0);
     });
 
     test("rejects claimed-id that doesn't belong to this menu", async () => {

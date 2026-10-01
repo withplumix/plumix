@@ -1,4 +1,9 @@
-import type { MenuItemMeta } from "./types.js";
+import type { MenuTargetLookups } from "./resolveItemStates.js";
+import type {
+  MenuItemEntryMeta,
+  MenuItemMeta,
+  MenuItemTermMeta,
+} from "./types.js";
 import { MenuPluginError } from "../errors.js";
 
 /**
@@ -150,4 +155,43 @@ export function resolveParentIds(
     if (item.resolvedParentIndex === null) return null;
     return resolvedIds[item.resolvedParentIndex] ?? null;
   });
+}
+
+/**
+ * `meta` with `lastLabel` / `lastHref` taken from its target's lookup. A
+ * field the lookup leaves empty isn't written. A target that doesn't
+ * resolve keeps the snapshot `stored` holds, if `stored` links the same
+ * target.
+ */
+export function withTargetSnapshot(
+  meta: MenuItemMeta,
+  targets: MenuTargetLookups,
+  stored: MenuItemMeta | null,
+): MenuItemMeta {
+  if (meta.kind === "custom") return meta;
+  const result = targets.resultFor(meta);
+  if (result === null) {
+    return isSameTarget(meta, stored)
+      ? {
+          ...meta,
+          ...(stored.lastLabel ? { lastLabel: stored.lastLabel } : {}),
+          ...(stored.lastHref ? { lastHref: stored.lastHref } : {}),
+        }
+      : meta;
+  }
+  return {
+    ...meta,
+    ...(result.label ? { lastLabel: result.label } : {}),
+    ...(result.href ? { lastHref: result.href } : {}),
+  };
+}
+
+function isSameTarget<T extends MenuItemEntryMeta | MenuItemTermMeta>(
+  meta: T,
+  stored: MenuItemMeta | null,
+): stored is T {
+  if (meta.kind === "entry") {
+    return stored?.kind === "entry" && stored.entryId === meta.entryId;
+  }
+  return stored?.kind === "term" && stored.termId === meta.termId;
 }

@@ -119,7 +119,7 @@ A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or 
 
 Two editors can have the same menu open. Each save carries the version it was loaded at, so the server refuses the second save and the editor prompts a reload. It never silently overwrites the first.
 
-When an item's linked entry or term no longer resolves, the editor marks the item as a broken link and offers two fixes. Re-link points it at another entry or term. Convert to Custom URL turns it into a custom link, which needs an address before the menu can be saved.
+When an item's linked entry or term no longer resolves, the editor marks the item as a broken link and offers two fixes. Re-link points it at another entry or term. Convert to Custom URL turns it into a custom link, which needs an address before the menu can be saved. Each save stores the label and URL its linked entry or term had, so a broken item keeps its name and Convert to Custom URL fills in the last known address. A snapshot is only as fresh as the last save of the menu.
 
 ## Which entry types appear
 

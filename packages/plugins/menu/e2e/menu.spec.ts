@@ -4,8 +4,12 @@
 // RPC mocking — the spec exercises the menu plugin end-to-end through
 // the actual oRPC + D1 round-trip.
 
+import { resolve } from "node:path";
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "plumix/test/playwright";
+import { eq } from "plumix/db";
+import { entries } from "plumix/schema";
+import { factoriesFor } from "plumix/test";
+import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
 // MenuItemEditor.tsx — must match the constant in the component
 // because drag projection compares `delta.x` against this width.
@@ -247,6 +251,71 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
       "0",
     );
   });
+});
+
+// The admin has no entry picker yet, so the entry item is seeded straight
+// into the playground's database, without a snapshot. The admin's save
+// is what writes one.
+test("a trashed entry's item keeps its label, and Convert to Custom URL fills in its last URL", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const factories = factoriesFor(db);
+  // globalSetup's `actingAs` already took the factory's `user-1`, and this
+  // worker's factory sequence starts over at 1, so the author is named.
+  const author = await factories.admin.create({
+    email: "author@example.test",
+    slug: "author",
+  });
+  const post = await factories.entry.create({
+    type: "post",
+    title: "About us",
+    slug: "about-us",
+    status: "published",
+    authorId: author.id,
+  });
+  const linked = await factories.term.create({
+    taxonomy: "menu",
+    slug: "linked",
+    name: "Linked",
+  });
+  const item = await factories.entry.create({
+    type: "menu_item",
+    title: "",
+    slug: "mi-linked-about-us",
+    status: "published",
+    authorId: author.id,
+    meta: { kind: "entry", entryId: post.id },
+  });
+  await factories.entryTerm.create({ entryId: item.id, termId: linked.id });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-linked").click();
+  const row = page.getByTestId(`menu-item-row-${String(item.id)}`);
+  await expect(row).toHaveAttribute("data-state", "ok");
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/menu/save") && r.status() === 200,
+  );
+  await page.getByTestId("menu-save-button").click();
+  await saved;
+
+  await db
+    .update(entries)
+    .set({ status: "trash" })
+    .where(eq(entries.id, post.id));
+  await page.reload();
+  await page.getByTestId("menus-selector-option-linked").click();
+  await expect(row).toHaveAttribute("data-state", "broken");
+  await expect(row).toContainText("About us");
+
+  // The editor has no URL field, so the URL Convert to Custom URL filled
+  // in is read off the save that carries it.
+  await page.getByTestId(`menu-item-convert-${String(item.id)}`).click();
+  const converted = page.waitForRequest((r) => r.url().endsWith("/menu/save"));
+  await page.getByTestId("menu-save-button").click();
+  expect((await converted).postData()).toContain('"url":"/post/about-us"');
 });
 
 function menuOption(page: Page): Locator {
