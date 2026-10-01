@@ -13,7 +13,7 @@ export interface GateFailure {
   readonly output: string;
 }
 
-interface GateResult {
+export interface GateResult {
   readonly name: string;
   readonly command: string;
   readonly durationMs: number;
@@ -21,6 +21,7 @@ interface GateResult {
   readonly outcome: "ok" | "fail" | "skipped";
   readonly exitCode?: number;
   readonly skippedBecause?: string;
+  readonly output?: string;
 }
 
 const touches =
@@ -204,7 +205,7 @@ export const runGates = async (
       continue;
     }
 
-    const runOnce = async (): Promise<GateResult & { output: string }> => {
+    const runOnce = async (): Promise<GateResult> => {
       const attemptStartedAtMs = Date.now();
       const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
       return {
@@ -214,7 +215,9 @@ export const runGates = async (
         durationMs: Date.now() - attemptStartedAtMs,
         outcome: exitCode === 0 ? "ok" : "fail",
         exitCode,
-        output: `${stdout}\n${stderr}`,
+        ...(exitCode !== 0 && {
+          output: `${stdout}\n${stderr}`.slice(-8000),
+        }),
       };
     };
 
@@ -228,12 +231,12 @@ export const runGates = async (
       onResult(attempt);
     }
 
-    const { exitCode, output } = attempt;
+    const { exitCode, output = "" } = attempt;
     if (exitCode !== 0) {
       failures.push({
         name: gate.name,
         command: gate.command,
-        output: output.slice(-8000),
+        output,
       });
       if (stopAtFirstFailure) return { results, failures };
     }

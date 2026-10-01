@@ -1,4 +1,10 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 interface ModelRatesPerMillionTokens {
@@ -273,7 +279,15 @@ export class Journal {
     this.#persist("running");
   }
 
-  record(phase: PhaseRecord): void {
+  record(phase: PhaseRecord, output?: string): void {
+    if (output !== undefined) {
+      const logFile = this.logPath(phase.phase);
+      appendFileSync(
+        logFile,
+        `--- ${phase.startedAt} exit ${String(phase.exitCode)}\n${output}\n`,
+      );
+      phase = { ...phase, logFile };
+    }
     this.#phases.push(phase);
     this.#persist("running");
 

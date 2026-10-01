@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { Gate } from "./gates.js";
+import type { Gate, GateResult } from "./gates.js";
 import { gateBehindCheck, GATES, GATES_LEFT_TO_CI, runGates } from "./gates.js";
 
 const sandboxWhereTheseCommandsFail = (failing: readonly string[]) => ({
@@ -75,7 +75,7 @@ const sandboxWhereACommandFailsOnce = (flaky: string) => {
       seen += 1;
       return {
         exitCode: seen === 1 ? 1 : 0,
-        stdout: "",
+        stdout: seen === 1 ? "http://localhost:3070 is already used" : "",
         stderr: "",
         durationMs: 0,
       };
@@ -121,6 +121,21 @@ describe("a gate that fails once", () => {
     });
 
     expect(seen).toEqual(["typecheck:ok", "lint:fail", "lint:ok", "knip:ok"]);
+  });
+
+  test("the failed run keeps its output even when the retry passes", async () => {
+    const results: GateResult[] = [];
+    await runGates(sandboxWhereACommandFailsOnce("lint"), THREE_GATES, {
+      stopAtFirstFailure: true,
+      onResult: (result) => results.push(result),
+      retryAFailureOnce: true,
+    });
+
+    const lint = results.filter(({ name }) => name === "lint");
+    expect(lint.map(({ outcome, output }) => [outcome, output])).toEqual([
+      ["fail", expect.stringContaining("3070 is already used")],
+      ["ok", undefined],
+    ]);
   });
 
   test("without the option a failure is handed on at once", async () => {
