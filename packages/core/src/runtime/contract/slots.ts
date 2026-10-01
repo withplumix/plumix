@@ -146,7 +146,11 @@ export interface UrlOptions {
 
 export interface PresignPutOptions {
   readonly contentType: string;
-  readonly maxBytes?: number;
+  /**
+   * Exact size of the PUT body in bytes. It is signed into the URL, so the
+   * bucket refuses a body of any other length.
+   */
+  readonly contentLength: number;
   /** Default 300. */
   readonly expiresIn?: number;
 }
@@ -154,6 +158,10 @@ export interface PresignPutOptions {
 export interface PresignedPutResult {
   readonly url: string;
   readonly method: "PUT";
+  /**
+   * Headers the client sets verbatim. `Content-Length` is not among them: the
+   * client's HTTP stack sets it from the body.
+   */
   readonly headers: Readonly<Record<string, string>>;
   /** Unix epoch seconds. */
   readonly expiresAt: number;

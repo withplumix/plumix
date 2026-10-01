@@ -336,6 +336,7 @@ export const objectStorageContractCases: readonly Case[] = [
       const now = Math.floor(Date.now() / 1000);
       const presigned = await storage.presignPut("upload/1", {
         contentType: "image/jpeg",
+        contentLength: 10,
         expiresIn,
       });
       expect(presigned.method).toBe("PUT");

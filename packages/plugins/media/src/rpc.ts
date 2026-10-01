@@ -179,7 +179,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
           try {
             presigned = await storage.presignPut(storageKey, {
               contentType: normalizedMime,
-              maxBytes: input.size,
+              contentLength: input.size,
               // 60s is plenty for a same-page XHR PUT and tightens the
               // replay window if the URL leaks (logs, browser history).
               expiresIn: 60,
@@ -200,8 +200,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
 
         // Worker-routed fallback — when the runtime has the binding
         // but no S3 credentials. Bytes flow through `env.MEDIA.put()`
-        // and the upload-route enforces the size cap on the actual
-        // stream, not just the Content-Length header.
+        // and the upload-route refuses a missing Content-Length or one
+        // above the declared size.
         return {
           uploadUrl: withBasePath(
             `/_plumix/media/upload/${String(created.id)}`,
@@ -251,9 +251,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
         throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
       }
 
-      // Size check — bytes are not signed into the SigV4 query, so
-      // `meta.size` is just the client's claim at draft creation. Use
-      // head() to verify the actually-stored bytes don't exceed it.
+      // Size check — a presigned PUT is signed for exactly `meta.size`; the
+      // worker-routed upload leaves it a claim. head() verifies the stored bytes.
       const head = await storage.head(meta.storageKey);
       if (!head) {
         throw errors.CONFLICT({ data: { reason: "object_not_found" } });

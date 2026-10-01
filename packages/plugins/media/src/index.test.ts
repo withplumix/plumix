@@ -266,6 +266,29 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
     expect(output?.storageKey).toMatch(/^\d{4}\/\d{2}\/[0-9a-f-]+\.png$/);
   });
 
+  test("presigns the PUT for exactly the declared size", async () => {
+    const storage = memoryStorage().connect({});
+    const presignPut = vi.spyOn(storage, "presignPut");
+    const h = await createDispatcherHarness({
+      storage,
+      config: { plugins: [media()] },
+    });
+    const user = await h.seedUser("contributor");
+
+    const { status } = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      { filename: "cat.png", contentType: "image/png", size: 5 },
+      user.id,
+    );
+
+    expect(status).toBe(200);
+    expect(presignPut).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ contentType: "image/png", contentLength: 5 }),
+    );
+  });
+
   test("rejects unsupported mime types with UNSUPPORTED_MEDIA_TYPE (415)", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
@@ -541,10 +564,9 @@ describe("@plumix/plugin-media — media.confirm", () => {
   });
 
   test("rejects an upload that exceeds meta.size with PAYLOAD_TOO_LARGE (413)", async () => {
-    // Bytes are not signed into the SigV4 query, so `meta.size` is
-    // just the client's claim. confirm must verify via head() that
-    // the actually-stored object isn't oversized — otherwise an
-    // attacker who got a presigned URL could PUT arbitrary size.
+    // A worker-routed or memory-stored upload has no signed length, so
+    // `meta.size` is just the client's claim. confirm must verify via
+    // head() that the actually-stored object isn't oversized.
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
       storage,

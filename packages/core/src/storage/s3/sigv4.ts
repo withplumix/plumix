@@ -27,6 +27,11 @@ export interface PresignPutInput {
   readonly key: string;
   /** Mime signed into the canonical request — browser must echo. */
   readonly contentType: string;
+  /**
+   * Exact body size in bytes, signed as `content-length`. The bucket refuses a
+   * PUT of any other length, so the URL cannot store more than was declared.
+   */
+  readonly contentLength: number;
   /** Seconds until the URL expires; outside AWS's 1..604800 range it throws. */
   readonly expiresIn: number;
   readonly credentials: SigV4Credentials;
@@ -45,7 +50,10 @@ export const DEFAULT_PRESIGN_TTL_SECONDS = 60;
 export interface PresignedPut {
   readonly url: string;
   readonly method: "PUT";
-  /** Headers the browser must send verbatim — they were signed. */
+  /**
+   * Headers the browser must send verbatim — they were signed. `content-length`
+   * is signed too but left out: the client's HTTP stack sets it from the body.
+   */
   readonly headers: Readonly<Record<string, string>>;
   readonly expiresAt: number;
 }
@@ -61,6 +69,11 @@ export async function presignPutUrl(
   ) {
     throw SigV4Error.expiresInOutOfRange({ expiresIn: input.expiresIn });
   }
+  if (!Number.isSafeInteger(input.contentLength) || input.contentLength < 0) {
+    throw SigV4Error.contentLengthInvalid({
+      contentLength: input.contentLength,
+    });
+  }
 
   const scope = scopeOf(input.credentials, input.now);
   const endpoint = new URL(input.endpoint);
@@ -68,13 +81,14 @@ export async function presignPutUrl(
   const base = endpoint.pathname.replace(/\/$/, "");
   const path = `${base}/${rfc3986Encode(input.bucket)}/${encodePath(input.key)}`;
 
-  // Sign content-type;host — matches the AWS SDK PutObjectCommand
-  // default and the Cloudflare R2 presigned-URL docs.
+  // content-type;host matches the AWS SDK PutObjectCommand default and the
+  // Cloudflare R2 presigned-URL docs; content-length bounds the body.
   const headers: Record<string, string> = {
+    "content-length": String(input.contentLength),
     "content-type": input.contentType,
     host,
   };
-  const signedHeaders = "content-type;host";
+  const signedHeaders = "content-length;content-type;host";
 
   const queryParams: Record<string, string> = {
     "X-Amz-Algorithm": "AWS4-HMAC-SHA256",

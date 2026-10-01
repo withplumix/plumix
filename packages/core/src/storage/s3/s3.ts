@@ -216,6 +216,7 @@ export function s3(config: S3Config): S3ObjectStorage {
             bucket: config.bucket,
             key,
             contentType: opts.contentType,
+            contentLength: opts.contentLength,
             expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
             credentials,
           });

@@ -133,6 +133,7 @@ describe("s3 requests", () => {
     if (!storage.presignPut) throw new Error("s3 should expose presignPut");
     const presigned = await storage.presignPut("uploads/cat photo.jpg", {
       contentType: "image/jpeg",
+      contentLength: 10,
     });
     const response = await fake.fetch(presigned.url, {
       method: presigned.method,
@@ -144,6 +145,25 @@ describe("s3 requests", () => {
       size: 10,
       contentType: "image/jpeg",
     });
+  });
+
+  test("a presigned PUT whose body is not the signed length is refused", async () => {
+    const { fake, storage } = bind();
+    if (!storage.presignPut) throw new Error("s3 should expose presignPut");
+    const presigned = await storage.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      contentLength: 10,
+    });
+    expect(presigned.url).toContain(
+      "X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost",
+    );
+    const response = await fake.fetch(presigned.url, {
+      method: presigned.method,
+      headers: presigned.headers,
+      body: "jpeg bytes, and then some",
+    });
+    expect(response.status).toBe(403);
+    expect(await storage.head("uploads/cat.jpg")).toBeNull();
   });
 
   test("a key with a dot segment is refused before any request is sent", async () => {

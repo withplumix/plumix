@@ -132,11 +132,13 @@ Either way, `media.confirm` does the same checks before publishing:
 
 When the PUT or the confirm fails, the admin deletes the draft entry it created. When presigning throws after the draft was inserted, the server deletes the draft itself.
 
-<Aside type="note" title="A request, not a guarantee, before confirm">
+<Aside type="note" title="Where the size is enforced">
   `media.createUploadUrl` checks the declared size against `maxUploadSize`
-  before it mints a URL, and the worker-routed upload refuses a body larger than
-  it. A presigned PUT URL does not sign the size, so for that mode the check
-  that holds is the one `media.confirm` makes after the bytes land.
+  before it mints a URL. A presigned PUT URL is signed for exactly that size as
+  `Content-Length`, so the bucket refuses a PUT whose length doesn't match, and
+  stores nothing. The worker-routed upload refuses a body larger than the
+  declared size, and for that mode `media.confirm` remains the check on the
+  stored object after the bytes land.
 </Aside>
 
 ## Configuration

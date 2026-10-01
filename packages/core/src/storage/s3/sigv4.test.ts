@@ -25,10 +25,14 @@ const BASE_PARAMS = {
   endpoint: "https://abc.r2.cloudflarestorage.com",
   bucket: "bucket-a",
   contentType: "image/jpeg",
+  contentLength: 10,
   expiresIn: 60,
   credentials: TEST_CREDENTIALS,
   now: FIXED_NOW,
 } as const;
+
+// Exactly `BASE_PARAMS.contentLength` bytes, the body the signed URL is for.
+const BODY = "jpeg bytes";
 
 describe("presignPutUrl", () => {
   test("signature is deterministic for fixed inputs", async () => {
@@ -61,13 +65,16 @@ describe("presignPutUrl", () => {
     expect(b.headers["content-type"]).toBe("image/png");
   });
 
-  test("X-Amz-SignedHeaders is content-type;host (matches AWS SDK + Cloudflare docs)", async () => {
+  test("X-Amz-SignedHeaders is content-length;content-type;host", async () => {
     const result = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
     // `;` URL-encodes to `%3B`.
-    expect(result.url).toContain("X-Amz-SignedHeaders=content-type%3Bhost");
-    // browsers refuse to set `host`; we sign it via the URL but the
-    // returned header bag must omit it.
+    expect(result.url).toContain(
+      "X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost",
+    );
+    // Browsers refuse to set `host` and `content-length`; both are signed,
+    // but the client's HTTP stack supplies them, so the header bag omits them.
     expect(result.headers).not.toHaveProperty("host");
+    expect(result.headers).not.toHaveProperty("content-length");
   });
 
   test("expiresIn out of range throws", async () => {
@@ -81,6 +88,26 @@ describe("presignPutUrl", () => {
     await expect(
       presignPutUrl({ ...base, expiresIn: Number.NaN }),
     ).rejects.toThrow(/expiresIn must be in/);
+  });
+
+  test.each<[string, number]>([
+    ["undefined", undefined as unknown as number],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["NaN", Number.NaN],
+    ["above the safe-integer limit", Number.MAX_SAFE_INTEGER + 1],
+  ])("a contentLength that is %s throws", async (_, contentLength) => {
+    await expect(
+      presignPutUrl({
+        ...BASE_PARAMS,
+        key: "k",
+        contentLength,
+      }),
+    ).rejects.toMatchObject({
+      name: "SigV4Error",
+      code: "content_length_invalid",
+      contentLength,
+    });
   });
 
   test("special characters in object key are encoded segment-by-segment", async () => {
@@ -104,6 +131,7 @@ describe("presignPutUrl against a server recomputing the signature", () => {
     const request = new Request(presigned.url, {
       method: "PUT",
       headers: presigned.headers,
+      body: BODY,
     });
     expect(await verifySigV4(request, VERIFIER)).toEqual({ ok: true });
   });
@@ -113,8 +141,25 @@ describe("presignPutUrl against a server recomputing the signature", () => {
     const request = new Request(presigned.url, {
       method: "PUT",
       headers: { "content-type": "image/png" },
+      body: BODY,
     });
     expect(await verifySigV4(request, VERIFIER)).toMatchObject({ ok: false });
+  });
+
+  test.each([
+    ["one byte longer", `${BODY}!`],
+    ["one byte shorter", BODY.slice(1)],
+  ])("a body %s than the one signed is rejected", async (_, body) => {
+    const presigned = await presignPutUrl({ ...BASE_PARAMS, key: "k" });
+    const request = new Request(presigned.url, {
+      method: "PUT",
+      headers: presigned.headers,
+      body,
+    });
+    expect(await verifySigV4(request, VERIFIER)).toEqual({
+      ok: false,
+      reason: "signature mismatch",
+    });
   });
 
   test("a session token rides along in the query and is covered by the signature", async () => {
@@ -131,6 +176,7 @@ describe("presignPutUrl against a server recomputing the signature", () => {
     const request = new Request(presigned.url, {
       method: "PUT",
       headers: presigned.headers,
+      body: BODY,
     });
     expect(await verifySigV4(request, { ...VERIFIER, credentials })).toEqual({
       ok: true,
@@ -299,6 +345,7 @@ describe("signRequest", () => {
     const request = new Request(presigned.url, {
       method: "PUT",
       headers: presigned.headers,
+      body: BODY,
     });
     expect(await verifySigV4(request, VERIFIER)).toEqual({ ok: true });
   });
@@ -308,6 +355,7 @@ describe("signRequest", () => {
     const request = new Request(presigned.url, {
       method: "PUT",
       headers: presigned.headers,
+      body: BODY,
     });
     const later = new Date(FIXED_NOW.getTime() + 61_000);
     expect(await verifySigV4(request, { ...VERIFIER, now: later })).toEqual({

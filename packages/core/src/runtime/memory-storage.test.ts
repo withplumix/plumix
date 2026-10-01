@@ -25,7 +25,10 @@ describe("memoryStorage public URLs", () => {
   test("presigns against the same base, with the key encoded whole", async () => {
     const s = memoryStorage().connect({});
     if (!s.presignPut) throw new Error("memoryStorage must presign");
-    const pre = await s.presignPut("upload/1", { contentType: "image/jpeg" });
+    const pre = await s.presignPut("upload/1", {
+      contentType: "image/jpeg",
+      contentLength: 10,
+    });
     expect(pre.url).toBe("/_plumix/memory-storage/upload%2F1");
     expect(pre.headers).toEqual({ "content-type": "image/jpeg" });
   });

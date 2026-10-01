@@ -17,9 +17,9 @@ const ID_RE = /^[1-9]\d{0,15}$/;
  * via `ctx.registerRoute({ path: "/upload/*", auth: "authenticated" })`.
  *
  * Defends against:
- * - **Unbounded body**: `meta.size` (signed at draft creation) caps the
- *   actual byte stream, not just the Content-Length header. Chunked
- *   uploads or a lying header trip the counting transform and abort.
+ * - **Unbounded body**: a request with no Content-Length (chunked) or
+ *   one above `meta.size`, the size declared at draft creation, is
+ *   refused; HTTP framing holds the stream to the declared length.
  * - **Path confusion**: only `/upload/<digits>` matches; trailing
  *   segments or non-numeric ids are rejected before any DB hit.
  *
