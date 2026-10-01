@@ -1,5 +1,10 @@
-import type { DragEndEvent } from "@dnd-kit/core";
+import type {
+  Announcements,
+  DragEndEvent,
+  UniqueIdentifier,
+} from "@dnd-kit/core";
 import type { CSSProperties, ReactNode } from "react";
+import { useRef } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -27,6 +32,22 @@ import { cn } from "./utils.js";
 // thumb (no nested drop targets); keyboard reorder works out of the
 // box via dnd-kit's `KeyboardSensor` + `sortableKeyboardCoordinates`.
 
+// Where an item sits, for a drag announcement: `position` is 1-based.
+// Announcements read positions, never item ids, which are opaque to an author.
+export interface SortablePosition {
+  readonly position: number;
+  readonly total: number;
+}
+
+// What a screen reader hears while an item is dragged with the keyboard.
+export interface SortableAnnouncements {
+  readonly instructions: string;
+  readonly pickedUp: (at: SortablePosition) => string;
+  readonly movedTo: (at: SortablePosition) => string;
+  readonly dropped: (at: SortablePosition) => string;
+  readonly cancelled: (at: SortablePosition) => string;
+}
+
 interface SortableListProps<T extends { readonly id: string }> {
   readonly items: readonly T[];
   readonly onReorder: (next: readonly T[]) => void;
@@ -34,10 +55,12 @@ interface SortableListProps<T extends { readonly id: string }> {
   readonly renderItem: (item: T) => ReactNode;
   readonly disabled?: boolean;
   readonly testId?: string;
-  // Accessible names for the icon-only handle and remove buttons; admin-ui
-  // carries no catalog, so the caller passes them already localized.
+  // Accessible names for the icon-only handle and remove buttons, and the
+  // drag announcements; admin-ui carries no catalog, so the caller passes
+  // them already localized.
   readonly reorderLabel: string;
   readonly removeLabel: string;
+  readonly announcements: SortableAnnouncements;
 }
 
 export function SortableList<T extends { readonly id: string }>({
@@ -49,6 +72,7 @@ export function SortableList<T extends { readonly id: string }>({
   testId,
   reorderLabel,
   removeLabel,
+  announcements,
 }: SortableListProps<T>): ReactNode {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -66,11 +90,39 @@ export function SortableList<T extends { readonly id: string }>({
     onReorder(arrayMove([...items], oldIndex, newIndex));
   };
 
+  const at = (id: UniqueIdentifier): SortablePosition => ({
+    position: items.findIndex((i) => i.id === id) + 1,
+    total: items.length,
+  });
+
+  // dnd-kit fires `onDragOver` as soon as a drag starts, with the item over
+  // its own slot; announcing that would talk over "picked up". Speak only
+  // when the item reaches a slot other than the last one announced.
+  const announcedOverId = useRef<UniqueIdentifier | null>(null);
+  const dndAnnouncements: Announcements = {
+    onDragStart: ({ active }) => {
+      announcedOverId.current = active.id;
+      return announcements.pickedUp(at(active.id));
+    },
+    onDragOver: ({ over }) => {
+      if (!over || over.id === announcedOverId.current) return undefined;
+      announcedOverId.current = over.id;
+      return announcements.movedTo(at(over.id));
+    },
+    onDragEnd: ({ active, over }) =>
+      announcements.dropped(at(over ? over.id : active.id)),
+    onDragCancel: ({ active }) => announcements.cancelled(at(active.id)),
+  };
+
   return (
     <DndContext
       sensors={sensors}
       modifiers={[restrictToVerticalAxis]}
       onDragEnd={handleDragEnd}
+      accessibility={{
+        announcements: dndAnnouncements,
+        screenReaderInstructions: { draggable: announcements.instructions },
+      }}
     >
       <SortableContext
         items={items.map((i) => i.id)}
