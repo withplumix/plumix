@@ -1,7 +1,12 @@
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { RegisteredPublicRoute } from "../plugin/registry.js";
+import type {
+  CompiledPublicRouteFor,
+  PublicRouteMatchFor,
+  PublicRouteTableFor,
+} from "./contract/public-route-table.js";
 import { AppBootError } from "../runtime/contract/errors.js";
-import { extractParams } from "./match.js";
+import { matchPublicRoute } from "./contract/public-route-table.js";
 
 // The prefix core owns outright: the RPC endpoint, the sign-in flows, the admin
 // app, MCP, REST and every `registerRoute` mount live under it, and the
@@ -15,20 +20,9 @@ const PLATFORM_PREFIX = "/_plumix";
 // and registers concrete paths — so those get a map lookup and never an exec.
 const PATTERN_SYNTAX = /[:*?+(){}[\]]/;
 
-interface CompiledPublicRoute {
-  readonly route: RegisteredPublicRoute;
-  readonly pattern: URLPattern;
-}
+export type PublicRouteTable = PublicRouteTableFor<RegisteredPublicRoute>;
 
-export interface PublicRouteTable {
-  readonly exact: ReadonlyMap<string, RegisteredPublicRoute>;
-  readonly patterns: readonly CompiledPublicRoute[];
-}
-
-export interface PublicRouteMatch {
-  readonly route: RegisteredPublicRoute;
-  readonly params: Record<string, string>;
-}
+export type PublicRouteMatch = PublicRouteMatchFor<RegisteredPublicRoute>;
 
 /**
  * Compile the registered public routes into the table the dispatcher matches
@@ -46,7 +40,7 @@ export function compilePublicRoutes(
   routes: readonly RegisteredPublicRoute[],
 ): PublicRouteTable {
   const exact = new Map<string, RegisteredPublicRoute>();
-  const patterns: CompiledPublicRoute[] = [];
+  const patterns: CompiledPublicRouteFor<RegisteredPublicRoute>[] = [];
   const owners = new Map<string, string>();
 
   for (const route of routes) {
@@ -100,25 +94,6 @@ function compilePattern(route: RegisteredPublicRoute): URLPattern {
       cause: err instanceof Error ? err.message : String(err),
     });
   }
-}
-
-/**
- * The public route that owns this pathname, or null. A literal path wins over a
- * pattern that would also match it — the more specific claim, and independent
- * of install order; patterns are tried in registration order.
- */
-export function matchPublicRoute(
-  table: PublicRouteTable,
-  pathname: string,
-): PublicRouteMatch | null {
-  const literal = table.exact.get(pathname);
-  if (literal !== undefined) return { route: literal, params: {} };
-  for (const { route, pattern } of table.patterns) {
-    const result = pattern.exec({ pathname });
-    if (result === null) continue;
-    return { route, params: extractParams(result.pathname) };
-  }
-  return null;
 }
 
 // Compiled once per registry: the routes are settled once every `afterSetup`

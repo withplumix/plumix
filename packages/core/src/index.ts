@@ -294,7 +294,7 @@ export { escapeHtml } from "./escape-html.js";
 // (`registerPublicRoute`) and has to address the same URL space the router
 // compiled. A feed or a sitemap that spelled any of these itself would drift
 // from the pages it points at the first time a rewrite option moved one.
-export { dateRange } from "./route/date-range.js";
+export { dateRange } from "./entries/date-range.js";
 export {
   archiveRoutes,
   archiveSlugForEntryType,

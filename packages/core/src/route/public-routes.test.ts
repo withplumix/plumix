@@ -2,11 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import type { RegisteredPublicRoute } from "../plugin/registry.js";
 import { createPluginRegistry } from "../plugin/registry.js";
-import {
-  compilePublicRoutes,
-  matchPublicRoute,
-  publicRouteAt,
-} from "./public-routes.js";
+import { matchPublicRoute } from "./contract/public-route-table.js";
+import { compilePublicRoutes, publicRouteAt } from "./public-routes.js";
 
 function route(path: string, pluginId = "feeds"): RegisteredPublicRoute {
   return { pluginId, path, handler: () => new Response("ok") };

@@ -68,10 +68,5 @@
     "rule": "environment",
     "from": "rpc/validation.ts",
     "to": "rpc/vmessage.ts"
-  },
-  {
-    "rule": "cycle",
-    "layer": "capabilities",
-    "members": ["entries", "route", "search", "seo"]
   }
 ]

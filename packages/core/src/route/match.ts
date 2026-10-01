@@ -1,5 +1,6 @@
 import type { RouteRule } from "./contract/intent.js";
 import type { ResolvedRoute } from "./contract/resolved-route.js";
+import { extractParams } from "./contract/params.js";
 
 export type { ResolvedRoute } from "./contract/resolved-route.js";
 
@@ -23,14 +24,4 @@ export function matchRoute(
     };
   }
   return null;
-}
-
-export function extractParams(
-  pathname: URLPatternComponentResult,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(pathname.groups)) {
-    if (typeof value === "string") out[key] = value;
-  }
-  return out;
 }

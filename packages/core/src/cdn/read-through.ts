@@ -1,4 +1,4 @@
-import type { Segment } from "../access/policy.js";
+import type { Segment } from "../access/contract/access.js";
 import type { DeferFn } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { RouteIntent } from "../route/contract/intent.js";

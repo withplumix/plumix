@@ -20,12 +20,12 @@ import { desc, eq } from "../../db/index.js";
 import { entries } from "../../db/schema/entries.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
+import { rememberAuthor, rememberTerm } from "../../entries/slug-lookups.js";
 import { labelSourceText } from "../../i18n/label.js";
 import { resolveTermMeta } from "../../meta/term.js";
 import { archiveEntries } from "../archive-entries.js";
 import { archiveSlugForEntryType } from "../compile.js";
 import { paginate } from "../paginate.js";
-import { rememberAuthor, rememberTerm } from "../path-chain.js";
 import { buildTermArchiveUrl } from "../permalink.js";
 import { listEntryPage } from "./entry-listing.js";
 import {

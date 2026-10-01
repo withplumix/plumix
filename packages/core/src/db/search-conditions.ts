@@ -1,12 +1,12 @@
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import type { SQL } from "../db/index.js";
-import type { SearchTerm } from "./contract/search-terms.js";
-import { not, sql } from "../db/index.js";
-import { entries } from "../db/schema/entries.js";
-import { terms } from "../db/schema/terms.js";
-import { users } from "../db/schema/users.js";
-import { escapeLikePattern } from "./contract/search-terms.js";
+import type { SearchTerm } from "../search/contract/search-terms.js";
+import type { SQL } from "./index.js";
+import { escapeLikePattern } from "../search/contract/search-terms.js";
+import { not, sql } from "./index.js";
+import { entries } from "./schema/entries.js";
+import { terms } from "./schema/terms.js";
+import { users } from "./schema/users.js";
 
 /**
  * `entries.content` is deliberately absent. It holds the block envelope, whose

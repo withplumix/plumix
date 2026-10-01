@@ -22,7 +22,7 @@ export { enqueuePurgeTags } from "../cdn/purge.js";
 // title and excerpt with `LIKE` involves — so a plugin that replaces the search
 // page can degrade to core's own query rather than restate it and disagree
 // about the details (#2127).
-export { entrySearchCondition } from "../search/conditions.js";
+export { entrySearchCondition } from "./search-conditions.js";
 export { tokenizeSearchQuery } from "../search/contract/search-terms.js";
 export type { SearchTerm } from "../search/contract/search-terms.js";
 // Settling meta is a direct writer's other obligation: a raw write skips the
