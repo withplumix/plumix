@@ -255,14 +255,14 @@ A media reference's `url` resolves in both shapes it takes: the bucket's own pub
 
 Six, each named by an identity a URL can carry. Every one of them is served from the bundled template with no theme configuration at all.
 
-| Page                   | Target                | Shareable when                                                             |
-| ---------------------- | --------------------- | -------------------------------------------------------------------------- |
-| An entry               | `entry/<id>`          | Published, of a public type, and reachable by an anonymous visitor         |
-| A term archive         | `term/<id>`           | Its taxonomy has a public archive, and it lists something                  |
-| A content-type archive | `archive/<type>`      | The type's archive is routed and anonymously readable, and lists something |
-| An author archive      | `author/<id>`         | They have published something                                              |
-| A date archive         | `date/YYYY[-MM[-DD]]` | Something was published in it                                              |
-| The front page         | `front-page`          | Always                                                                     |
+| Page                    | Target                | Shareable when                                                             |
+| ----------------------- | --------------------- | -------------------------------------------------------------------------- |
+| An entry                | `entry/<id>`          | Published, of a public type, and reachable by an anonymous visitor         |
+| A term archive          | `term/<id>`           | Its taxonomy has a public archive, and it lists something                  |
+| An entry type's archive | `archive/<type>`      | The type's archive is routed and anonymously readable, and lists something |
+| An author archive       | `author/<id>`         | They have published something                                              |
+| A date archive          | `date/YYYY[-MM[-DD]]` | Something was published in it                                              |
+| The front page          | `front-page`          | Always                                                                     |
 
 A listing page that lists nothing answers `404`, the way a draft entry's card does. Its page still renders — an empty term archive is a real page — but a card is minted at an enumerable URL and kept immutable in your bucket, and that rule is what keeps the calendar from being three million of them, and `author/<id>` from being a walk through your user list on a site where nobody has published yet. The front page is the exception: it is the site, so it is shareable whether or not anything is on it.
 

@@ -501,7 +501,7 @@ async function dispatchPublicRoute(
 
     // `null` ⇒ un-policied: no gate, and the segment derives from today's
     // privileged signal (below), so ordinary pages behave exactly as before. A
-    // per-entry-policied single intent resolves the addressed entry here — via
+    // per-entry-policied entry intent resolves the addressed entry here — via
     // the same request memo the renderer reuses, so the gate and the render
     // share one lookup. Runs after the principal loads so any per-entry
     // resolution keys off the same memo threaded into the live render.
@@ -552,11 +552,11 @@ async function dispatchPublicRoute(
       request: ctx.request,
       segment,
       intentKind: intent?.kind ?? null,
-      // A custom archive caches only when it opted in via `registerArchiveType
+      // An archive type caches only when it opted in via `registerArchiveType
       // ({ cacheable: true })`. Resolved here so the pure decision layer stays
       // free of the registry lookup.
       customArchiveCacheable:
-        intent?.kind === "custom"
+        intent?.kind === "archiveType"
           ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
           : undefined,
       cdn,

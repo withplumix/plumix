@@ -1,10 +1,10 @@
 import type {
-  ArchiveData,
   AuthorArchiveData,
   DateArchiveData,
+  EntryTypeArchiveData,
   FrontPageData,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "plumix/theme";
 import { defineTemplate } from "plumix/theme";
 
@@ -13,12 +13,12 @@ import { paginationInfo } from "../components/Pagination";
 import { PostList } from "../components/PostList";
 
 type ListingData =
-  | ArchiveData
+  | EntryTypeArchiveData
   | AuthorArchiveData
   | DateArchiveData
   | FrontPageData
   | SearchData
-  | TaxonomyData;
+  | TermArchiveData;
 
 const MONTHS = [
   "January",

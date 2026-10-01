@@ -48,11 +48,11 @@ The same composition runs in both directions. Inbound, Plumix splits the request
 3. **Link to it from a template, and put that template in the theme.** Every entry a resolver hands your theme already carries its permalink on `url`:
 
    ```tsx
-   import type { ArchiveData } from "plumix/theme";
+   import type { EntryTypeArchiveData } from "plumix/theme";
    import { Link } from "plumix/blocks/renderer";
-   import { archive, defineTemplate, defineTheme } from "plumix/theme";
+   import { defineTemplate, defineTheme, entryType } from "plumix/theme";
 
-   const recipeArchive = defineTemplate<ArchiveData>({
+   const recipeArchive = defineTemplate<EntryTypeArchiveData>({
      render: ({ data }) => (
        <ul>
          {data.entries.map((recipe) => (
@@ -65,11 +65,11 @@ The same composition runs in both directions. Inbound, Plumix splits the request
    });
 
    export const recipesTheme = defineTheme({
-     templates: [archive(recipeArchive)],
+     templates: [entryType(recipeArchive)],
    });
    ```
 
-   A bare `defineTemplate` export renders nothing. The theme's `templates` array is the only place the resolver looks for a template, so the `archive(...)` rule is what puts this one on `/recipes`. To bind one entry type's listing rather than every archive, swap it for `forEntryType("recipe").archive.template(recipeArchive)`.
+   A bare `defineTemplate` export renders nothing. The theme's `templates` array is the only place the resolver looks for a template, so the `entryType(...)` rule is what puts this one on `/recipes`. To bind one entry type's listing rather than every archive, swap it for `forEntryType("recipe").archive.template(recipeArchive)`.
 
    Passing the whole entry rather than `href={recipe.url}` is what keeps the link correct under a base path and safe when the permalink is null.
 

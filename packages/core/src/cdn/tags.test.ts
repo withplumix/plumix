@@ -49,7 +49,7 @@ describe("pageTags", () => {
     expect(
       pageTags({
         ...base,
-        intent: { kind: "single", entryType: "post" },
+        intent: { kind: "entry", entryType: "post" },
         resolvedEntity: { kind: "entry", id: 7, preview: false },
       }),
     ).toEqual(["t:post", "e:7"]);
@@ -57,7 +57,7 @@ describe("pageTags", () => {
 
   it("tags a type archive with the type tag", () => {
     expect(
-      pageTags({ ...base, intent: { kind: "archive", entryType: "post" } }),
+      pageTags({ ...base, intent: { kind: "entryType", entryType: "post" } }),
     ).toEqual(["t:post"]);
   });
 
@@ -65,7 +65,7 @@ describe("pageTags", () => {
     expect(
       pageTags({
         ...base,
-        intent: { kind: "front-page" },
+        intent: { kind: "frontPage" },
         frontPageEntryTypes: () => ["post", "note"],
       }),
     ).toEqual(["t:post", "t:note"]);
@@ -75,7 +75,7 @@ describe("pageTags", () => {
     expect(
       pageTags({
         ...base,
-        intent: { kind: "taxonomy", taxonomy: "category" },
+        intent: { kind: "term", taxonomy: "category" },
         taxonomyEntryTypes: (taxonomy) =>
           taxonomy === "category" ? ["post"] : [],
       }),
@@ -88,7 +88,7 @@ describe("pageTags", () => {
 
   it("tags nothing when a single render resolved no entry", () => {
     expect(
-      pageTags({ ...base, intent: { kind: "single", entryType: "post" } }),
+      pageTags({ ...base, intent: { kind: "entry", entryType: "post" } }),
     ).toEqual([]);
   });
 });

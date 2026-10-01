@@ -44,7 +44,7 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
       const resolved = ctx.resolvedEntity;
       // An archive has no row id to sign; any other kind is simply not
       // the one this form asked for.
-      if (resolved === null || resolved.kind === "archive") return null;
+      if (resolved === null || resolved.kind === "entryType") return null;
       if (resolved.kind !== form.bind) return null;
       return signBound(ctx, form.slug, {
         type: resolved.kind,

@@ -155,7 +155,7 @@ Redirects are matched first. The dispatcher runs the site's `redirects` config, 
 
 Framework routes come next, at priority 5. `/search`, `/search/<query>`, `/authors/<slug>`, `/page/2`, and the date archives `/2026`, `/2026/08` and `/2026/08/25` are compiled by the router itself, and `/search/<query>`, `/authors/<slug>` and the three date shapes each compile a `/page/<n>` variant at the same priority. A page slugged `search` is therefore unreachable, and so is a page slugged `2026`, because the year pattern only matches four digits and that is exactly what the slug is.
 
-Routes a plugin registered by hand come after those, at priority 10 unless the registration passes a number of its own. These are rewrite rules and custom archive types.
+Routes a plugin registered by hand come after those, at priority 10 unless the registration passes a number of its own. These are rewrite rules and archive types.
 
 Auto-compiled routes from other registrations come last before the page pattern, at priority 50. `/posts/<slug>` from the blog plugin, `/category/<path>` and `/tag/<term>` from its taxonomies, `/recipes` and `/recipes/<slug>` from your own type. A page nested so that its URL is `/recipes/caponata` never resolves, because the recipe rule matches that shape first.
 

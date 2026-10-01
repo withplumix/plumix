@@ -58,7 +58,7 @@ const NO_SUBJECT = {
  * Discriminates on `kind` rather than field presence: a plugin archive's
  * payload is arbitrary, so an `"entry" in data` check would read one plugin's
  * field as core's subject. The two fields it does read off such a payload are
- * core's own — `CustomArchiveData` declares them for an archive to state.
+ * core's own — `ArchiveTypeData` declares them for an archive to state.
  */
 export function pageFacts(data: TemplateData): PageFacts {
   switch (data.kind) {
@@ -72,7 +72,7 @@ export function pageFacts(data: TemplateData): PageFacts {
         author: data.entry.author,
         entry: data.entry,
       };
-    case "taxonomy":
+    case "term":
       return {
         ...NO_SUBJECT,
         kind: data.kind,
@@ -86,7 +86,7 @@ export function pageFacts(data: TemplateData): PageFacts {
         page: data.pagination.page,
         author: data.author,
       };
-    case "archive":
+    case "entryType":
       return {
         ...NO_SUBJECT,
         kind: data.kind,
@@ -103,7 +103,7 @@ export function pageFacts(data: TemplateData): PageFacts {
         page: data.pagination.page,
         query: data.query,
       };
-    case "custom":
+    case "archiveType":
       return {
         ...NO_SUBJECT,
         kind: data.kind,

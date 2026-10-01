@@ -98,7 +98,7 @@ export function routePublicRequest(
 function unmatchedFallback(url: URL): RouteMatch | null {
   if (url.pathname !== "/") return null;
   return {
-    intent: { kind: "front-page" },
+    intent: { kind: "frontPage" },
     pattern: "/",
     params: {},
     isPermalinkRoute: true,

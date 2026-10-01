@@ -7,13 +7,13 @@ import type { Term } from "../../db/schema/terms.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { EntryListing } from "../contract/entry-listing.js";
 import type {
-  ArchiveData,
   AuthorArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   FrontPageData,
   ResolvedAuthor,
-  TaxonomyData,
+  TermArchiveData,
 } from "../contract/resolved-entry.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { desc, eq } from "../../db/index.js";
@@ -39,11 +39,11 @@ declare module "../../hooks/types.js" {
   interface FilterRegistry {
     "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
     "resolve:archive:data": (
-      data: ArchiveData,
-    ) => ArchiveData | Promise<ArchiveData>;
+      data: EntryTypeArchiveData,
+    ) => EntryTypeArchiveData | Promise<EntryTypeArchiveData>;
     "resolve:term:data": (
-      data: TaxonomyData,
-    ) => TaxonomyData | Promise<TaxonomyData>;
+      data: TermArchiveData,
+    ) => TermArchiveData | Promise<TermArchiveData>;
     "resolve:author:data": (
       data: AuthorArchiveData,
     ) => AuthorArchiveData | Promise<AuthorArchiveData>;
@@ -61,8 +61,8 @@ export const DEFAULT_ARCHIVE_PER_PAGE = 20;
 /** Every page kind that lists entries: the payload half of what core renders. */
 type ListingPageData =
   | FrontPageData
-  | ArchiveData
-  | TaxonomyData
+  | EntryTypeArchiveData
+  | TermArchiveData
   | AuthorArchiveData
   | DateArchiveData;
 
@@ -83,7 +83,7 @@ export async function frontPageData(
 ): Promise<ResolvedListingPage | null> {
   const listing = await listingFor(
     ctx,
-    archiveEntries(ctx, { kind: "front-page" }, params),
+    archiveEntries(ctx, { kind: "frontPage" }, params),
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -94,7 +94,7 @@ export async function frontPageData(
     ...listing,
   });
   return {
-    node: { kind: "front-page" },
+    node: { kind: "frontPage" },
     data,
     // Public-route content i18n is a deferred userland seam; "Home"
     // (site root) stays English here.
@@ -111,19 +111,19 @@ export async function archiveData(
   const registered = ctx.plugins.entryTypes.get(entryType);
   const listing = await listingFor(
     ctx,
-    archiveEntries(ctx, { kind: "archive", entryType }, params),
+    archiveEntries(ctx, { kind: "entryType", entryType }, params),
     page,
     registered?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
   if (listing === null) return null;
 
   const data = await ctx.hooks.applyFilter("resolve:archive:data", {
-    kind: "archive",
+    kind: "entryType",
     contentType: entryType,
     ...listing,
   });
   return {
-    node: { kind: "content-type-archive", entryType },
+    node: { kind: "entryType", entryType },
     data,
     // SSR-side: descriptor labels fall back to source text until the
     // ctx.config.i18n route wiring lands (slice 11 #680 covered tRPC errors;
@@ -150,7 +150,7 @@ export async function termData(
   const taxonomy = ctx.plugins.termTaxonomies.get(term.taxonomy);
   const listing = await listingFor(
     ctx,
-    archiveEntries(ctx, { kind: "taxonomy", taxonomy: term.taxonomy }, params),
+    archiveEntries(ctx, { kind: "term", taxonomy: term.taxonomy }, params),
     page,
     taxonomy?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE,
   );
@@ -158,7 +158,7 @@ export async function termData(
 
   const meta = await resolveTermMeta(ctx, term.taxonomy, term.meta);
   const data = await ctx.hooks.applyFilter("resolve:term:data", {
-    kind: "taxonomy",
+    kind: "term",
     taxonomy: term.taxonomy,
     term: resolveTerm(ctx, term, meta, url),
     ...listing,
@@ -271,7 +271,7 @@ export async function resolveEntryData(
 
 /**
  * A listing page named by what it is about rather than by the URL it sits at:
- * the front page, a content-type archive, a term, an author, or a date.
+ * the front page, an entry type's archive, a term, an author, or a date.
  *
  * Only the pages core itself routes — a `registerArchiveType` archive resolves
  * through the plugin that registered it, from route parameters this vocabulary
@@ -279,8 +279,8 @@ export async function resolveEntryData(
  * minted for one: its subject is whatever the caller typed.
  */
 export type ListingPageTarget =
-  | { readonly kind: "front-page" }
-  | { readonly kind: "archive"; readonly entryType: string }
+  | { readonly kind: "frontPage" }
+  | { readonly kind: "entryType"; readonly entryType: string }
   | { readonly kind: "term"; readonly id: number }
   | { readonly kind: "author"; readonly id: number }
   | ({ readonly kind: "date" } & DateTarget);
@@ -299,9 +299,9 @@ export async function resolveListingPage(
   target: ListingPageTarget,
 ): Promise<ResolvedListingPage | null> {
   switch (target.kind) {
-    case "front-page":
+    case "frontPage":
       return frontPageData(ctx, {}, 1);
-    case "archive": {
+    case "entryType": {
       const registered = ctx.plugins.entryTypes.get(target.entryType);
       // Asked of the router's own helper rather than restated, so a type whose
       // archive is not routed is answered as the missing page it is.

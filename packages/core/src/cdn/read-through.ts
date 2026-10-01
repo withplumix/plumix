@@ -27,7 +27,7 @@ interface ReadThroughArgs {
    */
   readonly intentKind: RouteIntent["kind"] | null;
   /**
-   * When `intentKind` is `"custom"`, whether that plugin-registered archive
+   * When `intentKind` is `"archiveType"`, whether that plugin-registered archive
    * opted into CDN caching. The dispatcher resolves it from the archive-type
    * registry so the pure decision layer stays free of the lookup.
    */

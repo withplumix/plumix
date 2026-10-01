@@ -6,8 +6,8 @@ import type {
 
 /**
  * The archive a feed syndicates, as core's archive lookup names it — one of
- * the built-in listings (`front-page`, `archive`, `taxonomy`, `author`,
- * `date`) or a plugin archive (`custom`) — and the params its route captured.
+ * the built-in listings (`frontPage`, `entryType`, `term`, `author`,
+ * `date`) or a plugin archive (`archiveType`) — and the params its route captured.
  */
 export interface FeedScope {
   readonly archive: EntryArchive;

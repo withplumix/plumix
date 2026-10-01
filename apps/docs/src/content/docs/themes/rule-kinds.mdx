@@ -57,8 +57,8 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
 
    ```ts
    import type {
-     ArchiveData,
      EntryData,
+     EntryTypeArchiveData,
      EntryTypeName,
      ResolvedEntryFor,
      TemplateData,
@@ -92,7 +92,7 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
        EntryTypeTargets<
          K,
          FeedSelector<EntryData<ResolvedEntryFor<K>>>,
-         FeedSelector<ArchiveData<ResolvedEntryFor<K>>>
+         FeedSelector<EntryTypeArchiveData<ResolvedEntryFor<K>>>
        > {}
 
    export const feed = {
@@ -103,7 +103,7 @@ A `feeds` rule kind: which syndication feed each page advertises. It is small en
        entryTypeTargets(
          name,
          selector<EntryData<ResolvedEntryFor<K>>>,
-         selector<ArchiveData<ResolvedEntryFor<K>>>,
+         selector<EntryTypeArchiveData<ResolvedEntryFor<K>>>,
        ),
    };
 
@@ -183,7 +183,7 @@ export const matchers = [
 ];
 ```
 
-`name` is checked against `EntryTypeRegistry`, so a typo is a compile error rather than a rule that silently never matches. The bare selector mints `{ nodeKind: "content", type: "recipe" }`; `.slug()` and `.id()` add an exact comparison; `.where()` and `.whereMeta()` attach a predicate the walk evaluates after identity fits. `.archive` is not a call — it is the already-bound selector for `{ nodeKind: "content-type-archive" }`.
+`name` is checked against `EntryTypeRegistry`, so a typo is a compile error rather than a rule that silently never matches. The bare selector mints `{ nodeKind: "entry", type: "recipe" }`; `.slug()` and `.id()` add an exact comparison; `.where()` and `.whereMeta()` attach a predicate the walk evaluates after identity fits. `.archive` is not a call — it is the already-bound selector for `{ nodeKind: "entryType" }`.
 
 ### `termTaxonomyTargets`
 
@@ -250,7 +250,7 @@ The three overloads rather than optional parameters are what reject `(2026, unde
 
 ### `archiveTypeTargets`
 
-One archive a plugin registered with `registerArchiveType`. No narrowings — a custom archive is a single node, so the name is the whole matcher.
+One archive a plugin registered with `registerArchiveType`. No narrowings — an archive type is a single node, so the name is the whole matcher.
 
 ```ts
 import type { TierMatchRule } from "plumix/plugin";
@@ -261,7 +261,7 @@ const bind = (selected: TierMatchRule) => ({ selected });
 export const matcher = archiveTypeTargets("seasonal", bind).selected;
 ```
 
-`name` is a plain `string` here, unlike the two above it. The constructor mints `{ nodeKind: "custom", type: "seasonal" }` and types nothing from it, so a rule kind that wants the name checked against `ArchiveTypeRegistry` adds that constraint on its own wrapper — which is also where it would type the payload against the archive's data shape. Without a rule at all these archives fall to `fallback`, since no generic tier claims them.
+`name` is a plain `string` here, unlike the two above it. The constructor mints `{ nodeKind: "archiveType", type: "seasonal" }` and types nothing from it, so a rule kind that wants the name checked against `ArchiveTypeRegistry` adds that constraint on its own wrapper — which is also where it would type the payload against the archive's data shape. Without a rule at all these archives fall to `fallback`, since no generic tier claims them.
 
 ## The match constructors
 
@@ -269,7 +269,7 @@ The five above publish the narrowings core already knows how to mint. A rule kin
 
 Reach for them only after the five above have run out. A narrowing they already publish is one you should be taking rather than re-minting: `.whereMeta("season", "winter")` is `entryTypeMatch` and `metaEquals` already composed, with the key and the value typed for you.
 
-Two prefixes, not five: an author, date or custom-archive matcher carries a fixed `type` and no name to check, so `authorTargets`, `dateTargets` and `archiveTypeTargets` are already the whole of theirs, and a narrowing of your own on one of those writes its `match` inline.
+Two prefixes, not five: an author, date or archive-type matcher carries a fixed `type` and no name to check, so `authorTargets`, `dateTargets` and `archiveTypeTargets` are already the whole of theirs, and a narrowing of your own on one of those writes its `match` inline.
 
 Then hang the narrowing off your own builder exactly where `forEntryType` hangs `named` — beside the constructor's, not inside it:
 
@@ -316,7 +316,7 @@ export const matchers: TierMatchRule[] = [
 ];
 ```
 
-The bare call mints `{ nodeKind: "content", type: "recipe" }` — identical to `entryTypeTargets("recipe", bind, bind).selected`, because that is the call it makes. `name` is checked against `EntryTypeRegistry` here too, so a narrowing of your own rejects a typo that a hand-written object literal would not. The second argument reaches everything on the matcher except `nodeKind` and `type`: minting those from one place is the job, so overriding them is a compile error rather than a quiet way back to writing the matcher by hand.
+The bare call mints `{ nodeKind: "entry", type: "recipe" }` — identical to `entryTypeTargets("recipe", bind, bind).selected`, because that is the call it makes. `name` is checked against `EntryTypeRegistry` here too, so a narrowing of your own rejects a typo that a hand-written object literal would not. The second argument reaches everything on the matcher except `nodeKind` and `type`: minting those from one place is the job, so overriding them is a compile error rather than a quiet way back to writing the matcher by hand.
 
 ### `termTaxonomyMatch`
 

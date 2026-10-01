@@ -1,5 +1,5 @@
 import type {
-  CustomArchiveData,
+  ArchiveTypeData,
   ResolvedEntry,
   ResolvedTerm,
 } from "./route/contract/resolved-entry.js";
@@ -47,7 +47,7 @@ export interface TermTaxonomyRegistry {
  * Augmentable map of plugin-registered archive-type names to their data
  * projection. A plugin augments it alongside its `registerArchiveType` call so
  * `forArchiveType` autocompletes the name, rejects typos, and types `data`. The
- * projection must extend {@link CustomArchiveData}; a name registered without a
+ * projection must extend {@link ArchiveTypeData}; a name registered without a
  * `data` projection degrades to the base.
  *
  * ```ts
@@ -67,9 +67,9 @@ export type ArchiveTypeName = keyof ArchiveTypeRegistry;
 
 /** The data projection for a registered archive type, defaulting to the base. */
 export type ArchiveDataOf<K extends ArchiveTypeName> =
-  ArchiveTypeRegistry[K] extends { data: infer D extends CustomArchiveData }
+  ArchiveTypeRegistry[K] extends { data: infer D extends ArchiveTypeData }
     ? D
-    : CustomArchiveData;
+    : ArchiveTypeData;
 
 /** The entry projection for a registered type, defaulting to `ResolvedEntry`. */
 export type EntryProjection<K extends EntryTypeName> =

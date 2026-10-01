@@ -135,12 +135,12 @@ describe("selectEntryPolicy", () => {
 });
 
 describe("policyForMatch", () => {
-  it("returns the entry type's default policy for a single intent", async () => {
+  it("returns the entry type's default policy for an entry intent", async () => {
     const c = await ctx({
       entryTypes: { post: { default: authenticatedPolicy } },
     });
     await expect(
-      policyForMatch(c, match({ kind: "single", entryType: "post" })),
+      policyForMatch(c, match({ kind: "entry", entryType: "post" })),
     ).resolves.toBe(authenticatedPolicy);
   });
 
@@ -149,11 +149,11 @@ describe("policyForMatch", () => {
       entryTypes: { post: { default: authenticatedPolicy } },
     });
     await expect(
-      policyForMatch(c, match({ kind: "archive", entryType: "post" })),
+      policyForMatch(c, match({ kind: "entryType", entryType: "post" })),
     ).resolves.toBe(authenticatedPolicy);
   });
 
-  it("resolves a single intent's per-entry choice over the type default", async () => {
+  it("resolves an entry intent's per-entry choice over the type default", async () => {
     const editors = rolePolicy("editor");
     const c = await ctx({
       entryTypes: {
@@ -172,7 +172,7 @@ describe("policyForMatch", () => {
     await expect(
       policyForMatch(
         c,
-        matchWith({ kind: "single", entryType: "post" }, { slug: "hello" }),
+        matchWith({ kind: "entry", entryType: "post" }, { slug: "hello" }),
       ),
     ).resolves.toBe(editors);
   });
@@ -192,7 +192,7 @@ describe("policyForMatch", () => {
     await expect(
       policyForMatch(
         c,
-        matchWith({ kind: "single", entryType: "post" }, { slug: "hello" }),
+        matchWith({ kind: "entry", entryType: "post" }, { slug: "hello" }),
       ),
     ).resolves.toBe(authenticatedPolicy);
   });
@@ -214,7 +214,7 @@ describe("policyForMatch", () => {
     await expect(
       policyForMatch(
         c,
-        matchWith({ kind: "single", entryType: "post" }, { slug: "ghost" }),
+        matchWith({ kind: "entry", entryType: "post" }, { slug: "ghost" }),
       ),
     ).resolves.toBe(authenticatedPolicy);
   });
@@ -222,24 +222,24 @@ describe("policyForMatch", () => {
   it("returns null for an entry type with no access declared", async () => {
     const c = await ctx({ entryTypes: { post: undefined } });
     await expect(
-      policyForMatch(c, match({ kind: "single", entryType: "post" })),
+      policyForMatch(c, match({ kind: "entry", entryType: "post" })),
     ).resolves.toBe(null);
   });
 
-  it("returns the route-level policy for a custom archive", async () => {
+  it("returns the route-level policy for an archive type", async () => {
     const c = await ctx({ archiveTypes: { events: authenticatedPolicy } });
     await expect(
-      policyForMatch(c, match({ kind: "custom", name: "events" })),
+      policyForMatch(c, match({ kind: "archiveType", name: "events" })),
     ).resolves.toBe(authenticatedPolicy);
   });
 
   it("returns null for un-policied intents and an unmatched route", async () => {
     const c = await ctx({});
+    await expect(policyForMatch(c, match({ kind: "frontPage" }))).resolves.toBe(
+      null,
+    );
     await expect(
-      policyForMatch(c, match({ kind: "front-page" })),
-    ).resolves.toBe(null);
-    await expect(
-      policyForMatch(c, match({ kind: "taxonomy", taxonomy: "cat" })),
+      policyForMatch(c, match({ kind: "term", taxonomy: "cat" })),
     ).resolves.toBe(null);
     await expect(policyForMatch(c, match({ kind: "search" }))).resolves.toBe(
       null,

@@ -1,4 +1,4 @@
-import type { CustomArchiveData } from "plumix";
+import type { ArchiveTypeData } from "plumix";
 import type { PluginSetupContext } from "plumix/plugin";
 import {
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
@@ -17,8 +17,8 @@ const SEARCH_ARCHIVE_NAME = "search";
 const SHADOW_PRIORITY = 1;
 
 /** What the theme renders a search page from. */
-export interface SearchArchiveData extends CustomArchiveData {
-  readonly kind: "custom";
+export interface SearchArchiveData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "search";
   /**
    * Core's two archive facts, required here where the base leaves them
@@ -100,7 +100,7 @@ export function registerSearchArchive(
       if (outOfRange) return null;
       return {
         data: {
-          kind: "custom",
+          kind: "archiveType",
           name: SEARCH_ARCHIVE_NAME,
           page,
           query,

@@ -103,7 +103,7 @@ export function compileRouteMap(
       // The front page's later pages: the pagination suffix under the root.
       pattern: new URLPattern({ pathname: FRAMEWORK_PAGINATION_SUFFIX }),
       rawPattern: FRAMEWORK_PAGINATION_SUFFIX,
-      intent: { kind: "front-page" },
+      intent: { kind: "frontPage" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
       isPermalinkRoute: true,
@@ -201,7 +201,7 @@ export function compileRouteMap(
   }
 
   // Plugin-registered archive types (`registerArchiveType`): each route becomes
-  // a rule carrying the `custom` intent that `resolvePublicRoute` looks the
+  // a rule carrying the `archiveType` intent that `resolvePublicRoute` looks the
   // resolver up by. Default to the rewrite-rule priority.
   for (const archive of registry.archiveTypes.values()) {
     // Later pages first, as the auto rules order them: a multi-segment capture
@@ -215,7 +215,7 @@ export function compileRouteMap(
       rules.push({
         pattern: new URLPattern({ pathname: rawPattern }),
         rawPattern,
-        intent: { kind: "custom", name: archive.name },
+        intent: { kind: "archiveType", name: archive.name },
         priority: archive.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
         registeredBy: archive.registeredBy,
         isPermalinkRoute: false,
@@ -252,7 +252,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
     const basePattern = `/${archiveSlug}`;
     const paginatedPattern = `${basePattern}${FRAMEWORK_PAGINATION_SUFFIX}`;
     const intent: RouteIntent = {
-      kind: "archive",
+      kind: "entryType",
       entryType: entryType.name,
     };
     const { hasArchive } = entryType;
@@ -298,7 +298,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
   rules.push({
     pattern: new URLPattern({ pathname: singlePattern }),
     rawPattern: singlePattern,
-    intent: { kind: "single", entryType: entryType.name },
+    intent: { kind: "entry", entryType: entryType.name },
     priority: baseSlug === "" ? CATCH_ALL_ROUTE_PRIORITY : AUTO_ROUTE_PRIORITY,
     registeredBy: entryType.registeredBy,
     isPermalinkRoute: true,
@@ -334,7 +334,7 @@ function autoRulesForTermTaxonomy(
   const capture = exposesHierarchicalUrls(taxonomy) ? ":path+" : ":term";
   const basePattern = `/${baseSlug}/${capture}`;
   const paginatedPattern = `${basePattern}${FRAMEWORK_PAGINATION_SUFFIX}`;
-  const intent: RouteIntent = { kind: "taxonomy", taxonomy: taxonomy.name };
+  const intent: RouteIntent = { kind: "term", taxonomy: taxonomy.name };
   const onFrameworkCapture = rewriteSlugCapture(
     taxonomy,
     "term_taxonomy",
@@ -417,7 +417,7 @@ function archiveSlugFor(
   const { hasArchive } = entryType;
   if (!hasArchive) return null;
   // No empty branch here, unlike `baseSlugFor`: an archive at the root would
-  // collide with `front-page`.
+  // collide with the front page.
   if (typeof hasArchive === "string") {
     if (!PATH_SEGMENT_RE.test(hasArchive)) {
       throw RouteCompileError.invalidArchiveSlug({

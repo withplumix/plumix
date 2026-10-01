@@ -1,8 +1,8 @@
 /**
  * The hard gate — wiring the pure access resolution into the public render
  * path. {@link policyForMatch} finds the policy attached to a matched route
- * (the entry's per-entry choice for a single intent, the entry-type default for
- * an archive, the route-level policy for a custom archive, else none); the
+ * (the entry's per-entry choice for an `entry` intent, the entry-type default for
+ * an `entryType` intent, the route-level policy for an archive type, else none); the
  * dispatcher resolves it against the loaded principal once (reading the segment
  * for the cache key), and
  * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302
@@ -45,12 +45,12 @@ export function resolveLoginPath(auth: PlumixAuthConfig): string {
  * The access policy attached to a matched route, or `null` when the route is
  * un-policied (the global `anonymous` default — behaves exactly as today).
  *
- * Precedence is per-entry › entry-type › global. A `single` intent resolves the
+ * Precedence is per-entry › entry-type › global. An `entry` intent resolves the
  * addressed entry and honours its stored per-entry choice ({@link selectEntryPolicy})
  * when the type declares a selectable space, otherwise the type's
- * `access.default`; an `archive` intent always uses the type's `access.default`
+ * `access.default`; an `entryType` intent always uses the type's `access.default`
  * (per-entry visibility is a property of the entry's own page, not the listing);
- * a custom archive carries its own route-level `access`; every other intent
+ * an archive type carries its own route-level `access`; every other intent
  * (taxonomy, author, date, front page, search) and an unmatched route are
  * un-policied.
  *
@@ -71,7 +71,7 @@ export async function policyForMatch(
 ): Promise<AccessPolicy | null> {
   const intent = match?.intent;
   if (!intent) return null;
-  if (intent.kind === "single") {
+  if (intent.kind === "entry") {
     const access = ctx.plugins.entryTypes.get(intent.entryType)?.access;
     if (!access) return null;
     if (!access.policies || access.policies.length === 0) {
@@ -80,12 +80,12 @@ export async function policyForMatch(
     const row = await resolveSingleEntry(ctx, intent.entryType, match.params);
     return selectEntryPolicy(access, readAccessKey(row?.meta));
   }
-  if (intent.kind === "archive") {
+  if (intent.kind === "entryType") {
     return (
       ctx.plugins.entryTypes.get(intent.entryType)?.access?.default ?? null
     );
   }
-  if (intent.kind === "custom") {
+  if (intent.kind === "archiveType") {
     return ctx.plugins.archiveTypes.get(intent.name)?.access ?? null;
   }
   return null;

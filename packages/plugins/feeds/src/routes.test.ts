@@ -535,7 +535,7 @@ describe("a feed is its archive's entry query", () => {
   test("a handler excluding a term from the front page narrows its page and its feed", async () => {
     const narrowing = definePlugin("narrowing", (ctx) => {
       ctx.addFilter("archive:entries", (query, archive) =>
-        archive.kind === "front-page" ? query.where(outsideTagG) : query,
+        archive.kind === "frontPage" ? query.where(outsideTagG) : query,
       );
     });
     const h = await seedSite(narrowing);
@@ -551,7 +551,7 @@ describe("a feed is its archive's entry query", () => {
   test("a handler narrowing a plugin archive changes its page and its feed together", async () => {
     const narrowing = definePlugin("narrowing", (ctx) => {
       ctx.addFilter("archive:entries", (query, archive, params) =>
-        archive.kind === "custom" && archive.name === "series"
+        archive.kind === "archiveType" && archive.name === "series"
           ? query.ofTypes(params.name === "g" ? "page" : "post")
           : query,
       );
@@ -955,7 +955,7 @@ describe("archive-type feeds", () => {
         `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`,
       ],
       resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "event-series" },
+        data: { kind: "archiveType", name: "event-series" },
         title: `Series: ${params.series ?? ""}`,
       }),
       // Nothing is narrowed beyond the public entries the query arrives
@@ -973,7 +973,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         // The whole point: an archive that declares no narrowing at all cannot
@@ -1021,7 +1021,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q) => q,
@@ -1065,7 +1065,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: () => entryQuery(),
@@ -1092,7 +1092,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q) =>
@@ -1122,7 +1122,7 @@ describe("archive-type feeds", () => {
         routes: ["/events/:series"],
         access: authenticatedPolicy,
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q) => q,
@@ -1156,7 +1156,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q, params) => q.inTerm("category", params.series ?? ""),
@@ -1204,7 +1204,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q) => q.none(),
@@ -1357,7 +1357,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-calendar", {
         routes: ["/events"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-calendar" },
+          data: { kind: "archiveType", name: "event-calendar" },
           title: "Calendar",
         }),
         entries: (q) => q,
@@ -1378,7 +1378,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("doc-section", {
         routes: ["/docs/:path+", `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`],
         resolve: () => ({
-          data: { kind: "custom", name: "doc-section" },
+          data: { kind: "archiveType", name: "doc-section" },
           title: "Docs",
         }),
         entries: (q) => q,
@@ -1478,7 +1478,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("doc-section", {
         routes: ["/docs/:slug", "/docs/:path+"],
         resolve: () => ({
-          data: { kind: "custom", name: "doc-section" },
+          data: { kind: "archiveType", name: "doc-section" },
           title: "Docs",
         }),
         entries: (q) => q,
@@ -1500,7 +1500,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Events",
         }),
         entries: (q) => q,
@@ -1519,7 +1519,7 @@ describe("archive-type feeds", () => {
       ctx.registerArchiveType("event-series", {
         routes: ["/events/:series"],
         resolve: () => ({
-          data: { kind: "custom", name: "event-series" },
+          data: { kind: "archiveType", name: "event-series" },
           title: "Series",
         }),
       });
@@ -1552,7 +1552,7 @@ describe("the feed option", () => {
       ctx.registerArchiveType("unlisted", {
         routes: ["/unlisted"],
         resolve: () => ({
-          data: { kind: "custom", name: "unlisted" },
+          data: { kind: "archiveType", name: "unlisted" },
           title: "Unlisted",
         }),
         feed: true,
@@ -1647,7 +1647,7 @@ describe("a feed at the edge", () => {
         routes: ["/series/:name"],
         cacheable,
         resolve: () => ({
-          data: { kind: "custom", name: "series" },
+          data: { kind: "archiveType", name: "series" },
           title: "Series",
         }),
         entries: (q) => q,
@@ -1825,7 +1825,7 @@ describe("a feed at the edge", () => {
     expect(stored.some((tag) => purged.has(tag))).toBe(true);
   });
 
-  // Core can't see what a custom archive depends on, so it stays live unless
+  // Core can't see what an archive type depends on, so it stays live unless
   // the archive opted in; its feed reads the same things.
   test("a plugin archive that never opted into caching serves its feed live", async () => {
     const { cdn, put } = cdnStub();

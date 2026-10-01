@@ -34,7 +34,7 @@ function typeTags(
   plugins: PluginRegistry,
   target: ArchiveAtPath | null,
 ): string[] {
-  if (target?.archive.kind === "archive") {
+  if (target?.archive.kind === "entryType") {
     return [typeTag(target.archive.entryType)];
   }
   return syndicatableEntryTypeNames(plugins).map(typeTag);

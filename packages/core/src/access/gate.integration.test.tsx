@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { JsonObject } from "../json.js";
-import type { CustomArchiveData } from "../route/contract/resolved-entry.js";
+import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import {
   responseAllowsSharedStorage,
@@ -25,11 +25,11 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-// Two custom archives standing in for policied public routes: one
+// Two archive types standing in for policied public routes: one
 // authenticated-only, one gated to `editor`. The route-level `access` policy is
 // the seam under test end-to-end.
-interface GatedData extends CustomArchiveData {
-  readonly kind: "custom";
+interface GatedData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "members" | "staff";
   readonly label: string;
 }
@@ -45,7 +45,7 @@ const gatedPlugin = definePlugin("gated", (ctx) => {
     routes: ["/members"],
     access: authenticatedPolicy,
     resolve: () => ({
-      data: { kind: "custom", name: "members", label: "members-area" },
+      data: { kind: "archiveType", name: "members", label: "members-area" },
       title: "Members",
     }),
   });
@@ -53,7 +53,7 @@ const gatedPlugin = definePlugin("gated", (ctx) => {
     routes: ["/staff"],
     access: rolePolicy("editor"),
     resolve: () => ({
-      data: { kind: "custom", name: "staff", label: "staff-area" },
+      data: { kind: "archiveType", name: "staff", label: "staff-area" },
       title: "Staff",
     }),
   });
@@ -429,8 +429,8 @@ describe("access gate — segment-keyed caching (#1740)", () => {
 // mutable `entitled` set stands in for the developer's per-request entitlement
 // check (a `meta` flag, their own table, an external billing API), letting a
 // test flip a subscription active/lapsed between requests.
-interface PaywallData extends CustomArchiveData {
-  readonly kind: "custom";
+interface PaywallData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "premium";
   readonly summary: string;
   readonly body: string;
@@ -455,11 +455,11 @@ function paywallSetup() {
             ? entitlement("premium")
             : challenge("subscribe", { soft: true }),
       }),
-      // A custom archive opts into caching so the teaser/full variants persist.
+      // An archive type opts into caching so the teaser/full variants persist.
       cacheable: true,
       resolve: () => ({
         data: {
-          kind: "custom",
+          kind: "archiveType",
           name: "premium",
           summary: "PUBLIC-SUMMARY",
           body: "FULL-ARTICLE-BODY",

@@ -13,8 +13,8 @@ import { defineTemplate } from "../../template.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 import {
-  archive,
   entry,
+  entryType,
   fallback,
   forEntryType,
   forTermTaxonomy,
@@ -22,7 +22,7 @@ import {
   notFound,
   search,
   serverError,
-  taxonomy,
+  term,
 } from "./template-builders.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
@@ -1605,7 +1605,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(
+        entryType(
           defineTemplate({
             render: ({ data }) => (
               <ul>
@@ -1648,7 +1648,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(
+        entryType(
           defineTemplate({
             render: ({ data }) => (
               <ul>
@@ -2398,7 +2398,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <ul data-testid="archive">
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -2445,7 +2445,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id}>{entry.url}</li>
@@ -2491,7 +2491,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(
+        entryType(
           defineTemplate({
             prefetchArchiveLoaders: true,
             render: ({ data }) => (
@@ -2563,7 +2563,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) =>
               entry.contentBlocks ? (
@@ -2605,7 +2605,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -2650,7 +2650,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <span data-testid="pagination">
             {`page:${String(data.pagination.page)};perPage:${String(data.pagination.perPage)};total:${String(data.pagination.total)};pageCount:${String(data.pagination.pageCount)}`}
           </span>
@@ -2690,7 +2690,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
         )),
       ],
@@ -2733,7 +2733,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
         )),
       ],
@@ -2761,7 +2761,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => <div data-testid="index" />),
-        archive(() => <div data-testid="archive" />),
+        entryType(() => <div data-testid="archive" />),
         forEntryType("post").archive.template(() => (
           <div data-testid="archive-post" />
         )),
@@ -2823,7 +2823,9 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => <span data-testid="ct">{data.contentType}</span>),
+        entryType(({ data }) => (
+          <span data-testid="ct">{data.contentType}</span>
+        )),
       ],
     });
 
@@ -2856,7 +2858,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -2944,7 +2946,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
+        term(({ data }) => (
           <section data-testid="taxonomy">
             <h1 data-testid="term-name">{data.term.name}</h1>
             <ul>
@@ -2961,7 +2963,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       config: { plugins: [topicPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
-    const term = await h.factory.term.create({
+    const topicTerm = await h.factory.term.create({
       taxonomy: "topic",
       slug: "news",
       name: "News",
@@ -2977,7 +2979,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
     await h.factory.entryTerm.create({
       entryId: a.id,
-      termId: term.id,
+      termId: topicTerm.id,
       sortOrder: 0,
     });
 
@@ -3010,7 +3012,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
+        term(({ data }) => (
           <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
         )),
       ],
@@ -3020,7 +3022,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       config: { plugins: [smallPageTaxonomy], theme: theme },
     });
     const author = await h.seedUser("admin");
-    const term = await h.factory.term.create({
+    const topicTerm = await h.factory.term.create({
       taxonomy: "topic",
       slug: "news",
       name: "News",
@@ -3036,7 +3038,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
     await h.factory.entryTerm.create({
       entryId: createdEntry.id,
-      termId: term.id,
+      termId: topicTerm.id,
       sortOrder: 0,
     });
 
@@ -3050,7 +3052,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
+        term(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -3066,7 +3068,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       config: { plugins: [topicPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
-    const term = await h.factory.term.create({
+    const topicTerm = await h.factory.term.create({
       taxonomy: "topic",
       slug: "news",
       name: "News",
@@ -3095,12 +3097,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     if (!nullDated) throw new Error("insert returned no row");
     await h.factory.entryTerm.create({
       entryId: kept.id,
-      termId: term.id,
+      termId: topicTerm.id,
       sortOrder: 0,
     });
     await h.factory.entryTerm.create({
       entryId: nullDated.id,
-      termId: term.id,
+      termId: topicTerm.id,
       sortOrder: 1,
     });
 
@@ -3158,7 +3160,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
+        term(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
         )),
       ],
@@ -3168,7 +3170,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       config: { plugins: [topicPlugin], theme: theme },
     });
     const author = await h.seedUser("admin");
-    const term = await h.factory.term.create({
+    const topicTerm = await h.factory.term.create({
       taxonomy: "topic",
       slug: "page-tax",
       name: "PageTax",
@@ -3185,7 +3187,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       });
       await h.factory.entryTerm.create({
         entryId: e.id,
-        termId: term.id,
+        termId: topicTerm.id,
         sortOrder: i,
       });
     }
@@ -3202,9 +3204,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
-          <span data-testid="name">{data.term.name}</span>
-        )),
+        term(({ data }) => <span data-testid="name">{data.term.name}</span>),
       ],
     });
 
@@ -3238,7 +3238,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        taxonomy(({ data }) => (
+        term(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id}>
@@ -3258,7 +3258,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       name: "Public Writer",
       role: "admin",
     });
-    const term = await h.factory.term.create({
+    const topicTerm = await h.factory.term.create({
       taxonomy: "topic",
       slug: "eager",
       name: "Eager",
@@ -3274,7 +3274,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     });
     await h.factory.entryTerm.create({
       entryId: post.id,
-      termId: term.id,
+      termId: topicTerm.id,
       sortOrder: 0,
     });
 
@@ -3625,7 +3625,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        archive(({ data }) => (
+        entryType(({ data }) => (
           <span data-testid="archive">{`type:${data.contentType}`}</span>
         )),
       ],
@@ -3653,13 +3653,13 @@ describe("resolvePublicRoute — front-page through theme", () => {
   test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
     const homepagePlugin = definePlugin("homepage", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
+      ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
     });
     const theme = defineTheme({
       templates: [
         fallback(() => null),
         frontPage(() => <section data-testid="front-page" />),
-        archive(() => <section data-testid="archive" />),
+        entryType(() => <section data-testid="archive" />),
       ],
     });
 

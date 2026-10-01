@@ -147,13 +147,13 @@ import { definePlugin } from "plumix/plugin";
 export const featured = definePlugin("featured", {
   setup: (ctx) => {
     ctx.addFilter("feed:items", (items, scope) =>
-      scope.archive.kind === "front-page" ? items.slice(0, 5) : items,
+      scope.archive.kind === "frontPage" ? items.slice(0, 5) : items,
     );
   },
 });
 ```
 
-`scope.archive` names the archive as core's lookup does — `front-page`, `archive` (with its `entryType`), `taxonomy` (with its `taxonomy`), `author`, `date`, or `custom` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
+`scope.archive` names the archive as core's lookup does — `frontPage`, `entryType` (with its `entryType`), `term` (with its `taxonomy`), `author`, `date`, or `archiveType` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
 
 `feed:items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`archive:entries`](/routing/overview/#narrowing-an-archive) filter instead.
 

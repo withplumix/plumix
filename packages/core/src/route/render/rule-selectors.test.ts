@@ -42,7 +42,7 @@ declare module "../../template-registry.js" {
     colour: { term: Colour };
   }
   interface ArchiveTypeRegistry {
-    lookbook: { data: { kind: "custom"; name: "lookbook" } };
+    lookbook: { data: { kind: "archiveType"; name: "lookbook" } };
   }
 }
 
@@ -62,18 +62,18 @@ describe("entryTypeTargets", () => {
 
   test("the bare selector matches every entry of the type", () => {
     expect(widget.selected).toEqual({
-      match: { nodeKind: "content", type: "widget" },
+      match: { nodeKind: "entry", type: "widget" },
     });
   });
 
   test("slug and id narrow the content match", () => {
     expect(widget.slug("a").selected.match).toEqual({
-      nodeKind: "content",
+      nodeKind: "entry",
       type: "widget",
       slug: "a",
     });
     expect(widget.id(3).selected.match).toEqual({
-      nodeKind: "content",
+      nodeKind: "entry",
       type: "widget",
       id: 3,
     });
@@ -85,15 +85,15 @@ describe("entryTypeTargets", () => {
       widget.whereMeta("size", "large"),
     ]) {
       const match = narrowed.selected.match;
-      expect(match?.nodeKind).toBe("content");
+      expect(match?.nodeKind).toBe("entry");
       expect(match?.type).toBe("widget");
       expect(typeof match?.predicate).toBe("function");
     }
   });
 
-  test("archive selects the content-type-archive node, not the content one", () => {
+  test("archive selects the entryType node, not the entry one", () => {
     expect(widget.archive.selected).toEqual({
-      match: { nodeKind: "content-type-archive", type: "widget" },
+      match: { nodeKind: "entryType", type: "widget" },
     });
   });
 
@@ -182,9 +182,9 @@ describe("dateTargets", () => {
 });
 
 describe("archiveTypeTargets", () => {
-  test("carries the archive-type name as the custom node's type", () => {
+  test("carries the archive-type name as the archive-type node's type", () => {
     expect(archiveTypeTargets("lookbook", probe).selected).toEqual({
-      match: { nodeKind: "custom", type: "lookbook" },
+      match: { nodeKind: "archiveType", type: "lookbook" },
     });
   });
 });

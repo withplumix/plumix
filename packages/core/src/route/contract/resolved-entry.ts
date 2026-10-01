@@ -74,18 +74,20 @@ export interface Pagination {
   readonly pageCount: number;
 }
 
-export interface ArchiveData<TEntry extends ResolvedEntry = ResolvedEntry> {
-  readonly kind: "archive";
+export interface EntryTypeArchiveData<
+  TEntry extends ResolvedEntry = ResolvedEntry,
+> {
+  readonly kind: "entryType";
   readonly contentType: string;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }
 
-export interface TaxonomyData<
+export interface TermArchiveData<
   TTerm extends ResolvedTerm = ResolvedTerm,
   TEntry extends ResolvedEntry = ResolvedEntry,
 > {
-  readonly kind: "taxonomy";
+  readonly kind: "term";
   readonly taxonomy: string;
   readonly term: TTerm;
   readonly entries: readonly TEntry[];
@@ -94,7 +96,7 @@ export interface TaxonomyData<
 
 /**
  * Payload for an author archive (`/authors/{slug}`). Carries the resolved author
- * as the subject (like `TaxonomyData.term`) plus their published entries.
+ * as the subject (like `TermArchiveData.term`) plus their published entries.
  */
 export interface AuthorArchiveData<
   TEntry extends ResolvedEntry = ResolvedEntry,
@@ -139,8 +141,8 @@ export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
  * shape in `ArchiveTypeRegistry` so `forArchiveType(name)` types `data`. Core
  * only ever sees the base — the resolver and template come from the plugin.
  */
-export interface CustomArchiveData {
-  readonly kind: "custom";
+export interface ArchiveTypeData {
+  readonly kind: "archiveType";
   /** The registered archive-type name (`registerArchiveType(name, …)`). */
   readonly name: string;
   /**
@@ -165,7 +167,7 @@ export interface CustomArchiveData {
  */
 export interface ListingArchiveData<
   TEntry extends ResolvedEntry = ResolvedEntry,
-> extends CustomArchiveData {
+> extends ArchiveTypeData {
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }

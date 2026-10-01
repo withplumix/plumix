@@ -102,10 +102,10 @@ describe("routePublicRequest — stage order", () => {
     expect(outcome.match).toEqual({
       pattern: "/post/:slug",
       params: { slug: "hello" },
-      intent: { kind: "single", entryType: "post" },
+      intent: { kind: "entry", entryType: "post" },
       isPermalinkRoute: true,
     });
-    expect(outcome.intent).toEqual({ kind: "single", entryType: "post" });
+    expect(outcome.intent).toEqual({ kind: "entry", entryType: "post" });
   });
 
   test("a method other than GET or HEAD is refused before any stage runs", async () => {
@@ -134,14 +134,14 @@ describe("routePublicRequest — unmatched content", () => {
     expect(outcome.kind).toBe("content");
     if (outcome.kind !== "content") return;
     expect(outcome.match).toBeNull();
-    expect(outcome.intent).toEqual({ kind: "front-page" });
+    expect(outcome.intent).toEqual({ kind: "frontPage" });
 
     const response = await outcome.render(ctx);
     expect(response.status).toBe(200);
     expect(ctx.resolvedRoute).toEqual({
       pattern: "/",
       params: {},
-      intent: { kind: "front-page" },
+      intent: { kind: "frontPage" },
     });
   });
 

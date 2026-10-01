@@ -6,7 +6,7 @@ describe("templateNodeLabel", () => {
   test("labels each resolved node kind", () => {
     expect(
       templateNodeLabel({
-        kind: "content",
+        kind: "entry",
         entryType: "post",
         slug: "hello-world",
         databaseId: 1,
@@ -20,10 +20,10 @@ describe("templateNodeLabel", () => {
         databaseId: 2,
       }),
     ).toBe("category: news");
-    expect(
-      templateNodeLabel({ kind: "content-type-archive", entryType: "post" }),
-    ).toBe("post archive");
-    expect(templateNodeLabel({ kind: "front-page" })).toBe("front page");
+    expect(templateNodeLabel({ kind: "entryType", entryType: "post" })).toBe(
+      "post archive",
+    );
+    expect(templateNodeLabel({ kind: "frontPage" })).toBe("front page");
     expect(templateNodeLabel({ kind: "search" })).toBe("search");
   });
 });

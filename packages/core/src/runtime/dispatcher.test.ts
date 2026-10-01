@@ -2128,7 +2128,7 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
   });
 });
 
-describe("dispatcher — custom-archive CDN (#1693)", () => {
+describe("dispatcher — archive-type CDN (#1693)", () => {
   function cdnStub(hit?: Response) {
     const match = vi.fn(() => Promise.resolve(hit));
     const put = vi.fn(() => Promise.resolve());
@@ -2140,12 +2140,12 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     return { cdn, match, put };
   }
 
-  // A theme that renders any custom-archive node to a 200 so the store path
+  // A theme that renders any archiveType node to a 200 so the store path
   // is reachable; real themes narrow via `forArchiveType(name)`.
   const customTheme = defineTheme({
     templates: [
       fallback(({ data }) =>
-        data.kind === "custom"
+        data.kind === "archiveType"
           ? createElement("h1", null, `${data.name} archive`)
           : null,
       ),
@@ -2159,7 +2159,11 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
       routes: ["/schools/:location"],
       cacheable: true,
       resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "schools", location: params.location },
+        data: {
+          kind: "archiveType",
+          name: "schools",
+          location: params.location,
+        },
         title: `Schools in ${params.location}`,
         tags: ["t:school", "t:location"],
       }),
@@ -2171,13 +2175,17 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     ctx.registerArchiveType("schools", {
       routes: ["/schools/:location"],
       resolve: (_ctx, params) => ({
-        data: { kind: "custom", name: "schools", location: params.location },
+        data: {
+          kind: "archiveType",
+          name: "schools",
+          location: params.location,
+        },
         title: `Schools in ${params.location}`,
       }),
     });
   });
 
-  test("stores an opted-in custom archive's rendered response on a miss", async () => {
+  test("stores an opted-in archive type's rendered response on a miss", async () => {
     const { cdn, put } = cdnStub();
     const h = await createDispatcherHarness({
       cdn,
@@ -2208,7 +2216,7 @@ describe("dispatcher — custom-archive CDN (#1693)", () => {
     expect(tags).toContain("t:location");
   });
 
-  test("bypasses a custom archive that did not opt into caching", async () => {
+  test("bypasses an archive type that did not opt into caching", async () => {
     const { cdn, match, put } = cdnStub();
     const h = await createDispatcherHarness({
       cdn,
@@ -2602,7 +2610,7 @@ describe("dispatcher — telemetry consumers", () => {
       200,
     );
     const resolve = byName("resolve");
-    expect(resolve?.attributes["route.intent"]).toBe("single");
+    expect(resolve?.attributes["route.intent"]).toBe("entry");
     expect(resolve?.attributes["resolve.entity"]).toEqual({
       kind: "entry",
       id: entry.id,
@@ -2643,7 +2651,7 @@ describe("dispatcher — telemetry consumers", () => {
     // still carry what had resolved before the throw.
     const resolve = spans.find((span) => span.name === "resolve");
     expect(resolve?.status).toBe("error");
-    expect(resolve?.attributes["route.intent"]).toBe("front-page");
+    expect(resolve?.attributes["route.intent"]).toBe("frontPage");
     expect(resolve?.attributes["template.matched"]).toBe("fallback");
   });
 

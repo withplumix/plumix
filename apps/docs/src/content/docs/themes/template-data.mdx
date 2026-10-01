@@ -13,7 +13,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Overview
 
-Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `archive()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `ArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the nine.
+Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `entryType()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `EntryTypeArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the nine.
 
 Narrow the union in one of two ways. A `switch` on `data.kind` narrows in every branch.
 
@@ -77,18 +77,18 @@ export const single = defineTemplate({
 });
 ```
 
-`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the three listing-free shapes, alongside `CustomArchiveData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
+`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the three listing-free shapes, alongside `ArchiveTypeData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
 
-### `ArchiveData`
+### `EntryTypeArchiveData`
 
-An entry type's listing. `kind: "archive"`, guard `isArchive`, bound by the `archive` tier and by `forEntryType(name).archive.template()`.
+An entry type's listing. `kind: "entryType"`, guard `isEntryType`, bound by the `entryType` tier and by `forEntryType(name).archive.template()`.
 
 ```tsx
-import { defineTemplate, isArchive } from "plumix/theme";
+import { defineTemplate, isEntryType } from "plumix/theme";
 
 export const listing = defineTemplate({
   render: ({ data }) =>
-    isArchive(data) ? (
+    isEntryType(data) ? (
       <section>
         <h1>{data.contentType}</h1>
         <ol>
@@ -106,16 +106,16 @@ export const listing = defineTemplate({
 
 `data.contentType` is the entry type being listed, so one template can serve every archive on the site. A page number past the last page 404s before the template runs, which spares the template an empty-listing branch for that case.
 
-### `TaxonomyData`
+### `TermArchiveData`
 
-A term archive. `kind: "taxonomy"`, guard `isTaxonomy`, bound by the `taxonomy` tier and by `forTermTaxonomy(name)`.
+A term's archive. `kind: "term"`, guard `isTerm`, bound by the `term` tier and by `forTermTaxonomy(name)`.
 
 ```tsx
-import { defineTemplate, isTaxonomy } from "plumix/theme";
+import { defineTemplate, isTerm } from "plumix/theme";
 
 export const terms = defineTemplate({
   render: ({ data }) =>
-    isTaxonomy(data) ? (
+    isTerm(data) ? (
       <section data-taxonomy={data.taxonomy}>
         <h1>{data.term.name}</h1>
         {data.term.description ? <p>{data.term.description}</p> : null}
@@ -170,15 +170,15 @@ export const period = defineTemplate({
 
 `year` is always a number. `month` and `day` are 1-based and `null` at a coarser granularity. The three together tell you which archive you are on, and a year archive has both of them `null`.
 
-### `CustomArchiveData`
+### `ArchiveTypeData`
 
-A plugin-registered archive. `kind: "custom"`, guard `isCustom`, bound by `forArchiveType(name)`.
+A plugin-registered archive type. `kind: "archiveType"`, guard `isArchiveType`, bound by `forArchiveType(name)`.
 
 ```tsx
-import { defineTemplate, isCustom } from "plumix/theme";
+import { defineTemplate, isArchiveType } from "plumix/theme";
 
 export const pluginArchive = defineTemplate({
-  render: ({ data }) => (isCustom(data) ? <h1>{data.name}</h1> : null),
+  render: ({ data }) => (isArchiveType(data) ? <h1>{data.name}</h1> : null),
 });
 ```
 

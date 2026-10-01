@@ -47,13 +47,13 @@ export function cardIdentityFor(data: TemplateData): CardIdentity | null {
         kind: "entry",
         target: { kind: "entry", id: data.entry.id },
         node: {
-          kind: "content",
+          kind: "entry",
           entryType: data.entry.type,
           slug: data.entry.slug,
           databaseId: data.entry.id,
         },
       };
-    case "taxonomy":
+    case "term":
       return listing(data.pagination.page, {
         target: { kind: "term", id: data.term.id },
         node: {
@@ -72,15 +72,15 @@ export function cardIdentityFor(data: TemplateData): CardIdentity | null {
           databaseId: data.author.id,
         },
       });
-    case "archive":
+    case "entryType":
       return listing(data.pagination.page, {
-        target: { kind: "archive", entryType: data.contentType },
-        node: { kind: "content-type-archive", entryType: data.contentType },
+        target: { kind: "entryType", entryType: data.contentType },
+        node: { kind: "entryType", entryType: data.contentType },
       });
     case "frontPage":
       return listing(data.pagination.page, {
-        target: { kind: "front-page" },
-        node: { kind: "front-page" },
+        target: { kind: "frontPage" },
+        node: { kind: "frontPage" },
       });
     case "date": {
       const at = { year: data.year, month: data.month, day: data.day };
@@ -106,15 +106,19 @@ function listing(
  * page of that kind — `entry/12`, `term/3`, `date/2026-03`. The front page is
  * the one kind with a single page, so it is the one kind with no target segment.
  *
+ * A URL keeps its own spelling rather than the page kind's (ADR 0025): the
+ * front page is `front-page` and an entry type's listing `archive/<type>`, the
+ * segments cards were first published and stored under.
+ *
  * The same string is the last segments of both the card's URL and its storage
  * key, which is what "the URL is the key" means here — structurally, rather
  * than as a claim two string literals have to keep agreeing on.
  */
 export function cardTargetPath(target: CardTarget): string {
   switch (target.kind) {
-    case "front-page":
+    case "frontPage":
       return "front-page";
-    case "archive":
+    case "entryType":
       return `archive/${target.entryType}`;
     case "date":
       return `date/${dateSegment(target)}`;
@@ -155,7 +159,9 @@ const DATE = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
 export function parseCardTargetPath(path: string): CardTarget | null {
   const [kind, target, ...rest] = path.split("/");
   if (rest.length > 0) return null;
-  if (kind === "front-page") return target === undefined ? { kind } : null;
+  if (kind === "front-page") {
+    return target === undefined ? { kind: "frontPage" } : null;
+  }
   if (target === undefined) return null;
 
   switch (kind) {
@@ -164,7 +170,9 @@ export function parseCardTargetPath(path: string): CardTarget | null {
     case "author":
       return ID.test(target) ? { kind, id: Number.parseInt(target, 10) } : null;
     case "archive":
-      return ENTRY_TYPE.test(target) ? { kind, entryType: target } : null;
+      return ENTRY_TYPE.test(target)
+        ? { kind: "entryType", entryType: target }
+        : null;
     case "date":
       return parseDate(target);
     default:

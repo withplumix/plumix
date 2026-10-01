@@ -40,12 +40,12 @@ describe("the default card past entries", () => {
     expect(body).toContain("Example Site");
   });
 
-  test("serves a content-type archive's card under its plural label", async () => {
+  test("serves an entry type's archive card under its plural label", async () => {
     const harness = await createHarness();
     await seedEntry(harness);
 
     const response = await fetchCard(harness, {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 
@@ -87,7 +87,7 @@ describe("the default card past entries", () => {
       value: "Words about things",
     });
 
-    const response = await fetchCard(harness, { kind: "front-page" });
+    const response = await fetchCard(harness, { kind: "frontPage" });
 
     const body = await response.assertStatus(200).text();
     expect(body).toContain("Example Site");
@@ -119,7 +119,7 @@ describe("which pages are shareable", () => {
     ["a term nothing is filed under", { kind: "term", id: 1 }],
     [
       "an archive with nothing published",
-      { kind: "archive", entryType: "post" },
+      { kind: "entryType", entryType: "post" },
     ],
     ["an author who has published nothing", { kind: "author", id: 1 }],
     [
@@ -143,7 +143,7 @@ describe("which pages are shareable", () => {
     // card — public, immutable and shared-cached — must not answer for it.
     (await harness.fetch("/memo")).assertStatus(302);
     (
-      await fetchCard(harness, { kind: "archive", entryType: "memo" })
+      await fetchCard(harness, { kind: "entryType", entryType: "memo" })
     ).assertStatus(404);
   });
 
@@ -165,7 +165,7 @@ describe("which pages are shareable", () => {
     await seedEntry(harness, { type: "column", slug: "col" });
 
     (
-      await fetchCard(harness, { kind: "archive", entryType: "column" })
+      await fetchCard(harness, { kind: "entryType", entryType: "column" })
     ).assertStatus(404);
   });
 
@@ -181,7 +181,7 @@ describe("which pages are shareable", () => {
   test("serves the front page's card on a site with nothing published", async () => {
     const harness = await createHarness();
 
-    (await fetchCard(harness, { kind: "front-page" })).assertStatus(200);
+    (await fetchCard(harness, { kind: "frontPage" })).assertStatus(200);
   });
 
   test("has no card URL for a search page", async () => {
@@ -292,7 +292,7 @@ describe("the card in a listing page's head", () => {
     );
 
     const response = await fetchCard(harness, {
-      kind: "archive",
+      kind: "entryType",
       entryType: "post",
     });
 

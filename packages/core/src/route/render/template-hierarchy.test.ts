@@ -2,24 +2,24 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { TemplateData } from "../../theme.js";
 import type {
-  ArchiveData,
+  ArchiveTypeData,
   AuthorArchiveData,
-  CustomArchiveData,
   DateArchiveData,
   EntryData,
+  EntryTypeArchiveData,
   ResolvedEntry,
   ResolvedTerm,
-  TaxonomyData,
+  TermArchiveData,
 } from "../contract/resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { text } from "../../plugin/fields/builder.js";
 import { date as dateField } from "../../plugin/fields/temporal.js";
 import {
-  archive,
   author,
   collectNamedTemplates,
   date,
   entry,
+  entryType,
   fallback,
   forArchiveType,
   forAuthor,
@@ -31,7 +31,7 @@ import {
   notFound,
   search,
   serverError,
-  taxonomy,
+  term,
 } from "./template-builders.js";
 import {
   explainTemplateResolution,
@@ -41,7 +41,7 @@ import {
 } from "./template-hierarchy.js";
 
 const contentNode: ResolvedNode = {
-  kind: "content",
+  kind: "entry",
   entryType: "post",
   slug: "x",
   databaseId: 1,
@@ -50,8 +50,8 @@ const contentNode: ResolvedNode = {
 describe("resolveTemplate — generic tiers", () => {
   const rules = [
     entry(() => null),
-    archive(() => null),
-    taxonomy(() => null),
+    entryType(() => null),
+    term(() => null),
     author(() => null),
     date(() => null),
     frontPage(() => null),
@@ -61,21 +61,18 @@ describe("resolveTemplate — generic tiers", () => {
 
   test.each<[ResolvedNode, string]>([
     [contentNode, "entry"],
-    [{ kind: "content-type-archive", entryType: "post" }, "archive"],
-    [
-      { kind: "term", taxonomy: "category", slug: "x", databaseId: 1 },
-      "taxonomy",
-    ],
+    [{ kind: "entryType", entryType: "post" }, "entryType"],
+    [{ kind: "term", taxonomy: "category", slug: "x", databaseId: 1 }, "term"],
     [{ kind: "author", slug: "jane", databaseId: 1 }, "author"],
     [{ kind: "date", year: 2026, month: 7, day: 21 }, "date"],
-    [{ kind: "front-page" }, "frontPage"],
+    [{ kind: "frontPage" }, "frontPage"],
     [{ kind: "search" }, "search"],
   ])("resolves a node to its matching generic tier (#%#)", (node, tier) => {
     expect(resolveTemplate(rules, node)?.tier).toBe(tier);
   });
 
   test("array order is cosmetic — the node's own tier wins over fallback", () => {
-    // `fallback` is declared last but a content node still resolves to `entry`.
+    // `fallback` is declared last but an entry node still resolves to `entry`.
     expect(resolveTemplate(rules, contentNode)?.tier).toBe("entry");
   });
 
@@ -86,7 +83,9 @@ describe("resolveTemplate — generic tiers", () => {
   });
 
   test("returns undefined when neither the tier nor fallback is present", () => {
-    expect(resolveTemplate([archive(() => null)], contentNode)).toBeUndefined();
+    expect(
+      resolveTemplate([entryType(() => null)], contentNode),
+    ).toBeUndefined();
   });
 });
 
@@ -114,12 +113,12 @@ describe("generic-tier builders — data typing", () => {
       expectTypeOf(data).toEqualTypeOf<EntryData>();
       return null;
     });
-    archive(({ data }) => {
-      expectTypeOf(data).toEqualTypeOf<ArchiveData>();
+    entryType(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<EntryTypeArchiveData>();
       return null;
     });
-    taxonomy(({ data }) => {
-      expectTypeOf(data).toEqualTypeOf<TaxonomyData>();
+    term(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<TermArchiveData>();
       return null;
     });
     author(({ data }) => {
@@ -139,8 +138,8 @@ interface Product extends ResolvedEntry {
 interface Brand extends ResolvedTerm {
   readonly logoUrl: string | null;
 }
-interface GalleryData extends CustomArchiveData {
-  readonly kind: "custom";
+interface GalleryData extends ArchiveTypeData {
+  readonly kind: "archiveType";
   readonly name: "gallery";
   readonly album: string;
 }
@@ -194,19 +193,19 @@ const entryData = (meta: Record<string, unknown>): TemplateData =>
   }) as unknown as TemplateData;
 const termData = (meta: Record<string, unknown>): TemplateData =>
   ({
-    kind: "taxonomy",
+    kind: "term",
     term: { meta, storedMeta: meta },
   }) as unknown as TemplateData;
 
 describe("resolveTemplate — targeted rules (Zone 1)", () => {
   const postNode: ResolvedNode = {
-    kind: "content",
+    kind: "entry",
     entryType: "post",
     slug: "hello",
     databaseId: 42,
   };
   const postArchive: ResolvedNode = {
-    kind: "content-type-archive",
+    kind: "entryType",
     entryType: "post",
   };
   const catTerm: ResolvedNode = {
@@ -216,7 +215,7 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
     databaseId: 7,
   };
 
-  test("a targeted type rule matches its content node and beats the generic tier", () => {
+  test("a targeted type rule matches its entry node and beats the generic tier", () => {
     const rules = [
       entry(() => null),
       forEntryType("post").template(() => null),
@@ -250,10 +249,10 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
     );
   });
 
-  test(".archive matches the content-type-archive node, not a content node", () => {
+  test(".archive matches the entryType node, not an entry node", () => {
     const rules = [forEntryType("post").archive.template(() => null)];
     expect(resolveTemplate(rules, postArchive)?.match?.nodeKind).toBe(
-      "content-type-archive",
+      "entryType",
     );
     expect(resolveTemplate(rules, postNode)).toBeUndefined();
   });
@@ -263,11 +262,11 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
       forTermTaxonomy("category")
         .slug("news")
         .template(() => null),
-      taxonomy(() => null),
+      term(() => null),
     ];
     expect(resolveTemplate(rules, catTerm)?.match?.slug).toBe("news");
     expect(resolveTemplate(rules, { ...catTerm, slug: "sports" })?.tier).toBe(
-      "taxonomy",
+      "term",
     );
   });
 
@@ -420,7 +419,7 @@ describe("targeted builders — name checking and data typing", () => {
 
 describe("resolveTemplate — predicate rules (whereMeta / where / named)", () => {
   const postNode: ResolvedNode = {
-    kind: "content",
+    kind: "entry",
     entryType: "post",
     slug: "hello",
     databaseId: 1,
@@ -461,7 +460,7 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
       .template(() => null);
     expect(rule.match?.named).toEqual({ id: "landing", label: "Landing Page" });
     const pageNode: ResolvedNode = {
-      kind: "content",
+      kind: "entry",
       entryType: "page",
       slug: "home",
       databaseId: 1,
@@ -499,14 +498,14 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
       forTermTaxonomy("category")
         .whereMeta("featured", "yes")
         .template(() => null),
-      taxonomy(() => null),
+      term(() => null),
     ];
     expect(
       resolveTemplate(rules, catTerm, termData({ featured: "yes" }))?.match,
     ).toBeDefined();
     expect(
       resolveTemplate(rules, catTerm, termData({ featured: "no" }))?.tier,
-    ).toBe("taxonomy");
+    ).toBe("term");
   });
 
   test("where evaluates an arbitrary predicate over the resolved data", () => {
@@ -514,14 +513,14 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
       forTermTaxonomy("category")
         .where((data) => data.term.meta.pinned === "1")
         .template(() => null),
-      taxonomy(() => null),
+      term(() => null),
     ];
     expect(
       resolveTemplate(rules, catTerm, termData({ pinned: "1" }))?.match,
     ).toBeDefined();
     expect(
       resolveTemplate(rules, catTerm, termData({ pinned: "0" }))?.tier,
-    ).toBe("taxonomy");
+    ).toBe("term");
   });
 
   test("named matches the stored template choice and carries its label", () => {
@@ -544,9 +543,9 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
       forTermTaxonomy("category")
         .whereMeta("featured", "yes")
         .template(() => null),
-      taxonomy(() => null),
+      term(() => null),
     ];
-    expect(resolveTemplate(rules, catTerm)?.tier).toBe("taxonomy");
+    expect(resolveTemplate(rules, catTerm)?.tier).toBe("term");
   });
 });
 
@@ -652,9 +651,9 @@ describe("resolveTemplate — forDate targeted rules", () => {
 });
 
 describe("resolveTemplate — forArchiveType targeted rules", () => {
-  const galleryNode: ResolvedNode = { kind: "custom", name: "gallery" };
+  const galleryNode: ResolvedNode = { kind: "archiveType", name: "gallery" };
 
-  test("forArchiveType matches its custom node by name", () => {
+  test("forArchiveType matches its archive-type node by name", () => {
     const rules = [
       fallback(() => null),
       forArchiveType("gallery").template(() => null),
@@ -662,13 +661,13 @@ describe("resolveTemplate — forArchiveType targeted rules", () => {
     expect(resolveTemplate(rules, galleryNode)?.match?.type).toBe("gallery");
     // A different archive type falls through to `fallback`.
     expect(
-      resolveTemplate(rules, { kind: "custom", name: "events" })?.tier,
+      resolveTemplate(rules, { kind: "archiveType", name: "events" })?.tier,
     ).toBe("fallback");
   });
 
   test("the matcher carries nodeKind `custom` + the archive name as type", () => {
     const rule = forArchiveType("gallery").template(() => null);
-    expect(rule.match?.nodeKind).toBe("custom");
+    expect(rule.match?.nodeKind).toBe("archiveType");
     expect(rule.match?.type).toBe("gallery");
   });
 
@@ -714,7 +713,7 @@ describe("ruleLabel", () => {
 
 describe("explainTemplateResolution", () => {
   const postNode: ResolvedNode = {
-    kind: "content",
+    kind: "entry",
     entryType: "post",
     slug: "hello",
     databaseId: 1,
@@ -783,10 +782,10 @@ describe("explainTemplateResolution", () => {
   });
 
   test("no match and no fallback yields a null winner (a 404)", () => {
-    const trace = explainTemplateResolution([archive(() => null)], postNode);
+    const trace = explainTemplateResolution([entryType(() => null)], postNode);
     expect(trace.winner).toBeNull();
     expect(trace.steps).toEqual([
-      { label: "archive", status: "never-evaluated" },
+      { label: "entryType", status: "never-evaluated" },
     ]);
   });
 

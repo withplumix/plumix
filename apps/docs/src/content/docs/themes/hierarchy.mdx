@@ -12,7 +12,7 @@ Every public request ends at exactly one template. Two steps sit between the URL
 
 ## Overview
 
-A matched URL carries a route intent, meaning what the route is for rather than which row it points at. There are eight of them: `single`, `archive`, `taxonomy`, `author`, `date`, `front-page`, `search`, and a `custom` archive a plugin registered. The resolver takes that intent, loads the content behind it and produces two things. One is the [template data](/themes/template-data/) your render function receives. The other is a resolved node, carrying identity alone: a kind, a type name, and a slug, an id or a set of date components.
+A matched URL carries a route intent, meaning what the route is for rather than which row it points at. There are eight of them, one per page kind: `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, and `archiveType` for an archive a plugin registered. The resolver takes that intent, loads the content behind it and produces two things. One is the [template data](/themes/template-data/) your render function receives. The other is a resolved node, carrying identity alone: a kind, a type name, and a slug, an id or a set of date components.
 
 Resolution then walks the theme's `templates` array three times over.
 
@@ -22,20 +22,20 @@ Resolution then walks the theme's `templates` array three times over.
 
 If none of the three produces a rule, the request 404s and the `notFound` template renders instead.
 
-The kind-to-tier map is fixed. It is not something a theme configures.
+The kind-to-tier map is fixed. It is not something a theme configures. Every kind is served by the tier of the same name, except a plugin archive type.
 
-| Resolved node               | Kind                   | Generic tier |
-| --------------------------- | ---------------------- | ------------ |
-| One entry                   | `content`              | `entry`      |
-| An entry type's archive     | `content-type-archive` | `archive`    |
-| A term archive              | `term`                 | `taxonomy`   |
-| An author archive           | `author`               | `author`     |
-| A date archive              | `date`                 | `date`       |
-| A plugin-registered archive | `custom`               | `fallback`   |
-| The site root               | `front-page`           | `frontPage`  |
-| Search results              | `search`               | `search`     |
+| Resolved node               | Kind          | Generic tier |
+| --------------------------- | ------------- | ------------ |
+| One entry                   | `entry`       | `entry`      |
+| An entry type's archive     | `entryType`   | `entryType`  |
+| A term's archive            | `term`        | `term`       |
+| An author archive           | `author`      | `author`     |
+| A date archive              | `date`        | `date`       |
+| A plugin-registered archive | `archiveType` | `fallback`   |
+| The site root               | `frontPage`   | `frontPage`  |
+| Search results              | `search`      | `search`     |
 
-`custom` is the row worth reading twice. A plugin archive has no generic tier of its own, so it goes to `fallback` unless a `forArchiveType` rule claims it first.
+`archiveType` is the row worth reading twice. A plugin archive has no generic tier of its own, so it goes to `fallback` unless a `forArchiveType` rule claims it first.
 
 ## Quickstart
 
@@ -44,8 +44,8 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 1. **Cover the tiers first.** A theme with `fallback` alone is already complete, because every node reaches it. Add tiers as the pages diverge.
 
    ```tsx
-   import type { ArchiveData, EntryData } from "plumix/theme";
-   import { archive, defineTemplate, entry, fallback } from "plumix/theme";
+   import type { EntryData, EntryTypeArchiveData } from "plumix/theme";
+   import { defineTemplate, entry, entryType, fallback } from "plumix/theme";
 
    const anything = defineTemplate({
      render: ({ data }) => <main data-kind={data.kind} />,
@@ -55,11 +55,11 @@ The kind-to-tier map is fixed. It is not something a theme configures.
      render: ({ data }) => <h1>{data.entry.title}</h1>,
    });
 
-   const listing = defineTemplate<ArchiveData>({
+   const listing = defineTemplate<EntryTypeArchiveData>({
      render: ({ data }) => <h1>{data.contentType}</h1>,
    });
 
-   export const rules = [fallback(anything), entry(single), archive(listing)];
+   export const rules = [fallback(anything), entry(single), entryType(listing)];
    ```
 
 2. **Add a targeted rule above them.** Order matters among targeted rules, so put the narrower one first.
@@ -97,12 +97,12 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 
 A matcher holds a node kind and a type name, plus whichever narrowing the builder chain added. The walk compares those fields one by one, and an unset field matches anything.
 
-- `forEntryType("recipe")` fixes kind to `content` and type to `recipe`. `.slug()` and `.id()` add a further exact comparison against the node's slug or database id.
-- `forEntryType("recipe").archive` fixes kind to `content-type-archive` instead, so it never collides with the single-entry rules above it.
+- `forEntryType("recipe")` fixes kind to `entry` and type to `recipe`. `.slug()` and `.id()` add a further exact comparison against the node's slug or database id.
+- `forEntryType("recipe").archive` fixes kind to `entryType` instead, so it never collides with the single-entry rules above it.
 - `forTermTaxonomy("cuisine")` fixes kind to `term` and compares the type against the node's taxonomy.
 - `forAuthor()` fixes kind to `author` and carries a fixed type of `author`, then narrows by slug or id like a term.
 - `forDate(2026, 7)` fixes kind to `date` and compares year, month and day exactly. A component the builder never received has to be `null` on the node, so `forDate(2026)` matches the year archive and leaves `/2026/07` to the `date` tier.
-- `forArchiveType("seasonal")` fixes kind to `custom` and compares the type against the archive name the plugin registered.
+- `forArchiveType("seasonal")` fixes kind to `archiveType` and compares the type against the archive name the plugin registered.
 
 ## Predicates run second
 

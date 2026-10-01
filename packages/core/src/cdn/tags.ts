@@ -21,22 +21,22 @@ interface PageTagSources {
 export function pageTags(sources: PageTagSources): string[] {
   const { intent, resolvedEntity } = sources;
   switch (intent.kind) {
-    case "single":
+    case "entry":
       return resolvedEntity?.kind === "entry"
         ? [typeTag(intent.entryType), entryTag(resolvedEntity.id)]
         : [];
-    case "archive":
+    case "entryType":
       return [typeTag(intent.entryType)];
-    case "front-page":
+    case "frontPage":
       return sources.frontPageEntryTypes().map(typeTag);
-    case "taxonomy":
+    case "term":
       return sources.taxonomyEntryTypes(intent.taxonomy).map(typeTag);
     case "author":
     case "date":
       // Author and date archives list the same public, non-hierarchical type
       // set as the front page, so any publish of those types can change them.
       return sources.frontPageEntryTypes().map(typeTag);
-    case "custom":
+    case "archiveType":
     case "search":
       // Neither is derivable from the intent alone: search results depend on a
       // query, and a plugin archive's content on what it registered. Both

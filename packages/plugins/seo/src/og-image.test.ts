@@ -217,7 +217,7 @@ describe("resolveOgImage", () => {
     hooks.addFilter("seo:og_image", () => ({
       url: "https://cms.example/archive.png",
     }));
-    const archive = { kind: "archive" } as unknown as TemplateData;
+    const archive = { kind: "entryType" } as unknown as TemplateData;
 
     const image = await resolveOgImage(ogContext(hooks), archive, {
       override: null,

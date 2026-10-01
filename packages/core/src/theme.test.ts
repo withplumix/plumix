@@ -1,12 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import type {
-  ArchiveData,
+  ArchiveTypeData,
   EntryData,
+  EntryTypeArchiveData,
   ErrorData,
   FrontPageData,
   SearchData,
-  TaxonomyData,
+  TermArchiveData,
 } from "./route/contract/resolved-entry.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
@@ -16,12 +17,13 @@ import { buildApp } from "./runtime/app.js";
 import { createDispatcherHarness, plumixRequest } from "./test/dispatcher.js";
 import {
   defineTheme,
-  isArchive,
+  isArchiveType,
   isEntry,
+  isEntryType,
   isError,
   isFrontPage,
   isSearch,
-  isTaxonomy,
+  isTerm,
 } from "./theme.js";
 
 const stubAdapter = {
@@ -416,17 +418,19 @@ describe("theme:ready — theme-declared data reaching a request", () => {
 describe("template-data guards", () => {
   // The guards read only the `kind` discriminant, so minimal casts suffice.
   const entry = { kind: "entry" } as EntryData;
-  const archive = { kind: "archive" } as ArchiveData;
-  const taxonomy = { kind: "taxonomy" } as TaxonomyData;
+  const entryType = { kind: "entryType" } as EntryTypeArchiveData;
+  const term = { kind: "term" } as TermArchiveData;
+  const archiveType = { kind: "archiveType" } as ArchiveTypeData;
   const frontPage = { kind: "frontPage" } as FrontPageData;
   const search = { kind: "search" } as SearchData;
   const error = { kind: "error" } as ErrorData;
-  const all = [entry, archive, taxonomy, frontPage, search, error];
+  const all = [entry, entryType, term, archiveType, frontPage, search, error];
 
   test("each guard narrows exactly its own kind", () => {
     expect(all.filter(isEntry)).toEqual([entry]);
-    expect(all.filter(isArchive)).toEqual([archive]);
-    expect(all.filter(isTaxonomy)).toEqual([taxonomy]);
+    expect(all.filter(isEntryType)).toEqual([entryType]);
+    expect(all.filter(isTerm)).toEqual([term]);
+    expect(all.filter(isArchiveType)).toEqual([archiveType]);
     expect(all.filter(isFrontPage)).toEqual([frontPage]);
     expect(all.filter(isSearch)).toEqual([search]);
     expect(all.filter(isError)).toEqual([error]);

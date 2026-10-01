@@ -6,7 +6,7 @@ export const TEMPLATE_PANEL_ID = "template";
 /** A human label for the resolved route node, for the Template panel. */
 export function templateNodeLabel(node: ResolvedNode): string {
   switch (node.kind) {
-    case "content":
+    case "entry":
       return `${node.entryType}: ${node.slug}`;
     case "term":
       return `${node.taxonomy}: ${node.slug}`;
@@ -16,11 +16,11 @@ export function templateNodeLabel(node: ResolvedNode): string {
       return `date: ${[node.year, node.month, node.day]
         .filter((v) => v !== null)
         .join("-")}`;
-    case "custom":
+    case "archiveType":
       return `archive: ${node.name}`;
-    case "content-type-archive":
+    case "entryType":
       return `${node.entryType} archive`;
-    case "front-page":
+    case "frontPage":
       return "front page";
     case "search":
       return "search";

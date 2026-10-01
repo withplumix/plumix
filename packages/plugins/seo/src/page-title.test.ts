@@ -80,7 +80,7 @@ describe("titleVariables", () => {
   test("an entry-type archive carries its result count", () => {
     const vars = read(
       {
-        kind: "archive",
+        kind: "entryType",
         contentType: "post",
         entries: [],
         pagination: pagination(42),
@@ -95,7 +95,7 @@ describe("titleVariables", () => {
   test("a term archive carries its term name", () => {
     const vars = read(
       {
-        kind: "taxonomy",
+        kind: "term",
         taxonomy: "category",
         term,
         entries: [],
@@ -175,7 +175,7 @@ describe("titleVariables", () => {
     // The search page a site gets from `@plumix/plugin-search` renders as a
     // plugin archive, so the variable reads the fact rather than the payload.
     const vars = read(
-      { kind: "custom", name: "search" },
+      { kind: "archiveType", name: "search" },
       { query: "hydroponics" },
     );
 
@@ -183,7 +183,7 @@ describe("titleVariables", () => {
   });
 
   test("a page that lists nothing has no count", () => {
-    expect(read({ kind: "custom", name: "events" }, {}).count).toBe("");
+    expect(read({ kind: "archiveType", name: "events" }, {}).count).toBe("");
   });
 
   test("a missing site name is empty, not the string null", () => {
@@ -255,7 +255,7 @@ describe("patternTitle", () => {
 
   test("an archive is covered by the pattern of the type it lists", () => {
     const archive: TemplateData = {
-      kind: "archive",
+      kind: "entryType",
       contentType: "post",
       entries: [],
       pagination: pagination(0),

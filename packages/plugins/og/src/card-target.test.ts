@@ -19,7 +19,7 @@ const ENTRY = page({
   entry: { id: 12, type: "post", slug: "hello" },
 });
 const TERM = page({
-  kind: "taxonomy",
+  kind: "term",
   taxonomy: "category",
   term: { id: 3, slug: "design" },
 });
@@ -30,7 +30,7 @@ describe("cardIdentityFor", () => {
       kind: "entry",
       target: { kind: "entry", id: 12 },
       node: {
-        kind: "content",
+        kind: "entry",
         entryType: "post",
         slug: "hello",
         databaseId: 12,
@@ -54,10 +54,10 @@ describe("cardIdentityFor", () => {
 
   test("names an archive by its content type", () => {
     expect(
-      cardIdentityFor(page({ kind: "archive", contentType: "post" })),
+      cardIdentityFor(page({ kind: "entryType", contentType: "post" })),
     ).toMatchObject({
-      target: { kind: "archive", entryType: "post" },
-      node: { kind: "content-type-archive", entryType: "post" },
+      target: { kind: "entryType", entryType: "post" },
+      node: { kind: "entryType", entryType: "post" },
     });
   });
 
@@ -81,14 +81,14 @@ describe("cardIdentityFor", () => {
 
   test("names the front page, which has one page and no target", () => {
     expect(cardIdentityFor(page({ kind: "frontPage" }))).toMatchObject({
-      target: { kind: "front-page" },
-      node: { kind: "front-page" },
+      target: { kind: "frontPage" },
+      node: { kind: "frontPage" },
     });
   });
 
   test("says which paginated slice of the target a listing is", () => {
     const deeper = page({
-      kind: "archive",
+      kind: "entryType",
       contentType: "post",
       pagination: { page: 4 },
     });
@@ -96,7 +96,7 @@ describe("cardIdentityFor", () => {
     expect(cardIdentityFor(deeper)).toMatchObject({ kind: "listing", page: 4 });
   });
 
-  test.each(["search", "custom", "error"])(
+  test.each(["search", "archiveType", "error"])(
     "has no identity for a %s page",
     (kind) => {
       expect(cardIdentityFor(page({ kind }))).toBeNull();
@@ -109,8 +109,8 @@ describe("card target paths", () => {
     [{ kind: "entry", id: 12 }, "entry/12"],
     [{ kind: "term", id: 3 }, "term/3"],
     [{ kind: "author", id: 7 }, "author/7"],
-    [{ kind: "archive", entryType: "post" }, "archive/post"],
-    [{ kind: "front-page" }, "front-page"],
+    [{ kind: "entryType", entryType: "post" }, "archive/post"],
+    [{ kind: "frontPage" }, "front-page"],
     [{ kind: "date", year: 2026, month: null, day: null }, "date/2026"],
     [{ kind: "date", year: 2026, month: 3, day: null }, "date/2026-03"],
     [{ kind: "date", year: 2026, month: 3, day: 4 }, "date/2026-03-04"],
@@ -132,6 +132,9 @@ describe("card target paths", () => {
     "entry/abc",
     "entry/12/extra",
     "front-page/1",
+    // A URL keeps its own spelling: the page kinds are not path segments.
+    "frontPage",
+    "entryType/post",
     "search/cats",
     "custom/deals",
     "archive/Post",

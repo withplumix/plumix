@@ -125,7 +125,7 @@ export interface SitemapScope {
    * one, and they carry separate indexing defaults, so the scope has to say
    * which of the two it is rather than let the name answer.
    */
-  readonly kind: "entryType" | "taxonomy" | "archive";
+  readonly kind: "entryType" | "taxonomy" | "archiveType";
   readonly tags: readonly string[];
   readonly count: (ctx: AppContext) => Promise<number> | number;
   readonly urls: (
@@ -291,7 +291,7 @@ export function sitemapScopes(
     if (!sitemap || !isCrawlableType(archive)) continue;
     claim({
       name: archive.name,
-      kind: "archive",
+      kind: "archiveType",
       tags: sitemap.tags ?? [],
       count: sitemap.count,
       urls: sitemap.urls,
@@ -350,7 +350,7 @@ export function scopeIsOffered(
       return !settings.noindexTypes.has(scope.name);
     case "taxonomy":
       return !settings.noindexTaxonomies.has(scope.name);
-    case "archive":
+    case "archiveType":
       return true;
   }
 }
