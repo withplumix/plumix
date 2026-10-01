@@ -10,7 +10,7 @@ import {
 } from "./check-declarations.mjs";
 
 describe("findSpecifiers", () => {
-  test("reports an inferred type the compiler named through an internal package", () => {
+  test("reports a type the compiler named through a package", () => {
     expect(
       findSpecifiers(
         'export declare const pages: import("@plumix/core").PluginDescriptor<undefined>;',
@@ -18,7 +18,7 @@ describe("findSpecifiers", () => {
     ).toEqual(["@plumix/core"]);
   });
 
-  test("reports an internal subpath inside a `typeof import()`", () => {
+  test("reports a subpath inside a `typeof import()`", () => {
     expect(
       findSpecifiers(
         'type Ctx = AppContextBase<typeof import("@plumix/core/schema")>;',
@@ -184,6 +184,7 @@ describe("checkDeclarations", () => {
           'import type { A } from "./a.js";',
           'export * from "./b.mjs";',
           'export type C = import("./c").C;',
+          'export type F = import("./f").F;',
           'export { D } from "./d.cjs";',
           '/// <reference path="e.d.ts" />',
           'import type { Missing } from "./missing.js";',
@@ -196,6 +197,8 @@ describe("checkDeclarations", () => {
         ].join("\n"),
         "dist/d.d.cts": 'export type D = import("d-pkg").D;',
         "dist/e.d.ts": 'declare const e: import("e-pkg").E;',
+        "dist/f.d.ts": 'export type F = import("f-pkg").F;',
+        "dist/f/index.d.ts": 'export type F = import("f-index-pkg").F;',
       },
     );
     expect(checkDeclarations(dir)).toEqual([
@@ -204,6 +207,7 @@ describe("checkDeclarations", () => {
       { file: "dist/c/index.d.ts", specifiers: ["c-pkg"] },
       { file: "dist/d.d.cts", specifiers: ["d-pkg"] },
       { file: "dist/e.d.ts", specifiers: ["e-pkg"] },
+      { file: "dist/f.d.ts", specifiers: ["f-pkg"] },
     ]);
   });
 
@@ -290,6 +294,21 @@ describe("describeLeaks", () => {
       [
         "Declarations a consumer can load name packages this package does not declare:",
         "  dist/admin/react-router.d.ts: @tanstack/router-core",
+        "Annotate the export with a type from a package this one declares. Declaring a package no source file imports is not the fix: knip then calls it unused without a build.",
+      ].join("\n"),
+    );
+  });
+
+  test("gives both hints when an internal and another package are named", () => {
+    expect(
+      describeLeaks([
+        { file: "dist/index.d.ts", specifiers: ["@plumix/core", "a-pkg"] },
+      ]),
+    ).toBe(
+      [
+        "Declarations a consumer can load name packages this package does not declare:",
+        "  dist/index.d.ts: @plumix/core, a-pkg",
+        "Annotate the export with the type from a `plumix` subpath, or publish the type on one.",
         "Annotate the export with a type from a package this one declares. Declaring a package no source file imports is not the fix: knip then calls it unused without a build.",
       ].join("\n"),
     );

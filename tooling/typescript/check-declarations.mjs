@@ -127,11 +127,10 @@ function packageName(specifier) {
 function resolveDeclaration(from, specifier) {
   const base = resolve(dirname(from), specifier);
   const extension = /\.([cm]?)js$/.exec(base);
-  const candidates = /\.d\.[cm]?ts$/.test(base)
-    ? [base]
-    : extension
-      ? [`${base.slice(0, extension.index)}.d.${extension[1]}ts`]
-      : [`${base}.d.ts`, join(base, "index.d.ts")];
+  if (/\.d\.[cm]?ts$/.test(base)) return existsSync(base) ? base : undefined;
+  const candidates = extension
+    ? [`${base.slice(0, extension.index)}.d.${extension[1]}ts`]
+    : [`${base}.d.ts`, join(base, "index.d.ts")];
   return candidates.find((path) => existsSync(path));
 }
 
