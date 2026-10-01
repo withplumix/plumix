@@ -4,8 +4,11 @@
 // RPC mocking — the spec exercises the menu plugin end-to-end through
 // the actual oRPC + D1 round-trip.
 
+import { resolve } from "node:path";
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "plumix/test/playwright";
+import { eq } from "plumix/db";
+import { entries, entryTerm, terms, users } from "plumix/schema";
+import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
 // MenuItemEditor.tsx — must match the constant in the component
 // because drag projection compares `delta.x` against this width.
@@ -247,6 +250,75 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
       "0",
     );
   });
+});
+
+// The admin has no entry picker yet, so the entry item is seeded straight
+// into the playground's database, without a snapshot. The admin's save
+// is what writes one.
+test("a trashed entry's item keeps its label, and Convert to Custom URL fills in its last URL", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const [author] = await db.select({ id: users.id }).from(users).limit(1);
+  if (!author) throw new Error("globalSetup seeded no user");
+  const [post] = await db
+    .insert(entries)
+    .values({
+      type: "post",
+      title: "About us",
+      slug: "about-us",
+      status: "published",
+      authorId: author.id,
+    })
+    .returning({ id: entries.id });
+  const [linked] = await db
+    .insert(terms)
+    .values({ taxonomy: "menu", slug: "linked", name: "Linked" })
+    .returning({ id: terms.id });
+  if (!post || !linked) throw new Error("seed insert returned no row");
+  const [item] = await db
+    .insert(entries)
+    .values({
+      type: "menu_item",
+      title: "",
+      slug: "mi-linked-about-us",
+      status: "published",
+      authorId: author.id,
+      meta: { kind: "entry", entryId: post.id },
+    })
+    .returning({ id: entries.id });
+  if (!item) throw new Error("seed insert returned no row");
+  await db
+    .insert(entryTerm)
+    .values({ entryId: item.id, termId: linked.id, sortOrder: 0 });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-linked").click();
+  const row = page.getByTestId(`menu-item-row-${String(item.id)}`);
+  await expect(row).toHaveAttribute("data-state", "ok");
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/menu/save") && r.status() === 200,
+  );
+  await page.getByTestId("menu-save-button").click();
+  await saved;
+
+  await db
+    .update(entries)
+    .set({ status: "trash" })
+    .where(eq(entries.id, post.id));
+  await page.reload();
+  await page.getByTestId("menus-selector-option-linked").click();
+  await expect(row).toHaveAttribute("data-state", "broken");
+  await expect(row).toContainText("About us");
+
+  // The editor has no URL field, so the URL Convert to Custom URL filled
+  // in is read off the save that carries it.
+  await page.getByTestId(`menu-item-convert-${String(item.id)}`).click();
+  const converted = page.waitForRequest((r) => r.url().endsWith("/menu/save"));
+  await page.getByTestId("menu-save-button").click();
+  expect((await converted).postData()).toContain('"url":"/post/about-us"');
 });
 
 function menuOption(page: Page): Locator {

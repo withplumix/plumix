@@ -1,5 +1,6 @@
 import { plumix } from "plumix";
 import { auth } from "plumix/auth";
+import { definePlugin } from "plumix/plugin";
 import { defineTheme } from "plumix/theme";
 
 import { menu } from "@plumix/plugin-menu";
@@ -9,11 +10,18 @@ import {
   d1,
 } from "@plumix/runtime-cloudflare";
 
-// Plumix consumer wiring only the menu plugin — the smallest config
-// you can run to dogfood `@plumix/plugin-menu` without bringing the
-// rest of the plumix surface (blog, pages, media, etc.) along. The
-// worker-driven plugin e2e suite in `../e2e` boots this playground via
-// `plumix dev` and walks the menu happy path against the real worker.
+// Plumix consumer wiring only the menu plugin, plus a public `post` type
+// for menu items to link to — the smallest config you can run to dogfood
+// `@plumix/plugin-menu` without bringing the rest of the plumix surface
+// (blog, pages, media, etc.) along. The worker-driven plugin e2e suite in
+// `../e2e` boots this playground via `plumix dev` and walks the menu happy
+// path against the real worker.
+
+// A public entry type, so the e2e suite has something an entry-kind menu
+// item can link to.
+const content = definePlugin("menu-playground-content", (setup) => {
+  setup.registerEntryType("post", { label: "Posts", isPublic: true });
+});
 
 const deployOrigin = cloudflareDeployOrigin({
   workerName: "plumix-menu-playground",
@@ -38,6 +46,7 @@ export default plumix({
   // Locations are nav slots the theme renders; the e2e locations-tab
   // canary assigns the Primary menu into "primary".
   plugins: [
+    content,
     menu({
       locations: {
         primary: { label: "Primary Nav" },

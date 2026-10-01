@@ -27,10 +27,10 @@ export type MenuItemEntryMeta = MenuItemDisplayAttrs &
     kind: "entry";
     entryId: number;
     /**
-     * Snapshot of the linked entry's label/href at last sync (entered on
-     * save and refreshed by the `entry:trashed` subscriber). Survives
-     * source deletion so the admin can render broken items with their
-     * last-known label and "Convert to Custom URL" can seed `meta.url`.
+     * Snapshot of the linked entry's label/href, written by the server on
+     * every menu save the entry resolves on. Survives source deletion so
+     * the admin can render broken items with their last-known label and
+     * "Convert to Custom URL" can seed `meta.url`.
      */
     lastLabel?: string;
     lastHref?: string;

@@ -11,7 +11,11 @@ import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
 
 import type { ItemState } from "../admin/item-state.js";
-import type { MenuItemMeta } from "./types.js";
+import type {
+  MenuItemEntryMeta,
+  MenuItemMeta,
+  MenuItemTermMeta,
+} from "./types.js";
 import { mapItemState } from "../admin/item-state.js";
 import { isMenuEligible } from "./eligibility.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
@@ -52,14 +56,37 @@ export async function resolveItemStates(
     row,
     meta: parseMenuItemMeta(row.meta),
   }));
+  const targets = await lookupMenuTargets(
+    ctx,
+    parsed.map(({ meta }) => meta),
+  );
 
+  return parsed.map(({ row, meta }) => enrich(row, meta, targets));
+}
+
+/** The menu items' targets, looked up once per kind. */
+export interface MenuTargetLookups {
+  readonly canAccessKind: (kind: string) => boolean;
+  /** `null` when the target didn't resolve for this viewer. */
+  readonly resultFor: (
+    meta: MenuItemEntryMeta | MenuItemTermMeta,
+  ) => LookupResult | null;
+}
+
+/**
+ * Looks up the targets of `metas`' entry and term items, restricted to
+ * menu-eligible types and taxonomies and to the kinds the viewer may read.
+ */
+export async function lookupMenuTargets(
+  ctx: AppContext,
+  metas: readonly (MenuItemMeta | null)[],
+): Promise<MenuTargetLookups> {
   // Batch lookups by kind so a 50-item menu hits each adapter once.
   const idsByKind = new Map<string, Set<string>>();
-  for (const { meta } of parsed) {
+  for (const meta of metas) {
     if (!meta || meta.kind === "custom") continue;
-    const id = meta.kind === "entry" ? meta.entryId : meta.termId;
     const set = idsByKind.get(meta.kind) ?? new Set<string>();
-    set.add(String(id));
+    set.add(targetId(meta));
     idsByKind.set(meta.kind, set);
   }
 
@@ -110,9 +137,15 @@ export async function resolveItemStates(
     }),
   );
 
-  return parsed.map(({ row, meta }) =>
-    enrich(row, meta, lookupsByKind, canAccessKind),
-  );
+  return {
+    canAccessKind,
+    resultFor: (meta) =>
+      lookupsByKind.get(meta.kind)?.get(targetId(meta)) ?? null,
+  };
+}
+
+function targetId(meta: MenuItemEntryMeta | MenuItemTermMeta): string {
+  return String(meta.kind === "entry" ? meta.entryId : meta.termId);
 }
 
 interface BuiltScope {
@@ -143,8 +176,7 @@ function buildScope(
 function enrich(
   row: MenuItemRow,
   meta: MenuItemMeta | null,
-  lookupsByKind: ReadonlyMap<string, ReadonlyMap<string, LookupResult>>,
-  canAccessKind: (kind: string) => boolean,
+  targets: MenuTargetLookups,
 ): ResolvedRow {
   if (!meta) {
     // Garbage meta — treat as broken so the row still surfaces. The
@@ -174,9 +206,12 @@ function enrich(
     };
   }
 
-  const id = String(meta.kind === "entry" ? meta.entryId : meta.termId);
-  const lookupResult = lookupsByKind.get(meta.kind)?.get(id) ?? null;
-  const state = mapItemState({ meta, lookupResult, canAccessKind });
+  const lookupResult = targets.resultFor(meta);
+  const state = mapItemState({
+    meta,
+    lookupResult,
+    canAccessKind: targets.canAccessKind,
+  });
 
   // Label preference: row.title (override) → resolver result →
   // last-known snapshot in meta → "(unnamed)". Same shape for href,

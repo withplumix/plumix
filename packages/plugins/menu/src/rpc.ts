@@ -14,8 +14,16 @@ import type { ResolvedRow } from "./server/resolveItemStates.js";
 import type { RegisteredMenuLocation } from "./server/types.js";
 import { MenuPluginError } from "./errors.js";
 import { getEligibleMenuKinds } from "./server/eligibility.js";
-import { resolveItemStates } from "./server/resolveItemStates.js";
-import { flattenSaveItems, resolveParentIds } from "./server/save.js";
+import { parseMenuItemMeta } from "./server/parseMeta.js";
+import {
+  lookupMenuTargets,
+  resolveItemStates,
+} from "./server/resolveItemStates.js";
+import {
+  flattenSaveItems,
+  resolveParentIds,
+  withTargetSnapshot,
+} from "./server/save.js";
 import { sanitizeMenuHref } from "./server/url.js";
 
 const MENU_TAXONOMY = "menu";
@@ -282,7 +290,7 @@ export function createMenuRouter(
         .map((item) => item.id)
         .filter((id): id is number => id !== null);
       const existingRows = await context.db
-        .select({ id: entries.id })
+        .select({ id: entries.id, meta: entries.meta })
         .from(entries)
         .where(
           and(
@@ -310,6 +318,24 @@ export function createMenuRouter(
           });
         }
       }
+
+      // Snapshot each linked item's label and href, so the editor can
+      // still show it after the target is trashed or deleted. A target
+      // that doesn't resolve keeps the snapshot its row already stores.
+      const targets = await lookupMenuTargets(
+        context,
+        flat.items.map((item) => item.meta),
+      );
+      const storedMetas = new Map(
+        existingRows.map((r) => [r.id, parseMenuItemMeta(r.meta)]),
+      );
+      const metas = flat.items.map((item) =>
+        withTargetSnapshot(
+          item.meta,
+          targets,
+          item.id === null ? null : (storedMetas.get(item.id) ?? null),
+        ),
+      );
 
       // Load the prior set so we can compute removed / modified ids
       // without a second query after the writes.
@@ -362,7 +388,7 @@ export function createMenuRouter(
             .set({
               title: item.title ?? "",
               sortOrder: item.sortOrder,
-              meta: item.meta,
+              meta: metas[i],
               // parentId is patched in the second pass below.
             })
             .where(eq(entries.id, item.id))
@@ -384,7 +410,7 @@ export function createMenuRouter(
               status: "published",
               authorId,
               sortOrder: item.sortOrder,
-              meta: item.meta,
+              meta: metas[i],
             })
             .returning({ id: entries.id });
           if (!inserted) {
