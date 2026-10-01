@@ -1933,6 +1933,39 @@ describe("dispatcher — public read-through CDN", () => {
     expect(put.mock.calls[0]?.[2]).toContain("s:site");
   });
 
+  // A theme reads any other group through the `settings` template dep — the
+  // same loader — and the page is stored under that group's tag too.
+  test("a page whose template reads a settings group through the settings dep is stored under its tag", async () => {
+    const { cdn, put } = cdnStub();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: {
+        plugins: [blog],
+        theme: defineTheme({
+          templates: [
+            fallback(
+              defineTemplate({ settings: ["contact"], render: () => null }),
+            ),
+          ],
+        }),
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/hello"));
+    await h.drainDeferred();
+
+    expect(put.mock.calls[0]?.[2]).toContain("s:contact");
+  });
+
   // Stored under no tags, the archive would outlive every purge until its TTL.
   test("a term archive in a taxonomy listing no entry types is stored under the public types' tags", async () => {
     const { cdn, put } = cdnStub();
