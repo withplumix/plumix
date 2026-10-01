@@ -1,5 +1,21 @@
 # @plumix/plugin-search
 
+## 0.1.2
+
+### Patch Changes
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
+- [#2790](https://github.com/withplumix/plumix/pull/2790) [`a0566cc`](https://github.com/withplumix/plumix/commit/a0566cc6766e4084ba6220cb757b5eb9f2a0f343) Thanks [@nasyrov](https://github.com/nasyrov)! - Follows core's page-kind renames and needs `plumix` 0.24.0. `SearchArchiveData` has the `archiveType` kind where it had `custom`.
+
+- [#2575](https://github.com/withplumix/plumix/pull/2575) [`b85b4bc`](https://github.com/withplumix/plumix/commit/b85b4bcc226cc928d380f69c055fe6b3473b061a) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the scheduled search run never re-indexing a term renamed or re-described straight in the database: such a term is now found by its new name and description after the next run, instead of matching its old text until it is edited or the index is rebuilt.
+
+- [#2647](https://github.com/withplumix/plumix/pull/2647) [`11b5333`](https://github.com/withplumix/plumix/commit/11b53333c26f39fb4f8deda185463232f6c530da) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes search results showing entry title shortcodes such as `[year]` literally. The index still holds the raw title, so searching for the shortcode text still finds the entry.
+
 ## 0.1.1
 
 ### Patch Changes

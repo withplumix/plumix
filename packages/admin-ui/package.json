@@ -1,6 +1,6 @@
 {
   "name": "@plumix/admin-ui",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "type": "module",
   "description": "The UI primitives the Plumix admin and its plugins render with.",
   "license": "MIT",

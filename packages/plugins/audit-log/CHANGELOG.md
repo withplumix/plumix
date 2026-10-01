@@ -1,5 +1,21 @@
 # @plumix/plugin-audit-log
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2619](https://github.com/withplumix/plumix/pull/2619) [`267b106`](https://github.com/withplumix/plumix/commit/267b10604410736ae9ff014224f8503f9701ded8) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the write pipeline's internals from the published surface: `assertValidRetention` from the package root, and `createAuditService`, `AuditService`, `buildAuditRow`, `extractSubject` and `subjectExtractors` from `@plumix/plugin-audit-log/server`. Nothing outside the plugin used them. Log your own events through `ctx.audit.log()`. `runRetentionPurge` already validates the retention it is given. `sqlite` stays on both entries.
+
+### Patch Changes
+
+- [#2659](https://github.com/withplumix/plumix/pull/2659) [`3e27950`](https://github.com/withplumix/plumix/commit/3e27950e5b2b44a8f7370709bbb438506a4c62f9) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the audit log showing a failed load's raw error text instead of localized copy.
+
+- [#2780](https://github.com/withplumix/plumix/pull/2780) [`bcdc325`](https://github.com/withplumix/plumix/commit/bcdc3254c35fd4842e5b539fe6db10e9b2b59411) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the editor docs for scheduled retention. `retention` now says the plugin schedules the purge itself, and `purgeAt` says a custom schedule needs a matching trigger (on Cloudflare, an entry in `wrangler.jsonc` `triggers.crons`) or the purge never runs. `registerScheduledTask` now says a task with a `cron` runs only when a firing's schedule matches it exactly.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.2.0
 
 ### Minor Changes

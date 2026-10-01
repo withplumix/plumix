@@ -1,5 +1,51 @@
 # @plumix/plugin-media
 
+## 0.10.0
+
+### Minor Changes
+
+- [#2508](https://github.com/withplumix/plumix/pull/2508) [`a780883`](https://github.com/withplumix/plumix/commit/a78088338e8b3bf2d129d2a80804795a22b29cd0) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerImageRole(name, { single })`, so a plugin or theme declares its own image roles (`hero`, `thumbnail`, `avatar`) next to core's `featured` and `ogImage`. Type a new name by augmenting `ImageRoles` through `declare module "plumix"`. Registering a name twice fails and names both owners.
+
+  Adds `imageRoleFields(registry, scope, role)` to `plumix/plugin`. It returns the fields in one role for an entry type, a term taxonomy or the users, in declaration order, each with the key path to its value, including a field nested in groups. Core resolves the index once at boot.
+
+  Adds `.role(name)` to the media field builder. `.featured()` and `.ogImage()` are now shorthand for it. A role field with no `.accept()` now stores `accept: "image/"`, which also applies to existing `.featured()` / `.ogImage()` fields. An accept that admits anything other than images throws a `FieldConfigError`, which `plumix/fields` now exports.
+
+  Boot now fails, naming the field and its scope, for a role nobody registered, a role field inside a repeater at any depth, a multi-value role field, and a second field in a single role on one entry type, term taxonomy or users. Term and user meta boxes and fields nested in groups used to go unchecked. `buildApp` runs these checks as well as the manifest build. The error code `entry_has_multiple_featured_fields` is now `single_image_role_has_multiple_fields` (breaking).
+
+- [#2509](https://github.com/withplumix/plumix/pull/2509) [`235d8d5`](https://github.com/withplumix/plumix/commit/235d8d534c7ffb09c96c54c6a6c874e55a78ca97) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an optional `image(payload)` method to the lookup adapter contract. It returns a `ResolvedImage` (`url`, `alt`, and `width`/`height` as a pair or not at all), or `null` when the payload is not a usable image. `ResolvedImage` is exported from `plumix/plugin` and the root `plumix` types. The media adapter implements it: an image row resolves to its URL, alt text and measured size; a non-image row or one with no URL resolves to `null`.
+
+- [#2703](https://github.com/withplumix/plumix/pull/2703) [`2c296de`](https://github.com/withplumix/plumix/commit/2c296de470d2da4f07f530b057d740316ba6edd2) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes who may delete media and finish an upload. `media.delete` now follows core's trash rule. An owner needs `delete`, which contributors now hold for media. Deleting someone else's asset also needs `edit_any`, so it is still editor-only. A token without the `delete` scope can no longer delete its own media. Finishing an upload, whether through the worker upload route or `media.confirm`, now needs both ownership of the draft and media `create`. A `create`-scoped token succeeds at both steps, whatever the storage configuration. An owner without `create`, or any non-owner, is refused at both.
+
+- [#2619](https://github.com/withplumix/plumix/pull/2619) [`267b106`](https://github.com/withplumix/plumix/commit/267b10604410736ae9ff014224f8503f9701ded8) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `mediaBlocks` from the package root. The plugin registers its blocks itself, and nothing outside it read the list. Also stops passing `excludeFromGenericRpc` when registering the `attachment` entry type, because `plumix` no longer accepts that option. Behaviour is unchanged.
+
+- [#2632](https://github.com/withplumix/plumix/pull/2632) [`ebcc400`](https://github.com/withplumix/plumix/commit/ebcc400aa517b7cfd7e8d6076cac2c063e046091) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the file block ignoring the author's manual filename and MIME type when the picked asset has none — the link read "Download" and the meta label went missing. The file block's placeholder and "Download" fallback and the image block's "No image" placeholder are now localized, and the compiled catalogs are importable from `@plumix/plugin-media/locales/*`.
+
+### Patch Changes
+
+- [#2746](https://github.com/withplumix/plumix/pull/2746) [`ee0d65e`](https://github.com/withplumix/plumix/commit/ee0d65ef3f9bae3e2ad223d5141c6485d47ffa30) Thanks [@nasyrov](https://github.com/nasyrov)! - Styles the admin, the editor canvas's overlays and toolbar, and the forms, media, menu and seo admin screens through classes and CSS custom properties instead of inline styles. The canvas outlines now use a `canvas-selection` theme token, and the editor's "can't place here" notice uses the admin's standard small text and shadow.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2809](https://github.com/withplumix/plumix/pull/2809) [`c0e9bc4`](https://github.com/withplumix/plumix/commit/c0e9bc42b37bcc199f18fc05156c77faf06c2779) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a new media entry, menu or menu item skipping the defaults of fields another plugin registered on its entry type or the `menu` taxonomy; it now starts from them, like any other new entry. The comments plugin passes the starting user meta when it checks a commenter's session, so a user an authenticator provisions there starts from the user fields' defaults too.
+
+- [#2644](https://github.com/withplumix/plumix/pull/2644) [`7c8bc60`](https://github.com/withplumix/plumix/commit/7c8bc60872537082919f0168afd7933671a87ed3) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the site's subdirectory mount through `plumix/admin`'s `basePath()` instead of its own `window.plumix` cast.
+
+- [#2651](https://github.com/withplumix/plumix/pull/2651) [`ee29717`](https://github.com/withplumix/plumix/commit/ee2971704ab9393cf8ebbbf3575ad59bc72798b3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media library and media pickers offering an upload button, dropzone and drag-and-drop on a site with no `storage:` slot. They are now hidden there, and an empty library explains that uploads need a `storage:` slot in `plumix.config.ts`.
+
+- [#2572](https://github.com/withplumix/plumix/pull/2572) [`153c1e8`](https://github.com/withplumix/plumix/commit/153c1e84c32e62fdedec0b1b070a3cf5edfd16e7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media lookup browse path (`lookup.list({ kind: "media", query })`) disagreeing with `media.list`. It now runs the same query, so for the same search it returns the same assets in the same order (most recently updated first). It also matches alt text as well as the title, and treats a `%` or `_` in the query as a literal character, not a wildcard.
+
+  `media(...).accept()` now throws a `FieldConfigError` (`accept_out_of_bounds`) at build time for a value `media.list` would reject: a type longer than 64 characters, or a list of more than 32 types. Previously such a field registered without error and every list call from its picker failed validation.
+
+- [#2800](https://github.com/withplumix/plumix/pull/2800) [`2434fbd`](https://github.com/withplumix/plumix/commit/2434fbd390b270f4e7e2d92605b93f7f2124c4ca) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes presigned media uploads not being bounded by `maxUploadSize`. `media.createUploadUrl` now has the URL signed for exactly the declared `size`, which it has already checked against `maxUploadSize`, so the bucket refuses a PUT of any other length instead of storing it until `media.confirm` deletes it.
+
+- [#2659](https://github.com/withplumix/plumix/pull/2659) [`3e27950`](https://github.com/withplumix/plumix/commit/3e27950e5b2b44a8f7370709bbb438506a4c62f9) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media library's error banner showing raw text such as "Conflict" when an upload, delete or alt-text update fails. The banner now shows localized copy: the existing messages for a site with no storage or a rejected file, the too-large, unsupported-type and missing-length messages for a refused upload, and "Something went wrong. Try again." for anything else.
+
+- [#2787](https://github.com/withplumix/plumix/pull/2787) [`fdffe27`](https://github.com/withplumix/plumix/commit/fdffe272781a3ff8182dc43559e68c6cd18e72c2) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media entry type's description being untranslatable English. It is now a catalog message, so it can be translated.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
 ## 0.9.0
 
 ### Minor Changes

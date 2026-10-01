@@ -1,5 +1,41 @@
 # @plumix/plugin-comments
 
+## 0.5.0
+
+### Minor Changes
+
+- [#2555](https://github.com/withplumix/plumix/pull/2555) [`6efbb39`](https://github.com/withplumix/plumix/commit/6efbb39e466eaf00eb80c3084d7578d7a6960e26) Thanks [@nasyrov](https://github.com/nasyrov)! - Applies an entry type's access policy to the surfaces that publish entry data away from the entry's own page. A type registered with `access` is gated on its own page, but three plugins republished it elsewhere to visitors the gate would have turned away.
+
+  `@plumix/plugin-comments`: the public thread route, the REST resource and the submit handler now resolve the entry's policy before answering. Previously an anonymous visitor could read every approved comment on a members-only entry — and post to it — knowing only the entry id. All three routes are `auth: "public"`, which core answers ahead of the access gate, so they now share one `resolveCommentableEntry` that asks. A gated entry answers as a missing one, so the refusal does not report which ids exist.
+
+  **Commenting on a gated entry now closes for everyone, including the members the gate admits.** A public route carries no principal to resolve a policy against, so the question these three ask is whether an _anonymous_ reader may see the entry — and on a gated entry the answer is no whoever is asking. A member still sees the rendered thread on the entry's own page, which is gated and therefore safe, but the form and the "load older comments" control there will refuse. If your site runs members-only content with comments, this removes a feature you had. Serving those surfaces to the member the gate admits needs a public route that can carry a policy, which core does not have yet.
+
+  `@plumix/plugin-feeds`: a policied entry type is no longer syndicated. Its entries stay out of the site, author, date and term feeds, and the type registers no feed of its own to be asked for. A site whose only public entry type is gated now serves no feed at all, since a feed with no syndicatable type has nothing to carry.
+
+  `@plumix/plugin-seo`: a policied entry type gets no sitemap scope — and so no sub-sitemap route — and IndexNow is not told when one of its entries is published. The same now holds for a plugin archive declaring both `access` and `sitemap`. The type keeps its SEO meta box, its SERP preview and its settings keys in the editor: search copy is still worth writing for a page a member reaches, and removing the keys would orphan values a site had already saved.
+
+  A feed, a sitemap and an IndexNow ping are read by a client carrying no session and served from a shared cache, so there is no principal to resolve a policy against: those three exclude the whole type, as `@plumix/plugin-search` already does for its index. A type declaring `access` is therefore out even where an individual entry's policy would have admitted anyone.
+
+- [#2631](https://github.com/withplumix/plumix/pull/2631) [`5ca7014`](https://github.com/withplumix/plumix/commit/5ca701424d3468b683c56d07748b5670c8a13951) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `usePlumixCommentThread` to `@plumix/plugin-comments/hooks` for loading older root comments from a theme island. Loaded comments carry `createdAt` as a `Date`, and requests honour the deployment's base path.
+
+### Patch Changes
+
+- [#2570](https://github.com/withplumix/plumix/pull/2570) [`7335c03`](https://github.com/withplumix/plumix/commit/7335c03bbf3e66a468152f72791ac408d25716bf) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the thread route, the REST resource and the submit handler accepting a revision or autosave id. They now load the entry through core's `loadAuthoredEntry`, so such an id answers `entry_not_found` even on a site that lists those types in `entryTypes`.
+
+- [#2573](https://github.com/withplumix/plumix/pull/2573) [`e89382f`](https://github.com/withplumix/plumix/commit/e89382fe4e11f835cddf084f8bc7f850da0a9f2d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the comments REST collection serving approved replies the site hides: a reply under a pending, spam or trashed ancestor, or deeper than `maxDepth`, no longer appears, so the REST total now matches the thread's count.
+
+- [#2784](https://github.com/withplumix/plumix/pull/2784) [`c25c305`](https://github.com/withplumix/plumix/commit/c25c305501c06b0b04911d28444c5dcdc1dcd771) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the comments REST resource serving an entry's comments under any collection. `GET /_plumix/api/v1/{collection}/{entry}/comments` now answers 404 when the collection doesn't match the entry's type or names no public entry type, the same as `GET /{collection}/{id}`. An entry that isn't published or is closed to anonymous visitors now answers that same 404 instead of an empty page; an entry whose type has commenting off still gets an empty page.
+
+- [#2538](https://github.com/withplumix/plumix/pull/2538) [`c0cc0e6`](https://github.com/withplumix/plumix/commit/c0cc0e672368692bf3974a00a808ed953a858e9f) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@libsql/client` to `^0.18.0` (keeps in-memory databases intact across transactions), `lucide-react` to `^1.46.0`, `jose` to `^6.2.12` and `markdown-it` to `^15.0.2`.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2809](https://github.com/withplumix/plumix/pull/2809) [`c0e9bc4`](https://github.com/withplumix/plumix/commit/c0e9bc42b37bcc199f18fc05156c77faf06c2779) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a new media entry, menu or menu item skipping the defaults of fields another plugin registered on its entry type or the `menu` taxonomy; it now starts from them, like any other new entry. The comments plugin passes the starting user meta when it checks a commenter's session, so a user an authenticator provisions there starts from the user fields' defaults too.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
 ## 0.4.0
 
 ### Minor Changes

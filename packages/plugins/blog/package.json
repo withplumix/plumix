@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-blog",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "A blog for Plumix: posts, categories and tags.",
   "license": "MIT",

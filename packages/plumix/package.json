@@ -1,6 +1,6 @@
 {
   "name": "plumix",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "type": "module",
   "description": "The code-first TypeScript CMS for any runtime.",
   "license": "MIT",

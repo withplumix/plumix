@@ -1,6 +1,6 @@
 {
   "name": "create-plumix-app",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "Scaffold a new Plumix site.",
   "license": "MIT",

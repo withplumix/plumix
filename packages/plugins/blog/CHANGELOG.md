@@ -1,5 +1,19 @@
 # @plumix/plugin-blog
 
+## 0.2.3
+
+### Patch Changes
+
+- [#2643](https://github.com/withplumix/plumix/pull/2643) [`932e7c3`](https://github.com/withplumix/plumix/commit/932e7c3af735e527f3263122f90105b29914650c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the related-posts strip showing title shortcodes such as `[year]` literally. The strip's titles now render expanded.
+
+- [#2580](https://github.com/withplumix/plumix/pull/2580) [`b10f3ce`](https://github.com/withplumix/plumix/commit/b10f3cea512bd8f5385d49a87e991578b010c917) Thanks [@nasyrov](https://github.com/nasyrov)! - Uses the shared `applyOverride` from `plumix/plugin` for `blog()` overrides instead of its own copy; the merge behaves exactly as before.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2787](https://github.com/withplumix/plumix/pull/2787) [`fdffe27`](https://github.com/withplumix/plumix/commit/fdffe272781a3ff8182dc43559e68c6cd18e72c2) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the post entry type's description being untranslatable English. It is now a catalog message, and the admin shows it under the list heading.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
 ## 0.2.2
 
 ### Patch Changes

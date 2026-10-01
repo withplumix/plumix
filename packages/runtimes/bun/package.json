@@ -1,6 +1,6 @@
 {
   "name": "@plumix/runtime-bun",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Run a Plumix site on Bun.",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@plumix/runtime-node",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Run a Plumix site on Node.js.",
   "license": "MIT",

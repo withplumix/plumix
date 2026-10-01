@@ -1,5 +1,11 @@
 # @plumix/admin-ui
 
+## 0.24.0
+
+### Minor Changes
+
+- [#2628](https://github.com/withplumix/plumix/pull/2628) [`42595a6`](https://github.com/withplumix/plumix/commit/42595a6ce8e9d81e6b6222c245b30078b537f29d) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires `reorderLabel` and `removeLabel` on `SortableList`, and `triggerLabel` on `ColorPicker`, so their icon-only buttons are named in the admin's language instead of in hardcoded English. Adds `X` to the shared icon set.
+
 ## 0.23.0
 
 ## 0.22.0

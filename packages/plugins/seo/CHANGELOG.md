@@ -1,5 +1,45 @@
 # @plumix/plugin-seo
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2555](https://github.com/withplumix/plumix/pull/2555) [`6efbb39`](https://github.com/withplumix/plumix/commit/6efbb39e466eaf00eb80c3084d7578d7a6960e26) Thanks [@nasyrov](https://github.com/nasyrov)! - Applies an entry type's access policy to the surfaces that publish entry data away from the entry's own page. A type registered with `access` is gated on its own page, but three plugins republished it elsewhere to visitors the gate would have turned away.
+
+  `@plumix/plugin-comments`: the public thread route, the REST resource and the submit handler now resolve the entry's policy before answering. Previously an anonymous visitor could read every approved comment on a members-only entry — and post to it — knowing only the entry id. All three routes are `auth: "public"`, which core answers ahead of the access gate, so they now share one `resolveCommentableEntry` that asks. A gated entry answers as a missing one, so the refusal does not report which ids exist.
+
+  **Commenting on a gated entry now closes for everyone, including the members the gate admits.** A public route carries no principal to resolve a policy against, so the question these three ask is whether an _anonymous_ reader may see the entry — and on a gated entry the answer is no whoever is asking. A member still sees the rendered thread on the entry's own page, which is gated and therefore safe, but the form and the "load older comments" control there will refuse. If your site runs members-only content with comments, this removes a feature you had. Serving those surfaces to the member the gate admits needs a public route that can carry a policy, which core does not have yet.
+
+  `@plumix/plugin-feeds`: a policied entry type is no longer syndicated. Its entries stay out of the site, author, date and term feeds, and the type registers no feed of its own to be asked for. A site whose only public entry type is gated now serves no feed at all, since a feed with no syndicatable type has nothing to carry.
+
+  `@plumix/plugin-seo`: a policied entry type gets no sitemap scope — and so no sub-sitemap route — and IndexNow is not told when one of its entries is published. The same now holds for a plugin archive declaring both `access` and `sitemap`. The type keeps its SEO meta box, its SERP preview and its settings keys in the editor: search copy is still worth writing for a page a member reaches, and removing the keys would orphan values a site had already saved.
+
+  A feed, a sitemap and an IndexNow ping are read by a client carrying no session and served from a shared cache, so there is no principal to resolve a policy against: those three exclude the whole type, as `@plumix/plugin-search` already does for its index. A type declaring `access` is therefore out even where an individual entry's policy would have admitted anyone.
+
+- [#2515](https://github.com/withplumix/plumix/pull/2515) [`77abfb3`](https://github.com/withplumix/plumix/commit/77abfb3aa61c24b15ed88eccf95c38b55c3c681c) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `og:image:alt` and `twitter:image:alt` when the resolved share image names what it shows — a `featured` or `ogImage` role carries its media row's alt text, and a `seo:og_image` subscriber may return its own.
+
+- [#2512](https://github.com/withplumix/plumix/pull/2512) [`e09638d`](https://github.com/withplumix/plumix/commit/e09638d06e6574949e96a8aa2f3f7228336d4975) Thanks [@nasyrov](https://github.com/nasyrov)! - Lists every image role in the sitemap, not just `featured` and `ogImage`. A role a plugin or theme registered with `registerImageRole` now reaches `<image:image>`, and so does a role field nested in a group, which the previous walk could not see. Each role contributes one picture — the first of its fields that resolves — which replaces the ten-per-entry cap.
+
+  Fixes the `og:image` chain missing a `.featured()` or `.ogImage()` field nested in a group. Whether a stored reference is a picture is now the reference adapter's own answer rather than a mime check here, so a role field pointed at a non-media kind resolves through that kind instead of resolving nothing.
+
+- [#2619](https://github.com/withplumix/plumix/pull/2619) [`267b106`](https://github.com/withplumix/plumix/commit/267b10604410736ae9ff014224f8503f9701ded8) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the SERP preview helpers from the package root: `resolveSerp`, `SERP_TITLE_LIMIT`, `SERP_DESCRIPTION_LIMIT` and the `SerpOverrides`, `SerpPreview` and `SerpResult` types. Only this plugin's own editor preview used them, and there is no replacement.
+
+### Patch Changes
+
+- [#2746](https://github.com/withplumix/plumix/pull/2746) [`ee0d65e`](https://github.com/withplumix/plumix/commit/ee0d65ef3f9bae3e2ad223d5141c6485d47ffa30) Thanks [@nasyrov](https://github.com/nasyrov)! - Styles the admin, the editor canvas's overlays and toolbar, and the forms, media, menu and seo admin screens through classes and CSS custom properties instead of inline styles. The canvas outlines now use a `canvas-selection` theme token, and the editor's "can't place here" notice uses the admin's standard small text and shadow.
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2705](https://github.com/withplumix/plumix/pull/2705) [`c9ac1a9`](https://github.com/withplumix/plumix/commit/c9ac1a94445b639c82684161b7f774b57539ace0) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads config from `ctx.config`.
+
+- [#2790](https://github.com/withplumix/plumix/pull/2790) [`a0566cc`](https://github.com/withplumix/plumix/commit/a0566cc6766e4084ba6220cb757b5eb9f2a0f343) Thanks [@nasyrov](https://github.com/nasyrov)! - Follows core's page-kind renames in breadcrumbs, page titles and indexability, and needs `plumix` 0.24.0. Sitemap URLs don't change.
+
+- [#2643](https://github.com/withplumix/plumix/pull/2643) [`932e7c3`](https://github.com/withplumix/plumix/commit/932e7c3af735e527f3263122f90105b29914650c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the SERP preview showing a raw shortcode such as `[year]` in the title, and ignoring a `resolve:single:data` subscriber's rewrite. The preview now shows the title the page renders.
+
+- [#2570](https://github.com/withplumix/plumix/pull/2570) [`7335c03`](https://github.com/withplumix/plumix/commit/7335c03bbf3e66a468152f72791ac408d25716bf) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the sitemap listing entries core does not publish: a sub-sitemap now takes its entries from core's `publicEntryRows`, so a published entry with no publish date is left out, as it is from archives and feeds.
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,31 @@
 # @plumix/runtime-node
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2718](https://github.com/withplumix/plumix/pull/2718) [`3ae979f`](https://github.com/withplumix/plumix/commit/3ae979fa04c199682dfbb27cd5fd847e7a875208) Thanks [@nasyrov](https://github.com/nasyrov)! - Loads `.env` in production. The built server reads `.env` from the directory it starts in, before the site is built, and fills only the keys the environment has not set, so a platform's injected secrets always win; a missing file is not an error. A deploy that relied on a `.env` beside the server being ignored should remove the file or move its values into the environment. `.env` is now the one env file on every runtime: a project keeping local secrets in `.dev.vars` should rename it to `.env`.
+
+- [#2632](https://github.com/withplumix/plumix/pull/2632) [`ebcc400`](https://github.com/withplumix/plumix/commit/ebcc400aa517b7cfd7e8d6076cac2c063e046091) Thanks [@nasyrov](https://github.com/nasyrov)! - Passes each installed plugin's compiled catalogs to the app from the generated entry, so plugin block strings render in the request's locale. `createNodeSite` accepts a matching `pluginCatalogs` option.
+
+- [#2759](https://github.com/withplumix/plumix/pull/2759) [`567a0cf`](https://github.com/withplumix/plumix/commit/567a0cf65e2561c9c8697c4e12d9e8f8e617a35f) Thanks [@nasyrov](https://github.com/nasyrov)! - Moves the Node adapter to the `handler` spec, and has the site build its handler with `createRuntimeHandler(app)`. Assets and the drain deadline behave as before. Requires the `plumix` release that adds `createRuntimeHandler`.
+
+- [#2711](https://github.com/withplumix/plumix/pull/2711) [`943bd59`](https://github.com/withplumix/plumix/commit/943bd59807b020d116ece74f36bb50aec060df49) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires `plumix` 0.24.0 or later, and applies the request trust and asset rules from `plumix/runtime` instead of its own copies. The rules behave the same. One exception: `createRequestListener` no longer infers `https` from a TLS socket. Mounted on `node:https`, it now builds `http://` URLs unless `trustProxy` is on and the request carries `x-forwarded-proto`.
+
+- [#2619](https://github.com/withplumix/plumix/pull/2619) [`267b106`](https://github.com/withplumix/plumix/commit/267b10604410736ae9ff014224f8503f9701ded8) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `db` from `CronOverrides`, so `site.startCron()` no longer accepts a database. It was a test seam: the scheduler's run guard always writes to the site's own database. Drop the option from your call.
+
+### Patch Changes
+
+- [#2708](https://github.com/withplumix/plumix/pull/2708) [`26ecc04`](https://github.com/withplumix/plumix/commit/26ecc04bc17c5f45e672c6d58108d44594540265) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: the optional `vitest` peer of `plumix/test` now requires `^5.0.1`. Also raises `vite` to `^8.3.0`, `drizzle-orm` to `^0.45.3`, `@orpc/*` to `^1.15.3`, `@tanstack/react-query` to `^5.103.2` and `@tanstack/react-router` to `^1.170.38`.
+
+- [#2498](https://github.com/withplumix/plumix/pull/2498) [`0d0ed89`](https://github.com/withplumix/plumix/commit/0d0ed89d772b49d8f283bc5fd5d27ed08257e1cf) Thanks [@nasyrov](https://github.com/nasyrov)! - Imports each `plumix` value from the one subpath that publishes it (`plumix/theme`, `plumix/plugin`, `plumix/runtime`, `plumix/auth`, `plumix/support`), so this release requires `plumix` 0.24.0 or later.
+
+- [#2743](https://github.com/withplumix/plumix/pull/2743) [`6c87e7e`](https://github.com/withplumix/plumix/commit/6c87e7e3db3edb67df4ff8f877a47d63d32af09f) Thanks [@nasyrov](https://github.com/nasyrov)! - Runs scheduled tasks on the scheduler `plumix/runtime` now ships instead of its own copy, and requires `plumix` 0.24.0 or later. `startScheduledRunner` and its options are unchanged.
+
+- [#2712](https://github.com/withplumix/plumix/pull/2712) [`604764e`](https://github.com/withplumix/plumix/commit/604764e23cd0d587621517b2bee59b2363bce7bf) Thanks [@nasyrov](https://github.com/nasyrov)! - Runs `plumix dev` and `plumix build` through the shared `plumix/vite` command helpers, with unchanged behaviour, so this release requires `plumix` 0.24.0 or later.
+
+- [#2717](https://github.com/withplumix/plumix/pull/2717) [`ba15370`](https://github.com/withplumix/plumix/commit/ba153702afecfb1f80f8c75cfee029a34d411a6c) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `start` to each runtime's `plumix.e2e` block, the command that serves its built output, and an optional `packageManager` to a runtime's scaffold block. The scaffold smoke reads both to install each runtime with its own package manager and to start every built server.
+
 ## 0.2.0
 
 ### Minor Changes

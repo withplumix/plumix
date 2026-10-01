@@ -1,5 +1,22 @@
 # @plumix/admin-editor
 
+## 0.24.0
+
+### Minor Changes
+
+- [#2629](https://github.com/withplumix/plumix/pull/2629) [`d6aaf79`](https://github.com/withplumix/plumix/commit/d6aaf79f1177148d07ceda1925e1cd48f86587de) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the unused canvas, store and config exports from `@plumix/admin-editor`'s root entry (`connectCanvas`, `connectRuntime`, `EditorCanvas`, `CanvasFrame`, `EditorConfigProvider`, `useEditorConfig`, `EditorProvider`, `useEditorStore`, `createEditorStore`, `MIN_ZOOM`, `MAX_ZOOM` and their types). The entry now exports `PlumixEditor`, `bootEditor` and `EDITOR_COMMAND_DESCRIPTORS`, plus the `PlumixEditorProps`, `PublishActions`, `DraftMode` and `InserterPattern` types needed to type what you pass to `PlumixEditor`.
+
+- [#2774](https://github.com/withplumix/plumix/pull/2774) [`9b4b4f7`](https://github.com/withplumix/plumix/commit/9b4b4f7bf4b9453bf4dea0038c2f8789f8e0196c) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks a slot that refuses the dragged block while you drag over the editor canvas, with a red dashed outline and a screen-reader message, so it's clear why the drop line went elsewhere. Where the block lands is unchanged.
+
+- [#2571](https://github.com/withplumix/plumix/pull/2571) [`1542299`](https://github.com/withplumix/plumix/commit/15422993335ecec9f4095e3d12e0906304d1e97b) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `history` and `setTree` from the editor store's published state and adds `canUndo` / `canRedo` fields in their place; undo and redo now drop selected ids whose blocks the restored tree no longer contains.
+
+### Patch Changes
+
+- [#2568](https://github.com/withplumix/plumix/pull/2568) [`a1b8e74`](https://github.com/withplumix/plumix/commit/a1b8e747a6b5ccfaeef8228331144d828b121caa) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes editing a block with more than one slot. Duplicate, paste, move up/down, group and ungroup on a block in any slot after the first now stay in that slot, and the Layers panel lists every slot's children. Previously they landed in the first slot or did nothing, and the Layers panel hid every slot after the first.
+- Updated dependencies [[`42595a6`](https://github.com/withplumix/plumix/commit/42595a6ce8e9d81e6b6222c245b30078b537f29d), [`bcdc325`](https://github.com/withplumix/plumix/commit/bcdc3254c35fd4842e5b539fe6db10e9b2b59411), [`025f292`](https://github.com/withplumix/plumix/commit/025f29298cbb2ebca0aeb8a0c9cfa61318e70c32), [`004c0bc`](https://github.com/withplumix/plumix/commit/004c0bcac36aa4f32ac1e3f62b7f035a74a88de5), [`0b5a09b`](https://github.com/withplumix/plumix/commit/0b5a09b386fb2a6854d5156bd723008387ea8238), [`a623163`](https://github.com/withplumix/plumix/commit/a623163eb1d6082c146cbdb5272471b44f45d422)]:
+  - @plumix/admin-ui@0.24.0
+  - @plumix/core@0.24.0
+
 ## 0.23.0
 
 ### Patch Changes
