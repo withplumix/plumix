@@ -4,7 +4,7 @@ import { defineMessage } from "@lingui/core/macro";
 // Extraction mirror for core's valibot validator messages (see
 // `core-nav-i18n.ts` for the pattern). Rendering resolves the descriptor
 // through admin's `bootI18n` resolver (`vMessage`). Lockstep with
-// `packages/core/src/rpc/validation.ts` is test-guarded.
+// `packages/core/src/rpc/contract/validation.ts` is test-guarded.
 
 export const CORE_VALIDATION_DESCRIPTORS = {
   emailRequired: defineMessage({

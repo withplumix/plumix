@@ -7,7 +7,7 @@ import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { listActiveAutosaves } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { idParam } from "../../validation.js";
+import { idParam } from "../../contract/validation.js";
 
 const listInput = v.object({ entryId: idParam });
 

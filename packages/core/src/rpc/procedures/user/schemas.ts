@@ -1,13 +1,13 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
-import { slugSchema } from "../../schemas.js";
 import {
   emailField,
   idParam,
   metaInputSchema,
   nameField,
-} from "../../validation.js";
+} from "../../contract/validation.js";
+import { slugSchema } from "../../schemas.js";
 
 const avatarUrlSchema = v.pipe(
   v.string(),

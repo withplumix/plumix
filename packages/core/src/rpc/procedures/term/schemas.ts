@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
+import { idParam, metaInputSchema } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
-import { idParam, metaInputSchema } from "../../validation.js";
 
 const taxonomySchema = v.pipe(
   v.string(),

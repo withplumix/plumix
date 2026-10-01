@@ -17,7 +17,7 @@ import {
 } from "../../../revisions/snapshot-envelope.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { idParam } from "../../validation.js";
+import { idParam } from "../../contract/validation.js";
 import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
 import {
   applyEntryBeforeSave,

@@ -3,8 +3,8 @@ import * as v from "valibot";
 import type { McpTool } from "../context/mcp-tool.js";
 import { EntryReadError } from "../entries/errors.js";
 import { getEntry, listEntries } from "../entries/read-service.js";
+import { idParam } from "../rpc/contract/validation.js";
 import { entryListInputSchema } from "../rpc/procedures/entry/schemas.js";
-import { idParam } from "../rpc/validation.js";
 import { McpToolError } from "./errors.js";
 
 // Curated read surface: the entries list shape minus the admin-shaped filters

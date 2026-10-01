@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { SLUG_MAX_LENGTH, slugPattern } from "./validation.js";
+import { SLUG_MAX_LENGTH, slugPattern } from "./contract/validation.js";
 
 // Slug shape shared across RPC inputs — matches the URL-safe kebab-case
 // convention used for post and term slugs. Bounds live in `validation.ts`

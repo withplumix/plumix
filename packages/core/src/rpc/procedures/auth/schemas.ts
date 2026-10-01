@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
-import { idParam } from "../../validation.js";
+import { idParam } from "../../contract/validation.js";
 
 const sessionUserSchema = v.object({
   id: idParam,
