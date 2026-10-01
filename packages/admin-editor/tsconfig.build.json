@@ -1,13 +1,10 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": [
+    "./tsconfig.json",
+    "@plumix/typescript-config/library.build.json"
+  ],
   "compilerOptions": {
-    "stripInternal": true,
-    // tsconfig.json widens rootDir to the package root for the playground;
-    // the dist build is src-only, so pin it back and re-enable emit (the wide
-    // config sets noEmit to stay typecheck-only).
-    "rootDir": "src",
-    "noEmit": false,
-    "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
+    "stripInternal": true
   },
   // The published library is src-only; the playground + e2e + tool configs
   // that tsconfig.json adds for typecheck/eslint must stay out of dist.

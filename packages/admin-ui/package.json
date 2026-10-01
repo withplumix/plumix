@@ -216,7 +216,7 @@
     "publint": "publint",
     "roster:sync": "tsx scripts/sync-roster.ts",
     "test:unit": "vitest run",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "typecheck": "tsc",
     "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore && pnpm roster:sync"
   },
   "dependencies": {

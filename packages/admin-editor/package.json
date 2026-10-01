@@ -53,7 +53,7 @@
     "publint": "publint",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@dnd-kit/core": "catalog:dnd-kit",

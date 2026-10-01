@@ -50,7 +50,7 @@
     "publint": "publint",
     "test:unit": "vitest run",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc"
   },
   "peerDependencies": {
     "plumix": "workspace:>=0.24.0 <1.0.0"

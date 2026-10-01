@@ -16,9 +16,9 @@ const adminShimEntries = Object.keys(SHARED_ADMIN_RUNTIME_SPECIFIERS).map(
 );
 
 // Core's `exports` targets, as the `src/` modules they are built from. Knip
-// maps `dist` back through the tsconfig's rootDir, which is widened to the
-// package root so the layer table typechecks, so it can't follow the map to
-// `src/` on its own.
+// maps `dist` back to `src` through the tsconfig's outDir and rootDir, which
+// only tsconfig.build.json sets, so it can't follow the map to `src/` on its
+// own.
 const coreExportEntries = Object.values(corePackage.exports).flatMap(
   ({ default: target }) => {
     const built = /^\.\/dist\/(.+)\.js$/.exec(target);
@@ -255,9 +255,9 @@ const config: KnipConfig = {
     },
     "packages/admin-ui": {
       // Every `src/` module is a subpath export (`pnpm roster:sync` derives
-      // the map from them). Knip maps `dist` back through the tsconfig's
-      // rootDir, which is widened to the package root for the roster script,
-      // so it can't follow the map to `src/` on its own.
+      // the map from them). Knip maps `dist` back to `src` through the
+      // tsconfig's outDir and rootDir, which only tsconfig.build.json sets, so
+      // it can't follow the map to `src/` on its own.
       entry: ["src/*.{ts,tsx}"],
     },
     // The runtime-proof fixture plugin is loaded by playwright's

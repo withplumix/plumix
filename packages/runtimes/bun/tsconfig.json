@@ -1,10 +1,6 @@
 {
   "extends": "@plumix/typescript-config/library.json",
   "compilerOptions": {
-    // Override the library default (`${configDir}/src`) so ts-eslint lints
-    // the config files beside `src/` against this project, and `e2e/` sits
-    // inside the project rootDir.
-    "rootDir": ".",
     "types": ["bun"]
   },
   "include": ["src", "e2e"]

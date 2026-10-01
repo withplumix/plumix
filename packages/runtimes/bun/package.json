@@ -124,7 +124,7 @@
     "test:unit": "bun --bun ./node_modules/vitest/vitest.mjs run",
     "test:build": "vitest run --config vitest.build.config.ts",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "vite": "catalog:vite"
