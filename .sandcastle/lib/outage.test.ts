@@ -161,6 +161,32 @@ describe("waitOutALimit", () => {
     expect(step.calls()).toBe(1);
   });
 
+  const MODEL_GONE =
+    'claude-code exited with code 1:\n[claude-code:unrecognized_model] {"model":"claude-sonnet-5-5","query_source":"sdk"}';
+
+  test("a model the CLI stops recognising is the limit arriving, so the step is tried again every 15 minutes", async () => {
+    const step = failingThen([MODEL_GONE, MODEL_GONE]);
+    const { now, pause } = clock("2026-10-01T02:04:00Z");
+
+    await expect(waitOutALimit(step.start, { now, pause })).resolves.toBe(
+      "ran",
+    );
+    expect(step.calls()).toBe(3);
+    expect(now().toISOString()).toBe("2026-10-01T02:34:00.000Z");
+  });
+
+  test("a model still missing after a whole session window is handed on", async () => {
+    const step = failingThen(Array.from({ length: 100 }, () => MODEL_GONE));
+    const { now, pause } = clock("2026-10-01T02:04:00Z");
+
+    await expect(waitOutALimit(step.start, { now, pause })).rejects.toThrow(
+      "unrecognized_model",
+    );
+    expect(now().getTime() - Date.parse("2026-10-01T02:04:00Z")).toBe(
+      5 * 3_600_000,
+    );
+  });
+
   test("a limit that keeps coming back is handed on rather than waited for forever", async () => {
     const step = failingThen(Array.from({ length: 10 }, () => SESSION_LIMIT));
 
