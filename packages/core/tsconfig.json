@@ -7,11 +7,7 @@
     // `exports` map to their generated `.d.mts`. Without this, the
     // base-config `allowJs` pulls the `.mjs` into the program and
     // emits stray `.js` siblings into locales/.
-    "allowJs": false,
-    // Widen rootDir past `src` so the layer table (`layers.ts`) and the graph
-    // suite that reads it typecheck and resolve under eslint's project
-    // service. tsconfig.build.json pins it back to `src` for a clean dist.
-    "rootDir": "."
+    "allowJs": false
   },
   "include": ["src", "layers.ts"]
 }

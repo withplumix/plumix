@@ -2,7 +2,6 @@
   "extends": "@plumix/typescript-config/library.json",
   "compilerOptions": {
     "types": ["node"],
-    "rootDir": ".",
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },

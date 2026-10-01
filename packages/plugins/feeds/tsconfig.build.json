@@ -1,8 +1,10 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": [
+    "./tsconfig.json",
+    "@plumix/typescript-config/library.build.json"
+  ],
   "compilerOptions": {
-    "stripInternal": true,
-    "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
+    "stripInternal": true
   },
   "exclude": ["src/**/*.test.ts"]
 }

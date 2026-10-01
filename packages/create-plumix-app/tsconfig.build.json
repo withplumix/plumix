@@ -1,7 +1,7 @@
 {
-  "extends": "./tsconfig.json",
-  "exclude": ["src/**/*.test.ts", "src/test-support.ts"],
-  "compilerOptions": {
-    "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
-  }
+  "extends": [
+    "./tsconfig.json",
+    "@plumix/typescript-config/library.build.json"
+  ],
+  "exclude": ["src/**/*.test.ts", "src/test-support.ts"]
 }
