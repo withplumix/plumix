@@ -147,7 +147,8 @@ test.describe("plain-form route for non-editor entry types", () => {
   test("a cleared defaulted field opens empty and the next save leaves it out", async ({
     page,
   }) => {
-    const [bio] = MANIFEST_WITH_PLAIN_FORM_TYPE.entryMetaBoxes;
+    const bio = MANIFEST_WITH_PLAIN_FORM_TYPE.entryMetaBoxes?.[0];
+    if (!bio) throw new Error("the plain-form fixture lost its bio box");
     await mockManifest(page, {
       ...MANIFEST_WITH_PLAIN_FORM_TYPE,
       entryMetaBoxes: [

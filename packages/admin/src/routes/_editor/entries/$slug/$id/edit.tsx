@@ -350,11 +350,7 @@ function EntryEditor({
       entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
     [entryTypeName, capabilities],
   );
-  // The form, `metaRef`, and the diff baseline all seed from the stored bag,
-  // foreign keys included (e.g. `featuredImage` written by another plugin),
-  // so a freshly-opened entry diffs empty and autosaves nothing.
-  const seededMeta = entry.meta;
-  const metaRef = useRef<Record<string, unknown>>(seededMeta);
+  const metaRef = useRef<Record<string, unknown>>(entry.meta);
   // Named-template pick — a reserved meta key, but sent as the dedicated
   // `template` field (the meta bag sanitizer rejects reserved keys). `null`
   // = theme default. Rides the same autosave group as content/meta.
@@ -438,7 +434,7 @@ function EntryEditor({
           blocks: seedContent.blocks,
           serializedBlocks: JSON.stringify(seedContent.blocks),
           excerpt: entry.excerpt ?? "",
-          meta: seededMeta,
+          meta: entry.meta,
           template: initialTemplate,
           access: initialAccess,
         },
@@ -768,7 +764,7 @@ function EntryEditor({
           metaBoxes.length > 0
             ? {
                 boxes: metaBoxes,
-                initialMeta: seededMeta,
+                initialMeta: entry.meta,
                 onMetaChange: handleMetaChange,
                 fieldErrors: metaFieldErrors,
               }
@@ -794,7 +790,7 @@ function EntryEditor({
       handleAccessChange,
       taxonomyPickers,
       metaBoxes,
-      seededMeta,
+      entry.meta,
       handleMetaChange,
       metaFieldErrors,
     ],

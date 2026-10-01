@@ -247,8 +247,7 @@ export class MediaFieldBuilder<
   }
 
   /** The value a new entity starts with — a stored id (or id array for
-   * multi fields), written into its meta when it is created, not filled
-   * in on read, so a cleared field stays empty. */
+   * multi fields), written into its meta when it is created; a cleared field stays empty. */
   default(
     value: Multiple extends true ? readonly string[] : string,
   ): MediaFieldBuilder<K, Multiple, Required, Returns> {

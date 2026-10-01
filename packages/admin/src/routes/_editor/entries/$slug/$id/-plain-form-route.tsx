@@ -54,13 +54,10 @@ export function PlainFormRouteInner({
   );
   const queryClient = useQueryClient();
   const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
-  // The form and diff baseline share the stored bag, foreign keys included,
-  // so a freshly-opened entry diffs empty.
-  const seededMeta = entry.meta;
   const initialSnapshot: PlainFormSnapshot = {
     title: entry.title,
     status: entry.status,
-    meta: seededMeta,
+    meta: entry.meta,
   };
   const valuesRef = useRef<PlainFormSnapshot>(initialSnapshot);
   const [isSaving, setIsSaving] = useState(false);
@@ -138,7 +135,7 @@ export function PlainFormRouteInner({
     content: entry.content,
     excerpt: entry.excerpt ?? "",
     status: entry.status,
-    meta: seededMeta,
+    meta: entry.meta,
     terms: {},
     parentId: entry.parentId,
   };

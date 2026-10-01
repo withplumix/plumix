@@ -21,7 +21,7 @@ export interface StartingMetaField {
  * The starting meta for a set of meta-box fields, in stored shape: each
  * field's `.default()`, and for a group without one, its members' starting
  * meta. A field with no starting value is left out. Written into an entity
- * when it is created (ADR 0026) — nothing fills it in on read.
+ * when it is created (ADR 0026).
  */
 export function startingMeta(fields: readonly StartingMetaField[]): JsonObject {
   const bag: Record<string, JsonValue> = {};

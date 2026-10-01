@@ -4,6 +4,9 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { group, number, repeater, text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
+import { forEntryType } from "../../../route/render/template-builders.js";
+import { resolveTemplate } from "../../../route/render/template-hierarchy.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
@@ -623,6 +626,39 @@ describe("entry.create", () => {
       const read = await h.client.entry.get({ id: row.id });
 
       expect(read.meta).toEqual({ subtitle: "Stored" });
+    });
+
+    // A `whereMeta` rule reads the stored column, which now holds the default.
+    test("a whereMeta rule matches a created entry's default", async () => {
+      const h = await createRpcHarness({
+        authAs: "admin",
+        plugins: registryWithDefaults(),
+      });
+      const created = await h.client.entry.create({ slug: "rule" });
+      const [row] = await h.db
+        .select()
+        .from(entries)
+        .where(eq(entries.id, created.id));
+      if (!row) throw new Error("the created entry is not stored");
+      const [resolved] = await resolveEntryList(h.context, [row]);
+      if (!resolved) throw new Error("resolveEntryList returned no entry");
+
+      const warm = forEntryType("post")
+        .whereMeta("tone", "warm")
+        .template(() => null);
+
+      expect(
+        resolveTemplate(
+          [warm],
+          {
+            kind: "entry",
+            entryType: "post",
+            slug: row.slug,
+            databaseId: row.id,
+          },
+          { kind: "entry", entry: resolved },
+        ),
+      ).toBe(warm);
     });
 
     // The default is stored, so the conditions and the publish gate judge it

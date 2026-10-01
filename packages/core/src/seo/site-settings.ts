@@ -3,8 +3,9 @@ import type { SettingsBag } from "../db/schema/settings.js";
 import { settingsLoader } from "../template-deps-core.js";
 
 /**
- * Settings groups as flat `key → value` bags, keyed by group name; a group
- * with no rows is absent. One query for the lot, memoized per group for the
+ * Settings groups as flat `key → value` bags, keyed by group name, each read
+ * the way `settingsGroupBag` reads it; a group with neither rows nor starting
+ * values is absent. One query for the lot, memoized per group for the
  * request — so asking for several at once is what keeps a render on a single
  * round-trip.
  */

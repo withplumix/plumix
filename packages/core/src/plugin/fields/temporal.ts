@@ -86,8 +86,7 @@ export class TemporalFieldBuilder<
 
   /**
    * The value a new entity starts with — an ISO string in the field's
-   * stored shape, written into its meta when it is created, not filled
-   * in on read, so a cleared field stays empty. Leaves the read type as
+   * stored shape, written into its meta when it is created; a cleared field stays empty. Leaves the read type as
    * it is; `.required()` narrows it.
    */
   default(value: string): TemporalFieldBuilder<Input, K, V, S> {

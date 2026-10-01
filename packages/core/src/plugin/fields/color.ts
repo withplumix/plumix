@@ -64,8 +64,7 @@ export class ColorFieldBuilder<
 
   /**
    * The value a new entity starts with — a hex string `#xxxxxx` (or
-   * `#xxx` shorthand), written into its meta when it is created, not
-   * filled in on read, so a cleared field stays empty. Leaves the read
+   * `#xxx` shorthand), written into its meta when it is created; a cleared field stays empty. Leaves the read
    * type as it is; `.required()` narrows it.
    */
   default(value: string): ColorFieldBuilder<K, V, S> {

@@ -61,8 +61,7 @@ export class RichtextFieldBuilder<
   }
 
   /** The value a new entity starts with — a ProseMirror doc JSON value,
-   * written into its meta when it is created, not filled in on read, so
-   * a cleared field stays empty. */
+   * written into its meta when it is created; a cleared field stays empty. */
   default(value: unknown): RichtextFieldBuilder<K> {
     return this.#fork({ default: value });
   }

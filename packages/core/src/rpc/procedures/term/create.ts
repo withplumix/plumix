@@ -2,8 +2,6 @@ import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { startingMeta } from "../../../plugin/fields/starting-meta.js";
-import { listTermMetaFields } from "../../../plugin/manifest.js";
 import {
   assertTermMetaCapabilities,
   loadTermMeta,
@@ -12,6 +10,8 @@ import {
   validateTermMetaReferences,
   writeTermMeta,
 } from "../../../meta/term.js";
+import { startingMeta } from "../../../plugin/fields/starting-meta.js";
+import { listTermMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { termCreateInputSchema } from "./schemas.js";

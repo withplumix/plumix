@@ -112,7 +112,7 @@ export class RepeaterFieldBuilder<
 
   /**
    * The rows a new entity starts with — written into its meta when it is
-   * created, not filled in on read, so a cleared repeater stays empty.
+   * created; a cleared repeater stays empty.
    * Typed against the declared row schema in its STORED spelling — an ISO
    * string, a bare reference id — because they are stored with no
    * conversion. Rows are partial by design, and each is completed with the

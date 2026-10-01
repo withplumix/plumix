@@ -6,6 +6,8 @@ import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
+import { definePlugin } from "../../plugin/define.js";
+import { text } from "../../plugin/fields/index.js";
 import {
   createDispatcherHarness,
   plumixRequest,
@@ -37,6 +39,36 @@ describe("passkey register — options", () => {
     };
     expect(body.user.name).toBe("admin@cms.example");
     expect(typeof body.challenge).toBe("string");
+  });
+
+  // A user the passkey bootstrap provisions is a new entity, so it starts from
+  // the user fields' defaults (ADR 0026).
+  test("the bootstrapped user stores the user fields' defaults", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [
+          definePlugin("profiles", (ctx) => {
+            ctx.registerUserMetaBox("profile", {
+              label: "Profile",
+              fields: [text("pronouns").default("they/them"), text("bio")],
+            });
+          }),
+        ],
+      },
+    });
+
+    await h.dispatch(
+      plumixRequest("/_plumix/auth/passkey/register/options", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "admin@cms.example" }),
+      }),
+    );
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "admin@cms.example"),
+    });
+    expect(created?.meta).toEqual({ pronouns: "they/them" });
   });
 
   test("is race-safe on concurrent bootstraps of the same email", async () => {

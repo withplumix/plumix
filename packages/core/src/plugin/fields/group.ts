@@ -100,7 +100,7 @@ export class GroupFieldBuilder<
 
   /**
    * The value a new entity starts with — written into its meta when it is
-   * created, not filled in on read, so a cleared group stays empty. Typed
+   * created; a cleared group stays empty. Typed
    * against the declared members in their STORED spelling — an ISO string,
    * a bare reference id — because it is stored with no conversion. Partial
    * by design; a misspelled key is a compile error. Without one, the group

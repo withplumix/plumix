@@ -56,8 +56,7 @@ export class JsonFieldBuilder<
   }
 
   /** The value a new entity starts with — any JSON-serialisable value,
-   * written into its meta when it is created, not filled in on read, so
-   * a cleared field stays empty. */
+   * written into its meta when it is created; a cleared field stays empty. */
   default(value: unknown): JsonFieldBuilder<K> {
     return this.#fork({ default: value });
   }

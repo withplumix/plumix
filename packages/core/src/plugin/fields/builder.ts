@@ -108,7 +108,7 @@ export class StringFieldBuilder<
   }
 
   /** The value a new entity starts with — written into its meta when it
-   * is created, not filled in on read, so a cleared field stays empty.
+   * is created; a cleared field stays empty.
    * Leaves the read type as it is; `.required()` narrows it. */
   default(value: string): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ default: value });

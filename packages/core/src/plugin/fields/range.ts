@@ -88,7 +88,7 @@ export class RangeFieldBuilder<
   }
 
   /** The value a new entity starts with — written into its meta when it
-   * is created, not filled in on read, so a cleared field stays empty.
+   * is created; a cleared field stays empty.
    * Leaves the read type as it is; `.required()` narrows it. */
   default(value: number): RangeFieldBuilder<K, V, S> {
     return this.#fork({ default: value });

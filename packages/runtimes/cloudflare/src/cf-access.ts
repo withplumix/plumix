@@ -1,5 +1,4 @@
 import type { JWTPayload } from "jose";
-import type { Db } from "plumix";
 import type { RequestAuthenticator } from "plumix/auth";
 import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
