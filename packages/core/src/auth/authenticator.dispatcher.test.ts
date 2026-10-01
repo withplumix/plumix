@@ -35,6 +35,7 @@ describe("RequestAuthenticator — dispatcher integration", () => {
         headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
       }),
       h.db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });
@@ -77,6 +78,7 @@ describe("RequestAuthenticator — dispatcher integration", () => {
         headers: { "x-trusted-email": "trusted@enterprise.example" },
       }),
       h.db,
+      { startingUserMeta: {} },
     );
     expect(result?.user.id).toBe(seeded.id);
   });

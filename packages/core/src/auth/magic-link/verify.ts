@@ -24,7 +24,7 @@ interface VerifyMagicLinkOptions {
    */
   readonly selfSignup?: PlumixSelfSignupConfig;
   /** The meta a user this click signs up starts with — see `resolveExternalIdentity`. */
-  readonly meta?: JsonObject;
+  readonly meta: JsonObject;
 }
 
 interface VerifyMagicLinkResult {
@@ -59,7 +59,7 @@ interface VerifyMagicLinkResult {
 export async function verifyMagicLink(
   db: Db,
   rawToken: string,
-  options: VerifyMagicLinkOptions = {},
+  options: VerifyMagicLinkOptions,
 ): Promise<VerifyMagicLinkResult> {
   const hash = await hashToken(rawToken);
 

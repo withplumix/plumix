@@ -1,5 +1,5 @@
 import type { User } from "../db/schema/users.js";
-import type { PluginRegistry } from "../plugin/manifest.js";
+import type { JsonObject } from "../json.js";
 import type { Db } from "./app-context.js";
 
 // Declared beside the context rather than in `auth/contract/`: it names `Db`,
@@ -38,13 +38,11 @@ export type AuthResult =
     };
 
 /**
- * What core hands an authenticator beside the request and database: the
- * plugin registry, so one that provisions users can give them their starting
- * meta (ADR 0026). Core passes it on every call it makes; it is optional so an
- * authenticator called directly, as in a test, needs none.
+ * What an authenticator is handed beside the request and database. One that
+ * provisions a user stores `startingUserMeta` as the new user's meta (ADR 0026).
  */
 export interface AuthenticateScope {
-  readonly plugins: PluginRegistry;
+  readonly startingUserMeta: JsonObject;
 }
 
 /**
@@ -74,7 +72,7 @@ export interface RequestAuthenticator {
   authenticate(
     request: Request,
     db: Db,
-    scope?: AuthenticateScope,
+    scope: AuthenticateScope,
   ): Promise<AuthResult | null>;
   /**
    * Optional. Does this request carry a credential this authenticator would

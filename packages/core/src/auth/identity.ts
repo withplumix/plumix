@@ -94,7 +94,7 @@ export interface ExternalIdentityInput {
    * The meta a provisioned user starts with — `startingMeta` of the
    * registered user fields (ADR 0026). Ignored for an existing user.
    */
-  readonly meta?: JsonObject;
+  readonly meta: JsonObject;
 }
 
 export interface ResolvedExternalUser {

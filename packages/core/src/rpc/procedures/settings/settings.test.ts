@@ -531,6 +531,27 @@ describe("settings groups: created on first save", () => {
     expect(groups.blog).toEqual({ tagline: "Hello", perPage: 10 });
   });
 
+  test("the server-side read of a group never saved answers its starting values", async () => {
+    const h = await harnessWithDefaults();
+
+    const groups = await loadSettingsGroups(h.context, ["blog"]);
+
+    expect(groups.blog).toEqual({ tagline: "Hello", perPage: 10 });
+  });
+
+  test("the server-side read of a created group answers storage alone", async () => {
+    const h = await harnessWithDefaults();
+    await h.client.settings.upsert({ group: "blog", values: {} });
+    await h.client.settings.upsert({
+      group: "blog",
+      values: { tagline: null, perPage: null },
+    });
+
+    const groups = await loadSettingsGroups(h.context, ["blog"]);
+
+    expect(groups.blog).toEqual({});
+  });
+
   // Only the marker makes a group created. A group whose rows were written
   // without one (written by a version without the marker, or directly) has not
   // had its first save: it reads its starting values under what is stored, and

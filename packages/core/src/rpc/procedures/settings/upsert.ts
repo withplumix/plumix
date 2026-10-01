@@ -10,6 +10,7 @@ import { decodeJsonValue } from "../../../meta/coerce.js";
 import { runFieldPipeline } from "../../../meta/field-pipeline.js";
 import { isConditionHidden } from "../../../plugin/fields/condition.js";
 import { startingMeta } from "../../../plugin/fields/starting-meta.js";
+import { settingsGroupBag } from "../../../template-deps-core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
@@ -165,11 +166,8 @@ export const upsert = base
       .select({ key: settings.key, value: settings.value })
       .from(settings)
       .where(eq(settings.group, filtered.group));
-    const bag: Record<string, JsonValue> = {};
     // `null` is a value the column can hold, so it stays in the bag.
-    for (const row of fresh) {
-      if (row.key !== SETTINGS_CREATED_KEY) bag[row.key] = row.value;
-    }
+    const bag = settingsGroupBag(fresh, group?.fields ?? []);
 
     // Fire only when the call actually changed state — an empty
     // `values: {}` payload is a no-op and shouldn't wake up

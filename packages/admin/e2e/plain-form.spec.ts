@@ -141,6 +141,51 @@ test.describe("plain-form route for non-editor entry types", () => {
     expect(lastInput.id).toBe(1);
     expect(lastInput.status).toBe("draft");
   });
+
+  // A field default is only the starting value of a new entry (ADR 0026): an
+  // entry whose author cleared the field opens empty and saves without it.
+  test("a cleared defaulted field opens empty and the next save leaves it out", async ({
+    page,
+  }) => {
+    const [bio] = MANIFEST_WITH_PLAIN_FORM_TYPE.entryMetaBoxes;
+    await mockManifest(page, {
+      ...MANIFEST_WITH_PLAIN_FORM_TYPE,
+      entryMetaBoxes: [
+        {
+          ...bio,
+          fields: [
+            ...bio.fields,
+            {
+              key: "followers",
+              label: "Followers",
+              type: "number",
+              inputType: "number",
+              default: 100,
+            },
+          ],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...authorEntry(1), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_AUTHOR_EDITOR,
+        "/entry/get": authorEntry(1),
+      },
+    });
+
+    await page.goto("entries/authors/1/edit");
+    await expect(
+      page.getByTestId("meta-box-field-followers-input"),
+    ).toHaveValue("");
+    await page.getByTestId("plain-form-title-input").fill("Jane Q. Doe");
+    await page.getByTestId("plain-form-save-button").click();
+
+    await expect.poll(() => captures.length).toBeGreaterThan(0);
+    const lastInput = captures.at(-1) as { readonly meta?: object };
+    expect(lastInput.meta ?? {}).not.toHaveProperty("followers");
+  });
 });
 
 test.describe("capability gating in plain-form route", () => {

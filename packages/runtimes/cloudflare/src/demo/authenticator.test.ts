@@ -17,6 +17,7 @@ describe("demoAuthenticator", () => {
     const result = await demoAuthenticator().authenticate(
       withSession,
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result?.user.role).toBe("admin");
     expect(result?.user.id).toBe(DEMO_ADMIN.id);
@@ -28,6 +29,7 @@ describe("demoAuthenticator", () => {
     const result = await demoAuthenticator().authenticate(
       withoutSession,
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });
@@ -36,6 +38,7 @@ describe("demoAuthenticator", () => {
     const result = await demoAuthenticator().authenticate(
       forgedShowcase,
       {} as Db,
+      { startingUserMeta: {} },
     );
     expect(result).toBeNull();
   });

@@ -31,8 +31,9 @@ default on their first save, and the entry editor never did.
 - **Every creation path calls `startingMeta`.** Entry and term create, user
   invite, sign-up through passkey, OAuth, magic link and Cloudflare Access (the
   first admin included), and the media and menu plugins' direct inserts. Core
-  hands a `RequestAuthenticator` the plugin registry so one that provisions
-  users can do this. Meta the caller sends overlays the starting meta, and a
+  hands a `RequestAuthenticator` the new user's starting meta as a required
+  argument, and `provisionUser` and `resolveExternalIdentity` require it, so a
+  path that creates a user without it does not compile. Meta the caller sends overlays the starting meta, and a
   `null` for a defaulted key leaves it absent. Duplicating an entry and
   restoring a revision copy existing meta and apply no defaults.
 - **Composite defaults are assembled.** A group's starting value is its own

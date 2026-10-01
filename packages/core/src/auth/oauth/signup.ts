@@ -26,7 +26,7 @@ interface ResolveOAuthUserInput {
    */
   readonly selfSignup?: PlumixSelfSignupConfig;
   /** The meta a user this callback signs up starts with — see `resolveExternalIdentity`. */
-  readonly meta?: JsonObject;
+  readonly meta: JsonObject;
 }
 
 interface ResolvedOAuthUser {

@@ -19,6 +19,7 @@ describe("resolveExternalIdentity — sign-in (existing user)", () => {
     });
 
     const result = await resolveExternalIdentity(db, {
+      meta: {},
       email: "alice@example.com",
       emailVerified: true,
     });
@@ -35,6 +36,7 @@ describe("resolveExternalIdentity — sign-in (existing user)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "alice@example.com",
         emailVerified: false,
       }),
@@ -51,6 +53,7 @@ describe("resolveExternalIdentity — sign-in (existing user)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "alice@example.com",
         emailVerified: true,
       }),
@@ -69,6 +72,7 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
     });
 
     const result = await resolveExternalIdentity(db, {
+      meta: {},
       email: "newcomer@example.com",
       emailVerified: true,
     });
@@ -89,6 +93,7 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "newcomer@example.com",
         emailVerified: true,
       }),
@@ -101,6 +106,7 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "stranger@unknown.com",
         emailVerified: true,
       }),
@@ -118,6 +124,7 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "newcomer@example.com",
         emailVerified: false,
       }),
@@ -134,6 +141,7 @@ describe("resolveExternalIdentity — signup (allowed-domains gate)", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "first@example.com",
         emailVerified: true,
       }),
@@ -151,6 +159,7 @@ describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", 
     await userFactory.transient({ db }).create({ role: "admin" });
 
     const result = await resolveExternalIdentity(db, {
+      meta: {},
       email: "engineer@enterprise.example",
       emailVerified: true,
       allowedDomainsGate: false,
@@ -166,6 +175,7 @@ describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", 
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "x@y.example",
         emailVerified: true,
         allowedDomainsGate: false,
@@ -179,6 +189,7 @@ describe("resolveExternalIdentity — enterprise SSO (bypass allowed-domains)", 
     const db = await createTestDb();
 
     const result = await resolveExternalIdentity(db, {
+      meta: {},
       email: "first-admin@enterprise.example",
       emailVerified: true,
       allowedDomainsGate: false,
@@ -203,10 +214,12 @@ describe("resolveExternalIdentity — race retry", () => {
 
     const [a, b] = await Promise.all([
       resolveExternalIdentity(db, {
+        meta: {},
         email: "newcomer@example.com",
         emailVerified: true,
       }),
       resolveExternalIdentity(db, {
+        meta: {},
         email: "newcomer@example.com",
         emailVerified: true,
       }),
@@ -230,6 +243,7 @@ describe("resolveExternalIdentity — error type", () => {
 
     await expect(
       resolveExternalIdentity(db, {
+        meta: {},
         email: "alice@example.com",
         emailVerified: false,
       }),

@@ -2,7 +2,7 @@ import type { AppContext } from "plumix/plugin";
 import { resolveReturnUrl } from "plumix/auth";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
-import { jsonResponse } from "plumix/plugin";
+import { jsonResponse, listUserMetaFields, startingMeta } from "plumix/plugin";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
@@ -151,7 +151,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     // request that took the `formPost` exemption this resolves nobody, by
     // design; reading the session back another way would defeat the guard.
     const auth = await ctx.authenticator.authenticate(request, ctx.db, {
-      plugins: ctx.plugins,
+      startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
     });
     const authUser = auth?.user ?? null;
     const isAuthenticated = authUser !== null;
