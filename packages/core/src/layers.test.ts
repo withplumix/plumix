@@ -7,7 +7,6 @@ import { baseConfig } from "@plumix/eslint-config/base";
 import type { Layer } from "../layers.js";
 import type { ImportEdge } from "./test/import-graph.js";
 import { layerDirection } from "../eslint.config.js";
-import baseline from "../layers.baseline.json" with { type: "json" };
 import {
   CLIENT_SUBPATHS,
   CYCLE_UNITS,
@@ -88,37 +87,22 @@ type Violation = EnvironmentViolation | CycleViolation;
 
 interface Found<V extends Violation = Violation> {
   readonly violation: V;
-  /** What to go and delete, printed when the violation is not baselined. */
+  /** What to go and delete, printed when the violation occurs. */
   readonly detail: string;
 }
 
-// One line per violation, so the baseline compares as a set of strings and a
-// failure reads as the entry to add or remove.
+// One line per violation, so a failure reads as the edge or cycle to remove.
 function keyOf(violation: Violation): string {
   return violation.rule === "cycle"
     ? `cycle in ${violation.layer}: ${violation.members.join(", ")}`
     : `${violation.rule}: ${violation.from} → ${violation.to}`;
 }
 
-const BASELINE = new Set((baseline as readonly Violation[]).map(keyOf));
-
-/** Found violations the baseline doesn't list, each with its detail. */
-function unexpected(
-  found: readonly Found[],
-  known: ReadonlySet<string>,
-): readonly string[] {
-  return found
-    .filter(({ violation }) => !known.has(keyOf(violation)))
-    .map(({ violation, detail }) => `${keyOf(violation)} (${detail})`);
-}
-
-/** Baseline entries none of the found violations match. */
-function stale(
-  found: readonly Found[],
-  known: ReadonlySet<string>,
-): readonly string[] {
-  const occurring = new Set(found.map(({ violation }) => keyOf(violation)));
-  return [...known].filter((key) => !occurring.has(key));
+/** Each found violation, with its detail. */
+function described(found: readonly Found[]): readonly string[] {
+  return found.map(
+    ({ violation, detail }) => `${keyOf(violation)} (${detail})`,
+  );
 }
 
 // Static and dynamic edges both ship: a lazy chunk is still in the bundle.
@@ -284,36 +268,15 @@ describe("the subsystems inside a layer form no cycle", () => {
   });
 });
 
-describe("the baseline only shrinks", () => {
-  test("an entry that no longer occurs is stale", () => {
-    const fixed = "environment: support.ts → db/client.ts";
-    const standing = "environment: support.ts → rpc/x.ts";
-    const found: readonly Found[] = [
-      {
-        violation: { rule: "environment", from: "support.ts", to: "rpc/x.ts" },
-        detail: "support.ts → rpc/x.ts",
-      },
-    ];
-    expect(stale(found, new Set([fixed, standing]))).toEqual([fixed]);
-  });
-});
-
-describe("core keeps its layer table, less the baselined violations", () => {
+describe("core keeps its layer table", () => {
   const found = environmentViolations(GRAPH, CLIENT_ENTRIES);
-  const cycles = cycleViolations(GRAPH);
 
-  test("no environment violation beyond the baseline", () => {
-    expect(unexpected(found, BASELINE)).toEqual([]);
+  test("no client entry reaches server-only code", () => {
+    expect(described(found)).toEqual([]);
   });
 
-  test("no same-layer cycle beyond the baseline", () => {
-    expect(unexpected(cycles, BASELINE)).toEqual([]);
-  });
-
-  // A fixed violation must take its entry with it, or the entry would quietly
-  // re-admit the same violation later.
-  test("every baseline entry still occurs", () => {
-    expect(stale([...found, ...cycles], BASELINE)).toEqual([]);
+  test("no same-layer cycle", () => {
+    expect(described(cycleViolations(GRAPH))).toEqual([]);
   });
 
   // `@plumix/core/support` is what `plumix/support` promises an admin chunk

@@ -4,12 +4,12 @@ import * as v from "valibot";
 import {
   META_FIELD_KEY_MAX_LENGTH,
   META_FIELD_KEY_RE,
-} from "../plugin/validation/meta-field-key.js";
+} from "../../plugin/validation/meta-field-key.js";
 import { vMessage } from "./vmessage.js";
 
 export { setI18nResolver, vMessage } from "./vmessage.js";
 export type { I18nResolver } from "./vmessage.js";
-export { META_FIELD_MESSAGES } from "../meta/contract/field-messages.js";
+export { META_FIELD_MESSAGES } from "../../meta/contract/field-messages.js";
 
 // Shared leaf-level field schemas. Consumed server-side by RPC procedure
 // input schemas AND client-side by admin forms — same rules on both ends so

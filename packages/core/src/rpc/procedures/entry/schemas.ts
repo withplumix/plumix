@@ -1,8 +1,8 @@
 import * as v from "valibot";
 
 import { entryInsertSchema } from "../../../db/schema/entries.js";
+import { idParam, metaInputSchema } from "../../contract/validation.js";
 import { slugSchema } from "../../schemas.js";
-import { idParam, metaInputSchema } from "../../validation.js";
 
 export const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_EXCERPT_LENGTH = 600;

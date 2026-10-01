@@ -2,8 +2,8 @@ import * as v from "valibot";
 
 import type { McpTool } from "../context/mcp-tool.js";
 import { labelSourceText } from "../i18n/label.js";
+import { idParam } from "../rpc/contract/validation.js";
 import { termListInputSchema } from "../rpc/procedures/term/schemas.js";
-import { idParam } from "../rpc/validation.js";
 import { TermReadError } from "../terms/errors.js";
 import { getTerm, listTerms } from "../terms/read-service.js";
 import { McpToolError } from "./errors.js";

@@ -99,6 +99,8 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "admin-bar/": client("surfaces"),
   "admin/": client("surfaces"),
   "dev/": server("surfaces"),
+  // The error overlays `dev-client/` installs in the browser.
+  "dev/ui/": client("surfaces"),
   "dev-client/": client("surfaces"),
   "cli/": server("surfaces"),
   "welcome/": client("surfaces"),

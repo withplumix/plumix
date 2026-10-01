@@ -1,8 +1,8 @@
 import * as v from "valibot";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { assertMetaBoxFields } from "../plugin/validation/meta-box-fields.js";
-import { settingsUpsertInputSchema } from "./procedures/settings/schemas.js";
+import { assertMetaBoxFields } from "../../plugin/validation/meta-box-fields.js";
+import { settingsUpsertInputSchema } from "../procedures/settings/schemas.js";
 import {
   emailField,
   idParam,

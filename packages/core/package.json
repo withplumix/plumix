@@ -109,8 +109,8 @@
       "default": "./dist/test/conformance/index.js"
     },
     "./validation": {
-      "types": "./dist/rpc/validation.d.ts",
-      "default": "./dist/rpc/validation.js"
+      "types": "./dist/rpc/contract/validation.d.ts",
+      "default": "./dist/rpc/contract/validation.js"
     },
     "./manifest": {
       "types": "./dist/plugin/manifest.d.ts",

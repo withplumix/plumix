@@ -11,7 +11,7 @@ export type {
   AuthSessionOutput,
   AuthSessionUser,
 } from "./procedures/auth/schemas.js";
-export { emailField, nameField } from "./validation.js";
+export { emailField, nameField } from "./contract/validation.js";
 export {
   applyEntryBeforeSave,
   fireEntryPublished,

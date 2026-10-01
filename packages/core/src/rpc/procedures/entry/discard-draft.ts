@@ -5,7 +5,7 @@ import { assertCanEditEntry } from "../../../entries/editability.js";
 import { deleteAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { idParam } from "../../validation.js";
+import { idParam } from "../../contract/validation.js";
 import { fireEntryAutosaveDiscarded } from "./lifecycle.js";
 
 const discardDraftInput = v.object({ id: idParam });
