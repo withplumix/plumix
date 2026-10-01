@@ -251,9 +251,8 @@ export function createMediaRouter(options: MediaRpcOptions) {
         throw errors.CONFLICT({ data: { reason: "storage_not_configured" } });
       }
 
-      // Size check — a presigned PUT is signed for exactly `meta.size`, but
-      // the worker-routed upload and any adapter that cannot sign a length
-      // leave it a claim. head() verifies the stored bytes don't exceed it.
+      // Size check — a presigned PUT is signed for exactly `meta.size`; the
+      // worker-routed upload leaves it a claim. head() verifies the stored bytes.
       const head = await storage.head(meta.storageKey);
       if (!head) {
         throw errors.CONFLICT({ data: { reason: "object_not_found" } });

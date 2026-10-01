@@ -564,10 +564,9 @@ describe("@plumix/plugin-media — media.confirm", () => {
   });
 
   test("rejects an upload that exceeds meta.size with PAYLOAD_TOO_LARGE (413)", async () => {
-    // Bytes are not signed into the SigV4 query, so `meta.size` is
-    // just the client's claim. confirm must verify via head() that
-    // the actually-stored object isn't oversized — otherwise an
-    // attacker who got a presigned URL could PUT arbitrary size.
+    // A worker-routed or memory-stored upload has no signed length, so
+    // `meta.size` is just the client's claim. confirm must verify via
+    // head() that the actually-stored object isn't oversized.
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({
       storage,
