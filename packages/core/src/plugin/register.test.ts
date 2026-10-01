@@ -22,7 +22,13 @@ import type { NewEntry } from "../db/schema/entries.js";
 import type { Label } from "../i18n/label.js";
 import type { LookupAdapter } from "./lookup.js";
 import type { PluginRegistry } from "./manifest.js";
-import type { PluginRpcRouter, RegisteredEntryType } from "./registry.js";
+import type {
+  EntryTypeOptions,
+  PluginRpcRouter,
+  RegisteredEntryType,
+  RegisteredTermTaxonomy,
+  TermTaxonomyOptions,
+} from "./registry.js";
 import type { PluginSetupContext } from "./setup-context.js";
 
 declare module "../template.js" {
@@ -196,28 +202,17 @@ describe("installPlugins", () => {
     });
   });
 
-  test("takes no generic-RPC exclusion, which nothing ever read", async () => {
-    const hooks = new HookRegistry();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerTermTaxonomy("category", { label: "Categories" });
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        // @ts-expect-error -- removed before 1.0 (#2461)
-        excludeFromGenericRpc: true,
-      });
-      ctx.registerTermTaxonomy("tag", {
-        label: "Tags",
-        // @ts-expect-error -- removed before 1.0 (#2461)
-        excludeFromGenericRpc: true,
-      });
-    });
-
-    const { registry } = await installPlugins({ hooks, plugins: [site] });
-    expect(registry.entryTypes.get("post")).not.toHaveProperty(
+  test("has no generic-RPC exclusion in its option or registered types", () => {
+    expectTypeOf<EntryTypeOptions>().not.toHaveProperty(
       "excludeFromGenericRpc",
     );
-    expect(registry.termTaxonomies.get("category")).not.toHaveProperty(
+    expectTypeOf<TermTaxonomyOptions>().not.toHaveProperty(
+      "excludeFromGenericRpc",
+    );
+    expectTypeOf<RegisteredEntryType>().not.toHaveProperty(
+      "excludeFromGenericRpc",
+    );
+    expectTypeOf<RegisteredTermTaxonomy>().not.toHaveProperty(
       "excludeFromGenericRpc",
     );
   });
