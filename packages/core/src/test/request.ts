@@ -108,16 +108,16 @@ export async function buildRequest(
  * `assertRedirect`, `assertHeader`, plus `raw` / `status` getters —
  * nothing called them, so they were removed under the
  * "address fallow dead-code" pass. Re-add a method when you write
- * the first test that needs it. `assertTemplate` is intentionally
- * kept as a NotImplemented stub for the upcoming themes phase
- * (Phase 11+); see its JSDoc.
+ * the first test that needs it.
  */
 export class TestResponse {
   readonly #response: Response;
   readonly #bodyText: Promise<string>;
+  readonly #resolvedTemplate: string | null;
 
-  constructor(response: Response) {
+  constructor(response: Response, resolvedTemplate: string | null) {
     this.#response = response;
+    this.#resolvedTemplate = resolvedTemplate;
     this.#bodyText = response.clone().text();
   }
 
@@ -166,19 +166,23 @@ export class TestResponse {
   }
 
   /**
-   * Assert the request resolved to the named template.
-   *
-   * @throws NotImplementedError
-   *
-   * The template layer is not built yet (Phase 11+ per PLAN.md). Once
-   * themes land, this will read from a request-scoped tracker populated
-   * by the template resolver. The surface is locked in now so tests
-   * written against it work verbatim later.
+   * Assert the request rendered through the named template rule. `name` is
+   * the matched rule's label, as the debug bar's template panel shows it: its
+   * tier (`fallback`, `entry`, ...) or, for a targeted rule, `post`,
+   * `post:hello`, `post#12`, `archive:post`.
    */
   // fallow-ignore-next-line unused-class-member
-  assertTemplate(_name: string): this {
-    throw new Error(
-      "assertTemplate is not yet implemented — theme / template system lands with the themes phase. API is stable; call sites written now will work once the feature ships.",
-    );
+  assertTemplate(name: string): this {
+    if (this.#resolvedTemplate === null) {
+      throw new Error(
+        `assertTemplate: expected "${name}", but no template was resolved`,
+      );
+    }
+    if (this.#resolvedTemplate !== name) {
+      throw new Error(
+        `assertTemplate: expected "${name}", got "${this.#resolvedTemplate}"`,
+      );
+    }
+    return this;
   }
 }

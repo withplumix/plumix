@@ -228,3 +228,50 @@ describe("createDispatcherHarness slot binding", () => {
     );
   });
 });
+
+describe("createDispatcherHarness assertTemplate", () => {
+  async function harnessWithPost() {
+    const h = await createDispatcherHarness({ config: { plugins: [blog] } });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    return h;
+  }
+
+  test("passes on the label of the rule the request rendered through", async () => {
+    const h = await harnessWithPost();
+
+    const response = await h.fetch("/post/hello");
+
+    expect(response.assertStatus(200).assertTemplate("fallback")).toBe(
+      response,
+    );
+  });
+
+  test("throws naming the label the request actually rendered through", async () => {
+    const h = await harnessWithPost();
+
+    const response = await h.fetch("/post/hello");
+
+    expect(() => response.assertTemplate("post:hello")).toThrow(
+      'assertTemplate: expected "post:hello", got "fallback"',
+    );
+  });
+
+  test("throws when the request rendered through no template", async () => {
+    const h = await harnessWithPost();
+
+    const response = await h.fetch("/post/missing");
+
+    expect(() => response.assertStatus(404).assertTemplate("fallback")).toThrow(
+      'assertTemplate: expected "fallback", but no template was resolved',
+    );
+  });
+});
