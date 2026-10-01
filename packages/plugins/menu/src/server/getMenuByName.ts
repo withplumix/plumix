@@ -1,12 +1,18 @@
 import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "plumix/db";
-import { isCurrentSource, memoBatch, resolveEntryList } from "plumix/plugin";
+import {
+  isCurrentSource,
+  memoBatch,
+  resolveEntryList,
+  tagCdnEntry,
+} from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
+import { menuTag } from "./cache-tags.js";
 import { isMenuEligible } from "./eligibility.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
@@ -106,6 +112,7 @@ export async function resolveMenus(
     requests.map(async ({ location }, i) => {
       const data = clusters[i];
       if (!data) return null;
+      tagCdnEntry(ctx, [menuTag(data.term.id), ...linkedEntryTags(ctx, data)]);
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(
         tree.map((node) => toResolvedItem(ctx, node, data.refs)),
@@ -127,6 +134,21 @@ export async function resolveMenus(
       };
     }),
   );
+}
+
+// Every entry the menu links, resolved or not: the label and href are the
+// entry's, and a draft that gets published has to appear in the cached nav.
+function linkedEntryTags(ctx: AppContext, data: MenuData): string[] {
+  const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
+  if (adapter?.embeddedCacheTags === undefined) return [];
+  const tags: string[] = [];
+  for (const row of data.rows) {
+    const meta = parseMenuItemMeta(row.meta);
+    if (meta?.kind === "entry") {
+      tags.push(...adapter.embeddedCacheTags(String(meta.entryId)));
+    }
+  }
+  return tags;
 }
 
 interface MenuData {

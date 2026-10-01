@@ -434,12 +434,16 @@ export function createMenuRouter(
       // cache invalidators can run unconditionally without sniffing
       // the payload. Failures in subscribers don't roll back the
       // commit (Promise.allSettled inside doAction).
-      await context.hooks.doAction("menu:saved", {
-        termId: term.id,
-        addedIds: added,
-        removedIds: removed,
-        modifiedIds: modified,
-      });
+      await context.hooks.doAction(
+        "menu:saved",
+        {
+          termId: term.id,
+          addedIds: added,
+          removedIds: removed,
+          modifiedIds: modified,
+        },
+        context,
+      );
 
       return {
         termId: term.id,
@@ -490,14 +494,31 @@ export function createMenuRouter(
       // stored as JSON; compare against the JSON-encoded form of the
       // slug ("\"main\"") since drizzle's `eq` on a JSON column
       // serializes via JSON.stringify before comparing.
-      await context.db
+      const unbound = await context.db
         .delete(settings)
         .where(
           and(
             eq(settings.group, MENU_LOCATIONS_GROUP),
             eq(settings.value, term.slug),
           ),
+        )
+        .returning({ key: settings.key });
+      await context.hooks.doAction(
+        "menu:deleted",
+        { termId: term.id, slug: term.slug },
+        context,
+      );
+      if (unbound.length > 0) {
+        await context.hooks.doAction(
+          "settings:group_changed",
+          {
+            group: MENU_LOCATIONS_GROUP,
+            set: {},
+            removed: unbound.map((row) => row.key),
+          },
+          context,
         );
+      }
       return { id: input.termId };
     });
 
@@ -623,6 +644,19 @@ export function createMenuRouter(
             set: { value: input.termSlug },
           });
       }
+      // Pages that rendered this location are stored under the group's tag,
+      // so core's settings listener purges them.
+      await context.hooks.doAction(
+        "settings:group_changed",
+        input.termSlug === null
+          ? { group: MENU_LOCATIONS_GROUP, set: {}, removed: [input.location] }
+          : {
+              group: MENU_LOCATIONS_GROUP,
+              set: { [input.location]: input.termSlug },
+              removed: [],
+            },
+        context,
+      );
       return { location: input.location, termSlug: input.termSlug };
     });
 

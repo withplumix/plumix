@@ -1,9 +1,11 @@
 import type { Label } from "plumix/i18n";
 import type {
+  AppContext,
   EntryTypeLabels,
   PluginDescriptor,
   TermTaxonomyLabels,
 } from "plumix/plugin";
+import { enqueuePurgeTags } from "plumix/db";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -12,6 +14,7 @@ import {
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
+import { menuTag } from "./server/cache-tags.js";
 import { getMenusForLocations } from "./server/getMenuForLocation.js";
 import { declareLocations } from "./server/locations.js";
 
@@ -101,10 +104,11 @@ const APPEARANCE_LABEL: Label = {
 };
 
 // `@plumix/plugin-menu` augments the core option shapes with
-// menu-eligibility flags and the hook registries with three menu
+// menu-eligibility flags and the hook registries with four menu
 // hooks. TypeScript surfaces all of these only when this plugin is
 // in the project's `node_modules`. The eligibility flags are read by
-// `isMenuEligible`; the hooks are fired by `getMenuByName` and `menu.save`.
+// `isMenuEligible`; the hooks are fired by `getMenuByName`, `menu.save`
+// and `menu.delete`.
 declare module "plumix" {
   interface EntryTypeOptions {
     /**
@@ -142,7 +146,9 @@ declare module "plumix" {
    * branch by slot. `menu:saved` fires after every successful
    * `menu.save` commit — including no-op saves — so cache
    * invalidators don't need to sniff the payload to decide whether
-   * to run.
+   * to run. `menu:deleted` fires after `menu.delete` removes the menu
+   * and its items. Both actions take the request context last, which
+   * is what the plugin's own listeners purge the menu's CDN tag with.
    */
   interface FilterRegistry {
     "menu:tree": (
@@ -159,12 +165,20 @@ declare module "plumix" {
   }
 
   interface ActionRegistry {
-    "menu:saved": (payload: {
-      readonly termId: number;
-      readonly addedIds: readonly number[];
-      readonly removedIds: readonly number[];
-      readonly modifiedIds: readonly number[];
-    }) => void | Promise<void>;
+    "menu:saved": (
+      payload: {
+        readonly termId: number;
+        readonly addedIds: readonly number[];
+        readonly removedIds: readonly number[];
+        readonly modifiedIds: readonly number[];
+      },
+      ctx: AppContext,
+    ) => void | Promise<void>;
+
+    "menu:deleted": (
+      payload: { readonly termId: number; readonly slug: string },
+      ctx: AppContext,
+    ) => void | Promise<void>;
   }
 }
 
@@ -220,6 +234,16 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
       });
 
       ctx.registerRpcRouter(createMenuRouter(registered));
+
+      // A rendered menu is stored under `menu:<termId>` (see `resolveMenus`).
+      const purgeMenu = (
+        { termId }: { readonly termId: number },
+        appCtx: AppContext,
+      ) => {
+        enqueuePurgeTags(appCtx, [menuTag(termId)]);
+      };
+      ctx.addAction("menu:saved", purgeMenu);
+      ctx.addAction("menu:deleted", purgeMenu);
 
       ctx.registerAdminPage({
         path: "/menus",

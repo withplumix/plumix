@@ -1,7 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { and, eq, inArray } from "plumix/db";
-import { memoBatch } from "plumix/plugin";
-import { settings } from "plumix/schema";
+import { loadSettingsGroups, memoBatch } from "plumix/plugin";
 
 import type { ResolvedMenu } from "./types.js";
 import { resolveMenus } from "./getMenuByName.js";
@@ -12,7 +10,8 @@ const MENU_LOCATIONS_GROUP = "menu_locations";
  * Resolve the menu currently bound to a theme-registered location.
  *
  * The slot → term-slug binding lives in the `settings` table under group
- * `menu_locations`, with `key = location` and `value = '<term slug>'`.
+ * `menu_locations`, with `key = location` and `value = '<term slug>'`, and is
+ * read through core's settings loader.
  * Reads the binding, then defers to the shared menu resolver. Returns
  * `null` when no binding exists for this location, or when the bound
  * menu has been deleted.
@@ -55,20 +54,15 @@ async function resolveLocations(
   ctx: AppContext,
   locations: readonly string[],
 ): Promise<Map<string, ResolvedMenu>> {
-  const rows = await ctx.db
-    .select({ key: settings.key, value: settings.value })
-    .from(settings)
-    .where(
-      and(
-        eq(settings.group, MENU_LOCATIONS_GROUP),
-        inArray(settings.key, [...locations]),
-      ),
-    );
+  // Through core's settings loader, so the page is stored under the group's
+  // tag even when the location is empty, and a later binding purges it.
+  const groups = await loadSettingsGroups(ctx, [MENU_LOCATIONS_GROUP]);
+  const bindings = groups[MENU_LOCATIONS_GROUP] ?? {};
 
   const bound: { location: string; slug: string }[] = [];
-  for (const row of rows) {
-    const slug = parseTermSlug(row.value);
-    if (slug !== null) bound.push({ location: row.key, slug });
+  for (const location of locations) {
+    const slug = parseTermSlug(bindings[location]);
+    if (slug !== null) bound.push({ location, slug });
   }
 
   const menus = await resolveMenus(ctx, bound);

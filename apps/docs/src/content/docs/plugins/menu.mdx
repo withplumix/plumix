@@ -6,7 +6,7 @@ sidebar:
   order: 50
 ---
 
-import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+import { Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 `@plumix/plugin-menu` is site navigation. An editor builds a menu in the admin from links to entries, terms and custom URLs, nests the links into a tree, and assigns the menu to a location such as `primary` or `footer`. A theme template declares the locations it renders and receives each one's menu as a resolved tree.
 
@@ -21,7 +21,7 @@ What it registers:
 - An admin page at `/menus`, under Appearance, for building menus and assigning them to locations.
 - A `menus` template dep, so a template can declare the locations it renders.
 - Server functions, `getMenuForLocation` and `getMenuByName`, for code that resolves a menu outside a template.
-- Two filters, `menu:item` and `menu:tree`, and one action, `menu:saved`.
+- Two filters, `menu:item` and `menu:tree`, and two actions, `menu:saved` and `menu:deleted`.
 
 Every screen and procedure checks `term:menu:manage`, the `manage` capability the `menu` taxonomy mints. It maps to the editor role, so editors and admins can change the site's navigation.
 
@@ -219,11 +219,7 @@ The plugin resolves links to entries and terms when the page renders, not when y
 
 The plugin batches resolution. It reads every location a request asks for, from templates and from the functions below, in one settings query and one pass over the menus' items. Repeat calls within the request reuse that result.
 
-<Aside type="caution" title="Menu changes do not purge the CDN">
-  Saving a menu or reassigning a location does not purge cached pages. With a
-  [CDN](/deployment/cdn/) configured, pages already in its cache keep the old
-  navigation until their `ttl` runs out.
-</Aside>
+With a [CDN](/deployment/cdn/) configured, a cached page that renders a menu is purged when that menu is saved or deleted, when a location it renders is assigned or cleared, and when an entry the menu links to changes. A page that rendered an empty location is purged too once a menu is assigned there. A rename of a term the menu links to, such as a category, reaches a cached page only when its `ttl` runs out.
 
 ## Resolving a menu in server code
 
@@ -263,9 +259,11 @@ export const externalLinks = definePlugin("external-links", {
 
 `menu:tree` runs once on the whole list of top-level items after assembly. Its second argument is `{ location, termId }`, where `location` is the slot being rendered, or `null` when the menu was looked up by name. One listener can therefore treat the footer differently from the header.
 
-`menu:saved` is an action that fires after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }`. A listener that clears a cache can run on every call without inspecting the payload. A listener that throws does not undo the save.
+`menu:saved` is an action that fires after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }` and the request context. A listener that clears a cache can run on every call without inspecting the payload. A listener that throws does not undo the save.
 
-The plugin's package declares all three, so their names type-check once `@plumix/plugin-menu` is a dependency.
+`menu:deleted` is an action that fires after a menu and its items are deleted, with `{ termId, slug }` and the request context. Assigning or clearing a location, and deleting a menu that was assigned to one, fire core's `settings:group_changed` for the `menu_locations` group.
+
+The plugin's package declares all four, so their names type-check once `@plumix/plugin-menu` is a dependency.
 
 ## Related
 
