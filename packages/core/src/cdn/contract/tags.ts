@@ -1,6 +1,7 @@
 // Coarse cache-tag vocabulary (PRD #1080). Archive-class pages carry the type
 // tag `t:<type>`; entry permalinks carry the entry tag `e:<id>`. Publishing an
-// entry purges both — its permalink and every archive of that type.
+// entry purges both — its permalink and every archive of that type. A page that
+// read a settings group also carries `s:<group>`, which a settings write purges.
 //
 // A `contract/` half because two layers speak it: the CDN stores and purges
 // pages by these tags, and the request memo (`context/`, a layer below) drops
@@ -15,9 +16,9 @@ export function typeTag(entryType: string): string {
  * and one on another — a collision that only ever appears on the vendor the
  * site did not develop against. Applied wherever a tag enters the system:
  * `typeTag` below, the page-tag accumulator (`tagCdnEntry`, embedded
- * references, settings) and the purge accumulator, and the request memo — so a plugin's stored tag and its
- * purge cannot disagree, and neither can a memo entry and the write that
- * invalidates it.
+ * references, settings) and the purge accumulator, and the request memo — so a
+ * plugin's stored tag and its purge cannot disagree, and neither can a memo
+ * entry and the write that invalidates it.
  * `entryTag` needs no call: its input is a number.
  */
 export function normalizeTag(tag: string): string {

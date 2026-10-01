@@ -7,9 +7,9 @@ import { declarePageTags } from "./contract/page-tags.js";
  * `e:<id>` is cleared by the same publish that clears the entry's page.
  *
  * Reaches whatever response the request produces: a `cacheable: true` plugin
- * route's, stored under these tags alone, and a public page render's, stored
- * under them beside its route's own — so a template-dep loader, a component
- * or a hook that read something can name it. Calling it twice in a request
+ * route's, stored under the declared tags with no intent tags, and a public
+ * page render's, stored under them beside its route's own — so a template-dep
+ * loader, a component or a hook that read something can name it. Calling it twice in a request
  * unions the tags; calling it on a response that never reaches the CDN does
  * nothing.
  */

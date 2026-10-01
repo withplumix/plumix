@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { declaredPageTags } from "./cdn/contract/page-tags.js";
 import { and, eq } from "./db/index.js";
 import { settings } from "./db/schema/settings.js";
 import { settingsLoader } from "./template-deps-core.js";
@@ -111,5 +112,18 @@ describe("settingsLoader request memoization", () => {
       site: { title: "After" },
       social: { handle: "@plumix" },
     });
+  });
+});
+
+describe("settingsLoader page tags", () => {
+  test("every group read is declared as a page tag, one with no rows and one served from the memo included", async () => {
+    const { ctx, run } = await createTracedContext();
+
+    await run(async () => {
+      await settingsLoader(["site"], ctx);
+      await settingsLoader(["site", "Missing"], ctx);
+    });
+
+    expect(declaredPageTags(ctx)).toEqual(["s:site", "s:missing"]);
   });
 });
