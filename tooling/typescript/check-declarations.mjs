@@ -7,9 +7,8 @@
 // installed for a consumer, so a `.d.ts` naming one resolves nowhere.
 //
 // The compiler writes these without being asked: an inferred type prints
-// through whichever module declares it, or whichever it ranks best. That is
-// how a consumer's `.d.ts` came to name `@plumix/core` rather than
-// `plumix/plugin`, and plumix's react-router shim to name the
+// through whichever module declares it, or whichever it ranks best: it ranks
+// `@plumix/core` level with `plumix/plugin`, and prints the
 // `@tanstack/router-core` that `@tanstack/react-router` re-exports. Annotating
 // the export with a type from a declared package is what moves the output.
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
