@@ -56,11 +56,6 @@
   },
   {
     "rule": "environment",
-    "from": "i18n/index.ts",
-    "to": "auth/cookies.ts"
-  },
-  {
-    "rule": "environment",
     "from": "rpc/validation.ts",
     "to": "rpc/validation.ts"
   },

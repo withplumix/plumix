@@ -3,16 +3,16 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { defineBlock } from "../blocks/index.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { definePlugin } from "../plugin/define.js";
+import { DuplicateRegistrationError } from "../plugin/errors.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import { base } from "../rpc/base.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
-import { definePlugin } from "./define.js";
-import { DuplicateRegistrationError } from "./errors.js";
-import { createPluginRegistry } from "./manifest.js";
-import { installPlugins } from "./register.js";
+import { installPlugins } from "./install-plugins.js";
 
 import "../rpc/hooks.js";
 
@@ -20,16 +20,16 @@ import type { Lazy } from "@orpc/server";
 
 import type { NewEntry } from "../db/schema/entries.js";
 import type { Label } from "../i18n/label.js";
-import type { LookupAdapter } from "./lookup.js";
-import type { PluginRegistry } from "./manifest.js";
+import type { LookupAdapter } from "../plugin/lookup.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
 import type {
   EntryTypeOptions,
   PluginRpcRouter,
   RegisteredEntryType,
   RegisteredTermTaxonomy,
   TermTaxonomyOptions,
-} from "./registry.js";
-import type { PluginSetupContext } from "./setup-context.js";
+} from "../plugin/registry.js";
+import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 
 declare module "../template.js" {
   interface TemplateDepRegistry {

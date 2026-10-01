@@ -3,8 +3,8 @@ import { describe, expect, test } from "vitest";
 
 import type { TemplateResolution } from "../../../route/render/template-hierarchy.js";
 import { createTelemetryCollector } from "../../../context/collector.js";
+import { TEMPLATE_PANEL_ID } from "../../../route/render/template-node-label.js";
 import { makeSnapshot } from "../../request-history/snapshot-fixture.js";
-import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 import { templatePanel } from "./template.js";
 
 // The renderer stores the resolution walk as an attribute on the `template`

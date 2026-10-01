@@ -150,7 +150,7 @@ describe("link registers and round-trips the manifest", () => {
     const { HookRegistry } = await import("../../hooks/registry.js");
     const { definePlugin } = await import("../define.js");
     const { buildManifest } = await import("../manifest.js");
-    const { installPlugins } = await import("../register.js");
+    const { installPlugins } = await import("../../runtime/install-plugins.js");
 
     const hooks = new HookRegistry();
     const plugin = definePlugin("test", (ctx) => {

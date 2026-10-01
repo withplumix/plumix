@@ -2,9 +2,9 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { StringInputType } from "./index.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
-import { installPlugins } from "../register.js";
 import {
   email,
   password,

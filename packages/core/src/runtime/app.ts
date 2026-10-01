@@ -3,9 +3,9 @@ import type { RPCHandler } from "@orpc/server/fetch";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AuthMethodsSummary } from "../auth/contract/auth-methods.js";
+import type { SessionPolicy } from "../auth/contract/sessions.js";
 import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
-import type { SessionPolicy } from "../auth/sessions.js";
 import type {
   BlockRegistry,
   HtmlAllowlist,
@@ -33,6 +33,7 @@ import type { DocumentManifest } from "../theme.js";
 import type { EnvInput } from "./contract/env-input.js";
 import type { SchemaModule } from "./contract/slots.js";
 import type { DevRuntime } from "./dev.js";
+import { adminBarChrome } from "../admin-bar/component.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -48,6 +49,7 @@ import {
 } from "../blocks/index.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
 import * as coreSchema from "../db/schema/index.js";
+import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -56,7 +58,6 @@ import {
   collectContributedBlocks,
   createPluginRegistry,
 } from "../plugin/manifest.js";
-import { installPlugins } from "../plugin/register.js";
 import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
 import { compilePublicRoutes } from "../route/public-routes.js";
@@ -69,9 +70,10 @@ import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
+import { parseCron } from "./contract/cron.js";
 import { AppBootError } from "./contract/errors.js";
-import { parseCron } from "./cron.js";
 import { createDevRuntime } from "./dev.js";
+import { installPlugins } from "./install-plugins.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
@@ -425,6 +427,10 @@ export async function buildApp(
     assetManifest,
     htmlAllowlist,
     blockCatalogs: createBlockCatalogs(runtime.pluginCatalogs),
+    chrome: {
+      adminBar: adminBarChrome,
+      debugBar: process.env.PLUMIX_DEV ? debugBarChrome : undefined,
+    },
   };
 
   // Memoized so the heavy router module + handler construction happen once per

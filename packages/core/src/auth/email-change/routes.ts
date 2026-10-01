@@ -1,5 +1,5 @@
 import type { AppContext } from "../../context/app-context.js";
-import type { PlumixApp } from "../../runtime/app.js";
+import type { AuthFlowApp } from "../flow-app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
@@ -28,7 +28,7 @@ const MAX_TOKEN_LENGTH = 256;
  */
 export async function handleEmailChangeVerify(
   ctx: AppContext,
-  _app: PlumixApp,
+  _app: AuthFlowApp,
 ): Promise<Response> {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");

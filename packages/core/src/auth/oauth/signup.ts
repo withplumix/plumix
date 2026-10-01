@@ -1,7 +1,7 @@
 import type { Db } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
 import type { PlumixSelfSignupConfig } from "../config.js";
-import type { OAuthProfile } from "./types.js";
+import type { OAuthProfile } from "../contract/oauth.js";
 import { and, eq, isUniqueConstraintError } from "../../db/index.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { users } from "../../db/schema/users.js";

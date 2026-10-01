@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { McpTool } from "./tool.js";
+import type { McpTool } from "../context/mcp-tool.js";
 import { ENTRY_STATUSES } from "../db/schema/entries.js";
 import { labelSourceText } from "../i18n/label.js";
 import { McpToolError } from "./errors.js";

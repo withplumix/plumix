@@ -5,7 +5,7 @@ import type {
   DeferFn,
 } from "../context/app-context.js";
 import type { CreateAppContextArgs } from "../context/app.js";
-import type { Invocation, PlumixHandler } from "./adapter.js";
+import type { Invocation, PlumixHandler } from "../context/runtime-adapter.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./contract/bindings.js";
 import type {

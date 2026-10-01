@@ -5,7 +5,7 @@ import { settings } from "../../../db/schema/settings.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, select, text, url } from "../../../plugin/fields/index.js";
-import { installPlugins } from "../../../plugin/register.js";
+import { installPlugins } from "../../../runtime/install-plugins.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("settings.get", () => {

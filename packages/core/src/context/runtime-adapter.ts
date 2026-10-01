@@ -1,9 +1,9 @@
 import type { PlumixConfig } from "../config.js";
-import type { AppContext } from "../context/app-context.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { RegisteredScheduledTask } from "../plugin/registry.js";
-import type { PlumixEnv } from "./contract/bindings.js";
-import type { AssetsBinding } from "./contract/slots.js";
+import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { AssetsBinding } from "../runtime/contract/slots.js";
+import type { AppContext } from "./app-context.js";
 
 /**
  * What the runtime knows about one call into the handler. An adapter builds

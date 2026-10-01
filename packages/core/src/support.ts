@@ -6,5 +6,5 @@ export { nonEmpty } from "./non-empty.js";
 export { isJsonArray, isJsonObject } from "./json.js";
 export type { JsonObject, JsonValue } from "./json.js";
 export { escapeLikePattern } from "./search/contract/search-terms.js";
-export { xmlEscape } from "./seo/xml.js";
+export { xmlEscape } from "./seo/contract/xml.js";
 export { slugify } from "./slugify.js";

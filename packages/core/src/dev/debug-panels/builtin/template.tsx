@@ -5,8 +5,8 @@ import type {
 } from "../../../route/render/template-hierarchy.js";
 import type { DebugSnapshot } from "../../request-history/snapshot.js";
 import type { DebugPanel } from "../types.js";
+import { TEMPLATE_PANEL_ID } from "../../../route/render/template-node-label.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
-import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 
 // Matches on the resolution attribute too, so an unrelated span that happens
 // to share the `template` name can't shadow the renderer's span.

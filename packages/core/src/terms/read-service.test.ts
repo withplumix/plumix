@@ -7,11 +7,11 @@ import type { AuthenticatedRpcHarness } from "../test/rpc.js";
 import { withUser } from "../auth/with-user.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
-import { installPlugins } from "../plugin/register.js";
 import {
   termGetInputSchema,
   termListInputSchema,
 } from "../rpc/procedures/term/schemas.js";
+import { installPlugins } from "../runtime/install-plugins.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { TermReadError } from "./errors.js";
 import { getTerm, listTerms } from "./read-service.js";

@@ -3,21 +3,13 @@ import { eq, lt } from "drizzle-orm";
 import type { AppContext, Db } from "../context/app-context.js";
 import type { Session } from "../db/schema/sessions.js";
 import type { User } from "../db/schema/users.js";
+import type { SessionPolicy } from "./contract/sessions.js";
 import { rowsAffected } from "../db/rows-affected.js";
 import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
 import { generateToken, hashToken } from "./tokens.js";
 
 const SECONDS_PER_DAY = 60 * 60 * 24;
-
-export interface SessionPolicy {
-  /** Sliding-window duration. The cookie's Max-Age and DB expiresAt. */
-  readonly maxAgeSeconds: number;
-  /** Hard ceiling regardless of activity — re-auth required past this. */
-  readonly absoluteMaxAgeSeconds: number;
-  /** Refresh expiry only when more than this fraction of life has elapsed. */
-  readonly refreshThreshold: number;
-}
 
 export const DEFAULT_SESSION_POLICY: SessionPolicy = {
   maxAgeSeconds: 30 * SECONDS_PER_DAY,

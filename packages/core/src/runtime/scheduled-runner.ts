@@ -1,5 +1,5 @@
 import type { Db } from "../context/app-context.js";
-import type { ScheduledRunReport } from "./adapter.js";
+import type { ScheduledRunReport } from "../context/runtime-adapter.js";
 import type { PlumixEnv } from "./contract/bindings.js";
 import type { ConnectedScheduledDb } from "./scheduled-guard.js";
 import type {

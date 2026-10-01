@@ -1,4 +1,7 @@
-import type { OAuthProviderClient, OAuthProviderFactory } from "../types.js";
+import type {
+  OAuthProviderClient,
+  OAuthProviderFactory,
+} from "../../contract/oauth.js";
 
 interface GitHubProfile {
   readonly id: number;

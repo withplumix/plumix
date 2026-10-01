@@ -1,23 +1,23 @@
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
-import type { TelemetrySnapshot } from "../context/telemetry.js";
-import type { HookRegistry } from "../hooks/registry.js";
 import type {
   Invocation,
   PlumixHandler,
   RuntimeHandlerSpec,
   ScheduledRunReport,
-} from "./adapter.js";
+} from "../context/runtime-adapter.js";
+import type { TelemetrySnapshot } from "../context/telemetry.js";
+import type { HookRegistry } from "../hooks/registry.js";
 import type { DatabaseAdapter } from "./contract/slots.js";
 import type { PlumixHandlerOptions } from "./handler.js";
 import { auth } from "../auth/config.js";
 import { enqueuePurgeTags } from "../cdn/purge.js";
-import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
+import { plumix } from "./define-config.js";
 import { createPlumixHandler, createRuntimeHandler } from "./handler.js";
 import { memoryKv } from "./memory-kv.js";
 import { memoryStorage } from "./memory-storage.js";

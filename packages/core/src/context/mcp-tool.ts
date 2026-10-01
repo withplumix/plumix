@@ -1,8 +1,12 @@
 import type { GenericSchema, InferOutput } from "valibot";
 
-import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
+import type { AppContext } from "./app-context.js";
 
+// Declared beside the context rather than under `mcp/`, a surface: a plugin
+// registers tools through its setup context and the registry holds them, and
+// a contract under `mcp/` that names `AppContext` would tie the two into a
+// cycle.
 /**
  * One MCP tool: a name, a description, a valibot input schema authored once
  * (projected to JSON Schema for `tools/list`, validated on `tools/call`), and

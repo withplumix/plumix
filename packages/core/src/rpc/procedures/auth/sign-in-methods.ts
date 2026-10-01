@@ -1,4 +1,4 @@
-import type { AuthMethodsSummary } from "../../../runtime/app.js";
+import type { AuthMethodsSummary } from "../../../auth/contract/auth-methods.js";
 import { base } from "../../base.js";
 
 // Public — the login screen and the email-change field offer only the flows

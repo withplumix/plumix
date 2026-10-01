@@ -1,7 +1,7 @@
 import type { PlumixAuthInput } from "../auth/config.js";
 import type { PlumixConfig, PlumixConfigInput } from "../config.js";
 import { auth } from "../auth/config.js";
-import { plumix } from "../config.js";
+import { plumix } from "../runtime/define-config.js";
 import { defaultTestTheme } from "./default-theme.js";
 
 /**

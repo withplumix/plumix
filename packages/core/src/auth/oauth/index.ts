@@ -23,10 +23,10 @@ export { handleOAuthCallback, handleOAuthStart } from "./routes.js";
 
 export { github, google } from "./providers/index.js";
 
-export { OAUTH_PROVIDER_KEY_PATTERN } from "./types.js";
+export { OAUTH_PROVIDER_KEY_PATTERN } from "../contract/oauth.js";
 export type {
   OAuthClientConfig,
   OAuthProfile,
   OAuthProviderClient,
   OAuthProviderFactory,
-} from "./types.js";
+} from "../contract/oauth.js";

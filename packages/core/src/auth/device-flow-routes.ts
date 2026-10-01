@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../context/app-context.js";
-import type { PlumixApp } from "../runtime/app.js";
+import type { AuthFlowApp } from "./flow-app.js";
 import { withBasePath } from "../base-path.js";
 import { jsonResponse } from "../runtime/contract/http.js";
 import { exchangeDeviceCode, requestDeviceCode } from "./device-flow.js";
@@ -42,7 +42,7 @@ const exchangeInputSchema = v.object({
  */
 export async function handleDeviceCodeRequest(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const { deviceCode, userCode, expiresIn, interval } = await requestDeviceCode(
     ctx.db,

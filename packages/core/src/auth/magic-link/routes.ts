@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../../context/app-context.js";
-import type { PlumixApp } from "../../runtime/app.js";
+import type { AuthFlowApp } from "../flow-app.js";
 import type { MagicLinkErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
 import {
@@ -47,7 +47,7 @@ const requestInputSchema = v.object({
  */
 export async function handleMagicLinkRequest(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   // 503 distinguishes "plumix doesn't have magic-link wired up" (operator
   // omission, should fail loudly) from "this email isn't registered"
@@ -120,7 +120,7 @@ export async function handleMagicLinkRequest(
  */
 export async function handleMagicLinkVerify(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   if (!app.config.auth.magicLink) {
     return loginError(app.config.basePath, "token_invalid");

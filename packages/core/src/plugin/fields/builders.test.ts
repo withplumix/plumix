@@ -8,10 +8,10 @@ import type {
 } from "../lookup.js";
 import type { MetaBoxField, NumberMetaBoxField } from "./meta-box-field.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { seedFromMetaBoxes } from "../manifest-types.js";
 import { buildManifest } from "../manifest.js";
-import { installPlugins } from "../register.js";
 import { isFieldVisible } from "./condition.js";
 import {
   color,

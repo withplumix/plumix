@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 import type { AppContext } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
-import type { PlumixApp } from "../../runtime/app.js";
+import type { AuthFlowApp } from "../flow-app.js";
 import type { ValidInvite } from "../invite.js";
 import type { AuthenticationResponse } from "./types.js";
 import { withBasePath } from "../../base-path.js";
@@ -157,7 +157,7 @@ async function findOrProvisionUser(
 
 export async function handlePasskeyRegisterOptions(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const input = await parseJson(ctx.request, registerOptionsInputSchema);
   if (!input) return invalidInput();
@@ -216,7 +216,7 @@ async function decideRegistrationPolicy(
 
 export async function handlePasskeyRegisterVerify(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const payload = await parseJson(ctx.request, registerResponseSchema);
   if (!payload) return invalidInput();
@@ -299,7 +299,7 @@ export async function handlePasskeyRegisterVerify(
 
 export async function handlePasskeyLoginOptions(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const input = await parseJson(ctx.request, loginOptionsInputSchema);
   if (!input) return invalidInput();
@@ -325,7 +325,7 @@ export async function handlePasskeyLoginOptions(
 
 export async function handlePasskeyLoginVerify(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const payload = await parseJson(ctx.request, authenticationResponseSchema);
   if (!payload) return invalidInput();
@@ -373,7 +373,7 @@ export async function handlePasskeyLoginVerify(
 
 export async function handleSignout(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const token = readSessionCookie(ctx.request);
   if (token) {
@@ -449,7 +449,7 @@ const inviteRegisterVerifyInputSchema = v.object({
 
 export async function handleInviteRegisterOptions(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const input = await parseJson(ctx.request, inviteRegisterOptionsInputSchema);
   if (!input) return invalidInput();
@@ -473,7 +473,7 @@ export async function handleInviteRegisterOptions(
 
 export async function handleInviteRegisterVerify(
   ctx: AppContext,
-  app: PlumixApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const input = await parseJson(ctx.request, inviteRegisterVerifyInputSchema);
   if (!input) return invalidInput();
