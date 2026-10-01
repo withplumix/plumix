@@ -70,6 +70,10 @@ function purgeTags(tags: readonly string[]): Promise<void> {
   return purge(tags);
 }
 
+function entryTags(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `e:${String(i)}`);
+}
+
 describe("cloudflare().connect", () => {
   it("is inert when either credential resolves to nothing", () => {
     const config = { ttl: 60, ...CREDS };
@@ -209,6 +213,47 @@ describe("connected cdn purgeTags", () => {
     expect(JSON.parse(init.body as string)).toEqual({
       tags: ["t:post", "e:7"],
     });
+  });
+
+  it("splits more than 100 tags into calls of at most 100", async () => {
+    const tags = entryTags(101);
+
+    await purgeTags(tags);
+
+    const sent = fetchMock.mock.calls.map(([, init]) => {
+      const body = (init as RequestInit).body as string;
+      return (JSON.parse(body) as { tags: string[] }).tags;
+    });
+    expect(sent.map((group) => group.length)).toEqual([100, 1]);
+    expect(sent.flat()).toEqual(tags);
+  });
+
+  it("sends exactly 100 tags in one call", async () => {
+    await purgeTags(entryTags(100));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("lets every group finish before rejecting for a refused one", async () => {
+    let releaseFirst = (): void => undefined;
+    const firstAnswer = new Promise<Response>((resolve) => {
+      releaseFirst = () => resolve(new Response(null, { status: 200 }));
+    });
+    fetchMock
+      .mockReturnValueOnce(firstAnswer)
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    let settled = false;
+
+    const purge = purgeTags(entryTags(101)).finally(() => {
+      settled = true;
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The refused group answered first; the other is still in flight.
+    expect(settled).toBe(false);
+
+    releaseFirst();
+    await expect(purge).rejects.toThrow(/purge_cache responded 403/);
   });
 
   it("does not call the API for an empty tag list", async () => {
