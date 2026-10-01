@@ -32,6 +32,10 @@ typecheck, publint and attw run only in CI, after the pull request opens, so run
 single test files and a targeted typecheck and lint of the packages you touch as
 you work.
 
+Commit on the branch you are on. Never create, switch or rename a branch, even when the
+ticket names one: the harness owns this branch, and a commit anywhere else never reaches the
+pull request.
+
 Never run `git worktree` — add, remove or prune. The registry you would write to is the host's,
 shared with every other checkout on that machine, and your own worktree's path does not resolve
 from in here, so prune reads every one of them as gone. Compare against `origin/main` with
