@@ -249,7 +249,7 @@ export async function createDispatcherHarness(
       const request = await buildRequest(db, path, fetchOptions);
       const ctx = withRequest(request, fetchOptions.clientAddress);
       const response = await requestStore.run(ctx, () => dispatcher(ctx));
-      return new TestResponse(response);
+      return new TestResponse(response, ctx.resolvedTemplate);
     },
     authenticateRequest: async (request, userId) => {
       const { token } = await createSession(db, { userId });
