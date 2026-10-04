@@ -1,5 +1,13 @@
 # @plumix/admin-editor
 
+## 0.24.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @plumix/admin-ui@0.24.1
+  - @plumix/core@0.24.1
+
 ## 0.24.0
 
 ### Minor Changes

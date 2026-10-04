@@ -1,5 +1,11 @@
 # @plumix/runtime-cloudflare
 
+## 0.13.1
+
+### Patch Changes
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes demo deploys pointing every canonical and `og:url` at `https://demo.localhost`. The demo preset now builds its site origin from `PUBLIC_ORIGIN`, and when a deploy sets none the demo runtime uses the host the request came in on.
+
 ## 0.13.0
 
 ### Minor Changes
