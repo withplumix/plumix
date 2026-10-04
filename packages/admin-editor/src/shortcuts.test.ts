@@ -175,6 +175,14 @@ describe("forwardedShortcutId", () => {
     expect(forwardedShortcutId("KeyK", false)).toBe("palette.open");
   });
 
+  test("decodes the history, delete and panels keys", () => {
+    expect(forwardedShortcutId("KeyZ", false)).toBe("history.undo");
+    expect(forwardedShortcutId("KeyZ", true)).toBe("history.redo");
+    expect(forwardedShortcutId("Delete", false)).toBe("selection.delete");
+    expect(forwardedShortcutId("Backspace", false)).toBe("selection.delete");
+    expect(forwardedShortcutId("KeyB", false)).toBe("panels.toggle");
+  });
+
   test("the help chords ride the bridge as Slash", () => {
     expect(forwardedShortcutId("Slash", true)).toBe("help.open");
     expect(forwardedShortcutId("Slash", false)).toBe("help.open");
@@ -202,7 +210,7 @@ describe("forwardedShortcut", () => {
 
   test("ignores keys the host doesn't claim", () => {
     expect(
-      forwardedShortcut(key({ key: "z", code: "KeyZ", metaKey: true })),
+      forwardedShortcut(key({ key: "s", code: "KeyS", metaKey: true })),
     ).toBeNull();
   });
 });

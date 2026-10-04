@@ -10,6 +10,15 @@ import {
   isTypingTarget,
 } from "./shortcuts.js";
 
+const HOST_HANDLED: ReadonlySet<EditorShortcutId> = new Set([
+  "help.open",
+  "palette.open",
+  "history.undo",
+  "history.redo",
+  "panels.toggle",
+  "selection.delete",
+]);
+
 type CanvasKeyHandler = (
   down: boolean,
   code: string,
@@ -80,6 +89,16 @@ export function useCanvasKeys({
         else if (id === "canvas.xray") store.getState().toggleXray();
         else if (id === "help.open") store.getState().setShortcutsOpen(true);
         else if (id === "palette.open") store.getState().setPaletteOpen(true);
+        else if (id === "history.undo") store.getState().undo();
+        else if (id === "history.redo") store.getState().redo();
+        else if (id === "selection.delete") store.getState().removeSelected();
+        // The vendored sidebar owns Cmd+B through its own window listener, so
+        // a press forwarded from the canvas is replayed where it listens.
+        else if (id === "panels.toggle") {
+          window.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "b", metaKey: true }),
+          );
+        }
         return;
       }
       if (!down) exitPan();
@@ -98,15 +117,11 @@ export function useCanvasKeys({
       // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
-      // The cheatsheet and the palette each listen beside the dialog they open,
-      // so here those only arrive forwarded, from a canvas that holds focus.
-      if (
-        !claimed ||
-        claimed.id === "help.open" ||
-        claimed.id === "palette.open"
-      ) {
-        return;
-      }
+      // These have their own listeners in the host — the cheatsheet and the
+      // palette beside the dialog they open, undo/redo in EditorShortcuts, the
+      // panels in the sidebar, delete on a focused layer — so here they only
+      // arrive forwarded, from a canvas that holds focus.
+      if (!claimed || HOST_HANDLED.has(claimed.id)) return;
       if (claimed.id === "canvas.pan") e.preventDefault();
       run(claimed.id, true);
     };

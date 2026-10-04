@@ -658,7 +658,7 @@ msgstr "Delete"
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcut.selection.delete"
-msgstr "Delete the focused layer"
+msgstr "Delete the selection"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

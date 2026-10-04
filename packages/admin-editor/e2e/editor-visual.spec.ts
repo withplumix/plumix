@@ -717,6 +717,27 @@ test.describe("editor playground", () => {
     await expect(blocks).toHaveCount(before + 1);
   });
 
+  test("Delete, Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z work from canvas focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const heading = canvas.locator('[data-plumix-id="heading-1"]');
+    await expect(heading).toBeVisible();
+
+    // Clicking the block leaves focus inside the iframe; each key must reach
+    // the host over the canvas:key forward path.
+    await heading.click();
+    await page.keyboard.press("Delete");
+    await expect(heading).toHaveCount(0);
+
+    await page.keyboard.press("ControlOrMeta+KeyZ");
+    await expect(heading).toHaveCount(1);
+
+    await page.keyboard.press("ControlOrMeta+Shift+KeyZ");
+    await expect(heading).toHaveCount(0);
+  });
+
   test("group then ungroup selected blocks via the toolbar", async ({
     page,
   }) => {

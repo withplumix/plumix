@@ -199,12 +199,14 @@ export function EditorCanvas({
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
       if (!claimed) return;
-      // Space would scroll the iframe document; Cmd+/ is quick-find in Firefox
-      // and Cmd+K jumps to the browser's own search bar.
+      // Space would scroll the iframe document; Cmd+/ is quick-find in Firefox,
+      // Cmd+K jumps to the browser's own search bar and Cmd+B opens Firefox's
+      // bookmarks sidebar.
       if (
         claimed.id === "canvas.pan" ||
         claimed.id === "help.open" ||
-        claimed.id === "palette.open"
+        claimed.id === "palette.open" ||
+        claimed.id === "panels.toggle"
       ) {
         e.preventDefault();
       }
