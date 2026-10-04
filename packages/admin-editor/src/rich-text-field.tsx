@@ -143,6 +143,28 @@ interface ActiveState {
  * external value changes are pushed in without emitting an update — so typing
  * never loses focus across the live patch loop's re-renders.
  */
+// The trailing-node extension keeps an empty paragraph after a final heading,
+// list or quote so the caret can leave it. That paragraph is the editor's, not
+// the author's, so the stored value drops it; the sync guard compares this same
+// form, or every keystroke would reset the editor.
+function storedHtml(editor: Editor): string {
+  const html = editor.getHTML();
+  return html !== EMPTY_PARAGRAPH && html.endsWith(EMPTY_PARAGRAPH)
+    ? html.slice(0, -EMPTY_PARAGRAPH.length)
+    : html;
+}
+
+function storedJson(editor: Editor): JSONContent {
+  const doc = editor.getJSON();
+  const nodes = doc.content;
+  const last = nodes.at(-1);
+  return nodes.length > 1 && last?.type === "paragraph" && !last.content
+    ? { ...doc, content: nodes.slice(0, -1) }
+    : doc;
+}
+
+const EMPTY_PARAGRAPH = "<p></p>";
+
 export function RichTextField(props: RichTextFieldProps): ReactElement {
   const { testId, allow, ariaLabel } = props;
   const disabled = props.disabled ?? false;
@@ -153,8 +175,8 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
   const emitRef = useRef<(editor: Editor) => void>(() => undefined);
   useEffect(() => {
     emitRef.current = (editor: Editor): void => {
-      if (props.serialization === "json") props.onChange(editor.getJSON());
-      else props.onChange(editor.getHTML());
+      if (props.serialization === "json") props.onChange(storedJson(editor));
+      else props.onChange(storedHtml(editor));
     };
   });
 
@@ -188,10 +210,10 @@ export function RichTextField(props: RichTextFieldProps): ReactElement {
       if (next == null) {
         if (!editor.isEmpty)
           editor.commands.setContent(null, { emitUpdate: false });
-      } else if (JSON.stringify(next) !== JSON.stringify(editor.getJSON())) {
+      } else if (JSON.stringify(next) !== JSON.stringify(storedJson(editor))) {
         editor.commands.setContent(next, { emitUpdate: false });
       }
-    } else if (props.value !== editor.getHTML()) {
+    } else if (props.value !== storedHtml(editor)) {
       editor.commands.setContent(props.value, { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- serialization is stable per instance; value drives the sync
