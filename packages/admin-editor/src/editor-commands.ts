@@ -9,9 +9,11 @@ import {
   entryKey,
   groupInsertables,
 } from "./block-catalog.js";
+import { blockExcerpt } from "./block-excerpt.js";
 import {
   canGroupSelection,
   canUngroupBlock,
+  findBlock,
   flattenTree,
   topLevelIndexAfter,
 } from "./block-tree-ops.js";
@@ -28,6 +30,9 @@ export interface EditorCommand {
   readonly id: string;
   readonly group: EditorCommandGroupId;
   readonly title: Label;
+  /** A muted second line: a go-to command's block text, to tell blocks of one
+   *  type apart. */
+  readonly detail?: string;
   /** Extra search terms; a block's own keywords for the insert commands. */
   readonly keywords?: readonly Label[];
   /** A block-icon name, resolved against admin-ui's curated set. */
@@ -171,11 +176,14 @@ export function buildEditorCommands(
   }
   for (const node of flattenTree(tree)) {
     const spec = registry.get(node.name);
+    const block = findBlock(tree, node.id);
+    const detail = block ? blockExcerpt(block, spec) : null;
     commands.push({
       id: `goto:${node.id}`,
       group: "goto",
       title: node.label ?? spec?.title ?? node.name,
-      keywords: [node.name],
+      ...(detail ? { detail } : {}),
+      keywords: detail ? [node.name, detail] : [node.name],
       icon: spec?.icon,
       run: () => store.getState().revealBlock(node.id),
     });

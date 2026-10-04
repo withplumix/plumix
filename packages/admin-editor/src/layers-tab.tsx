@@ -34,8 +34,9 @@ import {
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { FlatNode } from "./block-tree-ops.js";
+import { blockExcerpt } from "./block-excerpt.js";
 import { BlockIcon } from "./block-icon.js";
-import { flattenTree, projectMove } from "./block-tree-ops.js";
+import { findBlock, flattenTree, projectMove } from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -104,6 +105,11 @@ export function LayersTab(): ReactElement {
     return spec?.title != null ? resolveLabel(spec.title, i18n) : name;
   };
 
+  const excerptOf = (id: string): string | null => {
+    const node = findBlock(tree, id);
+    return node ? blockExcerpt(node, registry.get(node.name)) : null;
+  };
+
   if (items.length === 0) {
     return (
       <div
@@ -148,6 +154,9 @@ export function LayersTab(): ReactElement {
               item={item}
               icon={registry.get(item.name)?.icon}
               label={item.label ?? typeLabel(item.name)}
+              // An author's own label already names the row; otherwise the
+              // block's text tells it from others of its type.
+              detail={item.label ? null : excerptOf(item.id)}
               active={item.id === activeId}
               onSelect={() => select(item.id)}
               onRename={(value) => setBlockLabel(item.id, value)}
@@ -164,6 +173,7 @@ interface LayerRowProps {
   readonly item: FlatNode;
   readonly icon?: string;
   readonly label: string;
+  readonly detail: string | null;
   readonly active: boolean;
   readonly onSelect: () => void;
   /** Commits a new instance label (empty string clears it). */
@@ -175,6 +185,7 @@ function LayerRow({
   item,
   icon,
   label,
+  detail,
   active,
   onSelect,
   onRename,
@@ -247,7 +258,12 @@ function LayerRow({
               name={icon}
               className="text-muted-foreground size-4 shrink-0"
             />
-            <span className="truncate">{label}</span>
+            {/* Weight, not a muted colour, sets the text apart: muted fails
+                contrast on the selected row's tint. */}
+            <span className={detail ? "shrink-0 font-medium" : "truncate"}>
+              {label}
+            </span>
+            {detail ? <span className="truncate">{detail}</span> : null}
           </button>
           <DropdownMenu>
             <span className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-[state=open]:opacity-100">

@@ -144,6 +144,33 @@ describe("buildEditorCommands", () => {
     expect(byId(goto, "goto:a")?.title).toBe("Heading");
   });
 
+  test("a go-to command carries the block's own text, and finds by it", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/prose",
+        title: "Text",
+        text: [{ name: "body", html: true }],
+      }),
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/prose",
+        attrs: { body: "<h2>What we found</h2>" },
+      },
+      { id: "p2", name: "core/prose", attrs: { body: "<p>Salt early</p>" } },
+    ];
+    const commands = buildEditorCommands(context({ registry, tree }));
+
+    // Two blocks of one type are told apart by what they say.
+    expect(byId(commands, "goto:p1")?.detail).toBe("What we found");
+    expect(byId(commands, "goto:p2")?.detail).toBe("Salt early");
+    const hits = selectEditorCommands(commands, "salt", (label) =>
+      typeof label === "string" ? label : (label.message ?? ""),
+    );
+    expect(hits.map((command) => command.id)).toContain("goto:p2");
+  });
+
   test("a go-to command selects its block and asks the canvas to frame it", () => {
     const ctx = context();
     byId(buildEditorCommands(ctx), "goto:b")?.run();

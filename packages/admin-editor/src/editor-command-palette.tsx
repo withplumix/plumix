@@ -188,7 +188,14 @@ function Item({
       {command.icon ? (
         <BlockIcon name={command.icon} className="text-muted-foreground" />
       ) : null}
-      <span>{label}</span>
+      {/* Weight, not a muted colour, sets the text apart: muted fails
+          contrast on the highlighted item's tint. */}
+      <span className={command.detail ? "shrink-0 font-medium" : undefined}>
+        {label}
+      </span>
+      {command.detail ? (
+        <span className="truncate">{command.detail}</span>
+      ) : null}
     </CommandItem>
   );
 }

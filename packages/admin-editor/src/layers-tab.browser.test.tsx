@@ -22,6 +22,12 @@ const registry = createBlockRegistry([
   { name: "core/heading", render: () => null, title: "Heading" },
   { name: "core/group", render: () => null, title: "Group" },
   {
+    name: "core/prose",
+    render: () => null,
+    title: "Text",
+    text: [{ name: "body", html: true }],
+  },
+  {
     name: "test/split",
     render: () => null,
     title: "Split",
@@ -106,6 +112,19 @@ describe("LayersTab", () => {
   test("uses the registry title as the layer label", () => {
     const { getByTestId } = renderLayers(TREE);
     expect(getByTestId("layer-g").textContent).toBe("Group");
+  });
+
+  test("a row shows its block's own text beside the type, to tell blocks apart", () => {
+    const { getByTestId } = renderLayers([
+      {
+        id: "p1",
+        name: "core/prose",
+        attrs: { body: "<h2>What we found</h2>" },
+      },
+      { id: "p2", name: "core/prose", attrs: { body: "<p>Salt early</p>" } },
+    ]);
+    expect(getByTestId("layer-p1").textContent).toBe("TextWhat we found");
+    expect(getByTestId("layer-p2").textContent).toBe("TextSalt early");
   });
 
   test("clicking a layer selects the block", () => {
