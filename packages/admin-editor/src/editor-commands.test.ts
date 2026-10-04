@@ -117,6 +117,16 @@ describe("buildEditorCommands", () => {
     expect(frameRequest).toBe(1);
   });
 
+  test("with a block selected, inserting lands right after it", () => {
+    const ctx = context();
+    ctx.store.getState().select("a");
+    byId(buildEditorCommands(ctx), "insert:core/heading")?.run();
+    const { tree } = ctx.store.getState();
+    expect(tree.map((node) => node.id)[0]).toBe("a");
+    expect(tree[1]?.name).toBe("core/heading");
+    expect(tree[2]?.id).toBe("b");
+  });
+
   test("a block's name matches, as it does in the catalog's own search", () => {
     const commands = buildEditorCommands(context());
     const hits = selectEditorCommands(commands, "core/heading", (label) =>

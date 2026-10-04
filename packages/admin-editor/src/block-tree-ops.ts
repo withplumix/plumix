@@ -42,6 +42,26 @@ export function findParentId(
   return null;
 }
 
+/**
+ * The top-level index just after `activeId`'s top-level ancestor (itself when
+ * top-level), or the end of the tree when nothing is active or it's absent.
+ * Where an insert lands with a selection: next to what the author is looking
+ * at, but never inside a nested slot whose allowedBlocks it can't honor.
+ */
+export function topLevelIndexAfter(
+  tree: readonly BlockNode[],
+  activeId: string | null,
+): number {
+  let rootId = activeId;
+  while (rootId !== null) {
+    const parent = findParentId(tree, rootId);
+    if (parent === null) break;
+    rootId = parent;
+  }
+  const at = tree.findIndex((node) => node.id === rootId);
+  return at === -1 ? tree.length : at + 1;
+}
+
 export interface FlatNode {
   readonly id: string;
   readonly name: string;

@@ -13,6 +13,7 @@ import {
   canGroupSelection,
   canUngroupBlock,
   flattenTree,
+  topLevelIndexAfter,
 } from "./block-tree-ops.js";
 
 /** The palette's sections, in the order it renders them. */
@@ -155,11 +156,14 @@ export function buildEditorCommands(
         icon: entry.icon,
         run: () => {
           const node = createNodeFromEntry(registry, entry);
-          // Appended at the top level: the palette has no drop position, and
-          // appending is the one placement that never reorders existing work.
-          // Revealing it matters more here than on a drag, where the author is
-          // already looking at the drop.
-          store.getState().insertBlock(node, store.getState().tree.length);
+          // The palette has no drop position, so the block lands after the
+          // selection (at the top level), or at the end with none. Revealing
+          // it matters more here than on a drag, where the author is already
+          // looking at the drop.
+          const { tree: current, activeId } = store.getState();
+          store
+            .getState()
+            .insertBlock(node, topLevelIndexAfter(current, activeId));
           store.getState().revealBlock(node.id);
         },
       });

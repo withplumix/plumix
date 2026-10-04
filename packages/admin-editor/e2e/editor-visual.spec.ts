@@ -311,6 +311,25 @@ test.describe("editor playground", () => {
       .toBe(true);
   });
 
+  test("a catalog click-insert lands right after the selected block", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.getByTestId("block-catalog-item-core/separator").click();
+
+    // Document order: the separator sits between the heading and the intro,
+    // not at the end of the entry (nested blocks come later, inside group-1).
+    const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks.nth(0)).toHaveAttribute("data-plumix-id", "heading-1");
+    await expect(blocks.nth(1)).toHaveAttribute(
+      "data-plumix-block",
+      "core/separator",
+    );
+    await expect(blocks.nth(2)).toHaveAttribute("data-plumix-id", "intro");
+  });
+
   test("the Blocks tab lists variations and a patterns section", async ({
     page,
   }) => {
