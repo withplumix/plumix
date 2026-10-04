@@ -297,6 +297,51 @@ describe("StylesTab", () => {
     ).toContain("col-span-2");
   });
 
+  describe("on a narrower device", () => {
+    function renderOnMobile(style: BlockNode["style"]) {
+      return render(
+        <I18nProvider i18n={i18n}>
+          <Config>
+            <EditorProvider
+              initialTree={[{ id: "a", name: "core/x", style }]}
+              device="mobile"
+            >
+              <ActiveSeed activeId="a" />
+              <StylesTab />
+            </EditorProvider>
+          </Config>
+        </I18nProvider>,
+      );
+    }
+    const widthInput = (utils: ReturnType<typeof render>): HTMLInputElement =>
+      utils.getByTestId("style-control-width-custom") as HTMLInputElement;
+
+    // Styles cascade from desktop down, so an unset narrower value still
+    // renders the wider one; the input says where the block's width comes from.
+    test("an unset value shows the desktop value it inherits as a placeholder", () => {
+      const utils = renderOnMobile({ large: { width: "50%" } });
+      expect(widthInput(utils).value).toBe("");
+      expect(widthInput(utils).placeholder).toBe("50%");
+    });
+
+    test("the nearest wider device's value wins", () => {
+      const utils = renderOnMobile({
+        large: { width: "50%" },
+        medium: { width: "30%" },
+      });
+      expect(widthInput(utils).placeholder).toBe("30%");
+    });
+
+    test("a value of its own shows no inherited placeholder", () => {
+      const utils = renderOnMobile({
+        large: { width: "50%" },
+        small: { width: "100%" },
+      });
+      expect(widthInput(utils).value).toBe("100%");
+      expect(widthInput(utils).placeholder).toBe("");
+    });
+  });
+
   test("opacity shows 1 as a placeholder when unset", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
     expect(

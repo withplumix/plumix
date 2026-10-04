@@ -31,6 +31,8 @@ interface StyleControlProps {
   /** Token scale offered in token mode; omit for a custom-value-only control. */
   readonly category?: TokenCategory;
   readonly value: string | undefined;
+  /** The wider device's value this one renders while unset. */
+  readonly inherited?: string;
   /** Emits the next CSS value string, or null to clear the property. */
   readonly onChange: (value: string | null) => void;
 }
@@ -48,6 +50,7 @@ export function StyleControl({
   property,
   category,
   value,
+  inherited,
   onChange,
 }: StyleControlProps): ReactElement {
   const testId = `style-control-${property}`;
@@ -59,6 +62,7 @@ export function StyleControl({
     onChange,
     category,
     literalOnly: !showModes,
+    inherited,
   });
   const isCustom = field.mode === "custom";
 
@@ -106,6 +110,7 @@ export function StyleControl({
             id={controlId}
             data-testid={`${testId}-custom`}
             value={field.literalText}
+            placeholder={field.inheritedText}
             onChange={(e) => field.setLiteral(e.target.value)}
           />
         </div>
@@ -125,7 +130,7 @@ export function StyleControl({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE_VALUE} data-testid={`${testId}-token-none`}>
-              —
+              {field.inheritedText || "—"}
             </SelectItem>
             {field.options.map((option) => (
               <SelectItem
