@@ -40,6 +40,30 @@ function renderToolbar(tree: readonly BlockNode[]): ReturnType<typeof render> {
 const button = (el: HTMLElement): HTMLButtonElement => el as HTMLButtonElement;
 
 describe("SelectionToolbar", () => {
+  test("every button has an accessible name", () => {
+    const { getByTestId } = renderToolbar([
+      {
+        id: "g",
+        name: "core/group",
+        attrs: { content: [{ id: "a", name: "core/x" }] },
+      },
+    ]);
+    act(() => storeApi?.getState().select("a"));
+
+    // The tooltip shows the label but doesn't name its trigger; aria-label does.
+    for (const [testId, name] of [
+      ["selection-toolbar-drag", "Drag to move"],
+      ["selection-toolbar-select-parent", "Select parent"],
+      ["selection-toolbar-move-up", "Move up"],
+      ["selection-toolbar-move-down", "Move down"],
+      ["selection-toolbar-group", "Group"],
+      ["selection-toolbar-duplicate", "Duplicate"],
+      ["selection-toolbar-delete", "Delete"],
+    ] as const) {
+      expect(getByTestId(testId).getAttribute("aria-label")).toBe(name);
+    }
+  });
+
   test("renders nothing until a block is active", () => {
     const { queryByTestId } = renderToolbar([{ id: "a", name: "core/x" }]);
     expect(queryByTestId("plumix-selection-toolbar")).toBeNull();

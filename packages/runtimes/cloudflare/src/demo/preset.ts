@@ -2,9 +2,10 @@ import { auth } from "plumix/auth";
 
 import type { TurnstileConfig } from "./turnstile.js";
 import { cloudflare } from "../adapter.js";
+import { readEnvString } from "../read-env.js";
 import { demoAuthenticator } from "./authenticator.js";
 import { demoDatabase } from "./database.js";
-import { demoRuntime } from "./demo-runtime.js";
+import { demoRuntime, PUBLIC_ORIGIN } from "./demo-runtime.js";
 
 export interface DemoPresetConfig {
   /** DemoDB Durable Object namespace binding name (declared in wrangler). */
@@ -21,8 +22,11 @@ export interface DemoPresetConfig {
  * authenticator, and the demo runtime wrapper. All three move together so a
  * deploy can't half-configure the demo (e.g. fake admin without the DO).
  *
- * The passkey config is a required-but-unused placeholder: real auth flows are
- * blocked in demo mode, and the authenticator owns who the user is.
+ * Real auth flows are blocked in demo mode and the authenticator owns who the
+ * user is, so the passkey config is a placeholder — except its `origin`, which
+ * is also the site origin every absolute URL (canonical, og:url) is built from.
+ * It reads `PUBLIC_ORIGIN`, which the demo runtime fills with the request's own
+ * origin when the deploy sets none.
  */
 export function demoPreset(config: DemoPresetConfig) {
   const { binding, loadSql, turnstile } = config;
@@ -33,7 +37,9 @@ export function demoPreset(config: DemoPresetConfig) {
       passkey: {
         rpName: "Plumix Demo",
         rpId: "demo.localhost",
-        origin: "https://demo.localhost",
+        // Always set: the demo runtime fills it from the request when the
+        // deploy doesn't.
+        origin: (env) => readEnvString(env, PUBLIC_ORIGIN) ?? "",
       },
       authenticator: demoAuthenticator(),
     }),

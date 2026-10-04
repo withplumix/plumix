@@ -1,6 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core";
 import type { CSSProperties, KeyboardEvent, ReactElement } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -29,13 +29,15 @@ import {
   Copy,
   CopyPlus,
   MoreVertical,
+  Pencil,
   Trash2,
 } from "@plumix/admin-ui/icons";
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { FlatNode } from "./block-tree-ops.js";
+import { blockExcerpt } from "./block-excerpt.js";
 import { BlockIcon } from "./block-icon.js";
-import { flattenTree, projectMove } from "./block-tree-ops.js";
+import { findBlock, flattenTree, projectMove } from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -75,6 +77,19 @@ export function LayersTab(): ReactElement {
     [storeApi, registry],
   );
 
+  // After a delete, the row that takes the deleted one's place gets focus, so
+  // keyboard work through the list carries on instead of falling to the body.
+  const treeRef = useRef<HTMLDivElement>(null);
+  const focusAfterDelete = useRef<string | null>(null);
+  useEffect(() => {
+    const id = focusAfterDelete.current;
+    if (id === null) return;
+    focusAfterDelete.current = null;
+    treeRef.current
+      ?.querySelector<HTMLElement>(`[data-testid="layer-${id}"]`)
+      ?.focus();
+  }, [items]);
+
   // The store's delete/duplicate/clipboard ops all key off the selection, so a
   // row action selects its block first, then runs the op.
   const runRowAction = (id: string, action: RowAction): void => {
@@ -89,9 +104,11 @@ export function LayersTab(): ReactElement {
       case "duplicate":
         duplicateSelected();
         break;
-      case "delete":
+      case "delete": {
+        focusAfterDelete.current = rowAfterRemoving(items, id);
         removeSelected();
         break;
+      }
     }
   };
   const sensors = useSensors(
@@ -102,6 +119,11 @@ export function LayersTab(): ReactElement {
   const typeLabel = (name: string): string => {
     const spec = registry.get(name);
     return spec?.title != null ? resolveLabel(spec.title, i18n) : name;
+  };
+
+  const excerptOf = (id: string): string | null => {
+    const node = findBlock(tree, id);
+    return node ? blockExcerpt(node, registry.get(node.name)) : null;
   };
 
   if (items.length === 0) {
@@ -132,7 +154,7 @@ export function LayersTab(): ReactElement {
   };
 
   return (
-    <div className="p-2" data-testid="layers-tree">
+    <div ref={treeRef} className="p-2" data-testid="layers-tree">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -148,6 +170,9 @@ export function LayersTab(): ReactElement {
               item={item}
               icon={registry.get(item.name)?.icon}
               label={item.label ?? typeLabel(item.name)}
+              // An author's own label already names the row; otherwise the
+              // block's text tells it from others of its type.
+              detail={item.label ? null : excerptOf(item.id)}
               active={item.id === activeId}
               onSelect={() => select(item.id)}
               onRename={(value) => setBlockLabel(item.id, value)}
@@ -164,6 +189,7 @@ interface LayerRowProps {
   readonly item: FlatNode;
   readonly icon?: string;
   readonly label: string;
+  readonly detail: string | null;
   readonly active: boolean;
   readonly onSelect: () => void;
   /** Commits a new instance label (empty string clears it). */
@@ -175,6 +201,7 @@ function LayerRow({
   item,
   icon,
   label,
+  detail,
   active,
   onSelect,
   onRename,
@@ -185,25 +212,43 @@ function LayerRow({
     useSortable({ id: item.id });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(label);
+  // Ending a rename hands focus back to the row it renamed.
+  const rowRef = useRef<HTMLButtonElement>(null);
+  const refocusRow = useRef(false);
+  useEffect(() => {
+    if (editing || !refocusRow.current) return;
+    refocusRow.current = false;
+    rowRef.current?.focus();
+  }, [editing]);
+  // The menu returns focus to its trigger on close, which would pull it out
+  // of the rename input the Rename item just opened.
+  const renamingFromMenu = useRef(false);
 
   const startEditing = (): void => {
     setDraft(item.label ?? "");
     setEditing(true);
   };
-  const commit = (): void => {
+  const stopEditing = (): void => {
+    refocusRow.current = true;
     setEditing(false);
+  };
+  const commit = (): void => {
+    stopEditing();
     onRename(draft);
   };
   const onRenameKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === "Enter") commit();
-    if (event.key === "Escape") setEditing(false);
+    if (event.key === "Escape") stopEditing();
   };
-  // Delete/Backspace removes the focused row, matching the canvas. The handler
-  // sits after the drag listeners spread so it owns these keys.
+  // Delete/Backspace removes the focused row, matching the canvas; F2 renames
+  // it. The handler sits after the drag listeners spread so it owns these keys.
   const onRowKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
     if (matchesShortcut("selection.delete", event)) {
       event.preventDefault();
       onAction("delete");
+    } else if (matchesShortcut("layers.rename", event)) {
+      event.preventDefault();
+      startEditing();
     }
   };
 
@@ -233,6 +278,7 @@ function LayerRow({
       ) : (
         <>
           <button
+            ref={rowRef}
             type="button"
             data-testid={`layer-${item.id}`}
             aria-current={active ? "true" : undefined}
@@ -247,7 +293,12 @@ function LayerRow({
               name={icon}
               className="text-muted-foreground size-4 shrink-0"
             />
-            <span className="truncate">{label}</span>
+            {/* Weight, not a muted colour, sets the text apart: muted fails
+                contrast on the selected row's tint. */}
+            <span className={detail ? "shrink-0 font-medium" : "truncate"}>
+              {label}
+            </span>
+            {detail ? <span className="truncate">{detail}</span> : null}
           </button>
           <DropdownMenu>
             <span className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-[state=open]:opacity-100">
@@ -266,7 +317,24 @@ function LayerRow({
                 </Button>
               </DropdownMenuTrigger>
             </span>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              onCloseAutoFocus={(event) => {
+                if (!renamingFromMenu.current) return;
+                renamingFromMenu.current = false;
+                event.preventDefault();
+              }}
+            >
+              <DropdownMenuItem
+                data-testid={`layer-rename-action-${item.id}`}
+                onSelect={() => {
+                  renamingFromMenu.current = true;
+                  startEditing();
+                }}
+              >
+                <Pencil />
+                <Trans id="editor.layers.rename" message="Rename" />
+              </DropdownMenuItem>
               <DropdownMenuItem
                 data-testid={`layer-copy-${item.id}`}
                 onSelect={() => onAction("copy")}
@@ -303,4 +371,18 @@ function LayerRow({
       )}
     </div>
   );
+}
+
+// The row that takes `id`'s place once it and its nested rows are gone: the
+// next row past its subtree, else the one before it.
+function rowAfterRemoving(
+  items: readonly FlatNode[],
+  id: string,
+): string | null {
+  const at = items.findIndex((item) => item.id === id);
+  if (at === -1) return null;
+  const depth = items[at]?.depth ?? 0;
+  let next = at + 1;
+  while (next < items.length && (items[next]?.depth ?? 0) > depth) next++;
+  return items[next]?.id ?? items[at - 1]?.id ?? null;
 }

@@ -69,9 +69,7 @@ export const single = defineTemplate({
     isEntry(data) ? (
       <article>
         <h1>{data.entry.title}</h1>
-        {data.entry.contentBlocks ? (
-          <BlockRenderer content={data.entry.contentBlocks} />
-        ) : null}
+        <BlockRenderer content={data.entry.contentBlocks} />
       </article>
     ) : null,
 });

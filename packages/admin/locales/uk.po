@@ -49,6 +49,26 @@ msgstr ""
 #~ msgstr "Оновлено"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+#~ msgid "palette.command.settings"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.tab.autosaves"
+#~ msgstr "Автозбереження"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.autosavesEmpty"
+#~ msgstr "Автозбереження з'являться тут, коли буде впроваджено чернетки опублікованих."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.description"
+#~ msgstr "Кожне збереження створює нову ревізію. Найновіші зверху."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -269,6 +289,11 @@ msgstr "CLI запитує API-токен для вашого обліковог
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
 msgstr "Новий API-токен буде створено для вашого облікового запису й передано в CLI. Дайте йому назву, щоб знайти пізніше в профілі, і за потреби обмежте його можливості."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.descriptionLive"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -496,16 +521,6 @@ msgstr ""
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "Дозволити доступ CLI"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.tab.autosaves"
-msgstr "Автозбереження"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr "Автозбереження з'являться тут, коли буде впроваджено чернетки опублікованих."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1590,11 +1605,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.description"
-msgstr "Кожне збереження створює нову ревізію. Найновіші зверху."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/field-values/index.tsx
@@ -3036,11 +3046,6 @@ msgstr "Налаштування"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "Налаштування"
-
-#. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx

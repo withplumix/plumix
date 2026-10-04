@@ -677,6 +677,16 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.discarding"
 msgstr ""
 
@@ -723,6 +733,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -818,6 +833,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.cancel"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1021,6 +1041,16 @@ msgid "editor.inspector.removeRow"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.rename"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.layers.rename"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.gesture.scroll"
 msgstr ""
@@ -1168,6 +1198,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/canvas-frame.tsx
 msgid "editor.canvas.slotRefusesBlock"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.noSettings"
 msgstr ""
 
 #. js-lingui-explicit-id

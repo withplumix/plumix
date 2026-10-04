@@ -9,7 +9,7 @@
 // injectEditorBootstrap). So green here means "given a booted editor, behavior
 // works", never "the editor boots on a real render". That the gate injects the
 // runtime for an authed user is covered in core's edit-mode.render.test.ts, and
-// end to end in the demo runtime in runtime-cloudflare's demo.spec.ts.
+// end to end in the demo runtime in apps/demo/e2e/demo.spec.ts.
 
 import { expect, test } from "@playwright/test";
 
@@ -309,6 +309,25 @@ test.describe("editor playground", () => {
         return h && i ? h.y > i.y : false;
       })
       .toBe(true);
+  });
+
+  test("a catalog click-insert lands right after the selected block", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.getByTestId("block-catalog-item-core/separator").click();
+
+    // Document order: the separator sits between the heading and the intro,
+    // not at the end of the entry (nested blocks come later, inside group-1).
+    const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks.nth(0)).toHaveAttribute("data-plumix-id", "heading-1");
+    await expect(blocks.nth(1)).toHaveAttribute(
+      "data-plumix-block",
+      "core/separator",
+    );
+    await expect(blocks.nth(2)).toHaveAttribute("data-plumix-id", "intro");
   });
 
   test("the Blocks tab lists variations and a patterns section", async ({
@@ -715,6 +734,27 @@ test.describe("editor playground", () => {
     await page.keyboard.press("ControlOrMeta+KeyV");
 
     await expect(blocks).toHaveCount(before + 1);
+  });
+
+  test("Delete, Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z work from canvas focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const heading = canvas.locator('[data-plumix-id="heading-1"]');
+    await expect(heading).toBeVisible();
+
+    // Clicking the block leaves focus inside the iframe; each key must reach
+    // the host over the canvas:key forward path.
+    await heading.click();
+    await page.keyboard.press("Delete");
+    await expect(heading).toHaveCount(0);
+
+    await page.keyboard.press("ControlOrMeta+KeyZ");
+    await expect(heading).toHaveCount(1);
+
+    await page.keyboard.press("ControlOrMeta+Shift+KeyZ");
+    await expect(heading).toHaveCount(0);
   });
 
   test("group then ungroup selected blocks via the toolbar", async ({

@@ -20,6 +20,7 @@ import {
   groupInsertables,
 } from "./block-catalog.js";
 import { BlockIcon } from "./block-icon.js";
+import { topLevelIndexAfter } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
@@ -59,7 +60,9 @@ export function BlockCatalog({
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
-  const treeLength = useEditorStore((s) => s.tree.length);
+  const insertAt = useEditorStore((s) =>
+    topLevelIndexAfter(s.tree, s.activeId),
+  );
 
   const groups = useMemo(
     () =>
@@ -85,12 +88,12 @@ export function BlockCatalog({
         allowed,
       );
     } else {
-      insertBlock(node, treeLength);
+      insertBlock(node, insertAt);
     }
     onInsert?.();
   };
   const insertPattern = (nodes: readonly BlockNode[]): void => {
-    insertBlocks(nodes, treeLength);
+    insertBlocks(nodes, insertAt);
     onInsert?.();
   };
 

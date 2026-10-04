@@ -43,6 +43,11 @@ const registry: BlockRegistry = createBlockRegistry([
   },
   { name: "core/spacer", render: () => null },
   {
+    name: "core/prose",
+    render: () => null,
+    inputs: [{ name: "body", type: "richtext", label: "Body" }],
+  },
+  {
     name: "core/group",
     render: () => null,
     inputs: [
@@ -176,6 +181,36 @@ describe("BlockInspector", () => {
     expect(queryByTestId("block-input-text")).toBeNull();
   });
 
+  test("selecting a rich-text block records no undo step", async () => {
+    let canUndo: (() => boolean) | undefined;
+    function UndoProbe(): null {
+      const api = useEditorStoreApi();
+      useEffect(() => {
+        canUndo = () => api.getState().canUndo;
+      }, [api]);
+      return null;
+    }
+    const { findByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <Config>
+          <EditorProvider
+            initialTree={[
+              { id: "p1", name: "core/prose", attrs: { body: "<p>Hello</p>" } },
+            ]}
+          >
+            <Selector id="p1" />
+            <BlockInspector />
+            <UndoProbe />
+          </EditorProvider>
+        </Config>
+      </I18nProvider>,
+    );
+
+    await findByTestId("block-input-body-editor");
+
+    expect(canUndo?.()).toBe(false);
+  });
+
   test("renders the active block's inputs as controls", () => {
     const { getByTestId } = renderInspector(
       [{ id: "h1", name: "core/heading", attrs: { text: "Hi", level: 2 } }],
@@ -235,13 +270,24 @@ describe("BlockInspector", () => {
     expect(queryByTestId("block-input-content")).toBeNull();
   });
 
-  test("renders the bare panel for a block with no inputs", () => {
+  test("a block with nothing to set says so instead of a blank panel", () => {
     const { getByTestId, queryByTestId } = renderInspector(
       [{ id: "s1", name: "core/spacer" }],
       "s1",
     );
     expect(getByTestId("block-inspector")).toBeDefined();
     expect(queryByTestId("block-inspector-empty")).toBeNull();
+    expect(getByTestId("block-inspector-no-settings").textContent).toBe(
+      "This block has no settings.",
+    );
+  });
+
+  test("a block with inputs shows no such note", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+      "h1",
+    );
+    expect(queryByTestId("block-inspector-no-settings")).toBeNull();
   });
 
   test("shows the refresh-data control only for a loader-backed block", () => {

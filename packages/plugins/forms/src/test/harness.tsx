@@ -23,9 +23,7 @@ const blog = definePlugin("test_blog", (ctx) => {
 // The entry's blocks on its page — the only way the form block's own
 // markup reaches a visitor.
 function entryBlocks(data: EntryData): ReactNode {
-  return data.entry.contentBlocks ? (
-    <BlockRenderer content={data.entry.contentBlocks} />
-  ) : null;
+  return <BlockRenderer content={data.entry.contentBlocks} />;
 }
 
 const themeWith = (blocks: readonly BlockSpec[], entryTemplate = entryBlocks) =>

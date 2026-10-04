@@ -18,6 +18,9 @@ export interface UseStyleFieldOptions {
    *  offers tokens, even for a property the model could derive a scale for
    *  (e.g. max-width). A stored `var()` then shows as its raw literal text. */
   readonly literalOnly?: boolean;
+  /** The value a wider device sets, which this one renders while it has none
+   *  of its own (styles cascade desktop-first). */
+  readonly inherited?: string;
 }
 
 export interface StyleFieldState {
@@ -29,6 +32,9 @@ export interface StyleFieldState {
   readonly tokenId: string | null;
   /** The literal text to show in a custom input (`""` for a token / unset). */
   readonly literalText: string;
+  /** What the inherited value reads as — a literal as written, a token by its
+   *  label — or `""` when the value is set here or nothing is inherited. */
+  readonly inheritedText: string;
   /** Which input the control shows. Follows the value's kind when set; falls
    *  back to the user's last toggle when the value is unset. */
   readonly mode: "token" | "custom";
@@ -54,6 +60,7 @@ export function useStyleField(
     category,
     emptyLiteralClears = true,
     literalOnly = false,
+    inherited,
   }: UseStyleFieldOptions,
 ): StyleFieldState {
   const field = useStyleFields().field(property, { category });
@@ -72,6 +79,16 @@ export function useStyleField(
     return selection.kind === "token" ? "token" : "custom";
   };
 
+  const resolveInheritedText = (): string => {
+    if (value !== undefined || inherited === undefined) return "";
+    if (literalOnly) return inherited;
+    const from = field.read(inherited);
+    if (!from) return "";
+    return from.kind === "token"
+      ? field.tokenOption(from.id).label
+      : from.value;
+  };
+
   const resolveLiteralText = (): string => {
     if (literalOnly) return value ?? "";
     return selection?.kind === "literal" ? selection.value : "";
@@ -84,6 +101,7 @@ export function useStyleField(
     options: literalOnly ? [] : field.options,
     tokenId: selection?.kind === "token" ? selection.id : null,
     literalText: resolveLiteralText(),
+    inheritedText: resolveInheritedText(),
     mode: resolveMode(),
     setMode(next) {
       setPref(next);

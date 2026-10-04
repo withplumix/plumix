@@ -58,7 +58,13 @@ const SHORTCUT_LABELS: Record<EditorShortcutId, ReactNode> = {
   "selection.delete": (
     <Trans
       id="editor.shortcut.selection.delete"
-      message="Delete the focused layer"
+      message="Delete the selection"
+    />
+  ),
+  "layers.rename": (
+    <Trans
+      id="editor.shortcut.layers.rename"
+      message="Rename the focused layer"
     />
   ),
   "clipboard.copy": (

@@ -57,10 +57,8 @@ interface ShortcutSpec {
  * can't drift from what the editor actually does. Every key handler matches
  * against this roster rather than spelling its own key test.
  *
- * Three entries are described here but matched elsewhere, because no seam
- * reaches them: the two pointer gestures (`matchesShortcut` takes a key event,
- * so a gesture chord can never fire one) and `panels.toggle`, which belongs to
- * the vendored sidebar.
+ * The two pointer gestures are described here but matched elsewhere, because
+ * `matchesShortcut` takes a key event, so a gesture chord can never fire one.
  *
  * Inline formatting is the exception — those bindings belong to the marks, so
  * `shortcut-display.ts` derives them from the mark catalogue instead.
@@ -83,10 +81,16 @@ const ROSTER = [
     chords: [{ mod: true, shift: false, key: "k", code: "KeyK" }],
     forwarded: true,
   },
-  // The only binding this roster describes without owning: Cmd+B is the
-  // vendored shadcn sidebar's own listener. It shares the chord with the bold
-  // mark and breaks the tie by standing aside while the author is typing.
-  { id: "panels.toggle", group: "general", chords: [{ mod: true, key: "b" }] },
+  // Cmd+B is the vendored shadcn sidebar's own listener in the host; the
+  // canvas forwards it so it also fires while the iframe holds focus. It shares
+  // the chord with the bold mark and breaks the tie by standing aside while
+  // the author is typing.
+  {
+    id: "panels.toggle",
+    group: "general",
+    chords: [{ mod: true, key: "b", code: "KeyB" }],
+    forwarded: true,
+  },
   {
     id: "selection.additive",
     group: "selection",
@@ -98,7 +102,16 @@ const ROSTER = [
   {
     id: "selection.delete",
     group: "selection",
-    chords: [{ key: "Delete" }, { key: "Backspace" }],
+    chords: [
+      { key: "Delete", code: "Delete" },
+      { key: "Backspace", code: "Backspace" },
+    ],
+    forwarded: true,
+  },
+  {
+    id: "layers.rename",
+    group: "selection",
+    chords: [{ key: "F2" }],
   },
   {
     id: "clipboard.copy",
@@ -158,12 +171,14 @@ const ROSTER = [
   {
     id: "history.undo",
     group: "history",
-    chords: [{ mod: true, shift: false, key: "z" }],
+    chords: [{ mod: true, shift: false, key: "z", code: "KeyZ" }],
+    forwarded: true,
   },
   {
     id: "history.redo",
     group: "history",
-    chords: [{ mod: true, shift: true, key: "z" }],
+    chords: [{ mod: true, shift: true, key: "z", code: "KeyZ" }],
+    forwarded: true,
   },
 ] as const satisfies readonly ShortcutSpec[];
 

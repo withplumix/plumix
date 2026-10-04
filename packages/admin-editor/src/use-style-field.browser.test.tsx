@@ -138,3 +138,24 @@ describe("useStyleField — token scale passthrough", () => {
     expect(result.current.options.map((o) => o.id)).toEqual(["sm", "lg"]);
   });
 });
+
+describe("useStyleField — inherited value", () => {
+  test("an inherited token reads as its label, a literal as written", () => {
+    expect(
+      setup("padding", undefined, {
+        inherited: "var(--plumix-spacing-lg, 24px)",
+      }).result.current.inheritedText,
+    ).toBe("Large");
+    expect(
+      setup("padding", undefined, { inherited: "20px" }).result.current
+        .inheritedText,
+    ).toBe("20px");
+  });
+
+  test("a value set here shadows what it would inherit", () => {
+    expect(
+      setup("padding", "8px", { inherited: "20px" }).result.current
+        .inheritedText,
+    ).toBe("");
+  });
+});

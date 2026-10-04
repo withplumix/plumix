@@ -121,14 +121,32 @@ describe("EditorHeader", () => {
     };
   }
 
-  test("a pending draft shows the unpublished-changes indicator and Discard", () => {
+  test("a pending draft shows the unpublished-changes indicator and Discard, which asks before discarding", async () => {
     const onDiscardDraft = vi.fn();
-    const { getByTestId } = renderHeader({
+    const { getByTestId, findByTestId } = renderHeader({
       publish: draftMode({ onDiscardDraft }),
     });
     expect(getByTestId("editor-unpublished-changes")).toBeDefined();
+
     fireEvent.click(getByTestId("editor-draft-discard"));
+    // Discarding can't be undone, so the click only asks.
+    expect(onDiscardDraft).not.toHaveBeenCalled();
+
+    fireEvent.click(await findByTestId("editor-draft-discard-confirm"));
     expect(onDiscardDraft).toHaveBeenCalledOnce();
+  });
+
+  test("cancelling the Discard confirmation keeps the draft", async () => {
+    const onDiscardDraft = vi.fn();
+    const { getByTestId, findByTestId, queryByTestId } = renderHeader({
+      publish: draftMode({ onDiscardDraft }),
+    });
+
+    fireEvent.click(getByTestId("editor-draft-discard"));
+    fireEvent.click(await findByTestId("editor-draft-discard-cancel"));
+
+    expect(onDiscardDraft).not.toHaveBeenCalled();
+    expect(queryByTestId("editor-draft-discard-confirm")).toBeNull();
   });
 
   test("with a pending draft, Publish calls onPublishDraft", () => {

@@ -620,6 +620,7 @@ async function regenerate(
   writeIfChanged(
     resolve(cwd, ".plumix/editor-entry.ts"),
     generateEditorEntrySource(
+      resolve(cwd, ".plumix"),
       editorBlockModules,
       collectEditorShortcodeModules(configPath, configSource),
     ),

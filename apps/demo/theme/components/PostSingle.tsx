@@ -40,9 +40,7 @@ export function PostSingle({
         className="prose prose-stone prose-headings:font-serif max-w-none"
         data-testid="post-body"
       >
-        {entry.contentBlocks ? (
-          <BlockRenderer content={entry.contentBlocks} />
-        ) : null}
+        <BlockRenderer content={entry.contentBlocks} />
       </div>
 
       {showMeta && tags.length > 0 ? (

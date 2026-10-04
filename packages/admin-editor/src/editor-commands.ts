@@ -9,10 +9,13 @@ import {
   entryKey,
   groupInsertables,
 } from "./block-catalog.js";
+import { blockExcerpt } from "./block-excerpt.js";
 import {
   canGroupSelection,
   canUngroupBlock,
+  findBlock,
   flattenTree,
+  topLevelIndexAfter,
 } from "./block-tree-ops.js";
 
 /** The palette's sections, in the order it renders them. */
@@ -27,6 +30,9 @@ export interface EditorCommand {
   readonly id: string;
   readonly group: EditorCommandGroupId;
   readonly title: Label;
+  /** A muted second line: a go-to command's block text, to tell blocks of one
+   *  type apart. */
+  readonly detail?: string;
   /** Extra search terms; a block's own keywords for the insert commands. */
   readonly keywords?: readonly Label[];
   /** A block-icon name, resolved against admin-ui's curated set. */
@@ -155,11 +161,14 @@ export function buildEditorCommands(
         icon: entry.icon,
         run: () => {
           const node = createNodeFromEntry(registry, entry);
-          // Appended at the top level: the palette has no drop position, and
-          // appending is the one placement that never reorders existing work.
-          // Revealing it matters more here than on a drag, where the author is
-          // already looking at the drop.
-          store.getState().insertBlock(node, store.getState().tree.length);
+          // The palette has no drop position, so the block lands after the
+          // selection (at the top level), or at the end with none. Revealing
+          // it matters more here than on a drag, where the author is already
+          // looking at the drop.
+          const { tree: current, activeId } = store.getState();
+          store
+            .getState()
+            .insertBlock(node, topLevelIndexAfter(current, activeId));
           store.getState().revealBlock(node.id);
         },
       });
@@ -167,11 +176,14 @@ export function buildEditorCommands(
   }
   for (const node of flattenTree(tree)) {
     const spec = registry.get(node.name);
+    const block = findBlock(tree, node.id);
+    const detail = block ? blockExcerpt(block, spec) : null;
     commands.push({
       id: `goto:${node.id}`,
       group: "goto",
       title: node.label ?? spec?.title ?? node.name,
-      keywords: [node.name],
+      ...(detail ? { detail } : {}),
+      keywords: detail ? [node.name, detail] : [node.name],
       icon: spec?.icon,
       run: () => store.getState().revealBlock(node.id),
     });

@@ -117,6 +117,16 @@ describe("buildEditorCommands", () => {
     expect(frameRequest).toBe(1);
   });
 
+  test("with a block selected, inserting lands right after it", () => {
+    const ctx = context();
+    ctx.store.getState().select("a");
+    byId(buildEditorCommands(ctx), "insert:core/heading")?.run();
+    const { tree } = ctx.store.getState();
+    expect(tree.map((node) => node.id)[0]).toBe("a");
+    expect(tree[1]?.name).toBe("core/heading");
+    expect(tree[2]?.id).toBe("b");
+  });
+
   test("a block's name matches, as it does in the catalog's own search", () => {
     const commands = buildEditorCommands(context());
     const hits = selectEditorCommands(commands, "core/heading", (label) =>
@@ -132,6 +142,33 @@ describe("buildEditorCommands", () => {
     expect(goto.map((command) => command.id)).toEqual(["goto:a", "goto:b"]);
     expect(byId(goto, "goto:b")?.title).toBe("Intro copy");
     expect(byId(goto, "goto:a")?.title).toBe("Heading");
+  });
+
+  test("a go-to command carries the block's own text, and finds by it", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/prose",
+        title: "Text",
+        text: [{ name: "body", html: true }],
+      }),
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/prose",
+        attrs: { body: "<h2>What we found</h2>" },
+      },
+      { id: "p2", name: "core/prose", attrs: { body: "<p>Salt early</p>" } },
+    ];
+    const commands = buildEditorCommands(context({ registry, tree }));
+
+    // Two blocks of one type are told apart by what they say.
+    expect(byId(commands, "goto:p1")?.detail).toBe("What we found");
+    expect(byId(commands, "goto:p2")?.detail).toBe("Salt early");
+    const hits = selectEditorCommands(commands, "salt", (label) =>
+      typeof label === "string" ? label : (label.message ?? ""),
+    );
+    expect(hits.map((command) => command.id)).toContain("goto:p2");
   });
 
   test("a go-to command selects its block and asks the canvas to frame it", () => {

@@ -248,6 +248,16 @@ function mapNodeById(
   return next.some((node, i) => node !== nodes[i]) ? next : nodes;
 }
 
+// Whether `node` already holds every value in `patch`, so writing it changes
+// nothing — a control echoing its value back (a rich-text field mounting, say)
+// must not leave an undo step. Attrs are JSON, so serialization compares them.
+function holdsPatch(node: BlockNode, patch: JsonObject): boolean {
+  return Object.entries(patch).every(
+    ([key, value]) =>
+      JSON.stringify(node.attrs?.[key]) === JSON.stringify(value),
+  );
+}
+
 function mapNode(
   node: BlockNode,
   id: string,
@@ -515,10 +525,11 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) => ({
-            ...node,
-            attrs: { ...node.attrs, ...patch },
-          })),
+          mapNodeById(state.tree, id, (node) =>
+            holdsPatch(node, patch)
+              ? node
+              : { ...node, attrs: { ...node.attrs, ...patch } },
+          ),
           // Coalesce a typing burst on one field into a single undo step.
           `attr:${id}:${Object.keys(patch).sort().join(",")}`,
         ),

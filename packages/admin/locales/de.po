@@ -49,6 +49,26 @@ msgstr ""
 #~ msgstr "Aktualisiert"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+#~ msgid "palette.command.settings"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.tab.autosaves"
+#~ msgstr "Automatisches Speichern"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.autosavesEmpty"
+#~ msgstr "Automatische Speicherungen erscheinen hier, sobald Entwürfe-von-veröffentlicht verfügbar sind."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.description"
+#~ msgstr "Jede Speicherung erstellt eine neue Revision. Neueste zuerst."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -269,6 +289,11 @@ msgstr "Eine CLI fordert ein API-Token für Ihr Konto an. Bestätigen Sie, dass 
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
 msgstr "Ein neues API-Token wird für Ihr Konto erstellt und an die CLI übergeben. Geben Sie ihm einen Namen, damit Sie es später in Ihrem Profil finden, und beschränken Sie optional, was es tun darf."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.descriptionLive"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -496,16 +521,6 @@ msgstr ""
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "CLI-Zugriff autorisieren"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.tab.autosaves"
-msgstr "Automatisches Speichern"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr "Automatische Speicherungen erscheinen hier, sobald Entwürfe-von-veröffentlicht verfügbar sind."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1590,11 +1605,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.description"
-msgstr "Jede Speicherung erstellt eine neue Revision. Neueste zuerst."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/field-values/index.tsx
@@ -3036,11 +3046,6 @@ msgstr "Einstellungen"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "Einstellungen"
-
-#. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx

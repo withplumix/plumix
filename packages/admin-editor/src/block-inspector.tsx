@@ -112,9 +112,24 @@ export function BlockInspector({
   const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
   const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
   const isColumns = block.name === "core/columns";
+  // Nothing to render would leave a blank panel, indistinguishable from one
+  // that failed to load.
+  const nothingToSet =
+    inputs.length === 0 && !isColumns && !tableId && !canRefresh;
 
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
+      {nothingToSet ? (
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="block-inspector-no-settings"
+        >
+          <Trans
+            id="editor.inspector.noSettings"
+            message="This block has no settings."
+          />
+        </p>
+      ) : null}
       {inputs.map((input) => {
         // A `styleProperty` input edits `node.style` for the active device
         // instead of an attr, so it's two-way synced with the Styles tab. A

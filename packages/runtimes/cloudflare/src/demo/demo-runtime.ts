@@ -1,8 +1,10 @@
 import type { PlumixEnv, RuntimeAdapter } from "plumix";
 import { resolveEnvInput } from "plumix";
 
+import type { WorkerEnv } from "../read-env.js";
 import type { TurnstileConfig } from "./turnstile.js";
 import { DemoError } from "../errors.js";
+import { readEnvString } from "../read-env.js";
 import { isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
@@ -16,6 +18,9 @@ import {
 } from "./session.js";
 import { injectDemoToolbar, shouldInjectDemoToolbar } from "./toolbar.js";
 import { verifyTurnstile } from "./turnstile.js";
+
+/** The env var the demo's site origin is read from (see demoPreset). */
+export const PUBLIC_ORIGIN = "PUBLIC_ORIGIN";
 
 /** Subpath whose named exports (DemoDB) the generated worker re-exports. */
 const DEMO_EXPORTS_MODULE = "@plumix/runtime-cloudflare/demo/durable-object";
@@ -144,7 +149,19 @@ export function demoRuntime(
               }
             }
 
-            const response = await handler.fetch(request, invocation);
+            // The site origin is read from PUBLIC_ORIGIN (see demoPreset); a
+            // deploy that sets none gets the host it is served from, so the
+            // demo's canonical and share URLs point back at itself.
+            const withOrigin: WorkerEnv = {
+              ...env,
+              [PUBLIC_ORIGIN]: new URL(request.url).origin,
+            };
+            const response = await handler.fetch(
+              request,
+              readEnvString(env, PUBLIC_ORIGIN)
+                ? invocation
+                : { ...invocation, env: withOrigin },
+            );
             return shouldInjectDemoToolbar(request)
               ? injectToolbar(response, hasSession)
               : response;

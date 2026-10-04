@@ -62,6 +62,14 @@ interface ControlSpec {
   readonly fullWidth?: boolean;
 }
 
+// The buckets whose values cascade into each one, nearest first: the large
+// bucket has no @media, medium narrows it, small narrows medium.
+const WIDER_BUCKETS: Readonly<Record<StyleBucket, readonly StyleBucket[]>> = {
+  large: [],
+  medium: ["large"],
+  small: ["medium", "large"],
+};
+
 /** Reads the active block's value for a style property in the current bucket. */
 type StyleGetter = (property: string) => string | undefined;
 /** Curried writer: pick a property, then set (or clear with `null`) its value. */
@@ -201,6 +209,15 @@ export function StylesTab(): ReactElement {
     const stored = current?.[property];
     return typeof stored === "string" && stored !== "" ? stored : undefined;
   };
+  // Styles cascade desktop-first, so an unset value renders the nearest wider
+  // device's; the controls show it so the author can see where it comes from.
+  const inheritedOf = (property: string): string | undefined => {
+    for (const wider of WIDER_BUCKETS[bucket]) {
+      const stored = block.style?.[wider]?.[property];
+      if (typeof stored === "string" && stored !== "") return stored;
+    }
+    return undefined;
+  };
   // Keep every string entry — including an empty one mid-retype — so clearing a
   // value doesn't unmount its row. Emission drops empties at sanitize time.
   const declarations: StyleDeclaration[] = Object.entries(
@@ -238,6 +255,7 @@ export function StylesTab(): ReactElement {
           <GenericSection
             section={SIZE_SECTION}
             valueOf={valueOf}
+            inheritedOf={inheritedOf}
             setter={setter}
           />
           <AccordionItem value="visibility">
@@ -254,11 +272,13 @@ export function StylesTab(): ReactElement {
           <GenericSection
             section={BACKGROUND_SECTION}
             valueOf={valueOf}
+            inheritedOf={inheritedOf}
             setter={setter}
           />
           <GenericSection
             section={TYPOGRAPHY_SECTION}
             valueOf={valueOf}
+            inheritedOf={inheritedOf}
             setter={setter}
           />
           <AccordionItem value="spacing">
@@ -272,6 +292,7 @@ export function StylesTab(): ReactElement {
           <GenericSection
             section={BORDER_SECTION}
             valueOf={valueOf}
+            inheritedOf={inheritedOf}
             setter={setter}
           />
           <AccordionItem value="effects">
@@ -336,10 +357,13 @@ export function StylesTab(): ReactElement {
 function GenericSection({
   section,
   valueOf,
+  inheritedOf,
   setter,
 }: {
   readonly section: SectionDef;
   readonly valueOf: StyleGetter;
+  /** The value a wider device sets, which an unset control renders. */
+  readonly inheritedOf: StyleGetter;
   readonly setter: StyleSetter;
 }): ReactElement {
   return (
@@ -373,6 +397,7 @@ function GenericSection({
                   property={c.property}
                   category={c.category}
                   value={valueOf(c.property)}
+                  inherited={inheritedOf(c.property)}
                   onChange={setter(c.property)}
                 />
               )}

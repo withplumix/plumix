@@ -90,16 +90,6 @@ const CORE_COMMANDS: readonly PaletteCommand[] = [
     coreIcon: "users",
     run: ({ navigate }) => void navigate({ to: "/profile" }),
   },
-  {
-    id: "core:settings",
-    title: defineMessage({
-      id: "palette.command.settings",
-      message: "Settings",
-    }),
-    coreIcon: "settings",
-    capability: "settings:manage",
-    run: ({ navigate }) => void navigate({ to: "/settings" }),
-  },
 ];
 
 function useDebounced(value: string, ms: number): string {

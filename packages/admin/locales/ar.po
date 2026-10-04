@@ -49,6 +49,26 @@ msgstr ""
 #~ msgstr "تم التحديث"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+#~ msgid "palette.command.settings"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.tab.autosaves"
+#~ msgstr "الحفظ التلقائي"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.autosavesEmpty"
+#~ msgstr "ستظهر عمليات الحفظ التلقائي هنا بعد إطلاق مسودات المنشورات المنشورة."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.description"
+#~ msgstr "كل عملية حفظ تنشئ مراجعة جديدة. الأحدث أولاً."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -269,6 +289,11 @@ msgstr "تطلب CLI رمز API لحسابك. تأكد من تطابق الرم�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
 msgstr "سيتم إنشاء رمز API جديد لحسابك وتسليمه إلى CLI. سمّه لتجده لاحقاً ضمن ملفك الشخصي، واختيارياً قيّد ما يمكنه فعله."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.descriptionLive"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -496,16 +521,6 @@ msgstr ""
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "السماح بوصول CLI"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.tab.autosaves"
-msgstr "الحفظ التلقائي"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr "ستظهر عمليات الحفظ التلقائي هنا بعد إطلاق مسودات المنشورات المنشورة."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1590,11 +1605,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.description"
-msgstr "كل عملية حفظ تنشئ مراجعة جديدة. الأحدث أولاً."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/field-values/index.tsx
@@ -3036,11 +3046,6 @@ msgstr "الإعدادات"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "الإعدادات"
-
-#. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx

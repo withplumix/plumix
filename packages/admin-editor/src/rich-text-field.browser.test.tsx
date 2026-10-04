@@ -1,9 +1,12 @@
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Editor } from "@tiptap/core";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { userEvent as realKeyboard } from "vitest/browser";
 
 import type { JSONContent } from "./rich-text-field.js";
 import {
@@ -227,6 +230,59 @@ describe("RichTextField toolbar reflects the allowlist", () => {
     expect(queryByTestId("rt-link")).toBeNull();
     // Clear formatting is always available
     expect(queryByTestId("rt-clear")).not.toBeNull();
+  });
+
+  // The editor keeps an empty paragraph after a trailing heading, list or
+  // quote so the caret can leave it; that paragraph is the editor's, not the
+  // author's, and must not reach the stored body.
+  test("turning the text into a heading stores no trailing empty paragraph", async () => {
+    const onChange = vi.fn();
+    const { getByTestId } = renderRT(
+      <RichTextField
+        serialization="html"
+        value="<p>Hi</p>"
+        onChange={onChange}
+        testId="rth"
+      />,
+    );
+
+    await userEvent.click(getByTestId("rth-editor"));
+    await userEvent.click(getByTestId("rth-format"));
+    await userEvent.click(getByTestId("rth-format-h2"));
+
+    expect(onChange).toHaveBeenLastCalledWith("<h2>Hi</h2>");
+  });
+
+  test("typing after the heading change keeps the caret in place", async () => {
+    let stored = "";
+    function Controlled(): ReactElement {
+      const [value, setValue] = useState("<p>Hi</p>");
+      return (
+        <RichTextField
+          serialization="html"
+          value={value}
+          onChange={(next) => {
+            stored = next;
+            setValue(next);
+          }}
+          testId="rtk"
+        />
+      );
+    }
+    const { getByTestId } = renderRT(<Controlled />);
+
+    await userEvent.click(getByTestId("rtk-editor"));
+    await userEvent.click(getByTestId("rtk-format"));
+    await userEvent.click(getByTestId("rtk-format-h2"));
+    const heading = getByTestId("rtk-editor").querySelector("h2");
+    if (!heading) throw new Error("expected the heading to render");
+    await userEvent.click(heading);
+    // Real key events: user-event can't move a caret inside contenteditable.
+    await realKeyboard.keyboard("{End} there");
+
+    // Had the stored value (no trailing paragraph) and the editor's (with
+    // one) disagreed, each keystroke would reset the content.
+    expect(stored).toBe("<h2>Hi there</h2>");
   });
 
   test("JSON mode clears the editor when the value resets to null", () => {

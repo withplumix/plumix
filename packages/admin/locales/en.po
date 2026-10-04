@@ -49,6 +49,26 @@ msgstr ""
 #~ msgstr "Updated"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+#~ msgid "palette.command.settings"
+#~ msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.tab.autosaves"
+#~ msgstr "Autosaves"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.autosavesEmpty"
+#~ msgstr "Autosaves will appear here once drafts-of-published lands."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.description"
+#~ msgstr "Every save creates a new revision. Newest first."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -269,6 +289,11 @@ msgstr "A CLI is requesting an API token for your account. Confirm the code your
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
 msgstr "A new API token will be minted for your account and handed to the CLI. Name it so you can find it later under your profile, and optionally restrict what it can do."
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.descriptionLive"
+msgstr "A revision is saved each time the live entry changes. Newest first."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -496,16 +521,6 @@ msgstr "Author slug"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "Authorize CLI access"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.tab.autosaves"
-msgstr "Autosaves"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr "Autosaves will appear here once drafts-of-published lands."
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1590,11 +1605,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.description"
-msgstr "Every save creates a new revision. Newest first."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/field-values/index.tsx
@@ -3035,11 +3045,6 @@ msgstr "Settings"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
-msgstr "Settings"
-
-#. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
