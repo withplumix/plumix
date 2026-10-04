@@ -16,6 +16,7 @@ import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
 import type { ImageResolver, RemotePattern } from "./image-attrs.js";
+import { defineEntryContent } from "../entry-content.js";
 import { useHtmlAllowlist } from "../html/context.js";
 import { serializeLoaderData } from "../loader-data.js";
 import { renderBlockTree } from "../render-block-tree.js";
@@ -143,11 +144,14 @@ export function BlockTree({
 }
 
 export function BlockRenderer({
-  content,
+  content: given,
 }: {
-  readonly content: EntryContent;
+  /** `null` for an entry with no content yet: nothing renders live, and edit
+   *  mode still emits the root the canvas mounts into. */
+  readonly content: EntryContent | null;
 }): ReactNode {
   const ctx = usePlumixContext("BlockRenderer");
+  const content = given ?? defineEntryContent([]);
   // The same hook the html / rich-text blocks read, so the embed below carries
   // what this render actually sanitized with.
   const htmlAllowlist = useHtmlAllowlist();

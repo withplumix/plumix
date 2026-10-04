@@ -13,9 +13,7 @@ export function PageBody({
         {entry.title}
       </h1>
       <div className="prose prose-stone mt-10 max-w-none">
-        {entry.contentBlocks ? (
-          <BlockRenderer content={entry.contentBlocks} />
-        ) : null}
+        <BlockRenderer content={entry.contentBlocks} />
       </div>
     </article>
   );

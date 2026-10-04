@@ -79,6 +79,32 @@ describe("BlockRenderer edit-mode mount boundary", () => {
     expect(env.htmlAllowlist?.allowedAttributes.img).toEqual(["src"]);
   });
 
+  test("an entry with no content still gets a mount root, seeded with an empty tree", () => {
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry, mode: "edit" }}>
+        <BlockRenderer content={null} />
+      </PlumixProvider>,
+    );
+
+    // A new entry has no content yet; without the root the canvas has nowhere
+    // to mount and every inserted block renders nowhere.
+    expect(html).toContain("data-plumix-content-root");
+    const tree = JSON.parse(
+      /data-plumix-initial-tree="">(.*?)<\/script>/.exec(html)?.[1] ?? "null",
+    ) as EntryContent | null;
+    expect(tree?.blocks).toEqual([]);
+  });
+
+  test("an entry with no content renders nothing live", () => {
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry }}>
+        <BlockRenderer content={null} />
+      </PlumixProvider>,
+    );
+
+    expect(html).toBe("");
+  });
+
   test("live render has no editor mount root or embedded tree", () => {
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry }}>

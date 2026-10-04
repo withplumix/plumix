@@ -103,6 +103,29 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await expect(canvas.locator("#plumix-demo-toolbar")).toHaveCount(0);
 });
 
+// Regression: a new entry has no content, and the theme skipped `BlockRenderer`
+// for it, so the canvas had no root to mount into — inserted blocks landed in
+// the editor's tree but never rendered.
+test("a block inserted into a new post renders in the canvas", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("try-editor").click();
+  await page.waitForURL(/\/_plumix\/admin/);
+
+  await page.goto("entries/posts");
+  const navigated = page.waitForURL(/\/entries\/posts\/\d+\/edit/);
+  await page.getByTestId("content-list-new-button").click();
+  await navigated;
+
+  const canvas = page.frameLocator(CANVAS_FRAME);
+  await expect(canvas.locator("[data-plumix-content-root]")).toBeAttached();
+  await page.getByTestId("block-catalog-item-core/rich-text").click();
+  await expect(
+    canvas.locator('[data-plumix-block="core/rich-text"]'),
+  ).toBeVisible();
+});
+
 // Author archives: the post byline links to `/authors/{slug}`, which lists that
 // author's published posts. Public, cookieless — no demo session needed.
 test("the author byline links to the author archive of the author's posts", async ({

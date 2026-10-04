@@ -51,9 +51,7 @@ Slugs are yours to choose. One convention is worth knowing: `@plumix/plugin-og` 
      render: ({ data }) => (
        <article>
          <h1>{data.entry.title}</h1>
-         {data.entry.contentBlocks ? (
-           <BlockRenderer content={data.entry.contentBlocks} />
-         ) : null}
+         <BlockRenderer content={data.entry.contentBlocks} />
        </article>
      ),
    });
@@ -112,7 +110,7 @@ Its document manifest sets `robots` to `noindex`. A welcome screen reaching prod
 
 ## Rendering entry content
 
-An entry's body is a block tree rather than a string of HTML. Render it with `<BlockRenderer content={...} />` from `plumix/blocks/renderer`. The tree comes off `data.entry.contentBlocks`, which is the stored content narrowed to the block-tree shape, and `null` when the stored JSON does not match that shape. The raw `data.entry.content` stays loose so a non-block serializer keeps working. Every node in that tree resolves to one of the specs in [Core Blocks](/blocks/core-blocks/), unless a plugin or the theme registered its own.
+An entry's body is a block tree rather than a string of HTML. Render it with `<BlockRenderer content={...} />` from `plumix/blocks/renderer`. The tree comes off `data.entry.contentBlocks`, which is the stored content narrowed to the block-tree shape, and `null` when there is no content yet or the stored JSON does not match that shape. Pass it to `BlockRenderer` as it is: a `null` renders nothing on the page, and in the editor it still gives the canvas the root it mounts into, so a template that skips `BlockRenderer` for an empty entry leaves a new entry with nowhere to add blocks. The raw `data.entry.content` stays loose so a non-block serializer keeps working. Every node in that tree resolves to one of the specs in [Core Blocks](/blocks/core-blocks/), unless a plugin or the theme registered its own.
 
 The same subpath carries `<Link>` and `<Image>`. `<Link>` takes a resolved entry or term and uses the url already on it, and applies the site's base path to a plain `href`. `<Image>` runs the site's image handling. Reach for both instead of a bare `<a>` or `<img>`.
 
