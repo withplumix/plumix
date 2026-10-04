@@ -126,6 +126,19 @@ test("a block inserted into a new post renders in the canvas", async ({
   ).toBeVisible();
 });
 
+// Regression: the site origin came from the preset's placeholder passkey
+// origin, so every canonical and og:url pointed at https://demo.localhost.
+test("the canonical URL points at the host the demo is served from", async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto("/");
+  const canonical = await page
+    .locator('link[rel="canonical"]')
+    .getAttribute("href");
+  expect(new URL(canonical ?? "").origin).toBe(new URL(baseURL ?? "").origin);
+});
+
 // Author archives: the post byline links to `/authors/{slug}`, which lists that
 // author's published posts. Public, cookieless — no demo session needed.
 test("the author byline links to the author archive of the author's posts", async ({
