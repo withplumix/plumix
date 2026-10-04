@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactElement, ReactNode } from "react";
-import { Trans } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -43,6 +43,7 @@ export function SelectionToolbar({
    *  the toolbar clips to the canvas with the overlays. */
   readonly box: OverlayBox;
 }): ReactElement | null {
+  const { i18n } = useLingui();
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
@@ -85,7 +86,10 @@ export function SelectionToolbar({
               variant="ghost"
               size="icon-sm"
               data-testid="selection-toolbar-drag"
-              aria-label="Drag to move"
+              aria-label={i18n._({
+                id: "editor.selection.drag",
+                message: "Drag to move",
+              })}
               disabled={multi}
               // Pointerdown (not click) starts the move; preventDefault stops
               // the browser's text-selection drag from hijacking it.
@@ -119,50 +123,60 @@ export function SelectionToolbar({
           icon={<CornerLeftUp className="size-4" />}
           disabled={!hasParent || multi}
           onClick={act(() => state.selectParent())}
-          label={
-            <Trans id="editor.selection.selectParent" message="Select parent" />
-          }
+          label={i18n._({
+            id: "editor.selection.selectParent",
+            message: "Select parent",
+          })}
         />
         <IconAction
           testId="selection-toolbar-move-up"
           icon={<ArrowUp className="size-4" />}
           disabled={multi}
           onClick={act(() => state.moveSelectedBy(-1))}
-          label={<Trans id="editor.selection.moveUp" message="Move up" />}
+          label={i18n._({ id: "editor.selection.moveUp", message: "Move up" })}
         />
         <IconAction
           testId="selection-toolbar-move-down"
           icon={<ArrowDown className="size-4" />}
           disabled={multi}
           onClick={act(() => state.moveSelectedBy(1))}
-          label={<Trans id="editor.selection.moveDown" message="Move down" />}
+          label={i18n._({
+            id: "editor.selection.moveDown",
+            message: "Move down",
+          })}
         />
         <IconAction
           testId="selection-toolbar-group"
           icon={<Group className="size-4" />}
           disabled={!canGroup}
           onClick={act(() => state.groupSelected())}
-          label={<Trans id="editor.selection.group" message="Group" />}
+          label={i18n._({ id: "editor.selection.group", message: "Group" })}
         />
         {canUngroup ? (
           <IconAction
             testId="selection-toolbar-ungroup"
             icon={<Ungroup className="size-4" />}
             onClick={act(() => state.ungroupSelected())}
-            label={<Trans id="editor.selection.ungroup" message="Ungroup" />}
+            label={i18n._({
+              id: "editor.selection.ungroup",
+              message: "Ungroup",
+            })}
           />
         ) : null}
         <IconAction
           testId="selection-toolbar-duplicate"
           icon={<Copy className="size-4" />}
           onClick={act(() => state.duplicateSelected())}
-          label={<Trans id="editor.selection.duplicate" message="Duplicate" />}
+          label={i18n._({
+            id: "editor.selection.duplicate",
+            message: "Duplicate",
+          })}
         />
         <IconAction
           testId="selection-toolbar-delete"
           icon={<Trash2 className="size-4" />}
           onClick={act(() => state.removeSelected())}
-          label={<Trans id="editor.selection.delete" message="Delete" />}
+          label={i18n._({ id: "editor.selection.delete", message: "Delete" })}
           variant="destructive-ghost"
         />
       </div>
@@ -170,7 +184,8 @@ export function SelectionToolbar({
   );
 }
 
-/** A ghost icon button with a tooltip describing the action. */
+/** A ghost icon button named by `label`: its accessible name, and the tooltip
+ *  that shows it to sighted users. */
 function IconAction({
   testId,
   icon,
@@ -181,7 +196,7 @@ function IconAction({
 }: {
   readonly testId: string;
   readonly icon: ReactNode;
-  readonly label: ReactNode;
+  readonly label: string;
   readonly disabled?: boolean;
   readonly onClick: () => void;
   readonly variant?: "ghost" | "destructive-ghost";
@@ -194,6 +209,7 @@ function IconAction({
           variant={variant}
           size="icon-sm"
           data-testid={testId}
+          aria-label={label}
           disabled={disabled}
           onClick={onClick}
         >
