@@ -268,6 +268,29 @@ test.describe("editor route", () => {
     await expect(page.getByTestId("editor-unpublished-changes")).toBeVisible();
     await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
     await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+
+    // Discarding can't be undone, so Discard only asks: cancelling sends
+    // nothing, confirming sends the discard.
+    const discards: string[] = [];
+    await page.route("**/_plumix/rpc/entry/discardDraft", (route) => {
+      discards.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: publishedEntryRpcBody(publishedEntry()),
+      });
+    });
+    await page.getByTestId("editor-draft-discard").click();
+    await page.getByTestId("editor-draft-discard-cancel").click();
+    await expect(page.getByTestId("editor-draft-discard-confirm")).toHaveCount(
+      0,
+    );
+    expect(discards).toHaveLength(0);
+
+    const discarded = page.waitForRequest("**/_plumix/rpc/entry/discardDraft");
+    await page.getByTestId("editor-draft-discard").click();
+    await page.getByTestId("editor-draft-discard-confirm").click();
+    await discarded;
   });
 
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({

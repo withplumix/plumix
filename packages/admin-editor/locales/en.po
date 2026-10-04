@@ -677,6 +677,16 @@ msgstr "Discard"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.confirm"
+msgstr "Discard changes"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.title"
+msgstr "Discard unpublished changes?"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.discarding"
 msgstr "Discarding…"
 
@@ -724,6 +734,11 @@ msgstr "Editor commands"
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.description"
 msgstr "Every binding the editor claims."
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.description"
+msgstr "Every change since the last publish is removed, and the editor goes back to the published version. This can't be undone."
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -819,6 +834,11 @@ msgstr "Italic"
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr "Italic"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discardConfirm.cancel"
+msgstr "Keep editing"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

@@ -1,6 +1,17 @@
 import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@plumix/admin-ui/alert-dialog";
 import { Button } from "@plumix/admin-ui/button";
 import {
   DropdownMenu,
@@ -199,20 +210,62 @@ function HeaderPublish({
                 message="Unpublished changes"
               />
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="editor-draft-discard"
-              disabled={busy}
-              onClick={draftMode.onDiscardDraft}
-            >
-              {draftMode.isDiscarding ? (
-                <Trans id="editor.toolbar.discarding" message="Discarding…" />
-              ) : (
-                <Trans id="editor.toolbar.discard" message="Discard" />
-              )}
-            </Button>
+            {/* Discarding drops the draft for good — it isn't a history step —
+                so the button only asks. */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  data-testid="editor-draft-discard"
+                  disabled={busy}
+                >
+                  {draftMode.isDiscarding ? (
+                    <Trans
+                      id="editor.toolbar.discarding"
+                      message="Discarding…"
+                    />
+                  ) : (
+                    <Trans id="editor.toolbar.discard" message="Discard" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    <Trans
+                      id="editor.toolbar.discardConfirm.title"
+                      message="Discard unpublished changes?"
+                    />
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    <Trans
+                      id="editor.toolbar.discardConfirm.description"
+                      message="Every change since the last publish is removed, and the editor goes back to the published version. This can't be undone."
+                    />
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="editor-draft-discard-cancel">
+                    <Trans
+                      id="editor.toolbar.discardConfirm.cancel"
+                      message="Keep editing"
+                    />
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    data-testid="editor-draft-discard-confirm"
+                    onClick={draftMode.onDiscardDraft}
+                  >
+                    <Trans
+                      id="editor.toolbar.discardConfirm.confirm"
+                      message="Discard changes"
+                    />
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         ) : null}
         <Button
