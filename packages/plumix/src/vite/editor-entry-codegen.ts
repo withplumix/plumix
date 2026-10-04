@@ -1,3 +1,5 @@
+import { isAbsolute, relative, sep } from "node:path";
+
 import type { BlockModuleRef } from "./block-module-resolver.js";
 import {
   blockImportStatement,
@@ -14,8 +16,16 @@ import {
  * to `bootEditor` so the canvas holds core + plugin + theme blocks and
  * shortcodes. Without them the canvas is core-only: it warns "Unregistered
  * block name" on any custom block and shows a custom shortcode's raw `[tag]`.
+ *
+ * A module resolved to a file is imported relative to `entryDir`, the folder
+ * the entry is written to. Vite's dependency scan does not crawl an import
+ * whose specifier is already its resolved path, so an absolute one hides what a
+ * plugin's block module in node_modules imports. Vite never discovers those at
+ * request time either, and a CommonJS one like `react/jsx-runtime` then fails
+ * to load in the browser, taking the whole canvas down.
  */
 export function generateEditorEntrySource(
+  entryDir: string,
   blocks: readonly BlockModuleRef[],
   shortcodes: readonly BlockModuleRef[] = [],
 ): string {
@@ -24,9 +34,15 @@ export function generateEditorEntrySource(
   if (blocks.length === 0 && shortcodes.length === 0) {
     return `${header}${boot}bootEditor();\n`;
   }
+  const fromEntry = (ref: BlockModuleRef): BlockModuleRef =>
+    isAbsolute(ref.module)
+      ? { ...ref, module: relativeSpecifier(entryDir, ref.module) }
+      : ref;
   const imports = [
-    ...blocks.map((ref, i) => blockImportStatement(ref, `pb${i}`)),
-    ...shortcodes.map((ref, i) => blockImportStatement(ref, `ps${i}`)),
+    ...blocks.map((ref, i) => blockImportStatement(fromEntry(ref), `pb${i}`)),
+    ...shortcodes.map((ref, i) =>
+      blockImportStatement(fromEntry(ref), `ps${i}`),
+    ),
   ]
     .map((statement) => `${statement}\n`)
     .join("");
@@ -39,4 +55,9 @@ export function generateEditorEntrySource(
     `bootEditor({ blocks: [${spread(blocks, "pb")}], ` +
     `shortcodes: [${spread(shortcodes, "ps")}] });\n`
   );
+}
+
+function relativeSpecifier(fromDir: string, file: string): string {
+  const path = relative(fromDir, file).split(sep).join("/");
+  return path.startsWith(".") ? path : `./${path}`;
 }
