@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { orpc } from "@/lib/orpc.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { AppRouterClient } from "@plumix/core";
@@ -90,6 +90,8 @@ function renderAutosave(
 }
 
 afterEach(() => {
+  // A hook left mounted keeps its window listeners answering later tests.
+  cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -238,6 +240,35 @@ describe("useEntryAutosave", () => {
     expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
       title: "Hello world",
     });
+  });
+
+  // Unloading the document — reload, tab close, a link off the admin — runs no
+  // unmount, so the page itself has to hold the edit back.
+  test("leaving the page with a pending edit sends it and asks to confirm", async () => {
+    const rpc = stubRpc({ "entry/update": () => row({ updatedAt: T1 }) });
+    const title = titleField();
+    const { result } = renderAutosave({ title: title.group });
+
+    title.value = "Hello world";
+    act(() => result.current.schedule.title());
+    const leave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leave);
+    await settleRpc();
+
+    expect(leave.defaultPrevented).toBe(true);
+    expect(rpc.lastCallTo("entry/update")?.input).toMatchObject({
+      title: "Hello world",
+    });
+  });
+
+  test("leaving the page with nothing pending doesn't ask", () => {
+    stubRpc({ "entry/update": () => row({ updatedAt: T1 }) });
+    renderAutosave({ title: titleField().group });
+
+    const leave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leave);
+
+    expect(leave.defaultPrevented).toBe(false);
   });
 
   test("cancel drops a pending edit so unmounting sends nothing", async () => {

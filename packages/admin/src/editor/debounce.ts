@@ -4,6 +4,8 @@ interface Debouncer<Args extends readonly unknown[]> {
    *  await persistence before navigating away. Resolves immediately when idle. */
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
+  /** Whether a call is waiting for the delay to pass. */
+  readonly pending: () => boolean;
 }
 
 export function createDebouncer<Args extends readonly unknown[]>(
@@ -35,6 +37,9 @@ export function createDebouncer<Args extends readonly unknown[]>(
       clearTimeout(timer);
       timer = undefined;
       pending = undefined;
+    },
+    pending() {
+      return pending !== undefined;
     },
   };
 }

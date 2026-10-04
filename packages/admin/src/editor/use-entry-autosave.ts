@@ -63,6 +63,7 @@ interface GroupRunner {
   readonly schedule: () => void;
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
+  readonly pending: () => boolean;
 }
 
 // The protocol itself, outside React: `sync` hands it each render's groups and
@@ -73,6 +74,8 @@ function createEntryAutosave<G extends Record<string, unknown>>(
 ): {
   readonly autosave: EntryAutosave<G>;
   readonly sync: (options: EntryAutosaveOptions<G>) => void;
+  /** Whether an edit is waiting to be sent or is being sent. */
+  readonly unsaved: () => boolean;
 } {
   let latest = initial;
   const queue = createSaveQueue();
@@ -141,6 +144,7 @@ function createEntryAutosave<G extends Record<string, unknown>>(
       schedule: debouncer.call,
       flush: debouncer.flush,
       cancel: debouncer.cancel,
+      pending: debouncer.pending,
     };
   }
 
@@ -180,22 +184,36 @@ function createEntryAutosave<G extends Record<string, unknown>>(
     sync: (options) => {
       latest = options;
     },
+    unsaved: () => inFlight > 0 || runners.some((r) => r.pending()),
   };
 }
 
 /**
  * The entry autosave protocol: every write runs in one queue behind the
  * optimistic live token, so no two writes read the same token and race each
- * other into a stale conflict. Pending writes are sent on unmount.
+ * other into a stale conflict. Pending writes are sent on unmount, and when
+ * the document unloads — reload, tab close, a link off the admin — which runs
+ * no unmount.
  */
 export function useEntryAutosave<G extends Record<string, unknown>>(
   options: EntryAutosaveOptions<G>,
 ): EntryAutosave<G> {
   const queryClient = useQueryClient();
-  const [{ autosave, sync }] = useState(() =>
+  const [{ autosave, sync, unsaved }] = useState(() =>
     createEntryAutosave(options, queryClient),
   );
   useEffect(() => sync(options));
   useEffect(() => () => void autosave.flush(), [autosave]);
+  useEffect(() => {
+    // Asking the browser to confirm keeps the page alive while the flush
+    // lands; leaving anyway can still drop it, which the prompt warns about.
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+      if (!unsaved()) return;
+      void autosave.flush();
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [autosave, unsaved]);
   return autosave;
 }
