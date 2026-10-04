@@ -1,5 +1,46 @@
 # plumix
 
+## 0.24.1
+
+### Patch Changes
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the editor losing the last edit when the page is reloaded, the tab is closed or a link leaves the admin within a second of typing. A pending autosave is now sent as the page unloads, and the browser asks to confirm leaving while it lands.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - The editor's Layers tab and the command palette's "Go to a block" now show a short excerpt of each block's own text beside its type, so blocks of one type (several paragraphs, say) can be told apart. The palette also finds a block by that text. A layer's custom name still replaces the excerpt.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, Cmd/Ctrl+B and Delete/Backspace doing nothing in the editor after clicking a block. The canvas now forwards them to the editor like its other shortcuts, so they undo, redo, toggle the panels and delete the selected blocks whether focus is in the canvas or around it.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a confirmation before the editor's Discard drops an entry's unpublished changes, since a discarded draft can't be recovered.
+
+- [#2777](https://github.com/withplumix/plumix/pull/2777) [`579a88e`](https://github.com/withplumix/plumix/commit/579a88e60d55dd28ba9316b73cd67507773d0bbb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Raises `dompurify` to `^3.4.16`, which hardens sanitization of XML content against DOM clobbering and fixes `IN_PLACE` sanitization with hooks.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the editor canvas failing to start under `plumix dev` when an installed plugin contributes blocks, such as `@plumix/plugin-media`: no block could be selected because the browser could not load the plugin's `react/jsx-runtime` import. The generated editor entry now imports those block modules so Vite prebundles their dependencies.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a new entry opening with a dead editor canvas, where inserted blocks never rendered. `BlockRenderer` now accepts the `null` that `entry.contentBlocks` holds for an entry with no content: it renders nothing on the page and still gives the editor canvas its root, so a template can pass `contentBlocks` straight through instead of skipping `BlockRenderer` for empty entries.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Hides Settings from the admin sidebar and the command palette when no plugin or site config registers a settings page, instead of linking to an empty page.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Inserting a block or pattern from the editor's Blocks tab or command palette now places it right after the selected block instead of at the end of the entry. With a nested block selected it lands after that block's top-level container; with nothing selected it still goes at the end.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - The editor's Block panel now says "This block has no settings." for a selected block with nothing to set, such as a Box or Separator, instead of showing a blank panel.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Keeps keyboard focus in the editor's Layers tab after deleting a row (it moves to the next row, or the previous one when the last is gone), and lets a layer be renamed with F2 or the row menu's new Rename item, not only by double-clicking.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the Revisions sheet's Autosaves tab, which only ever showed a placeholder: an autosave is one draft per author, overwritten in place, not a history. The sheet's description now says revisions are saved when the live entry changes.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes rich text gaining a stray empty paragraph when it ends in a heading, list or quote. The editor still lets the caret leave the last block, but the empty paragraph it keeps for that is no longer saved.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes selecting a rich-text block in the editor leaving an undo step that changes nothing, so the first Undo after a selection did nothing.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the editor's selection toolbar buttons (select parent, move up and down, group, duplicate, delete) having no accessible name, so screen readers announced each as just "button". The drag handle's name is now translated too.
+
+- [#2859](https://github.com/withplumix/plumix/pull/2859) [`9ea69b4`](https://github.com/withplumix/plumix/commit/9ea69b474cc8c776c97e43cacdc31e8cf2bc8ff6) Thanks [@nasyrov](https://github.com/nasyrov)! - On a tablet or mobile view, the editor's style controls now show the value a block inherits from a wider device when it has none of its own: as the custom input's placeholder, and in place of the token picker's blank choice, naming the token. Before, the control was blank even though the block rendered the wider value.
+- Updated dependencies []:
+  - @plumix/admin@0.24.1
+  - @plumix/admin-editor@0.24.1
+  - @plumix/admin-ui@0.24.1
+  - @plumix/core@0.24.1
+
 ## 0.24.0
 
 ### Minor Changes
