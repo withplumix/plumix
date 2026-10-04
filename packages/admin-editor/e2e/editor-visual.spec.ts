@@ -9,7 +9,7 @@
 // injectEditorBootstrap). So green here means "given a booted editor, behavior
 // works", never "the editor boots on a real render". That the gate injects the
 // runtime for an authed user is covered in core's edit-mode.render.test.ts, and
-// end to end in the demo runtime in runtime-cloudflare's demo.spec.ts.
+// end to end in the demo runtime in apps/demo/e2e/demo.spec.ts.
 
 import { expect, test } from "@playwright/test";
 

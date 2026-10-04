@@ -3,7 +3,7 @@
 // two client contracts instead: what the canvas renders, and what
 // envelope entry.update receives.
 
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 import { AUTHED_ADMIN, mockRpcWithCapture } from "./rpc-mock.js";
@@ -100,25 +100,6 @@ export function publishedEntryRpcBody(entry: Record<string, unknown>): string {
   });
 }
 
-// Two visible blocks (a heading + a paragraph, both rich-text) so drag, select,
-// duplicate, and delete specs start from a canvas with real geometry —
-// empty blocks render zero-height and can't be clicked.
-export const SEEDED_CONTENT = {
-  version: "plumix.v2",
-  blocks: [
-    {
-      id: "b1",
-      name: "core/rich-text",
-      attrs: { body: "<h2>Seeded heading</h2>" },
-    },
-    {
-      id: "b2",
-      name: "core/rich-text",
-      attrs: { body: "<p>Seeded body</p>" },
-    },
-  ],
-};
-
 export interface InstallEditorMocksOptions {
   readonly entry?: Record<string, unknown>;
   /** Extra suffix → body handlers, overriding the defaults on collision. */
@@ -156,125 +137,6 @@ export async function dismissStarterModal(page: Page): Promise<void> {
   await modal.waitFor({ state: "visible" });
   await page.getByTestId("plumix-starter-modal-start-blank").click();
   await expect(modal).toBeHidden();
-}
-
-type BoundingBox = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
-
-/** Resolves both drag endpoints' boxes, throwing if either is off-screen. */
-async function dragBoxes(
-  label: string,
-  source: Locator,
-  target: Locator,
-): Promise<{ source: BoundingBox; target: BoundingBox }> {
-  const sourceBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
-  if (!sourceBox || !targetBox) {
-    throw new Error(`${label}: source or target has no bounding box`);
-  }
-  return { source: sourceBox, target: targetBox };
-}
-
-/**
- * Palette → canvas drag (@dnd-kit/react, 5 px mouse activation). Walks
- * the cursor from the source's center onto the target's center with a
- * settle pause for the drag to engage and one for the collision
- * detector before release. Assumes the target's center is droppable —
- * i.e. an empty canvas; on a populated one, prefer dragBelow.
- */
-export async function dragOnto(
-  page: Page,
-  source: Locator,
-  target: Locator,
-): Promise<void> {
-  const { source: sourceBox, target: targetBox } = await dragBoxes(
-    "dragOnto",
-    source,
-    target,
-  );
-  const from = {
-    x: sourceBox.x + sourceBox.width / 2,
-    y: sourceBox.y + sourceBox.height / 2,
-  };
-  const to = {
-    x: targetBox.x + targetBox.width / 2,
-    y: targetBox.y + targetBox.height / 2,
-  };
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(from.x + 8, from.y + 8, { steps: 4 });
-  await page.waitForTimeout(300);
-  await page.mouse.move(to.x, to.y, { steps: 16 });
-  await page.waitForTimeout(300);
-  await page.mouse.up();
-}
-
-// Puck exposes only the item id on `data-puck-component` (pattern
-// inserts mint bare random ids), so block type is asserted through the
-// semantic element each core block renders — which doubles as checking
-// the block actually renders its markup.
-const BLOCK_DOM: Record<string, string> = {
-  "core/rich-text": ".rich-text",
-  "core/separator": "hr",
-};
-
-/** Canvas-rendered block wrappers for a given block name. */
-export function canvasBlocks(page: Page, name: string): Locator {
-  const selector = BLOCK_DOM[name];
-  if (!selector) throw new Error(`canvasBlocks: no DOM mapping for ${name}`);
-  return page
-    .getByTestId("plumix-editor-canvas")
-    .locator("[data-puck-component]")
-    .filter({ has: page.locator(selector) });
-}
-
-/** Top-level canvas block order as semantic names, for reorder asserts. */
-export async function canvasOrder(page: Page): Promise<readonly string[]> {
-  return page
-    .getByTestId("plumix-editor-canvas")
-    .locator("[data-puck-component]")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => {
-        if (node.querySelector("h1, h2, h3, h4, h5, h6")) return "heading";
-        if (node.querySelector(".rich-text")) return "rich-text";
-        if (node.querySelector("blockquote")) return "quote";
-        if (node.querySelector("hr")) return "separator";
-        return "unknown";
-      }),
-    );
-}
-
-/**
- * Reorder drag for Puck's canvas (@dnd-kit/react, mouse sensor with a
- * 5 px distance activation). HTML5 dragTo() doesn't fire pointer
- * events, so this walks the cursor: down on the source, a short
- * vertical move to clear the activation distance, a settle pause for
- * the drag to engage, a stepped glide deep past the target's bottom
- * edge (near-edge drops resolve back to the source's original slot — a
- * silent no-op — while the collision detector clamps an overshoot to
- * "after the last item"), another settle, then up. Meant for dropping
- * after the zone's trailing block.
- */
-export async function dragBelow(
-  page: Page,
-  source: Locator,
-  target: Locator,
-): Promise<void> {
-  const { source: sourceBox, target: targetBox } = await dragBoxes(
-    "dragBelow",
-    source,
-    target,
-  );
-  const x = sourceBox.x + Math.min(40, sourceBox.width / 2);
-  const startY = sourceBox.y + sourceBox.height / 2;
-  await page.mouse.move(x, startY);
-  await page.mouse.down();
-  await page.mouse.move(x, startY + 10, { steps: 4 });
-  await page.waitForTimeout(300);
-  await page.mouse.move(x, targetBox.y + targetBox.height + 100, {
-    steps: 12,
-  });
-  await page.waitForTimeout(300);
-  await page.mouse.up();
 }
 
 /** Last captured entry.update envelope, typed for content asserts. */
