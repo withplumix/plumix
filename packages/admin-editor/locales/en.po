@@ -1041,6 +1041,16 @@ msgid "editor.inspector.removeRow"
 msgstr "Remove row"
 
 #. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.rename"
+msgstr "Rename"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.layers.rename"
+msgstr "Rename the focused layer"
+
+#. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.gesture.scroll"
 msgstr "Scroll"

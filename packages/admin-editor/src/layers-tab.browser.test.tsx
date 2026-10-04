@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/core/blocks";
@@ -162,6 +162,58 @@ describe("LayersTab", () => {
 
     // Only the nested child is gone; its container and sibling remain.
     expect(getByTestId("tree-probe").textContent).toBe("a,g");
+  });
+
+  // Keyboard work through the list keeps going after a delete: focus lands
+  // on the row that took the deleted one's place, not on the page body.
+  test("deleting a row moves focus to the next row, past its children", async () => {
+    const { getByTestId } = renderLayers([
+      ...TREE,
+      { id: "z", name: "core/heading" },
+    ]);
+    getByTestId("layer-g").focus();
+
+    fireEvent.keyDown(getByTestId("layer-g"), { key: "Delete" });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(getByTestId("layer-z"));
+    });
+  });
+
+  test("deleting the last row moves focus to the one before it", async () => {
+    const { getByTestId } = renderLayers(TREE);
+    getByTestId("layer-c").focus();
+
+    fireEvent.keyDown(getByTestId("layer-c"), { key: "Delete" });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(getByTestId("layer-g"));
+    });
+  });
+
+  test("F2 renames the focused row, and focus returns to it after", async () => {
+    const { getByTestId } = renderLayers(TREE);
+    getByTestId("layer-a").focus();
+
+    fireEvent.keyDown(getByTestId("layer-a"), { key: "F2" });
+    const input = getByTestId("layer-rename-a");
+    fireEvent.change(input, { target: { value: "Intro" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(getByTestId("layer-a"));
+    });
+    expect(getByTestId("layer-a").textContent).toBe("Intro");
+  });
+
+  test("the actions menu offers Rename", () => {
+    const { getByTestId } = renderLayers(TREE);
+
+    fireEvent.pointerDown(getByTestId("layer-menu-a"));
+    fireEvent.click(getByTestId("layer-menu-a"));
+    fireEvent.click(getByTestId("layer-rename-action-a"));
+
+    expect(getByTestId("layer-rename-a")).toBeDefined();
   });
 
   test("the actions menu duplicates the row's block through the store", () => {

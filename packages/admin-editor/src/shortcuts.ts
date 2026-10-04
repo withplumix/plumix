@@ -109,6 +109,11 @@ const ROSTER = [
     forwarded: true,
   },
   {
+    id: "layers.rename",
+    group: "selection",
+    chords: [{ key: "F2" }],
+  },
+  {
     id: "clipboard.copy",
     group: "clipboard",
     chords: [{ mod: true, shift: false, key: "c" }],
