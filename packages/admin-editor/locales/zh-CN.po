@@ -1191,6 +1191,11 @@ msgid "editor.canvas.slotRefusesBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.noSettings"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.title"
 msgstr ""

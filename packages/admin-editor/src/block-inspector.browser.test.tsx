@@ -270,13 +270,24 @@ describe("BlockInspector", () => {
     expect(queryByTestId("block-input-content")).toBeNull();
   });
 
-  test("renders the bare panel for a block with no inputs", () => {
+  test("a block with nothing to set says so instead of a blank panel", () => {
     const { getByTestId, queryByTestId } = renderInspector(
       [{ id: "s1", name: "core/spacer" }],
       "s1",
     );
     expect(getByTestId("block-inspector")).toBeDefined();
     expect(queryByTestId("block-inspector-empty")).toBeNull();
+    expect(getByTestId("block-inspector-no-settings").textContent).toBe(
+      "This block has no settings.",
+    );
+  });
+
+  test("a block with inputs shows no such note", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+      "h1",
+    );
+    expect(queryByTestId("block-inspector-no-settings")).toBeNull();
   });
 
   test("shows the refresh-data control only for a loader-backed block", () => {
