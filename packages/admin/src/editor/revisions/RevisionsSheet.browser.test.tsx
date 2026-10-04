@@ -2,7 +2,6 @@ import type { ComponentProps, ReactElement } from "react";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
@@ -118,7 +117,7 @@ describe("RevisionsSheet — opened from outside its trigger", () => {
 });
 
 describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
-  test("renders three tabs (All / Publishes / Autosaves) when open", async () => {
+  test("renders the All and Publishes tabs, and no Autosaves tab, when open", async () => {
     renderWithI18n(
       wrap(
         <TriggerDriven
@@ -137,55 +136,9 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
       expect(screen.getByTestId("revisions-tab-all")).toBeInTheDocument();
     });
     expect(screen.getByTestId("revisions-tab-publishes")).toBeInTheDocument();
-    expect(screen.getByTestId("revisions-tab-autosaves")).toBeInTheDocument();
-  });
-
-  test("switching to the Autosaves tab shows the empty-state stub, not the row list", async () => {
-    renderWithI18n(
-      wrap(
-        <TriggerDriven
-          entryId={1}
-          fetchPage={() =>
-            Promise.resolve({
-              revisions: [
-                {
-                  id: 9,
-                  title: "Snap",
-                  updatedAt: new Date("2026-05-22T00:00:00Z"),
-                  authorId: 1,
-                  authorName: "Ada",
-                  authorEmail: "ada@x",
-                  message: null,
-                },
-              ] satisfies RevisionFixture[],
-              nextCursor: null,
-            })
-          }
-          relativeTime={() => "now"}
-          fetchRevision={vi.fn()}
-          fetchCurrent={vi.fn()}
-          onPreview={vi.fn()}
-          onSaveMessage={vi.fn()}
-        />,
-      ),
-    );
-    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
-    await waitFor(() => {
-      expect(screen.getByTestId("revisions-tab-autosaves")).toBeInTheDocument();
-    });
-    // Wait for the row to render under the default All tab so we know
-    // data loaded before we switch tabs.
-    await waitFor(() => {
-      expect(screen.getByTestId("revisions-sheet-item-9")).toBeInTheDocument();
-    });
-    await userEvent
-      .setup()
-      .click(screen.getByTestId("revisions-tab-autosaves"));
-    await waitFor(() => {
-      expect(
-        screen.getByTestId("revisions-autosaves-empty"),
-      ).toBeInTheDocument();
-    });
+    // An autosave is one draft row per user, overwritten in place — not a
+    // history — so there is no Autosaves tab to fill.
+    expect(screen.queryByTestId("revisions-tab-autosaves")).toBeNull();
   });
 
   test("dialog does not fetch before the user clicks the diff icon", async () => {

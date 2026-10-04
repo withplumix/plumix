@@ -206,8 +206,8 @@ export function RevisionsSheet({
           </SheetTitle>
           <SheetDescription>
             <Trans
-              id="editor.revisions.sheet.description"
-              message="Every save creates a new revision. Newest first."
+              id="editor.revisions.sheet.descriptionLive"
+              message="A revision is saved each time the live entry changes. Newest first."
             />
           </SheetDescription>
         </SheetHeader>
@@ -248,30 +248,10 @@ export function RevisionsSheet({
                       message="Publishes"
                     />
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="autosaves"
-                    data-testid="revisions-tab-autosaves"
-                  >
-                    <Trans
-                      id="editor.revisions.sheet.tab.autosaves"
-                      message="Autosaves"
-                    />
-                  </TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="all">{listPanel}</TabsContent>
               <TabsContent value="publishes">{listPanel}</TabsContent>
-              <TabsContent value="autosaves">
-                <div
-                  data-testid="revisions-autosaves-empty"
-                  className="text-muted-foreground px-4 py-6 text-sm"
-                >
-                  <Trans
-                    id="editor.revisions.sheet.autosavesEmpty"
-                    message="Autosaves will appear here once drafts-of-published lands."
-                  />
-                </div>
-              </TabsContent>
             </Tabs>
           );
         })()}

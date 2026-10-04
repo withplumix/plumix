@@ -54,6 +54,21 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.tab.autosaves"
+#~ msgstr "自动保存"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.autosavesEmpty"
+#~ msgstr "一旦有可用的「已发布的草稿」版本，自动保存将出现在这里。"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+#~ msgid "editor.revisions.sheet.description"
+#~ msgstr "每次保存都会创建一个新的修订版本。最新的在前。"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -274,6 +289,11 @@ msgstr "某个 CLI 正请求您账户的 API 令牌。在同意之前，请确�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.description"
 msgstr "将为您的账户创建一个新的 API 令牌并交给 CLI。给它起个名字以便日后在您的个人资料中查找，并可选择限制其能执行的操作。"
+
+#. js-lingui-explicit-id
+#: src/editor/revisions/RevisionsSheet.tsx
+msgid "editor.revisions.sheet.descriptionLive"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/-errors.ts
@@ -501,16 +521,6 @@ msgstr ""
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "授权 CLI 访问"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.tab.autosaves"
-msgstr "自动保存"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.autosavesEmpty"
-msgstr "一旦有可用的「已发布的草稿」版本，自动保存将出现在这里。"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/-login-screen.tsx
@@ -1595,11 +1605,6 @@ msgstr "entry:post:read\n"
 msgid "apiTokens.create.capabilities.placeholder"
 msgstr "entry:post:read\n"
 "entry:post:edit_own"
-
-#. js-lingui-explicit-id
-#: src/editor/revisions/RevisionsSheet.tsx
-msgid "editor.revisions.sheet.description"
-msgstr "每次保存都会创建一个新的修订版本。最新的在前。"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/field-values/index.tsx
