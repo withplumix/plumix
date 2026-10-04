@@ -49,6 +49,11 @@ msgstr ""
 #~ msgstr "Aktualisiert"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
+#~ msgid "palette.command.settings"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -3036,11 +3041,6 @@ msgstr "Einstellungen"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.item.settings"
 msgstr "Einstellungen"
-
-#. js-lingui-explicit-id
-#: src/components/shell/command-palette.tsx
-msgid "palette.command.settings"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/shell/user-menu.tsx

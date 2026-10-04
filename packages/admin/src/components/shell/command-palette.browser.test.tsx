@@ -303,6 +303,17 @@ describe("CommandPalette", () => {
     ).toBeNull();
   });
 
+  test("offers no Settings when the manifest's nav has no settings page", async () => {
+    await renderPalette(<CommandPalette capabilities={["settings:manage"]} />);
+    pressCmdK();
+    await screen.findByTestId("command-palette-input");
+
+    expect(screen.queryByTestId("command-palette-nav-/settings")).toBeNull();
+    expect(
+      screen.queryByTestId("command-palette-command-core:settings"),
+    ).toBeNull();
+  });
+
   test("renders a footer with keyboard hints", async () => {
     await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();

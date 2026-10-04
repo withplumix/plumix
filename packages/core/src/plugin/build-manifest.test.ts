@@ -206,10 +206,26 @@ describe("buildManifest", () => {
     expect(manifest.settingsPages).toEqual([]);
     expect(manifest.fieldTypes).toEqual([]);
     // Overview always carries Dashboard; Management carries Users +
-    // Allowed domains + Field values + Settings. Capability filtering
-    // happens admin-side at render time — the projection ships every item.
+    // Allowed domains + Field values, and no Settings with no page to show.
+    // Capability filtering happens admin-side at render time — the
+    // projection ships every item.
     const overview = manifest.adminNav.find((g) => g.id === "overview");
     expect(overview?.items.map((i) => i.to)).toEqual(["/"]);
+    const management = manifest.adminNav.find((g) => g.id === "management");
+    expect(management?.items.map((i) => i.to)).toEqual([
+      "/users",
+      "/allowed-domains",
+      "/field-values",
+    ]);
+  });
+
+  test("lists Settings under Management only when a settings page is registered", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("site", (ctx) => {
+      ctx.registerSettingsPage("general", { label: "General", groups: [] });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
     const management = manifest.adminNav.find((g) => g.id === "management");
     expect(management?.items.map((i) => i.to)).toEqual([
       "/users",
@@ -229,7 +245,6 @@ describe("buildManifest", () => {
       "/allowed-domains",
       "/mailer",
       "/field-values",
-      "/settings",
     ]);
   });
 

@@ -323,10 +323,13 @@ interface MutableAdminNavGroup {
 // the group id it lands in; capability gating is admin-side at render
 // time (the manifest projection ships every item, the sidebar drops
 // what the user can't see). A row naming a `slot` is dropped here when
-// the deployment doesn't fill it: the user may, but the site can't.
+// the deployment doesn't fill it: the user may, but the site can't. A
+// row marked `settingsPages` is dropped when no settings page is
+// registered, since its page would have nothing to show.
 const CORE_NAV_ITEMS: readonly {
   groupId: string;
   slot?: InfrastructureSlot;
+  settingsPages?: true;
   item: AdminNavItem;
 }[] = [
   {
@@ -407,6 +410,7 @@ const CORE_NAV_ITEMS: readonly {
   },
   {
     groupId: "management",
+    settingsPages: true,
     item: {
       to: "/settings",
       label: { id: "core.adminNav.item.settings", message: "Settings" },
@@ -439,6 +443,7 @@ function humanizeGroupId(id: string): string {
 
 function seedNavGroups(
   configuredSlots: ConfiguredSlots,
+  hasSettingsPages: boolean,
 ): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
   for (const g of CORE_NAV_GROUPS) {
@@ -449,8 +454,9 @@ function seedNavGroups(
       items: [],
     });
   }
-  for (const { groupId, slot, item } of CORE_NAV_ITEMS) {
+  for (const { groupId, slot, settingsPages, item } of CORE_NAV_ITEMS) {
     if (slot !== undefined && !configuredSlots[slot]) continue;
+    if (settingsPages && !hasSettingsPages) continue;
     groups.get(groupId)?.items.push(item);
   }
   return groups;
@@ -554,7 +560,10 @@ function projectAdminNav(
   termTaxonomies: readonly TermTaxonomyManifestEntry[],
   configuredSlots: ConfiguredSlots,
 ): readonly AdminNavGroup[] {
-  const groups = seedNavGroups(configuredSlots);
+  const groups = seedNavGroups(
+    configuredSlots,
+    registry.settingsPages.size > 0,
+  );
   addEntryNavItems(groups, entries);
   addTaxonomyNavItems(groups, termTaxonomies);
   addAdminPageNavItems(groups, registry);
