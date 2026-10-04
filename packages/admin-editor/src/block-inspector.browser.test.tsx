@@ -43,6 +43,11 @@ const registry: BlockRegistry = createBlockRegistry([
   },
   { name: "core/spacer", render: () => null },
   {
+    name: "core/prose",
+    render: () => null,
+    inputs: [{ name: "body", type: "richtext", label: "Body" }],
+  },
+  {
     name: "core/group",
     render: () => null,
     inputs: [
@@ -174,6 +179,36 @@ describe("BlockInspector", () => {
     ]);
     expect(getByTestId("block-inspector-empty")).toBeDefined();
     expect(queryByTestId("block-input-text")).toBeNull();
+  });
+
+  test("selecting a rich-text block records no undo step", async () => {
+    let canUndo: (() => boolean) | undefined;
+    function UndoProbe(): null {
+      const api = useEditorStoreApi();
+      useEffect(() => {
+        canUndo = () => api.getState().canUndo;
+      }, [api]);
+      return null;
+    }
+    const { findByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <Config>
+          <EditorProvider
+            initialTree={[
+              { id: "p1", name: "core/prose", attrs: { body: "<p>Hello</p>" } },
+            ]}
+          >
+            <Selector id="p1" />
+            <BlockInspector />
+            <UndoProbe />
+          </EditorProvider>
+        </Config>
+      </I18nProvider>,
+    );
+
+    await findByTestId("block-input-body-editor");
+
+    expect(canUndo?.()).toBe(false);
   });
 
   test("renders the active block's inputs as controls", () => {

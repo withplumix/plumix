@@ -158,6 +158,19 @@ describe("editor store", () => {
     expect(store.getState().tree[1]).toBe(sibling);
   });
 
+  test("updateBlockAttrs writing the values a block already holds records nothing", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "a", name: "core/x", attrs: { body: "<p>Hi</p>", list: [1, 2] } },
+    ];
+    const store = createEditorStore({ tree });
+
+    // A control echoing its value back on mount must not leave an undo step.
+    store.getState().updateBlockAttrs("a", { body: "<p>Hi</p>", list: [1, 2] });
+
+    expect(store.getState().tree).toBe(tree);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
   test("updateBlockAttrs is a no-op when the id is absent", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/heading" }];
     const store = createEditorStore({ tree });
