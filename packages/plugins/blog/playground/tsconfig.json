@@ -13,5 +13,5 @@
       ]
     }
   },
-  "include": ["plumix.config.ts", ".plumix"]
+  "include": ["plumix.config.ts", "theme.ts", ".plumix"]
 }
