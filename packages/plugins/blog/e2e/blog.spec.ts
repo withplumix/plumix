@@ -11,16 +11,11 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   test("posts list mounts against the real worker", async ({ page }) => {
     await page.goto("entries/posts");
     await expect(page.getByTestId("content-list-heading")).toBeVisible();
-    // Soft empty-state assertion: only enforce when the list actually
-    // has no rows. Playwright retries the whole `describe.serial`
-    // block on any failure, so a strict empty-state check here would
-    // cascade-fail once a later test had created a post — turning one
-    // real failure into three reported ones. Admin's mock-based
-    // entries.spec.ts covers the empty-state UI exhaustively.
-    const rows = page.locator(CONTENT_LIST_ROWS);
-    if ((await rows.count()) === 0) {
-      await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
-    }
+    // globalSetup seeds a published post, so the list is never empty.
+    // Admin's mock-based entries.spec.ts covers the empty-state UI.
+    await expect(
+      page.locator(CONTENT_LIST_ROWS).filter({ hasText: "First post" }),
+    ).toBeVisible();
   });
 
   test("create a draft post → row appears in the list", async ({ page }) => {
