@@ -233,6 +233,10 @@ A named per-request data dependency a template declares and the framework loads 
 **Token**:
 A named design value a theme declares, emitted as a CSS custom property.
 
+**Transition type**:
+A name core adds to a navigation's view transition (`nav-forward`, `nav-back`, `nav-replace`)
+for theme and admin CSS to match.
+
 ## Access & identity
 
 **Principal**:

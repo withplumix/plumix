@@ -62,6 +62,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "document-merge": client("foundation"),
   "telemetry-snapshot": client("foundation"),
   "telemetry-otel": client("foundation"),
+  "view-transition": client("foundation"),
 
   "plugin/": client("contracts"),
   "hooks/": client("contracts"),
