@@ -32,6 +32,18 @@ describe("transitionName", () => {
     expect(identValue(transitionName("card", key))).toBe(value);
   });
 
+  test("a numeric key names the same element as its string form", () => {
+    expect(transitionName("post", 42)).toBe(transitionName("post", "42"));
+  });
+
+  test.each([
+    [-7, String.raw`post_-7`, "post_-7"],
+    [1.5, String.raw`post_1\.5`, "post_1.5"],
+  ])("a numeric key %d stays one identifier", (key, name, value) => {
+    expect(transitionName("post", key)).toBe(name);
+    expect(identValue(name)).toBe(value);
+  });
+
   test.each([
     ["1col", String.raw`\31 col_x`, "1col_x"],
     ["-2", String.raw`-\32 _x`, "-2_x"],
