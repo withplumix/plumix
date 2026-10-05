@@ -21,6 +21,7 @@ import type {
 } from "./route/contract/resolved-entry.js";
 import type { ResolvedNode } from "./route/contract/resolved-node.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
+import type { ViewTransitionsInput } from "./theme-view-transitions.js";
 import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
@@ -217,6 +218,12 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    * resolves them through its normal graph and emits hashed bundles.
    */
   readonly css?: readonly string[];
+  /**
+   * Native cross-document page transitions (ADR 0031). Off when missing.
+   * When on, core emits the `@view-transition` rule in live renders; the
+   * theme's CSS owns every animation.
+   */
+  readonly viewTransitions?: ViewTransitionsInput;
 }
 
 const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;

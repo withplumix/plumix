@@ -515,3 +515,4 @@ export type {
   TierMatchRule,
 } from "./theme.js";
 export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
+export type { ViewTransitionsInput } from "./theme-view-transitions.js";
