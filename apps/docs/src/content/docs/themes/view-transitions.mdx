@@ -1,0 +1,368 @@
+---
+title: Page Transitions
+description: Turning on the browser's animated transitions between pages, per theme, per site and per template, and the CSS recipes that animate them.
+tier: P1
+sidebar:
+  order: 50
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+A theme can ask the browser to animate the navigation from one page to the next. It sets `viewTransitions` on its descriptor, and core puts the rule that turns the feature on into every page's `<head>`. The animation itself is CSS in your stylesheet. Core ships none, so a theme that opts in and writes nothing gets the browser's default cross-fade.
+
+## Overview
+
+The feature is the browser's own cross-document view transition. When a visitor follows a link between two pages that both carry a `@view-transition` rule, the browser snapshots the old page, loads the new one, and animates between the two. There is no client router. The navigation stays an ordinary page load, with the browser's own history, scroll restoration and caching.
+
+`viewTransitions` takes one of four values:
+
+| Value                | What the head gets                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| omitted or `false`   | Nothing. The page renders exactly as it did before the feature existed.                                   |
+| `true`               | The `@view-transition` rule, and a rule that turns it back off for visitors who reduce motion.            |
+| `"always"`           | The `@view-transition` rule alone. Reduced motion is left to your CSS.                                    |
+| `{ enabled, types }` | `enabled` is one of the three values above. `types` lists transition types a navigation to the page gets. |
+
+With `true`, core adds this to the head, after your stylesheets:
+
+```css
+@view-transition {
+  navigation: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+}
+```
+
+It also adds a short inline script that tags each navigation with the direction it went in. [Transition types](#transition-types) covers what the tags are for.
+
+Only live pages carry any of it. The editor canvas and a draft preview render without the rule, so editing an entry never animates a reload. The theme's 404 and 500 pages do carry it, so a link that lands on a missing page animates like any other.
+
+## Quickstart
+
+<Steps>
+
+1. **Opt in.** Set `viewTransitions` on the theme:
+
+   ```ts
+   import { defineTheme, entry, fallback } from "plumix/theme";
+
+   export const theme = defineTheme({
+     templates: [fallback(() => null), entry(() => null)],
+     css: ["./theme/transitions.css"],
+     viewTransitions: true,
+   });
+   ```
+
+2. **Click a link.** Start the dev server and follow a link between two pages in Chrome or Safari. The pages cross-fade, which is the browser's default animation.
+
+3. **Write your own.** Put an animation in `theme/transitions.css`. This one shortens the cross-fade and eases it:
+
+   ```css
+   ::view-transition-group(root) {
+     animation-duration: 180ms;
+     animation-timing-function: ease-out;
+   }
+   ```
+
+</Steps>
+
+Both pages of a navigation need the rule, so the animation runs between two pages of your site and never between your site and another origin. A reload never animates.
+
+## Turning it off for a site
+
+A site configures the theme value it passes to `plumix()`, and `plumix()` has no transition setting of its own. To switch transitions off for one site, spread the theme, replace the key, and pass the result as the `theme` slot in `plumix.config.ts`:
+
+```ts
+import { defineTheme, fallback } from "plumix/theme";
+
+const theme = defineTheme({
+  templates: [fallback(() => null)],
+  viewTransitions: true,
+});
+
+export const siteTheme = { ...theme, viewTransitions: false };
+```
+
+A theme you publish for several sites can take the setting as an option of the function that builds it:
+
+```ts
+import type { ViewTransitionsInput } from "plumix/theme";
+import { defineTheme, fallback } from "plumix/theme";
+
+export function magazineTheme(
+  options: { viewTransitions?: ViewTransitionsInput } = {},
+) {
+  return defineTheme({
+    templates: [fallback(() => null)],
+    viewTransitions: options.viewTransitions ?? true,
+  });
+}
+```
+
+## Overriding it per template
+
+A template can carry its own `viewTransitions`. It replaces the theme's value whole for the pages that template renders. Nothing merges, so a template value of `{ enabled: true }` drops any `types` the theme set.
+
+```ts
+import type { EntryData } from "plumix/theme";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
+
+const checkout = defineTemplate<EntryData>({
+  render: () => null,
+  viewTransitions: false,
+});
+
+export const theme = defineTheme({
+  templates: [fallback(() => null), entry(checkout)],
+  viewTransitions: true,
+});
+```
+
+Turning it off on one template stops every navigation into and out of its pages, because the browser animates only when both pages carry the rule.
+
+## Reduced motion
+
+With `true`, a visitor whose system asks for reduced motion gets no transition at all. Core's reduced-motion rule sits after the `@view-transition` rule, and the browser applies only the last `@view-transition` rule in a document, so it wins.
+
+`"always"` drops that rule. Navigations then animate for everyone, and your CSS decides what a visitor who reduces motion sees. Core's rule comes after your stylesheets, so a `@view-transition` rule of your own can't turn navigations back off. Tone the animation down instead. Put anything that moves inside a `no-preference` query, and a visitor who reduces motion gets the browser's plain cross-fade:
+
+```css
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-new(root) {
+    animation: 200ms ease-out both slide-from-right;
+  }
+}
+@keyframes slide-from-right {
+  from {
+    transform: translateX(40px);
+  }
+}
+```
+
+Use `"always"` when the transition carries meaning a visitor would miss without it. Otherwise `true` is the safer default.
+
+## Naming elements with `transitionName`
+
+An element with a `view-transition-name` animates on its own instead of as part of the page. When the old page and the new page each have an element with the same name, the browser moves and resizes one into the other, which is how a title on a listing travels to the top of the entry it links to.
+
+Build the name with `transitionName(prefix, key)` from `plumix/theme`:
+
+```tsx
+import { transitionName } from "plumix/theme";
+
+const name = transitionName("post", 42); // "post_42"
+
+export const Title = () => (
+  <h1 style={{ viewTransitionName: name }}>Sicilian Caponata</h1>
+);
+```
+
+A name built by hand, such as the bare slug, works until a value turns it into something the browser can't use. The name must be a single CSS identifier, and it can't be a reserved word. A slug like `2024-recap` starts with a digit, a slug like `none` or `auto` is reserved, and a slug with a dot or a space isn't one identifier. The browser drops an invalid `view-transition-name` without an error, and the element quietly animates as part of the page again.
+
+`transitionName` escapes whatever you pass, and the `_` between the two parts keeps the result from ever reading as a reserved word. A number key names the same element as its string form, so `transitionName("post", 42)` and `transitionName("post", "42")` match. It's a pure function, so the server and an island produce the same name.
+
+Each name must be unique on the page. When two elements share one, the browser skips the whole transition. Key the name on something unique, such as the entry id, and give each kind of element its own prefix.
+
+## Transition types
+
+Core tags every navigation with one transition type naming its direction. The names are on `viewTransitionTypes` from `plumix/theme`:
+
+| Key       | Type          | When                                                  |
+| --------- | ------------- | ----------------------------------------------------- |
+| `forward` | `nav-forward` | A link click, or the forward button.                  |
+| `back`    | `nav-back`    | The back button, or any step back through history.    |
+| `replace` | `nav-replace` | A navigation that replaces the current history entry. |
+
+Match a type in CSS with `:active-view-transition-type()` on the root:
+
+```css
+:root:active-view-transition-type(nav-back)::view-transition-new(root) {
+  animation-duration: 120ms;
+}
+```
+
+The `types` in the setting go on beside the direction. The browser takes them from the page being navigated to, so a template's own `types` tag every navigation that arrives at its pages, and your CSS can give those arrivals their own animation. The admin tags its own navigations with the same three names, and [Page transitions in the admin](/plugins/overview/#page-transitions-in-the-admin) covers that side.
+
+## Browser support
+
+Cross-document view transitions run in Chrome and Edge from version 126 and in Safari from 18.2. In Firefox and older Safari, the rule does nothing and a link click is the ordinary page load it was before. Nothing breaks and nothing needs a fallback.
+
+The direction types need the Navigation API's `navigation.activation`, which Safari has from 26.2. Safari 18.2 to 26.1 animates navigations without a type, so only your untyped rules apply there. Write the base animation without a type selector and the directional ones as refinements on top, and every supporting browser gets something sensible.
+
+## Recipes
+
+Each recipe is CSS for the theme's stylesheet, plus the template markup where it needs some. Every one assumes `viewTransitions: true`.
+
+### Cross-fade
+
+The browser's default is already a cross-fade. To change its pace, set the timing on the root's group. The old and new snapshots inherit it.
+
+```css
+::view-transition-group(root) {
+  animation-duration: 250ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+```
+
+### Directional slide
+
+Slide forward navigations in from the right and back navigations in from the left. A navigation with no type, in Safari before 26.2 or a replace, keeps the cross-fade.
+
+```css
+@keyframes slide-from-right {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+@keyframes slide-to-left {
+  to {
+    transform: translateX(-40px);
+    opacity: 0;
+  }
+}
+@keyframes slide-from-left {
+  from {
+    transform: translateX(-40px);
+    opacity: 0;
+  }
+}
+@keyframes slide-to-right {
+  to {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+:root:active-view-transition-type(nav-forward)::view-transition-old(root) {
+  animation: 200ms ease-in both slide-to-left;
+}
+:root:active-view-transition-type(nav-forward)::view-transition-new(root) {
+  animation: 200ms ease-out both slide-from-right;
+}
+
+:root:active-view-transition-type(nav-back)::view-transition-old(root) {
+  animation: 200ms ease-in both slide-to-right;
+}
+:root:active-view-transition-type(nav-back)::view-transition-new(root) {
+  animation: 200ms ease-out both slide-from-left;
+}
+```
+
+### Shared element from a listing to its entry
+
+Give the entry's title the same name on both pages. The listing names each title by its entry, and the entry page names its one title the same way. The `title` class lets your CSS select every one of them at once:
+
+```tsx
+import type { EntryData, EntryTypeArchiveData } from "plumix/theme";
+import { Link } from "plumix/blocks/renderer";
+import { defineTemplate, transitionName } from "plumix/theme";
+
+export const listing = defineTemplate<EntryTypeArchiveData>({
+  render: ({ data }) => (
+    <ul>
+      {data.entries.map((item) => (
+        <li key={item.id}>
+          <Link entry={item}>
+            <h2
+              style={{
+                viewTransitionName: transitionName("title", item.id),
+                viewTransitionClass: "title",
+              }}
+            >
+              {item.title}
+            </h2>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  ),
+});
+
+export const single = defineTemplate<EntryData>({
+  render: ({ data }) => (
+    <article>
+      <h1
+        style={{
+          viewTransitionName: transitionName("title", data.entry.id),
+          viewTransitionClass: "title",
+        }}
+      >
+        {data.entry.title}
+      </h1>
+    </article>
+  ),
+});
+```
+
+The browser moves the title from its place in the list to the top of the entry, and back again on the back button, with no CSS at all. To tune the movement, select the titles' groups by their class, since a stylesheet can't call `transitionName`:
+
+```css
+::view-transition-group(*.title) {
+  animation-duration: 300ms;
+}
+```
+
+### Pinned header
+
+A header that's the same on every page should hold still while the page around it animates. Name it, and stop its group from animating:
+
+```css
+.site-header {
+  view-transition-name: site-header;
+}
+::view-transition-group(site-header) {
+  animation: none;
+}
+```
+
+The header's group then runs no animation, so it stays put above the root while the slide or fade runs underneath it.
+
+### `<ViewTransition>` inside an island
+
+React's `<ViewTransition>` animates an update inside one React tree, which on a Plumix page means inside an island. It has nothing to do with the navigation between pages and works whether the theme sets `viewTransitions` or not. React animates an update that runs in `startTransition`, and leaves a synchronous update alone.
+
+```tsx
+"use client";
+
+import type { IslandProps } from "plumix/blocks";
+import { startTransition, useState, ViewTransition } from "react";
+
+export function Gallery({
+  images,
+}: IslandProps<{ images: readonly { src: string; alt: string }[] }>) {
+  const [index, setIndex] = useState(0);
+  const image = images[index];
+  if (image === undefined) return null;
+  const next = () => {
+    startTransition(() => {
+      setIndex((current) => (current + 1) % images.length);
+    });
+  };
+  return (
+    <figure>
+      <ViewTransition key={image.src}>
+        <img src={image.src} alt={image.alt} />
+      </ViewTransition>
+      <button type="button" onClick={next}>
+        Next
+      </button>
+    </figure>
+  );
+}
+```
+
+Changing the `key` makes React treat the image as one leaving and one arriving, and the browser cross-fades the two.
+
+The browser runs that transition over the whole document, not just the island. The root and every named element on the page take part, so your untyped `root` rules and the shared-element titles animate on an island update too. Rules keyed on `nav-forward` and `nav-back` don't, which is one more reason to put a page-wide animation behind a type selector. Core's reduced-motion rule covers navigations only, so add your own `prefers-reduced-motion` CSS for an island's transitions.
+
+## Related
+
+[Overview](/themes/overview/) puts `viewTransitions` beside the theme's other slots, and [Templates](/themes/templates/) covers `defineTemplate`, where the per-template value goes. The admin runs its own transitions between screens, and [Page transitions in the admin](/plugins/overview/#page-transitions-in-the-admin) is the plugin author's side of that.
+
+## Next steps
+
+Opt in with `true`, follow a few links, and add the directional slide once the default cross-fade feels too plain. When a listing links to its entries, add the shared-element recipe next.
