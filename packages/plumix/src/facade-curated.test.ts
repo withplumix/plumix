@@ -243,7 +243,18 @@ const CURATED: Readonly<Record<string, Curated>> = {
   "./theme": { draws: "@plumix/core" },
   "./runtime": { draws: "@plumix/core" },
   "./auth": { draws: "@plumix/core" },
-  "./support": { mirrors: "@plumix/core/support", withheld: [] },
+  "./support": {
+    mirrors: "@plumix/core/support",
+    withheld: [
+      {
+        reason:
+          "the navigation transition types, published on `plumix/theme`. " +
+          "The admin reads them here, clear of the root barrel.",
+        names: ["viewTransitionTypes"],
+        publishedBy: "./theme",
+      },
+    ],
+  },
   "./cli": {
     mirrors: "@plumix/core/cli",
     withheld: [

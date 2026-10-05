@@ -8,3 +8,5 @@ export type { JsonObject, JsonValue } from "./json.js";
 export { escapeLikePattern } from "./search/contract/search-terms.js";
 export { xmlEscape } from "./seo/contract/xml.js";
 export { slugify } from "./slugify.js";
+export { viewTransitionTypes } from "./view-transition.js";
+export type { ViewTransitionType } from "./view-transition.js";

@@ -204,7 +204,9 @@ async function renderThroughThemeInner({
     // The editor canvas and a draft preview are plain renders: never animated.
     viewTransitions:
       editMode.mode === "live"
-        ? resolveViewTransitions(theme.viewTransitions)
+        ? resolveViewTransitions(
+            template.viewTransitions ?? theme.viewTransitions,
+          )
         : null,
     editMode,
   });
@@ -328,7 +330,9 @@ async function renderErrorThroughThemeInner({
     chrome,
     catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
-    viewTransitions: resolveViewTransitions(theme.viewTransitions),
+    viewTransitions: resolveViewTransitions(
+      template.viewTransitions ?? theme.viewTransitions,
+    ),
     editMode: LIVE_EDIT_MODE,
   });
 }
