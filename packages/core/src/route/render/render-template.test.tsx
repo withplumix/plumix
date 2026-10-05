@@ -4634,6 +4634,8 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
   const RULE = "@view-transition{navigation:auto}";
   const REDUCED_MOTION =
     "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
+  const DIRECTION_SCRIPT =
+    /<script>addEventListener\("pagereveal".*?<\/script>/;
 
   async function headFor(
     setting: Pick<ThemeDescriptor, "viewTransitions">,
@@ -4654,6 +4656,23 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
 
     expect(head).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
   });
+
+  test("`true` renders the direction script right after the rule", async () => {
+    const head = await headFor({ viewTransitions: true });
+
+    const afterRule = head.split(`${RULE}${REDUCED_MOTION}</style>`)[1];
+
+    expect(afterRule).toMatch(new RegExp(`^${DIRECTION_SCRIPT.source}`));
+  });
+
+  test.each([["nav-forward"], ["nav-back"], ["nav-replace"]])(
+    "the direction script adds the %s type",
+    async (type) => {
+      const head = await headFor({ viewTransitions: true });
+
+      expect(DIRECTION_SCRIPT.exec(head)?.[0]).toContain(`"${type}"`);
+    },
+  );
 
   test("a theme without the key renders the head it rendered before", async () => {
     const head = await headFor({});
@@ -4683,6 +4702,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
 
       expect(head).toContain(`<style>${RULE}</style>`);
       expect(head).not.toContain("prefers-reduced-motion");
+      expect(head).toMatch(DIRECTION_SCRIPT);
     },
   );
 
@@ -4692,6 +4712,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
       const head = await headFor({ viewTransitions });
 
       expect(head).not.toContain("<style>");
+      expect(head).not.toContain("<script>");
     },
   );
 
@@ -4724,6 +4745,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
 
     expect(body).toContain('data-plumix-mode="edit"');
     expect(headOf(body)).not.toContain("@view-transition");
+    expect(headOf(body)).not.toContain("pagereveal");
   });
 
   test("a preview render carries no rule, whatever the theme says", async () => {
@@ -4758,6 +4780,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
 
     expect(body).toContain("<h1>Draft</h1>");
     expect(headOf(body)).not.toContain("@view-transition");
+    expect(headOf(body)).not.toContain("pagereveal");
   });
 
   test("a site spreading the theme with `viewTransitions: false` turns it off", async () => {
@@ -4776,6 +4799,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
     const head = await dispatchHead(h, "https://cms.example/post/hello");
 
     expect(head).not.toContain("@view-transition");
+    expect(head).not.toContain("pagereveal");
   });
 
   test("a 404 page carries the rule, so navigating to it animates too", async () => {
@@ -4792,8 +4816,8 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
     );
 
     expect(response.status).toBe(404);
-    expect(headOf(await response.text())).toContain(
-      `<style>${RULE}${REDUCED_MOTION}</style>`,
-    );
+    const head = headOf(await response.text());
+    expect(head).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(head).toMatch(DIRECTION_SCRIPT);
   });
 });

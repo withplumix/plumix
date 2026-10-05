@@ -51,6 +51,7 @@ import {
 import { normalizeTemplate } from "../../template.js";
 import {
   resolveViewTransitions,
+  viewTransitionsScriptTag,
   viewTransitionsStyleTag,
 } from "../../theme-view-transitions.js";
 import { validateDocumentManifest } from "../../theme.js";
@@ -628,6 +629,7 @@ function renderTree({
     devThemeCssLinks(themeCss, command, ctx.config.basePath) +
     devThemeStylesTag(command, ctx.config.basePath) +
     viewTransitionsStyleTag(viewTransitions) +
+    viewTransitionsScriptTag(viewTransitions) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
