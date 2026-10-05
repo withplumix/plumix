@@ -3,6 +3,7 @@ import { createElement } from "react";
 
 import type { AppContext } from "./context/app-context.js";
 import type { DocumentManifest } from "./document-manifest.js";
+import type { ViewTransitionsInput } from "./theme-view-transitions.js";
 import type { TemplateData } from "./theme.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
 
@@ -111,6 +112,11 @@ export interface Template<
    * silently collides in the per-id result map.
    */
   readonly prefetchArchiveLoaders?: boolean;
+  /**
+   * Replaces the theme's `viewTransitions` whole for the pages this
+   * template renders (ADR 0031); omitted, the theme's value applies.
+   */
+  readonly viewTransitions?: ViewTransitionsInput;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
@@ -120,6 +126,7 @@ interface DefineTemplateConfig<
   readonly render: TemplateRender<TData>;
   readonly document?: TemplateDocument<TData>;
   readonly prefetchArchiveLoaders?: boolean;
+  readonly viewTransitions?: ViewTransitionsInput;
 }
 
 export function defineTemplate<TData extends TemplateData = TemplateData>(
