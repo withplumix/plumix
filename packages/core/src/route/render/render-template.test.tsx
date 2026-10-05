@@ -1,6 +1,7 @@
 import { createElement, useId } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
+import type { Entry, NewEntry } from "../../db/schema/entries.js";
 import type { User } from "../../db/schema/users.js";
 import type { TemplateData, ThemeDescriptor } from "../../theme.js";
 import type { ResolvedEntry } from "../contract/resolved-entry.js";
@@ -50,17 +51,20 @@ async function dispatchHead(
 
 async function seedPost(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
-  slug = "hello",
-): Promise<void> {
+  overrides: Partial<
+    Pick<NewEntry, "slug" | "title" | "status" | "publishedAt">
+  > = {},
+): Promise<Entry> {
   const author = await h.seedUser("admin");
-  await h.factory.entry.create({
+  return h.factory.entry.create({
     type: "post",
-    slug,
+    slug: "hello",
     title: "Hello",
     content: null,
     status: "published",
     authorId: author.id,
     publishedAt: new Date(),
+    ...overrides,
   });
 }
 
@@ -4630,13 +4634,32 @@ describe("html allowlist — operator config reaches the renderer", () => {
   });
 });
 
-describe("theme viewTransitions — the head's @view-transition rule", () => {
-  const RULE = "@view-transition{navigation:auto}";
-  const REDUCED_MOTION =
-    "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
-  const DIRECTION_SCRIPT =
-    /<script>addEventListener\("pagereveal".*?<\/script>/;
+const VIEW_TRANSITION_RULE = "@view-transition{navigation:auto}";
+const REDUCED_MOTION =
+  "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
+const DIRECTION_SCRIPT = /<script>addEventListener\("pagereveal".*?<\/script>/;
 
+// A theme with an entry template, each carrying its own setting, and one
+// published post at /post/hello.
+async function viewTransitionsHarness(
+  themeSetting: Pick<ThemeDescriptor, "viewTransitions">,
+  templateSetting: Pick<ThemeDescriptor, "viewTransitions">,
+): Promise<Awaited<ReturnType<typeof createDispatcherHarness>>> {
+  const theme = defineTheme({
+    templates: [
+      fallback(() => null),
+      entry(defineTemplate({ render: () => null, ...templateSetting })),
+    ],
+    ...themeSetting,
+  });
+  const h = await createDispatcherHarness({
+    config: { plugins: [blogPlugin], theme },
+  });
+  await seedPost(h);
+  return h;
+}
+
+describe("theme viewTransitions — the head's @view-transition rule", () => {
   async function headFor(
     setting: Pick<ThemeDescriptor, "viewTransitions">,
   ): Promise<string> {
@@ -4654,15 +4677,21 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
   test("`true` renders the rule, then the reduced-motion rule after it", async () => {
     const head = await headFor({ viewTransitions: true });
 
-    expect(head).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(head).toContain(
+      `<style>${VIEW_TRANSITION_RULE}${REDUCED_MOTION}</style>`,
+    );
   });
 
-  test("`true` renders the direction script right after the rule", async () => {
+  test("`true` renders the direction script early in the head, ahead of every stylesheet", async () => {
     const head = await headFor({ viewTransitions: true });
 
-    const afterRule = head.split(`${RULE}${REDUCED_MOTION}</style>`)[1];
-
-    expect(afterRule).toMatch(new RegExp(`^${DIRECTION_SCRIPT.source}`));
+    expect(head).toMatch(
+      new RegExp(
+        '^<head><meta charSet="utf-8"/>' +
+          '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+          DIRECTION_SCRIPT.source,
+      ),
+    );
   });
 
   test.each([["nav-forward"], ["nav-back"], ["nav-replace"]])(
@@ -4700,7 +4729,7 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
     async (viewTransitions) => {
       const head = await headFor({ viewTransitions });
 
-      expect(head).toContain(`<style>${RULE}</style>`);
+      expect(head).toContain(`<style>${VIEW_TRANSITION_RULE}</style>`);
       expect(head).not.toContain("prefers-reduced-motion");
       expect(head).toMatch(DIRECTION_SCRIPT);
     },
@@ -4715,73 +4744,6 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
       expect(head).not.toContain("<script>");
     },
   );
-
-  test("an edit-mode render carries no rule, whatever the theme says", async () => {
-    const theme = defineTheme({
-      templates: [fallback(() => null)],
-      viewTransitions: true,
-    });
-    const h = await createDispatcherHarness({
-      config: { plugins: [blogPlugin], theme },
-    });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "post",
-      slug: "hello",
-      title: "Hello",
-      content: null,
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-    });
-
-    const response = await h.dispatch(
-      await h.authenticateRequest(
-        new Request("https://cms.example/post/hello?plumix.edit"),
-        author.id,
-      ),
-    );
-    const body = await response.text();
-
-    expect(body).toContain('data-plumix-mode="edit"');
-    expect(headOf(body)).not.toContain("@view-transition");
-    expect(headOf(body)).not.toContain("pagereveal");
-  });
-
-  test("a preview render carries no rule, whatever the theme says", async () => {
-    const theme = defineTheme({
-      templates: [
-        fallback(() => null),
-        entry(({ data }) => <h1>{data.entry.title}</h1>),
-      ],
-      viewTransitions: true,
-    });
-    const h = await createDispatcherHarness({
-      config: { plugins: [blogPlugin], theme },
-    });
-    const author = await h.seedUser("admin");
-    const draft = await h.factory.entry.create({
-      type: "post",
-      slug: "draft",
-      title: "Draft",
-      content: null,
-      status: "draft",
-      authorId: author.id,
-    });
-    const token = await createPreviewToken(h.db, {
-      entryId: draft.id,
-      userId: author.id,
-    });
-
-    const response = await h.dispatch(
-      new Request(`https://cms.example/post/draft?preview=${token}`),
-    );
-    const body = await response.text();
-
-    expect(body).toContain("<h1>Draft</h1>");
-    expect(headOf(body)).not.toContain("@view-transition");
-    expect(headOf(body)).not.toContain("pagereveal");
-  });
 
   test("a site spreading the theme with `viewTransitions: false` turns it off", async () => {
     const packaged = defineTheme({
@@ -4817,36 +4779,16 @@ describe("theme viewTransitions — the head's @view-transition rule", () => {
 
     expect(response.status).toBe(404);
     const head = headOf(await response.text());
-    expect(head).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(head).toContain(
+      `<style>${VIEW_TRANSITION_RULE}${REDUCED_MOTION}</style>`,
+    );
     expect(head).toMatch(DIRECTION_SCRIPT);
   });
 });
 
 describe("template viewTransitions — replaces the theme's value for its pages", () => {
-  const RULE = "@view-transition{navigation:auto}";
-  const REDUCED_MOTION =
-    "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
-
-  async function harnessWith(
-    themeSetting: Pick<ThemeDescriptor, "viewTransitions">,
-    templateSetting: Pick<ThemeDescriptor, "viewTransitions">,
-  ): Promise<Awaited<ReturnType<typeof createDispatcherHarness>>> {
-    const theme = defineTheme({
-      templates: [
-        fallback(() => null),
-        entry(defineTemplate({ render: () => null, ...templateSetting })),
-      ],
-      ...themeSetting,
-    });
-    const h = await createDispatcherHarness({
-      config: { plugins: [blogPlugin], theme },
-    });
-    await seedPost(h);
-    return h;
-  }
-
   test("a template's `false` drops the rule from its pages and leaves it on others", async () => {
-    const h = await harnessWith(
+    const h = await viewTransitionsHarness(
       { viewTransitions: true },
       { viewTransitions: false },
     );
@@ -4856,24 +4798,28 @@ describe("template viewTransitions — replaces the theme's value for its pages"
 
     expect(entryHead).not.toContain("@view-transition");
     expect(entryHead).not.toContain("pagereveal");
-    expect(archiveHead).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(archiveHead).toContain(
+      `<style>${VIEW_TRANSITION_RULE}${REDUCED_MOTION}</style>`,
+    );
     expect(archiveHead).toContain('addEventListener("pagereveal"');
   });
 
   test("a template's `true` renders the rule only on its pages when the theme leaves it off", async () => {
-    const h = await harnessWith({}, { viewTransitions: true });
+    const h = await viewTransitionsHarness({}, { viewTransitions: true });
 
     const entryHead = await dispatchHead(h, "https://cms.example/post/hello");
     const archiveHead = await dispatchHead(h, "https://cms.example/post");
 
-    expect(entryHead).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(entryHead).toContain(
+      `<style>${VIEW_TRANSITION_RULE}${REDUCED_MOTION}</style>`,
+    );
     expect(entryHead).toContain('addEventListener("pagereveal"');
     expect(archiveHead).not.toContain("@view-transition");
     expect(archiveHead).not.toContain("pagereveal");
   });
 
   test("a template's types replace the theme's rather than adding to them", async () => {
-    const h = await harnessWith(
+    const h = await viewTransitionsHarness(
       { viewTransitions: { enabled: true, types: ["slide"] } },
       { viewTransitions: { enabled: true, types: ["zoom"] } },
     );
@@ -4886,7 +4832,7 @@ describe("template viewTransitions — replaces the theme's value for its pages"
   });
 
   test('a template\'s `"always"` drops the reduced-motion rule for its pages only', async () => {
-    const h = await harnessWith(
+    const h = await viewTransitionsHarness(
       { viewTransitions: true },
       { viewTransitions: "always" },
     );
@@ -4894,9 +4840,11 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     const entryHead = await dispatchHead(h, "https://cms.example/post/hello");
     const archiveHead = await dispatchHead(h, "https://cms.example/post");
 
-    expect(entryHead).toContain(`<style>${RULE}</style>`);
+    expect(entryHead).toContain(`<style>${VIEW_TRANSITION_RULE}</style>`);
     expect(entryHead).not.toContain("prefers-reduced-motion");
-    expect(archiveHead).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(archiveHead).toContain(
+      `<style>${VIEW_TRANSITION_RULE}${REDUCED_MOTION}</style>`,
+    );
   });
 
   test("a 404 template's `false` drops the rule from the 404 page", async () => {
@@ -4922,48 +4870,58 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     expect(head).not.toContain("@view-transition");
     expect(head).not.toContain("pagereveal");
   });
+});
 
-  test("an edit-mode render carries no rule, whatever the template says", async () => {
-    const h = await harnessWith({}, { viewTransitions: "always" });
-    const editor = await h.seedUser("admin");
+describe("edit and preview renders — never animated", () => {
+  const SETTINGS = [
+    ["the theme's `true`", { viewTransitions: true }, {}],
+    ['the template\'s `"always"`', {}, { viewTransitions: "always" }],
+  ] as const;
 
-    const response = await h.dispatch(
-      await h.authenticateRequest(
-        new Request("https://cms.example/post/hello?plumix.edit"),
-        editor.id,
-      ),
-    );
-    const body = await response.text();
+  test.each(SETTINGS)(
+    "an edit-mode render carries no rule, whatever %s says",
+    async (_, themeSetting, templateSetting) => {
+      const h = await viewTransitionsHarness(themeSetting, templateSetting);
+      const editor = await h.seedUser("admin");
 
-    expect(body).toContain('data-plumix-mode="edit"');
-    expect(headOf(body)).not.toContain("@view-transition");
-    expect(headOf(body)).not.toContain("pagereveal");
-  });
+      const response = await h.dispatch(
+        await h.authenticateRequest(
+          new Request("https://cms.example/post/hello?plumix.edit"),
+          editor.id,
+        ),
+      );
+      const body = await response.text();
 
-  test("a preview render carries no rule, whatever the template says", async () => {
-    const h = await harnessWith({}, { viewTransitions: "always" });
-    const author = await h.seedUser("admin");
-    const draft = await h.factory.entry.create({
-      type: "post",
-      slug: "draft",
-      title: "Draft",
-      content: null,
-      status: "draft",
-      authorId: author.id,
-    });
-    const token = await createPreviewToken(h.db, {
-      entryId: draft.id,
-      userId: author.id,
-    });
+      expect(body).toContain('data-plumix-mode="edit"');
+      expect(headOf(body)).not.toContain("@view-transition");
+      expect(headOf(body)).not.toContain("pagereveal");
+    },
+  );
 
-    const response = await h.dispatch(
-      new Request(`https://cms.example/post/draft?preview=${token}`),
-    );
-    const body = await response.text();
+  test.each(SETTINGS)(
+    "a preview render carries no rule, whatever %s says",
+    async (_, themeSetting, templateSetting) => {
+      const h = await viewTransitionsHarness(themeSetting, templateSetting);
+      const draft = await seedPost(h, {
+        slug: "draft",
+        title: "Draft",
+        status: "draft",
+        publishedAt: null,
+      });
+      const token = await createPreviewToken(h.db, {
+        entryId: draft.id,
+        userId: draft.authorId,
+      });
 
-    expect(response.status).toBe(200);
-    expect(headOf(body)).toContain("<title>Draft</title>");
-    expect(headOf(body)).not.toContain("@view-transition");
-    expect(headOf(body)).not.toContain("pagereveal");
-  });
+      const response = await h.dispatch(
+        new Request(`https://cms.example/post/draft?preview=${token}`),
+      );
+      const body = await response.text();
+
+      expect(response.status).toBe(200);
+      expect(headOf(body)).toContain("<title>Draft</title>");
+      expect(headOf(body)).not.toContain("@view-transition");
+      expect(headOf(body)).not.toContain("pagereveal");
+    },
+  );
 });
