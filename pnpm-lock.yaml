@@ -1044,6 +1044,9 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@csstools/css-tokenizer':
+        specifier: ^4.0.0
+        version: 4.0.0
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.11)
@@ -12557,8 +12560,7 @@ snapshots:
       css-tree: 3.2.1
     optional: true
 
-  '@csstools/css-tokenizer@4.0.0':
-    optional: true
+  '@csstools/css-tokenizer@4.0.0': {}
 
   '@ctrl/tinycolor@4.2.0': {}
 
