@@ -150,6 +150,64 @@
   }
 }
 
+/* Admin navigations run as view transitions typed by direction (the router's
+   `defaultViewTransition`). In `base` so a plugin's sidecar, one layer up, can
+   restyle them. The sidebar and header carry names of their own, so they are
+   captured apart from the root and hold still while the screen beside them
+   changes. The pseudo-element tree covers the page while a transition runs;
+   it lets clicks through to the page underneath. */
+@layer base {
+  ::view-transition {
+    pointer-events: none;
+  }
+  [data-slot="sidebar-container"] {
+    view-transition-name: plumix-admin-sidebar;
+  }
+  [data-slot="shell-header"] {
+    view-transition-name: plumix-admin-header;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 150ms;
+  }
+
+  /* A forward navigation slides the screen toward the inline start, a back
+     navigation toward the inline end. */
+  :root {
+    --plumix-nav-inline: 1;
+  }
+  :root[dir="rtl"] {
+    --plumix-nav-inline: -1;
+  }
+  :root:active-view-transition-type(nav-forward) {
+    --plumix-nav-shift: calc(1.5rem * var(--plumix-nav-inline));
+  }
+  :root:active-view-transition-type(nav-back) {
+    --plumix-nav-shift: calc(-1.5rem * var(--plumix-nav-inline));
+  }
+  :root:active-view-transition-type(nav-forward, nav-back) {
+    &::view-transition-old(root) {
+      animation-name: plumix-nav-out;
+    }
+    &::view-transition-new(root) {
+      animation-name: plumix-nav-in;
+    }
+  }
+}
+
+@keyframes plumix-nav-out {
+  to {
+    opacity: 0;
+    translate: calc(-1 * var(--plumix-nav-shift));
+  }
+}
+@keyframes plumix-nav-in {
+  from {
+    opacity: 0;
+    translate: var(--plumix-nav-shift);
+  }
+}
+
 /* The editor canvas places its overlays at rects measured off the preview
    iframe. Those rects are physical, so they stay `left`/`top` under RTL,
    where a logical `start` would mirror them off the block they outline. The

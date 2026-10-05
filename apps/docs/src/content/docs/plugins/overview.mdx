@@ -293,6 +293,20 @@ Each of the seven declares a path to an admin entry module, and the Vite plugin 
 
 The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
 
+## Page transitions in the admin
+
+Moving between admin screens runs a view transition, and a plugin page gets it with no code. Each transition carries one type naming its direction: `nav-forward` for a new screen, `nav-back` for a step back through history, and `nav-replace` for a navigation that replaces the current history entry. A change to only the search params or the hash, such as filtering a list, starts no transition, and neither does any navigation for a user who prefers reduced motion.
+
+The admin's defaults are a short cross-fade with a slide in the direction of travel. The sidebar and header hold still because they carry their own `view-transition-name`, `plumix-admin-sidebar` and `plumix-admin-header`. Give an element of your page a `view-transition-name` to hold it still the same way, and keep the name unique on the page, since a name used twice stops the transition. Restyle a direction from your plugin's CSS with `:active-view-transition-type()`:
+
+```css
+:root:active-view-transition-type(nav-forward)::view-transition-new(root) {
+  animation-duration: 300ms;
+}
+```
+
+The admin's rules sit in its `base` cascade layer, below the layer your plugin's stylesheet lands in, so a rule like this one wins without raising its specificity. To keep a single link from animating, pass `viewTransition={false}` to `Link`, or to `navigate()`, from `@tanstack/react-router`.
+
 ## Two version tracks
 
 The platform releases in lockstep. `plumix` and the four packages behind it, `@plumix/core`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
