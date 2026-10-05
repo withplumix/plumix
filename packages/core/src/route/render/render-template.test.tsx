@@ -2,8 +2,9 @@ import { createElement, useId } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { User } from "../../db/schema/users.js";
-import type { TemplateData } from "../../theme.js";
+import type { TemplateData, ThemeDescriptor } from "../../theme.js";
 import type { ResolvedEntry } from "../contract/resolved-entry.js";
+import { createPreviewToken } from "../../auth/preview-token.js";
 import { defineBlock } from "../../blocks/index.js";
 import { BlockRenderer } from "../../blocks/renderer/index.js";
 import { getContext } from "../../context/stores.js";
@@ -4626,5 +4627,173 @@ describe("html allowlist — operator config reaches the renderer", () => {
       /data-plumix-render-env="">(.*?)<\/script>/.exec(body)?.[1] ?? "{}",
     ) as { htmlAllowlist?: { allowedTags: readonly string[] } };
     expect(env.htmlAllowlist?.allowedTags).toContain("img");
+  });
+});
+
+describe("theme viewTransitions — the head's @view-transition rule", () => {
+  const RULE = "@view-transition{navigation:auto}";
+  const REDUCED_MOTION =
+    "@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}}";
+
+  async function headFor(
+    setting: Pick<ThemeDescriptor, "viewTransitions">,
+  ): Promise<string> {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      ...setting,
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme },
+    });
+    await seedPost(h);
+    return dispatchHead(h, "https://cms.example/post/hello");
+  }
+
+  test("`true` renders the rule, then the reduced-motion rule after it", async () => {
+    const head = await headFor({ viewTransitions: true });
+
+    expect(head).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+  });
+
+  test("a theme without the key renders the head it rendered before", async () => {
+    const head = await headFor({});
+
+    expect(head).toBe(
+      '<head><meta charSet="utf-8"/>' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+        "<title>Hello</title>" +
+        '<link rel="canonical" href="https://cms.example/post/hello"/>',
+    );
+  });
+
+  test("`{ enabled: true, types }` renders those types in the rule", async () => {
+    const head = await headFor({
+      viewTransitions: { enabled: true, types: ["slide", "fade"] },
+    });
+
+    expect(head).toContain(
+      `<style>@view-transition{navigation:auto;types:slide fade}${REDUCED_MOTION}</style>`,
+    );
+  });
+
+  test.each([["always" as const], [{ enabled: "always" as const }]])(
+    "%j renders the rule without the reduced-motion rule",
+    async (viewTransitions) => {
+      const head = await headFor({ viewTransitions });
+
+      expect(head).toContain(`<style>${RULE}</style>`);
+      expect(head).not.toContain("prefers-reduced-motion");
+    },
+  );
+
+  test.each([[false], [{ enabled: false }]])(
+    "%j renders nothing",
+    async (viewTransitions) => {
+      const head = await headFor({ viewTransitions });
+
+      expect(head).not.toContain("<style>");
+    },
+  );
+
+  test("an edit-mode render carries no rule, whatever the theme says", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      viewTransitions: true,
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        new Request("https://cms.example/post/hello?plumix.edit"),
+        author.id,
+      ),
+    );
+    const body = await response.text();
+
+    expect(body).toContain('data-plumix-mode="edit"');
+    expect(headOf(body)).not.toContain("@view-transition");
+  });
+
+  test("a preview render carries no rule, whatever the theme says", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <h1>{data.entry.title}</h1>),
+      ],
+      viewTransitions: true,
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme },
+    });
+    const author = await h.seedUser("admin");
+    const draft = await h.factory.entry.create({
+      type: "post",
+      slug: "draft",
+      title: "Draft",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: draft.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/post/draft?preview=${token}`),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("<h1>Draft</h1>");
+    expect(headOf(body)).not.toContain("@view-transition");
+  });
+
+  test("a site spreading the theme with `viewTransitions: false` turns it off", async () => {
+    const packaged = defineTheme({
+      templates: [fallback(() => null)],
+      viewTransitions: true,
+    });
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin],
+        theme: { ...packaged, viewTransitions: false },
+      },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).not.toContain("@view-transition");
+  });
+
+  test("a 404 page carries the rule, so navigating to it animates too", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      viewTransitions: true,
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/never-existed"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(headOf(await response.text())).toContain(
+      `<style>${RULE}${REDUCED_MOTION}</style>`,
+    );
   });
 });

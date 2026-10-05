@@ -72,5 +72,6 @@ export type {
   TemplateRule,
   TermProjection,
   TermTaxonomyName,
+  ViewTransitionsInput,
   ViewTransitionType,
 } from "@plumix/core";
