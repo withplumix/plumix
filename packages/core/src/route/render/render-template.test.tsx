@@ -4855,7 +4855,9 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     const archiveHead = await dispatchHead(h, "https://cms.example/post");
 
     expect(entryHead).not.toContain("@view-transition");
+    expect(entryHead).not.toContain("pagereveal");
     expect(archiveHead).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(archiveHead).toContain('addEventListener("pagereveal"');
   });
 
   test("a template's `true` renders the rule only on its pages when the theme leaves it off", async () => {
@@ -4865,7 +4867,9 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     const archiveHead = await dispatchHead(h, "https://cms.example/post");
 
     expect(entryHead).toContain(`<style>${RULE}${REDUCED_MOTION}</style>`);
+    expect(entryHead).toContain('addEventListener("pagereveal"');
     expect(archiveHead).not.toContain("@view-transition");
+    expect(archiveHead).not.toContain("pagereveal");
   });
 
   test("a template's types replace the theme's rather than adding to them", async () => {
@@ -4914,7 +4918,9 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     );
 
     expect(response.status).toBe(404);
-    expect(headOf(await response.text())).not.toContain("@view-transition");
+    const head = headOf(await response.text());
+    expect(head).not.toContain("@view-transition");
+    expect(head).not.toContain("pagereveal");
   });
 
   test("an edit-mode render carries no rule, whatever the template says", async () => {
@@ -4931,6 +4937,7 @@ describe("template viewTransitions — replaces the theme's value for its pages"
 
     expect(body).toContain('data-plumix-mode="edit"');
     expect(headOf(body)).not.toContain("@view-transition");
+    expect(headOf(body)).not.toContain("pagereveal");
   });
 
   test("a preview render carries no rule, whatever the template says", async () => {
@@ -4957,5 +4964,6 @@ describe("template viewTransitions — replaces the theme's value for its pages"
     expect(response.status).toBe(200);
     expect(headOf(body)).toContain("<title>Draft</title>");
     expect(headOf(body)).not.toContain("@view-transition");
+    expect(headOf(body)).not.toContain("pagereveal");
   });
 });
