@@ -704,6 +704,67 @@ describe("access gate — per-entry visibility (#1742)", () => {
     expect(await response.text()).toContain("open title");
   });
 
+  test("a rule naming a fixed entry gates its path by that entry's choice", async () => {
+    const featured = definePlugin("featured", (ctx) => {
+      ctx.registerRewriteRule("/featured/:id", {
+        kind: "entry",
+        entryType: "column",
+        slug: "locked",
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [perEntryPlugin, featured] },
+    });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    const subscriber = await h.seedUser("subscriber");
+
+    const anonymous = await h.dispatch(
+      new Request("https://cms.example/featured/abc"),
+    );
+    const member = await h.dispatch(
+      await authed(h, "/featured/abc", subscriber.id),
+    );
+
+    expect(anonymous.status).toBe(302);
+    expect(anonymous.headers.get("location")).toBe(
+      "/_plumix/admin/login?redirectTo=%2Ffeatured%2Fabc",
+    );
+    expect(member.status).toBe(200);
+    expect(await member.text()).toContain("locked title");
+  });
+
+  test("a rule naming a fixed entry gates by that entry, not the one its captured slug names", async () => {
+    const pinned = definePlugin("pinned", (ctx) => {
+      ctx.registerRewriteRule("/pinned-locked/:slug", {
+        kind: "entry",
+        entryType: "column",
+        slug: "locked",
+      });
+      ctx.registerRewriteRule("/pinned-open/:slug", {
+        kind: "entry",
+        entryType: "column",
+        slug: "open",
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [perEntryPlugin, pinned] },
+    });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    await seedColumn(h, "open", {});
+
+    // Each path captures the slug of the *other* entry; the fixed one decides.
+    const locked = await h.dispatch(
+      new Request("https://cms.example/pinned-locked/open"),
+    );
+    const open = await h.dispatch(
+      new Request("https://cms.example/pinned-open/locked"),
+    );
+
+    expect(locked.status).toBe(302);
+    expect(open.status).toBe(200);
+    expect(await open.text()).toContain("open title");
+  });
+
   test("an unknown stored choice falls back to the type default, never granting less", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [perEntryPlugin] },

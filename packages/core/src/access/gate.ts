@@ -68,7 +68,7 @@ export async function policyForMatch(
     if (!access.policies || access.policies.length === 0) {
       return access.default;
     }
-    const row = await resolveSingleEntry(ctx, intent.entryType, match.params);
+    const row = await resolveSingleEntry(ctx, intent, match.params);
     return selectEntryPolicy(access, readAccessKey(row?.meta));
   }
   if (intent.kind === "entryType") {

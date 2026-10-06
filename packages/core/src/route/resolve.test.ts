@@ -1,10 +1,15 @@
 import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
+import type { BlockLoaderArgs } from "../blocks/index.js";
+import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
+import type { JsonObject } from "../json.js";
+import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
+import { defineBlock } from "../blocks/index.js";
 import { eq, ne } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
@@ -2456,5 +2461,352 @@ describe("resolvePublicRoute — resolved route", () => {
     );
     expect(response.status).toBe(200);
     expect(seen).toBeNull();
+  });
+});
+
+describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
+  // A page served at a dynamic path: the rule names the entry by slug, and
+  // whatever `:id` captured is left for the page's block loaders to read.
+  const comparePlugin = definePlugin("compare", (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      isHierarchical: true,
+      rewrite: { slug: "" },
+    });
+    ctx.registerRewriteRule("/compare/:id", {
+      kind: "entry",
+      entryType: "page",
+      slug: "shared-comparison",
+    });
+  });
+
+  function createPage(
+    h: DispatcherHarness,
+    authorId: number,
+    {
+      slug,
+      title,
+      status = "published",
+      content = TIPTAP_BODY,
+      parentId = null,
+    }: {
+      slug: string;
+      title: string;
+      status?: "published" | "draft";
+      content?: JsonObject;
+      parentId?: number | null;
+    },
+  ) {
+    return h.factory.entry.create({
+      type: "page",
+      slug,
+      title,
+      status,
+      content,
+      parentId,
+      authorId,
+    });
+  }
+
+  async function seedComparison(
+    options: {
+      status?: "published" | "draft";
+      content?: JsonObject;
+      plugins?: readonly AnyPluginDescriptor[];
+      cdn?: ConnectedCdn;
+    } = {},
+  ) {
+    const h = await createDispatcherHarness({
+      cdn: options.cdn,
+      config: { plugins: [comparePlugin, ...(options.plugins ?? [])] },
+    });
+    const author = await h.seedUser("admin");
+    const page = await createPage(h, author.id, {
+      slug: "shared-comparison",
+      title: "Shared Comparison",
+      status: options.status,
+      content: options.content,
+    });
+    return { h, author, page };
+  }
+
+  test("serves the named entry at whatever path the rule captured", async () => {
+    const { h } = await seedComparison();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<h1>Shared Comparison</h1>");
+    expect(body).toContain("<p>Body.</p>");
+  });
+
+  test("a block loader on the entry reads the params the rule captured", async () => {
+    const seen: unknown[] = [];
+    const probe = definePlugin("route-probe", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/route-probe",
+          loaders: {
+            params: ({ ctx: appCtx }: BlockLoaderArgs) => {
+              seen.push(appCtx);
+              return Promise.resolve(null);
+            },
+          },
+          render: () => null,
+        }),
+      );
+    });
+    const { h } = await seedComparison({
+      plugins: [probe],
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "n", name: "acme/route-probe", attrs: {} }],
+      },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(seen).toMatchObject([{ resolvedRoute: { params: { id: "abc" } } }]);
+  });
+
+  test("a draft 404s at the rule's path unless a preview token grants it", async () => {
+    const { h, author, page } = await seedComparison({ status: "draft" });
+    const token = await createPreviewToken(h.db, {
+      entryId: page.id,
+      userId: author.id,
+    });
+
+    const bare = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/compare/abc?preview=${token}`),
+    );
+
+    expect(bare.status).toBe(404);
+    expect(bare.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+    expect(preview.status).toBe(200);
+    expect(await preview.text()).toContain("<h1>Shared Comparison</h1>");
+  });
+
+  test("a preview token overlays its author's autosave at the rule's path", async () => {
+    const { h, author, page } = await seedComparison();
+    await upsertAutosave(h.db, {
+      entry: page,
+      authorId: author.id,
+      patch: {
+        title: "Shared Comparison",
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Draft body." }],
+            },
+          ],
+        },
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: page.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/compare/abc?preview=${token}`),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("Draft body.");
+  });
+
+  test("the page at the rule's path is stored under the entry's cdn tags", async () => {
+    const stored: (readonly string[])[] = [];
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: {
+        match: () => Promise.resolve(undefined),
+        put: (_request, _response, tags) => {
+          stored.push(tags);
+          return Promise.resolve();
+        },
+      },
+    };
+    const { h, page } = await seedComparison({ cdn });
+
+    await h.dispatch(new Request("https://cms.example/compare/abc"));
+    await h.drainDeferred();
+
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toContain("t:page");
+    expect(stored[0]).toContain(`e:${String(page.id)}`);
+  });
+
+  test("the rule's path is served as it is, never redirected to the entry's permalink", async () => {
+    const { h } = await seedComparison();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc?ref=feed"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  test("the entry's url at the rule's path is still its permalink", async () => {
+    const urlTheme = defineTheme({
+      templates: [
+        fallback(({ data }) =>
+          "entry" in data
+            ? createElement("h1", null, `url:${data.entry.url ?? "none"}`)
+            : null,
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [comparePlugin], theme: urlTheme },
+    });
+    const author = await h.seedUser("admin");
+    await createPage(h, author.id, {
+      slug: "shared-comparison",
+      title: "Shared Comparison",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>url:/shared-comparison</h1>");
+  });
+
+  test("an editor gets edit mode at the rule's path", async () => {
+    const { h, author } = await seedComparison();
+
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/compare/abc?plumix.edit"),
+      author.id,
+    );
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toMatch(/<html[^>]*data-plumix-mode="edit"/);
+  });
+
+  test.each(["/compare/other", "/versus/other", "/versus/a/b"])(
+    "a fixed slug wins over a captured slug or path param at %s",
+    async (path) => {
+      const capturing = definePlugin("compare-capturing", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
+        });
+        ctx.registerRewriteRule("/compare/:slug", {
+          kind: "entry",
+          entryType: "page",
+          slug: "shared-comparison",
+        });
+        ctx.registerRewriteRule("/versus/:path*", {
+          kind: "entry",
+          entryType: "page",
+          slug: "shared-comparison",
+        });
+      });
+      const h = await createDispatcherHarness({
+        config: { plugins: [capturing] },
+      });
+      const author = await h.seedUser("admin");
+      await createPage(h, author.id, {
+        slug: "shared-comparison",
+        title: "Shared Comparison",
+      });
+      await createPage(h, author.id, { slug: "other", title: "Other" });
+
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
+    },
+  );
+
+  test("a fixed slug names a nested entry without checking its ancestors", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [comparePlugin] },
+    });
+    const author = await h.seedUser("admin");
+    const parent = await createPage(h, author.id, {
+      slug: "parent",
+      title: "Parent",
+    });
+    await createPage(h, author.id, {
+      slug: "shared-comparison",
+      title: "Nested Comparison",
+      parentId: parent.id,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>Nested Comparison</h1>");
+  });
+
+  test("a preview token minted for another entry does not grant the named draft", async () => {
+    const { h, author } = await seedComparison({ status: "draft" });
+    const other = await createPage(h, author.id, {
+      slug: "other-draft",
+      title: "Other Draft",
+      status: "draft",
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: other.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/compare/abc?preview=${token}`),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+  });
+
+  test("a fixed slug naming no entry is not found", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [comparePlugin] },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+  });
+
+  test("the entry's own permalink still serves it", async () => {
+    const { h } = await seedComparison();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/shared-comparison"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
   });
 });

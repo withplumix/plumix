@@ -5,12 +5,15 @@ import type { RequestMemo } from "../context/memo.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy } from "./policy.js";
+import { createRequestMemo } from "../context/memo.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { resolveSingleEntry } from "../route/single-entry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
+import { entryFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import {
@@ -39,6 +42,32 @@ function seededMemo(
   const memo = <T>(key: string, load: () => Promise<T>): Promise<T> =>
     key in rows ? Promise.resolve(rows[key] as T) : load();
   return Object.assign(memo, { invalidate: () => undefined });
+}
+
+// A real request memo that records the key of every load it runs, so a test
+// can show two callers shared one entry rather than each loading their own.
+function recordingMemo(): { memo: RequestMemo; loads: string[] } {
+  const inner = createRequestMemo();
+  const loads: string[] = [];
+  const memo = <T>(
+    key: string,
+    load: () => Promise<T>,
+    tags?: readonly string[],
+  ): Promise<T> =>
+    inner(
+      key,
+      () => {
+        loads.push(key);
+        return load();
+      },
+      tags,
+    );
+  return {
+    memo: Object.assign(memo, {
+      invalidate: (tags: readonly string[]) => inner.invalidate(tags),
+    }),
+    loads,
+  };
 }
 
 let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -175,6 +204,77 @@ describe("policyForMatch", () => {
         matchWith({ kind: "entry", entryType: "post" }, { slug: "hello" }),
       ),
     ).resolves.toBe(editors);
+  });
+
+  it("reads the per-entry choice of the entry a fixed-slug intent names", async () => {
+    const editors = rolePolicy("editor");
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: anonymousPolicy,
+          policies: [{ key: "staff", label: "Staff", policy: editors }],
+        },
+      },
+      // Only the fixed entry is seeded: the captured `slug` addresses nothing.
+      memo: seededMemo({
+        "single-entry:post:s:pinned": {
+          meta: { [ACCESS_POLICY_META_KEY]: "staff" },
+        },
+      }),
+    });
+    await expect(
+      policyForMatch(
+        c,
+        matchWith(
+          { kind: "entry", entryType: "post", slug: "pinned" },
+          { slug: "hello" },
+        ),
+      ),
+    ).resolves.toBe(editors);
+  });
+
+  it("chooses a fixed-slug policy from the one lookup the renderer reuses", async () => {
+    const editors = rolePolicy("editor");
+    const { memo, loads } = recordingMemo();
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: anonymousPolicy,
+          policies: [{ key: "staff", label: "Staff", policy: editors }],
+        },
+      },
+      memo,
+    });
+    const author = await userFactory.transient({ db }).create();
+    const pinned = await entryFactory.transient({ db }).create({
+      type: "post",
+      slug: "memo-pinned",
+      status: "published",
+      authorId: author.id,
+      meta: { [ACCESS_POLICY_META_KEY]: "staff" },
+    });
+    // The captured slug names another, unpoliced entry; it must not be read.
+    await entryFactory.transient({ db }).create({
+      type: "post",
+      slug: "memo-captured",
+      status: "published",
+      authorId: author.id,
+    });
+    const intent = {
+      kind: "entry",
+      entryType: "post",
+      slug: "memo-pinned",
+    } as const;
+    const params = { slug: "memo-captured" };
+
+    await expect(policyForMatch(c, matchWith(intent, params))).resolves.toBe(
+      editors,
+    );
+    // The renderer (`resolveSingle`) resolves its row through this same call.
+    const rendered = await resolveSingleEntry(c, intent, params);
+
+    expect(rendered?.id).toBe(pinned.id);
+    expect(loads).toEqual(["single-entry:post:s:memo-pinned"]);
   });
 
   it("falls back to the type default for a per-entry-space single with no stored choice", async () => {

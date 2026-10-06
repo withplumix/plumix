@@ -9,47 +9,66 @@
  * — the gate can't pick a policy for one row while the renderer shows another —
  * and pays for at most one DB read per request.
  *
- * Memo-safety: the resolution reads only the request URL (slug/path params and
- * the `?preview=` token) and the database — never the principal — so it is
- * principal-invariant and safe under the `withUser`-shared request memo.
+ * Memo-safety: the resolution reads only the intent, the request URL (slug/path
+ * params and the `?preview=` token) and the database — never the principal — so
+ * it is principal-invariant and safe under the `withUser`-shared request memo.
  */
 
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
+import type { RouteIntent } from "./contract/intent.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { findEntryByPath } from "./path-chain.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 
+type EntryIntent = Extract<RouteIntent, { kind: "entry" }>;
+
+type EntrySelector =
+  | { readonly by: "slug"; readonly slug: string }
+  | { readonly by: "path"; readonly path: string };
+
 /**
- * Resolve the entry an `entry` intent addresses (flat `slug` or hierarchical
- * `path`), honouring a `?preview=` token for drafts. `null` when nothing
- * matches. Memoized per request per `(entryType, slug|path)`.
+ * Resolve the entry an `entry` intent addresses (the intent's fixed `slug`,
+ * else a flat `slug` or hierarchical `path` param), honouring a `?preview=`
+ * token for drafts. `null` when nothing matches. Memoized per request per
+ * `(entryType, slug|path)`.
  */
 export function resolveSingleEntry(
   ctx: AppContext,
-  entryType: string,
+  intent: EntryIntent,
   params: Record<string, string>,
 ): Promise<Entry | null> {
-  const path = params.path;
-  const usePath = typeof path === "string" && path !== "";
-  const selector = usePath ? `p:${path}` : `s:${params.slug ?? ""}`;
-  return ctx.memo(`single-entry:${entryType}:${selector}`, () =>
-    findEntryForSingle(ctx, entryType, params),
+  const selector = selectEntry(intent, params);
+  const key =
+    selector.by === "path" ? `p:${selector.path}` : `s:${selector.slug}`;
+  return ctx.memo(`single-entry:${intent.entryType}:${key}`, () =>
+    findEntryForSingle(ctx, intent.entryType, selector),
   );
+}
+
+// Slugs are unique per type, so a fixed slug names a nested entry too and no
+// ancestor path is checked.
+function selectEntry(
+  intent: EntryIntent,
+  params: Record<string, string>,
+): EntrySelector {
+  if (intent.slug !== undefined) return { by: "slug", slug: intent.slug };
+  const path = params.path;
+  if (typeof path === "string" && path !== "") return { by: "path", path };
+  return { by: "slug", slug: params.slug ?? "" };
 }
 
 async function findEntryForSingle(
   ctx: AppContext,
   entryType: string,
-  params: Record<string, string>,
+  selector: EntrySelector,
 ): Promise<Entry | null> {
-  const path = params.path;
-  if (typeof path === "string" && path !== "") {
-    return findEntryByPath(ctx, entryType, path.split("/"));
+  if (selector.by === "path") {
+    return findEntryByPath(ctx, entryType, selector.path.split("/"));
   }
-  const slug = params.slug;
-  if (typeof slug !== "string" || slug === "") return null;
+  const { slug } = selector;
+  if (slug === "") return null;
   const published = await ctx.db.query.entries.findFirst({
     where: and(
       eq(entries.type, entryType),

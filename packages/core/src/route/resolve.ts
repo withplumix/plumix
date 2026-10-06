@@ -389,7 +389,7 @@ async function resolveSingle(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const baseRow = await resolveSingleEntry(ctx, intent.entryType, params);
+  const baseRow = await resolveSingleEntry(ctx, intent, params);
   if (!baseRow) return notFound("public-post-not-found");
   // A preview link renders the minting author's in-progress autosave, so the
   // "Preview current draft" action shows pending edits rather than the live row.
