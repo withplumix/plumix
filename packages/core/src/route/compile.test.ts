@@ -732,12 +732,15 @@ describe("compileRouteMap", () => {
     });
 
     test("a string hasArchive gets the same messages, worded against hasArchive", async () => {
+      const message =
+        'Entry type "course" has invalid hasArchive "/learn/all-courses": ' +
+        'drop the leading slash and write "learn/all-courses"';
       await bootError((ctx) => {
         ctx.registerEntryType("course", {
           label: "Courses",
           hasArchive: "/learn/all-courses",
         });
-      }, 'Entry type "course" has invalid hasArchive "/learn/all-courses": ' + 'drop the leading slash and write "learn/all-courses"');
+      }, message);
     });
 
     test.each([
