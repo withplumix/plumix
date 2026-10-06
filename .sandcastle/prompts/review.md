@@ -32,7 +32,10 @@ as the ticket pins it, and put your disagreement in `notes`.
   it.
 - **Spec findings:** do not fix them. A missing criterion, one met in form but
   not in effect, or scope the ticket did not ask for goes in `specGaps`; the
-  implementer closes it and you review again.
+  implementer closes it and you review again. A criterion that a suite, a
+  typecheck, a lint or a build passes is met by the harness's gates, which run
+  after this phase; it is never a spec gap, and neither you nor the implementer
+  runs those suites to prove it.
 
 `notes` hold only the smells you left and your disagreements with a pinned
 decision. A rule about how the work was done, such as test-first order, leaves
