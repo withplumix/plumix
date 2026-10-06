@@ -21,7 +21,7 @@ type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 // Reads the boxes a `page.mouse` sequence is about to aim at, retrying until
 // every one is non-null. A `toBeVisible()` just before a one-shot read is not
 // enough: under worker load the toolbar or canvas can re-render between the
-// two, and the read comes back null.
+// two, and the read comes back null (#2582).
 async function settledBoxes<const T extends readonly Locator[]>(
   ...locators: T
 ): Promise<{ [K in keyof T]: Box }> {
@@ -502,7 +502,7 @@ test.describe("editor playground", () => {
   }) => {
     await page.goto("/");
     // The canvas forwards a wheel to the host from a listener it adds once it
-    // mounts, so a wheel sent before then is dropped and nothing pans.
+    // mounts, so a wheel sent before then is dropped and nothing pans (#2582).
     await page
       .frameLocator(CANVAS_FRAME)
       .locator('[data-plumix-id="heading-1"]')

@@ -326,7 +326,7 @@ type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
 // Reads the boxes a drag is about to aim at, retrying until every one is
 // non-null. A one-shot read can come back null when the row re-renders
-// between locating it and measuring it, which a loaded runner makes likely.
+// between locating it and measuring it, which a loaded runner makes likely (#2582).
 async function settledBoxes<const T extends readonly Locator[]>(
   ...locators: T
 ): Promise<{ [K in keyof T]: Box }> {
