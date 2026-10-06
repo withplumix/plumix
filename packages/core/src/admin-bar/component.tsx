@@ -9,6 +9,7 @@ import type { HookExecutor } from "../hooks/registry.js";
 import type { QueriedEntryDetails } from "../route/render/render-env.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
+import { canAccessAdmin } from "../access/contract/rbac.js";
 import { useQueriedEntry, useUser } from "../blocks/renderer/index.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
@@ -40,13 +41,17 @@ export function PlumixAdminBar({
   const user = useUser();
   const queriedEntry = useQueriedEntry();
   if (user === null) return null;
+  // Renderer types widen these structurally to keep blocks free of core.
+  const viewer = user as AuthenticatedUser;
+  // The admin shell refuses a non-staff viewer, so the bar has nothing to
+  // offer them; bail before any `admin_bar:nodes` handler runs.
+  if (!canAccessAdmin(viewer.role)) return null;
   const locale = resolveBarLocale(user);
   const direction = barDirection(locale);
   const strings = barMessages(locale);
-  // Renderer types widen these structurally to keep blocks free of core.
   const tree = buildAdminBarTree(
     collectAdminBarNodes(hooks, {
-      user: user as AuthenticatedUser,
+      user: viewer,
       queriedEntry,
       queriedEntryDetails,
       request,
@@ -57,6 +62,9 @@ export function PlumixAdminBar({
       direction,
     }),
   );
+  // An emptied tree is how a site or theme switches the bar off, so it must
+  // leave no offset or script behind either.
+  if (tree.length === 0) return null;
   return (
     <>
       <style data-testid="plumix-admin-bar-style">{ADMIN_BAR_CSS}</style>

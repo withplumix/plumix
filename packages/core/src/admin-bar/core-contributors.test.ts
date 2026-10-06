@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
+import type { UserRole } from "../db/schema/users.js";
 import type { BarRenderContext } from "./types.js";
+import {
+  deriveEntryTypeCapabilities,
+  roleLevel,
+} from "../access/contract/rbac.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { collectAdminBarNodes } from "./collect.js";
@@ -36,6 +41,23 @@ function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
   );
 }
 
+// `can` as the role hierarchy answers it for `role`, over the capabilities
+// `types` derive.
+function roleCan(
+  role: UserRole,
+  types: BarRenderContext["entryTypes"],
+): (capability: string) => boolean {
+  const minRoles = new Map(
+    [...types.values()]
+      .flatMap((type) => deriveEntryTypeCapabilities(type))
+      .map((cap) => [cap.name, cap.minRole]),
+  );
+  return (capability) => {
+    const minRole = minRoles.get(capability);
+    return minRole !== undefined && roleLevel(role) >= roleLevel(minRole);
+  };
+}
+
 function withCore(): HookRegistry {
   const hooks = new HookRegistry();
   registerCoreAdminBarContributors(hooks);
@@ -58,12 +80,30 @@ describe("registerCoreAdminBarContributors — site link", () => {
 });
 
 describe("registerCoreAdminBarContributors — +New group", () => {
-  test("emits a parent group with no children when no entry types are registered", () => {
+  test("omits the group when no entry types are registered", () => {
     const nodes = collectAdminBarNodes(withCore(), ctx());
 
-    const newGroup = nodes.find((n) => n.id === "+new");
-    expect(newGroup).toBeDefined();
-    expect(nodes.filter((n) => n.parent === "+new")).toEqual([]);
+    expect(nodes.find((n) => n.id === "+new")).toBeUndefined();
+  });
+
+  test("omits the group when the viewer may create none of the types", () => {
+    const types = new Map([
+      [
+        "notice",
+        toRegisteredEntryType(
+          "notice",
+          { label: "Notice", capabilities: { create: "editor" } },
+          "test",
+        ),
+      ],
+    ]);
+
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({ entryTypes: types, auth: { can: roleCan("author", types) } }),
+    );
+
+    expect(nodes.find((n) => n.id === "+new")).toBeUndefined();
   });
 
   test("adds one child per registered entry type, in registration order", () => {
@@ -150,6 +190,28 @@ describe("registerCoreAdminBarContributors — +New group", () => {
     const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
 
     expect(nodes.find((n) => n.id === "+new:secret")).toBeDefined();
+  });
+
+  test("omits a type whose create capability needs a role above the viewer's", () => {
+    const types = new Map([
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
+      [
+        "notice",
+        toRegisteredEntryType(
+          "notice",
+          { label: "Notice", capabilities: { create: "editor" } },
+          "test",
+        ),
+      ],
+    ]);
+
+    const nodes = collectAdminBarNodes(
+      withCore(),
+      ctx({ entryTypes: types, auth: { can: roleCan("author", types) } }),
+    );
+
+    const childIds = nodes.filter((n) => n.parent === "+new").map((n) => n.id);
+    expect(childIds).toEqual(["+new:post"]);
   });
 
   test("plugin can suppress its own entry type from the menu via the filter", () => {
