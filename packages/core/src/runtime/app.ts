@@ -271,7 +271,7 @@ export async function buildApp(
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
   registerCorePurgeInvalidator(hooks);
-  const seededRegistry = createPluginRegistry();
+  const seededRegistry = createPluginRegistry(config.routes);
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
   registerCoreSettings(seededRegistry);

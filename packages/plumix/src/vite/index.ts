@@ -636,6 +636,7 @@ async function regenerate(
       i18n: config.i18n,
       configuredSlots: configuredSlotsOf(config),
       theme: config.theme,
+      routes: config.routes,
       projectRoot: cwd,
       bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,
     },

@@ -16,6 +16,10 @@ import type {
   ResolvedI18nFor,
 } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
+import type {
+  FrameworkRoutes,
+  FrameworkRoutesInput,
+} from "./route/contract/framework-routes.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
 import type {
   CdnProvider,
@@ -154,6 +158,16 @@ export interface PlumixConfigInput {
    */
   readonly redirects?: readonly RedirectRule[];
   /**
+   * Which of core's framework routes the site keeps, keyed by page kind. Every
+   * family is on by default; one set to `false` is never compiled, so its URLs
+   * 404 unless something else answers them. Root pagination (`/page/N`) is not
+   * switchable.
+   *
+   * @example
+   * routes: { date: false, author: false }
+   */
+  readonly routes?: FrameworkRoutesInput;
+  /**
    * Serve the whole site under a subdirectory (`example.com/custom-directory/*`)
    * — set this when a reverse proxy mounts plumix below the domain root.
    * Mirrors Next's `basePath` / Nuxt's `app.baseURL`: a leading-slash prefix
@@ -221,6 +235,8 @@ interface ResolvedSlots {
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
   readonly redirects: readonly RedirectRule[];
+  /** Every framework route family settled, `true` where the site left it unset. */
+  readonly routes: FrameworkRoutes;
   /** Normalized subdirectory prefix (`""` for a root deployment). */
   readonly basePath: string;
 }

@@ -10,6 +10,7 @@ const OPTIONS = {
   projectRoot: "/nowhere",
   bundledPluginsDir: null,
   theme,
+  routes: { author: true, date: true, search: true },
 } as const;
 
 function metaBox(id: string, entryTypes: readonly string[]) {
@@ -80,5 +81,16 @@ describe("computeManifestAndRegistry", () => {
     expect(registry.entryMetaBoxes.get("derived")?.entryTypes).toEqual([
       "post",
     ]);
+  });
+
+  test("the site's routes reach both the registry and the manifest", async () => {
+    const routes = { author: false, date: false, search: true };
+    const { manifest, registry } = await computeManifestAndRegistry([content], {
+      ...OPTIONS,
+      routes,
+    });
+
+    expect(registry.frameworkRoutes).toEqual(routes);
+    expect(manifest.frameworkRoutes).toEqual({ author: false });
   });
 });

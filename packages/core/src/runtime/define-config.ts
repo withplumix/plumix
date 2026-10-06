@@ -2,6 +2,7 @@ import type { PlumixConfig, PlumixConfigInput } from "../config.js";
 import { normalizeBasePath } from "../base-path.js";
 import { ConfigError } from "../config.errors.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
+import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 import { welcomeTheme } from "../welcome-theme.js";
 
 // Resolves the config shapes `config.ts` declares. Here rather than beside
@@ -18,6 +19,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],
     redirects: config.redirects ?? [],
+    routes: resolveFrameworkRoutes(config.routes),
     i18n: resolveLocales(
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),

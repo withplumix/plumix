@@ -7,6 +7,7 @@ import type {
   ResolvedI18n,
 } from "./config.js";
 import type { RuntimeAdapter } from "./context/runtime-adapter.js";
+import type { FrameworkRoutes } from "./route/contract/framework-routes.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
 import type {
   DatabaseAdapter,
@@ -147,6 +148,22 @@ test("plumix() defaults basePath to the empty string (root deployment)", () => {
   expect(config.basePath).toBe("");
 });
 
+test("plumix() keeps every framework route family when routes is omitted", () => {
+  const config = plumix({ runtime, database, auth: authConfig, theme });
+  expect(config.routes).toEqual({ author: true, date: true, search: true });
+});
+
+test("plumix() turns off only the route families the site sets to false", () => {
+  const config = plumix({
+    runtime,
+    database,
+    auth: authConfig,
+    theme,
+    routes: { date: false },
+  });
+  expect(config.routes).toEqual({ author: true, date: false, search: true });
+});
+
 test("plumix() normalizes a configured basePath to its canonical form", () => {
   const config = plumix({
     runtime,
@@ -202,6 +219,7 @@ const everySlot: Required<PlumixConfigInput> = {
   plugins: [],
   i18n: { defaultLocale: "en", locales: ["en", "fr"] },
   redirects: [],
+  routes: { date: false },
   basePath: "/docs/",
   mcp: { enabled: true },
   api: { enabled: true },
@@ -217,6 +235,7 @@ const RESOLVED_SLOTS = new Set([
   "plugins",
   "i18n",
   "redirects",
+  "routes",
   "basePath",
 ]);
 
@@ -233,7 +252,7 @@ test("plumix() hands every pass-through slot on as the object the operator wrote
   }
 });
 
-test("PlumixConfig declares exactly the input's slots, resolving only the five it normalizes", () => {
+test("PlumixConfig declares exactly the input's slots, resolving only the six it normalizes", () => {
   expectTypeOf<keyof PlumixConfig>().toEqualTypeOf<keyof PlumixConfigInput>();
   expectTypeOf<PlumixConfig["theme"]>().toEqualTypeOf<ThemeDescriptor>();
   expectTypeOf<PlumixConfig["plugins"]>().toEqualTypeOf<
@@ -243,5 +262,6 @@ test("PlumixConfig declares exactly the input's slots, resolving only the five i
   expectTypeOf<PlumixConfig["redirects"]>().toEqualTypeOf<
     readonly RedirectRule[]
   >();
+  expectTypeOf<PlumixConfig["routes"]>().toEqualTypeOf<FrameworkRoutes>();
   expectTypeOf<PlumixConfig["basePath"]>().toEqualTypeOf<string>();
 });

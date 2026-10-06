@@ -68,6 +68,16 @@ describe("buildManifest", () => {
     },
   );
 
+  test.each([true, false])(
+    "tells the admin whether the site keeps its author routes (%s)",
+    (author) => {
+      const manifest = buildManifest(
+        createPluginRegistry({ author, date: true, search: true }),
+      );
+      expect(manifest.frameworkRoutes).toEqual({ author });
+    },
+  );
+
   test("names only keys of the config as infrastructure slots", () => {
     expectTypeOf<InfrastructureSlot>().toExtend<keyof PlumixConfig>();
   });

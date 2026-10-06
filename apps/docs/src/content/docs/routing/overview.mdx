@@ -120,17 +120,36 @@ Every compiled rule carries a numeric priority, and lower wins. Rules at equal p
 
 Only the 10 is a default. `registerRewriteRule` takes a third argument `{ priority }`, and `registerArchiveType` takes a `priority` in its options, both of which replace it outright. A rule numbered below 5 therefore lands ahead of the framework routes, and one numbered above 60 lands behind the root catch-all. The other three rows are fixed by the compiler.
 
-One pattern normally has one owner, and two rules claiming the same one throw at boot naming both. Numbering below 5 is the exception: a rule may claim a framework pattern outright when its priority actually beats the framework's, which is how `@plumix/plugin-search` replaces the search page with a ranked one. Core's rule stays compiled behind it, so uninstalling the plugin restores the built-in page with nothing to undo. Claim a framework pattern at a priority that cannot win and it still throws — a rule that silently never matches is the mistake the check exists to catch.
+One pattern normally has one owner, and two rules claiming the same one throw at boot naming both. Numbering below 5 is the exception: a rule may claim a framework pattern outright when its priority actually beats the framework's, which is how `@plumix/plugin-search` replaces the search page with a ranked one. Core's rule stays compiled behind it, so uninstalling the plugin restores the built-in page with nothing to undo, unless the site turned core's search routes off. Claim a framework pattern at a priority that cannot win and it still throws — a rule that silently never matches is the mistake the check exists to catch.
 
 The same goes for an entry type's or taxonomy's own URLs, even though their patterns differ from the framework's. A taxonomy slugged `search` compiles `/search/:term`, which is a different string from `/search/:query`, but the framework rule would still answer every URL the taxonomy's permalinks point at. Boot throws instead, naming the registration and the slug. A type slugged `page` keeps compiling, because the framework reserves only numeric page segments under `/page`.
 
 Two consequences are worth knowing before you name anything.
 
-Date archives are framework routes, so `/2026` is the year archive and a recipe slugged `2026` is unreachable at the root of a type mounted there. The compiler emits taxonomy rules ahead of entry-type rules, so a taxonomy named `cuisine` and an entry type with `rewrite: { slug: "cuisine" }` resolve taxonomy-first instead of racing on registration order.
+Date archives are framework routes, so `/2026` is the year archive and a recipe slugged `2026` is unreachable at the root of a type mounted there, unless the site [turns the date routes off](#turning-framework-routes-off). The compiler emits taxonomy rules ahead of entry-type rules, so a taxonomy named `cuisine` and an entry type with `rewrite: { slug: "cuisine" }` resolve taxonomy-first instead of racing on registration order.
 
 Two rules that compile to the identical pattern throw at boot, and the error names both registering plugins. A silent shadow would be worse than a failed deploy.
 
 The last priority band is how the pages plugin serves `/about/team`. Its `page` type registers `rewrite: { slug: "" }`, which compiles to a `/:path+` catch-all at the URL root, and the 60 keeps that catch-all behind every sibling plugin's rules so resolution does not depend on install order.
+
+## Turning framework routes off
+
+Core compiles the author, date and search routes on every site, whether or not it has posts. A site that has no use for one turns its family off with the `routes` key in `plumix.config.ts`:
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const routes: PlumixConfigInput["routes"] = {
+  author: false,
+  date: false,
+};
+```
+
+Each of `author`, `date` and `search` defaults to `true`, so a site that leaves `routes` out keeps all three. `date` is one switch for the year, month and day archives. Root pagination (`/page/2`) belongs to the front page and has no switch.
+
+A family set to `false` is never compiled, not even as a redirect. Its URLs fall through to whatever else matches, or to 404. With `date: false`, a page slugged `2026` under a type mounted at the root is reachable at `/2026`. With `search: false`, `/search?q=` no longer redirects, and a page slugged `search` is reachable at `/search`. `@plumix/plugin-search` keeps serving `/search/:query` on its own rules either way. Anything that reads the archive routes, such as `@plumix/plugin-feeds`, registers no feed for a family that is off.
+
+A date archive with no entries answers 404 whatever the switch says, because an empty year names nothing but a number. An empty author archive still answers 200, because the author exists.
 
 ## Registering your own routes
 

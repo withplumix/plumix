@@ -128,7 +128,8 @@ describe("resolveListingPage", () => {
       day: null,
     });
 
-    expect(page?.data.pagination.total).toBe(0);
+    // Narrowed to nothing, the period has no page (ADR 0029).
+    expect(page).toBeNull();
     expect(seen).toEqual([{ year: "2026", month: "03" }]);
   });
 
@@ -396,6 +397,20 @@ describe("resolveListingPage", () => {
         kind: "date",
         year: 2026,
         month: 13,
+        day: null,
+      }),
+    ).toBeNull();
+  });
+
+  test("has no date archive for a period with no entries", async () => {
+    const h = await harness();
+    await seedPost(h, { publishedAt: new Date("2026-03-04T00:00:00.000Z") });
+
+    expect(
+      await resolveListingPage(contextFor(h), {
+        kind: "date",
+        year: 2026,
+        month: 4,
         day: null,
       }),
     ).toBeNull();

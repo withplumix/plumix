@@ -66,8 +66,12 @@ export async function renderRoute(
   route: AnyRoute,
   { path, url, capabilities }: RouteMount,
 ): Promise<void> {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  // The root's context, as the admin's own router hands it to a loader.
   const rootRoute = createRootRoute({
-    beforeLoad: () => ({ user: { id: 1, capabilities } }),
+    beforeLoad: () => ({ user: { id: 1, capabilities }, queryClient }),
   });
   // The file route was built against the generated tree's parent; re-parenting
   // it is what `update` is for, but its options type is pinned to that tree.
@@ -82,11 +86,7 @@ export async function renderRoute(
   });
   await router.load();
   renderWithI18n(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );

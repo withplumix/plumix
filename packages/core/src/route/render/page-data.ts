@@ -223,7 +223,9 @@ export async function dateData(
     page,
     DEFAULT_ARCHIVE_PER_PAGE,
   );
-  if (listing === null) return null;
+  // Unlike every other archive, an empty period has no page at all: nothing
+  // but its URL makes it a subject, and every year ever is one (ADR 0029).
+  if (listing === null || listing.pagination.total === 0) return null;
 
   const data = await ctx.hooks.applyFilter("resolve:date:data", {
     kind: "date",

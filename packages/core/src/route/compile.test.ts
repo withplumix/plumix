@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { FrameworkRoutes } from "./contract/framework-routes.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -36,9 +37,12 @@ const FRAMEWORK_PATTERNS = new Set<string>([
   FRAMEWORK_DATE_YEAR_PATTERN,
 ]);
 
-async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {
+async function buildRegistry(
+  plugins: ReturnType<typeof definePlugin>[],
+  frameworkRoutes?: FrameworkRoutes,
+) {
   const hooks = new HookRegistry();
-  const registry = createPluginRegistry();
+  const registry = createPluginRegistry(frameworkRoutes);
   await installPlugins({ hooks, plugins, registry });
   return registry;
 }
@@ -674,5 +678,61 @@ describe("compileRouteMap", () => {
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual(["/:slug"]);
+  });
+});
+
+describe("compileRouteMap — framework routes a site turns off", () => {
+  const ALL_ON = { author: true, date: true, search: true } as const;
+
+  function frameworkRules(registry: ReturnType<typeof createPluginRegistry>) {
+    return compileRouteMap(registry)
+      .filter((rule) => FRAMEWORK_PATTERNS.has(rule.rawPattern))
+      .map((rule) => rule.rawPattern);
+  }
+
+  test("with every family on, core compiles its rules in today's order", async () => {
+    expect(frameworkRules(await buildRegistry([]))).toEqual([
+      "/page/:page(\\d+)",
+      "/search/:query/page/:page(\\d+)",
+      "/search/:query",
+      "/search",
+      "/authors/:slug/page/:page(\\d+)",
+      "/authors/:slug",
+      "/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})/page/:page(\\d+)",
+      "/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})",
+      "/:year(\\d{4})/:month(\\d{2})/page/:page(\\d+)",
+      "/:year(\\d{4})/:month(\\d{2})",
+      "/:year(\\d{4})/page/:page(\\d+)",
+      "/:year(\\d{4})",
+    ]);
+  });
+
+  test("date off compiles none of the six date rules, so a root entry slugged 2026 resolves", async () => {
+    const registry = await buildRegistry(
+      [
+        definePlugin("pages", (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            rewrite: { slug: "" },
+          });
+        }),
+      ],
+      { ...ALL_ON, date: false },
+    );
+    expect(frameworkRules(registry)).toEqual([
+      "/page/:page(\\d+)",
+      "/search/:query/page/:page(\\d+)",
+      "/search/:query",
+      "/search",
+      "/authors/:slug/page/:page(\\d+)",
+      "/authors/:slug",
+    ]);
+    const match = matchRoute(
+      new URL("https://cms.example/2026"),
+      compileRouteMap(registry),
+    );
+    expect(match?.intent).toEqual({ kind: "entry", entryType: "page" });
+    expect(match?.params).toEqual({ slug: "2026" });
   });
 });

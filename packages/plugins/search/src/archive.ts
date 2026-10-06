@@ -12,8 +12,10 @@ import { runSearch } from "./server/query.js";
 const SEARCH_ARCHIVE_NAME = "search";
 
 // Core's own search rules sit at priority 5, and lower wins. Claiming their
-// patterns below that is what replaces the page; core's rules stay compiled
-// behind these, so uninstalling the plugin restores them with nothing to undo.
+// patterns below that is what replaces the page. Where the site keeps core's
+// search routes they stay compiled behind these, so uninstalling the plugin
+// restores them with nothing to undo; where it turned them off, these are the
+// only rules at the patterns.
 const SHADOW_PRIORITY = 1;
 
 /** What the theme renders a search page from. */
