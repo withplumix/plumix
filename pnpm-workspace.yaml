@@ -32,7 +32,7 @@ catalog:
   publint: ^0.3.24
   radix-ui: ^1.6.7
   react-hook-form: ^7.87.0
-  sharp: ^0.35.4
+  sharp: ^0.35.5
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
   tsx: 4.23.13
