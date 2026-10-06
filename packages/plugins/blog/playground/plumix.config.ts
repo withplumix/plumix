@@ -1,6 +1,5 @@
 import { plumix } from "plumix";
 import { auth } from "plumix/auth";
-import { defineTheme } from "plumix/theme";
 
 import { blog } from "@plumix/plugin-blog";
 import {
@@ -8,6 +7,8 @@ import {
   cloudflareDeployOrigin,
   d1,
 } from "@plumix/runtime-cloudflare";
+
+import { theme } from "./theme.js";
 
 // Plumix consumer wiring only the blog plugin — the smallest config
 // you can run to dogfood `@plumix/plugin-blog` without bringing the
@@ -39,5 +40,5 @@ export default plumix({
   // Ukrainian alongside the default so the e2e can exercise the
   // locale switcher + the SSR admin bar translation end-to-end.
   i18n: { defaultLocale: "en", locales: ["en", "uk"] },
-  theme: defineTheme({ templates: () => null }),
+  theme,
 });

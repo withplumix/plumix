@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { factoriesFor } from "plumix/test";
 import { actingAs, openPlaygroundDb } from "plumix/test/playwright";
 
 // Runs once after the baked webServer is ready, before the spec
@@ -16,4 +17,18 @@ export default async function globalSetup(): Promise<void> {
     JSON.stringify(storageState, null, 2),
     "utf8",
   );
+
+  // A published post for the front page to link to: the view-transition spec
+  // walks from the front page to it and back.
+  const factories = factoriesFor(db);
+  const author = await factories.user.create({});
+  await factories.entry.create({
+    type: "post",
+    slug: "first",
+    title: "First post",
+    authorId: author.id,
+    status: "published",
+    publishedAt: new Date(),
+    content: null,
+  });
 }

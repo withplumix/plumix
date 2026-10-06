@@ -1,5 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ParsedLocation } from "@tanstack/react-router";
 import { createRouter as createTanstackRouter } from "@tanstack/react-router";
+
+import type { ViewTransitionType } from "@plumix/core/support";
+import { viewTransitionTypes } from "@plumix/core/support";
 
 import { ErrorBoundaryFallback } from "../components/error-boundary-fallback.js";
 import { adminBasePath } from "../lib/admin-base.js";
@@ -23,7 +27,40 @@ export function createRouter(queryClient: QueryClient) {
     // TanStack's hardcoded-English `ErrorComponent`.
     defaultErrorComponent: ErrorBoundaryFallback,
     context: { queryClient },
+    defaultViewTransition: {
+      types: (change) =>
+        navigationTransitionTypes(change, prefersReducedMotion),
+    },
   });
+}
+
+interface NavigationChange {
+  readonly fromLocation?: ParsedLocation;
+  readonly toLocation: ParsedLocation;
+  readonly pathChanged: boolean;
+}
+
+function prefersReducedMotion(): boolean {
+  return matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * The view transition types a navigation starts with, by the direction it
+ * moves through history, or `false` for no transition: on the first load,
+ * when only the search params or hash changed, and when
+ * `prefersReducedMotion` returns `true`.
+ */
+function navigationTransitionTypes(
+  { fromLocation, toLocation, pathChanged }: NavigationChange,
+  prefersReducedMotion: () => boolean,
+): ViewTransitionType[] | false {
+  if (fromLocation === undefined || !pathChanged) return false;
+  if (prefersReducedMotion()) return false;
+  const from = fromLocation.state.__TSR_index;
+  const to = toLocation.state.__TSR_index;
+  if (to < from) return [viewTransitionTypes.back];
+  if (to === from) return [viewTransitionTypes.replace];
+  return [viewTransitionTypes.forward];
 }
 
 declare module "@tanstack/react-router" {

@@ -32,6 +32,8 @@ export {
   term,
   ThemeError,
   ThemeRegistrationError,
+  transitionName,
+  viewTransitionTypes,
 } from "@plumix/core";
 
 export type {
@@ -70,4 +72,6 @@ export type {
   TemplateRule,
   TermProjection,
   TermTaxonomyName,
+  ViewTransitionsInput,
+  ViewTransitionType,
 } from "@plumix/core";

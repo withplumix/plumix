@@ -24,7 +24,8 @@ import type {
 import type { TransformOpts } from "../../runtime/contract/slots.js";
 import type { LoadedTemplateDeps } from "../../template-deps.js";
 import type { Template } from "../../template.js";
-import type { TemplateData } from "../../theme.js";
+import type { ResolvedViewTransitions } from "../../theme-view-transitions.js";
+import type { TemplateData, ThemeDescriptor } from "../../theme.js";
 import type { ErrorData } from "../contract/resolved-entry.js";
 import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
@@ -48,6 +49,11 @@ import {
   mergeTemplateDepDeclarations,
 } from "../../template-deps.js";
 import { normalizeTemplate } from "../../template.js";
+import {
+  resolveViewTransitions,
+  viewTransitionsScriptTag,
+  viewTransitionsStyleTag,
+} from "../../theme-view-transitions.js";
 import { validateDocumentManifest } from "../../theme.js";
 import { LIVE_EDIT_MODE } from "../edit-mode.js";
 import {
@@ -195,8 +201,21 @@ async function renderThroughThemeInner({
     chrome,
     catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
+    // The editor canvas and a draft preview are plain renders: never animated.
+    viewTransitions:
+      editMode.mode === "live" ? pageViewTransitions(theme, template) : null,
     editMode,
   });
+}
+
+// A template's setting replaces the theme's for the pages it renders.
+function pageViewTransitions(
+  theme: ThemeDescriptor,
+  template: Template,
+): ResolvedViewTransitions | null {
+  return resolveViewTransitions(
+    template.viewTransitions ?? theme.viewTransitions,
+  );
 }
 
 // String form falls back to the resolver title instead of substituting
@@ -317,6 +336,7 @@ async function renderErrorThroughThemeInner({
     chrome,
     catalog: await blockCatalogs(ctx.locale.code),
     themeCss: theme.css ?? [],
+    viewTransitions: pageViewTransitions(theme, template),
     editMode: LIVE_EDIT_MODE,
   });
 }
@@ -451,6 +471,7 @@ interface RenderTreeArgs {
   readonly catalog: CompiledCatalog;
   // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
   readonly themeCss: readonly string[];
+  readonly viewTransitions: ResolvedViewTransitions | null;
   readonly editMode: EditModeDecision;
 }
 
@@ -476,6 +497,7 @@ function renderTree({
   loaderData,
   siteSettings,
   themeCss,
+  viewTransitions,
   editMode,
 }: RenderTreeArgs): string {
   // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
@@ -608,12 +630,16 @@ function renderTree({
     scripts.headStart.map(scriptToHtml).join("") +
     '<meta charSet="utf-8"/>' +
     '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+    // Render-blocking ahead of every stylesheet, so its `pagereveal` listener
+    // is registered before the first frame.
+    viewTransitionsScriptTag(viewTransitions) +
     hoisted +
     titleFallback +
     voidTagsToHtml("link", document.link) +
     bundledCssTags(assetManifest, command, ctx.config.basePath) +
     devThemeCssLinks(themeCss, command, ctx.config.basePath) +
     devThemeStylesTag(command, ctx.config.basePath) +
+    viewTransitionsStyleTag(viewTransitions) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
 
