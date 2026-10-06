@@ -164,6 +164,7 @@ describe("cfAccess — hasSession", () => {
     expect(guard.hasSession?.(withHeader)).toBe(true);
     expect(guard.hasSession?.(without)).toBe(false);
   });
+
   test("carries a session when only the CF_Authorization cookie is present", () => {
     const guard = cfAccess({
       teamDomain: TEAM_DOMAIN,
@@ -178,6 +179,26 @@ describe("cfAccess — hasSession", () => {
     });
     expect(guard.hasSession?.(withCookie)).toBe(true);
     expect(guard.hasSession?.(withOtherCookie)).toBe(false);
+  });
+
+  test.each([
+    ["an empty value", "CF_Authorization="],
+    ["a lookalike name", "not_CF_Authorization=any-token"],
+    ["a name that only prefixes it", "CF_Authorization_x=any-token"],
+    [
+      "a cookie value that holds the name",
+      "plumix_session=CF_Authorization=any-token",
+    ],
+  ])("carries no session for a cookie with %s", (_name, cookie) => {
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+    });
+    const request = new Request("https://cms.example/post/hello", {
+      headers: { cookie },
+    });
+    expect(guard.hasSession?.(request)).toBe(false);
   });
 });
 
