@@ -7,6 +7,7 @@ import { users } from "../../db/schema/users.js";
 import { startingMeta } from "../../plugin/fields/starting-meta.js";
 import { listUserMetaFields } from "../../plugin/manifest.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
+import { resolveLoginPath } from "../config.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
@@ -15,7 +16,6 @@ import { resolveOAuthUser } from "./signup.js";
 import { consumeOAuthState } from "./state.js";
 
 const ADMIN_PATH = "/_plumix/admin";
-const LOGIN_PATH = "/_plumix/admin/login";
 const BOOTSTRAP_PATH = "/_plumix/admin/bootstrap";
 
 // Defensive bound on `code` from the provider's redirect. GitHub's codes
@@ -30,8 +30,7 @@ export async function handleOAuthStart(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider)
-    return loginError(app.config.basePath, "provider_not_configured");
+  if (!provider) return loginError(app, "provider_not_configured");
 
   // Block OAuth on a fresh deploy when the operator left bootstrap on
   // the passkey rail. An OAuth signup before any user exists would
@@ -71,7 +70,7 @@ export async function handleOAuthStart(
     return redirectTo(url);
   } catch (error) {
     ctx.logger.error("oauth_start_failed", { error, provider: providerKey });
-    return loginError(app.config.basePath, "code_exchange_failed");
+    return loginError(app, "code_exchange_failed");
   }
 }
 
@@ -81,8 +80,7 @@ export async function handleOAuthCallback(
   providerKey: string,
 ): Promise<Response> {
   const provider = pickProvider(app, providerKey);
-  if (!provider)
-    return loginError(app.config.basePath, "provider_not_configured");
+  if (!provider) return loginError(app, "provider_not_configured");
 
   const url = new URL(ctx.request.url);
   const state = url.searchParams.get("state");
@@ -92,18 +90,16 @@ export async function handleOAuthCallback(
   // TTL; consume it here so the slot is freed immediately.
   if (url.searchParams.has("error")) {
     if (state) await consumeOAuthState(ctx.db, state);
-    return loginError(app.config.basePath, "state_invalid");
+    return loginError(app, "state_invalid");
   }
 
   const code = url.searchParams.get("code");
-  if (!code || !state) return loginError(app.config.basePath, "state_invalid");
-  if (code.length > MAX_CODE_LENGTH)
-    return loginError(app.config.basePath, "state_invalid");
+  if (!code || !state) return loginError(app, "state_invalid");
+  if (code.length > MAX_CODE_LENGTH) return loginError(app, "state_invalid");
 
   const stored = await consumeOAuthState(ctx.db, state);
-  if (!stored) return loginError(app.config.basePath, "state_expired");
-  if (stored.provider !== providerKey)
-    return loginError(app.config.basePath, "state_invalid");
+  if (!stored) return loginError(app, "state_expired");
+  if (stored.provider !== providerKey) return loginError(app, "state_invalid");
 
   const redirectUri = oauthCallbackUrl(
     ctx.origin,
@@ -153,10 +149,10 @@ export async function handleOAuthCallback(
         provider: providerKey,
         code: error.code,
       });
-      return loginError(app.config.basePath, error.code);
+      return loginError(app, error.code);
     }
     ctx.logger.error("oauth_callback_failed", { error, provider: providerKey });
-    return loginError(app.config.basePath, "code_exchange_failed");
+    return loginError(app, "code_exchange_failed");
   }
 }
 
@@ -188,11 +184,11 @@ function oauthCallbackUrl(
   return `${origin}${withBasePath(path, basePath)}`;
 }
 
-function loginError(basePath: string, code: OAuthErrorCode): Response {
+function loginError(app: AuthFlowApp, code: OAuthErrorCode): Response {
   // Relative location — keeps the same scheme/host/port the browser
   // already used to reach us, no need to know the canonical origin.
   return loginErrorRedirect(
-    withBasePath(LOGIN_PATH, basePath),
+    withBasePath(resolveLoginPath(app.config.auth), app.config.basePath),
     "oauth_error",
     code,
   );

@@ -13,7 +13,6 @@
  * own page.
  */
 
-import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
@@ -27,19 +26,11 @@ import { redirectTo } from "../runtime/contract/http.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { resolveAccess } from "./policy.js";
 
-// Where `redirectToLogin()` sends a visitor when the operator sets no override.
-const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
-
 // Challenge kind → terminal HTTP status. A role denial is a 403 (the visitor
 // is signed in; re-authenticating wouldn't help), every other challenge is the
 // 402 paywall default. A *soft* challenge never reaches here — it renders a
 // teaser at 200 (see `gateToResponse`).
 const CHALLENGE_STATUS: Readonly<Record<string, number>> = { forbidden: 403 };
-
-/** The configured login path, defaulting to the admin login. */
-export function resolveLoginPath(auth: PlumixAuthConfig): string {
-  return auth.loginPath ?? DEFAULT_LOGIN_PATH;
-}
 
 /**
  * The access policy attached to a matched route, or `null` when the route is

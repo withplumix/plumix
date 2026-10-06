@@ -11,6 +11,7 @@ import {
   loginErrorRedirect,
   redirectTo,
 } from "../../runtime/contract/http.js";
+import { resolveLoginPath } from "../config.js";
 import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { announceSignIn, mintSessionAndCookie } from "../sign-in.js";
 import { MagicLinkError } from "./errors.js";
@@ -18,7 +19,6 @@ import { requestMagicLink } from "./request.js";
 import { verifyMagicLink } from "./verify.js";
 
 const ADMIN_PATH = "/_plumix/admin";
-const LOGIN_PATH = "/_plumix/admin/login";
 
 // Defensive bound on the inbound `token` query param. Our generator
 // emits 192-bit base64url (32 chars); 256 chars is generous for
@@ -118,21 +118,20 @@ export async function handleMagicLinkRequest(
  *
  * Top-level navigation from the user's email client; consumes the
  * single-use token, mints a session, redirects to /admin. Errors
- * redirect to /admin/login with a typed `magic_link_error=<code>`.
+ * redirect to `auth.loginPath` with a typed `magic_link_error=<code>`.
  */
 export async function handleMagicLinkVerify(
   ctx: AppContext,
   app: AuthFlowApp,
 ): Promise<Response> {
   if (!app.config.auth.magicLink) {
-    return loginError(app.config.basePath, "token_invalid");
+    return loginError(app, "token_invalid");
   }
 
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError(app.config.basePath, "missing_token");
-  if (token.length > MAX_TOKEN_LENGTH)
-    return loginError(app.config.basePath, "token_invalid");
+  if (!token) return loginError(app, "missing_token");
+  if (token.length > MAX_TOKEN_LENGTH) return loginError(app, "token_invalid");
 
   try {
     const { user, created } = await verifyMagicLink(ctx.db, token, {
@@ -157,10 +156,10 @@ export async function handleMagicLinkVerify(
   } catch (error) {
     if (error instanceof MagicLinkError) {
       ctx.logger.warn("magic_link_verify_rejected", { code: error.code });
-      return loginError(app.config.basePath, error.code);
+      return loginError(app, error.code);
     }
     ctx.logger.error("magic_link_verify_failed", { error });
-    return loginError(app.config.basePath, "token_invalid");
+    return loginError(app, "token_invalid");
   }
 }
 
@@ -168,9 +167,9 @@ function invalidInput(): Response {
   return jsonResponse({ error: "invalid_input" }, { status: 400 });
 }
 
-function loginError(basePath: string, code: MagicLinkErrorCode): Response {
+function loginError(app: AuthFlowApp, code: MagicLinkErrorCode): Response {
   return loginErrorRedirect(
-    withBasePath(LOGIN_PATH, basePath),
+    withBasePath(resolveLoginPath(app.config.auth), app.config.basePath),
     "magic_link_error",
     code,
   );

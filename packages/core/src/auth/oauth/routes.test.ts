@@ -961,3 +961,42 @@ describe("oauth callback route", () => {
     );
   });
 });
+
+describe("oauth callback failures land on auth.loginPath", () => {
+  test("a failed callback redirects to the theme login", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          loginPath: "/account/login",
+        },
+      },
+    });
+    const response = await get(
+      h,
+      "/_plumix/auth/oauth/github/callback?code=abc&state=nope",
+    );
+    expect(response.headers.get("location")).toBe(
+      "/account/login?oauth_error=state_expired",
+    );
+  });
+
+  test("under a basePath the theme login carries the base path", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        basePath: "/custom-directory",
+        auth: {
+          oauth: { providers: TEST_OAUTH },
+          loginPath: "/account/login",
+        },
+      },
+    });
+    const response = await get(
+      h,
+      "/custom-directory/_plumix/auth/oauth/github/callback?code=abc",
+    );
+    expect(response.headers.get("location")).toBe(
+      "/custom-directory/account/login?oauth_error=state_invalid",
+    );
+  });
+});

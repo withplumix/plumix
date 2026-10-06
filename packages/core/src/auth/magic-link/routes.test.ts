@@ -872,3 +872,79 @@ describe("magic-link verify route", () => {
     expect(remaining).toHaveLength(0);
   });
 });
+
+describe("magic-link verify failures land on auth.loginPath", () => {
+  async function themeLoginHarness(basePath?: string) {
+    const { mailer } = captureMailer();
+    return createDispatcherHarness({
+      config: {
+        ...(basePath ? { basePath } : {}),
+        mailer,
+        auth: {
+          magicLink: { siteName: "Plumix Test" },
+          loginPath: "/account/login",
+        },
+      },
+    });
+  }
+
+  test.each([
+    ["missing", "", "missing_token"],
+    ["over-long", `?token=${"x".repeat(512)}`, "token_invalid"],
+    ["invalid", "?token=not-a-real-token", "token_invalid"],
+  ])("a %s token redirects to the theme login", async (_name, query, code) => {
+    const h = await themeLoginHarness();
+
+    const response = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify${query}`),
+    );
+    expect(response.headers.get("location")).toBe(
+      `/account/login?magic_link_error=${code}`,
+    );
+  });
+
+  test("an expired token redirects to the theme login", async () => {
+    const h = await themeLoginHarness();
+    const user = await h.factory.user.create({ role: "subscriber" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: user.email,
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    const response = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+    expect(response.headers.get("location")).toBe(
+      "/account/login?magic_link_error=token_expired",
+    );
+  });
+
+  test("a spent token redirects to the theme login", async () => {
+    const h = await themeLoginHarness();
+    const user = await h.factory.user.create({ role: "subscriber" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: user.email,
+    });
+    const verify = () =>
+      h.dispatch(getRequest(`/_plumix/auth/magic-link/verify?token=${token}`));
+    await verify();
+
+    const response = await verify();
+    expect(response.headers.get("location")).toBe(
+      "/account/login?magic_link_error=token_invalid",
+    );
+  });
+
+  test("under a basePath the theme login carries the base path", async () => {
+    const h = await themeLoginHarness("/custom-directory");
+
+    const response = await h.dispatch(
+      getRequest("/custom-directory/_plumix/auth/magic-link/verify"),
+    );
+    expect(response.headers.get("location")).toBe(
+      "/custom-directory/account/login?magic_link_error=missing_token",
+    );
+  });
+});
