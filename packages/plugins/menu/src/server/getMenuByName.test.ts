@@ -347,6 +347,21 @@ describe("getMenuByName", () => {
     expect(menu?.items[0]?.label).toBe("Blank label");
   });
 
+  test("a term item with a whitespace-only title renders the term's name", async () => {
+    const category = await factories.term.create({
+      taxonomy: "category",
+      slug: "news",
+      name: "News",
+    });
+    const termId = await seedMenu("term-blank-label");
+    await seedItems(termId, [
+      { title: "   ", meta: { kind: "term", termId: category.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "term-blank-label");
+    expect(menu?.items[0]?.label).toBe("News");
+  });
+
   test("a term item with its own title renders that title with the term's href", async () => {
     const category = await factories.term.create({
       taxonomy: "category",
