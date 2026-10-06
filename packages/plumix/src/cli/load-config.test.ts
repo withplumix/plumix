@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
@@ -104,5 +104,61 @@ describe("loadConfig", () => {
 
     // Distinct paths each evaluate once; the repeat of `a` is cached.
     expect(evalCount()).toBe(2);
+  });
+
+  test("resolves `~/` and `@/` to the project root across the config graph", async () => {
+    const dir = writeFixtureDir(`
+import { runtimeName, databaseKind } from "./plugins/foo";
+export default {
+  runtime: { name: runtimeName, handler: {}, generateEntry: () => "" },
+  database: { kind: databaseKind },
+  auth: { passkey: {} },
+};
+`);
+    mkdirSync(join(dir, "plugins"));
+    writeFileSync(
+      join(dir, "plugins/foo.ts"),
+      `export { runtimeName } from "~/constants";
+export { databaseKind } from "@/database";
+`,
+    );
+    writeFileSync(
+      join(dir, "constants.ts"),
+      `export const runtimeName = "from-tilde";`,
+    );
+    writeFileSync(
+      join(dir, "database.ts"),
+      `export const databaseKind = "from-at";`,
+    );
+
+    const { config } = await loadConfig(dir);
+
+    expect(config.runtime.name).toBe("from-tilde");
+    expect(config.database.kind).toBe("from-at");
+  });
+
+  test("still resolves a bare scoped package beside the `@/` alias", async () => {
+    const dir = writeFixtureDir(`
+import { runtimeName } from "@scope/pkg";
+export default {
+  runtime: { name: runtimeName, handler: {}, generateEntry: () => "" },
+  database: { kind: "d1" },
+  auth: { passkey: {} },
+};
+`);
+    const pkg = join(dir, "node_modules/@scope/pkg");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({ name: "@scope/pkg", main: "index.js" }),
+    );
+    writeFileSync(
+      join(pkg, "index.js"),
+      `exports.runtimeName = "from-scoped-package";`,
+    );
+
+    const { config } = await loadConfig(dir);
+
+    expect(config.runtime.name).toBe("from-scoped-package");
   });
 });

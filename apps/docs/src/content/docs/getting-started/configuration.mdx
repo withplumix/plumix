@@ -392,6 +392,8 @@ export const images: PlumixConfigInput["images"] = {
 
 A Vite config object merged with the one Plumix builds. It stays structurally typed so core carries no Vite dependency, which is why the value is a plain object rather than the result of `defineConfig`.
 
+`~/` and `@/` resolve to the project root both while `plumix.config.ts` is evaluated and in the bundle, so the config, the theme, every plugin and anything they import can use them. Aliases added through `vite.resolve.alias` apply only inside the bundle: the config and everything it imports are evaluated before Vite starts, so an import through one of them fails to load the config.
+
 ```ts
 import type { PlumixConfigInput } from "plumix";
 

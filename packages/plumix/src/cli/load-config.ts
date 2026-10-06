@@ -6,6 +6,7 @@ import * as v from "valibot";
 
 import type { PlumixConfig } from "@plumix/core";
 
+import { plumixPathAliases } from "../vite/path-aliases.js";
 import { PlumixCliError } from "./errors.js";
 
 const CONFIG_CANDIDATES = [
@@ -48,12 +49,15 @@ export async function loadConfig(
     if (cached) return cached;
   }
 
-  const loaded = await evaluateConfig(configPath);
+  const loaded = await evaluateConfig(cwd, configPath);
   cache.set(configPath, loaded);
   return loaded;
 }
 
-async function evaluateConfig(configPath: string): Promise<LoadedConfig> {
+async function evaluateConfig(
+  cwd: string,
+  configPath: string,
+): Promise<LoadedConfig> {
   const jiti = createJiti(pathToFileURL(configPath).href, {
     interopDefault: true,
     // Re-evaluate the module every load so the dev watcher hot-reloads config
@@ -67,6 +71,12 @@ async function evaluateConfig(configPath: string): Promise<LoadedConfig> {
     // JSX plugin (classic runtime — theme files import React, matching the
     // worker bundle's esbuild transform).
     jsx: true,
+    // The config imports the theme and every plugin, so a `~/` or `@/` import
+    // anywhere in that graph has to resolve here, before Vite starts, exactly
+    // as it does in the bundle.
+    alias: Object.fromEntries(
+      plumixPathAliases(cwd).map((a) => [a.find, a.replacement]),
+    ),
   });
 
   let imported: unknown;
