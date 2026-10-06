@@ -370,7 +370,9 @@ describe("serveProcess", () => {
 
     expect(elapsed).toBeLessThan(BUDGET + STOP / 2);
     // The other side: the drain spends the budget rather than cutting short.
-    expect(elapsed).toBeGreaterThanOrEqual(BUDGET);
+    // The 5ms covers a timer firing early against `Date.now()` rounding, which
+    // measured 599 on a busy host; per-step spending is still ~500ms away.
+    expect(elapsed).toBeGreaterThanOrEqual(BUDGET - 5);
   });
 
   test("exits non-zero and says so when the budget cut a scheduled run", async () => {

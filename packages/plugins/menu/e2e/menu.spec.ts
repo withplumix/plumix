@@ -322,6 +322,22 @@ function menuOption(page: Page): Locator {
   return page.getByTestId(`menus-selector-option-${menuSlug}`);
 }
 
+type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
+
+// Reads the boxes a drag is about to aim at, retrying until every one is
+// non-null. A one-shot read can come back null when the row re-renders
+// between locating it and measuring it, which a loaded runner makes likely.
+async function settledBoxes<const T extends readonly Locator[]>(
+  ...locators: T
+): Promise<{ [K in keyof T]: Box }> {
+  let boxes: (Box | null)[] = [];
+  await expect(async () => {
+    boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
+    for (const box of boxes) expect(box).not.toBeNull();
+  }).toPass();
+  return boxes as { [K in keyof T]: Box };
+}
+
 // dnd-kit's PointerSensor listens for native `pointerdown` /
 // `pointermove` / `pointerup` events with a `distance: 5` activation
 // gate. Playwright's `page.mouse` API doesn't reliably fire pointer
@@ -338,13 +354,11 @@ async function dragRowOnSelf(
   rowId: string,
   options: { readonly nestPx?: number } = {},
 ): Promise<void> {
-  const handle = page.getByTestId(`menu-item-drag-${rowId}`);
   const target = page.getByTestId(`menu-item-row-${rowId}`);
-  const handleBox = await handle.boundingBox();
-  const targetBox = await target.boundingBox();
-  if (!handleBox || !targetBox) {
-    throw new Error(`missing bounding box for row ${rowId}`);
-  }
+  const [handleBox, targetBox] = await settledBoxes(
+    page.getByTestId(`menu-item-drag-${rowId}`),
+    target,
+  );
   const startX = handleBox.x + handleBox.width / 2;
   const startY = handleBox.y + handleBox.height / 2;
   const dropX = targetBox.x + targetBox.width / 2 + (options.nestPx ?? 0);
