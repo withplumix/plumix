@@ -14,6 +14,7 @@ import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
 import { menuTag } from "./cache-tags.js";
 import { isMenuEligible } from "./eligibility.js";
+import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
 
@@ -412,9 +413,17 @@ function resolveLabelHrefSource(
   if (meta.kind === "entry") {
     const ref = refs.entries.get(meta.entryId);
     if (!ref) return null;
-    return { ...ref, source: { kind: "entry", id: meta.entryId } };
+    return {
+      label: itemOwnLabel(node.title) ?? ref.label,
+      href: ref.href,
+      source: { kind: "entry", id: meta.entryId },
+    };
   }
   const ref = refs.terms.get(meta.termId);
   if (!ref) return null;
-  return { ...ref, source: { kind: "term", id: meta.termId } };
+  return {
+    label: itemOwnLabel(node.title) ?? ref.label,
+    href: ref.href,
+    source: { kind: "term", id: meta.termId },
+  };
 }

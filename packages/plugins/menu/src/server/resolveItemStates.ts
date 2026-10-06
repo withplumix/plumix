@@ -18,6 +18,7 @@ import type {
 } from "./types.js";
 import { mapItemState } from "../admin/item-state.js";
 import { isMenuEligible } from "./eligibility.js";
+import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 
 /** A `menu_item` row as it comes out of the DB — `meta` still unparsed JSON. */
@@ -217,7 +218,7 @@ function enrich(
   // last-known snapshot in meta → "(unnamed)". Same shape for href,
   // minus the override (entries don't carry an href column).
   const label =
-    (row.title.length > 0 ? row.title : null) ??
+    itemOwnLabel(row.title) ??
     lookupResult?.label ??
     meta.lastLabel ??
     "(unnamed)";

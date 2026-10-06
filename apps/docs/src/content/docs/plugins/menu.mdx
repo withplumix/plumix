@@ -215,7 +215,7 @@ A `ResolvedMenu` carries the menu's `termId`, `name`, `slug` and `items`. Each i
 - `target`, `rel` and `cssClasses`, from the stored item. The admin does not edit these today, and a `menu:item` filter can set them.
 - `children`, the nested items, already resolved the same way.
 
-The plugin resolves links to entries and terms when the page renders, not when you save the menu. Renaming a page renames its menu item everywhere, with no need to re-save the menu. An entry item shows only while its entry is published, so a draft added to a menu appears once it is published. The rendered menu leaves out an item whose target is unpublished, deleted, or of a type that is no longer eligible. Every item nested under it goes too.
+The plugin resolves links to entries and terms when the page renders, not when you save the menu. An entry or term item shows its own label when the editor set one, and the linked entry's title or the term's name otherwise. A label of only spaces counts as unset. Renaming a page renames every menu item that follows its title, with no need to re-save the menu, and the item's address follows the page whichever label it shows. An entry item shows only while its entry is published, so a draft added to a menu appears once it is published. The rendered menu leaves out an item whose target is unpublished, deleted, or of a type that is no longer eligible. Every item nested under it goes too.
 
 The plugin batches resolution. It reads every location a request asks for, from templates and from the functions below, in one settings query and one pass over the menus' items. Repeat calls within the request reuse that result.
 
