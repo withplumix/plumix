@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
-import { CHANGESET_GATE, GATES } from "./gates.js";
+import { CHANGESET_GATE, GATES, underAnOrphanReaper } from "./gates.js";
 import { SETUP_STEPS, workersALaneOversubscribes } from "./sandbox.js";
 import {
   asReviewNote,
@@ -175,11 +175,15 @@ describe("gatesUntilGreen", () => {
     { name: "test", command: "test" },
   ];
   const journal = { record: () => {} };
+  const GATE_NAMES = ["e2e", "test", "typecheck"];
   const sandbox = (
     fails: (command: string) => boolean,
     ran: string[] = [],
   ) => ({
-    exec: async (command: string) => {
+    exec: async (reaped: string) => {
+      const command =
+        GATE_NAMES.find((name) => underAnOrphanReaper(name) === reaped) ??
+        reaped;
       ran.push(command);
       return {
         exitCode: fails(command) ? 1 : 0,
