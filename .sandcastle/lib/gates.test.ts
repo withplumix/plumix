@@ -179,6 +179,14 @@ describe("package-scoped gates", () => {
   );
 });
 
+describe("the test gate", () => {
+  test("runs every package's tests after one fails, so a waived failure hides nothing", () => {
+    const gate = GATES.find((candidate) => candidate.name === "test");
+
+    expect(gate?.command).toContain("--continue");
+  });
+});
+
 describe("a gate command runs under an orphan reaper", () => {
   // Sandcastle starts the container as `sleep infinity`, and sleep never reaps the children a
   // gate orphans. A zombie still answers `kill -0`, so a test that waits for a process to go

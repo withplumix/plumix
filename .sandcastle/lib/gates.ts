@@ -68,7 +68,7 @@ export const GATES: readonly Gate[] = [
   { name: "knip", command: "pnpm knip" },
   {
     name: "test",
-    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${TURBO_GATE_FLAGS}`,
+    command: `pnpm exec turbo run test:unit test:build --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
