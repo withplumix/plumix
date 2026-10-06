@@ -45,7 +45,7 @@
     "@plumix/prettier-config": "workspace:*",
     "@types/node": "catalog:",
     "knip": "^6.32.2",
-    "pkg-pr-new": "^0.0.75",
+    "pkg-pr-new": "^0.0.88",
     "prettier": "catalog:",
     "sherif": "^1.13.0",
     "turbo": "^2.11.2"
