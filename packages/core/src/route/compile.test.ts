@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { PluginSetup } from "../plugin/define.js";
 import type { FrameworkRoutes } from "./contract/framework-routes.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
@@ -45,6 +46,12 @@ async function buildRegistry(
   const registry = createPluginRegistry(frameworkRoutes);
   await installPlugins({ hooks, plugins, registry });
   return registry;
+}
+
+function resolverFor(registry: ReturnType<typeof createPluginRegistry>) {
+  const rules = compileRouteMap(registry);
+  return (path: string) =>
+    matchRoute(new URL(path, "https://cms.example"), rules);
 }
 
 function pluginRoutes(registry: ReturnType<typeof createPluginRegistry>) {
@@ -521,18 +528,43 @@ describe("compileRouteMap", () => {
     expect(search?.priority).toBeLessThan(10);
   });
 
-  test("hasArchive: string rejects multi-segment or non-kebab input", async () => {
-    const bad = await buildRegistry([
-      definePlugin("x", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
+  test("a multi-segment hasArchive mounts the archive and its later pages there", async () => {
+    const registry = await buildRegistry([
+      definePlugin("learn", (ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
           isPublic: true,
-          hasArchive: "foo/bar",
+          hasArchive: "learn/all-courses",
         });
       }),
     ]);
-    expect(() => compileRouteMap(bad)).toThrow(/invalid hasArchive/);
+    const resolve = resolverFor(registry);
 
+    expect(resolve("/learn/all-courses")).toMatchObject({
+      intent: { kind: "entryType", entryType: "course" },
+    });
+    expect(resolve("/learn/all-courses/page/2")).toMatchObject({
+      intent: { kind: "entryType", entryType: "course" },
+      params: { page: "2" },
+    });
+  });
+
+  test("an empty string hasArchive mounts no archive, as false does", async () => {
+    const registry = await buildRegistry([
+      definePlugin("learn", (ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          isPublic: true,
+          hasArchive: "",
+        });
+      }),
+    ]);
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
+      "/course/:slug",
+    ]);
+  });
+
+  test("hasArchive: string rejects non-kebab input", async () => {
     const dots = await buildRegistry([
       definePlugin("y", (ctx) => {
         ctx.registerEntryType("product", {
@@ -545,7 +577,76 @@ describe("compileRouteMap", () => {
     expect(() => compileRouteMap(dots)).toThrow(/invalid hasArchive/);
   });
 
-  test("entry-type rewrite.slug rejects URL-pattern syntax and multi-segment input", async () => {
+  test("a taxonomy with a multi-segment rewrite.slug serves its terms and their later pages under that base", async () => {
+    const registry = await buildRegistry([
+      definePlugin("insights", (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    ]);
+    const resolve = resolverFor(registry);
+
+    expect(resolve("/insights/category/policy")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { term: "policy" },
+    });
+    expect(resolve("/insights/category/policy/page/2")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { term: "policy", page: "2" },
+    });
+  });
+
+  test("a hierarchical taxonomy with a multi-segment rewrite.slug serves nested terms and their later pages under that base", async () => {
+    const registry = await buildRegistry([
+      definePlugin("insights", (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isHierarchical: true,
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    ]);
+    const resolve = resolverFor(registry);
+
+    expect(resolve("/insights/category/policy/housing")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { path: "policy/housing" },
+    });
+    expect(resolve("/insights/category/policy/housing/page/2")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { path: "policy/housing", page: "2" },
+    });
+  });
+
+  test("an entry type with a multi-segment rewrite.slug serves its singles and archive under that base", async () => {
+    const registry = await buildRegistry([
+      definePlugin("learn", (ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "learn/courses" },
+        });
+      }),
+    ]);
+    const resolve = resolverFor(registry);
+
+    expect(resolve("/learn/courses/intro")).toMatchObject({
+      intent: { kind: "entry", entryType: "course" },
+      params: { slug: "intro" },
+    });
+    expect(resolve("/learn/courses")).toMatchObject({
+      intent: { kind: "entryType", entryType: "course" },
+    });
+    expect(resolve("/learn/courses/page/2")).toMatchObject({
+      intent: { kind: "entryType", entryType: "course" },
+      params: { page: "2" },
+    });
+  });
+
+  test("entry-type rewrite.slug rejects URL-pattern syntax", async () => {
     const greedy = await buildRegistry([
       definePlugin("greedy", (ctx) => {
         ctx.registerEntryType("product", {
@@ -559,17 +660,107 @@ describe("compileRouteMap", () => {
     expect(() => compileRouteMap(greedy)).toThrow(
       /Entry type "product" has invalid rewrite\.slug "\*"/,
     );
+  });
 
-    const nested = await buildRegistry([
-      definePlugin("nested", (ctx) => {
-        ctx.registerEntryType("post", {
-          label: "Posts",
-          isPublic: true,
-          rewrite: { slug: "insights/category" },
+  describe("a near-miss base fails at boot with one message saying what to write instead", () => {
+    async function bootError(register: PluginSetup<unknown>, message: string) {
+      const registry = await buildRegistry([definePlugin("site", register)]);
+      expect(() => compileRouteMap(registry)).toThrow(message);
+    }
+    const taxonomyAt = (slug: string, message: string) =>
+      bootError((ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          rewrite: { slug },
         });
-      }),
-    ]);
-    expect(() => compileRouteMap(nested)).toThrow(/invalid rewrite\.slug/);
+      }, message);
+
+    test.each([
+      ["/insights/category", "drop the leading slash"],
+      ["insights/category/", "drop the trailing slash"],
+      ["/insights/category/", "drop the leading and trailing slashes"],
+    ])("%s: %s and shows the corrected value", async (slug, fix) => {
+      await taxonomyAt(
+        slug,
+        `Term taxonomy "category" has invalid rewrite.slug "${slug}": ` +
+          `${fix} and write "insights/category"`,
+      );
+    });
+
+    test.each([
+      ["insights//category", "it has an empty segment"],
+      ["insights/Category", 'segment "Category" is not lowercase kebab-case'],
+      ["insights/my category", 'segment "my category" is not lowercase'],
+      ["insights/my_category", 'segment "my_category" is not lowercase'],
+      ["insights/*", 'segment "*" is URL-pattern syntax'],
+      ["insights/:evil", 'segment ":evil" is URL-pattern syntax'],
+      ["insights/(.*)", 'segment "(.*)" is URL-pattern syntax'],
+      ["insights/{x}", 'segment "{x}" is URL-pattern syntax'],
+      ["insights/x?", 'segment "x?" is URL-pattern syntax'],
+      ["insights/x+", 'segment "x+" is URL-pattern syntax'],
+      ["insights/./category", 'segment "." is a relative path segment'],
+      ["insights/../admin", 'segment ".." is a relative path segment'],
+      ["", "it is empty"],
+      ["/", "it has an empty segment"],
+      [".", 'segment "." is a relative path segment'],
+      ["..", 'segment ".." is a relative path segment'],
+      ["/Insights", 'segment "Insights" is not lowercase kebab-case'],
+      ["insights/*/", 'segment "*" is URL-pattern syntax'],
+      ["insights/a)", 'segment "a)" is URL-pattern syntax'],
+      ["insights/a}", 'segment "a}" is URL-pattern syntax'],
+    ])("%j names its problem: %s", async (slug, problem) => {
+      await taxonomyAt(
+        slug,
+        `Term taxonomy "category" has invalid rewrite.slug "${slug}": ${problem}`,
+      );
+    });
+
+    test("a long run of slashes inside a base is rejected without stalling boot", async () => {
+      const slug = `insights${"/".repeat(100_000)}category`;
+      const startedAt = performance.now();
+      await taxonomyAt(slug, "it has an empty segment");
+      expect(performance.now() - startedAt).toBeLessThan(1000);
+    });
+
+    test("an entry type's base names the type and still offers the site root", async () => {
+      await bootError(
+        (ctx) => {
+          ctx.registerEntryType("course", {
+            label: "Courses",
+            rewrite: { slug: "learn/Courses" },
+          });
+        },
+        'Entry type "course" has invalid rewrite.slug "learn/Courses": ' +
+          'segment "Courses" is not lowercase kebab-case (a-z, 0-9 and "-", ' +
+          'not starting with "-"). Expected one or more lowercase kebab-case ' +
+          'segments joined by "/" (or "" to claim the site root), ' +
+          'like "insights/category".',
+      );
+    });
+
+    test("a string hasArchive gets the same messages, worded against hasArchive", async () => {
+      const message =
+        'Entry type "course" has invalid hasArchive "/learn/all-courses": ' +
+        'drop the leading slash and write "learn/all-courses"';
+      await bootError((ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          hasArchive: "/learn/all-courses",
+        });
+      }, message);
+    });
+
+    test.each([
+      ["learn/all-courses/", "drop the trailing slash"],
+      ["learn//all", "it has an empty segment"],
+      ["learn/../admin", 'segment ".." is a relative path segment'],
+      ["learn/:x", 'segment ":x" is URL-pattern syntax'],
+      ["learn/All", 'segment "All" is not lowercase kebab-case'],
+    ])("a string hasArchive of %j is rejected: %s", async (hasArchive, why) => {
+      await bootError((ctx) => {
+        ctx.registerEntryType("course", { label: "Courses", hasArchive });
+      }, `Entry type "course" has invalid hasArchive "${hasArchive}": ${why}`);
+    });
   });
 
   test("taxonomy rewrite.slug gets the same check, and empty is rejected there too", async () => {
@@ -628,6 +819,39 @@ describe("compileRouteMap", () => {
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
       /Entry type "product" has rewrite\.slug "search" .*framework route/,
+    );
+  });
+
+  test("a multi-segment base whose archive a framework route would serve still fails to compile", async () => {
+    // `/search/all/page/2` is a search for "all": the archive never gets its URLs.
+    const registry = await buildRegistry([
+      definePlugin("shop", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "search/all" },
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(registry)).toThrow(
+      /Entry type "product" has rewrite\.slug "search\/all" .*framework route "\/search\/:query/,
+    );
+  });
+
+  test("a multi-segment hasArchive a framework route would serve is reported against hasArchive", async () => {
+    // `/authors/team` is the author archive for a user slugged "team".
+    const registry = await buildRegistry([
+      definePlugin("people", (ctx) => {
+        ctx.registerEntryType("person", {
+          label: "People",
+          isPublic: true,
+          hasArchive: "authors/team",
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(registry)).toThrow(
+      /Entry type "person" has hasArchive "authors\/team" .*framework route "\/authors\/:slug/,
     );
   });
 

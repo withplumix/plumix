@@ -475,6 +475,45 @@ describe("buildTermArchiveUrl", () => {
     ).toBe("/category/news/local");
   });
 
+  test("hierarchical taxonomy under a multi-segment base nests the chain after the whole base", async () => {
+    const registry = await buildRegistry([
+      definePlugin("insights", (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    ]);
+    const db = await createTestDb();
+    const factories = factoriesFor(db);
+    const parent = await factories.term.create({
+      taxonomy: "category",
+      slug: "policy",
+      name: "Policy",
+    });
+    const child = await factories.term.create({
+      taxonomy: "category",
+      slug: "housing",
+      name: "Housing",
+      parentId: parent.id,
+    });
+
+    const url = await buildTermArchiveUrl(ctxFor(db, registry), {
+      taxonomy: child.taxonomy,
+      slug: child.slug,
+      parentId: child.parentId,
+    });
+    expect(url).toBe("/insights/category/policy/housing");
+    expect(
+      matchRoute(
+        new URL(url ?? "", "https://cms.example"),
+        compileRouteMap(registry),
+      )?.intent,
+    ).toEqual({ kind: "term", taxonomy: "category" });
+  });
+
   test("honors taxonomy rewrite.slug override", async () => {
     const registry = await buildRegistry([
       definePlugin("blog", (ctx) => {
@@ -756,7 +795,7 @@ describe("every built permalink routes back to its own intent", () => {
     ["grand", "parent"],
   ];
 
-  test("for flat and hierarchical, prefixed and root-mounted registrations", async () => {
+  test("for flat and hierarchical, prefixed, multi-segment and root-mounted registrations", async () => {
     const registry = await buildRegistry([
       definePlugin("site", (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -794,6 +833,27 @@ describe("every built permalink routes back to its own intent", () => {
           label: "Topics",
           isHierarchical: true,
           rewrite: { isHierarchical: false },
+        });
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "learn/courses" },
+        });
+        ctx.registerEntryType("lesson", {
+          label: "Lessons",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "learn/lessons" },
+        });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          rewrite: { slug: "insights/category" },
+        });
+        ctx.registerTermTaxonomy("section", {
+          label: "Sections",
+          isHierarchical: true,
+          rewrite: { slug: "insights/section" },
         });
       }),
     ]);
@@ -835,6 +895,6 @@ describe("every built permalink routes back to its own intent", () => {
         }
       }
     }
-    expect(checked).toBe(SLUGS.length * ANCESTOR_CHAINS.length * 8);
+    expect(checked).toBe(SLUGS.length * ANCESTOR_CHAINS.length * 12);
   });
 });

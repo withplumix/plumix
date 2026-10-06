@@ -23,7 +23,10 @@ describe("RouteCompileError.invalidArchiveSlug", () => {
     });
     expect(err.message).toContain('Entry type "post"');
     expect(err.message).toContain('invalid hasArchive "Bad Slug"');
-    expect(err.message).toContain("single lowercase kebab-case path segment");
+    expect(err.message).toContain('segment "Bad Slug" is not lowercase');
+    expect(err.message).toContain(
+      'Expected one or more lowercase kebab-case segments joined by "/"',
+    );
   });
 });
 
@@ -46,11 +49,14 @@ describe("RouteCompileError.invalidRewriteSlug", () => {
     const err = RouteCompileError.invalidRewriteSlug({
       registration: "entry_type",
       registrationName: "product",
-      rewriteSlug: "shop/all",
+      rewriteSlug: "shop/All",
     });
     expect(err.message).toContain('Entry type "product"');
-    expect(err.message).toContain('invalid rewrite.slug "shop/all"');
-    expect(err.message).toContain("single lowercase kebab-case path segment");
+    expect(err.message).toContain('invalid rewrite.slug "shop/All"');
+    expect(err.message).toContain('segment "All" is not lowercase');
+    expect(err.message).toContain(
+      'Expected one or more lowercase kebab-case segments joined by "/"',
+    );
     expect(err.message).toContain('(or "" to claim the site root)');
   });
 

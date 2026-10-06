@@ -6,6 +6,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { RouteIntent, RouteRule } from "./contract/intent.js";
 import type { RegistrationKind } from "./errors.js";
+import { baseSlugProblem } from "./base-slug.js";
 import { RouteCompileError } from "./errors.js";
 import { matchRoute } from "./match.js";
 
@@ -338,16 +339,13 @@ function autoRulesForTermTaxonomy(
   ];
 }
 
-// Base and archive slugs need to be a single literal path segment. A slash
-// would let a plugin silently shadow other routes and leaves term feeds
-// unroutable (the feed router reads only the first segment); URL-pattern
-// syntax such as `:x` or `*` widens the compiled rule into a catch-all over
-// every other plugin's URLs.
-const PATH_SEGMENT_RE = /^[a-z0-9][a-z0-9-]*$/;
-
 /**
- * The empty string is the one shape the regex rejects but the compiler accepts,
- * and only for entry types — it mounts the type at the URL root, which
+ * A base is one or more lowercase kebab-case segments joined by `/`. URL-pattern
+ * syntax such as `:x` or `*` would widen the compiled rule into a catch-all
+ * over every other plugin's URLs.
+ *
+ * The empty string is the one shape `baseSlugProblem` rejects but the compiler
+ * accepts, and only for entry types — it mounts the type at the URL root, which
  * `@plumix/plugin-pages` relies on. A taxonomy has no root branch, so `""`
  * there would compile to `//:term`.
  *
@@ -362,7 +360,7 @@ function baseSlugFor(
   const slug = spec.rewrite?.slug;
   if (slug === undefined) return spec.name;
   if (slug === "" && registration === "entry_type") return slug;
-  if (!PATH_SEGMENT_RE.test(slug)) {
+  if (baseSlugProblem(slug) !== null) {
     throw RouteCompileError.invalidRewriteSlug({
       registration,
       registrationName: spec.name,
@@ -395,7 +393,7 @@ function archiveSlugFor(
   // No empty branch here, unlike `baseSlugFor`: an archive at the root would
   // collide with the front page.
   if (typeof hasArchive === "string") {
-    if (!PATH_SEGMENT_RE.test(hasArchive)) {
+    if (baseSlugProblem(hasArchive) !== null) {
       throw RouteCompileError.invalidArchiveSlug({
         entryType: entryType.name,
         hasArchive,
