@@ -229,7 +229,7 @@
     "cmdk": "catalog:",
     "lucide-react": "^1.46.0",
     "radix-ui": "catalog:",
-    "react-colorful": "^5.8.0",
+    "react-colorful": "^5.8.1",
     "react-hook-form": "catalog:",
     "sonner": "catalog:",
     "tailwind-merge": "catalog:"
