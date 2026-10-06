@@ -240,6 +240,7 @@ function createHarness(
 // `plumix` exports no span type; this is the part of one a query count reads.
 interface SpanTree {
   readonly name: string;
+  readonly attributes: Readonly<Record<string, unknown>>;
   readonly children: readonly SpanTree[];
 }
 
@@ -493,16 +494,30 @@ describe("the sitemap index", () => {
     expect(body).not.toContain("sitemap-entries-post-3.xml");
   });
 
-  test("costs the same queries however many pages an entry scope has", async () => {
-    async function indexQueries(posts: number): Promise<number> {
+  test("costs one entries query per entry scope, however many pages it has", async () => {
+    // Two entry scopes, so a count of one per scope is told apart from one
+    // per index.
+    const twoTypes = definePlugin("two-types", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    });
+
+    async function entriesQueries(posts: number): Promise<number> {
       let queries = 0;
-      const h = await createHarness([blogPlugin], {
+      const h = await createHarness([twoTypes], {
         telemetry: {
           consumers: [
             {
-              id: "query-count",
+              id: "entries-queries",
               onRequestEnd: (snapshot) => {
-                queries = countDbSpans(snapshot.spans);
+                queries = flattenSpans(snapshot.spans).filter((span) => {
+                  const sql = span.attributes["db.sql"];
+                  return (
+                    span.name.startsWith("db: ") &&
+                    typeof sql === "string" &&
+                    sql.includes('"entries"')
+                  );
+                }).length;
               },
             },
           ],
@@ -514,11 +529,8 @@ describe("the sitemap index", () => {
       return queries;
     }
 
-    const onePage = await indexQueries(1);
-    const twoPages = await indexQueries(1500);
-
-    expect(onePage).toBeGreaterThan(0);
-    expect(twoPages).toBe(onePage);
+    expect(await entriesQueries(1)).toBe(2);
+    expect(await entriesQueries(1500)).toBe(2);
   });
 
   test("lists base-prefixed sub-sitemap URLs under a base path", async () => {
