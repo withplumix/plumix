@@ -48,7 +48,10 @@ let admin: User;
 let index: SearchHarness["runSchedule"];
 let rpc: SearchHarness["rpc"];
 
-async function harness(withPlugin: boolean): Promise<void> {
+async function harness(
+  withPlugin: boolean,
+  routes?: { readonly search?: boolean },
+): Promise<void> {
   ({
     h,
     admin,
@@ -58,6 +61,7 @@ async function harness(withPlugin: boolean): Promise<void> {
     config: {
       plugins: withPlugin ? [contentPlugin, search()] : [contentPlugin],
       theme,
+      routes,
     },
   }));
 }
@@ -236,6 +240,25 @@ describe("the search page", () => {
     const body = await (await h.fetch("/search/hydroponics")).text();
 
     expect(body).toContain('data-testid="count">0<');
+  });
+});
+
+describe("with core's search routes turned off", () => {
+  test("the plugin still serves the search page on its own rules", async () => {
+    await harness(true, { search: false });
+    await publish({
+      title: "Notes from the greenhouse",
+      slug: "greenhouse",
+      content: defineEntryContent([paragraph("<p>hydroponics</p>")]),
+    });
+    await index();
+
+    const response = await h.fetch("/search/hydroponics");
+
+    response.assertStatus(200);
+    expect(await response.text()).toContain("Notes from the greenhouse");
+    // Core's bare `/search` is gone with the rest of its rules.
+    (await h.fetch("/search")).assertStatus(404);
   });
 });
 

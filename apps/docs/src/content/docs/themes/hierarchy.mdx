@@ -35,6 +35,8 @@ The kind-to-tier map is fixed. It is not something a theme configures. Every kin
 | The site root               | `frontPage`   | `frontPage`  |
 | Search results              | `search`      | `search`     |
 
+A site that turns off the author, date or search routes with the `routes` key in `plumix.config.ts` never resolves a node of that kind, so a template the theme declares for it never renders. See [Turning framework routes off](/routing/overview/#turning-framework-routes-off).
+
 `archiveType` is the row worth reading twice. A plugin archive has no generic tier of its own, so it goes to `fallback` unless a `forArchiveType` rule claims it first.
 
 ## Quickstart

@@ -296,6 +296,9 @@ The membership-gating scenario a challenge implements. A scenario label, not a t
 **Route intent**:
 What a matched URL represents, named by its page kind — `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, or `archiveType`.
 
+**Framework route**:
+A route core compiles without any registration: root pagination (`/page/N`) and the author, date and search routes. A site turns the author, date or search family off with `routes` in `plumix()`, and a family that is off is never compiled. See ADR 0029.
+
 **Resolved route**:
 The content route the current public request matched — the pattern as it was declared and the params it captured — read from `ctx.resolvedRoute` by anything rendering the page that has to address the page's own URL space. `null` on every path the content router did not match.
 

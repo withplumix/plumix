@@ -15,7 +15,7 @@ import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { hasCap } from "@/lib/caps.js";
-import { visibleUserMetaBoxes } from "@/lib/manifest.js";
+import { hasAuthorRoutes, visibleUserMetaBoxes } from "@/lib/manifest.js";
 import {
   extractMetaFieldErrors,
   META_FORM_BASE_PATH,
@@ -466,12 +466,14 @@ function UserEditForm({
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      <Trans
-                        id="userEdit.slug.description"
-                        message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
-                      />
-                    </FormDescription>
+                    {hasAuthorRoutes() ? (
+                      <FormDescription data-testid="user-edit-slug-description">
+                        <Trans
+                          id="userEdit.slug.description"
+                          message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
+                        />
+                      </FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

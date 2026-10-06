@@ -869,6 +869,44 @@ describe("date feed routes", () => {
   });
 });
 
+describe("framework routes a site turns off", () => {
+  async function offHarness() {
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin, feeds()],
+        routes: { date: false, author: false },
+      },
+    });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "by-jane",
+      title: "By Jane",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+      publishedAt: new Date("2026-07-21T12:00:00Z"),
+    });
+    return h;
+  }
+
+  test("date and author off: the front page keeps its own feed", async () => {
+    const h = await offHarness();
+    (await h.fetch("/feed")).assertStatus(200);
+  });
+
+  test.each([
+    "/authors/jane/feed",
+    "/authors/jane/feed/atom",
+    "/2026/feed",
+    "/2026/07/feed",
+    "/2026/07/21/feed/atom",
+  ])("date and author off: %s is not a feed", async (path) => {
+    const h = await offHarness();
+    (await h.fetch(path)).assertStatus(404);
+  });
+});
+
 describe("what the plugin does not claim", () => {
   // The pages plugin's shape: a hierarchical type at the URL root, so an entry
   // slugged "feed" lands at `/<parent>/feed`.

@@ -46,7 +46,7 @@ export default plumix({
 });
 ```
 
-`plumix()` returns a resolved config rather than the object you passed. Five slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, a missing `i18n` becomes English only, and a missing `basePath` becomes `""`. That last one is normalization as well as defaulting, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
+`plumix()` returns a resolved config rather than the object you passed. Six slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, a missing `routes` keeps every framework route, a missing `i18n` becomes English only, and a missing `basePath` becomes `""`. That last one is normalization as well as defaulting, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
 
 One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt.
 
@@ -282,6 +282,18 @@ export const redirects: PlumixConfigInput["redirects"] = [
 ```
 
 A rule with no `status` is a 301. The request's query string is appended to the target only when the target contains neither a `?` nor a `#`, and only when `preserveQuery` is not `false`. A target with a fragment, such as `/recipes/sicilian-caponata#method`, drops the query, because appending after a `#` would fold the query into the fragment. Config rules merge ahead of plugin rules and theme rules, so the site wins a tie.
+
+### routes
+
+Which of core's framework routes the site keeps: the `author`, `date` and `search` families. Each defaults to `true`; one set to `false` is never compiled, so its URLs 404 unless something else answers them.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const routes: PlumixConfigInput["routes"] = { date: false };
+```
+
+[Routing](/routing/overview/#turning-framework-routes-off) covers what each family holds and what changes when one is off.
 
 ### basePath
 

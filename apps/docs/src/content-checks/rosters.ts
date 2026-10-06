@@ -190,6 +190,7 @@ const CONFIG_OPTIONS = [
   "plugins",
   "i18n",
   "redirects",
+  "routes",
   "basePath",
   "mcp",
   "api",

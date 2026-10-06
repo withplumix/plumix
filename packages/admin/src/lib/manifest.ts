@@ -70,6 +70,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   i18n: false,
   pluginI18n: false,
   configuredSlots: false,
+  frameworkRoutes: false,
 } as const satisfies Record<keyof PlumixManifest, boolean>;
 
 // Non-matching values for known fields are dropped (silent, not coerced —
@@ -123,6 +124,14 @@ export function getConfiguredSlots(
   source: PlumixManifest = currentManifest(),
 ): ConfiguredSlots {
   return source.configuredSlots ?? configuredSlotsOf({});
+}
+
+/** Whether the site keeps core's author routes; on when the manifest is
+ *  silent, as it is for a site that never set `routes`. */
+export function hasAuthorRoutes(
+  source: PlumixManifest = currentManifest(),
+): boolean {
+  return source.frameworkRoutes?.author ?? true;
 }
 
 export function getPatterns(

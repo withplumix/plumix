@@ -272,6 +272,7 @@ export function buildManifest(
       options?.adminBundledPluginIds,
     ),
     configuredSlots,
+    frameworkRoutes: { author: registry.frameworkRoutes.author },
   };
 }
 

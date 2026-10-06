@@ -32,6 +32,7 @@ import type { EntryQuery } from "../entries/contract/query.js";
 import type { Label } from "../i18n/label.js";
 import type { RestErrors } from "../rest/contract/errors.js";
 import type { EntryListing } from "../route/contract/entry-listing.js";
+import type { FrameworkRoutes } from "../route/contract/framework-routes.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
@@ -42,6 +43,7 @@ import type {
 } from "./fields/meta-box-field.js";
 import type { RegisteredImageRole } from "./image-roles.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
+import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 
 /**
  * WP-style per-type chrome labels shared between `EntryTypeOptions.labels`
@@ -1075,6 +1077,12 @@ export interface PluginRegistry {
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
+  /**
+   * Which framework route families the site keeps, from its `routes` config.
+   * Set when the registry is created, before any plugin runs, so every
+   * compile of the route map reads the same answer.
+   */
+  readonly frameworkRoutes: FrameworkRoutes;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -1109,7 +1117,9 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly imageRoles: Map<string, RegisteredImageRole>;
 }
 
-export function createPluginRegistry(): MutablePluginRegistry {
+export function createPluginRegistry(
+  frameworkRoutes: FrameworkRoutes = resolveFrameworkRoutes(),
+): MutablePluginRegistry {
   return {
     pluginIds: [],
     entryTypes: new Map(),
@@ -1145,6 +1155,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
       ["featured", { name: "featured", single: true, registeredBy: null }],
       ["ogImage", { name: "ogImage", single: false, registeredBy: null }],
     ]),
+    frameworkRoutes,
   };
 }
 

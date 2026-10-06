@@ -7,7 +7,8 @@
  * `total === 0` is intentionally **not** out of range when `page === 1`
  * — an empty archive renders the 200 empty-state page, mirroring how
  * #224's taxonomy resolver treats a term that exists but has no entries
- * tagged with it.
+ * tagged with it. A date archive is the exception: it answers 404 when
+ * empty (ADR 0029).
  */
 
 interface PaginateInput {

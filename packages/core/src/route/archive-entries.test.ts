@@ -192,4 +192,19 @@ describe("archiveBaseRoutes", () => {
     );
     expect(patterns).not.toContain("/legacy/:x");
   });
+
+  test("names no author or date archive where the site turned those routes off", async () => {
+    const { app } = await createDispatcherHarness({
+      config: { plugins: [site], routes: { author: false, date: false } },
+    });
+
+    const kinds = archiveBaseRoutes(app.plugins).map(
+      (route) => route.archive.kind,
+    );
+    expect(kinds).not.toContain("author");
+    expect(kinds).not.toContain("date");
+    expect(kinds).toContain("frontPage");
+    expect(archiveAtPath(app, "/authors/jane")).toBeNull();
+    expect(archiveAtPath(app, "/2026/04")).toBeNull();
+  });
 });

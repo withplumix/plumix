@@ -68,7 +68,7 @@ export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN = `${FRAMEWORK_AUTHOR_PATTERN}${
 // Date archives: bare numeric segments, so each is constrained (`\d{4}`/`\d{2}`)
 // to only match date-shaped URLs. These sort at framework priority, so `/2026`
 // resolves to the year archive — a post slugged "2026" is shadowed (WP reserves
-// date-archive URL space the same way).
+// date-archive URL space the same way) unless the site turns `routes.date` off.
 const YEAR = ":year(\\d{4})";
 const MONTH = ":month(\\d{2})";
 const DAY = ":day(\\d{2})";
@@ -97,81 +97,43 @@ interface CompiledRule extends RouteRule {
 export function compileRouteMap(
   registry: PluginRegistry,
 ): readonly RouteRule[] {
+  const { frameworkRoutes } = registry;
   const rules: CompiledRule[] = [
-    {
-      // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
-      // The front page's later pages: the pagination suffix under the root.
-      pattern: new URLPattern({ pathname: FRAMEWORK_PAGINATION_SUFFIX }),
-      rawPattern: FRAMEWORK_PAGINATION_SUFFIX,
-      intent: { kind: "frontPage" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
+    // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
+    // The front page's later pages: the pagination suffix under the root.
+    ...frameworkRules({ kind: "frontPage" }, [FRAMEWORK_PAGINATION_SUFFIX]),
+    // A family the site turned off is never compiled, not even as a redirect,
+    // so its URLs are free for whatever else matches (ADR 0029).
     // Paginated variant goes first so `/search/foo/page/2` doesn't
     // accidentally match the bare-query rule with `:query = "foo/page/2"`
     // when URLPattern relaxes its segment captures.
-    {
-      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_PAGINATED_PATTERN }),
-      rawPattern: FRAMEWORK_SEARCH_PAGINATED_PATTERN,
-      intent: { kind: "search" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
-    {
-      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_QUERY_PATTERN }),
-      rawPattern: FRAMEWORK_SEARCH_QUERY_PATTERN,
-      intent: { kind: "search" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
-    {
-      pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_BARE_PATTERN }),
-      rawPattern: FRAMEWORK_SEARCH_BARE_PATTERN,
-      intent: { kind: "search" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
+    ...(frameworkRoutes.search
+      ? frameworkRules({ kind: "search" }, [
+          FRAMEWORK_SEARCH_PAGINATED_PATTERN,
+          FRAMEWORK_SEARCH_QUERY_PATTERN,
+          FRAMEWORK_SEARCH_BARE_PATTERN,
+        ])
+      : []),
     // Paginated variant first, mirroring search — keeps the more-specific rule
     // ahead of the bare `/authors/:slug`.
-    {
-      pattern: new URLPattern({ pathname: FRAMEWORK_AUTHOR_PAGINATED_PATTERN }),
-      rawPattern: FRAMEWORK_AUTHOR_PAGINATED_PATTERN,
-      intent: { kind: "author" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
-    {
-      pattern: new URLPattern({ pathname: FRAMEWORK_AUTHOR_PATTERN }),
-      rawPattern: FRAMEWORK_AUTHOR_PATTERN,
-      intent: { kind: "author" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
+    ...(frameworkRoutes.author
+      ? frameworkRules({ kind: "author" }, [
+          FRAMEWORK_AUTHOR_PAGINATED_PATTERN,
+          FRAMEWORK_AUTHOR_PATTERN,
+        ])
+      : []),
     // Date archives, most-specific first (day → month → year, paginated before
     // bare) so a more-granular URL is never captured by a coarser rule.
-    ...(
-      [
-        FRAMEWORK_DATE_DAY_PAGINATED_PATTERN,
-        FRAMEWORK_DATE_DAY_PATTERN,
-        FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN,
-        FRAMEWORK_DATE_MONTH_PATTERN,
-        FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN,
-        FRAMEWORK_DATE_YEAR_PATTERN,
-      ] as const
-    ).map((rawPattern): CompiledRule => ({
-      pattern: new URLPattern({ pathname: rawPattern }),
-      rawPattern,
-      intent: { kind: "date" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    })),
+    ...(frameworkRoutes.date
+      ? frameworkRules({ kind: "date" }, [
+          FRAMEWORK_DATE_DAY_PAGINATED_PATTERN,
+          FRAMEWORK_DATE_DAY_PATTERN,
+          FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN,
+          FRAMEWORK_DATE_MONTH_PATTERN,
+          FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN,
+          FRAMEWORK_DATE_YEAR_PATTERN,
+        ])
+      : []),
   ];
 
   // Taxonomies emit before entry types so that a slug collision (e.g. a
@@ -229,6 +191,20 @@ export function compileRouteMap(
   assertAutoUrlsResolveToThemselves(sorted);
   assertUniquePatterns(rules);
   return sorted;
+}
+
+function frameworkRules(
+  intent: RouteIntent,
+  rawPatterns: readonly string[],
+): CompiledRule[] {
+  return rawPatterns.map((rawPattern) => ({
+    pattern: new URLPattern({ pathname: rawPattern }),
+    rawPattern,
+    intent,
+    priority: FRAMEWORK_ROUTE_PRIORITY,
+    registeredBy: null,
+    isPermalinkRoute: true,
+  }));
 }
 
 /**

@@ -23,6 +23,7 @@ import type { PlumixConfig } from "../config.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
+import type { FrameworkRoutes } from "../route/contract/framework-routes.js";
 import type { NamedTemplateChoice } from "../route/contract/named-template.js";
 import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
 import type {
@@ -410,6 +411,12 @@ export interface PlumixManifest {
    * hides itself when the deployment can't do what it offers (ADR 0014).
    */
   readonly configuredSlots?: ConfiguredSlots;
+  /**
+   * Whether the site keeps core's author routes, so the user screen names the
+   * `/authors/` URL only where one exists. The other families are left out:
+   * no admin surface reads them.
+   */
+  readonly frameworkRoutes?: Pick<FrameworkRoutes, "author">;
 }
 
 // Constrains each slot name to a key of the config it is read off.
@@ -506,6 +513,7 @@ export function emptyManifest(): PlumixManifest {
     i18n: { defaultLocale: "en", locales: [] },
     pluginI18n: {},
     configuredSlots: configuredSlotsOf({}),
+    frameworkRoutes: { author: true },
   };
 }
 
