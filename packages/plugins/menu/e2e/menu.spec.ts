@@ -263,8 +263,7 @@ test("a trashed entry's item keeps its label, and Convert to Custom URL fills in
     cwd: resolve(process.cwd(), "playground"),
   });
   const factories = factoriesFor(db);
-  // globalSetup's `actingAs` already took the factory's `user-1`, and this
-  // worker's factory sequence starts over at 1, so the author is named.
+  // The author is named rather than taking the factory's generated email and slug.
   const author = await factories.admin.create({
     email: "author@example.test",
     slug: "author",

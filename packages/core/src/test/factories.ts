@@ -55,7 +55,8 @@ function requireDb(transient: Partial<DbTransient>): Db {
 
 // Each Playwright worker is its own process with its own fishery sequence, and
 // they all seed one database. Defaults on a unique column add this token so two
-// processes never mint the same value; within a process the sequence orders them.
+// processes are unlikely to mint the same value; within a process the sequence
+// orders them. The device-code default uses only its first four characters.
 const processToken = crypto.randomUUID().slice(0, 8);
 
 // The fourth type argument pins `params` to a shallow `Partial`. fishery's

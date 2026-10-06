@@ -5,6 +5,13 @@ import { userFactory } from "../factories.js";
 import { createTestDb } from "../harness.js";
 import { actingAs } from "./acting-as.js";
 
+// Each Playwright worker loads its own module graph, so each one's factory
+// sequence starts over at 1.
+function loadInFreshProcess() {
+  vi.resetModules();
+  return import("./acting-as.js");
+}
+
 describe("actingAs (Playwright)", () => {
   test("role string → creates a user with that role and a storageState carrying the session cookie", async () => {
     const db = await createTestDb();
@@ -48,18 +55,12 @@ describe("actingAs (Playwright)", () => {
   });
 
   test("a second process seeding the same db mints a user that does not collide", async () => {
-    // Each Playwright worker loads its own module graph, so each one's
-    // factory sequence starts over at 1.
-    const loadInFreshProcess = async () => {
-      vi.resetModules();
-      return import("./acting-as.js");
-    };
     const db = await createTestDb();
 
-    const first = await (await loadInFreshProcess()).actingAs(db, "subscriber");
-    const second = await (
-      await loadInFreshProcess()
-    ).actingAs(db, "subscriber");
+    const firstProcess = await loadInFreshProcess();
+    const first = await firstProcess.actingAs(db, "subscriber");
+    const secondProcess = await loadInFreshProcess();
+    const second = await secondProcess.actingAs(db, "subscriber");
 
     expect(second.user.id).not.toBe(first.user.id);
     expect(second.user.slug).not.toBe(first.user.slug);
