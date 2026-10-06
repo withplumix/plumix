@@ -779,6 +779,7 @@ describe("seo:sitemap:urls", () => {
       "<loc>https://cms.example/injected/event-series?page=1</loc>",
     );
   });
+
   test("names an entry type's scope by its kind as well as its name", async () => {
     const seen: SitemapScopeRef[] = [];
     const recorder = definePlugin("recorder", (ctx) => {
@@ -828,6 +829,7 @@ describe("the site's sitemap policy", () => {
     );
     expect(categories).not.toContain("<changefreq>");
   });
+
   // A plugin's archive whose provider sets a priority of its own.
   const ranked = definePlugin("ranked", (ctx) => {
     ctx.registerArchiveType("location", {
@@ -870,6 +872,7 @@ describe("the site's sitemap policy", () => {
       "<loc>https://cms.example/locations/leeds</loc><priority>0.3</priority>",
     );
   });
+
   test("false drops an entry type's scope from the index", async () => {
     const h = await createHarness([blogPlugin], {
       seo: { sitemaps: { entries: { post: false } } },
@@ -906,6 +909,30 @@ describe("the site's sitemap policy", () => {
     );
   });
 
+  test("a dropped scope is never asked for its URLs", async () => {
+    const urls = vi.fn(() => []);
+    const filter = vi.fn((all: readonly unknown[]) => all);
+    const dropped = definePlugin("dropped", (ctx) => {
+      ctx.registerArchiveType("location", {
+        routes: ["/locations/:slug"],
+        resolve: () => ({
+          data: { kind: "archiveType", name: "location" },
+          title: "Location",
+        }),
+        sitemap: { count: () => 1, urls },
+      });
+      ctx.addFilter("seo:sitemap:urls", (all) => filter(all) as typeof all);
+    });
+    const h = await createHarness([dropped], {
+      seo: { sitemaps: { location: false } },
+    });
+
+    await bodyOf(h, "/sitemap-location-1.xml");
+
+    expect(urls).not.toHaveBeenCalled();
+    expect(filter).not.toHaveBeenCalled();
+  });
+
   test("false drops a contributed scope from the index", async () => {
     const h = await createHarness([ranked], {
       seo: { sitemaps: { location: false } },
@@ -915,6 +942,7 @@ describe("the site's sitemap policy", () => {
       "sitemap-location-1.xml",
     );
   });
+
   test("a site held out of the index lists no contributed scope either", async () => {
     const h = await createHarness([ranked], {
       seo: { sitemaps: { location: { priority: 0.5 } } },

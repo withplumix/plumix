@@ -9,8 +9,8 @@ describe("renderSitemapIndex", () => {
   test("wraps each loc in a <sitemap> entry", () => {
     const xml = renderSitemapIndex(
       [
-        "https://cms.example/sitemap-post-1.xml",
-        "https://cms.example/sitemap-category-1.xml",
+        "https://cms.example/sitemap-entries-post-1.xml",
+        "https://cms.example/sitemap-terms-category-1.xml",
       ],
       XSL,
     );
@@ -19,7 +19,7 @@ describe("renderSitemapIndex", () => {
       '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     );
     expect(xml).toContain(
-      "<sitemap><loc>https://cms.example/sitemap-post-1.xml</loc></sitemap>",
+      "<sitemap><loc>https://cms.example/sitemap-entries-post-1.xml</loc></sitemap>",
     );
     expect(xml.match(/<sitemap>/g)).toHaveLength(2);
   });
@@ -51,9 +51,8 @@ describe("renderSubSitemap", () => {
     );
   });
 
-  test("a set with no changefreq or priority serializes as it always has", () => {
-    // Captured before either field existed: a site that sets neither keeps
-    // the exact bytes its crawlers already fetch.
+  test("a set with no changefreq or priority writes neither element", () => {
+    // A site that sets neither keeps the exact bytes its crawlers fetch.
     const xml = renderSubSitemap(
       [
         {
@@ -96,6 +95,16 @@ describe("renderSubSitemap", () => {
         "<lastmod>2026-06-14T00:00:00.000Z</lastmod>" +
         "<changefreq>weekly</changefreq><priority>0.8</priority>" +
         "<image:image><image:loc>https://cdn.example/a.png</image:loc></image:image></url>",
+    );
+  });
+
+  test("writes a priority of 0", () => {
+    const xml = renderSubSitemap(
+      [{ loc: "https://cms.example/post/a", priority: 0 }],
+      XSL,
+    );
+    expect(xml).toContain(
+      "<url><loc>https://cms.example/post/a</loc><priority>0</priority></url>",
     );
   });
 
