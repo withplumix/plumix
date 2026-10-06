@@ -149,6 +149,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "extractDomain",
       "isSafeRedirect",
       "resolveSafeRedirect",
+      "resolveLoginPath",
       "createCapabilityResolver",
       "getCapabilityResolver",
       "deriveEntryTypeCapabilities",
