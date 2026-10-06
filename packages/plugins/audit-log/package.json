@@ -38,6 +38,7 @@
   },
   "files": [
     "dist",
+    "migrations",
     "locales",
     "README.md",
     "LICENSE"
@@ -53,6 +54,7 @@
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "lint": "eslint",
     "publint": "publint",
@@ -92,6 +94,7 @@
     "@types/react-dom": "catalog:react",
     "@vitest/browser-playwright": "catalog:vitest",
     "@vitest/coverage-v8": "catalog:vitest",
+    "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
     "fishery": "catalog:",
     "playwright": "catalog:",

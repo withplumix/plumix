@@ -1,102 +1,95 @@
-import { eq, sql } from "drizzle-orm";
+import { fileURLToPath } from "node:url";
+import { createClient } from "@libsql/client";
+import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { PluginRawSqlMigration } from "../cli/raw-migrations.js";
-import { CORE_SQL_MIGRATIONS } from "../cli/raw-migrations.js";
-import { applyTestSchema, createTestDb } from "./harness.js";
+import {
+  applyCoreTestSchema,
+  applyTestSchema,
+  createTestDb,
+} from "./harness.js";
 
-// Stands in for a plugin's `schema.ts` namespace object — one module-level
-// value, so repeat calls hit the compiled-SQL cache the way real ones do.
-const pluginSchema = {
-  widgets: sqliteTable("widgets", {
-    id: integer("id").primaryKey(),
-    name: text("name").notNull(),
-  }),
-};
+// A plugin's history, hand-written so its one migration is dated 1970: older
+// than anything core ships, which is the case a tracking table shared with
+// core would skip.
+const widgetsMigrations = fileURLToPath(
+  new URL("fixtures/widgets/migrations", import.meta.url),
+);
 
-const auditedSchema = {
-  gadgets: sqliteTable("gadgets", {
-    id: integer("id").primaryKey(),
-    name: text("name").notNull(),
-  }),
-  gadgetChanges: sqliteTable("gadget_changes", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    op: text("op").notNull(),
-  }),
-};
+const widgets = sqliteTable("widgets", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+});
 
-const gadgetTriggers = [
-  `CREATE TRIGGER gadgets_insert AFTER INSERT ON gadgets
-   BEGIN INSERT INTO gadget_changes (op) VALUES ('insert'); END`,
-  `CREATE TRIGGER gadgets_update AFTER UPDATE ON gadgets
-   BEGIN INSERT INTO gadget_changes (op) VALUES ('update'); END`,
-  `CREATE TRIGGER gadgets_delete AFTER DELETE ON gadgets
-   BEGIN INSERT INTO gadget_changes (op) VALUES ('delete'); END`,
-];
+function bareDb() {
+  return drizzle(createClient({ url: ":memory:" }), { casing: "snake_case" });
+}
+
+async function objectNames(
+  db: ReturnType<typeof bareDb>,
+  type: "table" | "trigger",
+): Promise<string[]> {
+  const rows = await db.all<{ name: string }>(
+    sql`SELECT name FROM sqlite_master WHERE type = ${type} AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle_%' ORDER BY name`,
+  );
+  return rows.map((row) => row.name);
+}
+
+describe("applyCoreTestSchema", () => {
+  test("builds every core table and the change-feed triggers from core's shipped history", async () => {
+    const db = bareDb();
+
+    await applyCoreTestSchema(db);
+
+    expect(await objectNames(db, "table")).toEqual([
+      "allowed_domains",
+      "api_tokens",
+      "auth_tokens",
+      "credentials",
+      "device_codes",
+      "entries",
+      "entry_changes",
+      "entry_term",
+      "oauth_accounts",
+      "scheduled_task_claims",
+      "scheduled_task_leases",
+      "sessions",
+      "settings",
+      "terms",
+      "users",
+    ]);
+    expect(await objectNames(db, "trigger")).toEqual([
+      "entries_change_feed_delete",
+      "entries_change_feed_insert",
+      "entries_change_feed_update",
+    ]);
+  });
+});
 
 describe("applyTestSchema", () => {
-  test("layers a plugin's tables onto a core test db", async () => {
+  test("layers a plugin's history onto a core test db, however old its migrations", async () => {
     const db = await createTestDb();
 
-    await applyTestSchema(db, pluginSchema);
-    await db.insert(pluginSchema.widgets).values({ id: 1, name: "sprocket" });
+    await applyTestSchema(db, widgetsMigrations);
+    await db.insert(widgets).values({ id: 1, name: "sprocket" });
 
-    expect(await db.select().from(pluginSchema.widgets)).toEqual([
+    expect(await db.select().from(widgets)).toEqual([
       { id: 1, name: "sprocket" },
     ]);
   });
 
-  test("compiles a schema module once and replays it per db", async () => {
+  test("builds the plugin's tables afresh on every db", async () => {
     const [first, second] = await Promise.all([createTestDb(), createTestDb()]);
     await Promise.all([
-      applyTestSchema(first, pluginSchema),
-      applyTestSchema(second, pluginSchema),
+      applyTestSchema(first, widgetsMigrations),
+      applyTestSchema(second, widgetsMigrations),
     ]);
 
-    await second.insert(pluginSchema.widgets).values({ id: 2, name: "cog" });
+    await second.insert(widgets).values({ id: 2, name: "cog" });
 
-    expect(await first.select().from(pluginSchema.widgets)).toEqual([]);
-    expect(await second.select().from(pluginSchema.widgets)).toHaveLength(1);
-  });
-
-  test("applies raw statements alongside the compiled schema", async () => {
-    const db = await createTestDb();
-    await applyTestSchema(db, auditedSchema, gadgetTriggers);
-
-    const { gadgets, gadgetChanges } = auditedSchema;
-    await db.insert(gadgets).values({ id: 1, name: "sprocket" });
-    await db.update(gadgets).set({ name: "cog" }).where(eq(gadgets.id, 1));
-    await db.delete(gadgets).where(eq(gadgets.id, 1));
-
-    expect(
-      await db
-        .select({ op: gadgetChanges.op })
-        .from(gadgetChanges)
-        .orderBy(gadgetChanges.id),
-    ).toEqual([{ op: "insert" }, { op: "update" }, { op: "delete" }]);
-  });
-});
-
-describe("applyCoreTestSchema", () => {
-  const mutableCoreMigrations = CORE_SQL_MIGRATIONS as PluginRawSqlMigration[];
-
-  afterEach(() => {
-    mutableCoreMigrations.pop();
-  });
-
-  test("picks up a core raw migration declared after this test was written", async () => {
-    mutableCoreMigrations.push({
-      pluginId: "core",
-      name: "harness_test_marker",
-      statements: ["CREATE TABLE harness_test_marker (id INTEGER PRIMARY KEY)"],
-    });
-
-    const db = await createTestDb();
-
-    await db.run(sql`INSERT INTO harness_test_marker (id) VALUES (1)`);
-    expect(
-      await db.get<{ id: number }>(sql`SELECT id FROM harness_test_marker`),
-    ).toEqual({ id: 1 });
+    expect(await first.select().from(widgets)).toEqual([]);
+    expect(await second.select().from(widgets)).toHaveLength(1);
   });
 });

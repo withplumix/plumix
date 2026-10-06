@@ -1,16 +1,18 @@
+import { fileURLToPath } from "node:url";
 import type { DispatcherHarness } from "plumix/test";
 import { applyTestSchema, createTestDb } from "plumix/test";
 
-import * as schema from "../db/schema.js";
+// The history this package ships, at its root.
+const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
 
 export type FormsTestDb = DispatcherHarness["db"];
 
 /**
- * Layer the plugin's `form_submissions` table onto an existing core test
+ * Apply the plugin's shipped migration history onto an existing core test
  * db — the one inside `createDispatcherHarness`, or a bare one below.
  */
 export async function applyFormsSchema(db: FormsTestDb): Promise<void> {
-  await applyTestSchema(db, schema);
+  await applyTestSchema(db, migrations);
 }
 
 export async function createFormsTestDb(): Promise<FormsTestDb> {

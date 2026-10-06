@@ -121,6 +121,20 @@ jobs:
       - run: pnpm exec turbo run i18n:compile
       - run: pnpm knip
 
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # drizzle-kit loads each schema module, and a plugin's imports
+      # `plumix/schema`, which resolves to `dist/`.
+      - run: pnpm exec turbo run build --filter plumix
+      - run: pnpm migrations:check
+
   i18n:
     name: i18n
     runs-on: ubuntu-latest

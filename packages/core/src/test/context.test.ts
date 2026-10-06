@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, test } from "vitest";
 
@@ -35,7 +36,10 @@ describe("createTestContext", () => {
       name: text("name").notNull(),
     });
     const db = await createTestDb();
-    await applyTestSchema(db, { widgets });
+    await applyTestSchema(
+      db,
+      fileURLToPath(new URL("fixtures/widgets/migrations", import.meta.url)),
+    );
     const ctx = createTestContext({ db });
 
     await ctx.db.insert(widgets).values({ id: 1, name: "sprocket" });

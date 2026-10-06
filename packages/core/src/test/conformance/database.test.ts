@@ -42,11 +42,32 @@ function triggerCountingClient(): Client {
   });
 }
 
+// Leaves foreign keys off, as a driver that never turns them on does.
+// libsql's own `migrate` turns them back on when it finishes, so they go off
+// again after it.
+function foreignKeysOffClient(): Client {
+  const client = createClient({ url: ":memory:" });
+  const migrate = async (statements: InStatement[]) => {
+    const results = await client.migrate(statements);
+    await client.execute("PRAGMA foreign_keys = OFF");
+    return results;
+  };
+  return new Proxy(client, {
+    get: (target, key) => {
+      if (key === "migrate") return migrate;
+      const value: unknown = Reflect.get(target, key);
+      return typeof value === "function"
+        ? (value as (this: Client) => unknown).bind(target)
+        : value;
+    },
+  });
+}
+
 describe("database contract cases", () => {
   test("fail a connection that leaves foreign keys off", async () => {
     const failed = await failingCases(databaseContractCases, {
       connect: async () => {
-        const client = createClient({ url: ":memory:" });
+        const client = foreignKeysOffClient();
         await client.execute("PRAGMA foreign_keys = OFF");
         return { adapter: adapterOver(client) };
       },

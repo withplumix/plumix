@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type {
   AppContext,
   MutablePluginRegistry,
@@ -23,22 +24,21 @@ import {
   toRegisteredTermTaxonomy,
 } from "plumix/test";
 
-import { ensureSearchIndex, SEARCH_INDEX_TRIGGER_DROP_DDL } from "../db/ddl.js";
+import { SEARCH_INDEX_TRIGGER_DROP_DDL } from "../db/ddl.js";
 import * as schema from "../db/schema.js";
 
 export type SearchTestDb = DispatcherHarness["db"];
 
+// The history this package ships, at its root.
+const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
+
 /**
- * Layer the plugin's projection and its FTS5 index onto an existing core
- * test db — the one inside `createDispatcherHarness`, or a bare one below.
- *
- * The index half goes on through `ensureSearchIndex`, the same function the
- * runtime self-heals with, so every suite exercises that path rather than
- * leaving it the one branch nothing runs.
+ * Apply the plugin's shipped migration history — the projection, then its
+ * FTS5 index and triggers — onto an existing core test db: the one inside
+ * `createDispatcherHarness`, or a bare one below.
  */
 export async function applySearchSchema(db: SearchTestDb): Promise<void> {
-  await applyTestSchema(db, schema);
-  await ensureSearchIndex(db);
+  await applyTestSchema(db, migrations);
 }
 
 /**

@@ -35,6 +35,7 @@
   },
   "files": [
     "dist",
+    "migrations",
     "README.md",
     "LICENSE"
   ],
@@ -46,6 +47,7 @@
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "lint": "eslint",
     "publint": "publint",
@@ -68,6 +70,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
+    "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
