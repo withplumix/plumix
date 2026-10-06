@@ -206,7 +206,7 @@ export interface SitemapScope {
 }
 
 /** What the index knows of one sub-sitemap page before it has a `<loc>`. */
-export interface SitemapIndexPage {
+interface SitemapIndexPage {
   readonly lastmod?: string;
 }
 
