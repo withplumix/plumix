@@ -583,6 +583,28 @@ describe("compileRouteMap", () => {
     });
   });
 
+  test("a hierarchical taxonomy with a multi-segment rewrite.slug serves nested terms and their later pages under that base", async () => {
+    const registry = await buildRegistry([
+      definePlugin("insights", (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isHierarchical: true,
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    ]);
+    const resolve = resolverFor(registry);
+
+    expect(resolve("/insights/category/policy/housing")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { path: "policy/housing" },
+    });
+    expect(resolve("/insights/category/policy/housing/page/2")).toMatchObject({
+      intent: { kind: "term", taxonomy: "category" },
+      params: { path: "policy/housing", page: "2" },
+    });
+  });
+
   test("an entry type with a multi-segment rewrite.slug serves its singles and archive under that base", async () => {
     const registry = await buildRegistry([
       definePlugin("learn", (ctx) => {
@@ -626,25 +648,17 @@ describe("compileRouteMap", () => {
   });
 
   describe("a near-miss base fails at boot with one message saying what to write instead", () => {
-    async function bootError(
-      register: PluginSetup<unknown>,
-      ...fragments: string[]
-    ) {
+    async function bootError(register: PluginSetup<unknown>, message: string) {
       const registry = await buildRegistry([definePlugin("site", register)]);
-      for (const fragment of fragments) {
-        expect(() => compileRouteMap(registry)).toThrow(fragment);
-      }
+      expect(() => compileRouteMap(registry)).toThrow(message);
     }
-    const taxonomyAt = (slug: string, ...fragments: string[]) =>
-      bootError(
-        (ctx) => {
-          ctx.registerTermTaxonomy("category", {
-            label: "Categories",
-            rewrite: { slug },
-          });
-        },
-        ...fragments,
-      );
+    const taxonomyAt = (slug: string, message: string) =>
+      bootError((ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          rewrite: { slug },
+        });
+      }, message);
 
     test.each([
       ["/insights/category", "drop the leading slash"],
@@ -653,13 +667,13 @@ describe("compileRouteMap", () => {
     ])("%s: %s and shows the corrected value", async (slug, fix) => {
       await taxonomyAt(
         slug,
-        `Term taxonomy "category" has invalid rewrite.slug "${slug}"`,
-        `${fix} and write "insights/category"`,
+        `Term taxonomy "category" has invalid rewrite.slug "${slug}": ` +
+          `${fix} and write "insights/category"`,
       );
     });
 
     test.each([
-      ["insights//category", "has an empty segment"],
+      ["insights//category", "it has an empty segment"],
       ["insights/Category", 'segment "Category" is not lowercase kebab-case'],
       ["insights/my category", 'segment "my category" is not lowercase'],
       ["insights/my_category", 'segment "my_category" is not lowercase'],
@@ -671,8 +685,8 @@ describe("compileRouteMap", () => {
       ["insights/x+", 'segment "x+" is URL-pattern syntax'],
       ["insights/./category", 'segment "." is a relative path segment'],
       ["insights/../admin", 'segment ".." is a relative path segment'],
-      ["", "is empty"],
-      ["/", "has an empty segment"],
+      ["", "it is empty"],
+      ["/", "it has an empty segment"],
       [".", 'segment "." is a relative path segment'],
       ["..", 'segment ".." is a relative path segment'],
       ["/Insights", 'segment "Insights" is not lowercase kebab-case'],
@@ -682,8 +696,7 @@ describe("compileRouteMap", () => {
     ])("%j names its problem: %s", async (slug, problem) => {
       await taxonomyAt(
         slug,
-        `Term taxonomy "category" has invalid rewrite.slug "${slug}"`,
-        problem,
+        `Term taxonomy "category" has invalid rewrite.slug "${slug}": ${problem}`,
       );
     });
 
@@ -696,8 +709,10 @@ describe("compileRouteMap", () => {
           });
         },
         'Entry type "course" has invalid rewrite.slug "learn/Courses": ' +
-          'segment "Courses" is not lowercase kebab-case',
-        '(or "" to claim the site root)',
+          'segment "Courses" is not lowercase kebab-case (a-z, 0-9 and "-", ' +
+          'not starting with "-"). Expected one or more lowercase kebab-case ' +
+          'segments joined by "/" (or "" to claim the site root), ' +
+          'like "insights/category".',
       );
     });
 
