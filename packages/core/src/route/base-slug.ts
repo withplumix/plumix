@@ -2,26 +2,7 @@ const SEGMENT_RE = /^[a-z0-9][a-z0-9-]*$/;
 // What a URLPattern pathname reads as more than a literal character.
 const PATTERN_SYNTAX_RE = /[*:(){}?+]/;
 
-/**
- * What is wrong with a URL base — a `rewrite.slug` or a string `hasArchive` —
- * as a clause the boot error quotes, or null when it is one or more
- * lowercase kebab-case segments joined by `/`. The caller decides whether
- * `""` is allowed before asking.
- */
-export function baseSlugProblem(slug: string): string | null {
-  if (slug === "") return "it is empty";
-  const trimmed = slug.replace(/^\/+|\/+$/g, "");
-  if (trimmed !== slug && trimmed !== "" && baseSlugProblem(trimmed) === null) {
-    const leading = slug.startsWith("/");
-    const trailing = slug.endsWith("/");
-    const which =
-      leading && trailing
-        ? "leading and trailing slashes"
-        : leading
-          ? "leading slash"
-          : "trailing slash";
-    return `drop the ${which} and write "${trimmed}"`;
-  }
+function segmentProblem(slug: string): string | null {
   for (const segment of slug.split("/")) {
     if (SEGMENT_RE.test(segment)) continue;
     if (segment === "") {
@@ -42,4 +23,31 @@ export function baseSlugProblem(slug: string): string | null {
     );
   }
   return null;
+}
+
+function slashProblem(slug: string, trimmed: string): string {
+  const leading = slug.startsWith("/");
+  const trailing = slug.endsWith("/");
+  if (leading && trailing) {
+    return `drop the leading and trailing slashes and write "${trimmed}"`;
+  }
+  if (leading) return `drop the leading slash and write "${trimmed}"`;
+  return `drop the trailing slash and write "${trimmed}"`;
+}
+
+/**
+ * What is wrong with a URL base — a `rewrite.slug` or a string `hasArchive` —
+ * as a clause the boot error quotes, or null when it is one or more
+ * lowercase kebab-case segments joined by `/`. The caller decides whether
+ * `""` is allowed before asking.
+ *
+ * A stray leading or trailing slash on an otherwise valid base is answered
+ * with the value to write; when the segments themselves are wrong, the
+ * problem names the first bad segment instead.
+ */
+export function baseSlugProblem(slug: string): string | null {
+  if (slug === "") return "it is empty";
+  const trimmed = slug.replace(/^\/+|\/+$/g, "");
+  if (trimmed === slug || trimmed === "") return segmentProblem(slug);
+  return segmentProblem(trimmed) ?? slashProblem(slug, trimmed);
 }
