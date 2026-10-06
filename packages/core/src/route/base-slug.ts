@@ -35,6 +35,16 @@ function slashProblem(slug: string, trimmed: string): string {
   return `drop the trailing slash and write "${trimmed}"`;
 }
 
+// An index scan, not `/^\/+|\/+$/`: that regex retries `\/+$` from every
+// slash of an inner run, so a base with a long one stalls boot.
+function trimSlashes(slug: string): string {
+  let start = 0;
+  let end = slug.length;
+  while (start < end && slug[start] === "/") start++;
+  while (end > start && slug[end - 1] === "/") end--;
+  return slug.slice(start, end);
+}
+
 /**
  * What is wrong with a URL base — a `rewrite.slug` or a string `hasArchive` —
  * as a clause the boot error quotes, or null when it is one or more
@@ -47,7 +57,7 @@ function slashProblem(slug: string, trimmed: string): string {
  */
 export function baseSlugProblem(slug: string): string | null {
   if (slug === "") return "it is empty";
-  const trimmed = slug.replace(/^\/+|\/+$/g, "");
+  const trimmed = trimSlashes(slug);
   if (trimmed === slug || trimmed === "") return segmentProblem(slug);
   return segmentProblem(trimmed) ?? slashProblem(slug, trimmed);
 }

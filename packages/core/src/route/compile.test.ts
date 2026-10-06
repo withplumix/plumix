@@ -715,6 +715,13 @@ describe("compileRouteMap", () => {
       );
     });
 
+    test("a long run of slashes inside a base is rejected without stalling boot", async () => {
+      const slug = `insights${"/".repeat(100_000)}category`;
+      const startedAt = performance.now();
+      await taxonomyAt(slug, "it has an empty segment");
+      expect(performance.now() - startedAt).toBeLessThan(1000);
+    });
+
     test("an entry type's base names the type and still offers the site root", async () => {
       await bootError(
         (ctx) => {
