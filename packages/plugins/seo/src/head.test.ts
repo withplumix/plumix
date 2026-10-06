@@ -19,6 +19,8 @@ const baseInputs: HeadInputs = {
   published: null,
   modified: null,
   author: null,
+  articleTags: true,
+  errorPage: false,
 };
 
 const meta = (m: DocumentManifest): readonly DocumentMeta[] => m.meta ?? [];
@@ -202,6 +204,24 @@ describe("seoHeadMeta", () => {
   });
 });
 
+describe("seoHeadMeta on an error page", () => {
+  test("writes the robots directive and nothing else", () => {
+    const out = seoHeadMeta(
+      {},
+      {
+        ...baseInputs,
+        canonical: null,
+        errorPage: true,
+        indexable: false,
+        ogImage: { url: "https://cms.example/og.png" },
+        verification: [{ name: "google-site-verification", content: "g" }],
+      },
+    );
+
+    expect(meta(out)).toEqual([{ name: "robots", content: "noindex,follow" }]);
+  });
+});
+
 describe("seoHeadMeta — article facts", () => {
   const article: HeadInputs = {
     ...baseInputs,
@@ -247,6 +267,15 @@ describe("seoHeadMeta — article facts", () => {
       meta(out).filter((e) => e.property === "article:author"),
     ).toHaveLength(1);
     expect(byProperty(out, "article:author")?.content).toBe("From Theme");
+  });
+
+  test("with article tags off, an entry carries none and stays an article", () => {
+    const out = seoHeadMeta({}, { ...article, articleTags: false });
+
+    expect(meta(out).filter((e) => e.property?.startsWith("article:"))).toEqual(
+      [],
+    );
+    expect(byProperty(out, "og:type")?.content).toBe("article");
   });
 });
 

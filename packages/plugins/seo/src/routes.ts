@@ -105,21 +105,28 @@ async function handleSubSitemap(
 }
 
 /**
- * Claim `/robots.txt`, `/llms.txt` and the sitemap stylesheet, and keep the
- * cached sitemap honest about the indexing toggle. None of it depends on what
- * the site registered; the sitemap does, so {@link registerSitemapRoutes}
- * claims it from `afterSetup`.
+ * Claim `/robots.txt`, `/llms.txt` (unless the site turned it off) and the
+ * sitemap stylesheet, and keep the cached sitemap honest about the indexing
+ * toggle. None of it depends on what the site registered; the sitemap does, so
+ * {@link registerSitemapRoutes} claims it from `afterSetup`.
  */
-export function registerSeoRoutes(ctx: PluginSetupContext): void {
+export function registerSeoRoutes(
+  ctx: PluginSetupContext,
+  options: { readonly llmsTxt: boolean },
+): void {
   ctx.registerPublicRoute({
     path: ROBOTS_PATH,
     handler: (_request, appCtx) => handleRobotsTxt(appCtx),
   });
 
-  ctx.registerPublicRoute({
-    path: LLMS_PATH,
-    handler: (_request, appCtx) => handleLlmsTxt(appCtx),
-  });
+  // Unclaimed, the path falls through to the content router like any other,
+  // so a site that answers it itself can register it without a conflict.
+  if (options.llmsTxt) {
+    ctx.registerPublicRoute({
+      path: LLMS_PATH,
+      handler: (_request, appCtx) => handleLlmsTxt(appCtx),
+    });
+  }
 
   // Not `cacheable: true`: a constant document has no tag a purge would ever
   // have to retire, so it rides its shared-cache header alone.

@@ -18,6 +18,7 @@ import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
 
@@ -244,13 +245,14 @@ function createHarness(
     readonly logger?: Logger;
     readonly telemetry?: HarnessConfig["telemetry"];
     readonly theme?: HarnessConfig["theme"];
+    readonly seo?: SeoOptions;
   } = {},
 ): Promise<DispatcherHarness> {
-  const { cdn, logger, ...slots } = options;
+  const { cdn, logger, seo: seoOptions, ...slots } = options;
   return createDispatcherHarness({
     cdn,
     logger,
-    config: { ...slots, plugins: [...plugins, seo()] },
+    config: { ...slots, plugins: [...plugins, seo(seoOptions)] },
   });
 }
 
@@ -1323,6 +1325,31 @@ describe("/llms.txt", () => {
     const h = await createHarness([blogPlugin, rewrite]);
 
     expect((await llms(h)).body.endsWith("## Docs\n")).toBe(true);
+  });
+
+  test("with llmsTxt off, a site plugin serves its own", async () => {
+    const filter = vi.fn((body: string) => body);
+    const own = definePlugin("own-llms", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/llms.txt",
+        handler: () => new Response("# Our own\n"),
+      });
+      ctx.addFilter("seo:llms-txt", filter);
+    });
+    const h = await createHarness([blogPlugin, own], {
+      seo: { llmsTxt: false },
+    });
+
+    expect((await llms(h)).body).toBe("# Our own\n");
+    expect(filter).not.toHaveBeenCalled();
+  });
+
+  test("with llmsTxt off and nothing else claiming it, the path 404s", async () => {
+    const h = await createHarness([blogPlugin], { seo: { llmsTxt: false } });
+
+    const res = await h.dispatch(new Request("https://cms.example/llms.txt"));
+
+    expect(res.status).toBe(404);
   });
 });
 
