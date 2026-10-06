@@ -177,7 +177,7 @@
   "dependencies": {
     "@libsql/client": "catalog:",
     "@lingui/core": "catalog:lingui",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@orpc/client": "catalog:orpc",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/server": "catalog:orpc",

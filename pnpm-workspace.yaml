@@ -12,6 +12,15 @@ packages:
   - "packages/plugins/*/playground"
   - "tooling/*"
 
+# Let a release age a week before resolving to it, matching the Dependabot
+# cooldown in .github/dependabot.yml, so a local `pnpm install` cannot adopt a
+# version Dependabot would still be holding back.
+minimumReleaseAge: 10080
+# A security override may name a version younger than that. List the package
+# here while it does, and drop it the next time the override is refreshed.
+minimumReleaseAgeExclude:
+  - source-map-js # 1.2.2 closes GHSA-68fv-2mgg-jv7q
+
 # Default catalog: version-coordinated deps that aren't part of a multi-package
 # family. Multi-package families live in the named catalogs below. Single-consumer
 # deps (incl. the @oslojs/* auth stack, @hookform/resolvers, the prettier plugins)
@@ -20,19 +29,19 @@ catalog:
   "@arethetypeswrong/cli": ^0.18.5
   "@axe-core/playwright": ^4.13.0
   "@libsql/client": ^0.18.0
-  "@playwright/test": ^1.62.1
+  "@playwright/test": ^1.63.0
   "@types/node": ^24.13.4
   cmdk: ^1.1.1
   esbuild: ^0.28.2
   eslint: ^10.11.0
   fishery: ^2.4.0
   jsonc-parser: ^3.3.1
-  playwright: ^1.62.1
-  prettier: ^3.9.6
+  playwright: ^1.63.0
+  prettier: ^3.9.9
   publint: ^0.3.24
   radix-ui: ^1.6.7
-  react-hook-form: ^7.87.0
-  sharp: ^0.35.4
+  react-hook-form: ^7.89.0
+  sharp: ^0.35.5
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
   tsx: 4.23.13
@@ -44,9 +53,9 @@ catalog:
 # `catalog:<name>` from consumer package.json files.
 catalogs:
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.54.2
-    "@cloudflare/workers-types": ^5.20260831.1
-    wrangler: ^4.127.1
+    "@cloudflare/vite-plugin": ^1.62.1
+    "@cloudflare/workers-types": ^5.20260929.1
+    wrangler: ^4.143.1
   dnd-kit:
     "@dnd-kit/core": ^6.3.1
     "@dnd-kit/modifiers": ^9.0.0
@@ -57,12 +66,12 @@ catalogs:
     drizzle-orm: ^0.45.3
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/babel-plugin-lingui-macro": ^6.6.0
-    "@lingui/cli": ^6.6.0
-    "@lingui/core": ^6.6.0
-    "@lingui/format-po": ^6.6.0
-    "@lingui/react": ^6.6.0
-    "@lingui/vite-plugin": ^6.6.0
+    "@lingui/babel-plugin-lingui-macro": ^6.8.0
+    "@lingui/cli": ^6.8.0
+    "@lingui/core": ^6.8.0
+    "@lingui/format-po": ^6.8.0
+    "@lingui/react": ^6.8.0
+    "@lingui/vite-plugin": ^6.8.0
   orpc:
     "@orpc/client": ^1.15.3
     "@orpc/openapi": ^1.15.3
