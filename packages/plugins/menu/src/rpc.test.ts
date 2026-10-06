@@ -353,6 +353,41 @@ describe("menu RPC", () => {
       expect(result.items[0]?.resolved.lastHref).toBe("/about-old");
     });
 
+    test("entry-kind item with a whitespace-only title reports the linked entry's label", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "blank-label@example.test" });
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "Admissions",
+        slug: `admissions-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+      });
+      const item = await entryFactory.transient({ db: h.db }).create({
+        type: "menu_item",
+        title: "   ",
+        slug: `mi-blank-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+        meta: { kind: "entry", entryId: post.id },
+      });
+      await entryTermFactory
+        .transient({ db: h.db })
+        .create({ entryId: item.id, termId: m.id, sortOrder: 0 });
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly { resolved: { state: string; label: string } }[];
+      };
+
+      expect(result.items[0]?.resolved).toMatchObject({
+        state: "ok",
+        label: "Admissions",
+      });
+    });
+
     test("entry-kind item of a non-public type resolves to broken even with isShownInMenus: true", async () => {
       // The public menu can never render it (no permalink), so the editor
       // must not show it as ok. The public `page` type keeps the lookup

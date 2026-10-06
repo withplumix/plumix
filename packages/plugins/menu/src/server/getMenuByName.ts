@@ -14,6 +14,7 @@ import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
 import { menuTag } from "./cache-tags.js";
 import { isMenuEligible } from "./eligibility.js";
+import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
 
@@ -36,7 +37,8 @@ interface ResolvedRef {
  *
  * Resolution at render time is live: entry/term refs go through the
  * registered `LookupAdapter` per kind, batched by id, so a renamed page or
- * retitled category propagates without re-saving the menu. Items whose
+ * retitled category propagates without re-saving the menu (unless the item
+ * carries its own label, which wins over the linked title). Items whose
  * ref fails to resolve (deleted, unpublished, scope-excluded) drop
  * silently along with their descendants — mirrors how broken refs will
  * be surfaced in admin from slice 11.
@@ -412,9 +414,17 @@ function resolveLabelHrefSource(
   if (meta.kind === "entry") {
     const ref = refs.entries.get(meta.entryId);
     if (!ref) return null;
-    return { ...ref, source: { kind: "entry", id: meta.entryId } };
+    return {
+      label: itemOwnLabel(node.title) ?? ref.label,
+      href: ref.href,
+      source: { kind: "entry", id: meta.entryId },
+    };
   }
   const ref = refs.terms.get(meta.termId);
   if (!ref) return null;
-  return { ...ref, source: { kind: "term", id: meta.termId } };
+  return {
+    label: itemOwnLabel(node.title) ?? ref.label,
+    href: ref.href,
+    source: { kind: "term", id: meta.termId },
+  };
 }

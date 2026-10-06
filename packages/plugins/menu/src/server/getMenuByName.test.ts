@@ -277,7 +277,7 @@ describe("getMenuByName", () => {
     expect(menu?.items.map((i) => i.label)).toEqual(["Healthy"]);
   });
 
-  test("resolves kind='entry' items via the entry lookup adapter", async () => {
+  test("an entry item with its own title renders that title with the entry's href", async () => {
     const post = await factories.entry.create({
       type: "post",
       slug: "hello-world",
@@ -287,18 +287,18 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("entry-kind");
     await seedItems(termId, [
-      { title: "Stored title", meta: { kind: "entry", entryId: post.id } },
+      { title: "Hello", meta: { kind: "entry", entryId: post.id } },
     ]);
 
     const menu = await getMenuByName(ctx, "entry-kind");
     expect(menu?.items[0]).toMatchObject({
-      label: "Hello, world",
+      label: "Hello",
       href: "/post/hello-world",
       source: { kind: "entry", id: post.id },
     });
   });
 
-  test("renaming the linked entry propagates to the menu output without re-saving", async () => {
+  test("an entry item with an empty title follows the entry's title, renames included", async () => {
     const post = await factories.entry.create({
       type: "post",
       slug: "first",
@@ -308,7 +308,7 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("rename");
     await seedItems(termId, [
-      { title: "snapshot", meta: { kind: "entry", entryId: post.id } },
+      { title: "", meta: { kind: "entry", entryId: post.id } },
     ]);
 
     const before = await getMenuByName(ctx, "rename");
@@ -330,7 +330,58 @@ describe("getMenuByName", () => {
     expect(after?.items[0]?.href).toBe("/post/second");
   });
 
-  test("resolves kind='term' items via the term lookup adapter", async () => {
+  test("an entry item with a whitespace-only title renders the entry's title", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "blank-label",
+      title: "Blank label",
+      status: "published",
+      authorId,
+    });
+    const termId = await seedMenu("blank-label");
+    await seedItems(termId, [
+      { title: "   ", meta: { kind: "entry", entryId: post.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "blank-label");
+    expect(menu?.items[0]?.label).toBe("Blank label");
+  });
+
+  test("a term item with a whitespace-only title renders the term's name", async () => {
+    const category = await factories.term.create({
+      taxonomy: "category",
+      slug: "news",
+      name: "News",
+    });
+    const termId = await seedMenu("term-blank-label");
+    await seedItems(termId, [
+      { title: "   ", meta: { kind: "term", termId: category.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "term-blank-label");
+    expect(menu?.items[0]?.label).toBe("News");
+  });
+
+  test("a term item with its own title renders that title with the term's href", async () => {
+    const category = await factories.term.create({
+      taxonomy: "category",
+      slug: "news",
+      name: "News",
+    });
+    const termId = await seedMenu("term-override");
+    await seedItems(termId, [
+      { title: "Latest", meta: { kind: "term", termId: category.id } },
+    ]);
+
+    const menu = await getMenuByName(ctx, "term-override");
+    expect(menu?.items[0]).toMatchObject({
+      label: "Latest",
+      href: "/category/news",
+      source: { kind: "term", id: category.id },
+    });
+  });
+
+  test("a term item with an empty title renders the term's name", async () => {
     const category = await factories.term.create({
       taxonomy: "category",
       slug: "news",
@@ -338,7 +389,7 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("term-kind");
     await seedItems(termId, [
-      { title: "ignored", meta: { kind: "term", termId: category.id } },
+      { title: "", meta: { kind: "term", termId: category.id } },
     ]);
 
     const menu = await getMenuByName(ctx, "term-kind");
@@ -360,7 +411,7 @@ describe("getMenuByName", () => {
     expect(menu?.items.map((i) => i.label)).toEqual(["Healthy"]);
   });
 
-  test("drops entry items in trash status (excluded by adapter scope)", async () => {
+  test("drops entry items in trash status, own title or not (excluded by adapter scope)", async () => {
     const post = await factories.entry.create({
       type: "post",
       slug: "trashed-post",
@@ -370,7 +421,8 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("trashed");
     await seedItems(termId, [
-      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+      { title: "", meta: { kind: "entry", entryId: post.id } },
+      { title: "Own label", meta: { kind: "entry", entryId: post.id } },
     ]);
 
     const menu = await getMenuByName(ctx, "trashed");
@@ -446,9 +498,9 @@ describe("getMenuByName", () => {
         });
         const menu = await getMenuByName(localCtx, "active");
         const items = menu?.items ?? [];
-        // Entry-kind items render the linked entry's title — "Linked" is
-        // the menu item's stored title; "Active" is the post's live title.
-        expect(items.find((i) => i.label === "Active")?.isCurrent).toBe(true);
+        // "Linked" is the item's own title, which wins over the post's
+        // title "Active".
+        expect(items.find((i) => i.label === "Linked")?.isCurrent).toBe(true);
         expect(items.find((i) => i.label === "Other")?.isCurrent).toBe(false);
       },
     );
@@ -589,7 +641,7 @@ describe("getMenuByName", () => {
       });
       const termId = await seedMenu("unset-entry");
       await seedItems(termId, [
-        { title: "ignored", meta: { kind: "entry", entryId: product.id } },
+        { title: "", meta: { kind: "entry", entryId: product.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "unset-entry");
@@ -612,7 +664,7 @@ describe("getMenuByName", () => {
       });
       const termId = await seedMenu("unset-term");
       await seedItems(termId, [
-        { title: "ignored", meta: { kind: "term", termId: genre.id } },
+        { title: "", meta: { kind: "term", termId: genre.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "unset-term");
@@ -743,8 +795,8 @@ describe("getMenuByName", () => {
     const termId = await seedMenu("mixed");
     await seedItems(termId, [
       { title: "Custom", meta: { kind: "custom", url: "/c" } },
-      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
-      { title: "ignored", meta: { kind: "term", termId: tag.id } },
+      { title: "", meta: { kind: "entry", entryId: post.id } },
+      { title: "", meta: { kind: "term", termId: tag.id } },
     ]);
 
     const menu = await getMenuByName(ctx, "mixed");
@@ -822,10 +874,10 @@ describe("getMenuByName", () => {
       const headerId = await seedMenu("header");
       const asideId = await seedMenu("aside");
       await seedItems(headerId, [
-        { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+        { title: "", meta: { kind: "entry", entryId: post.id } },
       ]);
       await seedItems(asideId, [
-        { title: "ignored", meta: { kind: "term", termId: category.id } },
+        { title: "", meta: { kind: "term", termId: category.id } },
       ]);
 
       const result = await getMenusByName(ctx, ["header", "aside"]);
@@ -883,7 +935,7 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("lean");
     await seedItems(termId, [
-      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+      { title: "", meta: { kind: "entry", entryId: post.id } },
     ]);
 
     const select = vi.spyOn(ctx.db, "select");
