@@ -10,8 +10,8 @@
  * and pays for at most one DB read per request.
  *
  * Memo-safety: the resolution reads only the intent, the request URL (slug/path
- * params and the `?preview=` token) and the database — never the principal — so it is
- * principal-invariant and safe under the `withUser`-shared request memo.
+ * params and the `?preview=` token) and the database — never the principal — so
+ * it is principal-invariant and safe under the `withUser`-shared request memo.
  */
 
 import type { AppContext } from "../context/app-context.js";

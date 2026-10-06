@@ -2483,6 +2483,107 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     expect(await response.text()).toMatch(/<html[^>]*data-plumix-mode="edit"/);
   });
 
+  test("a fixed slug wins over a captured slug or path param", async () => {
+    const capturing = definePlugin("compare-capturing", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+        rewrite: { slug: "" },
+      });
+      ctx.registerRewriteRule("/compare/:slug", {
+        kind: "entry",
+        entryType: "page",
+        slug: "shared-comparison",
+      });
+      ctx.registerRewriteRule("/versus/:path*", {
+        kind: "entry",
+        entryType: "page",
+        slug: "shared-comparison",
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [capturing] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "page",
+      slug: "shared-comparison",
+      title: "Shared Comparison",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+    await h.factory.entry.create({
+      type: "page",
+      slug: "other",
+      title: "Other",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      parentId: null,
+    });
+
+    for (const path of ["/compare/other", "/versus/other", "/versus/a/b"]) {
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
+    }
+  });
+
+  test("a fixed slug names a nested entry without checking its ancestors", async () => {
+    const { h, author, page } = await seedComparison();
+    await h.db
+      .update(entries)
+      .set({ slug: "parent" })
+      .where(eq(entries.id, page.id));
+    const parent = page;
+    await h.factory.entry.create({
+      type: "page",
+      slug: "shared-comparison",
+      title: "Nested Comparison",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      parentId: parent.id,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>Nested Comparison</h1>");
+  });
+
+  test("a preview token minted for another entry does not grant the named draft", async () => {
+    const { h, author } = await seedComparison({ status: "draft" });
+    const other = await h.factory.entry.create({
+      type: "page",
+      slug: "other-draft",
+      title: "Other Draft",
+      content: TIPTAP_BODY,
+      status: "draft",
+      authorId: author.id,
+      parentId: null,
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: other.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/compare/abc?preview=${token}`),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+  });
+
   test("a fixed slug naming no entry is not found", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [comparePlugin] },

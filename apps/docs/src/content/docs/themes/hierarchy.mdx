@@ -12,7 +12,7 @@ Every public request ends at exactly one template. Two steps sit between the URL
 
 ## Overview
 
-A matched URL carries a route intent, meaning what the route is for rather than which row it points at. There are eight of them, one per page kind: `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, and `archiveType` for an archive a plugin registered. The resolver takes that intent, loads the content behind it and produces two things. One is the [template data](/themes/template-data/) your render function receives. The other is a resolved node, carrying identity alone: a kind, a type name, and a slug, an id or a set of date components.
+A matched URL carries a route intent, meaning what the route is for. Only an `entry` intent from a rewrite rule can name the row it points at. There are eight of them, one per page kind: `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, and `archiveType` for an archive a plugin registered. The resolver takes that intent, loads the content behind it and produces two things. One is the [template data](/themes/template-data/) your render function receives. The other is a resolved node, carrying identity alone: a kind, a type name, and a slug, an id or a set of date components.
 
 Resolution then walks the theme's `templates` array three times over.
 
