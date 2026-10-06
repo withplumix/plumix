@@ -62,7 +62,7 @@ export interface ContributedSitemap {
 // a taxonomy's sub-sitemap.
 const RESERVED_SCOPE_KINDS = ["entries", "terms"] as const;
 
-export function assertContributable(name: string, pluginId: string): void {
+function assertContributable(name: string, pluginId: string): void {
   const reserved = RESERVED_SCOPE_KINDS.some(
     (kind) => name === kind || name.startsWith(`${kind}-`),
   );

@@ -18,13 +18,8 @@ import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type {
-  // @ts-expect-error — `SitemapSource` replaces the archive's sitemap type.
-  ArchiveTypeSitemap,
-  SeoOptions,
-  SitemapScopeRef,
-  SitemapSource,
-} from "./index.js";
+import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
+import type * as SeoPackage from "./index.js";
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
 
@@ -987,8 +982,7 @@ describe("a contributed sitemap", () => {
       ctx.registerSitemap("dated", {
         count: () => 1,
         urls: () => [],
-        lastmod: (_appCtx, page) =>
-          page === 1 ? "2026-01-01T00:00:00.000Z" : undefined,
+        lastmod: () => "2026-01-01T00:00:00.000Z",
       });
     });
     const h = await createHarness([extraPlugin, dated, taxonomyPlugin]);
@@ -1013,7 +1007,7 @@ describe("a contributed sitemap", () => {
   });
 
   test("is the only way in: an archive registration takes no sitemap", () => {
-    const legacy = definePlugin("legacy", (ctx) => {
+    definePlugin("legacy", (ctx) => {
       ctx.registerArchiveType("location", {
         routes: ["/locations/:slug"],
         resolve: () => ({
@@ -1024,11 +1018,11 @@ describe("a contributed sitemap", () => {
         sitemap: { count: () => 0, urls: () => [] },
       });
     });
-    expect(legacy.id).toBe("legacy");
   });
 
   test("the archive's sitemap type is gone from the package", () => {
-    expectTypeOf<ArchiveTypeSitemap>().toBeAny();
+    // @ts-expect-error — the package exports no `ArchiveTypeSitemap`.
+    expectTypeOf<SeoPackage.ArchiveTypeSitemap>();
     expectTypeOf<SitemapSource>().not.toBeAny();
   });
 

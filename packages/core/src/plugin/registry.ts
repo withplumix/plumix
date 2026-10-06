@@ -584,9 +584,8 @@ export type ArchiveTitle =
   string | ((params: Record<string, string>) => string);
 
 /**
- * The options every archive type shares, and a seam a plugin may augment.
- * An option only an archive with `entries` can take goes on
- * {@link ListingArchiveTypeOptions} instead.
+ * The options every archive type shares. An option only an archive with
+ * `entries` can take goes on {@link ListingArchiveTypeOptions} instead.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
