@@ -110,6 +110,12 @@ export const CHANGESET_GATE: Gate = {
 
 export type Executor = Pick<sandcastle.Sandbox, "exec">;
 
+// Sandcastle starts the container as `sleep infinity`, which never reaps the children a gate
+// orphans. A zombie still answers `kill -0`, so a test that waits for a process to go away waits
+// out its timeout instead. tini as a subreaper adopts and reaps them.
+export const underAnOrphanReaper = (command: string): string =>
+  `tini -s -- sh -c '${command.replace(/'/g, "'\\''")}'`;
+
 const changedPathsIn = async (
   sandbox: Executor,
 ): Promise<readonly string[]> => {
@@ -207,7 +213,9 @@ export const runGates = async (
 
     const runOnce = async (): Promise<GateResult> => {
       const attemptStartedAtMs = Date.now();
-      const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
+      const { exitCode, stdout, stderr } = await sandbox.exec(
+        underAnOrphanReaper(gate.command),
+      );
       return {
         name: gate.name,
         command: gate.command,
