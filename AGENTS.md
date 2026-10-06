@@ -37,6 +37,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
 | `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
 | `knip`                            | Unused files, exports and dependencies.                                                                             |
+| `migrations:check`                | Regenerates each table-owning package's migration history, then fails naming any whose `migrations/` changed.       |
 | `publint` / `attw`                | Check each published package's `package.json` and its types as consumers resolve them.                              |
 | `commitlint`                      | Lint commit messages.                                                                                               |
 | `check-no-major`                  | Fails when a changeset would take a package to 1.0.                                                                 |
