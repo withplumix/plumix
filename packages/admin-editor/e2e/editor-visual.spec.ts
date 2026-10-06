@@ -11,9 +11,27 @@
 // runtime for an authed user is covered in core's edit-mode.render.test.ts, and
 // end to end in the demo runtime in apps/demo/e2e/demo.spec.ts.
 
+import type { Locator } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 const CANVAS_FRAME = '[data-testid="plumix-canvas-frame"] iframe';
+
+type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
+
+// Reads the boxes a `page.mouse` sequence is about to aim at, retrying until
+// every one is non-null. A `toBeVisible()` just before a one-shot read is not
+// enough: under worker load the toolbar or canvas can re-render between the
+// two, and the read comes back null (#2582).
+async function settledBoxes<const T extends readonly Locator[]>(
+  ...locators: T
+): Promise<{ [K in keyof T]: Box }> {
+  let boxes: (Box | null)[] = [];
+  await expect(async () => {
+    boxes = await Promise.all(locators.map((locator) => locator.boundingBox()));
+    for (const box of boxes) expect(box).not.toBeNull();
+  }).toPass();
+  return boxes as { [K in keyof T]: Box };
+}
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -189,15 +207,12 @@ test.describe("editor playground", () => {
 
     await canvas.locator('[data-plumix-id="heading-1"]').click();
     await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
-    const handle = await page
-      .getByTestId("selection-toolbar-drag")
-      .boundingBox();
-    // Await the drop target's paint before measuring — boundingBox() returns
-    // null for a not-yet-visible element, which raced under slow CI.
     const groupHeading = canvas.locator('[data-plumix-id="group-heading"]');
     await expect(groupHeading).toBeVisible();
-    const target = await groupHeading.boundingBox();
-    if (!handle || !target) throw new Error("expected handle + target boxes");
+    const [handle, target] = await settledBoxes(
+      page.getByTestId("selection-toolbar-drag"),
+      groupHeading,
+    );
 
     // Drag the handle (host-side) into the group's slot and release.
     await page.mouse.move(
@@ -265,22 +280,18 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
 
-    const headingBefore = await canvas
-      .locator('[data-plumix-id="heading-1"]')
-      .boundingBox();
-    const introBefore = await canvas
-      .locator('[data-plumix-id="intro"]')
-      .boundingBox();
-    if (!headingBefore || !introBefore) throw new Error("expected boxes");
+    const [headingBefore, introBefore] = await settledBoxes(
+      canvas.locator('[data-plumix-id="heading-1"]'),
+      canvas.locator('[data-plumix-id="intro"]'),
+    );
     // heading-1 starts above intro.
     expect(headingBefore.y).toBeLessThan(introBefore.y);
 
     await canvas.locator('[data-plumix-id="heading-1"]').click();
     await expect(page.getByTestId("selection-toolbar-drag")).toBeVisible();
-    const handle = await page
-      .getByTestId("selection-toolbar-drag")
-      .boundingBox();
-    if (!handle) throw new Error("expected handle box");
+    const [handle] = await settledBoxes(
+      page.getByTestId("selection-toolbar-drag"),
+    );
 
     // Drag the handle to intro's lower half — a top-level drop after intro,
     // clear of any container slot.
@@ -490,6 +501,12 @@ test.describe("editor playground", () => {
     page,
   }) => {
     await page.goto("/");
+    // The canvas forwards a wheel to the host from a listener it adds once it
+    // mounts, so a wheel sent before then is dropped and nothing pans (#2582).
+    await page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-plumix-id="heading-1"]')
+      .waitFor();
     const iframe = page.locator(CANVAS_FRAME);
     const before = await iframe.boundingBox();
     expect(before).toBeTruthy();
@@ -505,9 +522,10 @@ test.describe("editor playground", () => {
   test("dragging the frame header strip pans the canvas", async ({ page }) => {
     await page.goto("/");
     const iframe = page.locator(CANVAS_FRAME);
-    const before = await iframe.boundingBox();
-    const handle = await page.getByTestId("plumix-canvas-handle").boundingBox();
-    if (!before || !handle) throw new Error("expected frame + handle boxes");
+    const [before, handle] = await settledBoxes(
+      iframe,
+      page.getByTestId("plumix-canvas-handle"),
+    );
 
     // The strip rides just above the frame (inside the panned/zoomed stage),
     // left-aligned to it — not a fixed band welded to the viewport top.
@@ -540,9 +558,10 @@ test.describe("editor playground", () => {
   test("holding Space and dragging still pans the canvas", async ({ page }) => {
     await page.goto("/");
     const iframe = page.locator(CANVAS_FRAME);
-    const frame = await page.getByTestId("plumix-canvas-frame").boundingBox();
-    const before = await iframe.boundingBox();
-    if (!frame || !before) throw new Error("expected frame boxes");
+    const [frame, before] = await settledBoxes(
+      page.getByTestId("plumix-canvas-frame"),
+      iframe,
+    );
 
     // Space arms pan mode (grab cursor); a drag over the canvas then pans it.
     await page.keyboard.down("Space");
