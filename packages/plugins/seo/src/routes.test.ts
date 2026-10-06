@@ -981,6 +981,26 @@ describe("sitemap scopes at boot", () => {
     },
   );
 
+  // A gated type or archive is registered but lists nothing, so a policy for
+  // it would never apply: the key fails like an unknown one, and says why.
+  test.each([
+    [membersOnlyPlugin, { entries: { lesson: false } }, "entries.lesson"],
+    [gatedArchivePlugin, { "member-series": false }, "member-series"],
+  ] as const)(
+    "a policy key naming a registered but unlisted scope fails (%#)",
+    async (plugin, sitemaps, key) => {
+      await expect(
+        createHarness([plugin], { seo: { sitemaps } }),
+      ).rejects.toThrow(
+        new RegExp(`sitemaps\\.${key}.*public.*access policy`, "s"),
+      );
+    },
+  );
+
+  // Core refuses a second archive by one name at registration, before seo
+  // enumerates anything, so seo has no collision of its own to detect. This
+  // test is what holds that refusal to the criterion: if core stopped
+  // naming both plugins, it would fail here.
   test("two plugins contributing one scope name fail, naming both", async () => {
     await expect(
       createHarness([

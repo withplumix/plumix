@@ -48,14 +48,17 @@ export class SeoError extends Error {
   }
 
   /**
-   * The site's `sitemaps` option names a scope nothing registered, so its
-   * policy would never apply. `key` is the path as written in the option,
-   * such as `entries.post` or `location`.
+   * The site's `sitemaps` option names no sitemap scope — nothing by that
+   * name, or a registration the sitemap never lists — so its policy would
+   * never apply. `key` is the path as written in the option, such as
+   * `entries.post` or `location`.
    */
   static unknownSitemapPolicyKey(ctx: { key: string }): SeoError {
     return new SeoError(
       "unknown_sitemap_policy_key",
-      `seo: sitemaps.${ctx.key} names no sitemap scope this site registered.`,
+      `seo: sitemaps.${ctx.key} names no sitemap scope, so its policy would ` +
+        `never apply. A scope is a public entry type or taxonomy, or an ` +
+        `archive that declares a \`sitemap\`, with no access policy.`,
       ctx,
     );
   }

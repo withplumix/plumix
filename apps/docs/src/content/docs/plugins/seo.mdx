@@ -384,7 +384,7 @@ seo({
 });
 ```
 
-`false` leaves a scope out: it is absent from the index and its sub-sitemap serves an empty `<urlset>`. That is about the sitemap only — a page of a dropped type still says `index` in its head, which the **Hide from search engines** settings decide. A policy object is the default for every URL in the scope. `changefreq` takes the sitemaps.org vocabulary (`always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`), and `priority` is 0.0–1.0, which the plugin does not clamp. A key that names no scope the site registered fails the boot, naming the key.
+`false` leaves a scope out: it is absent from the index and its sub-sitemap serves an empty `<urlset>`. That is about the sitemap only — a page of a dropped type still says `index` in its head, which the **Hide from search engines** settings decide. A policy object is the default for every URL in the scope. `changefreq` takes the sitemaps.org vocabulary (`always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`), and `priority` is 0.0–1.0, which the plugin does not clamp. A key that names no scope fails the boot, naming the key — a misspelt name, and also a registered type or archive the sitemap never lists because it is not public or carries an access policy, since its policy would never apply.
 
 For one URL, a value its scope's provider set — an archive's `urls` — beats the site's default, and the `seo:sitemap:urls` filter below sees the merged values and has the last word. A URL that ends up with neither field writes neither element. Google ignores both fields; they are there for parity with an existing sitemap and for crawlers that read them.
 

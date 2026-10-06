@@ -412,7 +412,8 @@ export function sitemapScopes(
 
 /**
  * Fail the boot on a `sitemaps` key that names no scope this site has, so a
- * misspelt or uninstalled scope cannot leave its policy silently unapplied.
+ * misspelt, uninstalled, non-public or gated one cannot leave its policy
+ * silently unapplied.
  *
  * @throws naming the first such key, as `sitemaps.<kind>.<name>` for an entry
  * type or taxonomy and `sitemaps.<name>` for a contributed scope.
