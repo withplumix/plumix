@@ -1,4 +1,3 @@
-import { Factory } from "fishery";
 import { describe, expect, test, vi } from "vitest";
 
 import { validateApiToken } from "../auth/api-tokens.js";
@@ -24,59 +23,79 @@ type FactoriesModule = Awaited<ReturnType<typeof loadSecondProcess>>;
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 
 describe("defaults on unique columns", () => {
-  const cases: readonly [
-    string,
-    (f: FactoriesModule, db: Db, userId: number) => Promise<unknown>,
-  ][] = [
-    ["userFactory", (f, db) => f.userFactory.transient({ db }).create({})],
-    [
-      "entryFactory",
-      (f, db, userId) =>
+  interface Case {
+    readonly name: string;
+    readonly rewind: (f: FactoriesModule) => void;
+    readonly create: (
+      f: FactoriesModule,
+      db: Db,
+      userId: number,
+    ) => Promise<unknown>;
+  }
+
+  const cases: readonly Case[] = [
+    {
+      name: "userFactory",
+      rewind: (f) => f.userFactory.rewindSequence(),
+      create: (f, db) => f.userFactory.transient({ db }).create({}),
+    },
+    {
+      name: "entryFactory",
+      rewind: (f) => f.entryFactory.rewindSequence(),
+      create: (f, db, userId) =>
         f.entryFactory.transient({ db }).create({ authorId: userId }),
-    ],
-    ["termFactory", (f, db) => f.termFactory.transient({ db }).create({})],
-    [
-      "sessionFactory",
-      (f, db, userId) => f.sessionFactory.transient({ db }).create({ userId }),
-    ],
-    [
-      "settingFactory",
-      (f, db) => f.settingFactory.transient({ db }).create({}),
-    ],
-    [
-      "allowedDomainFactory",
-      (f, db) => f.allowedDomainFactory.transient({ db }).create({}),
-    ],
-    [
-      "credentialFactory",
-      (f, db, userId) =>
+    },
+    {
+      name: "termFactory",
+      rewind: (f) => f.termFactory.rewindSequence(),
+      create: (f, db) => f.termFactory.transient({ db }).create({}),
+    },
+    {
+      name: "sessionFactory",
+      rewind: (f) => f.sessionFactory.rewindSequence(),
+      create: (f, db, userId) =>
+        f.sessionFactory.transient({ db }).create({ userId }),
+    },
+    {
+      name: "settingFactory",
+      rewind: (f) => f.settingFactory.rewindSequence(),
+      create: (f, db) => f.settingFactory.transient({ db }).create({}),
+    },
+    {
+      name: "allowedDomainFactory",
+      rewind: (f) => f.allowedDomainFactory.rewindSequence(),
+      create: (f, db) => f.allowedDomainFactory.transient({ db }).create({}),
+    },
+    {
+      name: "credentialFactory",
+      rewind: (f) => f.credentialFactory.rewindSequence(),
+      create: (f, db, userId) =>
         f.credentialFactory
           .transient({ db })
           .create({ userId, publicKey: Buffer.from([1, 2, 3]) }),
-    ],
-    [
-      "oauthAccountFactory",
-      (f, db, userId) =>
+    },
+    {
+      name: "oauthAccountFactory",
+      rewind: (f) => f.oauthAccountFactory.rewindSequence(),
+      create: (f, db, userId) =>
         f.oauthAccountFactory.transient({ db }).create({ userId }),
-    ],
-    [
-      "deviceCodeFactory",
-      (f, db) => f.deviceCodeFactory.transient({ db }).create({}),
-    ],
+    },
+    {
+      name: "deviceCodeFactory",
+      rewind: (f) => f.deviceCodeFactory.rewindSequence(),
+      create: (f, db) => f.deviceCodeFactory.transient({ db }).create({}),
+    },
   ];
 
   test.each(cases)(
-    "%s: a second process seeding the same db does not collide",
-    async (_name, create) => {
+    "$name: a second process seeding the same db does not collide",
+    async ({ rewind, create }) => {
       const db = await createTestDb();
       const user = await userFactory
         .transient({ db })
         .create({ email: "owner@example.test", slug: "owner" });
 
-      for (const factory of Object.values(thisProcess)) {
-        if (factory instanceof Factory) factory.rewindSequence();
-      }
-
+      rewind(thisProcess);
       await create(thisProcess, db, user.id);
 
       await expect(

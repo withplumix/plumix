@@ -263,7 +263,6 @@ test("a trashed entry's item keeps its label, and Convert to Custom URL fills in
     cwd: resolve(process.cwd(), "playground"),
   });
   const factories = factoriesFor(db);
-  // The author is named rather than taking the factory's generated email and slug.
   const author = await factories.admin.create({
     email: "author@example.test",
     slug: "author",
