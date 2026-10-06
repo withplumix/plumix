@@ -1,9 +1,16 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { SESSION_COOKIE_NAME } from "../../auth/cookies.js";
 import { userFactory } from "../factories.js";
 import { createTestDb } from "../harness.js";
 import { actingAs } from "./acting-as.js";
+
+// A second Playwright worker is a second process: its factory sequence starts
+// over at 1, and it loads its own copy of the factories module.
+function loadSecondProcess() {
+  vi.resetModules();
+  return import("./acting-as.js");
+}
 
 describe("actingAs (Playwright)", () => {
   test("role string → creates a user with that role and a storageState carrying the session cookie", async () => {
@@ -45,5 +52,17 @@ describe("actingAs (Playwright)", () => {
     expect(first.storageState.cookies[0]?.value).not.toBe(
       second.storageState.cookies[0]?.value,
     );
+  });
+
+  test("a second process seeding the same db mints a user that does not collide", async () => {
+    const db = await createTestDb();
+
+    userFactory.rewindSequence();
+    const first = await actingAs(db, "subscriber");
+    const second = await (await loadSecondProcess()).actingAs(db, "subscriber");
+
+    expect(second.user.id).not.toBe(first.user.id);
+    expect(second.user.slug).not.toBe(first.user.slug);
+    expect(second.user.email).not.toBe(first.user.email);
   });
 });
