@@ -70,11 +70,13 @@ function decodeQuery(raw: string | undefined): string {
 /**
  * Replace core's search page with one backed by the index.
  *
- * The bare `/search` stays core's on purpose. A plain HTML form submits
- * `GET /search?q=…`, and core answers it with a 301 to the canonical
- * `/search/<q>` — which lands back here. An archive resolver returns a payload
- * or a 404 and has no way to redirect, so taking that path would cost the
- * no-JavaScript form its canonical URL.
+ * The bare `/search` is left to core on purpose. A plain HTML form submits
+ * `GET /search?q=…`, and where the site keeps core's search routes, core
+ * answers it with a 301 to the canonical `/search/<q>` — which lands back
+ * here. An archive resolver returns a payload or a 404 and has no way to
+ * redirect, so taking that path would cost the no-JavaScript form its
+ * canonical URL. A site that turns core's search routes off has no bare
+ * `/search` and no 301, and only these routes answer.
  */
 export function registerSearchArchive(
   ctx: PluginSetupContext,

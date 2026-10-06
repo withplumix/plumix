@@ -1459,7 +1459,14 @@ describe("resolvePublicRoute — date archive", () => {
     expect(body).not.toContain("Post 2026-07-22");
   });
 
-  test.each(["/1999", "/2026/06", "/2026/07/20"])(
+  test.each([
+    "/1999",
+    "/1999/page/2",
+    "/2026/06",
+    "/2026/06/page/2",
+    "/2026/07/20",
+    "/2026/07/20/page/3",
+  ])(
     "an empty period (%s) is a 404, not an empty archive (ADR 0029)",
     async (path) => {
       const h = await createDispatcherHarness({

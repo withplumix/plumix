@@ -707,6 +707,74 @@ describe("compileRouteMap — framework routes a site turns off", () => {
     ]);
   });
 
+  test("with no routes key, the whole map keeps every rule, intent and priority in today's order", async () => {
+    const registry = await buildRegistry([
+      definePlugin("site", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          rewrite: { slug: "" },
+        });
+        ctx.registerTermTaxonomy("topic", { label: "Topics" });
+        ctx.registerRewriteRule("/kitchen/:slug", {
+          kind: "entry",
+          entryType: "post",
+        });
+        ctx.registerArchiveType("talks", {
+          routes: ["/talks/:track"],
+          entries: (q) => q,
+          title: "Talks",
+        });
+      }),
+    ]);
+    expect(
+      compileRouteMap(registry).map((rule) => [
+        rule.rawPattern,
+        rule.intent,
+        rule.priority,
+      ]),
+    ).toEqual([
+      ["/page/:page(\\d+)", { kind: "frontPage" }, 5],
+      ["/search/:query/page/:page(\\d+)", { kind: "search" }, 5],
+      ["/search/:query", { kind: "search" }, 5],
+      ["/search", { kind: "search" }, 5],
+      ["/authors/:slug/page/:page(\\d+)", { kind: "author" }, 5],
+      ["/authors/:slug", { kind: "author" }, 5],
+      [
+        "/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})/page/:page(\\d+)",
+        { kind: "date" },
+        5,
+      ],
+      ["/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})", { kind: "date" }, 5],
+      ["/:year(\\d{4})/:month(\\d{2})/page/:page(\\d+)", { kind: "date" }, 5],
+      ["/:year(\\d{4})/:month(\\d{2})", { kind: "date" }, 5],
+      ["/:year(\\d{4})/page/:page(\\d+)", { kind: "date" }, 5],
+      ["/:year(\\d{4})", { kind: "date" }, 5],
+      ["/kitchen/:slug", { kind: "entry", entryType: "post" }, 10],
+      [
+        "/talks/:track/page/:page(\\d+)",
+        { kind: "archiveType", name: "talks" },
+        10,
+      ],
+      ["/talks/:track", { kind: "archiveType", name: "talks" }, 10],
+      [
+        "/topic/:term/page/:page(\\d+)",
+        { kind: "term", taxonomy: "topic" },
+        50,
+      ],
+      ["/topic/:term", { kind: "term", taxonomy: "topic" }, 50],
+      ["/post/page/:page(\\d+)", { kind: "entryType", entryType: "post" }, 50],
+      ["/post", { kind: "entryType", entryType: "post" }, 50],
+      ["/post/:slug", { kind: "entry", entryType: "post" }, 50],
+      ["/:slug", { kind: "entry", entryType: "page" }, 60],
+    ]);
+  });
+
   test("date off compiles none of the six date rules, so a root entry slugged 2026 resolves", async () => {
     const registry = await buildRegistry(
       [
