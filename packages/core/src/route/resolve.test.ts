@@ -5,6 +5,7 @@ import type { BlockLoaderArgs } from "../blocks/index.js";
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject } from "../json.js";
+import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
@@ -2388,9 +2389,11 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
       status?: "published" | "draft";
       content?: JsonObject;
       plugins?: readonly AnyPluginDescriptor[];
+      cdn?: ConnectedCdn;
     } = {},
   ) {
     const h = await createDispatcherHarness({
+      cdn: options.cdn,
       config: { plugins: [comparePlugin, ...(options.plugins ?? [])] },
     });
     const author = await h.seedUser("admin");
@@ -2466,8 +2469,65 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     );
 
     expect(bare.status).toBe(404);
+    expect(bare.headers.get("x-plumix-hint")).toBe("public-post-not-found");
     expect(preview.status).toBe(200);
     expect(await preview.text()).toContain("<h1>Shared Comparison</h1>");
+  });
+
+  test("a preview token overlays its author's autosave at the rule's path", async () => {
+    const { h, author, page } = await seedComparison();
+    await upsertAutosave(h.db, {
+      entry: page,
+      authorId: author.id,
+      patch: {
+        title: "Shared Comparison",
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Draft body." }],
+            },
+          ],
+        },
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: page.id,
+      userId: author.id,
+    });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/compare/abc?preview=${token}`),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("Draft body.");
+  });
+
+  test("the page at the rule's path is stored under the entry's cdn tags", async () => {
+    const stored: (readonly string[])[] = [];
+    const cdn: ConnectedCdn = {
+      decorate: (response) => response,
+      store: {
+        match: () => Promise.resolve(undefined),
+        put: (_request, _response, tags) => {
+          stored.push(tags);
+          return Promise.resolve();
+        },
+      },
+    };
+    const { h, page } = await seedComparison({ cdn });
+
+    await h.dispatch(new Request("https://cms.example/compare/abc"));
+    await h.drainDeferred();
+
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toContain("t:page");
+    expect(stored[0]).toContain(`e:${String(page.id)}`);
   });
 
   test("an editor gets edit mode at the rule's path", async () => {
