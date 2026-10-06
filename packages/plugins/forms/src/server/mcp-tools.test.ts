@@ -1,6 +1,6 @@
 import { email, group, select, text, textarea } from "plumix/fields";
 import { createDispatcherHarness } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { FormsConfig } from "../index.js";
 import type { SubmissionDTO } from "../types.js";
@@ -117,6 +117,17 @@ interface SubmissionsPayload {
 }
 
 describe("@plumix/plugin-forms — MCP tools", () => {
+  // The first MCP dispatch in a process pays for the lazy import of the MCP
+  // server and its transport. Paid here, before any test's timer starts.
+  beforeAll(async () => {
+    const h = await setup();
+    await rpc(h, await mintPat(h), {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+    });
+  });
+
   test("form_list names every registered form", async () => {
     const h = await setup();
     const secret = await mintPat(h);

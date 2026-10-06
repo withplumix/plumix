@@ -5,6 +5,10 @@ import { readContentTree } from "./content-tree";
 import { CONTENT_ROOT, runContentChecks } from "./index";
 
 const findings = runContentChecks(FIXTURES_ROOT);
+// One TypeScript program over every fenced sample in the tree. Run while the
+// file is collected, where no test timer is running: the test is synchronous,
+// so a timeout could never interrupt it, only fail a slow pass after the fact.
+const realTreeFindings = runContentChecks(CONTENT_ROOT);
 
 describe("runContentChecks", () => {
   it("runs the checks against an arbitrary content root", () => {
@@ -37,6 +41,6 @@ describe("runContentChecks", () => {
   });
 
   it("passes the real content tree", () => {
-    expect(runContentChecks(CONTENT_ROOT)).toEqual([]);
+    expect(realTreeFindings).toEqual([]);
   });
 });
