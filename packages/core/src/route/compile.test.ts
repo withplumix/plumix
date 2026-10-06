@@ -724,6 +724,15 @@ describe("compileRouteMap", () => {
         });
       }, 'Entry type "course" has invalid hasArchive "/learn/all-courses": ' + 'drop the leading slash and write "learn/all-courses"');
     });
+
+    test("an empty string hasArchive is rejected rather than read as no archive", async () => {
+      await bootError((ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          hasArchive: "",
+        });
+      }, 'Entry type "course" has invalid hasArchive "": it is empty');
+    });
   });
 
   test("taxonomy rewrite.slug gets the same check, and empty is rejected there too", async () => {
