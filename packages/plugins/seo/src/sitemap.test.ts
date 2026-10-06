@@ -9,8 +9,8 @@ describe("renderSitemapIndex", () => {
   test("wraps each loc in a <sitemap> entry", () => {
     const xml = renderSitemapIndex(
       [
-        "https://cms.example/sitemap-entries-post-1.xml",
-        "https://cms.example/sitemap-terms-category-1.xml",
+        { loc: "https://cms.example/sitemap-entries-post-1.xml" },
+        { loc: "https://cms.example/sitemap-terms-category-1.xml" },
       ],
       XSL,
     );

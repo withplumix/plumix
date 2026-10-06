@@ -31,8 +31,8 @@ type and a taxonomy sharing one silently lost the taxonomy's sub-sitemap.
   as dropping the URLs. The site-wide indexing toggle still empties every scope.
 - **Registrations carry no sitemap options.** `ArchiveTypeOptions.sitemap` is
   removed rather than kept as a second way in, and `ctx.registerSitemap`
-  replaces it (#2821). Until that lands, an archive's `sitemap` is how a plugin
-  contributes a scope, and it already answers to the site's policy.
+  replaces it (#2821). An archive that wants a sitemap calls it like any other
+  plugin.
 - **Only seo-built sitemaps are listed.** The index names no outside XML; a
   sitemap seo did not build is not seo's to gate. A site advertises one with a
   `Sitemap:` line through `seo:robots-txt`.

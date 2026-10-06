@@ -7,6 +7,8 @@ import {
 
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import type { SeoSitemapsOptions } from "./sitemap.js";
+// Also anchors the `registerSitemap` augmentation, as the imports below do theirs.
+import { contributedSitemaps, createRegisterSitemap } from "./contributed.js";
 import { applySeoHead } from "./head.js";
 import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
@@ -21,7 +23,6 @@ import {
 // naming them here is what stops that riding on which types the exports below
 // happen to mention — drop the `og-image` line and `@plumix/plugin-og`'s
 // subscription stops compiling.
-import "./archive.js"; // ArchiveTypeOptions.sitemap
 import "./llms.js"; // seo:llms-txt
 import "./og-image.js"; // seo:og_image
 import "./robots.js"; // seo:robots-txt
@@ -37,7 +38,7 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 // Re-exported so a subscriber to this plugin's `seo:og_image` filter names the
 // value type from the package that declares the filter — one import pulls both.
 export type { OgImage } from "plumix";
-export type { ArchiveTypeSitemap } from "./archive.js";
+export type { SitemapSource } from "./contributed.js";
 export type {
   SeoSitemapsOptions,
   SitemapChangeFrequency,
@@ -138,6 +139,13 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    // One list per install rather than per `seo()` call: a descriptor is a
+    // value, installed more than once per build and possibly into more than
+    // one app. Core runs every `provides` before any `setup`, so every
+    // plugin's `setup` can contribute to it.
+    provides: (ctx) => {
+      ctx.extendPluginContext("registerSitemap", createRegisterSitemap());
+    },
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
       registerSeoRoutes(ctx, { llmsTxt: options.llmsTxt ?? true });
@@ -165,7 +173,12 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // every plugin's `setup` to have registered it.
     afterSetup: (ctx) => {
       registerSeoSettings(ctx);
-      registerSitemapRoutes(ctx, options.sitemaps ?? {});
+      registerSitemapRoutes(
+        ctx,
+        options.sitemaps ?? {},
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- an identity key, never called
+        contributedSitemaps(ctx.registerSitemap),
+      );
       registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
     },
   });

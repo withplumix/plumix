@@ -54,24 +54,6 @@ const membersOnlyPlugin = definePlugin("members", (ctx) => {
   });
 });
 
-// A gated archive, which carries its policy directly rather than under a
-// `default`. `plugin-feeds` already refuses one a feed.
-const gatedArchivePlugin = definePlugin("gated-archive", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerArchiveType("member-series", {
-    routes: ["/members/:series"],
-    access: membersOnlyPolicy,
-    resolve: () => ({
-      data: { kind: "archiveType", name: "member-series" },
-      title: "Members",
-    }),
-    sitemap: {
-      count: () => 1,
-      urls: () => [{ loc: "https://cms.example/members/summer" }],
-    },
-  });
-});
-
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
@@ -93,26 +75,19 @@ const taxonomyPlugin = definePlugin("taxo", (ctx) => {
   });
 });
 
-// An archive type owning its own sitemap scope, through this plugin's
-// augmentation rather than a core field.
+// A plugin contributing a sitemap scope of its own, through this plugin's
+// `registerSitemap` rather than a core registration.
 const eventsPlugin = definePlugin("events", (ctx) => {
-  ctx.registerArchiveType("event-series", {
-    routes: ["/events/:series"],
-    resolve: (_ctx, params) => ({
-      data: { kind: "archiveType", name: "event-series" },
-      title: `Series: ${params.series}`,
-    }),
-    sitemap: {
-      // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
-      count: () => 1500,
-      urls: (_ctx, page) => [
-        {
-          loc: `https://cms.example/events/summer?page=${String(page)}`,
-          lastmod: "2026-08-01T00:00:00.000Z",
-        },
-      ],
-      tags: ["events"],
-    },
+  ctx.registerSitemap("event-series", {
+    // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
+    count: () => 1500,
+    urls: (_ctx, page) => [
+      {
+        loc: `https://cms.example/events/summer?page=${String(page)}`,
+        lastmod: "2026-08-01T00:00:00.000Z",
+      },
+    ],
+    tags: ["events"],
   });
 });
 
@@ -410,19 +385,6 @@ describe("the sitemap index", () => {
     expect(direct.status).toBe(404);
   });
 
-  test("omits an access-policied archive's scope", async () => {
-    // An archive declares its own `sitemap`, so it claims a scope without
-    // passing the entry-type loop at all.
-    const h = await createHarness([gatedArchivePlugin]);
-
-    const index = await bodyOf(h, "/sitemap.xml");
-    expect(index).not.toContain("sitemap-member-series-1.xml");
-    const direct = await h.dispatch(
-      new Request("https://cms.example/sitemap-member-series-1.xml"),
-    );
-    expect(direct.status).toBe(404);
-  });
-
   test("an entry type and a taxonomy sharing a name each get a sub-sitemap", async () => {
     const namesake = definePlugin("namesake", (ctx) => {
       ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
@@ -465,7 +427,7 @@ describe("the sitemap index", () => {
     );
   });
 
-  test("paginates an archive type's scope by its own count", async () => {
+  test("paginates a contributed scope by its own count", async () => {
     const h = await createHarness([eventsPlugin]);
 
     const body = await bodyOf(h, "/sitemap.xml");
@@ -473,6 +435,79 @@ describe("the sitemap index", () => {
     expect(body).toContain("https://cms.example/sitemap-event-series-1.xml");
     expect(body).toContain("https://cms.example/sitemap-event-series-2.xml");
     expect(body).not.toContain("sitemap-event-series-3.xml");
+  });
+
+  // 1,500 published posts in id order, `updatedAt` minutes apart from a
+  // fixed start, except two: the newest overall sits on page 1, and page 2's
+  // newest is older than it — so a scope-wide maximum gets page 2 wrong.
+  const PAGE_ONE_NEWEST = new Date("2026-03-01T00:00:00.000Z");
+  const PAGE_TWO_NEWEST = new Date("2026-02-01T00:00:00.000Z");
+
+  async function seedPosts(h: DispatcherHarness, count: number): Promise<void> {
+    const author = await h.seedUser("admin");
+    const start = Date.parse("2026-01-01T00:00:00.000Z");
+    const rows = Array.from({ length: count }, (_, i) => ({
+      type: "post",
+      slug: `post-${String(i)}`,
+      title: "Post",
+      status: "published" as const,
+      authorId: author.id,
+      publishedAt: new Date(start),
+      updatedAt:
+        i === 500
+          ? PAGE_ONE_NEWEST
+          : i === 1200
+            ? PAGE_TWO_NEWEST
+            : new Date(start + i * 60_000),
+    }));
+    for (let i = 0; i < rows.length; i += 100) {
+      await h.db.insert(entries).values(rows.slice(i, i + 100));
+    }
+  }
+
+  test("dates each entry-scope page by the newest entry on it", async () => {
+    const h = await createHarness();
+    await seedPosts(h, 1500);
+
+    const body = await bodyOf(h, "/sitemap.xml");
+
+    expect(body).toContain(
+      "<sitemap><loc>https://cms.example/sitemap-entries-post-1.xml</loc>" +
+        `<lastmod>${PAGE_ONE_NEWEST.toISOString()}</lastmod></sitemap>`,
+    );
+    expect(body).toContain(
+      "<sitemap><loc>https://cms.example/sitemap-entries-post-2.xml</loc>" +
+        `<lastmod>${PAGE_TWO_NEWEST.toISOString()}</lastmod></sitemap>`,
+    );
+    expect(body).not.toContain("sitemap-entries-post-3.xml");
+  });
+
+  test("costs the same queries however many pages an entry scope has", async () => {
+    async function indexQueries(posts: number): Promise<number> {
+      let queries = 0;
+      const h = await createHarness([blogPlugin], {
+        telemetry: {
+          consumers: [
+            {
+              id: "query-count",
+              onRequestEnd: (snapshot) => {
+                queries = countDbSpans(snapshot.spans);
+              },
+            },
+          ],
+        },
+      });
+      await seedPosts(h, posts);
+      await bodyOf(h, "/sitemap.xml");
+      await h.drainDeferred();
+      return queries;
+    }
+
+    const onePage = await indexQueries(1);
+    const twoPages = await indexQueries(1500);
+
+    expect(onePage).toBeGreaterThan(0);
+    expect(twoPages).toBe(onePage);
   });
 
   test("lists base-prefixed sub-sitemap URLs under a base path", async () => {
@@ -556,7 +591,7 @@ describe("a sub-sitemap", () => {
     );
   });
 
-  test("serves an archive type's provider URLs for the page", async () => {
+  test("serves a contributed scope's provider URLs for the page", async () => {
     const h = await createHarness([eventsPlugin]);
 
     const body = await bodyOf(h, "/sitemap-event-series-2.xml");
@@ -822,6 +857,145 @@ describe("seo:sitemap:urls", () => {
   });
 });
 
+describe("a contributed sitemap", () => {
+  // A URL space with no archive behind it: the plugin serves these pages
+  // from routes of its own, and only the list joins the index.
+  const extraPlugin = definePlugin("extra", (ctx) => {
+    ctx.registerSitemap("extra", {
+      count: () => 2,
+      urls: () => [
+        {
+          loc: "https://cms.example/locations/leeds",
+          changefreq: "daily",
+          priority: 0.9,
+        },
+        { loc: "https://cms.example/locations/york" },
+      ],
+    });
+  });
+
+  test("joins the index and serves its URLs with their own values", async () => {
+    const h = await createHarness([extraPlugin]);
+
+    expect(await bodyOf(h, "/sitemap.xml")).toContain(
+      "<loc>https://cms.example/sitemap-extra-1.xml</loc>",
+    );
+    const sub = await bodyOf(h, "/sitemap-extra-1.xml");
+    expect(sub).toContain(
+      "<loc>https://cms.example/locations/leeds</loc>" +
+        "<changefreq>daily</changefreq><priority>0.9</priority>",
+    );
+    expect(sub).toContain(
+      "<url><loc>https://cms.example/locations/york</loc></url>",
+    );
+  });
+
+  test("takes the site's policy: false leaves it out of the index", async () => {
+    const h = await createHarness([extraPlugin], {
+      seo: { sitemaps: { extra: false } },
+    });
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain("sitemap-extra-1");
+  });
+
+  test("and a default priority reaches only the URLs that set none", async () => {
+    const h = await createHarness([extraPlugin], {
+      seo: { sitemaps: { extra: { priority: 0.4 } } },
+    });
+
+    const sub = await bodyOf(h, "/sitemap-extra-1.xml");
+    expect(sub).toContain(
+      "<loc>https://cms.example/locations/leeds</loc>" +
+        "<changefreq>daily</changefreq><priority>0.9</priority>",
+    );
+    expect(sub).toContain(
+      "<loc>https://cms.example/locations/york</loc><priority>0.4</priority>",
+    );
+  });
+
+  const contributor = (pluginId: string, name: string) =>
+    definePlugin(pluginId, (ctx) => {
+      ctx.registerSitemap(name, { count: () => 0, urls: () => [] });
+    });
+
+  test("two plugins contributing one name fail boot, naming both", async () => {
+    await expect(
+      createHarness([
+        contributor("first", "extra"),
+        contributor("second", "extra"),
+      ]),
+    ).rejects.toThrow(/"second".*"extra".*"first"/s);
+  });
+
+  test.each(["entries", "terms", "entries-x", "terms-x"])(
+    "a contribution named %s fails boot, naming the plugin",
+    async (name) => {
+      await expect(
+        createHarness([contributor("claimer", name)]),
+      ).rejects.toThrow(new RegExp(`"claimer".*"${name}"`));
+    },
+  );
+
+  test("dates its index entry by the source's lastmod, when it has one", async () => {
+    const dated = definePlugin("dated", (ctx) => {
+      ctx.registerSitemap("dated", {
+        count: () => 1,
+        urls: () => [],
+        lastmod: (_appCtx, page) =>
+          page === 1 ? "2026-01-01T00:00:00.000Z" : undefined,
+      });
+    });
+    const h = await createHarness([extraPlugin, dated, taxonomyPlugin]);
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const index = await bodyOf(h, "/sitemap.xml");
+
+    expect(index).toContain(
+      "<sitemap><loc>https://cms.example/sitemap-dated-1.xml</loc>" +
+        "<lastmod>2026-01-01T00:00:00.000Z</lastmod></sitemap>",
+    );
+    expect(index).toContain(
+      "<sitemap><loc>https://cms.example/sitemap-extra-1.xml</loc></sitemap>",
+    );
+    expect(index).toContain(
+      "<sitemap><loc>https://cms.example/sitemap-terms-category-1.xml</loc></sitemap>",
+    );
+  });
+
+  test("is the only way in: an archive registration takes no sitemap", () => {
+    const legacy = definePlugin("legacy", (ctx) => {
+      ctx.registerArchiveType("location", {
+        routes: ["/locations/:slug"],
+        resolve: () => ({
+          data: { kind: "archiveType", name: "location" },
+          title: "Location",
+        }),
+        // @ts-expect-error — a sitemap is contributed with `registerSitemap`.
+        sitemap: { count: () => 0, urls: () => [] },
+      });
+    });
+    expect(legacy.id).toBe("legacy");
+  });
+
+  test("with the indexing toggle off, is not listed and serves no URLs", async () => {
+    const h = await createHarness([extraPlugin]);
+    await h.factory.setting.create({
+      group: "seo",
+      key: "indexable",
+      value: false,
+    });
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain("<sitemap>");
+    const sub = await bodyOf(h, "/sitemap-extra-1.xml");
+    expect(sub).toContain("<urlset");
+    expect(sub).not.toContain("<url>");
+  });
+});
+
 describe("the site's sitemap policy", () => {
   test("a scope's defaults reach every URL in it and no other scope's", async () => {
     const h = await createHarness([taxonomyPlugin], {
@@ -845,20 +1019,13 @@ describe("the site's sitemap policy", () => {
     expect(categories).not.toContain("<changefreq>");
   });
 
-  // A plugin's archive whose provider sets a priority of its own.
+  // A plugin's contributed scope whose provider sets a priority of its own.
   const ranked = definePlugin("ranked", (ctx) => {
-    ctx.registerArchiveType("location", {
-      routes: ["/locations/:slug"],
-      resolve: () => ({
-        data: { kind: "archiveType", name: "location" },
-        title: "Location",
-      }),
-      sitemap: {
-        count: () => 1,
-        urls: () => [
-          { loc: "https://cms.example/locations/leeds", priority: 0.9 },
-        ],
-      },
+    ctx.registerSitemap("location", {
+      count: () => 1,
+      urls: () => [
+        { loc: "https://cms.example/locations/leeds", priority: 0.9 },
+      ],
     });
   });
 
@@ -928,14 +1095,7 @@ describe("the site's sitemap policy", () => {
     const urls = vi.fn(() => []);
     const filter = vi.fn((all: readonly unknown[]) => all);
     const dropped = definePlugin("dropped", (ctx) => {
-      ctx.registerArchiveType("location", {
-        routes: ["/locations/:slug"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "location" },
-          title: "Location",
-        }),
-        sitemap: { count: () => 1, urls },
-      });
+      ctx.registerSitemap("location", { count: () => 1, urls });
       ctx.addFilter("seo:sitemap:urls", (all) => filter(all) as typeof all);
     });
     const h = await createHarness([dropped], {
@@ -974,15 +1134,6 @@ describe("the site's sitemap policy", () => {
 });
 
 describe("sitemap scopes at boot", () => {
-  const archiveWithSitemap = (pluginId: string, name: string) =>
-    definePlugin(pluginId, (ctx) => {
-      ctx.registerArchiveType(name, {
-        routes: [`/${pluginId}/:slug`],
-        resolve: () => ({ data: { kind: "archiveType", name }, title: name }),
-        sitemap: { count: () => 0, urls: () => [] },
-      });
-    });
-
   test.each([
     [{ entries: { nope: false } }, /sitemaps\.entries\.nope/],
     [{ terms: { nope: {} } }, /sitemaps\.terms\.nope/],
@@ -996,62 +1147,14 @@ describe("sitemap scopes at boot", () => {
     },
   );
 
-  // A gated type or archive is registered but lists nothing, so a policy for
-  // it would never apply: the key fails like an unknown one, and says why.
-  test.each([
-    [membersOnlyPlugin, { entries: { lesson: false } }, "entries.lesson"],
-    [gatedArchivePlugin, { "member-series": false }, "member-series"],
-  ] as const)(
-    "a policy key naming a registered but unlisted scope fails (%#)",
-    async (plugin, sitemaps, key) => {
-      await expect(
-        createHarness([plugin], { seo: { sitemaps } }),
-      ).rejects.toThrow(
-        new RegExp(`sitemaps\\.${key}.*public.*access policy`, "s"),
-      );
-    },
-  );
-
-  // Core refuses a second archive by one name at registration, before seo
-  // enumerates anything, so seo has no collision of its own to detect. This
-  // test is what holds that refusal to the criterion: if core stopped
-  // naming both plugins, it would fail here.
-  test("two plugins contributing one scope name fail, naming both", async () => {
+  // A gated type is registered but lists nothing, so a policy for it would
+  // never apply: the key fails like an unknown one, and says why.
+  test("a policy key naming a registered but unlisted scope fails", async () => {
     await expect(
-      createHarness([
-        archiveWithSitemap("first", "location"),
-        archiveWithSitemap("second", "location"),
-      ]),
-    ).rejects.toThrow(/"second".*"location".*"first"/);
-  });
-
-  test.each(["entries", "terms", "entries-x", "terms-x"])(
-    "a contributed scope named %s fails, naming the plugin",
-    async (name) => {
-      await expect(
-        createHarness([archiveWithSitemap("claimer", name)]),
-      ).rejects.toThrow(new RegExp(`"claimer".*"${name}"`));
-    },
-  );
-
-  test("a gated archive's reserved scope name fails too", async () => {
-    // Gating keeps the scope out of the index today, but the name is declared
-    // either way, and lifting the gate must not be what surfaces the clash.
-    const gatedClaimer = definePlugin("gated-claimer", (ctx) => {
-      ctx.registerArchiveType("entries", {
-        routes: ["/gated/:slug"],
-        access: membersOnlyPolicy,
-        resolve: () => ({
-          data: { kind: "archiveType", name: "entries" },
-          title: "Gated",
-        }),
-        sitemap: { count: () => 0, urls: () => [] },
-      });
-    });
-
-    await expect(createHarness([gatedClaimer])).rejects.toThrow(
-      /"gated-claimer".*"entries"/,
-    );
+      createHarness([membersOnlyPlugin], {
+        seo: { sitemaps: { entries: { lesson: false } } },
+      }),
+    ).rejects.toThrow(/sitemaps\.entries\.lesson.*public.*access policy/s);
   });
 });
 
