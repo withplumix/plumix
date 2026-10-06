@@ -28,7 +28,7 @@ catalog:
   fishery: ^2.4.0
   jsonc-parser: ^3.3.1
   playwright: ^1.62.1
-  prettier: ^3.9.6
+  prettier: ^3.9.9
   publint: ^0.3.24
   radix-ui: ^1.6.7
   react-hook-form: ^7.87.0
