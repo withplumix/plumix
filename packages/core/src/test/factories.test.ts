@@ -1,3 +1,4 @@
+import { Factory } from "fishery";
 import { describe, expect, test, vi } from "vitest";
 
 import { validateApiToken } from "../auth/api-tokens.js";
@@ -9,16 +10,17 @@ import {
   oauthAccountFactory,
   userFactory,
 } from "./factories.js";
+import * as thisProcess from "./factories.js";
 import { createTestDb } from "./harness.js";
 
-// Each Playwright worker loads its own module graph, so each one's factory
-// sequences start over at 1 while every worker seeds the same database.
-async function loadInFreshProcess() {
+// A second Playwright worker is a second process: its factory sequences start
+// over at 1, and it loads its own copy of the factories module.
+async function loadSecondProcess() {
   vi.resetModules();
   return import("./factories.js");
 }
 
-type FactoriesModule = Awaited<ReturnType<typeof loadInFreshProcess>>;
+type FactoriesModule = Awaited<ReturnType<typeof loadSecondProcess>>;
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 
 describe("defaults on unique columns", () => {
@@ -71,10 +73,14 @@ describe("defaults on unique columns", () => {
         .transient({ db })
         .create({ email: "owner@example.test", slug: "owner" });
 
-      await create(await loadInFreshProcess(), db, user.id);
+      for (const factory of Object.values(thisProcess)) {
+        if (factory instanceof Factory) factory.rewindSequence();
+      }
+
+      await create(thisProcess, db, user.id);
 
       await expect(
-        create(await loadInFreshProcess(), db, user.id),
+        create(await loadSecondProcess(), db, user.id),
       ).resolves.toBeDefined();
     },
   );

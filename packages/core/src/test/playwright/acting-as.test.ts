@@ -5,9 +5,9 @@ import { userFactory } from "../factories.js";
 import { createTestDb } from "../harness.js";
 import { actingAs } from "./acting-as.js";
 
-// Each Playwright worker loads its own module graph, so each one's factory
-// sequence starts over at 1.
-function loadInFreshProcess() {
+// A second Playwright worker is a second process: its factory sequence starts
+// over at 1, and it loads its own copy of the factories module.
+function loadSecondProcess() {
   vi.resetModules();
   return import("./acting-as.js");
 }
@@ -57,10 +57,9 @@ describe("actingAs (Playwright)", () => {
   test("a second process seeding the same db mints a user that does not collide", async () => {
     const db = await createTestDb();
 
-    const firstProcess = await loadInFreshProcess();
-    const first = await firstProcess.actingAs(db, "subscriber");
-    const secondProcess = await loadInFreshProcess();
-    const second = await secondProcess.actingAs(db, "subscriber");
+    userFactory.rewindSequence();
+    const first = await actingAs(db, "subscriber");
+    const second = await (await loadSecondProcess()).actingAs(db, "subscriber");
 
     expect(second.user.id).not.toBe(first.user.id);
     expect(second.user.slug).not.toBe(first.user.slug);
