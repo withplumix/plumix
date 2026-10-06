@@ -177,6 +177,33 @@ describe("policyForMatch", () => {
     ).resolves.toBe(editors);
   });
 
+  it("reads the per-entry choice of the entry a fixed-slug intent names", async () => {
+    const editors = rolePolicy("editor");
+    const c = await ctx({
+      entryTypes: {
+        post: {
+          default: anonymousPolicy,
+          policies: [{ key: "staff", label: "Staff", policy: editors }],
+        },
+      },
+      // Only the fixed entry is seeded: the captured `slug` addresses nothing.
+      memo: seededMemo({
+        "single-entry:post:s:pinned": {
+          meta: { [ACCESS_POLICY_META_KEY]: "staff" },
+        },
+      }),
+    });
+    await expect(
+      policyForMatch(
+        c,
+        matchWith(
+          { kind: "entry", entryType: "post", slug: "pinned" },
+          { slug: "hello" },
+        ),
+      ),
+    ).resolves.toBe(editors);
+  });
+
   it("falls back to the type default for a per-entry-space single with no stored choice", async () => {
     const c = await ctx({
       entryTypes: {

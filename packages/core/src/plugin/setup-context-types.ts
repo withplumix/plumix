@@ -169,6 +169,12 @@ export interface PluginSetupContextBase {
    * `/docs/:category/:slug`). `priority` defaults to 10 — lower wins,
    * auto-generated archive/single rules from `registerEntryType` sit at 50.
    *
+   * An `entry` intent with a `slug` serves that one entry at every URL the
+   * pattern matches: `registerRewriteRule("/compare/:id", { kind: "entry",
+   * entryType: "page", slug: "shared-comparison" })` renders the
+   * `shared-comparison` page at `/compare/abc`, and its block loaders read
+   * `id` from `ctx.resolvedRoute.params`.
+   *
    * Paths with a static-asset extension (`.ico`, `.js`, `.png`, fonts, …)
    * 404 before the route map runs (#1491), so a pattern ending in one of
    * those can never match. Content-plausible extensions (`.txt`, `.xml`,

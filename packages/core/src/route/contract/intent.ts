@@ -5,7 +5,13 @@
  * intent describes the *route shape*, the match carries the request.
  */
 export type RouteIntent =
-  | { readonly kind: "entry"; readonly entryType: string }
+  // `slug` names one fixed entry, found whatever the URL captured; without it
+  // the entry is the one the captured `path` or `slug` param addresses.
+  | {
+      readonly kind: "entry";
+      readonly entryType: string;
+      readonly slug?: string;
+    }
   | { readonly kind: "entryType"; readonly entryType: string }
   | { readonly kind: "term"; readonly taxonomy: string }
   | { readonly kind: "author" }

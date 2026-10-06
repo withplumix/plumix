@@ -704,6 +704,35 @@ describe("access gate — per-entry visibility (#1742)", () => {
     expect(await response.text()).toContain("open title");
   });
 
+  test("a rule naming a fixed entry gates its path by that entry's choice", async () => {
+    const featured = definePlugin("featured", (ctx) => {
+      ctx.registerRewriteRule("/featured/:id", {
+        kind: "entry",
+        entryType: "column",
+        slug: "locked",
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [perEntryPlugin, featured] },
+    });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    const subscriber = await h.seedUser("subscriber");
+
+    const anonymous = await h.dispatch(
+      new Request("https://cms.example/featured/abc"),
+    );
+    const member = await h.dispatch(
+      await authed(h, "/featured/abc", subscriber.id),
+    );
+
+    expect(anonymous.status).toBe(302);
+    expect(anonymous.headers.get("location")).toBe(
+      "/_plumix/admin/login?redirectTo=%2Ffeatured%2Fabc",
+    );
+    expect(member.status).toBe(200);
+    expect(await member.text()).toContain("locked title");
+  });
+
   test("an unknown stored choice falls back to the type default, never granting less", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [perEntryPlugin] },
