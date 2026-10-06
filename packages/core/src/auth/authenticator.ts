@@ -141,8 +141,8 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
 /**
  * Compose multiple authenticators into a first-match-wins chain. The
  * first one to return a non-null user decides the request. `signOutUrl`
- * is taken from the first authenticator that exposes it — the chain is
- * a list, and the head wins when both could speak.
+ * is taken from the first authenticator that returns one for the request —
+ * the chain is a list, and the head wins when both could speak.
  *
  * Used to wire the default plumix install: the cookie-session authenticator
  * in front of the API-token authenticator, so browser requests resolve via
@@ -163,9 +163,9 @@ export function chainAuthenticators(
     hasSession(request) {
       return authenticators.some((auth) => requestHasSession(auth, request));
     },
-    signOutUrl(): string | null {
+    signOutUrl(request): string | null {
       for (const auth of authenticators) {
-        const url = auth.signOutUrl?.() ?? null;
+        const url = auth.signOutUrl?.(request) ?? null;
         if (url) return url;
       }
       return null;

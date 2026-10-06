@@ -90,6 +90,8 @@ export interface RequestAuthenticator {
   /**
    * Optional. Where the user should land after signing out — surfaced
    * to the admin client by `/_plumix/auth/signout` as `redirectTo`.
+   * Handed the sign-out request, so an authenticator chained beside
+   * others can claim only the sign-outs that carry its own credential.
    * Returning null (or omitting the method) keeps the default
    * behaviour: clear the local session cookie and let the admin
    * navigate to the login screen.
@@ -105,5 +107,5 @@ export interface RequestAuthenticator {
    * authenticator can't inject `javascript:` or protocol-relative
    * redirect targets into the admin client.
    */
-  signOutUrl?(): string | null;
+  signOutUrl?(request: Request): string | null;
 }

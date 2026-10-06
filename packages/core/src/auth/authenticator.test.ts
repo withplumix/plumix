@@ -202,9 +202,11 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       signOutUrl: () => "https://other.example/logout",
     };
 
-    expect(chainAuthenticators(a, b).signOutUrl?.()).toBe(
-      "https://idp.example/logout",
-    );
+    expect(
+      chainAuthenticators(a, b).signOutUrl?.(
+        new Request("https://cms.example/"),
+      ),
+    ).toBe("https://idp.example/logout");
   });
 
   test("signOutUrl falls through past authenticators that don't expose one", () => {
@@ -216,8 +218,30 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       signOutUrl: () => "https://idp.example/logout",
     };
 
-    expect(chainAuthenticators(a, b).signOutUrl?.()).toBe(
-      "https://idp.example/logout",
+    expect(
+      chainAuthenticators(a, b).signOutUrl?.(
+        new Request("https://cms.example/"),
+      ),
+    ).toBe("https://idp.example/logout");
+  });
+
+  test("signOutUrl forwards the request to each authenticator", () => {
+    const a: RequestAuthenticator = {
+      authenticate: () => Promise.resolve(null),
+      signOutUrl: (request) =>
+        request.headers.has("x-idp-a") ? "https://a.example/logout" : null,
+    };
+    const b: RequestAuthenticator = {
+      authenticate: () => Promise.resolve(null),
+      signOutUrl: (request) =>
+        request.headers.has("x-idp-b") ? "https://b.example/logout" : null,
+    };
+    const request = new Request("https://cms.example/", {
+      headers: { "x-idp-b": "1" },
+    });
+
+    expect(chainAuthenticators(a, b).signOutUrl?.(request)).toBe(
+      "https://b.example/logout",
     );
   });
 

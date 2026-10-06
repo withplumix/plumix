@@ -148,8 +148,10 @@ function proxyIdentity(): RequestAuthenticator {
     hasSession(request) {
       return request.headers.has(IDENTITY_HEADER);
     },
-    signOutUrl() {
-      return "https://identity.example.com/logout";
+    signOutUrl(request) {
+      return request.headers.has(IDENTITY_HEADER)
+        ? "https://identity.example.com/logout"
+        : null;
     },
   };
 }
@@ -172,7 +174,7 @@ export const authenticator = chainAuthenticators(
   trusting a header value.
 </Aside>
 
-`signOutUrl` matters for any identity provider that keeps its own session. Clearing the local cookie is not enough there. The next request still carries the provider's credential, so the provider signs the same person straight back in. Plumix passes the URL to the admin client after sign-out and drops anything that is not an `https://` URL or a same-origin path.
+`signOutUrl` matters for any identity provider that keeps its own session. Clearing the local cookie is not enough there. The next request still carries the provider's credential, so the provider signs the same person straight back in. `signOutUrl` receives the sign-out request, so an authenticator chained beside others can return its URL only for a request that carries its own credential and `null` for the rest. Plumix passes the URL to the admin client after sign-out and drops anything that is not an `https://` URL or a same-origin path.
 
 ## Capabilities and the staff boundary
 

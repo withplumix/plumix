@@ -1,6 +1,11 @@
 import type { Db } from "plumix";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { createTestDb } from "plumix/test";
+import { chainAuthenticators, defaultAuthenticator } from "plumix/auth";
+import {
+  createDispatcherHarness,
+  createTestDb,
+  plumixRequest,
+} from "plumix/test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { cfAccess, cfAccessLogoutUrl } from "./cf-access.js";
@@ -67,6 +72,15 @@ describe("cfAccess — config validation", () => {
     ).toThrow(/audience/);
   });
 
+  test.each([
+    ["empty list", []],
+    ["list with an empty entry", ["aud-prod", ""]],
+  ])("rejects an audience %s", (_name, audience) => {
+    expect(() =>
+      cfAccess({ teamDomain: TEAM_DOMAIN, audience, defaultRole: "editor" }),
+    ).toThrow(/audience/);
+  });
+
   test("accepts a valid teamDomain + audience pair", () => {
     expect(() =>
       cfAccess({
@@ -79,13 +93,54 @@ describe("cfAccess — config validation", () => {
 });
 
 describe("cfAccess — signOutUrl", () => {
-  test("returns the team's CF Access logout endpoint", () => {
+  // Chained beside the default authenticator, the Access logout must only
+  // reach a request that carries an Access credential, or a member signed in
+  // by magic link would be sent to the Access logout too.
+  async function signOutRedirect(cookie: string): Promise<string | null> {
+    const h = await createDispatcherHarness({
+      config: {
+        auth: {
+          authenticator: chainAuthenticators(
+            defaultAuthenticator(),
+            cfAccess({
+              teamDomain: TEAM_DOMAIN,
+              audience: AUDIENCE,
+              defaultRole: "editor",
+            }),
+          ),
+        },
+      },
+    });
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", {
+        method: "POST",
+        headers: { cookie },
+      }),
+    );
+    const body = await response.json<{ redirectTo: string | null }>();
+    return body.redirectTo;
+  }
+
+  test("sends a request carrying CF_Authorization to the Access logout", async () => {
+    expect(await signOutRedirect("CF_Authorization=any-token")).toBe(
+      `https://${TEAM_DOMAIN}/cdn-cgi/access/logout`,
+    );
+  });
+
+  test("leaves a request carrying only a Plumix session to its own sign-out", async () => {
+    expect(await signOutRedirect("plumix_session=any-token")).toBeNull();
+  });
+
+  test("returns the Access logout for a request carrying the Access header", () => {
     const guard = cfAccess({
       teamDomain: TEAM_DOMAIN,
       audience: AUDIENCE,
       defaultRole: "editor",
     });
-    expect(guard.signOutUrl?.()).toBe(
+    const request = new Request("https://cms.example/", {
+      headers: { "cf-access-jwt-assertion": "any-token" },
+    });
+    expect(guard.signOutUrl?.(request)).toBe(
       `https://${TEAM_DOMAIN}/cdn-cgi/access/logout`,
     );
   });
@@ -108,6 +163,42 @@ describe("cfAccess — hasSession", () => {
     const without = new Request("https://cms.example/post/hello");
     expect(guard.hasSession?.(withHeader)).toBe(true);
     expect(guard.hasSession?.(without)).toBe(false);
+  });
+
+  test("carries a session when only the CF_Authorization cookie is present", () => {
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+    });
+    const withCookie = new Request("https://cms.example/post/hello", {
+      headers: { cookie: "CF_Authorization=any-token" },
+    });
+    const withOtherCookie = new Request("https://cms.example/post/hello", {
+      headers: { cookie: "plumix_session=abc" },
+    });
+    expect(guard.hasSession?.(withCookie)).toBe(true);
+    expect(guard.hasSession?.(withOtherCookie)).toBe(false);
+  });
+
+  test.each([
+    ["an empty value", "CF_Authorization="],
+    ["a lookalike name", "not_CF_Authorization=any-token"],
+    ["a name that only prefixes it", "CF_Authorization_x=any-token"],
+    [
+      "a cookie value that holds the name",
+      "plumix_session=CF_Authorization=any-token",
+    ],
+  ])("carries no session for a cookie with %s", (_name, cookie) => {
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+    });
+    const request = new Request("https://cms.example/post/hello", {
+      headers: { cookie },
+    });
+    expect(guard.hasSession?.(request)).toBe(false);
   });
 });
 
@@ -310,6 +401,87 @@ describe("cfAccess.authenticate — full crypto path", () => {
     // once across many authenticate calls. Regression here = perf
     // disaster (one round-trip per request).
     expect(jwksFetches).toHaveLength(1);
+  });
+
+  // A path-scoped Access app injects the header only on the paths it covers;
+  // the admin's RPC calls carry the host-wide `CF_Authorization` cookie instead.
+  test("authenticates from the CF_Authorization cookie when the header is absent", async () => {
+    const db = await createTestDb();
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+    const jwt = await mintJwt(material.privateKey, material.kid, {
+      email: "cookie@enterprise.example",
+    });
+
+    const result = await guard.authenticate(
+      new Request("https://cms.example/_plumix/rpc/entry/list", {
+        headers: { cookie: `plumix_locale=en; CF_Authorization=${jwt}` },
+      }),
+      db,
+      { startingUserMeta: {} },
+    );
+    expect(result?.user.email).toBe("cookie@enterprise.example");
+  });
+
+  test("an invalid header does not fall back to a valid cookie", async () => {
+    const db = await createTestDb();
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+    const jwt = await mintJwt(material.privateKey, material.kid, {
+      email: "cookie@enterprise.example",
+    });
+
+    const result = await guard.authenticate(
+      new Request("https://cms.example/_plumix/admin", {
+        headers: {
+          "cf-access-jwt-assertion": "not-a-real-jwt",
+          cookie: `CF_Authorization=${jwt}`,
+        },
+      }),
+      db,
+      { startingUserMeta: {} },
+    );
+    expect(result).toBeNull();
+  });
+
+  // Preview and production hostnames usually sit under separate Access apps,
+  // each with its own AUD tag.
+  test.each([
+    ["the first audience", "aud-preview", "alice@enterprise.example"],
+    ["the second audience", "aud-prod", "alice@enterprise.example"],
+    ["a third audience", "aud-other", null],
+  ])("with an audience list, a JWT for %s", async (_name, aud, expected) => {
+    const db = await createTestDb();
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: ["aud-preview", "aud-prod"],
+      defaultRole: "editor",
+      bootstrapAllowed: true,
+    });
+    const jwt = await new SignJWT({ email: "alice@enterprise.example" })
+      .setProtectedHeader({ alg: "RS256", kid: material.kid })
+      .setIssuedAt()
+      .setIssuer(`https://${TEAM_DOMAIN}`)
+      .setAudience(aud)
+      .setExpirationTime("5m")
+      .sign(material.privateKey);
+
+    const result = await guard.authenticate(
+      new Request("https://cms.example/", {
+        headers: { "cf-access-jwt-assertion": jwt },
+      }),
+      db,
+      { startingUserMeta: {} },
+    );
+    expect(result?.user.email ?? null).toBe(expected);
   });
 
   test("returns null when the email claim is missing", async () => {
