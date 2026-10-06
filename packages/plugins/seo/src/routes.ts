@@ -7,6 +7,7 @@ import { enqueuePurgeTags, typeTag } from "plumix/db";
 import { tagCdnEntry } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
+import type { ContributedSitemap } from "./contributed.js";
 import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
@@ -23,7 +24,7 @@ import {
   renderSubSitemap,
   scopeIsOffered,
   SITEMAP_INDEX_PATH,
-  sitemapIndexLocs,
+  sitemapIndexEntries,
   sitemapScopes,
   sitemapScopeStem,
 } from "./sitemap.js";
@@ -87,7 +88,7 @@ async function handleSitemapIndex(
   const listed = scopes.filter((scope) => scopeIsOffered(scope, settings));
   return xmlResponse(
     renderSitemapIndex(
-      await sitemapIndexLocs(ctx, listed),
+      await sitemapIndexEntries(ctx, listed),
       stylesheetHref(ctx),
     ),
   );
@@ -164,8 +165,9 @@ export function registerSeoRoutes(
 export function registerSitemapRoutes(
   ctx: PluginAfterSetupContext,
   sitemaps: SeoSitemapsOptions,
+  contributed: readonly ContributedSitemap[],
 ): void {
-  const scopes = sitemapScopes(ctx.plugins, sitemaps);
+  const scopes = sitemapScopes(ctx.plugins, sitemaps, contributed);
   assertSitemapPolicyNamesScopes(sitemaps, scopes);
 
   ctx.registerPublicRoute({

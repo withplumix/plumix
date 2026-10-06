@@ -37,7 +37,7 @@ see a narrowing that fails only on resolution — a term slug nothing answers to
 and advertises a feed that 404s. An archive whose `resolve` already 404s the
 params it cannot place never renders that page, which is the common case.
 
-`@plumix/plugin-seo` asks an archive for the opposite thing: `ArchiveTypeSitemap`
+`@plumix/plugin-seo` asks a plugin for the opposite thing: `SitemapSource`
 takes finished URLs, not a query. The asymmetry is the point rather than an
 inconsistency. A sitemap is any URL space, so seo cannot own the query behind it;
 a feed is always entries, so feeds can, and what a surface can own it should.

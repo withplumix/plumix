@@ -5,6 +5,7 @@ import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
 import { withBasePath, xmlEscape } from "plumix/support";
 
+import type { ContributedSitemap, SitemapSource } from "./contributed.js";
 import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";
 import { SeoError } from "./errors.js";
@@ -87,12 +88,22 @@ function prologue(stylesheet: string): string {
   );
 }
 
+/** One `<sitemap>` the index lists: a sub-sitemap page and when it last changed. */
+export interface SitemapIndexEntry {
+  readonly loc: string;
+  /** Written as `<lastmod>` only when set. */
+  readonly lastmod?: string;
+}
+
 export function renderSitemapIndex(
-  locs: readonly string[],
+  sitemaps: readonly SitemapIndexEntry[],
   stylesheet: string,
 ): string {
-  const body = locs
-    .map((loc) => `<sitemap><loc>${xmlEscape(loc)}</loc></sitemap>`)
+  const body = sitemaps
+    .map(({ loc, lastmod }) => {
+      const mod = lastmod ? `<lastmod>${xmlEscape(lastmod)}</lastmod>` : "";
+      return `<sitemap><loc>${xmlEscape(loc)}</loc>${mod}</sitemap>`;
+    })
     .join("");
   return (
     prologue(stylesheet) +
@@ -171,8 +182,8 @@ export interface SeoSitemapsOptions {
 }
 
 /**
- * One sub-sitemap's URL space: an entry type, a taxonomy, or an archive a
- * plugin registered. `tags` is what the scope's cached pages are stored under,
+ * One sub-sitemap's URL space: an entry type, a taxonomy, or a source a
+ * plugin contributed. `tags` is what the scope's cached pages are stored under,
  * so a publish retires that scope and leaves the rest of the set alone.
  */
 export interface SitemapScope {
@@ -182,11 +193,21 @@ export interface SitemapScope {
   /** Whether the site's `sitemaps` option set this scope to `false`. */
   readonly dropped: boolean;
   readonly tags: readonly string[];
-  readonly count: (ctx: AppContext) => Promise<number> | number;
+  /**
+   * One element per page the index lists, each with the newest `lastmod`
+   * among that page's URLs where the scope knows it. Empty for a scope with
+   * nothing to list.
+   */
+  readonly pages: (ctx: AppContext) => Promise<readonly SitemapIndexPage[]>;
   readonly urls: (
     ctx: AppContext,
     page: number,
   ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
+}
+
+/** What the index knows of one sub-sitemap page before it has a `<loc>`. */
+interface SitemapIndexPage {
+  readonly lastmod?: string;
 }
 
 /**
@@ -226,6 +247,28 @@ export function sitemapIndexUrl(ctx: AppContext): string {
   return `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.config.basePath)}`;
 }
 
+function undatedPages(total: number): SitemapIndexPage[] {
+  return Array.from(
+    { length: Math.ceil(Math.max(total, 0) / SITEMAP_PAGE_SIZE) },
+    () => ({}),
+  );
+}
+
+async function contributedPages(
+  ctx: AppContext,
+  source: SitemapSource,
+): Promise<SitemapIndexPage[]> {
+  const pages = undatedPages(await source.count(ctx));
+  const { lastmod } = source;
+  if (lastmod === undefined) return pages;
+  return Promise.all(
+    pages.map(async (_, index) => {
+      const newest = await lastmod(ctx, index + 1);
+      return newest === undefined ? {} : { lastmod: newest };
+    }),
+  );
+}
+
 function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }
@@ -241,14 +284,35 @@ function listedTermsOf(taxonomy: string) {
   return and(eq(terms.taxonomy, taxonomy), termIsIndexable);
 }
 
-async function entryCount(ctx: AppContext, type: string): Promise<number> {
+// Each page's newest `updatedAt`, in the order and window `entryUrls` pages
+// by, as one query for the whole scope — the index lists every page, so a
+// query per page would grow with the site.
+async function entryPages(
+  ctx: AppContext,
+  type: string,
+): Promise<SitemapIndexPage[]> {
   const where = publishedEntriesOf(ctx, type);
-  if (where === null) return 0;
-  const [row] = await ctx.db
-    .select({ n: sql<number>`count(*)` })
+  if (where === null) return [];
+  const ranked = ctx.db
+    .select({
+      updatedAt: entries.updatedAt,
+      position: sql<number>`row_number() over (order by ${entries.id}) - 1`.as(
+        "position",
+      ),
+    })
     .from(entries)
-    .where(where);
-  return row?.n ?? 0;
+    .where(where)
+    .as("ranked");
+  // Cast, or a bound page size divides as a real and every row is a page.
+  const page = sql<number>`${ranked.position} / cast(${SITEMAP_PAGE_SIZE} as integer)`;
+  const rows = await ctx.db
+    .select({
+      lastmod: sql<Date>`max(${ranked.updatedAt})`.mapWith(entries.updatedAt),
+    })
+    .from(ranked)
+    .groupBy(page)
+    .orderBy(page);
+  return rows.map((row) => ({ lastmod: row.lastmod.toISOString() }));
 }
 
 async function entryUrls(
@@ -322,19 +386,6 @@ async function termUrls(
   );
 }
 
-// Seo's own scope kinds, which own every stem starting with their name — so a
-// contributed scope by one of these names would answer for an entry type's or
-// a taxonomy's sub-sitemap.
-const RESERVED_SCOPE_KINDS = ["entries", "terms"] as const;
-
-function assertContributable(name: string, pluginId: string): void {
-  const reserved = RESERVED_SCOPE_KINDS.some(
-    (kind) => name === kind || name.startsWith(`${kind}-`),
-  );
-  if (!reserved) return;
-  throw SeoError.reservedSitemapScope({ scope: name, pluginId });
-}
-
 function policyOf(
   sitemaps: SeoSitemapsOptions,
   ref: SitemapScopeRef,
@@ -353,12 +404,13 @@ function policyOf(
 
 /**
  * Every scope the sitemap index enumerates: each crawlable public entry type,
- * each public taxonomy, and each crawlable archive that declared a `sitemap`,
- * with the policy the site's `sitemaps` option set for it.
+ * each public taxonomy, and each scope a plugin contributed with
+ * `registerSitemap`, with the policy the site's `sitemaps` option set for it.
  */
 export function sitemapScopes(
   plugins: PluginRegistry,
   sitemaps: SeoSitemapsOptions,
+  contributed: readonly ContributedSitemap[],
 ): readonly SitemapScope[] {
   const scopes: SitemapScope[] = [];
   const add = (scope: Omit<SitemapScope, "policy" | "dropped">): void => {
@@ -374,7 +426,7 @@ export function sitemapScopes(
     add({
       ref: { kind: "entries", name: type.name },
       tags: [typeTag(type.name)],
-      count: (ctx) => entryCount(ctx, type.name),
+      pages: (ctx) => entryPages(ctx, type.name),
       urls: (ctx, page) => entryUrls(ctx, type.name, page),
     });
   }
@@ -385,25 +437,17 @@ export function sitemapScopes(
       // entry types, and a term change purges exactly those — so the list of
       // those archives rides the same signal.
       tags: (taxonomy.entryTypes ?? []).map(typeTag),
-      count: (ctx) => termCount(ctx, taxonomy.name),
+      // A term stores no modification time, so its pages carry no lastmod.
+      pages: async (ctx) => undatedPages(await termCount(ctx, taxonomy.name)),
       urls: (ctx, page) => termUrls(ctx, taxonomy.name, page),
     });
   }
-  for (const archive of plugins.archiveTypes.values()) {
-    const sitemap = archive.sitemap;
-    if (!sitemap) continue;
-    // Checked before the gate below: the name is declared whether or not the
-    // archive is gated today, and lifting a gate must not surface the clash.
-    assertContributable(archive.name, archive.registeredBy ?? "core");
-    // An archive carries its policy directly rather than under a `default`,
-    // and `plugin-feeds` already refuses a policied archive's feed on the
-    // same ground — a URL list is no more publishable than a feed.
-    if (!isCrawlableType(archive)) continue;
+  for (const { name, source } of contributed) {
     add({
-      ref: { kind: "contributed", name: archive.name },
-      tags: sitemap.tags ?? [],
-      count: sitemap.count,
-      urls: sitemap.urls,
+      ref: { kind: "contributed", name },
+      tags: source.tags ?? [],
+      pages: (ctx) => contributedPages(ctx, source),
+      urls: source.urls,
     });
   }
   return scopes;
@@ -467,21 +511,22 @@ export async function collectSitemapUrls(
   return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope.ref, page, ctx);
 }
 
-/** The sub-sitemap `<loc>`s the index lists, paged by each scope's own count. */
-export async function sitemapIndexLocs(
+/** The sub-sitemaps the index lists, one per page of each scope. */
+export async function sitemapIndexEntries(
   ctx: AppContext,
   scopes: readonly SitemapScope[],
-): Promise<string[]> {
-  const locs: string[] = [];
+): Promise<SitemapIndexEntry[]> {
+  const listed: SitemapIndexEntry[] = [];
   for (const scope of scopes) {
-    const total = await scope.count(ctx);
-    if (total <= 0) continue;
-    const pages = Math.ceil(total / SITEMAP_PAGE_SIZE);
-    for (let page = 1; page <= pages; page++) {
-      locs.push(`${ctx.origin}${subSitemapPath(ctx, scope.ref, page)}`);
+    const pages = await scope.pages(ctx);
+    for (const [index, { lastmod }] of pages.entries()) {
+      listed.push({
+        loc: `${ctx.origin}${subSitemapPath(ctx, scope.ref, index + 1)}`,
+        ...(lastmod === undefined ? {} : { lastmod }),
+      });
     }
   }
-  return locs;
+  return listed;
 }
 
 /**

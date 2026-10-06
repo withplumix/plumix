@@ -1,8 +1,12 @@
-type SeoErrorCode = "reserved_sitemap_scope" | "unknown_sitemap_policy_key";
+type SeoErrorCode =
+  | "duplicate_sitemap_scope"
+  | "reserved_sitemap_scope"
+  | "unknown_sitemap_policy_key";
 
 interface SeoErrorFields {
   scope?: string;
   pluginId?: string;
+  existingPluginId?: string;
   key?: string;
 }
 
@@ -14,6 +18,7 @@ export class SeoError extends Error {
   readonly code: SeoErrorCode;
   readonly scope: string | undefined;
   readonly pluginId: string | undefined;
+  readonly existingPluginId: string | undefined;
   readonly key: string | undefined;
 
   private constructor(
@@ -25,11 +30,31 @@ export class SeoError extends Error {
     this.code = code;
     this.scope = fields.scope;
     this.pluginId = fields.pluginId;
+    this.existingPluginId = fields.existingPluginId;
     this.key = fields.key;
   }
 
   /**
-   * A plugin's archive contributes a sitemap scope under a name seo keeps for
+   * A second plugin contributes a sitemap scope under a name another already
+   * holds, so two sources would answer at one URL. Raised at boot, naming
+   * both plugins.
+   */
+  static duplicateSitemapScope(ctx: {
+    scope: string;
+    pluginId: string;
+    existingPluginId: string;
+  }): SeoError {
+    return new SeoError(
+      "duplicate_sitemap_scope",
+      `seo: plugin "${ctx.pluginId}" contributes the sitemap scope ` +
+        `"${ctx.scope}", which plugin "${ctx.existingPluginId}" already ` +
+        `contributes. Rename one of them.`,
+      ctx,
+    );
+  }
+
+  /**
+   * A plugin contributes a sitemap scope under a name seo keeps for
    * its own entry-type and taxonomy scopes. Raised at boot, naming the plugin,
    * so the name can be changed before any route answers for it.
    */
@@ -57,8 +82,8 @@ export class SeoError extends Error {
     return new SeoError(
       "unknown_sitemap_policy_key",
       `seo: sitemaps.${ctx.key} names no sitemap scope, so its policy would ` +
-        `never apply. A scope is a public entry type or taxonomy, or an ` +
-        `archive that declares a \`sitemap\`, with no access policy.`,
+        `never apply. A scope is a public entry type or taxonomy with no ` +
+        `access policy, or one a plugin contributes with \`registerSitemap\`.`,
       ctx,
     );
   }

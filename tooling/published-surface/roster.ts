@@ -463,11 +463,11 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "the sitemap: the `sitemap` option an archive registration takes, " +
+          "the sitemap: the source a plugin hands `ctx.registerSitemap`, " +
           "the `seo:sitemap:urls` payload and the scope it names, its page " +
           "size, and the tag a subscriber retires its rows under",
         names: [
-          "ArchiveTypeSitemap",
+          "SitemapSource",
           "SitemapUrl",
           "SitemapChangeFrequency",
           "SitemapScopeRef",

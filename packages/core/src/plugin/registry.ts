@@ -584,8 +584,7 @@ export type ArchiveTitle =
   string | ((params: Record<string, string>) => string);
 
 /**
- * The options every archive type shares, and the seam a plugin augments:
- * `@plumix/plugin-seo` adds `sitemap`. An option only an archive with
+ * The options every archive type shares. An option only an archive with
  * `entries` can take goes on {@link ListingArchiveTypeOptions} instead.
  */
 export interface ArchiveTypeOptions {
