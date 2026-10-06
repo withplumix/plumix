@@ -870,7 +870,7 @@ describe("date feed routes", () => {
 });
 
 describe("framework routes a site turns off", () => {
-  test("date and author off: no date or author feed, while the front page keeps its own", async () => {
+  async function offHarness() {
     const h = await createDispatcherHarness({
       config: {
         plugins: [blogPlugin, feeds()],
@@ -887,17 +887,23 @@ describe("framework routes a site turns off", () => {
       authorId: jane.id,
       publishedAt: new Date("2026-07-21T12:00:00Z"),
     });
+    return h;
+  }
 
+  test("date and author off: the front page keeps its own feed", async () => {
+    const h = await offHarness();
     (await h.fetch("/feed")).assertStatus(200);
-    for (const path of [
-      "/authors/jane/feed",
-      "/authors/jane/feed/atom",
-      "/2026/feed",
-      "/2026/07/feed",
-      "/2026/07/21/feed/atom",
-    ]) {
-      (await h.fetch(path)).assertStatus(404);
-    }
+  });
+
+  test.each([
+    "/authors/jane/feed",
+    "/authors/jane/feed/atom",
+    "/2026/feed",
+    "/2026/07/feed",
+    "/2026/07/21/feed/atom",
+  ])("date and author off: %s is not a feed", async (path) => {
+    const h = await offHarness();
+    (await h.fetch(path)).assertStatus(404);
   });
 });
 

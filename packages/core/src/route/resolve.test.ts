@@ -1459,18 +1459,19 @@ describe("resolvePublicRoute — date archive", () => {
     expect(body).not.toContain("Post 2026-07-22");
   });
 
-  test("an empty period is a 404, not an empty archive (ADR 0029)", async () => {
-    const h = await createDispatcherHarness({
-      config: { plugins: [blogPlugin] },
-    });
-    await seedDated(h, ["2026-07-21"]);
-    for (const path of ["/1999", "/2026/06", "/2026/07/20"]) {
+  test.each(["/1999", "/2026/06", "/2026/07/20"])(
+    "an empty period (%s) is a 404, not an empty archive (ADR 0029)",
+    async (path) => {
+      const h = await createDispatcherHarness({
+        config: { plugins: [blogPlugin] },
+      });
+      await seedDated(h, ["2026-07-21"]);
       const response = await h.dispatch(
         new Request(`https://cms.example${path}`),
       );
-      expect(response.status, path).toBe(404);
-    }
-  });
+      expect(response.status).toBe(404);
+    },
+  );
 
   test("an impossible date returns 404", async () => {
     const h = await createDispatcherHarness({
@@ -2082,7 +2083,7 @@ describe("resolvePublicRoute — framework routes a site turns off", () => {
     });
   }
 
-  test("date off: date URLs 404, and a root page slugged 2026 resolves", async () => {
+  test("date off: a root page slugged 2026 resolves", async () => {
     const h = await createDispatcherHarness({
       config: {
         plugins: [blogPlugin, rootPagesPlugin],
@@ -2093,28 +2094,40 @@ describe("resolvePublicRoute — framework routes a site turns off", () => {
     const year = await h.dispatch(new Request("https://cms.example/2026"));
     expect(year.status).toBe(200);
     expect(await year.text()).toContain("<h1>Page 2026</h1>");
-    for (const path of ["/2026/10", "/2026/10/03", "/2026/page/2"]) {
+  });
+
+  test.each(["/2026/10", "/2026/10/03", "/2026/page/2"])(
+    "date off: %s 404s",
+    async (path) => {
+      const h = await createDispatcherHarness({
+        config: {
+          plugins: [blogPlugin, rootPagesPlugin],
+          routes: { date: false },
+        },
+      });
+      await seedRootPage(h, "2026");
       const response = await h.dispatch(
         new Request(`https://cms.example${path}`),
       );
-      expect(response.status, path).toBe(404);
-    }
-  });
+      expect(response.status).toBe(404);
+    },
+  );
 
-  test("author off: an existing author's archive 404s", async () => {
-    const h = await createDispatcherHarness({
-      config: { plugins: [blogPlugin], routes: { author: false } },
-    });
-    await h.factory.author.create({ name: "Jane", slug: "jane" });
-    for (const path of ["/authors/jane", "/authors/jane/page/2"]) {
+  test.each(["/authors/jane", "/authors/jane/page/2"])(
+    "author off: an existing author's archive (%s) 404s",
+    async (path) => {
+      const h = await createDispatcherHarness({
+        config: { plugins: [blogPlugin], routes: { author: false } },
+      });
+      await h.factory.author.create({ name: "Jane", slug: "jane" });
       const response = await h.dispatch(
         new Request(`https://cms.example${path}`),
       );
-      expect(response.status, path).toBe(404);
-    }
-  });
+      expect(response.status).toBe(404);
+    },
+  );
 
-  test("search off: /search?q= no longer redirects, and a root page slugged search resolves", async () => {
+  test("search off: /search?q= is not redirected, and a root page slugged search resolves", async () => {
     const h = await createDispatcherHarness({
       config: {
         plugins: [blogPlugin, rootPagesPlugin],

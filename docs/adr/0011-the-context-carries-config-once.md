@@ -31,8 +31,8 @@ record extends it to every slot.
 
 A new pass-through slot is declared once, on `PlumixConfigInput`, and reaches
 every handler and plugin without another edit. `PlumixConfig` is derived from
-the input: it names only the five slots `plumix()` resolves (`theme`,
-`plugins`, `i18n`, `redirects`, `basePath`) and inherits the rest, and
+the input: it names only the six slots `plumix()` resolves (`theme`,
+`plugins`, `i18n`, `redirects`, `routes`, `basePath`) and inherits the rest, and
 `plumix()` spreads the input rather than naming slots. `PlumixAuthConfig` is
 `PlumixAuthInput` plus its `kind`, and `auth()` spreads its input the same way.
 The documented input interface is the single source because its per-option

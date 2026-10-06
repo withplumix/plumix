@@ -147,7 +147,7 @@ export const routes: PlumixConfigInput["routes"] = {
 
 Each of `author`, `date` and `search` defaults to `true`, so a site that leaves `routes` out keeps all three. `date` is one switch for the year, month and day archives. Root pagination (`/page/2`) belongs to the front page and has no switch.
 
-A family set to `false` is never compiled, not even as a redirect. Its URLs fall through to whatever else matches, or to 404. With `date: false`, a page slugged `2026` under a type mounted at the root is reachable at `/2026`. With `search: false`, `/search?q=` no longer redirects, and a page slugged `search` is reachable at `/search`. `@plumix/plugin-search` keeps serving `/search/:query` on its own rules either way. Anything that reads the archive routes, such as `@plumix/plugin-feeds`, registers no feed for a family that is off.
+A family set to `false` is never compiled, not even as a redirect. Its URLs fall through to whatever else matches, or to 404. With `date: false`, a page slugged `2026` under a type mounted at the root is reachable at `/2026`. With `search: false`, `/search?q=` is not redirected, and a page slugged `search` is reachable at `/search`. `@plumix/plugin-search` keeps serving `/search/:query` on its own rules either way. Anything that reads the archive routes, such as `@plumix/plugin-feeds`, registers no feed for a family that is off.
 
 A date archive with no entries answers 404 whatever the switch says, because an empty year names nothing but a number. An empty author archive still answers 200, because the author exists.
 

@@ -690,7 +690,7 @@ describe("compileRouteMap — framework routes a site turns off", () => {
       .map((rule) => rule.rawPattern);
   }
 
-  test("with every family on, core compiles its rules in today's order", async () => {
+  test("with every family on, core compiles its rules in the documented order", async () => {
     expect(frameworkRules(await buildRegistry([]))).toEqual([
       "/page/:page(\\d+)",
       "/search/:query/page/:page(\\d+)",
