@@ -1,14 +1,11 @@
 import { eq, sql } from "drizzle-orm";
+import { readMigrationFiles } from "drizzle-orm/migrator";
 import { expect } from "vitest";
 
 import type { Db } from "../../context/app-context.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
-import {
-  CORE_SQL_MIGRATIONS,
-  planRawSqlMigrations,
-} from "../../cli/raw-migrations.js";
 import { rowsAffected } from "../../db/rows-affected.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { entries } from "../../db/schema/entries.js";
@@ -17,7 +14,7 @@ import * as schema from "../../db/schema/index.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { factoriesFor } from "../factories.js";
-import { applyCoreTestSchema, compileSchemaSql } from "../harness.js";
+import { applyCoreTestSchema, CORE_MIGRATIONS } from "../harness.js";
 import { describeContract } from "./case.js";
 
 /** The adapter under test and the env its `connect` binds against. */
@@ -69,40 +66,20 @@ function withCoreSchema(
   });
 }
 
-// drizzle-kit's marker between two statements of one migration file. Every
-// drizzle migrator splits a file on it, so a statement is what runs whole.
-const BREAKPOINT = "--> statement-breakpoint";
-
-// The files `plumix migrate generate` writes for core alone, in journal
-// order: drizzle-kit's create-from-empty diff, then core's raw SQL
-// migrations numbered behind it.
-async function generatedMigrationSet(): Promise<string[]> {
-  const tables = await compileSchemaSql(schema);
-  const plan = planRawSqlMigrations(
-    CORE_SQL_MIGRATIONS,
-    {
-      version: "7",
-      dialect: "sqlite",
-      entries: [
-        { idx: 0, version: "6", when: 1, tag: "0000_core", breakpoints: true },
-      ],
-    },
-    2,
+// Core's shipped history as drizzle's migrator reads it: one statement per
+// breakpoint, in journal order. Every drizzle migrator runs a statement whole.
+function shippedMigrationStatements(): string[] {
+  return readMigrationFiles({ migrationsFolder: CORE_MIGRATIONS }).flatMap(
+    (migration) => migration.sql,
   );
-  return [
-    tables.join(`\n${BREAKPOINT}\n`),
-    ...plan.emit.map((migration) => migration.sql),
-  ];
 }
 
-async function applyMigrationSet(
+async function applyStatements(
   db: Db,
-  files: readonly string[],
+  statements: readonly string[],
 ): Promise<void> {
-  for (const file of files) {
-    for (const statement of file.split(BREAKPOINT)) {
-      if (statement.trim() !== "") await db.run(sql.raw(statement));
-    }
+  for (const statement of statements) {
+    if (statement.trim() !== "") await db.run(sql.raw(statement));
   }
 }
 
@@ -297,10 +274,10 @@ export const databaseContractCases: readonly Case[] = [
   {
     // A trigger body holds semicolons of its own, so a driver that splits a
     // statement on them, or runs only the first, loses the change feed.
-    name: "a generated migration set leaves the change-feed triggers in place",
+    name: "core's shipped history leaves the change-feed triggers in place",
     run: (options) =>
       withDb(options, async (db) => {
-        await applyMigrationSet(db, await generatedMigrationSet());
+        await applyStatements(db, shippedMigrationStatements());
 
         expect(
           await db.all(

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { AppContext } from "plumix/plugin";
 import type { Entry, NewEntry } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
@@ -8,7 +9,8 @@ import {
   factoriesFor,
 } from "plumix/test";
 
-import * as schema from "../db/schema.js";
+// The history this package ships, at its root.
+const migrations = fileURLToPath(new URL("../../migrations", import.meta.url));
 
 export type CommentsTestDb = DispatcherHarness["db"];
 
@@ -36,12 +38,12 @@ export async function seedPublishedPost(
 }
 
 /**
- * Layer the plugin's `comments` table onto an existing core test db
- * (e.g. the one inside `createDispatcherHarness`). The FKs reference core
- * `entries`/`users`, which the core schema already created.
+ * Apply the plugin's shipped migration history onto an existing core test
+ * db (e.g. the one inside `createDispatcherHarness`). The FKs reference core
+ * `entries`/`users`, which core's history already created.
  */
 export async function applyCommentsSchema(db: CommentsTestDb): Promise<void> {
-  await applyTestSchema(db, schema);
+  await applyTestSchema(db, migrations);
 }
 
 /**

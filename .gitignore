@@ -45,8 +45,6 @@ packages/runtimes/node/playground/data/
 # bun runtime playground: the same
 packages/runtimes/bun/playground/data/
 
-# drizzle-kit generated migrations (committed under packages once a release flow is in place)
-.drizzle/
 .output/
 # `plumix migrate generate` output in playgrounds + examples — generated
 # fresh from the current schema at e2e/dev/build time, never committed, so

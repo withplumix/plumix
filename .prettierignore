@@ -12,3 +12,8 @@ packages/create-plumix-app/base
 # pnpm owns this file's formatting; a `prettier --write` would fight the
 # next `pnpm install`.
 pnpm-lock.yaml
+
+# drizzle-kit writes a package's migration journal and snapshots in its own
+# format and reads them back on the next `db:generate`; they change only by
+# running it.
+packages/**/migrations/meta/

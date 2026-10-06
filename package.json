@@ -23,6 +23,7 @@
     "knip": "knip",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
+    "migrations:check": "node .github/scripts/migrations-check.mjs",
     "postinstall": "sherif",
     "publint": "turbo run publint",
     "release": "pnpm run build && changeset publish",

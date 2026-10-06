@@ -128,6 +128,10 @@ Each folder under `packages/runtimes/` runs a Plumix site on one runtime, using 
 - `plumix.e2e` is what the e2e suites and the scaffold smoke need: `start` serves the built output on `PORT`, `wipe` lists what a run deletes first, `database` says where the database ends up, and `cli` runs the `plumix` CLI (the package's bin by default).
 - An adapter proves itself with a `playground/` that runs the shared `runtimeSpec` from `plumix/test/playwright`. The scaffold smoke (`pnpm --filter create-plumix-app smoke:scaffold`) builds a project for each runtime, applies its migrations through `cli`, starts it, and requests `/`, the admin and the `auth/session` RPC.
 
+### Packages that own tables
+
+Core and each plugin that declares tables ships its own migration history in `migrations/` at the package root ([ADR 0027](docs/adr/0027-each-table-owner-ships-its-own-migration-history.md)). After changing a table, run `pnpm --filter <package> db:generate` and commit what it writes. DDL drizzle cannot express, like a trigger or a virtual table, goes in a hand-written migration: `pnpm --filter <package> exec drizzle-kit generate --custom --name <name>`. CI runs `pnpm migrations:check`, which regenerates every package's history and names each one whose `migrations/` changed. The unit-test harness builds its databases from these histories, so a suite runs the migrations a site would.
+
 ### The OG card engine
 
 `@plumix/plugin-og` declares its card engine at an exact version, so the copy a site installs is the one the raster suite renders with. `src/takumi.test.ts` fails if the declared and installed versions differ, and a bump goes through that raster suite.

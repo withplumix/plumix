@@ -1241,6 +1241,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.2(@vitest/browser@5.0.2)(vitest@5.0.2)
+      drizzle-kit:
+        specifier: catalog:drizzle
+        version: 0.31.11
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)
@@ -1467,6 +1470,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.2(@vitest/browser@5.0.2)(vitest@5.0.2)
+      drizzle-kit:
+        specifier: catalog:drizzle
+        version: 0.31.11
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)
@@ -1689,6 +1695,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.2(@vitest/browser@5.0.2)(vitest@5.0.2)
+      drizzle-kit:
+        specifier: catalog:drizzle
+        version: 0.31.11
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)
@@ -2253,6 +2262,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.2(@vitest/browser@5.0.2)(vitest@5.0.2)
+      drizzle-kit:
+        specifier: catalog:drizzle
+        version: 0.31.11
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)

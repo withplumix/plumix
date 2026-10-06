@@ -153,6 +153,7 @@
     "dist",
     "i18n-compile",
     "locales",
+    "migrations",
     "README.md",
     "LICENSE"
   ],
@@ -163,7 +164,7 @@
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
-    "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome --src src/blocks",

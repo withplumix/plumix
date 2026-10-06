@@ -43,9 +43,10 @@ function isContentRow(row: "new" | "old"): string {
 }
 
 /**
- * The DDL drizzle cannot express, shipped as a core raw SQL migration and
- * applied to every test database. One statement per entry — the callers that
- * apply these run them one at a time.
+ * The DDL drizzle cannot express, shipped as a core raw SQL migration and,
+ * statement for statement, as `migrations/0001_entry_change_feed.sql` in
+ * core's own history. One statement per entry — the callers that apply these
+ * run them one at a time.
  *
  * These triggers live on core's own `entries` table on purpose. drizzle emits
  * a table rebuild for ordinary schema changes — `CREATE TABLE __new_entries` /

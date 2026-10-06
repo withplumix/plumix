@@ -315,6 +315,10 @@ The platform-neutral object a runtime adapter produces — a `fetch`, optionally
 **Invocation**:
 What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
 
+**Migration history**:
+The ordered migrations that build the tables one owner declares — core, a plugin, or a site's own tables — shipped and committed with that owner and replayed by every database it reaches. Source its owner alone writes: it only grows, and nothing that applies it ever deletes or rewrites it. A site's database is built from every history its config pulls in, each migration applied once, in timestamp order.
+_Avoid_: migrations folder, `drizzle/` (a folder holds a history; it is not the concept)
+
 **Config slot**:
 A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot. Read at runtime as `ctx.config.<slot>`. A slot that binds to the platform is also connected as a service on the context (`ctx.storage`).
 

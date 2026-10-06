@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { AppContext } from "plumix/plugin";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
@@ -8,13 +9,16 @@ import type { NewAuditLogRow } from "./db/schema.js";
 import * as schema from "./db/schema.js";
 import { auditLog } from "./db/schema.js";
 
+// The history this package ships, at its root.
+const migrations = fileURLToPath(new URL("../migrations", import.meta.url));
+
 export type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
-/** In-memory db with only the plugin's own tables — no core schema. */
+/** In-memory db with only the plugin's own history applied — no core schema. */
 export async function createDb(): Promise<TestDb> {
   const client = createClient({ url: ":memory:" });
   const db = drizzle(client, { schema, casing: "snake_case" });
-  await applyTestSchema(db, schema);
+  await applyTestSchema(db, migrations);
   return db;
 }
 

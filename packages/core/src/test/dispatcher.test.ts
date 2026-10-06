@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
@@ -11,6 +11,14 @@ import { memoryKv } from "../runtime/memory-kv.js";
 import { createDispatcherHarness } from "./dispatcher.js";
 import { createTestDb } from "./harness.js";
 import { buildRequest } from "./request.js";
+
+// The app defers the RPC handler's module graph to its first RPC request
+// (`runtime/app.ts`), roughly 800ms cold. Loaded here, so that cost sits in a
+// hook rather than inside whichever test sends the first RPC, where a busy
+// runner pushed it past the 5s timeout.
+beforeAll(async () => {
+  await import("../rpc/build-handler.js");
+});
 
 describe("createDispatcherHarness db option", () => {
   test("a supplied database is the one requests run against", async () => {
