@@ -28,15 +28,17 @@ async function recordReveals(page: Page): Promise<void> {
   });
 }
 
-// The types of the current document's last revealed view transition. A
-// reveal without one throws here, which fails the test.
-async function lastRevealTypes(page: Page): Promise<string[]> {
+// The types of the current document's last revealed view transition, or null
+// while the document has not been revealed yet, so a poll keeps waiting. A
+// reveal without a transition throws here, which fails the test.
+async function lastRevealTypes(page: Page): Promise<string[] | null> {
   return page.evaluate(() => {
     const { transitions } = (
       globalThis as unknown as { __plumixReveals: RevealRecorder }
     ).__plumixReveals;
-    const [last] = transitions.slice(-1) as [RevealedTransition];
-    return [...last.types];
+    const last = transitions.at(-1);
+    if (last === undefined) return null;
+    return [...(last as RevealedTransition).types];
   });
 }
 
