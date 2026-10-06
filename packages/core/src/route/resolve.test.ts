@@ -2384,6 +2384,34 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     });
   });
 
+  function createPage(
+    h: DispatcherHarness,
+    authorId: number,
+    {
+      slug,
+      title,
+      status = "published",
+      content = TIPTAP_BODY,
+      parentId = null,
+    }: {
+      slug: string;
+      title: string;
+      status?: "published" | "draft";
+      content?: JsonObject;
+      parentId?: number | null;
+    },
+  ) {
+    return h.factory.entry.create({
+      type: "page",
+      slug,
+      title,
+      status,
+      content,
+      parentId,
+      authorId,
+    });
+  }
+
   async function seedComparison(
     options: {
       status?: "published" | "draft";
@@ -2397,14 +2425,11 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
       config: { plugins: [comparePlugin, ...(options.plugins ?? [])] },
     });
     const author = await h.seedUser("admin");
-    const page = await h.factory.entry.create({
-      type: "page",
+    const page = await createPage(h, author.id, {
       slug: "shared-comparison",
       title: "Shared Comparison",
-      content: options.content ?? TIPTAP_BODY,
-      status: options.status ?? "published",
-      authorId: author.id,
-      parentId: null,
+      status: options.status,
+      content: options.content,
     });
     return { h, author, page };
   }
@@ -2543,72 +2568,60 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     expect(await response.text()).toMatch(/<html[^>]*data-plumix-mode="edit"/);
   });
 
-  test("a fixed slug wins over a captured slug or path param", async () => {
-    const capturing = definePlugin("compare-capturing", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-        rewrite: { slug: "" },
-      });
-      ctx.registerRewriteRule("/compare/:slug", {
-        kind: "entry",
-        entryType: "page",
-        slug: "shared-comparison",
-      });
-      ctx.registerRewriteRule("/versus/:path*", {
-        kind: "entry",
-        entryType: "page",
-        slug: "shared-comparison",
-      });
-    });
-    const h = await createDispatcherHarness({
-      config: { plugins: [capturing] },
-    });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "page",
-      slug: "shared-comparison",
-      title: "Shared Comparison",
-      content: TIPTAP_BODY,
-      status: "published",
-      authorId: author.id,
-      parentId: null,
-    });
-    await h.factory.entry.create({
-      type: "page",
-      slug: "other",
-      title: "Other",
-      content: TIPTAP_BODY,
-      status: "published",
-      authorId: author.id,
-      parentId: null,
-    });
+  describe.each(["/compare/other", "/versus/other", "/versus/a/b"])(
+    "a fixed slug wins over a captured slug or path param",
+    (path) => {
+      test(`at ${path}`, async () => {
+        const capturing = definePlugin("compare-capturing", (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "" },
+          });
+          ctx.registerRewriteRule("/compare/:slug", {
+            kind: "entry",
+            entryType: "page",
+            slug: "shared-comparison",
+          });
+          ctx.registerRewriteRule("/versus/:path*", {
+            kind: "entry",
+            entryType: "page",
+            slug: "shared-comparison",
+          });
+        });
+        const h = await createDispatcherHarness({
+          config: { plugins: [capturing] },
+        });
+        const author = await h.seedUser("admin");
+        await createPage(h, author.id, {
+          slug: "shared-comparison",
+          title: "Shared Comparison",
+        });
+        await createPage(h, author.id, { slug: "other", title: "Other" });
 
-    for (const path of ["/compare/other", "/versus/other", "/versus/a/b"]) {
-      const response = await h.dispatch(
-        new Request(`https://cms.example${path}`),
-      );
+        const response = await h.dispatch(
+          new Request(`https://cms.example${path}`),
+        );
 
-      expect(response.status).toBe(200);
-      expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
-    }
-  });
+        expect(response.status).toBe(200);
+        expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
+      });
+    },
+  );
 
   test("a fixed slug names a nested entry without checking its ancestors", async () => {
-    const { h, author, page } = await seedComparison();
-    await h.db
-      .update(entries)
-      .set({ slug: "parent" })
-      .where(eq(entries.id, page.id));
-    const parent = page;
-    await h.factory.entry.create({
-      type: "page",
+    const h = await createDispatcherHarness({
+      config: { plugins: [comparePlugin] },
+    });
+    const author = await h.seedUser("admin");
+    const parent = await createPage(h, author.id, {
+      slug: "parent",
+      title: "Parent",
+    });
+    await createPage(h, author.id, {
       slug: "shared-comparison",
       title: "Nested Comparison",
-      content: TIPTAP_BODY,
-      status: "published",
-      authorId: author.id,
       parentId: parent.id,
     });
 
@@ -2622,14 +2635,10 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
 
   test("a preview token minted for another entry does not grant the named draft", async () => {
     const { h, author } = await seedComparison({ status: "draft" });
-    const other = await h.factory.entry.create({
-      type: "page",
+    const other = await createPage(h, author.id, {
       slug: "other-draft",
       title: "Other Draft",
-      content: TIPTAP_BODY,
       status: "draft",
-      authorId: author.id,
-      parentId: null,
     });
     const token = await createPreviewToken(h.db, {
       entryId: other.id,
