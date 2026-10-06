@@ -186,7 +186,7 @@
     "@oslojs/crypto": "catalog:oslojs",
     "@oslojs/encoding": "catalog:oslojs",
     "@oslojs/webauthn": "catalog:oslojs",
-    "@sindresorhus/slugify": "^3.0.0",
+    "@sindresorhus/slugify": "^3.0.1",
     "@tiptap/core": "catalog:tiptap",
     "@valibot/to-json-schema": "^1.7.1",
     "dompurify": "^3.4.16",
