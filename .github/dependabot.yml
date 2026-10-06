@@ -64,6 +64,13 @@ updates:
       testing-library:
         patterns:
           - "@testing-library/*"
+      # `@playwright/test` depends on an exact `playwright`; a bump of one alone
+      # installs two `playwright-core` copies and the e2e runner rejects
+      # `test.use()` from the other copy's module instance.
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/test"
       dnd-kit:
         patterns:
           - "@dnd-kit/*"

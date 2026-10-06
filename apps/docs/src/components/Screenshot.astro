@@ -30,15 +30,13 @@ if (!light || !dark || !alt) {
 const sizes = "(min-width: 45rem) 45rem, 100vw";
 ---
 
-{
-  /*
+{/*
     Starlight's utilities key off the `data-theme` attribute its inline script
     writes before first paint, so switching theme switches the image with no
     script of ours. The cost is that both captures ship and a browser fetches
     the hidden one too — hence `constrained`, so that second fetch takes a
     srcset variant near the display size rather than the full 2x capture.
-  */
-}
+  */}
 <Image
   src={light}
   alt={alt}
