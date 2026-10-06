@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { AuthNamespace } from "../context/app-context.js";
+import type { AdminBarNode } from "./types.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -22,6 +23,15 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
+// Every element the bar emits outside its node list.
+const BAR_TEST_IDS = [
+  "plumix-admin-bar",
+  "plumix-admin-bar-style",
+  "plumix-admin-bar-body-offset",
+  "plumix-admin-bar-signout-script",
+  "plumix-admin-bar-noscript",
+];
+
 describe("PlumixAdminBar", () => {
   test("renders nothing when user is null", () => {
     const hooks = new HookRegistry();
@@ -41,8 +51,96 @@ describe("PlumixAdminBar", () => {
     expect(html).toBe("");
   });
 
+  test("renders nothing for a subscriber, who may not use the admin", () => {
+    const subscriber = { ...user, role: "subscriber" };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: subscriber }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    for (const testId of BAR_TEST_IDS) {
+      expect(html).not.toContain(`data-testid="${testId}"`);
+    }
+  });
+
+  test("does not run admin_bar:nodes handlers for a subscriber", () => {
+    const subscriber = { ...user, role: "subscriber" };
+    const hooks = new HookRegistry();
+    const handler = vi.fn((nodes: readonly AdminBarNode[]) => nodes);
+    hooks.addFilter("admin_bar:nodes", handler, { plugin: "test" });
+
+    renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: subscriber }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test.each(["contributor", "admin"])("renders the bar for a %s", (role) => {
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider
+        value={{ registry: emptyRegistry, user: { ...user, role } }}
+      >
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    expect(html).toContain('data-testid="plumix-admin-bar"');
+  });
+
+  test("renders nothing when a filter empties the node list", () => {
+    const admin = { ...user, role: "admin" };
+    const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
+    hooks.addFilter("admin_bar:nodes", () => [], { plugin: "theme" });
+
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry, user: admin }}>
+        <PlumixAdminBar
+          hooks={hooks}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={entryTypes}
+        />
+      </PlumixProvider>,
+    );
+
+    for (const testId of BAR_TEST_IDS) {
+      expect(html).not.toContain(`data-testid="${testId}"`);
+    }
+  });
+
   test("renders the bar shell when user is populated", () => {
     const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
@@ -87,6 +185,7 @@ describe("PlumixAdminBar", () => {
 
   test("emits the inline CSS style block once and applies the .plumix-admin-bar class", () => {
     const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
@@ -116,6 +215,7 @@ describe("PlumixAdminBar", () => {
   // document `lang`/`dir` attributes.
   test("renders nav with an aria-label sourced from the bar catalog", () => {
     const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
@@ -134,6 +234,7 @@ describe("PlumixAdminBar", () => {
   test("sets the document lang attribute from the user's locale", () => {
     const ukUser = { ...user, meta: { locale: "uk" } };
     const hooks = new HookRegistry();
+    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user: ukUser }}>
