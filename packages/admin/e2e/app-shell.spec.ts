@@ -8,28 +8,29 @@ import {
   mockRpc,
 } from "./support/rpc-mock.js";
 
-// Records the types of every view transition the page starts, by wrapping
+type StartViewTransitionArg =
+  ViewTransitionUpdateCallback | StartViewTransitionOptions | undefined;
+
+// Records the argument of every view transition the page starts, by wrapping
 // `document.startViewTransition` before the bundle boots.
 async function recordViewTransitions(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const recorded: (readonly string[] | null)[] = [];
+    const recorded: StartViewTransitionArg[] = [];
     Object.assign(window, { __viewTransitions: recorded });
     const start = document.startViewTransition.bind(document);
-    document.startViewTransition = (
-      update?: ViewTransitionUpdateCallback | StartViewTransitionOptions,
-    ) => {
-      recorded.push(
-        typeof update === "object" ? [...(update.types ?? [])] : null,
-      );
+    document.startViewTransition = (update?: StartViewTransitionArg) => {
+      recorded.push(update);
       return start(update);
     };
   });
 }
 
-function viewTransitions(page: Page): Promise<(readonly string[] | null)[]> {
+// The recorded arguments as they cross into the test: an options object keeps
+// its `types`, a bare update callback arrives as `undefined`.
+function viewTransitions(page: Page): Promise<StartViewTransitionArg[]> {
   return page.evaluate(
     () =>
-      (window as unknown as { __viewTransitions: (readonly string[] | null)[] })
+      (window as unknown as { __viewTransitions: StartViewTransitionArg[] })
         .__viewTransitions,
   );
 }
@@ -56,7 +57,9 @@ test.describe("admin navigation transitions", () => {
     await page.getByTestId("dashboard-tile-post-link").click();
     await expect(page.getByTestId("content-list-heading")).toBeVisible();
 
-    expect(await viewTransitions(page)).toEqual([["nav-forward"]]);
+    expect(await viewTransitions(page)).toMatchObject([
+      { types: ["nav-forward"] },
+    ]);
   });
 
   test("browser back starts one view transition typed nav-back", async ({
@@ -70,9 +73,9 @@ test.describe("admin navigation transitions", () => {
     await page.goBack();
     await expect(page.getByTestId("dashboard-tile-post-link")).toBeVisible();
 
-    expect(await viewTransitions(page)).toEqual([
-      ["nav-forward"],
-      ["nav-back"],
+    expect(await viewTransitions(page)).toMatchObject([
+      { types: ["nav-forward"] },
+      { types: ["nav-back"] },
     ]);
   });
 
@@ -95,7 +98,9 @@ test.describe("admin navigation transitions", () => {
     await expect(page).toHaveURL(/q=quantum/);
     await refetch;
 
-    expect(await viewTransitions(page)).toEqual([["nav-forward"]]);
+    expect(await viewTransitions(page)).toMatchObject([
+      { types: ["nav-forward"] },
+    ]);
   });
 
   test("a user who prefers reduced motion navigates with no view transition", async ({
@@ -116,17 +121,14 @@ test.describe("admin navigation transitions", () => {
   }) => {
     await openDashboard(page);
 
-    const names = await page.evaluate(() =>
-      ['[data-slot="sidebar-container"]', '[data-slot="shell-header"]'].map(
-        (selector) => {
-          const element = document.querySelector(selector);
-          return element === null
-            ? null
-            : getComputedStyle(element).viewTransitionName;
-        },
-      ),
-    );
-    expect(names).toEqual(["plumix-admin-sidebar", "plumix-admin-header"]);
+    const sidebarName = await page
+      .locator('[data-slot="sidebar-container"]')
+      .evaluate((element) => getComputedStyle(element).viewTransitionName);
+    const headerName = await page
+      .locator('[data-slot="shell-header"]')
+      .evaluate((element) => getComputedStyle(element).viewTransitionName);
+    expect(sidebarName).toBe("plumix-admin-sidebar");
+    expect(headerName).toBe("plumix-admin-header");
 
     const pointerEvents = await page.evaluate(
       () =>
