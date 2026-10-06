@@ -684,30 +684,15 @@ describe("compileRouteMap", () => {
 describe("compileRouteMap — framework routes a site turns off", () => {
   const ALL_ON = { author: true, date: true, search: true } as const;
 
-  function frameworkRules(registry: ReturnType<typeof createPluginRegistry>) {
+  function frameworkPatterns(
+    registry: ReturnType<typeof createPluginRegistry>,
+  ) {
     return compileRouteMap(registry)
       .filter((rule) => FRAMEWORK_PATTERNS.has(rule.rawPattern))
       .map((rule) => rule.rawPattern);
   }
 
-  test("with every family on, core compiles its rules in the documented order", async () => {
-    expect(frameworkRules(await buildRegistry([]))).toEqual([
-      "/page/:page(\\d+)",
-      "/search/:query/page/:page(\\d+)",
-      "/search/:query",
-      "/search",
-      "/authors/:slug/page/:page(\\d+)",
-      "/authors/:slug",
-      "/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})/page/:page(\\d+)",
-      "/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})",
-      "/:year(\\d{4})/:month(\\d{2})/page/:page(\\d+)",
-      "/:year(\\d{4})/:month(\\d{2})",
-      "/:year(\\d{4})/page/:page(\\d+)",
-      "/:year(\\d{4})",
-    ]);
-  });
-
-  test("with no routes key, the whole map keeps every rule, intent and priority in today's order", async () => {
+  test("with no routes key, the whole map keeps every rule, intent and priority in order", async () => {
     const registry = await buildRegistry([
       definePlugin("site", (ctx) => {
         ctx.registerEntryType("post", {
@@ -788,7 +773,7 @@ describe("compileRouteMap — framework routes a site turns off", () => {
       ],
       { ...ALL_ON, date: false },
     );
-    expect(frameworkRules(registry)).toEqual([
+    expect(frameworkPatterns(registry)).toEqual([
       "/page/:page(\\d+)",
       "/search/:query/page/:page(\\d+)",
       "/search/:query",

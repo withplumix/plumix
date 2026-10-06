@@ -99,16 +99,9 @@ export function compileRouteMap(
 ): readonly RouteRule[] {
   const { frameworkRoutes } = registry;
   const rules: CompiledRule[] = [
-    {
-      // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
-      // The front page's later pages: the pagination suffix under the root.
-      pattern: new URLPattern({ pathname: FRAMEWORK_PAGINATION_SUFFIX }),
-      rawPattern: FRAMEWORK_PAGINATION_SUFFIX,
-      intent: { kind: "frontPage" },
-      priority: FRAMEWORK_ROUTE_PRIORITY,
-      registeredBy: null,
-      isPermalinkRoute: true,
-    },
+    // `(\d+)` lets a hierarchical pages plugin keep `/page/:path+`.
+    // The front page's later pages: the pagination suffix under the root.
+    ...frameworkRules({ kind: "frontPage" }, [FRAMEWORK_PAGINATION_SUFFIX]),
     // A family the site turned off is never compiled, not even as a redirect,
     // so its URLs are free for whatever else matches (ADR 0029).
     // Paginated variant goes first so `/search/foo/page/2` doesn't
