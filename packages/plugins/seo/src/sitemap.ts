@@ -392,11 +392,14 @@ export function sitemapScopes(
   }
   for (const archive of plugins.archiveTypes.values()) {
     const sitemap = archive.sitemap;
+    if (!sitemap) continue;
+    // Checked before the gate below: the name is declared whether or not the
+    // archive is gated today, and lifting a gate must not surface the clash.
+    assertContributable(archive.name, archive.registeredBy ?? "core");
     // An archive carries its policy directly rather than under a `default`,
     // and `plugin-feeds` already refuses a policied archive's feed on the
     // same ground — a URL list is no more publishable than a feed.
-    if (!sitemap || !isCrawlableType(archive)) continue;
-    assertContributable(archive.name, archive.registeredBy ?? "core");
+    if (!isCrawlableType(archive)) continue;
     add({
       ref: { kind: "contributed", name: archive.name },
       tags: sitemap.tags ?? [],

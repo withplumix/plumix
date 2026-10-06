@@ -352,7 +352,7 @@ Turning **Block AI crawlers** on adds one more group to the file, naming the cra
 
 A scope whose entry type or taxonomy is held out of the index leaves the set entirely — it is absent from the index and its sub-sitemap serves an empty `<urlset>`.
 
-One seam is worth knowing about. An archive registered with `registerArchiveType` answers to neither per-type nor per-taxonomy default: a contributed scope answers to the site's [`sitemaps` policy](#sitemap-policy) — so an archive listing permalinks of a `noindex` type would advertise pages that say `noindex` until the site drops it there.
+An archive registered with `registerArchiveType` is a contributed scope, and a contributed scope answers to the site's [`sitemaps` policy](#sitemap-policy). An archive listing permalinks of a `noindex` type therefore advertises pages that say `noindex` until the site sets its scope to `false` there.
 
 Each scope's sub-sitemap answers at a URL named by its kind, so an entry type and a taxonomy sharing a name each get one:
 

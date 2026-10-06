@@ -970,6 +970,26 @@ describe("sitemap scopes at boot", () => {
       ).rejects.toThrow(new RegExp(`"claimer".*"${name}"`));
     },
   );
+
+  test("a gated archive's reserved scope name fails too", async () => {
+    // Gating keeps the scope out of the index today, but the name is declared
+    // either way, and lifting the gate must not be what surfaces the clash.
+    const gatedClaimer = definePlugin("gated-claimer", (ctx) => {
+      ctx.registerArchiveType("entries", {
+        routes: ["/gated/:slug"],
+        access: membersOnlyPolicy,
+        resolve: () => ({
+          data: { kind: "archiveType", name: "entries" },
+          title: "Gated",
+        }),
+        sitemap: { count: () => 0, urls: () => [] },
+      });
+    });
+
+    await expect(createHarness([gatedClaimer])).rejects.toThrow(
+      /"gated-claimer".*"entries"/,
+    );
+  });
 });
 
 describe("a sitemap at the edge", () => {
