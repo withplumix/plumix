@@ -79,6 +79,7 @@ export const agentPhaseRunner =
   async (phase, { model, effort }, options) => {
     const clock = startClock();
     const logFile = journal.logPath(phase);
+    let waitedMs = 0;
 
     try {
       const result = await waitOutALimit(
@@ -96,10 +97,12 @@ export const agentPhaseRunner =
         {
           now: () => new Date(),
           pause: sleep,
-          onWait: (lifts) =>
+          onWait: (lifts, waitMs) => {
+            waitedMs += waitMs;
             say(
               `    ${phase} hit the session limit; waiting until ${lifts.toISOString()} to run it again`,
-            ),
+            );
+          },
         },
       );
       const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
@@ -116,7 +119,8 @@ export const agentPhaseRunner =
         model,
         effort,
         startedAt: clock.startedAt,
-        durationMs: clock.elapsedMs(),
+        durationMs: clock.elapsedMs() - waitedMs,
+        ...(waitedMs > 0 && { waitedMs }),
         outcome: "ok",
         iterations: result.iterations.length,
         completionSignal: result.completionSignal,

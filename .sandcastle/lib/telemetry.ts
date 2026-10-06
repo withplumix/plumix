@@ -52,6 +52,7 @@ export interface PhaseRecord {
   readonly effort?: string;
   readonly startedAt: string;
   readonly durationMs: number;
+  readonly waitedMs?: number;
   readonly outcome: "ok" | "fail" | "error" | "skipped";
   readonly detail?: string;
   readonly iterations?: number;
@@ -214,7 +215,10 @@ const phaseNote = (record: PhaseRecord): string => {
     return `${total} findings (${high}h/${medium}m/${low}l)${parsed ? "" : " — UNPARSED"}`;
   }
   if (record.commits === undefined) return "";
-  return `${record.commits} commits${record.completionSignal ? "" : ", no completion signal"}`;
+  const waited = record.waitedMs
+    ? `, waited ${asSeconds(record.waitedMs)} on a limit`
+    : "";
+  return `${record.commits} commits${record.completionSignal ? "" : ", no completion signal"}${waited}`;
 };
 
 const asMarkdownRow = (record: PhaseRecord): string => {

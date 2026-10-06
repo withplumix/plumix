@@ -195,6 +195,29 @@ describe("Journal.record with a gate run's output", () => {
   });
 });
 
+describe("a phase that waited out a session limit", () => {
+  test("shows the wait beside its duration, so an idle hour is not read as work", () => {
+    const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));
+
+    journal.record({
+      phase: "implement",
+      kind: "agent",
+      model: "claude-opus-5-5",
+      startedAt: "2026-10-06T15:40:00.000Z",
+      durationMs: 300_000,
+      waitedMs: 1_845_000,
+      outcome: "ok",
+      completionSignal: "<promise>COMPLETE</promise>",
+      commits: 1,
+    });
+    journal.finish("shipped");
+
+    const summary = readFileSync(join(journal.dir, "summary.md"), "utf8");
+    expect(summary).toContain("| 300.0s |");
+    expect(summary).toContain("1 commits, waited 1845.0s on a limit");
+  });
+});
+
 const readJournal = (journal: Journal): { phases: PhaseRecord[] } =>
   JSON.parse(readFileSync(join(journal.dir, "run.json"), "utf8")) as {
     phases: PhaseRecord[];

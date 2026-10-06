@@ -38,7 +38,7 @@ const TIMES_A_STEP_POLLS_FOR_THE_MODEL = 20;
 interface LimitClock {
   readonly now: () => Date;
   readonly pause: (ms: number) => Promise<void>;
-  readonly onWait?: (lifts: Date) => void;
+  readonly onWait?: (lifts: Date, waitMs: number) => void;
 }
 
 export const waitOutALimit = async <T>(
@@ -56,17 +56,20 @@ export const waitOutALimit = async <T>(
         polls < TIMES_A_STEP_POLLS_FOR_THE_MODEL
       ) {
         polls += 1;
-        onWait?.(new Date(now().getTime() + POLL_FOR_THE_MODEL_EVERY_MS));
+        onWait?.(
+          new Date(now().getTime() + POLL_FOR_THE_MODEL_EVERY_MS),
+          POLL_FOR_THE_MODEL_EVERY_MS,
+        );
         await pause(POLL_FOR_THE_MODEL_EVERY_MS);
         continue;
       }
       const lifts = whenTheLimitLifts(String(error), now());
       if (!lifts || waits === TIMES_A_STEP_WAITS_OUT_A_LIMIT) throw error;
       waits += 1;
-      onWait?.(lifts);
-      await pause(
-        lifts.getTime() - now().getTime() + A_MINUTE_PAST_THE_RESET_MS,
-      );
+      const waitMs =
+        lifts.getTime() - now().getTime() + A_MINUTE_PAST_THE_RESET_MS;
+      onWait?.(lifts, waitMs);
+      await pause(waitMs);
     }
   }
 };
