@@ -5,6 +5,7 @@ import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
+import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
@@ -71,9 +72,9 @@ const photoPlugin = definePlugin("photos", (ctx) => {
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
-function createHarness(): Promise<DispatcherHarness> {
+function createHarness(options?: SeoOptions): Promise<DispatcherHarness> {
   return createDispatcherHarness({
-    config: { plugins: [blogPlugin, seo()], theme: theme },
+    config: { plugins: [blogPlugin, seo(options)], theme: theme },
   });
 }
 
@@ -180,6 +181,16 @@ describe("head meta", () => {
     expect(head).toContain(
       '<meta property="article:author" content="Ada Lovelace"/>',
     );
+  });
+
+  test("with article tags off, an entry page carries none and stays an article", async () => {
+    const h = await createHarness({ articleTags: false });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).not.toContain('property="article:');
+    expect(head).toContain('<meta property="og:type" content="article"/>');
   });
 
   test("an archive page is a website and carries no article facts", async () => {
@@ -757,15 +768,21 @@ describe("a page that was not found", () => {
     expect(head).not.toContain("og:url");
   });
 
-  test("still carries the rest of the set", async () => {
+  test("carries the robots directive and no other tag of this plugin's", async () => {
     const h = await createHarness();
     await seedSettings(h, "site", { title: "Demo", tagline: "A tagline" });
+    await seedSettings(h, "seo", {
+      default_og_image: "https://cms.example/og.png",
+    });
+    await seedSettings(h, "seo_verification", { google: "g-token" });
 
     const head = await dispatch404(h);
 
-    expect(head).toContain('<meta property="og:site_name" content="Demo"/>');
-    expect(head).toContain('<meta name="description" content="A tagline"/>');
-    expect(head).toContain('<meta property="og:type" content="website"/>');
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+    expect(head).not.toContain('name="description"');
+    expect(head).not.toContain('property="og:');
+    expect(head).not.toContain('name="twitter:');
+    expect(head).not.toContain("google-site-verification");
   });
 
   test("a site that asks for it can index them", async () => {

@@ -67,6 +67,23 @@ export { Breadcrumbs, breadcrumbTrail } from "./breadcrumbs.js";
 export interface SeoOptions {
   /** Which entry types and taxonomies carry the per-entry SEO box. */
   readonly metaBox?: SeoMetaBoxOptions;
+  /**
+   * Serve `/llms.txt`. On by default; `false` leaves the path unclaimed, so it
+   * 404s or a site plugin can answer it, and `seo:llms-txt` never fires.
+   */
+  readonly llmsTxt?: boolean;
+  /**
+   * Write `article:published_time`, `article:modified_time` and
+   * `article:author` on an entry page. On by default; `false` drops the whole
+   * `article:*` family, while `og:type` still says `article`.
+   */
+  readonly articleTags?: boolean;
+  /**
+   * Build the JSON-LD graph and append it as an `application/ld+json` script.
+   * On by default; `false` builds nothing, so no `seo:schema:*` filter fires.
+   * {@link Breadcrumbs} and {@link breadcrumbTrail} still work.
+   */
+  readonly structuredData?: boolean;
 }
 
 /**
@@ -81,10 +98,11 @@ export interface SeoOptions {
  * flag reaches the head and the sitemap through one predicate, so a page
  * cannot claim `noindex` while still being listed.
  *
- * Every indexable page also carries a cross-referenced structured-data graph —
- * website, publisher, page, article, breadcrumbs, image and author, each
- * addressable by URL fragment — which a plugin can narrow, reshape or replace
- * through the three `seo:schema:*` filters. {@link Breadcrumbs} draws the same
+ * Unless `structuredData` is off, every indexable page also carries a
+ * cross-referenced structured-data graph — website, publisher, page, article,
+ * breadcrumbs, image and author, each addressable by URL fragment — which a
+ * plugin can narrow, reshape or replace through the three `seo:schema:*`
+ * filters. {@link Breadcrumbs} draws the same
  * trail the graph publishes.
  *
  * Every tag is gap-filled — a theme or another plugin that set the same key
@@ -99,6 +117,10 @@ export interface SeoOptions {
  * ```
  */
 export function seo(options: SeoOptions = {}): PluginDescriptor {
+  const headOptions = {
+    articleTags: options.articleTags ?? true,
+    structuredData: options.structuredData ?? true,
+  };
   return definePlugin("seo", {
     // The chunk the SERP preview's field renderer ships in. Without it the
     // preview falls through to the admin's text-input fallback.
@@ -106,7 +128,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     i18n: PLUGIN_I18N_SLOT,
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
-      registerSeoRoutes(ctx);
+      registerSeoRoutes(ctx, { llmsTxt: options.llmsTxt ?? true });
       registerIndexNow(ctx);
       // Declared here so the bundler synthesises the admin-chunk registration.
       ctx.registerFieldType({
@@ -120,7 +142,12 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
       // gap-filler that ran mid-chain would fill a key a later subscriber was
       // about to set, and that subscriber appending to the manifest would then
       // put two of the same tag on the page rather than override one.
-      ctx.addFilter("render:document", applySeoHead, { priority: LAST });
+      ctx.addFilter(
+        "render:document",
+        (manifest, data, appCtx, title) =>
+          applySeoHead(manifest, data, appCtx, title, headOptions),
+        { priority: LAST },
+      );
     },
     // Each of these is scoped to what the site registered, so it waits for
     // every plugin's `setup` to have registered it.

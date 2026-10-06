@@ -56,6 +56,22 @@ export default plumix({
 });
 ```
 
+## Options
+
+Every option is optional. Three of them switch off a default, for a site whose head or root documents already say what the plugin would add. Each one defaults to `true`, so a site that sets none of them gets everything below.
+
+| Option           | `false` removes                                                                                                                                                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `llmsTxt`        | The [`/llms.txt`](#llmstxt) route. The path falls through to the content router and 404s, or a site plugin can register its own `/llms.txt` without a conflict. `seo:llms-txt` never fires.                                                                    |
+| `articleTags`    | `article:published_time`, `article:modified_time` and `article:author` on an entry page. `og:type` still says `article`.                                                                                                                                       |
+| `structuredData` | The [structured-data graph](#structured-data). It is never built, no `application/ld+json` script is appended, and none of the `seo:schema:*` filters fire. [`Breadcrumbs` and `breadcrumbTrail`](#breadcrumbs) still work, because a theme calls them itself. |
+
+```ts no-typecheck title="plumix.config.ts"
+seo({ llmsTxt: false, articleTags: false, structuredData: false });
+```
+
+`metaBox` is the fourth; [Scope is derived, not configured](#scope-is-derived-not-configured) covers it.
+
 ## What lands in the head
 
 Every public page gets:
@@ -66,7 +82,9 @@ Every public page gets:
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
 - One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable.
 
-A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`. An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
+A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`, unless the site set [`articleTags: false`](#options). An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
+
+A page that was not found is the exception: it carries the `robots` directive and nothing else from this plugin — no description, no `og:*`, no `twitter:*`, no verification tags and no structured data. The URL resolved to nothing, so there is no page to describe or share. The directive still follows **Index pages that were not found**.
 
 `og:title` is the title core resolved for the page — an entry's title with its shortcodes expanded, an archive's plural label, `Search: <query>`, or the title a `registerArchiveType` resolver returned. `og:url` is the same canonical URL core's `<link rel="canonical">` and its redirect normalizer resolve, so the page cannot contradict where core sends traffic.
 

@@ -61,6 +61,10 @@ export interface HeadInputs {
   readonly published: Date | null;
   readonly modified: Date | null;
   readonly author: string | null;
+  /** Whether to write the `article:*` tags at all; a site can turn them off. */
+  readonly articleTags: boolean;
+  /** A page that resolved to nothing: it carries the robots directive alone. */
+  readonly errorPage: boolean;
   /** One entry per engine the site owner configured. */
   readonly verification: readonly VerificationTag[];
 }
@@ -104,43 +108,49 @@ export function seoHeadMeta(
     }
   };
 
-  addName("description", inputs.description);
-  addName("robots", robotsDirective(inputs));
-  // Ownership proofs, not page copy — each engine reads its own name, and a
-  // theme that already declared one keeps it like any other tag.
-  for (const tag of inputs.verification) addName(tag.name, tag.content);
-  // An image with no usable url is no image: every tag below hangs off it.
-  const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
-  addName("twitter:card", image ? "summary_large_image" : "summary");
-  addProperty("og:title", inputs.searchTitle ?? inputs.title);
-  addProperty("og:type", inputs.ogType);
-  addProperty("og:url", inputs.canonical);
-  addProperty("og:site_name", inputs.siteName);
-  addProperty("og:description", inputs.description);
-  addProperty("og:locale", inputs.ogLocale);
-  // Only an `article` carries them, which is the one page kind that has them.
-  if (inputs.ogType === "article") {
-    addProperty(
-      "article:published_time",
-      inputs.published?.toISOString() ?? null,
-    );
-    addProperty(
-      "article:modified_time",
-      inputs.modified?.toISOString() ?? null,
-    );
-    addProperty("article:author", inputs.author);
-  }
-  // The image tags describe one picture, so they travel as a group: a template
-  // that declared its own `og:image` owns it, and a size or twitter mirror
-  // appended beside it would describe some other image.
-  if (image && !hasProperty(existing, "og:image")) {
-    addProperty("og:image", image.url);
-    addProperty("og:image:width", image.width?.toString() ?? null);
-    addProperty("og:image:height", image.height?.toString() ?? null);
-    addName("twitter:image", image.url);
-    const alt = nonEmpty(image.alt);
-    addProperty("og:image:alt", alt);
-    addName("twitter:image:alt", alt);
+  // A URL that resolved to nothing has no page to describe or share and no
+  // site to vouch for, so all it says is whether to index it.
+  if (inputs.errorPage) {
+    addName("robots", robotsDirective(inputs));
+  } else {
+    addName("description", inputs.description);
+    addName("robots", robotsDirective(inputs));
+    // Ownership proofs, not page copy — each engine reads its own name, and a
+    // theme that already declared one keeps it like any other tag.
+    for (const tag of inputs.verification) addName(tag.name, tag.content);
+    // An image with no usable url is no image: every tag below hangs off it.
+    const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
+    addName("twitter:card", image ? "summary_large_image" : "summary");
+    addProperty("og:title", inputs.searchTitle ?? inputs.title);
+    addProperty("og:type", inputs.ogType);
+    addProperty("og:url", inputs.canonical);
+    addProperty("og:site_name", inputs.siteName);
+    addProperty("og:description", inputs.description);
+    addProperty("og:locale", inputs.ogLocale);
+    // Only an `article` carries them, the one page kind that has them.
+    if (inputs.articleTags && inputs.ogType === "article") {
+      addProperty(
+        "article:published_time",
+        inputs.published?.toISOString() ?? null,
+      );
+      addProperty(
+        "article:modified_time",
+        inputs.modified?.toISOString() ?? null,
+      );
+      addProperty("article:author", inputs.author);
+    }
+    // The image tags describe one picture, so they travel as a group: a
+    // template that declared its own `og:image` owns it, and a size or twitter
+    // mirror appended beside it would describe some other image.
+    if (image && !hasProperty(existing, "og:image")) {
+      addProperty("og:image", image.url);
+      addProperty("og:image:width", image.width?.toString() ?? null);
+      addProperty("og:image:height", image.height?.toString() ?? null);
+      addName("twitter:image", image.url);
+      const alt = nonEmpty(image.alt);
+      addProperty("og:image:alt", alt);
+      addName("twitter:image:alt", alt);
+    }
   }
 
   // Written here rather than left to core's own gap-filler, which runs after
@@ -188,6 +198,12 @@ function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
   );
 }
 
+/** What the site turned off when it installed the plugin. */
+export interface SeoHeadOptions {
+  readonly articleTags: boolean;
+  readonly structuredData: boolean;
+}
+
 /**
  * Write this page's head. Reads the site settings and the subject's own SEO
  * answers, decides indexability once through {@link indexable}, then gap-fills
@@ -198,6 +214,7 @@ export async function applySeoHead(
   data: TemplateData,
   ctx: AppContext,
   title: string,
+  options: SeoHeadOptions,
 ): Promise<DocumentManifest> {
   // `loadSeoSettings` reads the `site` group too, so this pair is one query.
   const [site, seoSettings, verification] = await Promise.all([
@@ -252,6 +269,8 @@ export async function applySeoHead(
     published,
     modified,
     author: byline ? (byline.name ?? byline.slug) : null,
+    articleTags: options.articleTags,
+    errorPage: kind === "error",
     verification,
   });
 
@@ -260,7 +279,14 @@ export async function applySeoHead(
   // whose robots directive say different things about it. Nor does a URL that
   // resolved to nothing, which has no subject to describe and no canonical to
   // hang one off.
-  if (canonical === null || !decision.indexable || hasJsonLd(manifest.script)) {
+  // A site that turned the graph off gets none built, so no `seo:schema:*`
+  // subscriber runs.
+  if (
+    !options.structuredData ||
+    canonical === null ||
+    !decision.indexable ||
+    hasJsonLd(manifest.script)
+  ) {
     return withMeta;
   }
 

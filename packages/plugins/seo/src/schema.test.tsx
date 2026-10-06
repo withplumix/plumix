@@ -5,7 +5,7 @@ import type { TemplateData } from "plumix/theme";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SchemaPiece } from "./schema.js";
 import { Breadcrumbs } from "./breadcrumbs.js";
@@ -452,6 +452,22 @@ describe("the three filter tiers", () => {
     await seedPost(h);
 
     expect(await headAt(h, POST_URL)).not.toContain("application/ld+json");
+  });
+
+  test("with structured data off, no graph is built or emitted", async () => {
+    const subscriber = vi.fn((graph: readonly SchemaPiece[]) => graph);
+    const watcher = definePlugin("watch-graph", (ctx) => {
+      ctx.addFilter("seo:schema:graph", subscriber);
+    });
+    const h = await createHarness([
+      blogPlugin,
+      seo({ structuredData: false }),
+      watcher,
+    ]);
+    await seedPost(h);
+
+    expect(await headAt(h, POST_URL)).not.toContain("application/ld+json");
+    expect(subscriber).not.toHaveBeenCalled();
   });
 });
 
