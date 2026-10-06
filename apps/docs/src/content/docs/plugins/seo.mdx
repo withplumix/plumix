@@ -436,7 +436,7 @@ ctx.registerSitemap("locations", {
 });
 ```
 
-Its sub-sitemap answers at `/sitemap-locations-<page>.xml`. `registerSitemap` exists on the setup context only while seo is installed, so a plugin that calls it declares `@plumix/plugin-seo` as an optional peer. An archive registered with `registerArchiveType` that wants a sitemap calls it the same way, under the archive's name.
+Its sub-sitemap answers at `/sitemap-locations-<page>.xml`. `registerSitemap` exists on the setup context only while seo is installed, so a plugin that calls it declares `@plumix/plugin-seo` as an optional peer. An archive registered with `registerArchiveType` that wants a sitemap calls it the same way, under the archive's name. Seo does not read the archive, so an `access` policy on it does not hold the sitemap out: a source lists only URLs the public may see.
 
 ### Caching
 

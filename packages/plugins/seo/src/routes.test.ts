@@ -18,7 +18,13 @@ import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
+import type {
+  // @ts-expect-error — `SitemapSource` replaces the archive's sitemap type.
+  ArchiveTypeSitemap,
+  SeoOptions,
+  SitemapScopeRef,
+  SitemapSource,
+} from "./index.js";
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
 
@@ -448,18 +454,21 @@ describe("the sitemap index", () => {
     [1200, PAGE_TWO_NEWEST],
   ]);
 
-  // Written straight to the table: `entryFactory` takes no `updatedAt`, and
-  // the page windows under test are defined by it.
+  // The factory builds each row; only `updatedAt`, which it takes no param
+  // for and which defines the page windows under test, is set here, and the
+  // rows go in batches rather than one query each.
   async function seedPosts(h: DispatcherHarness, count: number): Promise<void> {
     const author = await h.seedUser("admin");
     const start = Date.parse("2026-01-01T00:00:00.000Z");
     const rows = Array.from({ length: count }, (_, i) => ({
-      type: "post",
-      slug: `post-${String(i)}`,
-      title: "Post",
-      status: "published" as const,
-      authorId: author.id,
-      publishedAt: new Date(start),
+      ...h.factory.entry.build({
+        type: "post",
+        slug: `post-${String(i)}`,
+        title: "Post",
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(start),
+      }),
       updatedAt: NEWEST_AT.get(i) ?? new Date(start + i * 60_000),
     }));
     for (let i = 0; i < rows.length; i += 100) {
@@ -1007,9 +1016,7 @@ describe("a contributed sitemap", () => {
   });
 
   test("the archive's sitemap type is gone from the package", () => {
-    // @ts-expect-error — `SitemapSource` replaces it.
-    type Removed = import("./index.js").ArchiveTypeSitemap;
-    expectTypeOf<Removed>().toBeAny();
+    expectTypeOf<ArchiveTypeSitemap>().toBeAny();
     expectTypeOf<SitemapSource>().not.toBeAny();
   });
 

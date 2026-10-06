@@ -585,8 +585,8 @@ export type ArchiveTitle =
 
 /**
  * The options every archive type shares, and a seam a plugin may augment.
- * An option only an archive with
- * `entries` can take goes on {@link ListingArchiveTypeOptions} instead.
+ * An option only an archive with `entries` can take goes on
+ * {@link ListingArchiveTypeOptions} instead.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
