@@ -117,6 +117,11 @@ export interface PlumixAuthInput {
    * admin login (`/_plumix/admin/login`) — set it to a theme-owned login page
    * so gated visitors sign in on the site rather than in the CMS.
    *
+   * The sign-in flows land here too, with a query parameter the page reads to
+   * render the outcome: a failed magic link (`magic_link_error=<code>`), a
+   * failed OAuth callback (`oauth_error=<code>`) and an email-change
+   * confirmation (`email_change_error=<code>` or `email_change_success=1`).
+   *
    * Point it at a page that is itself un-policied: a `loginPath` under a gated
    * entry type would bounce an anonymous visitor from the gate to the login and
    * straight back into the gate — a redirect loop. The default is un-policied.

@@ -8,17 +8,14 @@ import type { PlumixApp } from "./app.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { canAccessAdmin } from "../access/contract/rbac.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
-import {
-  gateToResponse,
-  policyForMatch,
-  resolveLoginPath,
-} from "../access/gate.js";
+import { gateToResponse, policyForMatch } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
 import {
   authenticateTraced,
   requestHasSession,
   tokenScopesOf,
 } from "../auth/authenticator.js";
+import { resolveLoginPath } from "../auth/config.js";
 import {
   hasCsrfHeader,
   hasMatchingOrigin,

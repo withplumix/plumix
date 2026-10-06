@@ -3,10 +3,9 @@ import type { AuthFlowApp } from "../flow-app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
+import { resolveLoginPath } from "../config.js";
 import { EmailChangeError } from "./errors.js";
 import { verifyEmailChange } from "./verify.js";
-
-const LOGIN_PATH = "/_plumix/admin/login";
 
 // Defensive bound on the inbound `token` query param. Same shape
 // as magic-link's verify route — protects against pathological
@@ -19,22 +18,22 @@ const MAX_TOKEN_LENGTH = 256;
  * Top-level navigation from the user's email client. Consumes the
  * single-use email-change token, atomically commits the new email
  * + resets `emailVerifiedAt`, invalidates every session for the
- * affected user, and redirects to `/admin` (the user re-auths via
- * passkey / magic-link / OAuth using the new email).
+ * affected user, and redirects to `auth.loginPath` with
+ * `email_change_success=1` (the user re-auths via passkey /
+ * magic-link / OAuth using the new email).
  *
- * Errors redirect to `/admin/login` with a typed
+ * Errors redirect to `auth.loginPath` with a typed
  * `email_change_error=<code>` so the login screen can render
  * actionable copy.
  */
 export async function handleEmailChangeVerify(
   ctx: AppContext,
-  _app: AuthFlowApp,
+  app: AuthFlowApp,
 ): Promise<Response> {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token");
-  if (!token) return loginError(ctx.config.basePath, "missing_token");
-  if (token.length > MAX_TOKEN_LENGTH)
-    return loginError(ctx.config.basePath, "token_invalid");
+  if (!token) return loginError(app, "missing_token");
+  if (token.length > MAX_TOKEN_LENGTH) return loginError(app, "token_invalid");
 
   let result: Awaited<ReturnType<typeof verifyEmailChange>>;
   try {
@@ -42,10 +41,10 @@ export async function handleEmailChangeVerify(
   } catch (error) {
     if (error instanceof EmailChangeError) {
       ctx.logger.warn("email_change_verify_rejected", { code: error.code });
-      return loginError(ctx.config.basePath, error.code);
+      return loginError(app, error.code);
     }
     ctx.logger.error("email_change_verify_failed", { error });
-    return loginError(ctx.config.basePath, "token_invalid");
+    return loginError(app, "token_invalid");
   }
 
   // The change is COMMITTED at this point — email + emailVerifiedAt
@@ -68,15 +67,13 @@ export async function handleEmailChangeVerify(
   } catch (error) {
     ctx.logger.error("email_change_hook_failed", { error });
   }
-  return redirectTo(
-    `${withBasePath(LOGIN_PATH, ctx.config.basePath)}?email_change_success=1`,
-  );
+  return redirectTo(`${loginPath(app)}?email_change_success=1`);
 }
 
-function loginError(basePath: string, code: EmailChangeErrorCode): Response {
-  return loginErrorRedirect(
-    withBasePath(LOGIN_PATH, basePath),
-    "email_change_error",
-    code,
-  );
+function loginError(app: AuthFlowApp, code: EmailChangeErrorCode): Response {
+  return loginErrorRedirect(loginPath(app), "email_change_error", code);
+}
+
+function loginPath(app: AuthFlowApp): string {
+  return withBasePath(resolveLoginPath(app.config.auth), app.config.basePath);
 }

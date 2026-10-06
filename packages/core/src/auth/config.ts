@@ -293,6 +293,14 @@ const authInputSchema = v.object({
   ),
 } satisfies { readonly [K in keyof PlumixAuthInput]?: v.GenericSchema });
 
+// Where a sign-in redirect sends a visitor when the operator sets no override.
+const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
+
+/** The configured login path, defaulting to the admin login. */
+export function resolveLoginPath(auth: PlumixAuthConfig): string {
+  return auth.loginPath ?? DEFAULT_LOGIN_PATH;
+}
+
 function toIssues(
   issues: readonly v.BaseIssue<unknown>[],
 ): PlumixConfigIssue[] {

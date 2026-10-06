@@ -281,3 +281,71 @@ describe("GET /_plumix/auth/verify-email", () => {
     expect(response.status).toBe(405);
   });
 });
+
+describe("GET /_plumix/auth/verify-email lands on auth.loginPath", () => {
+  test("a confirmed change redirects to the theme login with email_change_success=1", async () => {
+    const mailer = makeMailer();
+    const h = await createDispatcherHarness({
+      config: {
+        mailer,
+        auth: {
+          magicLink: { siteName: "Test" },
+          loginPath: "/account/login",
+        },
+      },
+    });
+    const seeded = await h.factory.user.create({
+      email: "alice@old.example",
+      role: "subscriber",
+    });
+    const { requestEmailChange } =
+      await import("../../../auth/email-change/index.js");
+    const { token } = await requestEmailChange(h.db, {
+      userId: seeded.id,
+      newEmail: "alice@new.example",
+      origin: "https://cms.example",
+      mailer,
+      siteName: "Test",
+    });
+
+    const response = await h.dispatch(
+      new Request(
+        `https://cms.example/_plumix/auth/verify-email?token=${token}`,
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "/account/login?email_change_success=1",
+    );
+  });
+
+  test("a failed change redirects to the theme login with email_change_error", async () => {
+    const h = await createDispatcherHarness({
+      config: { auth: { loginPath: "/account/login" } },
+    });
+    const response = await h.dispatch(
+      new Request(
+        "https://cms.example/_plumix/auth/verify-email?token=garbage",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "/account/login?email_change_error=token_invalid",
+    );
+  });
+
+  test("under a basePath the theme login carries the base path", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        basePath: "/custom-directory",
+        auth: { loginPath: "/account/login" },
+      },
+    });
+    const response = await h.dispatch(
+      new Request(
+        "https://cms.example/custom-directory/_plumix/auth/verify-email",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "/custom-directory/account/login?email_change_error=missing_token",
+    );
+  });
+});
