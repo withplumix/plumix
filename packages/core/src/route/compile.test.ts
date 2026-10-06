@@ -829,6 +829,22 @@ describe("compileRouteMap", () => {
     );
   });
 
+  test("a multi-segment hasArchive a framework route would serve is reported against hasArchive", async () => {
+    // `/authors/team` is the author archive for a user slugged "team".
+    const registry = await buildRegistry([
+      definePlugin("people", (ctx) => {
+        ctx.registerEntryType("person", {
+          label: "People",
+          isPublic: true,
+          hasArchive: "authors/team",
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(registry)).toThrow(
+      /Entry type "person" has hasArchive "authors\/team" .*framework route "\/authors\/:slug/,
+    );
+  });
+
   test("a hasArchive slugged search is reported against hasArchive", async () => {
     const registry = await buildRegistry([
       definePlugin("shop", (ctx) => {
