@@ -2606,45 +2606,43 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     expect(await response.text()).toMatch(/<html[^>]*data-plumix-mode="edit"/);
   });
 
-  describe.each(["/compare/other", "/versus/other", "/versus/a/b"])(
-    "a fixed slug wins over a captured slug or path param",
-    (path) => {
-      test(`at ${path}`, async () => {
-        const capturing = definePlugin("compare-capturing", (ctx) => {
-          ctx.registerEntryType("page", {
-            label: "Pages",
-            isPublic: true,
-            isHierarchical: true,
-            rewrite: { slug: "" },
-          });
-          ctx.registerRewriteRule("/compare/:slug", {
-            kind: "entry",
-            entryType: "page",
-            slug: "shared-comparison",
-          });
-          ctx.registerRewriteRule("/versus/:path*", {
-            kind: "entry",
-            entryType: "page",
-            slug: "shared-comparison",
-          });
+  test.each(["/compare/other", "/versus/other", "/versus/a/b"])(
+    "a fixed slug wins over a captured slug or path param at %s",
+    async (path) => {
+      const capturing = definePlugin("compare-capturing", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          rewrite: { slug: "" },
         });
-        const h = await createDispatcherHarness({
-          config: { plugins: [capturing] },
-        });
-        const author = await h.seedUser("admin");
-        await createPage(h, author.id, {
+        ctx.registerRewriteRule("/compare/:slug", {
+          kind: "entry",
+          entryType: "page",
           slug: "shared-comparison",
-          title: "Shared Comparison",
         });
-        await createPage(h, author.id, { slug: "other", title: "Other" });
-
-        const response = await h.dispatch(
-          new Request(`https://cms.example${path}`),
-        );
-
-        expect(response.status).toBe(200);
-        expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
+        ctx.registerRewriteRule("/versus/:path*", {
+          kind: "entry",
+          entryType: "page",
+          slug: "shared-comparison",
+        });
       });
+      const h = await createDispatcherHarness({
+        config: { plugins: [capturing] },
+      });
+      const author = await h.seedUser("admin");
+      await createPage(h, author.id, {
+        slug: "shared-comparison",
+        title: "Shared Comparison",
+      });
+      await createPage(h, author.id, { slug: "other", title: "Other" });
+
+      const response = await h.dispatch(
+        new Request(`https://cms.example${path}`),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("<h1>Shared Comparison</h1>");
     },
   );
 

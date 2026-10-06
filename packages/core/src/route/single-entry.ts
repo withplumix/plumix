@@ -24,7 +24,6 @@ import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 
 type EntryIntent = Extract<RouteIntent, { kind: "entry" }>;
 
-// How the entry is found: by its slug, or by walking a hierarchical path.
 type EntrySelector =
   | { readonly by: "slug"; readonly slug: string }
   | { readonly by: "path"; readonly path: string };
