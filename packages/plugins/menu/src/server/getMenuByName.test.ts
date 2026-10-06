@@ -586,7 +586,7 @@ describe("getMenuByName", () => {
     });
     const termId = await seedMenu("private-link");
     await seedItems(termId, [
-      { title: "", meta: { kind: "entry", entryId: privateEntry.id } },
+      { title: "ignored", meta: { kind: "entry", entryId: privateEntry.id } },
     ]);
 
     const menu = await getMenuByName(localCtx, "private-link");
@@ -694,7 +694,7 @@ describe("getMenuByName", () => {
       const termId = await seedMenu("non-public-entry");
       await seedItems(termId, [
         { title: "Home", meta: { kind: "custom", url: "/" } },
-        { title: "", meta: { kind: "entry", entryId: memo.id } },
+        { title: "ignored", meta: { kind: "entry", entryId: memo.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "non-public-entry");
@@ -719,7 +719,7 @@ describe("getMenuByName", () => {
       const termId = await seedMenu("non-public-term");
       await seedItems(termId, [
         { title: "Home", meta: { kind: "custom", url: "/" } },
-        { title: "", meta: { kind: "term", termId: team.id } },
+        { title: "ignored", meta: { kind: "term", termId: team.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "non-public-term");
@@ -746,7 +746,7 @@ describe("getMenuByName", () => {
       const termId = await seedMenu("hidden-entry");
       await seedItems(termId, [
         { title: "Home", meta: { kind: "custom", url: "/" } },
-        { title: "", meta: { kind: "entry", entryId: product.id } },
+        { title: "ignored", meta: { kind: "entry", entryId: product.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "hidden-entry");
@@ -771,7 +771,7 @@ describe("getMenuByName", () => {
       const termId = await seedMenu("hidden-term");
       await seedItems(termId, [
         { title: "Home", meta: { kind: "custom", url: "/" } },
-        { title: "", meta: { kind: "term", termId: genre.id } },
+        { title: "ignored", meta: { kind: "term", termId: genre.id } },
       ]);
 
       const menu = await getMenuByName(localCtx, "hidden-term");
@@ -906,7 +906,7 @@ describe("getMenuByName", () => {
         });
         await seedItems(termId, [
           { title: "Home", meta: { kind: "custom", url: `/${slug}` } },
-          { title: "", meta: { kind: "entry", entryId: post.id } },
+          { title: "ignored", meta: { kind: "entry", entryId: post.id } },
         ]);
       }
 
