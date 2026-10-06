@@ -27,7 +27,10 @@ export function createRouter(queryClient: QueryClient) {
     // TanStack's hardcoded-English `ErrorComponent`.
     defaultErrorComponent: ErrorBoundaryFallback,
     context: { queryClient },
-    defaultViewTransition: { types: navigationTransitionTypes },
+    defaultViewTransition: {
+      types: (change) =>
+        navigationTransitionTypes(change, prefersReducedMotion),
+    },
   });
 }
 
@@ -37,19 +40,22 @@ interface NavigationChange {
   readonly pathChanged: boolean;
 }
 
+function prefersReducedMotion(): boolean {
+  return matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 /**
  * The view transition types a navigation starts with, by the direction it
  * moves through history, or `false` for no transition: on the first load,
- * when only the search params or hash changed, and when the user prefers
- * reduced motion.
+ * when only the search params or hash changed, and when
+ * `prefersReducedMotion` returns `true`.
  */
-function navigationTransitionTypes({
-  fromLocation,
-  toLocation,
-  pathChanged,
-}: NavigationChange): ViewTransitionType[] | false {
+function navigationTransitionTypes(
+  { fromLocation, toLocation, pathChanged }: NavigationChange,
+  prefersReducedMotion: () => boolean,
+): ViewTransitionType[] | false {
   if (fromLocation === undefined || !pathChanged) return false;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  if (prefersReducedMotion()) return false;
   const from = fromLocation.state.__TSR_index;
   const to = toLocation.state.__TSR_index;
   if (to < from) return [viewTransitionTypes.back];
