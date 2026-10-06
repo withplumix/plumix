@@ -1,3 +1,5 @@
+import { baseSlugProblem } from "./base-slug.js";
+
 type RouteCompileErrorCode =
   "invalid_archive_slug" | "invalid_rewrite_slug" | "duplicate_rewrite_rule";
 
@@ -62,8 +64,8 @@ export class RouteCompileError extends Error {
     return new RouteCompileError(
       "invalid_archive_slug",
       ctx.rawPattern === undefined
-        ? `${subject} invalid hasArchive "${ctx.hasArchive}" — ` +
-            `expected a single lowercase kebab-case path segment.`
+        ? `${subject} invalid hasArchive "${ctx.hasArchive}": ` +
+            `${baseSlugProblem(ctx.hasArchive)}. ${expectedShape("")}`
         : `${subject} hasArchive "${ctx.hasArchive}" ${collision(ctx.rawPattern)}`,
       ctx,
     );
@@ -87,8 +89,8 @@ export class RouteCompileError extends Error {
     return new RouteCompileError(
       "invalid_rewrite_slug",
       ctx.rawPattern === undefined
-        ? `${subject} invalid rewrite.slug "${ctx.rewriteSlug}" — expected a ` +
-            `single lowercase kebab-case path segment${root}.`
+        ? `${subject} invalid rewrite.slug "${ctx.rewriteSlug}": ` +
+            `${baseSlugProblem(ctx.rewriteSlug)}. ${expectedShape(root)}`
         : `${subject} rewrite.slug "${ctx.rewriteSlug}" ${collision(ctx.rawPattern)}`,
       ctx,
     );
@@ -106,6 +108,13 @@ export class RouteCompileError extends Error {
       ctx,
     );
   }
+}
+
+function expectedShape(root: string): string {
+  return (
+    `Expected one or more lowercase kebab-case segments joined by "/"${root}, ` +
+    `like "insights/category".`
+  );
 }
 
 function collision(frameworkPattern: string): string {

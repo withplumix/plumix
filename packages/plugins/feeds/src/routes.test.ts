@@ -745,6 +745,41 @@ describe("term feed routes", () => {
     expect(await bare.text()).toContain("Paris Post");
   });
 
+  test("a taxonomy based at several segments serves its term feeds under that whole base", async () => {
+    const h = await harness(
+      definePlugin("insights", (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          entryTypes: ["post"],
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    );
+    const author = await h.seedUser("admin");
+    const policy = await h.factory.term.create({
+      taxonomy: "category",
+      slug: "policy",
+      name: "Policy",
+    });
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "budget",
+      title: "Budget Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: policy.id });
+
+    const rss = await h.fetch("/insights/category/policy/feed");
+    rss.assertStatus(200);
+    expect(await rss.text()).toContain("Budget Post");
+    const atom = await h.fetch("/insights/category/policy/feed/atom");
+    atom.assertStatus(200);
+    expect(atom.headers.get("content-type")).toContain("application/atom+xml");
+  });
+
   test("a non-taxonomy /<x>/<y>/feed path is nobody's feed", async () => {
     const h = await seedTermFeed();
     // "post" is an entry type, not a taxonomy base slug, so no route claims
