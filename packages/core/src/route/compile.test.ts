@@ -549,6 +549,21 @@ describe("compileRouteMap", () => {
     });
   });
 
+  test("an empty string hasArchive mounts no archive, as false does", async () => {
+    const registry = await buildRegistry([
+      definePlugin("learn", (ctx) => {
+        ctx.registerEntryType("course", {
+          label: "Courses",
+          isPublic: true,
+          hasArchive: "",
+        });
+      }),
+    ]);
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
+      "/course/:slug",
+    ]);
+  });
+
   test("hasArchive: string rejects non-kebab input", async () => {
     const dots = await buildRegistry([
       definePlugin("y", (ctx) => {
@@ -735,15 +750,6 @@ describe("compileRouteMap", () => {
       await bootError((ctx) => {
         ctx.registerEntryType("course", { label: "Courses", hasArchive });
       }, `Entry type "course" has invalid hasArchive "${hasArchive}": ${why}`);
-    });
-
-    test("an empty string hasArchive is rejected rather than read as no archive", async () => {
-      await bootError((ctx) => {
-        ctx.registerEntryType("course", {
-          label: "Courses",
-          hasArchive: "",
-        });
-      }, 'Entry type "course" has invalid hasArchive "": it is empty');
     });
   });
 

@@ -389,9 +389,9 @@ function archiveSlugFor(
   baseSlug: string,
 ): string | null {
   const { hasArchive } = entryType;
-  if (hasArchive === undefined || hasArchive === false) return null;
+  if (!hasArchive) return null;
   // No empty branch here, unlike `baseSlugFor`: an archive at the root would
-  // collide with the front page, so `""` is an invalid archive slug.
+  // collide with the front page.
   if (typeof hasArchive === "string") {
     if (baseSlugProblem(hasArchive) !== null) {
       throw RouteCompileError.invalidArchiveSlug({
