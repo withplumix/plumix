@@ -725,6 +725,18 @@ describe("compileRouteMap", () => {
       }, 'Entry type "course" has invalid hasArchive "/learn/all-courses": ' + 'drop the leading slash and write "learn/all-courses"');
     });
 
+    test.each([
+      ["learn/all-courses/", "drop the trailing slash"],
+      ["learn//all", "it has an empty segment"],
+      ["learn/../admin", 'segment ".." is a relative path segment'],
+      ["learn/:x", 'segment ":x" is URL-pattern syntax'],
+      ["learn/All", 'segment "All" is not lowercase kebab-case'],
+    ])("a string hasArchive of %j is rejected: %s", async (hasArchive, why) => {
+      await bootError((ctx) => {
+        ctx.registerEntryType("course", { label: "Courses", hasArchive });
+      }, `Entry type "course" has invalid hasArchive "${hasArchive}": ${why}`);
+    });
+
     test("an empty string hasArchive is rejected rather than read as no archive", async () => {
       await bootError((ctx) => {
         ctx.registerEntryType("course", {

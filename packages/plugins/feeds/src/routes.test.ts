@@ -778,6 +778,7 @@ describe("term feed routes", () => {
     const atom = await h.fetch("/insights/category/policy/feed/atom");
     atom.assertStatus(200);
     expect(atom.headers.get("content-type")).toContain("application/atom+xml");
+    expect(await atom.text()).toContain("Budget Post");
   });
 
   test("a non-taxonomy /<x>/<y>/feed path is nobody's feed", async () => {
