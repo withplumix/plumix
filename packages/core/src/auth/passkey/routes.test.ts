@@ -770,6 +770,37 @@ describe("passkey signout", () => {
     expect(setCookie).toContain("Max-Age=0");
   });
 
+  test("passes the sign-out request to signOutUrl", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () => Promise.resolve(null),
+            signOutUrl: (request) =>
+              request.headers.has("x-idp-session")
+                ? "https://idp.example/logout"
+                : null,
+          },
+        },
+      },
+    });
+    const withIdp = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", {
+        method: "POST",
+        headers: { "x-idp-session": "1" },
+      }),
+    );
+    const withoutIdp = await h.dispatch(
+      plumixRequest("/_plumix/auth/signout", { method: "POST" }),
+    );
+    const withBody = (await withIdp.json()) as { redirectTo: string | null };
+    const withoutBody = (await withoutIdp.json()) as {
+      redirectTo: string | null;
+    };
+    expect(withBody.redirectTo).toBe("https://idp.example/logout");
+    expect(withoutBody.redirectTo).toBeNull();
+  });
+
   test.each([
     ["javascript scheme", "javascript:alert(1)"],
     ["data scheme", "data:text/html,<script>"],

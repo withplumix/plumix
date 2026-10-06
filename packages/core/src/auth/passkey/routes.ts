@@ -400,7 +400,9 @@ export async function handleSignout(
   // navigate there after clearing the local cookie. Without this, the
   // next request would carry the same IdP credential and silently
   // re-auth the user.
-  const redirectTo = sanitiseSignOutUrl(ctx.authenticator.signOutUrl?.());
+  const redirectTo = sanitiseSignOutUrl(
+    ctx.authenticator.signOutUrl?.(ctx.request),
+  );
   return jsonResponse(
     { ok: true, redirectTo },
     { status: 200, headers: { "set-cookie": cookie } },

@@ -10,6 +10,12 @@ import { CfAccessError } from "./errors.js";
 // policy. Documented in `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/application-token/`.
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
+// Cookie CF Access sets host-wide after login, carrying the same signed
+// application token. Paths the Access application doesn't cover get no
+// header, but still carry this cookie. Documented in
+// `https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/`.
+const CF_ACCESS_COOKIE = "CF_Authorization";
+
 // CF's logout endpoint clears both the global session cookie and the
 // per-application session. The plumix logout handler should redirect
 // here when the cfAccess() guard is in use; documented in
@@ -33,12 +39,14 @@ export interface CfAccessConfig {
    */
   readonly teamDomain: string;
   /**
-   * The CF Access application's AUD tag. Found on the application's
-   * Overview page in the CF Access dashboard. Validated against the
-   * JWT's `aud` claim — without this check, a JWT issued for a
-   * *different* app on the same team domain would be accepted.
+   * The CF Access application's AUD tag, or a list of them. Found on the
+   * application's Overview page in the CF Access dashboard. Validated
+   * against the JWT's `aud` claim — without this check, a JWT issued for
+   * a *different* app on the same team domain would be accepted. Pass a
+   * list when hostnames (preview, production) sit under separate Access
+   * applications; a JWT matching any entry is accepted.
    */
-  readonly audience: string;
+  readonly audience: string | readonly string[];
   /**
    * Role for users provisioned via CF Access. The CF Access JWT carries
    * email + idp claims, but no plumix role — operators decide here. To
@@ -123,24 +131,30 @@ export interface CfAccessConfig {
 export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
   validateConfig(config);
   const issuer = `https://${config.teamDomain}`;
+  const audience = [config.audience].flat();
   const jwks = createRemoteJWKSet(new URL(`/cdn-cgi/access/certs`, issuer));
   return {
-    signOutUrl(): string {
-      return cfAccessLogoutUrl(config.teamDomain);
+    // Only a request that carries an Access credential signed in through
+    // Access, so only it is sent to the Access logout. Chained after the
+    // default authenticator, members keep their own sign-out.
+    signOutUrl(request: Request): string | null {
+      return readAccessToken(request) === null
+        ? null
+        : cfAccessLogoutUrl(config.teamDomain);
     },
-    // CF Access identity rides a request header, not the session cookie.
+    // CF Access identity rides its own header or cookie, not the session cookie.
     hasSession(request: Request): boolean {
-      return request.headers.has(CF_ACCESS_HEADER);
+      return readAccessToken(request) !== null;
     },
     async authenticate(request, db, scope) {
-      const token = request.headers.get(CF_ACCESS_HEADER);
+      const token = readAccessToken(request);
       if (!token) return null;
 
       let email: string | null;
       try {
         const { payload } = await jwtVerify(token, jwks, {
           issuer,
-          audience: config.audience,
+          audience,
         });
         email = extractEmail(payload);
       } catch {
@@ -191,7 +205,8 @@ function validateConfig(config: CfAccessConfig): void {
   // would be accepted, including ones issued for adjacent CF Access
   // applications. Fail-fast on missing config (e.g.
   // `audience: env.CF_ACCESS_AUD ?? ""` after a missing binding).
-  if (config.audience.length === 0) {
+  const audiences = [config.audience].flat();
+  if (audiences.length === 0 || audiences.some((aud) => aud.length === 0)) {
     throw CfAccessError.audienceEmpty();
   }
 }
@@ -208,6 +223,25 @@ function validateConfig(config: CfAccessConfig): void {
  */
 export function cfAccessLogoutUrl(teamDomain: string): string {
   return `https://${teamDomain}${CF_ACCESS_LOGOUT_PATH}`;
+}
+
+// The header wins when present, even when it fails to verify: Cloudflare
+// prefers it because the cookie "is not guaranteed to be passed". The cookie
+// is only the credential on a request with no header.
+function readAccessToken(request: Request): string | null {
+  return request.headers.get(CF_ACCESS_HEADER) ?? readCookie(request);
+}
+
+function readCookie(request: Request): string | null {
+  const header = request.headers.get("cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0 || part.slice(0, eq).trim() !== CF_ACCESS_COOKIE) continue;
+    const value = part.slice(eq + 1).trim();
+    return value === "" ? null : value;
+  }
+  return null;
 }
 
 function extractEmail(payload: JWTPayload): string | null {

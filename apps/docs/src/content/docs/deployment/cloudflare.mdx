@@ -266,7 +266,7 @@ Production on a custom domain drops `allowedOrigins` and writes `rpId: "recipes.
 
 ## Cloudflare Access
 
-`cfAccess` replaces the request authenticator with a check on the `Cf-Access-Jwt-Assertion` header that Cloudflare Access sets once a request has passed the application's policy.
+`cfAccess` replaces the request authenticator with a check on the Access JWT that Cloudflare Access issues once a request has passed the application's policy. It reads the `Cf-Access-Jwt-Assertion` header, and on a request without that header it reads the `CF_Authorization` cookie, which carries the same signed token.
 
 ```ts no-typecheck
 import { auth } from "plumix/auth";
@@ -289,13 +289,15 @@ export const recipeAuth = auth({
 });
 ```
 
-`teamDomain` has to end in `.cloudflareaccess.com`, and the adapter rejects anything else at boot rather than failing every request later. `audience` is the application's AUD tag from the Access dashboard, checked against the JWT's `aud` claim so a token minted for a different application on the same team is refused. `defaultRole` is required, because the Access JWT carries an email and an identity provider but no Plumix role.
+`teamDomain` has to end in `.cloudflareaccess.com`, and the adapter rejects anything else at boot rather than failing every request later. `audience` is the application's AUD tag from the Access dashboard, checked against the JWT's `aud` claim so a token minted for a different application on the same team is refused. It also takes a list, such as `["aud-preview", "aud-prod"]`, for preview and production hostnames that sit under separate Access applications; a token matching any entry is accepted. `defaultRole` is required, because the Access JWT carries an email and an identity provider but no Plumix role.
 
 The two bootstrap options in that example do different jobs. `bootstrapAllowed` belongs to `cfAccess` and defaults to false, and while it is false an Access user arriving at an empty users table is refused with `registration_closed`, the authenticator returns no principal, and nobody gets in through Access at all. `bootstrapVia` belongs to core and gates the built-in flows instead. Its default `"passkey"` refuses magic-link and OAuth signup while the users table is empty, so the first admin has to enrol through the passkey rail. `"first-method-wins"` lets the first account through any of those flows take the admin role. Setting only `bootstrapVia` is the trap, because it leaves Access itself shut. The example sets both, so the first admin can arrive through Access or through a built-in flow.
 
+An Access application does not have to cover the whole site. The usual setup covers `/_plumix/admin` alone, because members use the public routes and their own RPC under `/_plumix/rpc/user/*`, which shares a prefix with the admin's. Access sets the header only on the paths it covers, so the admin's `/_plumix/rpc/*` calls arrive without it and authenticate through the host-wide `CF_Authorization` cookie instead. That stops working if the Access application enables the cookie's Path attribute, which scopes the cookie to the covered paths. When a request carries the header, the header is the credential even if it fails to verify; the cookie is read only when the header is absent. One trade-off comes with the cookie: on a path Access does not cover, revoking a user's Access session does not take effect until the token's `exp`.
+
 The built-in sign-in routes stay mounted underneath. Firewall `/_plumix/auth/*` at the edge if you want Access to be the only way in, or leave them live to keep passkeys as a fallback.
 
-Signing out takes one more piece. Clearing the Plumix session cookie leaves the Access JWT on the next request, and the reader is signed straight back in. `cfAccessLogoutUrl("your-team.cloudflareaccess.com")` returns `https://your-team.cloudflareaccess.com/cdn-cgi/access/logout`, the URL that clears the Access session. Point your sign-out control at it.
+Signing out takes one more piece. Clearing the Plumix session cookie leaves the Access JWT on the next request, and the reader is signed straight back in. `cfAccess` handles that through `signOutUrl`: for a request that carries the Access header or the `CF_Authorization` cookie, the sign-out route sends the admin to `https://your-team.cloudflareaccess.com/cdn-cgi/access/logout`, which clears the Access session. A request with neither gets no Access logout, so chaining `cfAccess` with `defaultAuthenticator()` keeps a member signed in by magic link on their own sign-out. `cfAccessLogoutUrl("your-team.cloudflareaccess.com")` returns the same URL for a sign-out control of your own.
 
 ## Commands the runtime adds
 
