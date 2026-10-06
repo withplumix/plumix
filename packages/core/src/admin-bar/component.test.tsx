@@ -23,15 +23,6 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
-// Every element the bar emits outside its node list.
-const BAR_TEST_IDS = [
-  "plumix-admin-bar",
-  "plumix-admin-bar-style",
-  "plumix-admin-bar-body-offset",
-  "plumix-admin-bar-signout-script",
-  "plumix-admin-bar-noscript",
-];
-
 describe("PlumixAdminBar", () => {
   test("renders nothing when user is null", () => {
     const hooks = new HookRegistry();
@@ -68,9 +59,7 @@ describe("PlumixAdminBar", () => {
       </PlumixProvider>,
     );
 
-    for (const testId of BAR_TEST_IDS) {
-      expect(html).not.toContain(`data-testid="${testId}"`);
-    }
+    expect(html).toBe("");
   });
 
   test("does not run admin_bar:nodes handlers for a subscriber", () => {
@@ -133,9 +122,7 @@ describe("PlumixAdminBar", () => {
       </PlumixProvider>,
     );
 
-    for (const testId of BAR_TEST_IDS) {
-      expect(html).not.toContain(`data-testid="${testId}"`);
-    }
+    expect(html).toBe("");
   });
 
   test("renders the bar shell when user is populated", () => {
