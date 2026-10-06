@@ -2555,6 +2555,44 @@ describe("resolvePublicRoute — a rewrite rule naming a fixed entry", () => {
     expect(stored[0]).toContain(`e:${String(page.id)}`);
   });
 
+  test("the rule's path is served as it is, never redirected to the entry's permalink", async () => {
+    const { h } = await seedComparison();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc?ref=feed"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  test("the entry's url at the rule's path is still its permalink", async () => {
+    const urlTheme = defineTheme({
+      templates: [
+        fallback(({ data }) =>
+          "entry" in data
+            ? createElement("h1", null, `url:${data.entry.url ?? "none"}`)
+            : null,
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [comparePlugin], theme: urlTheme },
+    });
+    const author = await h.seedUser("admin");
+    await createPage(h, author.id, {
+      slug: "shared-comparison",
+      title: "Shared Comparison",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/compare/abc"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<h1>url:/shared-comparison</h1>");
+  });
+
   test("an editor gets edit mode at the rule's path", async () => {
     const { h, author } = await seedComparison();
 

@@ -733,6 +733,38 @@ describe("access gate — per-entry visibility (#1742)", () => {
     expect(await member.text()).toContain("locked title");
   });
 
+  test("a rule naming a fixed entry gates by that entry, not the one its captured slug names", async () => {
+    const pinned = definePlugin("pinned", (ctx) => {
+      ctx.registerRewriteRule("/pinned-locked/:slug", {
+        kind: "entry",
+        entryType: "column",
+        slug: "locked",
+      });
+      ctx.registerRewriteRule("/pinned-open/:slug", {
+        kind: "entry",
+        entryType: "column",
+        slug: "open",
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [perEntryPlugin, pinned] },
+    });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    await seedColumn(h, "open", {});
+
+    // Each path captures the slug of the *other* entry; the fixed one decides.
+    const locked = await h.dispatch(
+      new Request("https://cms.example/pinned-locked/open"),
+    );
+    const open = await h.dispatch(
+      new Request("https://cms.example/pinned-open/locked"),
+    );
+
+    expect(locked.status).toBe(302);
+    expect(open.status).toBe(200);
+    expect(await open.text()).toContain("open title");
+  });
+
   test("an unknown stored choice falls back to the type default, never granting less", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [perEntryPlugin] },
