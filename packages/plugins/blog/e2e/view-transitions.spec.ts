@@ -38,7 +38,9 @@ async function lastRevealTypes(page: Page): Promise<string[] | null> {
     ).__plumixReveals;
     const last = transitions.at(-1);
     if (last === undefined) return null;
-    return [...(last as RevealedTransition).types];
+    if (last === null)
+      throw new Error("the last reveal had no view transition");
+    return [...last.types];
   });
 }
 
