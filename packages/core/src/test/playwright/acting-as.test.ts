@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { SESSION_COOKIE_NAME } from "../../auth/cookies.js";
 import { userFactory } from "../factories.js";
@@ -45,5 +45,24 @@ describe("actingAs (Playwright)", () => {
     expect(first.storageState.cookies[0]?.value).not.toBe(
       second.storageState.cookies[0]?.value,
     );
+  });
+
+  test("a second process seeding the same db mints a user that does not collide", async () => {
+    // Each Playwright worker loads its own module graph, so each one's
+    // factory sequence starts over at 1.
+    const loadInFreshProcess = async () => {
+      vi.resetModules();
+      return import("./acting-as.js");
+    };
+    const db = await createTestDb();
+
+    const first = await (await loadInFreshProcess()).actingAs(db, "subscriber");
+    const second = await (
+      await loadInFreshProcess()
+    ).actingAs(db, "subscriber");
+
+    expect(second.user.id).not.toBe(first.user.id);
+    expect(second.user.slug).not.toBe(first.user.slug);
+    expect(second.user.email).not.toBe(first.user.email);
   });
 });

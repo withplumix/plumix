@@ -53,6 +53,11 @@ function requireDb(transient: Partial<DbTransient>): Db {
   return transient.db;
 }
 
+// Each Playwright worker is its own process with its own fishery sequence, and
+// they all seed one database. Defaults on a unique column add this token so two
+// processes never mint the same value; within a process the sequence orders them.
+const processToken = crypto.randomUUID().slice(0, 8);
+
 // The fourth type argument pins `params` to a shallow `Partial`. fishery's
 // default is a `DeepPartial`, which walks into the JSON columns — `JsonValue`
 // is recursive, so that instantiation never bottoms out. An override on a JSON
@@ -71,8 +76,8 @@ export const userFactory = Factory.define<
   });
 
   return {
-    email: params.email ?? `user-${sequence}@example.test`,
-    slug: params.slug ?? `user-${sequence}`,
+    email: params.email ?? `user-${sequence}-${processToken}@example.test`,
+    slug: params.slug ?? `user-${sequence}-${processToken}`,
     name: params.name ?? null,
     role: params.role ?? "subscriber",
   };
@@ -105,7 +110,7 @@ export const entryFactory = Factory.define<
   return {
     type: params.type ?? "post",
     title: params.title ?? `Entry ${sequence}`,
-    slug: params.slug ?? `post-${sequence}-${Date.now()}`,
+    slug: params.slug ?? `post-${sequence}-${processToken}`,
     content: params.content ?? null,
     excerpt: params.excerpt ?? null,
     status,
@@ -137,7 +142,7 @@ export const termFactory = Factory.define<
   return {
     taxonomy: params.taxonomy ?? "category",
     name: params.name ?? `Term ${sequence}`,
-    slug: params.slug ?? `term-${sequence}-${Date.now()}`,
+    slug: params.slug ?? `term-${sequence}-${processToken}`,
     description: params.description ?? null,
     parentId: params.parentId ?? null,
   };
@@ -191,7 +196,7 @@ export const sessionFactory = Factory.define<NewSession, DbTransient, Session>(
       throw new Error("sessionFactory: userId is required");
     }
     return {
-      id: params.id ?? `session-${sequence}-${Date.now()}`,
+      id: params.id ?? `session-${sequence}-${processToken}`,
       userId,
       expiresAt: params.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000),
       ipAddress: params.ipAddress ?? null,
@@ -218,8 +223,8 @@ export const settingFactory = Factory.define<
   });
 
   return {
-    group: params.group ?? `group_${sequence}`,
-    key: params.key ?? `key_${sequence}`,
+    group: params.group ?? `group_${sequence}_${processToken}`,
+    key: params.key ?? `key_${sequence}_${processToken}`,
     value: params.value ?? "",
   };
 });
@@ -263,7 +268,7 @@ export const allowedDomainFactory = Factory.define<
   });
 
   return {
-    domain: params.domain ?? `example-${sequence}.test`,
+    domain: params.domain ?? `example-${sequence}-${processToken}.test`,
     defaultRole: params.defaultRole ?? "subscriber",
     isEnabled: params.isEnabled ?? true,
   };
@@ -293,7 +298,7 @@ export const credentialFactory = Factory.define<
     throw new Error("credentialFactory: publicKey is required");
   }
   return {
-    id: params.id ?? `cred-${sequence}-${Date.now()}`,
+    id: params.id ?? `cred-${sequence}-${processToken}`,
     userId,
     publicKey: publicKey as Buffer,
     counter: params.counter ?? 0,
@@ -387,7 +392,8 @@ export const oauthAccountFactory = Factory.define<
   }
   return {
     provider: params.provider ?? "github",
-    providerAccountId: params.providerAccountId ?? `account-${sequence}`,
+    providerAccountId:
+      params.providerAccountId ?? `account-${sequence}-${processToken}`,
     userId,
   };
 });
@@ -424,7 +430,8 @@ export const deviceCodeFactory = Factory.define<
   return {
     // RFC 8628 "ABCD-EFGH" shape — the deviceFlow RPC validates this format.
     userCode:
-      params.userCode ?? `TEST-${String(sequence).padStart(4, "0").slice(-4)}`,
+      params.userCode ??
+      `${processToken.slice(0, 4).toUpperCase()}-${String(sequence).padStart(4, "0").slice(-4)}`,
     userId: params.userId ?? null,
     status: params.status ?? "pending",
     tokenName: params.tokenName ?? null,
