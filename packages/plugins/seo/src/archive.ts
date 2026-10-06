@@ -26,8 +26,10 @@ export interface ArchiveTypeSitemap {
 declare module "plumix" {
   interface ArchiveTypeOptions {
     /**
-     * Fold this archive into the sitemap index at
-     * `/sitemap-<name>-<page>.xml`. Absent, the archive is not indexed.
+     * Fold this archive into the sitemap index as a contributed scope at
+     * `/sitemap-<name>-<page>.xml`. Absent, the archive is not indexed. A
+     * name `entries` or `terms`, or one starting `entries-` or `terms-`,
+     * fails the boot: those are seo's own scopes.
      */
     readonly sitemap?: ArchiveTypeSitemap;
   }

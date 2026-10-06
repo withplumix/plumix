@@ -18,7 +18,7 @@ import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { SeoOptions } from "./index.js";
+import type { SeoOptions, SitemapScopeRef } from "./index.js";
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
 
@@ -371,7 +371,9 @@ describe("the sitemap index", () => {
 
     expect(res.headers.get("content-type")).toContain("application/xml");
     expect(body).toContain("<sitemapindex");
-    expect(body).toContain("<loc>https://cms.example/sitemap-post-1.xml</loc>");
+    expect(body).toContain(
+      "<loc>https://cms.example/sitemap-entries-post-1.xml</loc>",
+    );
   });
 
   test("leaves out a scope with nothing published", async () => {
@@ -398,12 +400,12 @@ describe("the sitemap index", () => {
     });
 
     const index = await bodyOf(h, "/sitemap.xml");
-    expect(index).toContain("https://cms.example/sitemap-post-1.xml");
-    expect(index).not.toContain("sitemap-lesson-1.xml");
+    expect(index).toContain("https://cms.example/sitemap-entries-post-1.xml");
+    expect(index).not.toContain("sitemap-entries-lesson-1.xml");
     // Dropping the scope drops the route with it, so there is no sub-sitemap
     // to fetch directly — a 404, not an empty urlset.
     const direct = await h.dispatch(
-      new Request("https://cms.example/sitemap-lesson-1.xml"),
+      new Request("https://cms.example/sitemap-entries-lesson-1.xml"),
     );
     expect(direct.status).toBe(404);
   });
@@ -419,6 +421,48 @@ describe("the sitemap index", () => {
       new Request("https://cms.example/sitemap-member-series-1.xml"),
     );
     expect(direct.status).toBe(404);
+  });
+
+  test("an entry type and a taxonomy sharing a name each get a sub-sitemap", async () => {
+    const namesake = definePlugin("namesake", (ctx) => {
+      ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        isHierarchical: false,
+        entryTypes: ["topic"],
+      });
+    });
+    const h = await createHarness([namesake]);
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "topic",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.term.create({
+      taxonomy: "topic",
+      name: "News",
+      slug: "news",
+    });
+
+    const index = await bodyOf(h, "/sitemap.xml");
+
+    expect(index).toContain(
+      "<loc>https://cms.example/sitemap-entries-topic-1.xml</loc>",
+    );
+    expect(index).toContain(
+      "<loc>https://cms.example/sitemap-terms-topic-1.xml</loc>",
+    );
+    expect(await bodyOf(h, "/sitemap-entries-topic-1.xml")).toContain(
+      "<loc>https://cms.example/topic/hello</loc>",
+    );
+    expect(await bodyOf(h, "/sitemap-terms-topic-1.xml")).toContain(
+      "<loc>https://cms.example/topic/news</loc>",
+    );
   });
 
   test("paginates an archive type's scope by its own count", async () => {
@@ -445,7 +489,7 @@ describe("the sitemap index", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toContain(
-      "https://cms.example/custom-directory/sitemap-post-1.xml",
+      "https://cms.example/custom-directory/sitemap-entries-post-1.xml",
     );
   });
 
@@ -471,7 +515,7 @@ describe("a sub-sitemap", () => {
     await seedPost(h, { slug: "live" });
     await seedPost(h, { slug: "draft", status: "draft" });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<loc>https://cms.example/post/live</loc>");
     expect(body).toContain("<lastmod>");
@@ -483,7 +527,7 @@ describe("a sub-sitemap", () => {
     await seedPost(h, { slug: "live" });
     await seedPost(h, { slug: "undated", publishedAt: null });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<loc>https://cms.example/post/live</loc>");
     expect(body).not.toContain("/post/undated");
@@ -493,7 +537,7 @@ describe("a sub-sitemap", () => {
     const h = await createHarness();
     await seedPost(h);
 
-    const body = await bodyOf(h, "/sitemap-post-2.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-2.xml");
 
     expect(body).toContain("<urlset");
     expect(body).not.toContain("<url>");
@@ -507,7 +551,7 @@ describe("a sub-sitemap", () => {
       slug: "news",
     });
 
-    expect(await bodyOf(h, "/sitemap-category-1.xml")).toContain(
+    expect(await bodyOf(h, "/sitemap-terms-category-1.xml")).toContain(
       "<loc>https://cms.example/category/news</loc>",
     );
   });
@@ -532,7 +576,7 @@ describe("a sub-sitemap", () => {
     });
     await seedPost(h);
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<urlset");
     expect(body).not.toContain("<url>");
@@ -558,6 +602,17 @@ describe("a sub-sitemap", () => {
     );
   });
 
+  test("an entry type's scope does not answer at its bare name", async () => {
+    const h = await createHarness();
+    await seedPost(h);
+
+    const res = await h.dispatch(
+      new Request("https://cms.example/sitemap-post-1.xml"),
+    );
+
+    expect(res.status).toBe(404);
+  });
+
   test("an unregistered scope is not claimed at all", async () => {
     const h = await createHarness();
 
@@ -574,7 +629,7 @@ describe("a sub-sitemap", () => {
       const h = await createHarness();
 
       const res = await h.dispatch(
-        new Request(`https://cms.example/sitemap-post-${page}.xml`),
+        new Request(`https://cms.example/sitemap-entries-post-${page}.xml`),
       );
 
       expect(res.status).toBe(404);
@@ -628,7 +683,7 @@ describe("a sub-sitemap", () => {
           parentId: parent.id,
         });
       }
-      const body = await bodyOf(h, "/sitemap-page-1.xml");
+      const body = await bodyOf(h, "/sitemap-entries-page-1.xml");
       await h.drainDeferred();
       return { queries, body };
     }
@@ -680,7 +735,7 @@ describe("a sub-sitemap", () => {
           parentId: parent.id,
         });
       }
-      const body = await bodyOf(h, "/sitemap-category-1.xml");
+      const body = await bodyOf(h, "/sitemap-terms-category-1.xml");
       await h.drainDeferred();
       return { queries, body };
     }
@@ -704,14 +759,18 @@ describe("seo:sitemap:urls", () => {
     const h = await createHarness([blogPlugin, dropAll]);
     await seedPost(h);
 
-    expect(await bodyOf(h, "/sitemap-post-1.xml")).not.toContain("<url>");
+    expect(await bodyOf(h, "/sitemap-entries-post-1.xml")).not.toContain(
+      "<url>",
+    );
   });
 
   test("receives the scope, page and ctx so a subscriber can inject rows", async () => {
     const injector = definePlugin("injector", (ctx) => {
       ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => [
         ...urls,
-        { loc: `${appCtx.origin}/injected/${scope}?page=${String(page)}` },
+        {
+          loc: `${appCtx.origin}/injected/${scope.name}?page=${String(page)}`,
+        },
       ]);
     });
     const h = await createHarness([eventsPlugin, injector]);
@@ -720,6 +779,197 @@ describe("seo:sitemap:urls", () => {
       "<loc>https://cms.example/injected/event-series?page=1</loc>",
     );
   });
+  test("names an entry type's scope by its kind as well as its name", async () => {
+    const seen: SitemapScopeRef[] = [];
+    const recorder = definePlugin("recorder", (ctx) => {
+      ctx.addFilter("seo:sitemap:urls", (urls, scope) => {
+        seen.push(scope);
+        return urls;
+      });
+    });
+    const h = await createHarness([blogPlugin, recorder]);
+    await seedPost(h);
+
+    await bodyOf(h, "/sitemap-entries-post-1.xml");
+
+    expect(seen).toEqual([{ kind: "entries", name: "post" }]);
+  });
+
+  test("a subscriber typed against a bare scope name does not compile", () => {
+    const stale = definePlugin("stale", (ctx) => {
+      // @ts-expect-error — the scope is a `SitemapScopeRef`, not its name.
+      ctx.addFilter("seo:sitemap:urls", (urls, scope: string) =>
+        scope === "post" ? [] : urls,
+      );
+    });
+    expect(stale.id).toBe("stale");
+  });
+});
+
+describe("the site's sitemap policy", () => {
+  test("a scope's defaults reach every URL in it and no other scope's", async () => {
+    const h = await createHarness([taxonomyPlugin], {
+      seo: { sitemaps: { entries: { post: { changefreq: "weekly" } } } },
+    });
+    await seedPost(h, { slug: "one" });
+    await seedPost(h, { slug: "two" });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const posts = await bodyOf(h, "/sitemap-entries-post-1.xml");
+    const categories = await bodyOf(h, "/sitemap-terms-category-1.xml");
+
+    expect(posts.match(/<changefreq>weekly<\/changefreq>/g)).toHaveLength(2);
+    expect(categories).toContain(
+      "<loc>https://cms.example/category/news</loc>",
+    );
+    expect(categories).not.toContain("<changefreq>");
+  });
+  // A plugin's archive whose provider sets a priority of its own.
+  const ranked = definePlugin("ranked", (ctx) => {
+    ctx.registerArchiveType("location", {
+      routes: ["/locations/:slug"],
+      resolve: () => ({
+        data: { kind: "archiveType", name: "location" },
+        title: "Location",
+      }),
+      sitemap: {
+        count: () => 1,
+        urls: () => [
+          { loc: "https://cms.example/locations/leeds", priority: 0.9 },
+        ],
+      },
+    });
+  });
+
+  test("a URL's own value beats the site's default for its scope", async () => {
+    const h = await createHarness([ranked], {
+      seo: { sitemaps: { location: { changefreq: "daily", priority: 0.1 } } },
+    });
+
+    expect(await bodyOf(h, "/sitemap-location-1.xml")).toContain(
+      "<loc>https://cms.example/locations/leeds</loc>" +
+        "<changefreq>daily</changefreq><priority>0.9</priority>",
+    );
+  });
+
+  test("the seo:sitemap:urls filter has the last word over both", async () => {
+    const overrider = definePlugin("overrider", (ctx) => {
+      ctx.addFilter("seo:sitemap:urls", (urls) =>
+        urls.map((url) => ({ ...url, priority: 0.3 })),
+      );
+    });
+    const h = await createHarness([ranked, overrider], {
+      seo: { sitemaps: { location: { priority: 0.1 } } },
+    });
+
+    expect(await bodyOf(h, "/sitemap-location-1.xml")).toContain(
+      "<loc>https://cms.example/locations/leeds</loc><priority>0.3</priority>",
+    );
+  });
+  test("false drops an entry type's scope from the index", async () => {
+    const h = await createHarness([blogPlugin], {
+      seo: { sitemaps: { entries: { post: false } } },
+    });
+    await seedPost(h);
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain(
+      "sitemap-entries-post-1.xml",
+    );
+  });
+
+  test("and its sub-sitemap serves an empty url-set", async () => {
+    const h = await createHarness([blogPlugin], {
+      seo: { sitemaps: { entries: { post: false } } },
+    });
+    await seedPost(h);
+
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
+
+    expect(body).toContain("<urlset");
+    expect(body).not.toContain("<url>");
+  });
+
+  test("and leaves the head's robots directive alone", async () => {
+    // `false` is about the sitemap; indexability is the admin's to decide.
+    const h = await createHarness([blogPlugin], {
+      seo: { sitemaps: { entries: { post: false } } },
+      theme: defineTheme({ templates: [fallback(() => null)] }),
+    });
+    await seedPost(h);
+
+    expect(await bodyOf(h, "/post/hello")).toMatch(
+      /<meta name="robots" content="index[^"]*"/,
+    );
+  });
+
+  test("false drops a contributed scope from the index", async () => {
+    const h = await createHarness([ranked], {
+      seo: { sitemaps: { location: false } },
+    });
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain(
+      "sitemap-location-1.xml",
+    );
+  });
+  test("a site held out of the index lists no contributed scope either", async () => {
+    const h = await createHarness([ranked], {
+      seo: { sitemaps: { location: { priority: 0.5 } } },
+    });
+    await h.factory.setting.create({
+      group: "seo",
+      key: "indexable",
+      value: false,
+    });
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain("<sitemap>");
+    expect(await bodyOf(h, "/sitemap-location-1.xml")).not.toContain("<url>");
+  });
+});
+
+describe("sitemap scopes at boot", () => {
+  const archiveWithSitemap = (pluginId: string, name: string) =>
+    definePlugin(pluginId, (ctx) => {
+      ctx.registerArchiveType(name, {
+        routes: [`/${pluginId}/:slug`],
+        resolve: () => ({ data: { kind: "archiveType", name }, title: name }),
+        sitemap: { count: () => 0, urls: () => [] },
+      });
+    });
+
+  test.each([
+    [{ entries: { nope: false } }, /sitemaps\.entries\.nope/],
+    [{ terms: { nope: {} } }, /sitemaps\.terms\.nope/],
+    [{ nope: false }, /sitemaps\.nope/],
+  ] as const)(
+    "a policy key naming no scope fails, naming the key (%o)",
+    async (sitemaps, key) => {
+      await expect(
+        createHarness([blogPlugin], { seo: { sitemaps } }),
+      ).rejects.toThrow(key);
+    },
+  );
+
+  test("two plugins contributing one scope name fail, naming both", async () => {
+    await expect(
+      createHarness([
+        archiveWithSitemap("first", "location"),
+        archiveWithSitemap("second", "location"),
+      ]),
+    ).rejects.toThrow(/"second".*"location".*"first"/);
+  });
+
+  test.each(["entries", "terms", "entries-x", "terms-x"])(
+    "a contributed scope named %s fails, naming the plugin",
+    async (name) => {
+      await expect(
+        createHarness([archiveWithSitemap("claimer", name)]),
+      ).rejects.toThrow(new RegExp(`"claimer".*"${name}"`));
+    },
+  );
 });
 
 describe("a sitemap at the edge", () => {
@@ -758,8 +1008,8 @@ describe("a sitemap at the edge", () => {
     const h = await createHarness([taxonomyPlugin], { cdn });
     await seedPost(h);
 
-    await bodyOf(h, "/sitemap-post-1.xml");
-    await bodyOf(h, "/sitemap-category-1.xml");
+    await bodyOf(h, "/sitemap-entries-post-1.xml");
+    await bodyOf(h, "/sitemap-terms-category-1.xml");
     await h.drainDeferred();
 
     // `t:post` is what an `entry:published` of a post purges, so publishing one
@@ -768,15 +1018,17 @@ describe("a sitemap at the edge", () => {
     // Asserted against core's own purge vocabulary rather than a spelled-out
     // string: what makes this one caching story is that the set an
     // `entry:published` sweeps covers what the scope stored under.
-    expect(tagsFor(put, "/sitemap-post-1.xml")).toContain(typeTag("post"));
+    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(
+      typeTag("post"),
+    );
     expect(entryPurgeTags("post", 1)).toEqual(
       expect.arrayContaining([typeTag("post")]),
     );
-    expect(tagsFor(put, "/sitemap-category-1.xml")).toEqual(
+    expect(tagsFor(put, "/sitemap-terms-category-1.xml")).toEqual(
       expect.arrayContaining([typeTag("post")]),
     );
     // And both carry the set-wide tag the indexing toggle purges by.
-    expect(tagsFor(put, "/sitemap-post-1.xml")).toContain(SITEMAP_TAG);
+    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(SITEMAP_TAG);
   });
 
   test("names only its own tags, not one per picture it lists", async () => {
@@ -790,10 +1042,10 @@ describe("a sitemap at the edge", () => {
     const h = await createHarness([picturePlugin], { cdn });
     await seedPost(h, { meta: { appearance: { hero: "m1" } } });
 
-    await bodyOf(h, "/sitemap-post-1.xml");
+    await bodyOf(h, "/sitemap-entries-post-1.xml");
     await h.drainDeferred();
 
-    expect(tagsFor(put, "/sitemap-post-1.xml")).toEqual([
+    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toEqual([
       SITEMAP_TAG,
       typeTag("post"),
       "s:seo",
@@ -807,12 +1059,12 @@ describe("a sitemap at the edge", () => {
     await seedPost(h);
 
     const first = await h.dispatch(
-      new Request("https://cms.example/sitemap-post-1.xml"),
+      new Request("https://cms.example/sitemap-entries-post-1.xml"),
     );
     const firstBody = await first.text();
     await h.drainDeferred();
     const second = await h.dispatch(
-      new Request("https://cms.example/sitemap-post-1.xml"),
+      new Request("https://cms.example/sitemap-entries-post-1.xml"),
     );
 
     expect(first.headers.get("cache-control")).toBe(
@@ -855,7 +1107,7 @@ describe("a sitemap at the edge", () => {
     await seedPost(h);
 
     const res = await h.dispatch(
-      new Request("https://cms.example/sitemap-post-1.xml"),
+      new Request("https://cms.example/sitemap-entries-post-1.xml"),
     );
 
     expect(res.status).toBe(200);
@@ -875,7 +1127,9 @@ describe("a scope held out of the index leaves the sitemap", () => {
     });
     await seedPost(h);
 
-    expect(await bodyOf(h, "/sitemap.xml")).not.toContain("sitemap-post-1.xml");
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain(
+      "sitemap-entries-post-1.xml",
+    );
   });
 
   test("and its sub-sitemap serves an empty url-set", async () => {
@@ -887,7 +1141,7 @@ describe("a scope held out of the index leaves the sitemap", () => {
     });
     await seedPost(h);
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<urlset");
     expect(body).not.toContain("<url>");
@@ -909,9 +1163,9 @@ describe("a scope held out of the index leaves the sitemap", () => {
 
     const index = await bodyOf(h, "/sitemap.xml");
 
-    expect(index).not.toContain("sitemap-category-1.xml");
+    expect(index).not.toContain("sitemap-terms-category-1.xml");
     // The entry type is untouched — one scope leaving is not all of them.
-    expect(index).toContain("sitemap-post-1.xml");
+    expect(index).toContain("sitemap-entries-post-1.xml");
   });
 
   test("a type and a taxonomy sharing a name are told apart", async () => {
@@ -939,10 +1193,16 @@ describe("a scope held out of the index leaves the sitemap", () => {
       authorId: author.id,
       publishedAt: new Date(),
     });
+    await h.factory.term.create({
+      taxonomy: "topic",
+      name: "News",
+      slug: "news",
+    });
 
-    // The entry type keeps its scope; only the taxonomy was held out, and the
-    // taxonomy never claimed a route because the type took the name first.
-    expect(await bodyOf(h, "/sitemap.xml")).toContain("sitemap-topic-1.xml");
+    // The entry type keeps its scope; only the taxonomy was held out.
+    const index = await bodyOf(h, "/sitemap.xml");
+    expect(index).toContain("sitemap-entries-topic-1.xml");
+    expect(index).not.toContain("sitemap-terms-topic-1.xml");
   });
 });
 
@@ -952,7 +1212,7 @@ describe("noindex keeps a page out of the sitemap", () => {
     await seedPost(h, { slug: "listed" });
     await seedPost(h, { slug: "hidden", meta: { seo_noindex: true } });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<loc>https://cms.example/post/listed</loc>");
     expect(body).not.toContain("/post/hidden");
@@ -962,7 +1222,7 @@ describe("noindex keeps a page out of the sitemap", () => {
     const h = await createHarness();
     await seedPost(h, { slug: "listed", meta: { seo_noindex: false } });
 
-    expect(await bodyOf(h, "/sitemap-post-1.xml")).toContain(
+    expect(await bodyOf(h, "/sitemap-entries-post-1.xml")).toContain(
       "<loc>https://cms.example/post/listed</loc>",
     );
   });
@@ -976,7 +1236,7 @@ describe("noindex keeps a page out of the sitemap", () => {
     await seedPost(h, { slug: "texty", meta: { seo_noindex: "yes" } });
     await seedPost(h, { slug: "numeric", meta: { seo_noindex: 1 } });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<loc>https://cms.example/post/texty</loc>");
     expect(body).toContain("<loc>https://cms.example/post/numeric</loc>");
@@ -988,7 +1248,7 @@ describe("noindex keeps a page out of the sitemap", () => {
 
     const body = await bodyOf(h, "/sitemap.xml");
 
-    expect(body).not.toContain("sitemap-post-1.xml");
+    expect(body).not.toContain("sitemap-entries-post-1.xml");
   });
 
   test("a term marked noindex is not listed", async () => {
@@ -1005,7 +1265,7 @@ describe("noindex keeps a page out of the sitemap", () => {
       meta: { seo_noindex: true },
     });
 
-    const body = await bodyOf(h, "/sitemap-category-1.xml");
+    const body = await bodyOf(h, "/sitemap-terms-category-1.xml");
 
     expect(body).toContain("<loc>https://cms.example/category/news</loc>");
     expect(body).not.toContain("/category/secret");
@@ -1021,7 +1281,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { meta: featured("m1") });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain(
       "<image:image><image:loc>https://cdn.example/m1.png</image:loc></image:image>",
@@ -1032,7 +1292,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { slug: "bare" });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<url><loc>https://cms.example/post/bare</loc>");
     expect(body).not.toContain("image");
@@ -1042,7 +1302,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { meta: { heroShot: "m3" } });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain(
       "<image:image><image:loc>https://cdn.example/m3.png</image:loc></image:image>",
@@ -1060,7 +1320,7 @@ describe("an entry's pictures in the sitemap", () => {
       },
     });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("https://cdn.example/m1.png");
     expect(body).toContain("https://cdn.example/m2.png");
@@ -1072,7 +1332,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { meta: featured("rel1") });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain(
       "<image:loc>https://cms.example/_plumix/media/serve/rel1</image:loc>",
@@ -1083,7 +1343,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { meta: { ...featured("m1"), shareImage: "doc1" } });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("https://cdn.example/m1.png");
     expect(body).not.toContain("doc1");
@@ -1106,7 +1366,7 @@ describe("an entry's pictures in the sitemap", () => {
       },
     });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     // `shareImage` is declared first but hydrates to a PDF, so the role falls
     // through to the next field rather than answering with nothing.
@@ -1122,7 +1382,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { slug: "bare", meta: featured("blank1") });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body).toContain("<url><loc>https://cms.example/post/bare</loc>");
     expect(body).not.toContain("<image:image>");
@@ -1132,7 +1392,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([picturePlugin]);
     await seedPost(h, { meta: { ...featured("m1"), shareImage: "m1" } });
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body.match(/<image:image>/g)).toHaveLength(1);
   });
@@ -1147,7 +1407,7 @@ describe("an entry's pictures in the sitemap", () => {
       });
     }
 
-    const body = await bodyOf(h, "/sitemap-post-1.xml");
+    const body = await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(body.match(/<image:image>/g)).toHaveLength(5);
     expect(hydrate).toHaveBeenCalledTimes(1);
@@ -1166,7 +1426,7 @@ describe("an entry's pictures in the sitemap", () => {
     const h = await createHarness([noFields]);
     await seedPost(h);
 
-    await bodyOf(h, "/sitemap-post-1.xml");
+    await bodyOf(h, "/sitemap-entries-post-1.xml");
 
     expect(hydrate).not.toHaveBeenCalled();
   });
@@ -1190,7 +1450,7 @@ describe("the sitemap stylesheet", () => {
     await seedPost(h);
 
     const index = await bodyOf(h, "/sitemap.xml");
-    const sub = await bodyOf(h, "/sitemap-post-1.xml");
+    const sub = await bodyOf(h, "/sitemap-entries-post-1.xml");
     const declared =
       '<?xml version="1.0" encoding="UTF-8"?>' +
       '<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>';
@@ -1718,8 +1978,8 @@ describe("the head, the sitemap and IndexNow agree on indexability", () => {
 
       const [path, sitemap] =
         subject === "entry"
-          ? ["/post/hello", "/sitemap-post-1.xml"]
-          : ["/category/news", "/sitemap-category-1.xml"];
+          ? ["/post/hello", "/sitemap-entries-post-1.xml"]
+          : ["/category/news", "/sitemap-terms-category-1.xml"];
       // Every request has to land: a 404 is `noindex`, lists nothing and
       // announces nothing, so a broken route would pass each `false` row.
       const page = await h.dispatch(new Request(`https://cms.example${path}`));

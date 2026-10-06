@@ -7,7 +7,7 @@ import { enqueuePurgeTags, typeTag } from "plumix/db";
 import { tagCdnEntry } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
-import type { SitemapScope } from "./sitemap.js";
+import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
 import {
@@ -17,6 +17,7 @@ import {
   SEO_VERIFICATION_GROUP,
 } from "./settings.js";
 import {
+  assertSitemapPolicyNamesScopes,
   collectSitemapUrls,
   renderSitemapIndex,
   renderSubSitemap,
@@ -24,6 +25,7 @@ import {
   SITEMAP_INDEX_PATH,
   sitemapIndexLocs,
   sitemapScopes,
+  sitemapScopeStem,
 } from "./sitemap.js";
 import { SITEMAP_STYLESHEET, SITEMAP_STYLESHEET_PATH } from "./stylesheet.js";
 
@@ -159,8 +161,12 @@ export function registerSeoRoutes(
  * would claim the whole `sitemap-*.xml` space — answering for scopes that do
  * not exist, and shadowing anything else that wanted a path in it.
  */
-export function registerSitemapRoutes(ctx: PluginAfterSetupContext): void {
-  const scopes = sitemapScopes(ctx.plugins);
+export function registerSitemapRoutes(
+  ctx: PluginAfterSetupContext,
+  sitemaps: SeoSitemapsOptions,
+): void {
+  const scopes = sitemapScopes(ctx.plugins, sitemaps);
+  assertSitemapPolicyNamesScopes(sitemaps, scopes);
 
   ctx.registerPublicRoute({
     path: SITEMAP_INDEX_PATH,
@@ -170,7 +176,7 @@ export function registerSitemapRoutes(ctx: PluginAfterSetupContext): void {
 
   for (const scope of scopes) {
     ctx.registerPublicRoute({
-      path: `/sitemap-${scope.name}-${PAGE_SEGMENT}.xml`,
+      path: `/sitemap-${sitemapScopeStem(scope.ref)}-${PAGE_SEGMENT}.xml`,
       cacheable: true,
       handler: (_request, appCtx, params) =>
         handleSubSitemap(appCtx, scope, Number(params.page)),

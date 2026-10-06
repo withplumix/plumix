@@ -464,14 +464,22 @@ export const ROSTER: Readonly<
       {
         reason:
           "the sitemap: the `sitemap` option an archive registration takes, " +
-          "the `seo:sitemap:urls` payload, its page size, and the tag a " +
-          "subscriber retires its rows under",
+          "the `seo:sitemap:urls` payload and the scope it names, its page " +
+          "size, and the tag a subscriber retires its rows under",
         names: [
           "ArchiveTypeSitemap",
           "SitemapUrl",
+          "SitemapChangeFrequency",
+          "SitemapScopeRef",
           "SITEMAP_PAGE_SIZE",
           "SITEMAP_TAG",
         ],
+      },
+      {
+        reason:
+          "the site's sitemap policy: the `sitemaps` option `seo()` takes " +
+          "and the per-scope defaults it holds",
+        names: ["SeoSitemapsOptions", "SitemapScopePolicy"],
       },
       {
         reason:

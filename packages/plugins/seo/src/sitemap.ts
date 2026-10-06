@@ -7,6 +7,7 @@ import { withBasePath, xmlEscape } from "plumix/support";
 
 import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";
+import { SeoError } from "./errors.js";
 import { SEO_META_KEYS } from "./overrides.js";
 import { isCrawlableType, publicTargets } from "./scope.js";
 
@@ -34,9 +35,21 @@ const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'tr
 // Google's sitemap image extension — the one crawlers read image entries from.
 const IMAGE_NS = "http://www.google.com/schemas/sitemap-image/1.1";
 
+/** How often a page is likely to change, in the sitemaps.org vocabulary. */
+export type SitemapChangeFrequency =
+  "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+
 export interface SitemapUrl {
   readonly loc: string;
   readonly lastmod?: string;
+  /** Written as `<changefreq>` only when set. */
+  readonly changefreq?: SitemapChangeFrequency;
+  /**
+   * This URL's priority relative to the site's other URLs, 0.0–1.0 per
+   * sitemaps.org. Written as `<priority>` only when set, and not clamped:
+   * the range is the contract.
+   */
+  readonly priority?: number;
   /**
    * Pictures this page shows, as absolute URLs. Listed so image search can
    * find them without crawling the page for `<img>` tags.
@@ -48,13 +61,14 @@ declare module "plumix" {
   interface FilterRegistry {
     /**
      * Adjust a sub-sitemap's URL set before it's serialized — add, drop, or
-     * re-`lastmod` entries. Receives the scope (entry-type, taxonomy, or custom
-     * archive name), the 1-based `page`, and the request `ctx` so a subscriber
-     * can query the DB to inject rows, not just reshape statically-known URLs.
+     * re-`lastmod` entries, or set their `changefreq` and `priority`. Receives
+     * the scope by kind and name, the 1-based `page`, and the request `ctx` so
+     * a subscriber can query the DB to inject rows, not just reshape
+     * statically-known URLs.
      */
     "seo:sitemap:urls": (
       urls: readonly SitemapUrl[],
-      scope: string,
+      scope: SitemapScopeRef,
       page: number,
       ctx: AppContext,
     ) => readonly SitemapUrl[] | Promise<readonly SitemapUrl[]>;
@@ -91,15 +105,25 @@ export function renderSubSitemap(
   stylesheet: string,
 ): string {
   const body = urls
-    .map(({ loc, lastmod, images }) => {
+    .map(({ loc, lastmod, changefreq, priority, images }) => {
       const mod = lastmod ? `<lastmod>${xmlEscape(lastmod)}</lastmod>` : "";
+      const freq =
+        changefreq === undefined
+          ? ""
+          : `<changefreq>${xmlEscape(changefreq)}</changefreq>`;
+      // `0` is a priority, so presence is the test rather than truthiness.
+      const rank =
+        priority === undefined
+          ? ""
+          : `<priority>${xmlEscape(String(priority))}</priority>`;
       const pictures = (images ?? [])
         .map(
           (url) =>
             `<image:image><image:loc>${xmlEscape(url)}</image:loc></image:image>`,
         )
         .join("");
-      return `<url><loc>${xmlEscape(loc)}</loc>${mod}${pictures}</url>`;
+      // The sitemaps.org XSD sequence, with the image extension after it.
+      return `<url><loc>${xmlEscape(loc)}</loc>${mod}${freq}${rank}${pictures}</url>`;
     })
     .join("");
   // The image namespace is declared only when a page carries one, so a set
@@ -114,18 +138,48 @@ export function renderSubSitemap(
 }
 
 /**
+ * Which URL space a sub-sitemap lists. Seo provides the `entries` and `terms`
+ * scopes; a `contributed` one is a plugin's own, named by that plugin. The
+ * kind is part of the name, so an entry type and a taxonomy sharing one are
+ * still two scopes.
+ */
+export type SitemapScopeRef =
+  | { readonly kind: "entries"; readonly name: string }
+  | { readonly kind: "terms"; readonly name: string }
+  | { readonly kind: "contributed"; readonly name: string };
+
+/** The `changefreq` and `priority` a scope's URLs default to. */
+export interface SitemapScopePolicy {
+  readonly changefreq?: SitemapChangeFrequency;
+  /** 0.0–1.0, as on {@link SitemapUrl.priority}. */
+  readonly priority?: number;
+}
+
+/**
+ * The site's policy for each sitemap scope, its own and every plugin's. Entry
+ * types sit under `entries`, taxonomies under `terms`, and a contributed scope
+ * under its own name. A scope's value is `false` to leave it out of the
+ * sitemap, or the `changefreq` and `priority` its URLs default to.
+ */
+export interface SeoSitemapsOptions {
+  readonly entries?: Readonly<Record<string, false | SitemapScopePolicy>>;
+  readonly terms?: Readonly<Record<string, false | SitemapScopePolicy>>;
+  readonly [contributed: string]:
+    | false
+    | SitemapScopePolicy
+    | Readonly<Record<string, false | SitemapScopePolicy>>
+    | undefined;
+}
+
+/**
  * One sub-sitemap's URL space: an entry type, a taxonomy, or an archive a
  * plugin registered. `tags` is what the scope's cached pages are stored under,
  * so a publish retires that scope and leaves the rest of the set alone.
  */
 export interface SitemapScope {
-  readonly name: string;
-  /**
-   * Which registry the name came from. An entry type and a taxonomy may share
-   * one, and they carry separate indexing defaults, so the scope has to say
-   * which of the two it is rather than let the name answer.
-   */
-  readonly kind: "entryType" | "taxonomy" | "archiveType";
+  readonly ref: SitemapScopeRef;
+  /** What the site's `sitemaps` option set for this scope. */
+  readonly policy: false | SitemapScopePolicy;
   readonly tags: readonly string[];
   readonly count: (ctx: AppContext) => Promise<number> | number;
   readonly urls: (
@@ -135,13 +189,33 @@ export interface SitemapScope {
 }
 
 /**
+ * The file-name stem a scope's sub-sitemaps answer under:
+ * `/sitemap-<stem>-<page>.xml`. A contributed scope keeps its bare name,
+ * which is why `entries` and `terms` are reserved to seo's own.
+ */
+export function sitemapScopeStem(ref: SitemapScopeRef): string {
+  switch (ref.kind) {
+    case "entries":
+      return `entries-${ref.name}`;
+    case "terms":
+      return `terms-${ref.name}`;
+    case "contributed":
+      return ref.name;
+  }
+}
+
+/**
  * Where a sub-sitemap answers. The registered route path is root-relative —
  * the dispatcher strips any base prefix before matching — so the prefix is
  * re-added only on the `<loc>` the index publishes.
  */
-function subSitemapPath(ctx: AppContext, scope: string, page: number): string {
+function subSitemapPath(
+  ctx: AppContext,
+  ref: SitemapScopeRef,
+  page: number,
+): string {
   return withBasePath(
-    `/sitemap-${scope}-${String(page)}.xml`,
+    `/sitemap-${sitemapScopeStem(ref)}-${String(page)}.xml`,
     ctx.config.basePath,
   );
 }
@@ -247,34 +321,60 @@ async function termUrls(
   );
 }
 
+// Seo's own scope kinds, which own every stem starting with their name — so a
+// contributed scope by one of these names would answer for an entry type's or
+// a taxonomy's sub-sitemap.
+const RESERVED_SCOPE_KINDS = ["entries", "terms"] as const;
+
+function assertContributable(name: string, pluginId: string): void {
+  const reserved = RESERVED_SCOPE_KINDS.some(
+    (kind) => name === kind || name.startsWith(`${kind}-`),
+  );
+  if (!reserved) return;
+  throw SeoError.reservedSitemapScope({ scope: name, pluginId });
+}
+
+function policyOf(
+  sitemaps: SeoSitemapsOptions,
+  ref: SitemapScopeRef,
+): false | SitemapScopePolicy | undefined {
+  switch (ref.kind) {
+    case "entries":
+      return sitemaps.entries?.[ref.name];
+    case "terms":
+      return sitemaps.terms?.[ref.name];
+    case "contributed":
+      // A contributed name is never `entries` or `terms`, the two keys
+      // holding a map of scopes, so its key holds one scope's policy.
+      return sitemaps[ref.name];
+  }
+}
+
 /**
- * Every scope the sitemap index enumerates, in the precedence core resolved a
- * scope name by: entry type, then taxonomy, then registered archive. A name
- * claimed twice keeps the first claim — two routes for one path would fail the
- * boot naming this plugin as its own rival.
+ * Every scope the sitemap index enumerates: each crawlable public entry type,
+ * each public taxonomy, and each crawlable archive that declared a `sitemap`,
+ * with the policy the site's `sitemaps` option set for it.
  */
 export function sitemapScopes(
   plugins: PluginRegistry,
+  sitemaps: SeoSitemapsOptions,
 ): readonly SitemapScope[] {
-  const scopes = new Map<string, SitemapScope>();
-  const claim = (scope: SitemapScope): void => {
-    if (!scopes.has(scope.name)) scopes.set(scope.name, scope);
+  const scopes: SitemapScope[] = [];
+  const add = (scope: Omit<SitemapScope, "policy">): void => {
+    scopes.push({ ...scope, policy: policyOf(sitemaps, scope.ref) ?? {} });
   };
-
   for (const type of publicTargets(plugins.entryTypes)) {
     if (!isCrawlableType(type)) continue;
-    claim({
-      name: type.name,
-      kind: "entryType",
+    add({
+      ref: { kind: "entries", name: type.name },
       tags: [typeTag(type.name)],
       count: (ctx) => entryCount(ctx, type.name),
       urls: (ctx, page) => entryUrls(ctx, type.name, page),
     });
   }
   for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
-    claim({
-      name: taxonomy.name,
-      kind: "taxonomy",
+    add({
+      ref: { kind: "terms", name: taxonomy.name },
       // A term archive is stored under the `t:<type>` tags of its taxonomy's
       // entry types, and a term change purges exactly those — so the list of
       // those archives rides the same signal.
@@ -289,29 +389,75 @@ export function sitemapScopes(
     // and `plugin-feeds` already refuses a policied archive's feed on the
     // same ground — a URL list is no more publishable than a feed.
     if (!sitemap || !isCrawlableType(archive)) continue;
-    claim({
-      name: archive.name,
-      kind: "archiveType",
+    assertContributable(archive.name, archive.registeredBy ?? "core");
+    add({
+      ref: { kind: "contributed", name: archive.name },
       tags: sitemap.tags ?? [],
       count: sitemap.count,
       urls: sitemap.urls,
     });
   }
-  return [...scopes.values()];
+  return scopes;
 }
 
 /**
- * A scope's URLs for one page, passed through the `seo:sitemap:urls` filter —
- * which runs even on an empty page, so a subscriber can inject rows into a
- * scope that has none of its own.
+ * Fail the boot on a `sitemaps` key that names no scope this site has, so a
+ * misspelt or uninstalled scope cannot leave its policy silently unapplied.
+ *
+ * @throws naming the first such key, as `sitemaps.<kind>.<name>` for an entry
+ * type or taxonomy and `sitemaps.<name>` for a contributed scope.
+ */
+export function assertSitemapPolicyNamesScopes(
+  sitemaps: SeoSitemapsOptions,
+  scopes: readonly SitemapScope[],
+): void {
+  const { entries = {}, terms = {}, ...contributed } = sitemaps;
+  const groups = [
+    { kind: "entries", prefix: "entries.", keys: Object.keys(entries) },
+    { kind: "terms", prefix: "terms.", keys: Object.keys(terms) },
+    { kind: "contributed", prefix: "", keys: Object.keys(contributed) },
+  ] as const;
+  for (const { kind, prefix, keys } of groups) {
+    const names = new Set(
+      scopes
+        .filter((scope) => scope.ref.kind === kind)
+        .map((scope) => scope.ref.name),
+    );
+    const unknown = keys.find((key) => !names.has(key));
+    if (unknown === undefined) continue;
+    throw SeoError.unknownSitemapPolicyKey({ key: `${prefix}${unknown}` });
+  }
+}
+
+// A value the URL carries beats the site's default for its scope. A field
+// neither sets stays absent, so the serializer writes no element for it.
+function withPolicy(url: SitemapUrl, policy: SitemapScopePolicy): SitemapUrl {
+  const changefreq = url.changefreq ?? policy.changefreq;
+  const priority = url.priority ?? policy.priority;
+  return {
+    ...url,
+    ...(changefreq === undefined ? {} : { changefreq }),
+    ...(priority === undefined ? {} : { priority }),
+  };
+}
+
+/**
+ * A scope's URLs for one page, each over its scope's policy, passed through
+ * the `seo:sitemap:urls` filter — which runs even on an empty page, so a
+ * subscriber can inject rows into a scope that has none of its own, and which
+ * has the last word on every value.
  */
 export async function collectSitemapUrls(
   ctx: AppContext,
   scope: SitemapScope,
   page: number,
 ): Promise<readonly SitemapUrl[]> {
-  const urls = await scope.urls(ctx, page);
-  return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope.name, page, ctx);
+  // A scope the site dropped is held out by `scopeIsOffered` before its URLs
+  // are ever asked for.
+  const defaults = scope.policy === false ? {} : scope.policy;
+  const provided = await scope.urls(ctx, page);
+  const urls = provided.map((url) => withPolicy(url, defaults));
+  return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope.ref, page, ctx);
 }
 
 /** The sub-sitemap `<loc>`s the index lists, paged by each scope's own count. */
@@ -325,7 +471,7 @@ export async function sitemapIndexLocs(
     if (total <= 0) continue;
     const pages = Math.ceil(total / SITEMAP_PAGE_SIZE);
     for (let page = 1; page <= pages; page++) {
-      locs.push(`${ctx.origin}${subSitemapPath(ctx, scope.name, page)}`);
+      locs.push(`${ctx.origin}${subSitemapPath(ctx, scope.ref, page)}`);
     }
   }
   return locs;
@@ -335,22 +481,25 @@ export async function sitemapIndexLocs(
  * Whether this scope's URLs may be offered at all — the `site_private`,
  * `type_default` and `taxonomy_default` arms of `indexable`, asked of a whole
  * scope rather than of a page, so a type held out of the index is not still
- * advertised here.
+ * advertised here. A scope the site's `sitemaps` policy set to `false` is
+ * held out too, and that is about the sitemap only: the head's robots
+ * directive never reads it.
  *
- * A registered archive answers to neither per-scope default: it is a plugin's
- * own URL space, and the plugin declaring its `sitemap` is what opts it in.
+ * A contributed scope answers to no admin per-scope default: it is a plugin's
+ * own URL space, and only the site's `sitemaps` policy can drop it.
  */
 export function scopeIsOffered(
   scope: SitemapScope,
   settings: SeoSettings,
 ): boolean {
   if (!settings.indexable) return false;
-  switch (scope.kind) {
-    case "entryType":
-      return !settings.noindexTypes.has(scope.name);
-    case "taxonomy":
-      return !settings.noindexTaxonomies.has(scope.name);
-    case "archiveType":
+  if (scope.policy === false) return false;
+  switch (scope.ref.kind) {
+    case "entries":
+      return !settings.noindexTypes.has(scope.ref.name);
+    case "terms":
+      return !settings.noindexTaxonomies.has(scope.ref.name);
+    case "contributed":
       return true;
   }
 }

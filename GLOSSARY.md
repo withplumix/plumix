@@ -392,9 +392,15 @@ One transform of an image source — a width, a crop, a format — that the Node
 The single normalized source-of-truth URL driving `<link rel="canonical">`, the redirect normalizer, sitemap, and `og:url`.
 
 **Sitemap**:
-The generated XML URL set, paged into scoped sub-sitemaps per entry type,
-taxonomy, or archive type. Served by `@plumix/plugin-seo` rather than by core,
-alongside `/robots.txt`.
+The generated XML index at `/sitemap.xml`, naming one paged sub-sitemap per
+sitemap scope. Served by `@plumix/plugin-seo` rather than by core, alongside
+`/robots.txt`.
+
+**Sitemap scope**:
+One URL space the sitemap index lists: the published entries of a public entry
+type, the term archives of a public taxonomy, or a URL space a plugin
+contributed. The site, not the scope's contributor, decides whether it is listed
+and what its URLs' `changefreq` and `priority` default to.
 
 ## Syndication
 
