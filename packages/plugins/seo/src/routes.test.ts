@@ -443,6 +443,13 @@ describe("the sitemap index", () => {
   const PAGE_ONE_NEWEST = new Date("2026-03-01T00:00:00.000Z");
   const PAGE_TWO_NEWEST = new Date("2026-02-01T00:00:00.000Z");
 
+  const NEWEST_AT = new Map([
+    [500, PAGE_ONE_NEWEST],
+    [1200, PAGE_TWO_NEWEST],
+  ]);
+
+  // Written straight to the table: `entryFactory` takes no `updatedAt`, and
+  // the page windows under test are defined by it.
   async function seedPosts(h: DispatcherHarness, count: number): Promise<void> {
     const author = await h.seedUser("admin");
     const start = Date.parse("2026-01-01T00:00:00.000Z");
@@ -453,12 +460,7 @@ describe("the sitemap index", () => {
       status: "published" as const,
       authorId: author.id,
       publishedAt: new Date(start),
-      updatedAt:
-        i === 500
-          ? PAGE_ONE_NEWEST
-          : i === 1200
-            ? PAGE_TWO_NEWEST
-            : new Date(start + i * 60_000),
+      updatedAt: NEWEST_AT.get(i) ?? new Date(start + i * 60_000),
     }));
     for (let i = 0; i < rows.length; i += 100) {
       await h.db.insert(entries).values(rows.slice(i, i + 100));
