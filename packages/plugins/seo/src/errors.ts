@@ -28,6 +28,11 @@ export class SeoError extends Error {
     this.key = fields.key;
   }
 
+  /**
+   * A plugin's archive contributes a sitemap scope under a name seo keeps for
+   * its own entry-type and taxonomy scopes. Raised at boot, naming the plugin,
+   * so the name can be changed before any route answers for it.
+   */
   static reservedSitemapScope(ctx: {
     scope: string;
     pluginId: string;
@@ -42,6 +47,11 @@ export class SeoError extends Error {
     );
   }
 
+  /**
+   * The site's `sitemaps` option names a scope nothing registered, so its
+   * policy would never apply. `key` is the path as written in the option,
+   * such as `entries.post` or `location`.
+   */
   static unknownSitemapPolicyKey(ctx: { key: string }): SeoError {
     return new SeoError(
       "unknown_sitemap_policy_key",

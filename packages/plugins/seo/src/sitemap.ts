@@ -178,8 +178,10 @@ export interface SeoSitemapsOptions {
  */
 export interface SitemapScope {
   readonly ref: SitemapScopeRef;
-  /** What the site's `sitemaps` option set for this scope. */
-  readonly policy: false | SitemapScopePolicy;
+  /** The `changefreq` and `priority` the site's `sitemaps` option set for this scope. */
+  readonly policy: SitemapScopePolicy;
+  /** Whether the site's `sitemaps` option set this scope to `false`. */
+  readonly dropped: boolean;
   readonly tags: readonly string[];
   readonly count: (ctx: AppContext) => Promise<number> | number;
   readonly urls: (
@@ -360,8 +362,13 @@ export function sitemapScopes(
   sitemaps: SeoSitemapsOptions,
 ): readonly SitemapScope[] {
   const scopes: SitemapScope[] = [];
-  const add = (scope: Omit<SitemapScope, "policy">): void => {
-    scopes.push({ ...scope, policy: policyOf(sitemaps, scope.ref) ?? {} });
+  const add = (scope: Omit<SitemapScope, "policy" | "dropped">): void => {
+    const policy = policyOf(sitemaps, scope.ref) ?? {};
+    scopes.push({
+      ...scope,
+      policy: policy === false ? {} : policy,
+      dropped: policy === false,
+    });
   };
   for (const type of publicTargets(plugins.entryTypes)) {
     if (!isCrawlableType(type)) continue;
@@ -452,11 +459,8 @@ export async function collectSitemapUrls(
   scope: SitemapScope,
   page: number,
 ): Promise<readonly SitemapUrl[]> {
-  // A scope the site dropped is held out by `scopeIsOffered` before its URLs
-  // are ever asked for.
-  const defaults = scope.policy === false ? {} : scope.policy;
   const provided = await scope.urls(ctx, page);
-  const urls = provided.map((url) => withPolicy(url, defaults));
+  const urls = provided.map((url) => withPolicy(url, scope.policy));
   return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope.ref, page, ctx);
 }
 
@@ -493,7 +497,7 @@ export function scopeIsOffered(
   settings: SeoSettings,
 ): boolean {
   if (!settings.indexable) return false;
-  if (scope.policy === false) return false;
+  if (scope.dropped) return false;
   switch (scope.ref.kind) {
     case "entries":
       return !settings.noindexTypes.has(scope.ref.name);
