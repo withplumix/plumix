@@ -3,10 +3,16 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { validateApiToken } from "../auth/api-tokens.js";
 import { hashToken } from "../auth/tokens.js";
 import {
+  allowedDomainFactory,
   apiTokenFactory,
   authTokenFactory,
+  credentialFactory,
   deviceCodeFactory,
+  entryFactory,
   oauthAccountFactory,
+  sessionFactory,
+  settingFactory,
+  termFactory,
   userFactory,
 } from "./factories.js";
 import * as thisProcess from "./factories.js";
@@ -129,29 +135,26 @@ describe("explicit values on unique columns", () => {
     {
       name: "entryFactory",
       create: (db, userId) =>
-        thisProcess.entryFactory
+        entryFactory
           .transient({ db })
           .create({ authorId: userId, slug: "hello" }),
       expected: { slug: "hello" },
     },
     {
       name: "termFactory",
-      create: (db) =>
-        thisProcess.termFactory.transient({ db }).create({ slug: "news" }),
+      create: (db) => termFactory.transient({ db }).create({ slug: "news" }),
       expected: { slug: "news" },
     },
     {
       name: "sessionFactory",
       create: (db, userId) =>
-        thisProcess.sessionFactory
-          .transient({ db })
-          .create({ userId, id: "session-a" }),
+        sessionFactory.transient({ db }).create({ userId, id: "session-a" }),
       expected: { id: "session-a" },
     },
     {
       name: "settingFactory",
       create: (db) =>
-        thisProcess.settingFactory
+        settingFactory
           .transient({ db })
           .create({ group: "site", key: "title" }),
       expected: { group: "site", key: "title" },
@@ -159,7 +162,7 @@ describe("explicit values on unique columns", () => {
     {
       name: "allowedDomainFactory",
       create: (db) =>
-        thisProcess.allowedDomainFactory
+        allowedDomainFactory
           .transient({ db })
           .create({ domain: "school.test" }),
       expected: { domain: "school.test" },
@@ -167,7 +170,7 @@ describe("explicit values on unique columns", () => {
     {
       name: "credentialFactory",
       create: (db, userId) =>
-        thisProcess.credentialFactory.transient({ db }).create({
+        credentialFactory.transient({ db }).create({
           userId,
           id: "cred-a",
           publicKey: Buffer.from([1, 2, 3]),
