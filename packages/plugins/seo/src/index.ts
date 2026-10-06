@@ -102,8 +102,7 @@ export interface SeoOptions {
  * cross-referenced structured-data graph — website, publisher, page, article,
  * breadcrumbs, image and author, each addressable by URL fragment — which a
  * plugin can narrow, reshape or replace through the three `seo:schema:*`
- * filters. {@link Breadcrumbs} draws the same
- * trail the graph publishes.
+ * filters. {@link Breadcrumbs} draws the same trail the graph publishes.
  *
  * Every tag is gap-filled — a theme or another plugin that set the same key
  * keeps it — so installing this adds what a page was missing and overrides

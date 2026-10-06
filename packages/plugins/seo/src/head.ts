@@ -91,7 +91,8 @@ function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
  * Pure gap-filler for the head: appends a `<meta>` only when its
  * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
  * declared one, and a `<title>` only when an editor overrode it — so a theme-
- * or plugin-set value always wins and nothing duplicates.
+ * or plugin-set value always wins and nothing duplicates. An error page gets
+ * the robots directive and nothing else.
  */
 export function seoHeadMeta(
   manifest: DocumentManifest,
@@ -112,47 +113,57 @@ export function seoHeadMeta(
   // site to vouch for, so all it says is whether to index it.
   if (inputs.errorPage) {
     addName("robots", robotsDirective(inputs));
-  } else {
-    addName("description", inputs.description);
-    addName("robots", robotsDirective(inputs));
-    // Ownership proofs, not page copy — each engine reads its own name, and a
-    // theme that already declared one keeps it like any other tag.
-    for (const tag of inputs.verification) addName(tag.name, tag.content);
-    // An image with no usable url is no image: every tag below hangs off it.
-    const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
-    addName("twitter:card", image ? "summary_large_image" : "summary");
-    addProperty("og:title", inputs.searchTitle ?? inputs.title);
-    addProperty("og:type", inputs.ogType);
-    addProperty("og:url", inputs.canonical);
-    addProperty("og:site_name", inputs.siteName);
-    addProperty("og:description", inputs.description);
-    addProperty("og:locale", inputs.ogLocale);
-    // Only an `article` carries them, the one page kind that has them.
-    if (inputs.articleTags && inputs.ogType === "article") {
-      addProperty(
-        "article:published_time",
-        inputs.published?.toISOString() ?? null,
-      );
-      addProperty(
-        "article:modified_time",
-        inputs.modified?.toISOString() ?? null,
-      );
-      addProperty("article:author", inputs.author);
-    }
-    // The image tags describe one picture, so they travel as a group: a
-    // template that declared its own `og:image` owns it, and a size or twitter
-    // mirror appended beside it would describe some other image.
-    if (image && !hasProperty(existing, "og:image")) {
-      addProperty("og:image", image.url);
-      addProperty("og:image:width", image.width?.toString() ?? null);
-      addProperty("og:image:height", image.height?.toString() ?? null);
-      addName("twitter:image", image.url);
-      const alt = nonEmpty(image.alt);
-      addProperty("og:image:alt", alt);
-      addName("twitter:image:alt", alt);
-    }
+    return withAdditions(manifest, inputs, additions);
   }
 
+  addName("description", inputs.description);
+  addName("robots", robotsDirective(inputs));
+  // Ownership proofs, not page copy — each engine reads its own name, and a
+  // theme that already declared one keeps it like any other tag.
+  for (const tag of inputs.verification) addName(tag.name, tag.content);
+  // An image with no usable url is no image: every tag below hangs off it.
+  const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
+  addName("twitter:card", image ? "summary_large_image" : "summary");
+  addProperty("og:title", inputs.searchTitle ?? inputs.title);
+  addProperty("og:type", inputs.ogType);
+  addProperty("og:url", inputs.canonical);
+  addProperty("og:site_name", inputs.siteName);
+  addProperty("og:description", inputs.description);
+  addProperty("og:locale", inputs.ogLocale);
+  // Only an `article` carries them, which is the one page kind that has them.
+  if (inputs.articleTags && inputs.ogType === "article") {
+    addProperty(
+      "article:published_time",
+      inputs.published?.toISOString() ?? null,
+    );
+    addProperty(
+      "article:modified_time",
+      inputs.modified?.toISOString() ?? null,
+    );
+    addProperty("article:author", inputs.author);
+  }
+  // The image tags describe one picture, so they travel as a group: a template
+  // that declared its own `og:image` owns it, and a size or twitter mirror
+  // appended beside it would describe some other image.
+  if (image && !hasProperty(existing, "og:image")) {
+    addProperty("og:image", image.url);
+    addProperty("og:image:width", image.width?.toString() ?? null);
+    addProperty("og:image:height", image.height?.toString() ?? null);
+    addName("twitter:image", image.url);
+    const alt = nonEmpty(image.alt);
+    addProperty("og:image:alt", alt);
+    addName("twitter:image:alt", alt);
+  }
+
+  return withAdditions(manifest, inputs, additions);
+}
+
+/** The manifest with `additions` appended, plus the canonical link and title. */
+function withAdditions(
+  manifest: DocumentManifest,
+  inputs: HeadInputs,
+  additions: readonly DocumentMeta[],
+): DocumentManifest {
   // Written here rather than left to core's own gap-filler, which runs after
   // this and would otherwise declare the derived URL an editor overrode. With
   // no override the two agree, so core simply finds the tag already set.
@@ -176,7 +187,7 @@ export function seoHeadMeta(
       ? {}
       : { title: composed, titleTemplate: IDENTITY_TEMPLATE }),
     link,
-    meta: [...(existing ?? []), ...additions],
+    meta: [...(manifest.meta ?? []), ...additions],
   };
 }
 
@@ -207,7 +218,9 @@ export interface SeoHeadOptions {
 /**
  * Write this page's head. Reads the site settings and the subject's own SEO
  * answers, decides indexability once through {@link indexable}, then gap-fills
- * via {@link seoHeadMeta} and appends the structured-data graph.
+ * via {@link seoHeadMeta} and appends the structured-data graph. An error page
+ * gets the robots directive alone, and `options.structuredData: false` skips
+ * the graph and the `seo:schema:*` filters it runs.
  */
 export async function applySeoHead(
   manifest: DocumentManifest,
@@ -279,6 +292,7 @@ export async function applySeoHead(
   // whose robots directive say different things about it. Nor does a URL that
   // resolved to nothing, which has no subject to describe and no canonical to
   // hang one off.
+  //
   // A site that turned the graph off gets none built, so no `seo:schema:*`
   // subscriber runs.
   if (

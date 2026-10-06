@@ -80,7 +80,7 @@ Every public page gets:
 - `robots` — decided by the [assertion chain](#one-predicate-several-consumers) below.
 - `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`.
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
-- One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable.
+- One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable, unless the site set [`structuredData: false`](#options).
 
 A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`, unless the site set [`articleTags: false`](#options). An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
 
@@ -243,7 +243,7 @@ A variable the page has nothing for resolves to the empty string, and a separato
 
 ## Structured data
 
-Every indexable page carries one `<script type="application/ld+json">` in its head, holding a **graph**: a set of pieces that reference each other by URL fragment rather than repeating themselves. That referencing convention is what makes it a graph instead of a pile of disconnected objects, and it is what a crawler follows to learn that the article on this page was written by the person named two pieces over.
+Unless the site set [`structuredData: false`](#options), every indexable page carries one `<script type="application/ld+json">` in its head, holding a **graph**: a set of pieces that reference each other by URL fragment rather than repeating themselves. That referencing convention is what makes it a graph instead of a pile of disconnected objects, and it is what a crawler follows to learn that the article on this page was written by the person named two pieces over.
 
 An entry page carries all seven pieces:
 
@@ -335,7 +335,7 @@ Ancestors are not walked: a hierarchical entry's parents and a nested term's par
 
 ## robots.txt and the sitemap
 
-Installing the plugin puts four kinds of machine-readable document at the site root: `/robots.txt`, the sitemap, the stylesheet that renders it, and `/llms.txt`.
+Installing the plugin puts four kinds of machine-readable document at the site root: `/robots.txt`, the sitemap, the stylesheet that renders it, and `/llms.txt` (unless the site set [`llmsTxt: false`](#options)).
 
 `/robots.txt` allows all crawling while the indexing toggle is on, and disallows everything when it is off. An indexable site's file ends with a `Sitemap:` line pointing at the index below, and the settings screen can replace the rules above it. The body goes through a `seo:robots-txt` filter, so a plugin can append `Sitemap:` lines, a crawl-delay or per-agent rules without owning the route:
 
@@ -405,7 +405,7 @@ With no CDN configured, every sitemap is generated per request.
 
 ## llms.txt
 
-`/llms.txt` is the [llmstxt.org](https://llmstxt.org/) convention: a small Markdown file naming the site, its tagline and what is worth reading. The plugin serves the site title and tagline from the Site identity group — falling back to the host when no title is set — and links the sitemap index.
+`/llms.txt` is the [llmstxt.org](https://llmstxt.org/) convention: a small Markdown file naming the site, its tagline and what is worth reading. Unless the site set [`llmsTxt: false`](#options), the plugin serves the site title and tagline from the Site identity group — falling back to the host when no title is set — and links the sitemap index.
 
 The map is offered only to a site that wants to be read this way. One held out of the index has nothing to offer, and one that blocks AI crawlers has already said the opposite of what a map here would say, so both get the heading and a sentence instead of a list. The file is still served either way: a crawler that fetches it gets an answer rather than a 404 it would read as "not implemented yet".
 
@@ -451,7 +451,7 @@ The plugin owns one settings page, **SEO**, composed of three groups. Each is it
 - **IndexNow key** — turns on publish-time notification. Empty means none.
 - One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from the `afterSetup` of a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
-**Site verification** holds the token each engine hands you to prove you own the site. Every one set reaches the head of every page, under the name that engine reads:
+**Site verification** holds the token each engine hands you to prove you own the site. Every one set reaches the head of every page except one that was not found, under the name that engine reads:
 
 | Field     | Meta name                  |
 | --------- | -------------------------- |

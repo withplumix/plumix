@@ -455,9 +455,13 @@ describe("the three filter tiers", () => {
   });
 
   test("with structured data off, no graph is built or emitted", async () => {
-    const subscriber = vi.fn((graph: readonly SchemaPiece[]) => graph);
+    const needs = vi.fn((needed: boolean) => needed);
+    const piece = vi.fn((built: SchemaPiece) => built);
+    const graph = vi.fn((pieces: readonly SchemaPiece[]) => pieces);
     const watcher = definePlugin("watch-graph", (ctx) => {
-      ctx.addFilter("seo:schema:graph", subscriber);
+      ctx.addFilter("seo:schema:needs", needs);
+      ctx.addFilter("seo:schema:piece", piece);
+      ctx.addFilter("seo:schema:graph", graph);
     });
     const h = await createHarness([
       blogPlugin,
@@ -467,7 +471,9 @@ describe("the three filter tiers", () => {
     await seedPost(h);
 
     expect(await headAt(h, POST_URL)).not.toContain("application/ld+json");
-    expect(subscriber).not.toHaveBeenCalled();
+    expect(needs).not.toHaveBeenCalled();
+    expect(piece).not.toHaveBeenCalled();
+    expect(graph).not.toHaveBeenCalled();
   });
 });
 
@@ -575,6 +581,24 @@ describe("breadcrumbs", () => {
       "https://cms.example/post",
       undefined,
     ]);
+  });
+
+  test("with structured data off, the theme's trail still renders", async () => {
+    const h = await createHarness(
+      [blogPlugin, seo({ structuredData: false })],
+      trailTheme,
+    );
+    await seedPost(h);
+
+    const html = await (await h.dispatch(new Request(POST_URL))).text();
+    const nav = /<nav[^>]*data-plumix-breadcrumbs[\s\S]*?<\/nav>/.exec(html);
+
+    expect(
+      [...(nav?.[0] ?? "").matchAll(/<li>(?:<a[^>]*>)?([^<]*)/g)].map(
+        (m) => m[1],
+      ),
+    ).toEqual(["Home", "Posts", "Hello"]);
+    expect(html).not.toContain("application/ld+json");
   });
 
   test("the front page draws no trail and claims none", async () => {
