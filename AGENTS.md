@@ -123,7 +123,7 @@ Gate dev-only code on a compile-time constant, `import.meta.env.DEV` or the `pro
 ## Commits, branches, PRs
 
 - Conventional Commits, enforced by commitlint (`commitlint.config.ts`).
-- **Scopes** must be workspace package names, and `pnpm ls -r --depth -1` lists them. For `.github/` meta changes, use `ci:` with no scope.
+- **Scopes** are workspace package names without their `@…/` prefix: `core`, `runtime-node`, `docs`, `plugin-seo`. `commitlint.config.ts` derives the list through `@commitlint/config-pnpm-scopes`, so `@plumix/runtime-node` and `@plumix-apps/docs` are rejected. For `.github/` meta changes, use `ci:` with no scope.
 - Use `refactor`, not `ref`. Commitlint rejects `ref`.
 - **Subject must start lowercase.** Rephrase to start with a lowercase verb if you'd otherwise lead with `CI`, `API`, `OAuth`, etc.
 - **Wrap commit body lines at 100 characters.** `commitlint.config.ts` turns the body limit off, but config-conventional's 100-character footer limit still applies.

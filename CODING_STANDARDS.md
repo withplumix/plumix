@@ -57,6 +57,10 @@ Handle every case a caller can actually produce, including empty, missing and fa
 Before you handle a state, check that real use can reach it. A guard for a state nothing reaches is
 a safety net nobody asked for.
 
+An empty string in a config slot means the option is off, the same as `false` or leaving the slot
+out. Validation rejects only the shapes a ticket names as rejected; it does not turn an empty
+string into a boot error on its own.
+
 ## Performance
 
 - Load a set of records in one query (`WHERE id IN (…)`), never one query per record. On the
@@ -120,6 +124,11 @@ it or delete it.
 
 Never change a test just to make it pass, because the test may be the only thing that's right. When
 you can't tell which side is wrong, stop and say so.
+
+An end-to-end test waits for the element whose listener it drives before it dispatches input.
+A click, key or wheel sent straight after navigation races the mount of the listener that handles
+it, and passes or fails with the machine's load. Waiting for that element is part of the test, not
+a scope change, even when the ticket never names the race.
 
 ### Shared helpers
 
