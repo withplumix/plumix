@@ -70,7 +70,7 @@ Every option is optional. Three of them switch off a default, for a site whose h
 seo({ llmsTxt: false, articleTags: false, structuredData: false });
 ```
 
-`metaBox` is the fourth; [Scope is derived, not configured](#scope-is-derived-not-configured) covers it.
+`metaBox` is the fourth; [Scope is derived, not configured](#scope-is-derived-not-configured) covers it. `sitemaps` is the fifth; [Sitemap policy](#sitemap-policy) covers it.
 
 ## What lands in the head
 
@@ -352,15 +352,43 @@ Turning **Block AI crawlers** on adds one more group to the file, naming the cra
 
 A scope whose entry type or taxonomy is held out of the index leaves the set entirely — it is absent from the index and its sub-sitemap serves an empty `<urlset>`.
 
-Two seams are worth knowing about. An archive registered with `registerArchiveType` answers to neither per-type nor per-taxonomy default: it is a plugin's own URL space, and declaring a `sitemap` is what opts it in — so an archive listing permalinks of a `noindex` type would advertise pages that say `noindex`. And a taxonomy sharing a name with an entry type gets no sub-sitemap at all, because the entry type claims the scope name first; its term archives still say `index`.
+An archive registered with `registerArchiveType` is a contributed scope, and a contributed scope answers to the site's [`sitemaps` policy](#sitemap-policy). An archive listing permalinks of a `noindex` type therefore advertises pages that say `noindex` until the site sets its scope to `false` there.
 
-`/sitemap-<scope>-<page>.xml` is the URL list for one scope and page. Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree.
+Each scope's sub-sitemap answers at a URL named by its kind, so an entry type and a taxonomy sharing a name each get one:
 
-Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
+| Scope              | URL                                    |
+| ------------------ | -------------------------------------- |
+| An entry type      | `/sitemap-entries-<type>-<page>.xml`   |
+| A taxonomy         | `/sitemap-terms-<taxonomy>-<page>.xml` |
+| A plugin's archive | `/sitemap-<name>-<page>.xml`           |
+
+Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree. `entries` and `terms` belong to seo, so an archive whose `sitemap` scope is named `entries` or `terms`, or starts `entries-` or `terms-`, fails the boot naming its plugin.
+
+Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-entries-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
 
 A site with indexing turned off publishes an empty index and empty URL lists, so a crawler that already knows the URL learns nothing from it.
 
 Both documents name `/sitemap.xsl`, an XSLT stylesheet the plugin serves. A crawler ignores the instruction and parses the same XML; a browser renders a table of the URLs, their last-modified stamps and how many pictures each carries. The stylesheet is inline and static — nothing it renders depends on a second request. Browsers are phasing XSLT support out; where it has gone, the document falls back to the plain XML tree the browser would have shown anyway.
+
+### Sitemap policy
+
+The site decides which scopes its sitemap lists and what their URLs' `<changefreq>` and `<priority>` default to — its own scopes and every plugin's — in the `sitemaps` option. Entry types sit under `entries`, taxonomies under `terms`, and a plugin's archive under its own name:
+
+```ts no-typecheck
+seo({
+  sitemaps: {
+    entries: { post: { changefreq: "weekly", priority: 0.8 }, page: false },
+    terms: { category: { changefreq: "monthly" } },
+    location: { changefreq: "daily" },
+  },
+});
+```
+
+`false` leaves a scope out: it is absent from the index and its sub-sitemap serves an empty `<urlset>`. That is about the sitemap only — a page of a dropped type still says `index` in its head, which the **Hide from search engines** settings decide. A policy object is the default for every URL in the scope. `changefreq` takes the sitemaps.org vocabulary (`always`, `hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`), and `priority` is 0.0–1.0, which the plugin does not clamp. A key that names no scope fails the boot, naming the key — a misspelt name, and also a registered type or archive the sitemap never lists because it is not public or carries an access policy, since its policy would never apply.
+
+For one URL, a value its scope's provider set — an archive's `urls` — beats the site's default, and the `seo:sitemap:urls` filter below sees the merged values and has the last word. A URL that ends up with neither field writes neither element. Google ignores both fields; they are there for parity with an existing sitemap and for crawlers that read them.
+
+The site-wide indexing toggle still empties every scope, a plugin's included.
 
 ### Images
 
@@ -372,13 +400,25 @@ Only pictures are listed, and nothing here sniffs a payload to decide: the adapt
 
 ### Adding URLs
 
-The `seo:sitemap:urls` filter adjusts one scope's page before it is serialized. It receives the scope name, the 1-based page and the request context, so a subscriber can query for rows to inject rather than only reshape what is there:
+The `seo:sitemap:urls` filter adjusts one scope's page before it is serialized. It receives the scope as `{ kind, name }` — `kind` is `"entries"`, `"terms"` or `"contributed"` — the 1-based page and the request context, so a subscriber can query for rows to inject rather than only reshape what is there:
 
 ```ts no-typecheck
 ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => {
-  if (scope !== "post" || page !== 1) return urls;
+  if (scope.kind !== "entries" || scope.name !== "post" || page !== 1) {
+    return urls;
+  }
   return [...urls, { loc: `${appCtx.origin}/handbook` }];
 });
+```
+
+A URL can carry `changefreq` and `priority` too, so a subscriber can set them per URL, after the site's policy has been applied:
+
+```ts no-typecheck
+ctx.addFilter("seo:sitemap:urls", (urls, scope) =>
+  scope.kind === "entries" && scope.name === "insight"
+    ? urls.map((url) => ({ ...url, changefreq: "weekly", priority: 0.8 }))
+    : urls,
+);
 ```
 
 An archive registered with `registerArchiveType` folds into the index by declaring a `sitemap`. `count` drives the index's pagination without a URL scan, `urls` answers one page, and `tags` names the cache tags its pages are stored under:

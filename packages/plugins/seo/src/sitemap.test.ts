@@ -9,8 +9,8 @@ describe("renderSitemapIndex", () => {
   test("wraps each loc in a <sitemap> entry", () => {
     const xml = renderSitemapIndex(
       [
-        "https://cms.example/sitemap-post-1.xml",
-        "https://cms.example/sitemap-category-1.xml",
+        "https://cms.example/sitemap-entries-post-1.xml",
+        "https://cms.example/sitemap-terms-category-1.xml",
       ],
       XSL,
     );
@@ -19,7 +19,7 @@ describe("renderSitemapIndex", () => {
       '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     );
     expect(xml).toContain(
-      "<sitemap><loc>https://cms.example/sitemap-post-1.xml</loc></sitemap>",
+      "<sitemap><loc>https://cms.example/sitemap-entries-post-1.xml</loc></sitemap>",
     );
     expect(xml.match(/<sitemap>/g)).toHaveLength(2);
   });
@@ -49,6 +49,72 @@ describe("renderSubSitemap", () => {
     expect(xml).toContain(
       "<url><loc>https://cms.example/category/news</loc></url>",
     );
+  });
+
+  test("a set with no changefreq or priority writes neither element", () => {
+    // A site that sets neither keeps the exact bytes its crawlers fetch.
+    const xml = renderSubSitemap(
+      [
+        {
+          loc: "https://cms.example/post/a?x=1&y=2",
+          lastmod: "2026-06-14T00:00:00.000Z",
+          images: ["https://cdn.example/a.png"],
+        },
+        { loc: "https://cms.example/category/news" },
+      ],
+      XSL,
+    );
+    expect(xml).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>' +
+        '<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ' +
+        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' +
+        "<url><loc>https://cms.example/post/a?x=1&amp;y=2</loc>" +
+        "<lastmod>2026-06-14T00:00:00.000Z</lastmod>" +
+        "<image:image><image:loc>https://cdn.example/a.png</image:loc></image:image></url>" +
+        "<url><loc>https://cms.example/category/news</loc></url>" +
+        "</urlset>",
+    );
+  });
+
+  test("writes changefreq and priority after lastmod and before the images", () => {
+    const xml = renderSubSitemap(
+      [
+        {
+          loc: "https://cms.example/post/a",
+          lastmod: "2026-06-14T00:00:00.000Z",
+          changefreq: "weekly",
+          priority: 0.8,
+          images: ["https://cdn.example/a.png"],
+        },
+      ],
+      XSL,
+    );
+    expect(xml).toContain(
+      "<url><loc>https://cms.example/post/a</loc>" +
+        "<lastmod>2026-06-14T00:00:00.000Z</lastmod>" +
+        "<changefreq>weekly</changefreq><priority>0.8</priority>" +
+        "<image:image><image:loc>https://cdn.example/a.png</image:loc></image:image></url>",
+    );
+  });
+
+  test("writes a priority of 0", () => {
+    const xml = renderSubSitemap(
+      [{ loc: "https://cms.example/post/a", priority: 0 }],
+      XSL,
+    );
+    expect(xml).toContain(
+      "<url><loc>https://cms.example/post/a</loc><priority>0</priority></url>",
+    );
+  });
+
+  test("changefreq accepts only the sitemaps.org vocabulary", () => {
+    const url: SitemapUrl = {
+      loc: "https://cms.example/post/a",
+      // @ts-expect-error — not a sitemaps.org change frequency.
+      changefreq: "sometimes",
+    };
+    expect(url.loc).toBe("https://cms.example/post/a");
   });
 
   test("escapes XML metacharacters in loc", () => {

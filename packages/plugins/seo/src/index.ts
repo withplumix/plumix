@@ -6,6 +6,7 @@ import {
 } from "plumix/plugin";
 
 import type { SeoMetaBoxOptions } from "./meta-box.js";
+import type { SeoSitemapsOptions } from "./sitemap.js";
 import { applySeoHead } from "./head.js";
 import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
@@ -37,7 +38,13 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 // value type from the package that declares the filter — one import pulls both.
 export type { OgImage } from "plumix";
 export type { ArchiveTypeSitemap } from "./archive.js";
-export type { SitemapUrl } from "./sitemap.js";
+export type {
+  SeoSitemapsOptions,
+  SitemapChangeFrequency,
+  SitemapScopePolicy,
+  SitemapScopeRef,
+  SitemapUrl,
+} from "./sitemap.js";
 export { SITEMAP_PAGE_SIZE } from "./sitemap.js";
 // The set-wide cache tag, for a `seo:sitemap:urls` subscriber whose own data
 // changed and which has to retire what it contributed rows to.
@@ -84,6 +91,12 @@ export interface SeoOptions {
    * {@link Breadcrumbs} and {@link breadcrumbTrail} still work.
    */
   readonly structuredData?: boolean;
+  /**
+   * The site's sitemap policy, per scope: the `changefreq` and `priority` its
+   * URLs default to. A URL's own values, and then the `seo:sitemap:urls`
+   * filter, override it.
+   */
+  readonly sitemaps?: SeoSitemapsOptions;
 }
 
 /**
@@ -152,7 +165,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // every plugin's `setup` to have registered it.
     afterSetup: (ctx) => {
       registerSeoSettings(ctx);
-      registerSitemapRoutes(ctx);
+      registerSitemapRoutes(ctx, options.sitemaps ?? {});
       registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
     },
   });
