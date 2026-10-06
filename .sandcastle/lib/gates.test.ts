@@ -1,11 +1,17 @@
 import { describe, expect, test } from "vitest";
 
 import type { Gate, GateResult } from "./gates.js";
-import { gateBehindCheck, GATES, GATES_LEFT_TO_CI, runGates } from "./gates.js";
+import {
+  gateBehindCheck,
+  GATES,
+  GATES_LEFT_TO_CI,
+  runGates,
+  underAnOrphanReaper,
+} from "./gates.js";
 
 const sandboxWhereTheseCommandsFail = (failing: readonly string[]) => ({
   exec: async (command: string) => ({
-    exitCode: failing.includes(command) ? 1 : 0,
+    exitCode: failing.map(underAnOrphanReaper).includes(command) ? 1 : 0,
     stdout: "",
     stderr: "",
     durationMs: 0,
@@ -70,7 +76,7 @@ const sandboxWhereACommandFailsOnce = (flaky: string) => {
   let seen = 0;
   return {
     exec: async (command: string) => {
-      if (command !== flaky)
+      if (command !== underAnOrphanReaper(flaky))
         return { exitCode: 0, stdout: "", stderr: "", durationMs: 0 };
       seen += 1;
       return {
@@ -171,4 +177,42 @@ describe("package-scoped gates", () => {
       expect(gate?.command).toContain("--output-logs=errors-only");
     },
   );
+});
+
+describe("the test gate", () => {
+  test("runs every package's tests after one fails, so a waived failure hides nothing", () => {
+    const gate = GATES.find((candidate) => candidate.name === "test");
+
+    expect(gate?.command).toContain("--continue");
+  });
+});
+
+describe("a gate command runs under an orphan reaper", () => {
+  // Sandcastle starts the container as `sleep infinity`, and sleep never reaps the children a
+  // gate orphans. A zombie still answers `kill -0`, so a test that waits for a process to go
+  // away waits out its timeout instead.
+  test("so a process the gate orphans is reaped instead of left as a zombie", async () => {
+    const ran: string[] = [];
+    const sandbox = {
+      exec: async (command: string) => {
+        ran.push(command);
+        return { exitCode: 0, stdout: "", stderr: "", durationMs: 0 };
+      },
+    };
+
+    await runGates(sandbox, [gate("pnpm test")], {
+      stopAtFirstFailure: true,
+      onResult: ignoreResults,
+    });
+
+    expect(ran).toContain("tini -s -- sh -c 'pnpm test'");
+  });
+
+  test("a command with its own quotes reaches the shell unchanged", () => {
+    expect(
+      underAnOrphanReaper(`test -n "$(git diff)" || { echo 'none'; exit 1; }`),
+    ).toBe(
+      `tini -s -- sh -c 'test -n "$(git diff)" || { echo '\\''none'\\''; exit 1; }'`,
+    );
+  });
 });

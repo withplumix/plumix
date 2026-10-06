@@ -148,6 +148,20 @@ describe("waitOutALimit", () => {
     expect(now().getTime()).toBeGreaterThan(Date.parse("2026-09-30T22:00:00Z"));
   });
 
+  test("the wait's length is reported, so a phase's duration can leave it out", async () => {
+    const step = failingThen([SESSION_LIMIT]);
+    const { now, pause } = clock("2026-09-30T21:40:00Z");
+    const waited: number[] = [];
+
+    await waitOutALimit(step.start, {
+      now,
+      pause,
+      onWait: (_lifts, waitMs) => waited.push(waitMs),
+    });
+
+    expect(waited).toEqual([21 * 60_000]);
+  });
+
   test.each([
     "Claude AI usage limit reached",
     "claude-code exited with code 1: You've hit your weekly limit · resets Oct 3, 10pm (UTC)",

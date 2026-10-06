@@ -68,7 +68,7 @@ export const GATES: readonly Gate[] = [
   { name: "knip", command: "pnpm knip" },
   {
     name: "test",
-    command: `pnpm exec turbo run test:unit test:build --concurrency=2 ${TURBO_GATE_FLAGS}`,
+    command: `pnpm exec turbo run test:unit test:build --continue --concurrency=2 ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "e2e",
@@ -109,6 +109,12 @@ export const CHANGESET_GATE: Gate = {
 };
 
 export type Executor = Pick<sandcastle.Sandbox, "exec">;
+
+// Sandcastle starts the container as `sleep infinity`, which never reaps the children a gate
+// orphans. A zombie still answers `kill -0`, so a test that waits for a process to go away waits
+// out its timeout instead. tini as a subreaper adopts and reaps them.
+export const underAnOrphanReaper = (command: string): string =>
+  `tini -s -- sh -c '${command.replace(/'/g, "'\\''")}'`;
 
 const changedPathsIn = async (
   sandbox: Executor,
@@ -207,7 +213,9 @@ export const runGates = async (
 
     const runOnce = async (): Promise<GateResult> => {
       const attemptStartedAtMs = Date.now();
-      const { exitCode, stdout, stderr } = await sandbox.exec(gate.command);
+      const { exitCode, stdout, stderr } = await sandbox.exec(
+        underAnOrphanReaper(gate.command),
+      );
       return {
         name: gate.name,
         command: gate.command,
