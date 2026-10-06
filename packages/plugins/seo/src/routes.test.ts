@@ -613,6 +613,21 @@ describe("a sub-sitemap", () => {
     expect(res.status).toBe(404);
   });
 
+  test("a taxonomy's scope does not answer at its bare name", async () => {
+    const h = await createHarness([taxonomyPlugin]);
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    const res = await h.dispatch(
+      new Request("https://cms.example/sitemap-category-1.xml"),
+    );
+
+    expect(res.status).toBe(404);
+  });
+
   test("an unregistered scope is not claimed at all", async () => {
     const h = await createHarness();
 

@@ -155,6 +155,8 @@ export interface SitemapScopePolicy {
   readonly priority?: number;
 }
 
+type ScopePolicies = Readonly<Record<string, false | SitemapScopePolicy>>;
+
 /**
  * The site's policy for each sitemap scope, its own and every plugin's. Entry
  * types sit under `entries`, taxonomies under `terms`, and a contributed scope
@@ -162,13 +164,10 @@ export interface SitemapScopePolicy {
  * sitemap, or the `changefreq` and `priority` its URLs default to.
  */
 export interface SeoSitemapsOptions {
-  readonly entries?: Readonly<Record<string, false | SitemapScopePolicy>>;
-  readonly terms?: Readonly<Record<string, false | SitemapScopePolicy>>;
+  readonly entries?: ScopePolicies;
+  readonly terms?: ScopePolicies;
   readonly [contributed: string]:
-    | false
-    | SitemapScopePolicy
-    | Readonly<Record<string, false | SitemapScopePolicy>>
-    | undefined;
+    false | SitemapScopePolicy | ScopePolicies | undefined;
 }
 
 /**
