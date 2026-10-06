@@ -501,12 +501,6 @@ test.describe("editor playground", () => {
     page,
   }) => {
     await page.goto("/");
-    // The canvas forwards a wheel to the host from a listener it adds once it
-    // mounts, so a wheel sent before then is dropped and nothing pans (#2582).
-    await page
-      .frameLocator(CANVAS_FRAME)
-      .locator('[data-plumix-id="heading-1"]')
-      .waitFor();
     const iframe = page.locator(CANVAS_FRAME);
     const before = await iframe.boundingBox();
     expect(before).toBeTruthy();
