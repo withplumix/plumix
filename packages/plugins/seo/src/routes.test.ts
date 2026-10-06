@@ -16,9 +16,9 @@ import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type { SeoOptions, SitemapScopeRef } from "./index.js";
+import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
 import { seo } from "./index.js";
 import { SITEMAP_TAG } from "./routes.js";
 
@@ -938,6 +938,29 @@ describe("a contributed sitemap", () => {
     },
   );
 
+  test("leaves every term scope's index entry undated", async () => {
+    const tagged = definePlugin("tagged", (ctx) => {
+      ctx.registerTermTaxonomy("tag", {
+        label: "Tags",
+        isHierarchical: false,
+        entryTypes: ["post"],
+      });
+    });
+    const h = await createHarness([taxonomyPlugin, tagged]);
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.term.create({ taxonomy: "tag", name: "Red", slug: "red" });
+
+    const index = await bodyOf(h, "/sitemap.xml");
+
+    expect(index).toContain("sitemap-terms-category-1.xml");
+    expect(index).toContain("sitemap-terms-tag-1.xml");
+    expect(index).not.toContain("<lastmod>");
+  });
+
   test("dates its index entry by the source's lastmod, when it has one", async () => {
     const dated = definePlugin("dated", (ctx) => {
       ctx.registerSitemap("dated", {
@@ -981,6 +1004,13 @@ describe("a contributed sitemap", () => {
       });
     });
     expect(legacy.id).toBe("legacy");
+  });
+
+  test("the archive's sitemap type is gone from the package", () => {
+    // @ts-expect-error — `SitemapSource` replaces it.
+    type Removed = import("./index.js").ArchiveTypeSitemap;
+    expectTypeOf<Removed>().toBeAny();
+    expectTypeOf<SitemapSource>().not.toBeAny();
   });
 
   test("with the indexing toggle off, is not listed and serves no URLs", async () => {
