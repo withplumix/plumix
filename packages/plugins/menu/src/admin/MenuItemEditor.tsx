@@ -577,7 +577,9 @@ function LinkedTargetPickerPanel({
 }): ReactNode {
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
-  const [announcement, setAnnouncement] = useState("");
+  // `count` keys the announced text, so repeating an add replaces the node
+  // and the live region speaks again instead of seeing no change.
+  const [announcement, setAnnouncement] = useState({ text: "", count: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const search = useSearchTargets({ kind, target, query });
   const searchLabel = i18n._(
@@ -605,9 +607,10 @@ function LinkedTargetPickerPanel({
     }
     const descriptor =
       relinkTargetKey === null ? M.addedAnnouncement : M.replacedAnnouncement;
-    setAnnouncement(
-      i18n._(descriptor.id, { label }, { message: descriptor.message }),
-    );
+    setAnnouncement((previous) => ({
+      text: i18n._(descriptor.id, { label }, { message: descriptor.message }),
+      count: previous.count + 1,
+    }));
     // Keep the query and the focus so several results go in a row.
     inputRef.current?.focus();
   }
@@ -679,8 +682,13 @@ function LinkedTargetPickerPanel({
         />
         <CommandList>{renderResults()}</CommandList>
       </Command>
-      <div role="status" aria-live="polite" className="sr-only">
-        {announcement}
+      <div
+        role="status"
+        aria-live="polite"
+        data-testid="menu-picker-announcement"
+        className="sr-only"
+      >
+        <span key={announcement.count}>{announcement.text}</span>
       </div>
     </div>
   );
@@ -1047,13 +1055,17 @@ function ItemDetailFields({
                 message="Leave empty to use the linked title."
               />
             </FieldDescription>
-            <FieldDescription data-testid="menu-item-detail-linked">
-              {i18n._(
-                M.linkedTarget.id,
-                { label: item.linkedLabel ?? i18n._(M.untitledTarget) },
-                { message: M.linkedTarget.message },
-              )}
-            </FieldDescription>
+            {/* A target with no known title can't be named; the row's
+                broken-link mark already says what is wrong with it. */}
+            {item.linkedLabel === null ? null : (
+              <FieldDescription data-testid="menu-item-detail-linked">
+                {i18n._(
+                  M.linkedTarget.id,
+                  { label: item.linkedLabel },
+                  { message: M.linkedTarget.message },
+                )}
+              </FieldDescription>
+            )}
           </>
         ) : null}
       </Field>

@@ -17,11 +17,13 @@ function okResolved(label: string): JsonValue {
 
 let stub: PluginRpcStub;
 
+type Responder = (input: unknown) => JsonValue | Promise<JsonValue>;
+
 function mockRpc(
   routes: Record<string, JsonValue>,
-  responders: Record<string, (input: unknown) => JsonValue> = {},
+  responders: Record<string, Responder> = {},
 ): void {
-  const served: Record<string, (input: unknown) => JsonValue> = {
+  const served: Record<string, Responder> = {
     ...responders,
   };
   for (const [procedure, value] of Object.entries(routes)) {
@@ -729,6 +731,130 @@ describe("MenusShell", () => {
       ]);
     });
 
+    test("an entry tab keeps its results on screen while a narrower search is in flight", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      const serve = searchTargetsFrom({
+        post: [
+          { id: "11", label: "About us" },
+          { id: "12", label: "Contact" },
+        ],
+      });
+      let release: (() => void) | undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [{ kind: "entry", tabLabel: "Posts", target: "post" }],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+        },
+        {
+          searchTargets: async (input) => {
+            if ((input as SearchTargetsInput).query !== undefined) await held;
+            return serve(input);
+          },
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      expect(
+        await screen.findByTestId("menu-picker-option-12"),
+      ).toBeInTheDocument();
+      await user.type(screen.getByTestId("menu-picker-search-input"), "abo");
+      await vi.waitFor(() => {
+        expect(searchTargetsCalls().at(-1)?.query).toBe("abo");
+      });
+
+      expect(screen.getByTestId("menu-picker-option-11")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("menu-picker-linked-panel"),
+      ).not.toHaveTextContent("Loading…");
+
+      release?.();
+      await vi.waitFor(() => {
+        expect(screen.queryByTestId("menu-picker-option-12")).toBeNull();
+      });
+    });
+
+    test("adding the same result twice announces each add", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [{ kind: "entry", tabLabel: "Posts", target: "post" }],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+        },
+        {
+          searchTargets: searchTargetsFrom({
+            post: [{ id: "11", label: "About us" }],
+          }),
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const option = await screen.findByTestId("menu-picker-option-11");
+      const region = screen.getByTestId("menu-picker-announcement");
+      expect(region).toHaveAttribute("aria-live", "polite");
+      // A screen reader speaks a live region when its content is replaced,
+      // so an add has to put new text in the region even when it repeats.
+      const announced: string[] = [];
+      const observer = new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            announced.push(node.textContent ?? "");
+          }
+        }
+      });
+      observer.observe(region, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+
+      await user.click(option);
+      await user.click(option);
+      await vi.waitFor(() => {
+        expect(announced).toEqual([
+          "Added About us to the menu",
+          "Added About us to the menu",
+        ]);
+      });
+      observer.disconnect();
+    });
+
     test("a term tab searches its taxonomy and adds the chosen term from the keyboard", async () => {
       window.history.replaceState(
         {},
@@ -979,6 +1105,50 @@ describe("MenusShell", () => {
 
       fireEvent.change(input, { target: { value: "" } });
       expect(row).toHaveTextContent("About us");
+    });
+
+    test("the detail panel names no linked target when the item's linked title is unknown", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 41,
+              parentId: null,
+              sortOrder: 0,
+              title: "",
+              meta: { kind: "entry", entryId: 404 },
+              resolved: {
+                state: "broken",
+                label: "(unnamed)",
+                linkedLabel: null,
+                href: null,
+                lastHref: null,
+              },
+            },
+          ],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      await user.click(await screen.findByTestId("menu-item-row-41"));
+
+      expect(await screen.findByTestId("menu-item-detail-title")).toBeVisible();
+      expect(screen.queryByTestId("menu-item-detail-linked")).toBeNull();
     });
 
     test("custom URL picker tab adds a new item to the in-memory list", async () => {

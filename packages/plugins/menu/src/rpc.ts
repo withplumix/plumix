@@ -729,7 +729,7 @@ export function createMenuRouter(
     .input(
       v.object({
         kind: v.picklist(["entry", "term"]),
-        target: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
+        target: v.string(),
         query: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
       }),
     )
@@ -750,12 +750,10 @@ export function createMenuRouter(
         }
         // The same gate `lookup.list` applies to the adapter, so the picker
         // lists no more than the viewer could look up directly.
+        // Core registers both adapters; like `lookupMenuTargets`, a missing
+        // one has nothing to list.
         const registered = context.plugins.lookupAdapters.get(input.kind);
-        if (!registered) {
-          throw errors.NOT_FOUND({
-            data: { kind: "lookup_adapter", id: input.kind },
-          });
-        }
+        if (!registered) return { items: [] };
         const { capability } = registered;
         if (capability !== null && !context.auth.can(capability)) {
           throw errors.FORBIDDEN({
