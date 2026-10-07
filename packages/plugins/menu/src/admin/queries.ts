@@ -19,6 +19,8 @@ export type MenuListItem = MenuOutputs["list"][number];
 export type MenuGetResponse = MenuOutputs["get"];
 export type MenuLocationRow = MenuOutputs["locations"]["list"][number];
 export type PickerTab = MenuOutputs["pickerTabs"][number];
+type SearchTargetsInput = MenuInputs["searchTargets"];
+export type LinkTarget = MenuOutputs["searchTargets"]["items"][number];
 export type SaveMenuInput = MenuInputs["save"];
 
 const MENU_LIST_KEY = ["menu", "list"] as const;
@@ -59,6 +61,25 @@ export function usePickerTabs(): UseQueryResult<MenuOutputs["pickerTabs"]> {
   return useQuery({
     queryKey: ["menu", "pickerTabs"] as const,
     queryFn: () => rpc.pickerTabs(),
+  });
+}
+
+// Keyed on the trimmed query and fetched on every change with no debounce,
+// like the admin's own lookup search: a blank query lists the first page.
+export function useSearchTargets({
+  kind,
+  target,
+  query,
+}: SearchTargetsInput): UseQueryResult<MenuOutputs["searchTargets"]> {
+  const trimmed = query?.trim() ?? "";
+  return useQuery({
+    queryKey: ["menu", "searchTargets", kind, target, trimmed] as const,
+    queryFn: () =>
+      rpc.searchTargets({
+        kind,
+        target,
+        query: trimmed === "" ? undefined : trimmed,
+      }),
   });
 }
 

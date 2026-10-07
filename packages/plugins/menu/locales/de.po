@@ -170,11 +170,6 @@ msgid "plugin.menu.itemEditor.reorderAria"
 msgstr "{title} neu anordnen"
 
 #. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.reorderFallbackTitle"
-msgstr "Element"
-
-#. js-lingui-explicit-id
 #. label: the broken item's resolved-label or original title
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.relinkBanner"

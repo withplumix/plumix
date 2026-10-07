@@ -253,9 +253,8 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
   });
 });
 
-// The admin has no entry picker yet, so the entry item is seeded straight
-// into the playground's database, without a snapshot. The admin's save
-// is what writes one.
+// The entry item is seeded straight into the playground's database, so it
+// starts without a snapshot. The admin's save is what writes one.
 test("a trashed entry's item keeps its label, and Convert to Custom URL fills in its last URL", async ({
   page,
 }) => {
@@ -315,6 +314,90 @@ test("a trashed entry's item keeps its label, and Convert to Custom URL fills in
   await page.getByTestId("menu-save-button").click();
   expect((await converted).postData()).toContain('"url":"/post/about-us"');
 });
+
+test("entry and term tabs add linked items picked from the keyboard, and an override survives a reload", async ({
+  page,
+}) => {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  const factories = factoriesFor(db);
+  const author = await factories.admin.create({
+    email: "picker-author@example.test",
+    slug: "picker-author",
+  });
+  await factories.entry.create({
+    type: "post",
+    title: "Pricing plans",
+    slug: "pricing-plans",
+    status: "published",
+    authorId: author.id,
+  });
+  await factories.term.create({
+    taxonomy: "category",
+    slug: "guides",
+    name: "Guides",
+  });
+  await factories.term.create({
+    taxonomy: "menu",
+    slug: "picked",
+    name: "Picked",
+  });
+
+  await page.goto("pages/menus");
+  await page.getByTestId("menus-selector-option-picked").click();
+  await expect(page.getByTestId("menu-item-editor")).toBeVisible();
+
+  // Posts is the first tab, so it is open on load.
+  await pickFromLinkedTab(page, "Pricing", "Pricing plans");
+  await page.getByTestId("menu-picker-tab-term-category").click();
+  await pickFromLinkedTab(page, "Guid", "Guides");
+
+  const rows = page
+    .getByTestId("menu-tree")
+    .locator("[data-testid^='menu-item-row-']");
+  await expect(rows).toHaveCount(2);
+  await rows.filter({ hasText: "Pricing plans" }).click();
+  const title = page.getByTestId("menu-item-detail-title");
+  await expect(title).toHaveAttribute("placeholder", "Pricing plans");
+  await title.fill("Plans");
+
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/menu/save") && r.status() === 200,
+  );
+  await page.getByTestId("menu-save-button").click();
+  await saved;
+
+  await page.reload();
+  await page.getByTestId("menus-selector-option-picked").click();
+  const reloaded = page
+    .getByTestId("menu-tree")
+    .locator("[data-testid^='menu-item-row-']");
+  await expect(reloaded).toHaveCount(2);
+  await expect(reloaded.first()).toContainText("Plans");
+  await expect(reloaded.first()).toHaveAttribute("data-state", "ok");
+  await expect(reloaded.last()).toContainText("Guides");
+  await expect(reloaded.last()).toHaveAttribute("data-state", "ok");
+});
+
+// Types into the open tab's search, waits for the only match, then picks it
+// with the keyboard alone.
+async function pickFromLinkedTab(
+  page: Page,
+  query: string,
+  label: string,
+): Promise<void> {
+  const search = page.getByTestId("menu-picker-search-input");
+  await search.fill(query);
+  const options = page
+    .getByTestId("menu-picker-linked-panel")
+    .locator("[data-testid^='menu-picker-option-']");
+  await expect(options).toHaveCount(1);
+  await expect(options).toContainText(label);
+  await search.press("ArrowDown");
+  await search.press("Enter");
+  await expect(page.getByTestId("menu-tree")).toContainText(label);
+}
 
 function menuOption(page: Page): Locator {
   return page.getByTestId(`menus-selector-option-${menuSlug}`);

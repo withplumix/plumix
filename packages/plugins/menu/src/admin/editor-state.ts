@@ -19,6 +19,19 @@ export interface EditorItem {
   readonly state: ItemState;
   /** Server-resolved display label — picks the right fallback chain. */
   readonly resolvedLabel: string;
+  /**
+   * The linked entry's or term's title, `null` for custom items. What the
+   * item shows once its own title is cleared.
+   */
+  readonly linkedLabel: string | null;
+}
+
+/**
+ * The name the editor shows for an item: its own title, else the linked
+ * title, else the server's fallback chain.
+ */
+export function itemDisplayLabel(item: EditorItem): string {
+  return item.title ?? item.linkedLabel ?? item.resolvedLabel;
 }
 
 export interface EditorState {
@@ -69,6 +82,7 @@ export type EditorAction =
       readonly type: "addItem";
       readonly title: string | null;
       readonly meta: MenuItemMeta;
+      readonly linkedLabel: string | null;
     }
   | {
       readonly type: "updateField";
@@ -120,6 +134,7 @@ export type EditorAction =
       readonly type: "relinkItem";
       readonly key: ItemKey;
       readonly newMeta: MenuItemMeta;
+      readonly linkedLabel: string | null;
     }
   | {
       readonly type: "startRelink";
@@ -291,7 +306,16 @@ export function editorReducer(
       const target = state.items.find((item) => item.key === action.key);
       if (!target) return state;
       const items = state.items.map((item) =>
-        item.key === action.key ? { ...item, meta: action.newMeta } : item,
+        item.key === action.key
+          ? {
+              ...item,
+              meta: action.newMeta,
+              // The picker only offers live targets, so the replacement
+              // stops reading as broken before the save confirms it.
+              state: "ok" as const,
+              linkedLabel: action.linkedLabel,
+            }
+          : item,
       );
       // Exiting re-link mode is part of "I picked a replacement"; UI
       // doesn't have to issue a separate `cancelRelink` afterward.
@@ -322,6 +346,7 @@ export function editorReducer(
         state: "ok",
         resolvedLabel:
           action.title ?? labelFromMeta(action.meta) ?? "(unnamed)",
+        linkedLabel: action.linkedLabel,
       };
       return {
         ...state,
@@ -473,6 +498,7 @@ function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
         meta: row.meta ?? { kind: "custom", url: "" },
         state: row.resolved.state,
         resolvedLabel: row.resolved.label,
+        linkedLabel: row.resolved.linkedLabel,
       });
       walk(row.id, key);
     }

@@ -19,6 +19,7 @@ function row(
     meta: { kind: "custom", url: `/${key}` },
     state: "ok",
     resolvedLabel: key,
+    linkedLabel: null,
   };
 }
 

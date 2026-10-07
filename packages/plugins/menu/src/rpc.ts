@@ -1,3 +1,4 @@
+import type { LookupResult } from "plumix/plugin";
 import type { JsonObject } from "plumix/support";
 import { and, count, eq, inArray, sql } from "plumix/db";
 import {
@@ -6,6 +7,7 @@ import {
   listEntryMetaFields,
   listTermMetaFields,
   requireCapability,
+  resolveCapability,
   startingMeta,
   termCapability,
 } from "plumix/plugin";
@@ -16,7 +18,7 @@ import * as v from "valibot";
 import type { ResolvedRow } from "./server/resolveItemStates.js";
 import type { RegisteredMenuLocation } from "./server/types.js";
 import { MenuPluginError } from "./errors.js";
-import { getEligibleMenuKinds } from "./server/eligibility.js";
+import { getEligibleMenuKinds, isMenuEligible } from "./server/eligibility.js";
 import { parseMenuItemMeta } from "./server/parseMeta.js";
 import {
   lookupMenuTargets,
@@ -37,6 +39,7 @@ const MAX_MAX_DEPTH = 20;
 const MAX_ITEMS_PER_SAVE = 500;
 const MAX_TITLE_LENGTH = 300;
 const MAX_LOCATION_ID_LENGTH = 64;
+const SEARCH_TARGETS_LIMIT = 20;
 const MENU_LOCATION_ID_RE = /^[a-z][a-z0-9-]*$/;
 
 // Valibot schemas for the wire-level inputs.
@@ -720,6 +723,57 @@ export function createMenuRouter(
       },
     );
 
+  const searchTargets = base
+    .use(authenticated)
+    .use(requireCapability(MENU_MANAGE_CAPABILITY))
+    .input(
+      v.object({
+        kind: v.picklist(["entry", "term"]),
+        target: v.string(),
+        query: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
+      }),
+    )
+    .handler(
+      async ({
+        input,
+        context,
+        errors,
+      }): Promise<{ readonly items: readonly LookupResult[] }> => {
+        const eligible =
+          input.kind === "entry"
+            ? context.plugins.entryTypes.get(input.target)
+            : context.plugins.termTaxonomies.get(input.target);
+        if (!eligible || !isMenuEligible(eligible)) {
+          throw errors.NOT_FOUND({
+            data: { kind: "menu_target", id: input.target },
+          });
+        }
+        // The same gate `lookup.list` applies to the adapter, so the picker
+        // lists no more than the viewer could look up directly.
+        // Core registers both adapters; like `lookupMenuTargets`, a missing
+        // one has nothing to list.
+        const registered = context.plugins.lookupAdapters.get(input.kind);
+        if (!registered) return { items: [] };
+        const { capability } = registered;
+        if (capability !== null && !context.auth.can(capability)) {
+          throw errors.FORBIDDEN({
+            data: {
+              capability: resolveCapability(context.plugins, capability),
+            },
+          });
+        }
+        const items = await registered.adapter.list(context, {
+          query: input.query,
+          scope:
+            input.kind === "entry"
+              ? { entryTypes: [input.target] }
+              : { termTaxonomies: [input.target] },
+          limit: SEARCH_TARGETS_LIMIT,
+        });
+        return { items };
+      },
+    );
+
   const locationsList = base
     .use(authenticated)
     .use(requireCapability(MENU_MANAGE_CAPABILITY))
@@ -784,6 +838,7 @@ export function createMenuRouter(
     delete: remove,
     assignLocation,
     pickerTabs,
+    searchTargets,
     locations: { list: locationsList },
   };
 }

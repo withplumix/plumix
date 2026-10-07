@@ -199,15 +199,10 @@ msgid "plugin.menu.itemEditor.brokenLinkAria"
 msgstr "broken link"
 
 #. js-lingui-explicit-id
-#. title: the item's display title, or a translated 'item' fallback
+#. title: the item's name as the tree row shows it
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.reorderAria"
 msgstr "Reorder {title}"
-
-#. js-lingui-explicit-id
-#: src/admin/MenuItemEditor.tsx
-msgid "plugin.menu.itemEditor.reorderFallbackTitle"
-msgstr "item"
 
 #. js-lingui-explicit-id
 #. label: the broken item's resolved-label or original title
@@ -314,3 +309,69 @@ msgstr "header"
 #: src/index.ts
 msgid "plugin.menu.keyword.footer"
 msgstr "footer"
+
+#. js-lingui-explicit-id
+#. tabLabel: the picker tab's name, such as 'Posts' or 'Categories'
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.searchTargets"
+msgstr "Search {tabLabel}…"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.untitledTarget"
+msgstr "(no title)"
+
+#. js-lingui-explicit-id
+#. label: the title of the entry or term just added
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.addedAnnouncement"
+msgstr "Added {label} to the menu"
+
+#. js-lingui-explicit-id
+#. label: the title of the entry or term the item links to
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.linkedTarget"
+msgstr "Links to {label}"
+
+#. js-lingui-explicit-id
+#. label: the title of the entry or term the item now links to
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.replacedAnnouncement"
+msgstr "Replaced the link with {label}"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.searchLoading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.searchFailed"
+msgstr "Couldn't load results."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.searchNoMatches"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.navigationLabel"
+msgstr "Navigation label"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.navigationLabelHint"
+msgstr "Leave empty to use the linked title."
+
+#. js-lingui-explicit-id
+#. id: the linked entry's id, shown when its title is unknown
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.linkedEntryById"
+msgstr "Links to entry #{id}"
+
+#. js-lingui-explicit-id
+#. id: the linked term's id, shown when its title is unknown
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.linkedTermById"
+msgstr "Links to term #{id}"

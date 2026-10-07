@@ -11,16 +11,21 @@ import {
 } from "@plumix/runtime-cloudflare";
 
 // Plumix consumer wiring only the menu plugin, plus a public `post` type
-// for menu items to link to — the smallest config you can run to dogfood
-// `@plumix/plugin-menu` without bringing the rest of the plumix surface
-// (blog, pages, media, etc.) along. The worker-driven plugin e2e suite in
-// `../e2e` boots this playground via `plumix dev` and walks the menu happy
-// path against the real worker.
+// and `category` taxonomy for menu items to link to — the smallest config
+// you can run to dogfood `@plumix/plugin-menu` without bringing the rest of
+// the plumix surface (blog, pages, media, etc.) along. The worker-driven
+// plugin e2e suite in `../e2e` boots this playground via `plumix dev` and
+// walks the menu happy path against the real worker.
 
-// A public entry type, so the e2e suite has something an entry-kind menu
-// item can link to.
+// A public entry type and taxonomy, so the e2e suite has something an
+// entry-kind and a term-kind menu item can link to.
 const content = definePlugin("menu-playground-content", (setup) => {
   setup.registerEntryType("post", { label: "Posts", isPublic: true });
+  setup.registerTermTaxonomy("category", {
+    label: "Categories",
+    isPublic: true,
+    entryTypes: ["post"],
+  });
 });
 
 const deployOrigin = cloudflareDeployOrigin({

@@ -17,12 +17,51 @@ function okResolved(label: string): JsonValue {
 
 let stub: PluginRpcStub;
 
-function mockRpc(routes: Record<string, JsonValue>): void {
-  const responders: Record<string, () => JsonValue> = {};
+type Responder = (input: unknown) => JsonValue | Promise<JsonValue>;
+
+function mockRpc(
+  routes: Record<string, JsonValue>,
+  responders: Record<string, Responder> = {},
+): void {
+  const served: Record<string, Responder> = {
+    ...responders,
+  };
   for (const [procedure, value] of Object.entries(routes)) {
-    responders[procedure] = () => value;
+    served[procedure] = () => value;
   }
-  stub = stubPluginRpc("menu", responders);
+  stub = stubPluginRpc("menu", served);
+}
+
+interface SearchTargetsInput {
+  readonly kind: string;
+  readonly target: string;
+  readonly query?: string;
+}
+
+// Serves `searchTargets` the way the server does: a case-insensitive
+// substring match over the tab's own targets.
+function searchTargetsFrom(
+  byTarget: Record<string, readonly { id: string; label: string | null }[]>,
+): (input: unknown) => JsonValue {
+  return (input) => {
+    const { target, query } = input as SearchTargetsInput;
+    const needle = (query ?? "").toLowerCase();
+    return {
+      items: (byTarget[target] ?? [])
+        .filter((item) => (item.label ?? "").toLowerCase().includes(needle))
+        .map((item) => ({
+          ...item,
+          targetType: target,
+          subtitle: `${target} · published`,
+        })),
+    };
+  };
+}
+
+function searchTargetsCalls(): SearchTargetsInput[] {
+  return stub.calls
+    .filter((call) => call.procedure === "searchTargets")
+    .map((call) => call.input as SearchTargetsInput);
 }
 
 function findRpcCall(procedure: string): PluginRpcCall | undefined {
@@ -553,11 +592,9 @@ describe("MenusShell", () => {
       expect(del.classList.contains("bg-destructive")).toBe(true);
     });
 
-    test("a non-custom source tab is independently selectable and shows its panel", async () => {
-      // Regression: source tabs other than Custom URL did nothing when
-      // clicked — the active tab keyed on `kind` so per-target entry
-      // tabs collapsed, and only the custom panel ever rendered. Now each
-      // tab selects on its own key and surfaces a panel.
+    test("the picker tabs are tabs: the first is selected on load and ArrowRight moves selection", async () => {
+      // Entry tabs share kind="entry", so each tab keys on kind-target and
+      // selects on its own.
       window.history.replaceState(
         {},
         "",
@@ -579,28 +616,367 @@ describe("MenusShell", () => {
           maxDepth: 5,
           items: [],
         },
+        searchTargets: { items: [] },
       });
 
       renderShell();
       const user = userEvent.setup();
 
-      // Two entry tabs share kind="entry"; they must have distinct,
-      // independently-selectable testids (kind-target).
       const pages = await screen.findByTestId("menu-picker-tab-entry-page");
       const posts = await screen.findByTestId("menu-picker-tab-entry-post");
-      await user.click(pages);
-      expect(pages.getAttribute("aria-selected")).toBe("true");
-      expect(posts.getAttribute("aria-selected")).toBe("false");
-      expect(
-        await screen.findByTestId("menu-picker-unsupported-panel"),
-      ).toBeInTheDocument();
+      expect(pages).toHaveAttribute("role", "tab");
+      expect(pages).toHaveAttribute("aria-selected", "true");
+      expect(posts).toHaveAttribute("aria-selected", "false");
 
-      // Switching to Custom URL swaps to the working add-item panel.
+      await user.click(pages);
+      await user.keyboard("{ArrowRight}");
+      expect(posts).toHaveAttribute("aria-selected", "true");
+      expect(pages).toHaveAttribute("aria-selected", "false");
+
+      // Custom URL still swaps to its own add-item panel.
       await user.click(await screen.findByTestId("menu-picker-tab-custom"));
       expect(
         await screen.findByTestId("menu-picker-custom-url"),
       ).toBeInTheDocument();
-      expect(screen.queryByTestId("menu-picker-unsupported-panel")).toBeNull();
+    });
+
+    test("a plugin lookup kind's tab keeps the unavailable panel and never searches", async () => {
+      // `MenuItemMeta` can't store a media or user pick, so that tab has
+      // nothing to search for.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [
+          { kind: "media", tabLabel: "Media" },
+          { kind: "custom", tabLabel: "Custom URL" },
+        ],
+        get: {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [],
+        },
+      });
+
+      renderShell();
+
+      expect(
+        await screen.findByTestId("menu-picker-unsupported-panel"),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("menu-picker-linked-panel")).toBeNull();
+      expect(searchTargetsCalls()).toEqual([]);
+    });
+
+    test("an entry tab searches its type and adds the chosen entry from the keyboard", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [
+            { kind: "entry", tabLabel: "Posts", target: "post" },
+            { kind: "custom", tabLabel: "Custom URL" },
+          ],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+          save: {
+            termId: 7,
+            version: 2,
+            itemIds: [50],
+            added: [50],
+            removed: [],
+            modified: [],
+          },
+        },
+        {
+          searchTargets: searchTargetsFrom({
+            post: [
+              { id: "11", label: "About us" },
+              { id: "12", label: "Contact" },
+            ],
+          }),
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const panel = await screen.findByTestId("menu-picker-linked-panel");
+      await vi.waitFor(() => {
+        expect(searchTargetsCalls()[0]).toMatchObject({
+          kind: "entry",
+          target: "post",
+        });
+      });
+      expect(panel).toHaveTextContent("Contact");
+
+      const search = screen.getByTestId("menu-picker-search-input");
+      expect(search).toHaveAccessibleName("Search Posts…");
+      await user.type(search, "abo");
+      await vi.waitFor(() => {
+        expect(searchTargetsCalls().at(-1)?.query).toBe("abo");
+      });
+      await vi.waitFor(() => {
+        expect(screen.queryByTestId("menu-picker-option-12")).toBeNull();
+      });
+
+      await user.keyboard("{ArrowDown}{Enter}");
+
+      const tree = await screen.findByTestId("menu-tree");
+      expect(tree).toHaveTextContent("About us");
+      expect(screen.getByTestId("menu-item-drag-tmp-0")).toHaveAccessibleName(
+        "Reorder About us",
+      );
+      expect(search).toHaveFocus();
+
+      await user.click(screen.getByTestId("menu-save-button"));
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{
+        items: readonly { title: string | null; meta: JsonValue }[];
+      }>(call);
+      expect(payload.items).toEqual([
+        expect.objectContaining({
+          title: null,
+          meta: { kind: "entry", entryId: 11 },
+        }),
+      ]);
+    });
+
+    test("an entry tab shows its loading state while a narrower search is in flight", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      const serve = searchTargetsFrom({
+        post: [
+          { id: "11", label: "About us" },
+          { id: "12", label: "Contact" },
+        ],
+      });
+      // Open until the test closes the gate for the narrower search.
+      let gate: Promise<void> = Promise.resolve();
+      let release: (() => void) | undefined;
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [{ kind: "entry", tabLabel: "Posts", target: "post" }],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+        },
+        {
+          searchTargets: async (input) => {
+            await gate;
+            return serve(input);
+          },
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      expect(
+        await screen.findByTestId("menu-picker-option-12"),
+      ).toBeInTheDocument();
+      gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await user.type(screen.getByTestId("menu-picker-search-input"), "abo");
+      await vi.waitFor(() => {
+        expect(searchTargetsCalls().at(-1)?.query).toBe("abo");
+      });
+
+      // No stale rows to pick from while the new query loads.
+      await vi.waitFor(() => {
+        expect(
+          screen.getByTestId("menu-picker-linked-panel"),
+        ).toHaveTextContent("Loading…");
+      });
+      expect(screen.queryByTestId("menu-picker-option-11")).toBeNull();
+
+      release?.();
+      await vi.waitFor(() => {
+        expect(screen.queryByTestId("menu-picker-option-12")).toBeNull();
+      });
+    });
+
+    test("adding the same result twice announces each add", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [{ kind: "entry", tabLabel: "Posts", target: "post" }],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+        },
+        {
+          searchTargets: searchTargetsFrom({
+            post: [{ id: "11", label: "About us" }],
+          }),
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const option = await screen.findByTestId("menu-picker-option-11");
+      const region = screen.getByTestId("menu-picker-announcement");
+      expect(region).toHaveAttribute("aria-live", "polite");
+      // A screen reader speaks a live region when its content is replaced,
+      // so an add has to put new text in the region even when it repeats.
+      const announced: (string | null)[] = [];
+      const observer = new MutationObserver((records) => {
+        announced.push(
+          ...records.flatMap((record) =>
+            Array.from(record.addedNodes, (node) => node.textContent),
+          ),
+        );
+      });
+      observer.observe(region, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+
+      await user.click(option);
+      await user.click(option);
+      await vi.waitFor(() => {
+        expect(announced).toEqual([
+          "Added About us to the menu",
+          "Added About us to the menu",
+        ]);
+      });
+      observer.disconnect();
+    });
+
+    test("a term tab searches its taxonomy and adds the chosen term from the keyboard", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 },
+          ],
+          "locations/list": [],
+          pickerTabs: [
+            { kind: "entry", tabLabel: "Posts", target: "post" },
+            { kind: "term", tabLabel: "Categories", target: "category" },
+            { kind: "custom", tabLabel: "Custom URL" },
+          ],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [],
+          },
+          save: {
+            termId: 7,
+            version: 2,
+            itemIds: [51],
+            added: [51],
+            removed: [],
+            modified: [],
+          },
+        },
+        {
+          searchTargets: searchTargetsFrom({
+            post: [],
+            category: [
+              { id: "3", label: "News" },
+              { id: "4", label: "Guides" },
+            ],
+          }),
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      await user.click(
+        await screen.findByTestId("menu-picker-tab-term-category"),
+      );
+      await vi.waitFor(() => {
+        expect(searchTargetsCalls().at(-1)).toMatchObject({
+          kind: "term",
+          target: "category",
+        });
+      });
+      const search = await screen.findByTestId("menu-picker-search-input");
+      expect(search).toHaveAccessibleName("Search Categories…");
+      await user.type(search, "gui");
+      await vi.waitFor(() => {
+        expect(screen.queryByTestId("menu-picker-option-3")).toBeNull();
+      });
+      await user.keyboard("{ArrowDown}{Enter}");
+
+      expect(await screen.findByTestId("menu-tree")).toHaveTextContent(
+        "Guides",
+      );
+      await user.click(screen.getByTestId("menu-save-button"));
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{
+        items: readonly { title: string | null; meta: JsonValue }[];
+      }>(call);
+      expect(payload.items).toEqual([
+        expect.objectContaining({
+          title: null,
+          meta: { kind: "term", termId: 4 },
+        }),
+      ]);
     });
 
     test("settings panel location checkboxes reflect bindings and toggle via menu.assignLocation", async () => {
@@ -715,6 +1091,105 @@ describe("MenusShell", () => {
       }>(call);
       expect(input.items[0]?.id).toBe(99);
       expect(input.items[0]?.title).toBeNull();
+    });
+
+    test("the detail panel labels the title input and offers a linked item's title as its placeholder", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 40,
+              parentId: null,
+              sortOrder: 0,
+              title: "Who we are",
+              meta: { kind: "entry", entryId: 11, lastLabel: "About us" },
+              resolved: {
+                state: "ok",
+                label: "Who we are",
+                linkedLabel: "About us",
+                href: "/about-us",
+                lastHref: "/about-us",
+              },
+            },
+          ],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const row = await screen.findByTestId("menu-item-row-40");
+      await user.click(row);
+
+      const input = screen.getByTestId("menu-item-detail-title");
+      expect(input).toHaveAccessibleName("Navigation label");
+      expect(input).toHaveValue("Who we are");
+      expect(input).toHaveAttribute("placeholder", "About us");
+      expect(screen.getByTestId("menu-item-detail-linked")).toHaveTextContent(
+        "About us",
+      );
+
+      fireEvent.change(input, { target: { value: "" } });
+      expect(row).toHaveTextContent("About us");
+    });
+
+    test("the detail panel names the linked target by id when its title is unknown", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 }],
+        "locations/list": [],
+        pickerTabs: [{ kind: "custom", tabLabel: "Custom URL" }],
+        get: {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 41,
+              parentId: null,
+              sortOrder: 0,
+              title: "",
+              meta: { kind: "entry", entryId: 404 },
+              resolved: {
+                state: "broken",
+                label: "(unnamed)",
+                linkedLabel: null,
+                href: null,
+                lastHref: null,
+              },
+            },
+          ],
+        },
+      });
+
+      renderShell();
+      const user = userEvent.setup();
+
+      await user.click(await screen.findByTestId("menu-item-row-41"));
+
+      expect(await screen.findByTestId("menu-item-detail-title")).toBeVisible();
+      expect(screen.getByTestId("menu-item-detail-linked")).toHaveTextContent(
+        "Links to entry #404",
+      );
     });
 
     test("custom URL picker tab adds a new item to the in-memory list", async () => {
@@ -1009,6 +1484,91 @@ describe("MenusShell", () => {
       expect(payload.items[0]?.meta).toEqual({
         kind: "custom",
         url: "/about-new",
+      });
+    });
+    test("in re-link mode, choosing a term replaces the broken item's link and clears the banner", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc(
+        {
+          list: [
+            { id: 7, slug: "main", name: "Main", version: 1, itemCount: 1 },
+          ],
+          "locations/list": [],
+          pickerTabs: [
+            { kind: "term", tabLabel: "Categories", target: "category" },
+            { kind: "custom", tabLabel: "Custom URL" },
+          ],
+          get: {
+            id: 7,
+            slug: "main",
+            name: "Main",
+            version: 1,
+            maxDepth: 5,
+            items: [
+              {
+                id: 30,
+                parentId: null,
+                sortOrder: 0,
+                title: "",
+                meta: { kind: "term", termId: 404, lastLabel: "Old news" },
+                resolved: {
+                  state: "broken",
+                  label: "Old news",
+                  linkedLabel: "Old news",
+                  href: null,
+                  lastHref: null,
+                },
+              },
+            ],
+          },
+          save: {
+            termId: 7,
+            version: 2,
+            itemIds: [30],
+            added: [],
+            removed: [],
+            modified: [30],
+          },
+        },
+        {
+          searchTargets: searchTargetsFrom({
+            category: [{ id: "4", label: "Guides" }],
+          }),
+        },
+      );
+
+      renderShell();
+      const user = userEvent.setup();
+
+      const row = await screen.findByTestId("menu-item-row-30");
+      expect(row).toHaveAttribute("data-state", "broken");
+      await user.click(screen.getByTestId("menu-item-relink-30"));
+      expect(
+        await screen.findByTestId("menu-picker-relink-banner"),
+      ).toHaveTextContent("Old news");
+
+      await user.click(await screen.findByTestId("menu-picker-option-4"));
+
+      expect(screen.queryByTestId("menu-picker-relink-banner")).toBeNull();
+      expect(row).toHaveAttribute("data-state", "ok");
+      expect(row).toHaveTextContent("Guides");
+
+      await user.click(screen.getByTestId("menu-save-button"));
+      const call = await vi.waitFor(() => {
+        const found = findRpcCall("save");
+        if (!found) throw new Error("menu.save not called");
+        return found;
+      });
+      const payload = parseRpcInput<{
+        items: readonly { id?: number; meta: JsonValue }[];
+      }>(call);
+      expect(payload.items[0]).toMatchObject({
+        id: 30,
+        meta: { kind: "term", termId: 4 },
       });
     });
   });

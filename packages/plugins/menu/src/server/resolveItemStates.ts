@@ -42,6 +42,13 @@ export interface ResolvedRow extends Omit<MenuItemRow, "meta"> {
   readonly resolved: {
     readonly state: ItemState;
     readonly label: string;
+    /**
+     * The linked entry's or term's title, whatever the item's own label:
+     * the lookup label, else the last-known snapshot. `null` for custom
+     * items and for rows whose meta didn't parse. The editor falls back to
+     * it when an override is cleared.
+     */
+    readonly linkedLabel: string | null;
     readonly href: string | null;
     readonly lastHref: string | null;
   };
@@ -188,6 +195,7 @@ function enrich(
       resolved: {
         state: "broken",
         label: row.title || "(unnamed)",
+        linkedLabel: null,
         href: null,
         lastHref: null,
       },
@@ -201,6 +209,7 @@ function enrich(
       resolved: {
         state: "ok",
         label: row.title || "(unnamed)",
+        linkedLabel: null,
         href: meta.url,
         lastHref: null,
       },
@@ -217,11 +226,8 @@ function enrich(
   // Label preference: row.title (override) → resolver result →
   // last-known snapshot in meta → "(unnamed)". Same shape for href,
   // minus the override (entries don't carry an href column).
-  const label =
-    itemOwnLabel(row.title) ??
-    lookupResult?.label ??
-    meta.lastLabel ??
-    "(unnamed)";
+  const linkedLabel = lookupResult?.label ?? meta.lastLabel ?? null;
+  const label = itemOwnLabel(row.title) ?? linkedLabel ?? "(unnamed)";
 
   return {
     ...row,
@@ -229,6 +235,7 @@ function enrich(
     resolved: {
       state,
       label,
+      linkedLabel,
       href: hrefFor(state, lookupResult?.href ?? null, meta.lastHref ?? null),
       lastHref: meta.lastHref ?? null,
     },

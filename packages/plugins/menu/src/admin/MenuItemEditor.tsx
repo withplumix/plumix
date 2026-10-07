@@ -1,7 +1,7 @@
 import type { DragEndEvent, DragMoveEvent } from "@dnd-kit/core";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { CSSProperties, Dispatch, ReactNode } from "react";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useId, useReducer, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -31,7 +31,19 @@ import {
   AlertDialogTrigger,
   Button,
   Checkbox,
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  Field,
+  FieldDescription,
+  FieldLabel,
   Input,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
@@ -41,12 +53,13 @@ import type {
   EditorState,
   ItemKey,
 } from "./editor-state.js";
-import type { PickerTab } from "./queries.js";
+import type { LinkTarget, PickerTab } from "./queries.js";
 import {
   buildSavePayload,
   computeDepths,
   editorReducer,
   initialEditorState,
+  itemDisplayLabel,
 } from "./editor-state.js";
 import {
   useAssignLocation,
@@ -55,6 +68,7 @@ import {
   useMenuGet,
   usePickerTabs,
   useSaveMenu,
+  useSearchTargets,
 } from "./queries.js";
 import { dragEndToAction, getProjection } from "./tree-state.js";
 
@@ -71,16 +85,46 @@ const M = {
   reorderItemAria: {
     id: "plugin.menu.itemEditor.reorderAria",
     message: "Reorder {title}",
-    comment: "title: the item's display title, or a translated 'item' fallback",
-  },
-  reorderFallbackTitle: {
-    id: "plugin.menu.itemEditor.reorderFallbackTitle",
-    message: "item",
+    comment: "title: the item's name as the tree row shows it",
   },
   relinkBanner: {
     id: "plugin.menu.itemEditor.relinkBanner",
     message: "Pick replacement for {label}",
     comment: "label: the broken item's resolved-label or original title",
+  },
+  searchTargets: {
+    id: "plugin.menu.itemEditor.searchTargets",
+    message: "Search {tabLabel}…",
+    comment: "tabLabel: the picker tab's name, such as 'Posts' or 'Categories'",
+  },
+  untitledTarget: {
+    id: "plugin.menu.itemEditor.untitledTarget",
+    message: "(no title)",
+  },
+  addedAnnouncement: {
+    id: "plugin.menu.itemEditor.addedAnnouncement",
+    message: "Added {label} to the menu",
+    comment: "label: the title of the entry or term just added",
+  },
+  linkedTarget: {
+    id: "plugin.menu.itemEditor.linkedTarget",
+    message: "Links to {label}",
+    comment: "label: the title of the entry or term the item links to",
+  },
+  linkedEntryById: {
+    id: "plugin.menu.itemEditor.linkedEntryById",
+    message: "Links to entry #{id}",
+    comment: "id: the linked entry's id, shown when its title is unknown",
+  },
+  linkedTermById: {
+    id: "plugin.menu.itemEditor.linkedTermById",
+    message: "Links to term #{id}",
+    comment: "id: the linked term's id, shown when its title is unknown",
+  },
+  replacedAnnouncement: {
+    id: "plugin.menu.itemEditor.replacedAnnouncement",
+    message: "Replaced the link with {label}",
+    comment: "label: the title of the entry or term the item now links to",
   },
 } satisfies Record<string, MessageDescriptor>;
 
@@ -410,12 +454,11 @@ function ItemsPicker({
   // type/taxonomy (all sharing `kind`), so keying the active tab on
   // `kind` alone collapses every entry tab into one and makes them all
   // read as selected. The composite keeps each tab independently
-  // selectable.
+  // selectable. Until the user picks one, the first tab is active.
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const activeKind =
-    activeTab === null
-      ? null
-      : (tabs.find((tab) => tabKey(tab) === activeTab)?.kind ?? null);
+  const firstTab = tabs[0];
+  const selectedTab =
+    activeTab ?? (firstTab === undefined ? "" : tabKey(firstTab));
   const relinkTarget =
     state.relinkTargetKey === null
       ? null
@@ -431,7 +474,7 @@ function ItemsPicker({
           <span>
             {i18n._(
               M.relinkBanner.id,
-              { label: relinkTarget.resolvedLabel },
+              { label: itemDisplayLabel(relinkTarget) },
               { message: M.relinkBanner.message },
             )}
           </span>
@@ -448,49 +491,31 @@ function ItemsPicker({
           </Button>
         </div>
       ) : null}
-      <div
-        data-testid="menu-picker-tabs"
-        className="border-border flex items-center gap-1 border-b"
-      >
-        {tabs.map((tab) => {
-          const key = tabKey(tab);
-          return (
-            <Button
-              key={key}
-              type="button"
-              variant={activeTab === key ? "secondary" : "ghost"}
-              size="sm"
-              data-testid={`menu-picker-tab-${key}`}
-              aria-selected={activeTab === key}
-              onClick={() => {
-                setActiveTab(key);
-              }}
-            >
-              {tab.tabLabel}
-            </Button>
-          );
-        })}
-      </div>
-      {activeKind === "custom" ? (
-        <CustomUrlPickerPanel
-          relinkTargetKey={state.relinkTargetKey}
-          dispatch={dispatch}
-        />
-      ) : activeKind !== null ? (
-        // Entry/term/other sources have no in-admin search picker yet —
-        // the lookup-search RPC that would back them isn't built. Show a
-        // panel so the tab visibly responds, and point at Custom URL,
-        // which can link to anything the other sources would.
-        <div
-          data-testid="menu-picker-unsupported-panel"
-          className="border-border bg-card text-muted-foreground rounded-lg border p-4 text-sm"
-        >
-          <Trans
-            id="plugin.menu.itemEditor.sourceUnavailable"
-            message="This source isn't available yet — add the link via Custom URL."
-          />
-        </div>
-      ) : null}
+      <Tabs value={selectedTab} onValueChange={setActiveTab}>
+        <TabsList data-testid="menu-picker-tabs" variant="line">
+          {tabs.map((tab) => {
+            const key = tabKey(tab);
+            return (
+              <TabsTrigger
+                key={key}
+                value={key}
+                data-testid={`menu-picker-tab-${key}`}
+              >
+                {tab.tabLabel}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+        {tabs.map((tab) => (
+          <TabsContent key={tabKey(tab)} value={tabKey(tab)}>
+            <PickerPanel
+              tab={tab}
+              relinkTargetKey={state.relinkTargetKey}
+              dispatch={dispatch}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }
@@ -499,6 +524,191 @@ function ItemsPicker({
 // `custom` — keeping the existing `menu-picker-tab-custom` testid.
 function tabKey(tab: PickerTab): string {
   return tab.target === undefined ? tab.kind : `${tab.kind}-${tab.target}`;
+}
+
+function PickerPanel({
+  tab,
+  relinkTargetKey,
+  dispatch,
+}: {
+  readonly tab: PickerTab;
+  readonly relinkTargetKey: ItemKey | null;
+  readonly dispatch: Dispatch<EditorAction>;
+}): ReactNode {
+  if (tab.kind === "custom") {
+    return (
+      <CustomUrlPickerPanel
+        relinkTargetKey={relinkTargetKey}
+        dispatch={dispatch}
+      />
+    );
+  }
+  if (
+    (tab.kind === "entry" || tab.kind === "term") &&
+    tab.target !== undefined
+  ) {
+    return (
+      <LinkedTargetPickerPanel
+        kind={tab.kind}
+        target={tab.target}
+        tabLabel={tab.tabLabel}
+        relinkTargetKey={relinkTargetKey}
+        dispatch={dispatch}
+      />
+    );
+  }
+  // `MenuItemMeta` stores only custom, entry and term links, so a plugin
+  // lookup kind has nowhere to keep what it would pick.
+  return (
+    <div
+      data-testid="menu-picker-unsupported-panel"
+      className="border-border bg-card text-muted-foreground rounded-lg border p-4 text-sm"
+    >
+      <Trans
+        id="plugin.menu.itemEditor.sourceUnavailable"
+        message="This source isn't available yet — add the link via Custom URL."
+      />
+    </div>
+  );
+}
+
+function LinkedTargetPickerPanel({
+  kind,
+  target,
+  tabLabel,
+  relinkTargetKey,
+  dispatch,
+}: {
+  readonly kind: "entry" | "term";
+  readonly target: string;
+  readonly tabLabel: string;
+  readonly relinkTargetKey: ItemKey | null;
+  readonly dispatch: Dispatch<EditorAction>;
+}): ReactNode {
+  const { i18n } = useLingui();
+  const [query, setQuery] = useState("");
+  // `count` keys the announced text, so repeating an add replaces the node
+  // and the live region speaks again instead of seeing no change.
+  const [announcement, setAnnouncement] = useState({ text: "", count: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const search = useSearchTargets({ kind, target, query });
+  const searchLabel = i18n._(
+    M.searchTargets.id,
+    { tabLabel },
+    { message: M.searchTargets.message },
+  );
+
+  function nameOf(item: LinkTarget): string {
+    return (
+      item.label ??
+      i18n._(M.untitledTarget.id, undefined, {
+        message: M.untitledTarget.message,
+      })
+    );
+  }
+
+  function choose(item: LinkTarget): void {
+    const label = nameOf(item);
+    const meta =
+      kind === "entry"
+        ? { kind, entryId: Number(item.id) }
+        : { kind, termId: Number(item.id) };
+    if (relinkTargetKey !== null) {
+      dispatch({
+        type: "relinkItem",
+        key: relinkTargetKey,
+        newMeta: meta,
+        linkedLabel: item.label,
+      });
+    } else {
+      // No title of its own: the item follows the linked title.
+      dispatch({ type: "addItem", title: null, meta, linkedLabel: item.label });
+    }
+    const descriptor =
+      relinkTargetKey === null ? M.addedAnnouncement : M.replacedAnnouncement;
+    setAnnouncement((previous) => ({
+      text: i18n._(descriptor.id, { label }, { message: descriptor.message }),
+      count: previous.count + 1,
+    }));
+    // Keep the query and the focus so several results go in a row.
+    inputRef.current?.focus();
+  }
+
+  function renderResults(): ReactNode {
+    if (search.isPending) {
+      return (
+        <CommandEmpty>
+          <Trans id="plugin.menu.itemEditor.searchLoading" message="Loading…" />
+        </CommandEmpty>
+      );
+    }
+    if (search.isError) {
+      return (
+        <CommandEmpty>
+          <Trans
+            id="plugin.menu.itemEditor.searchFailed"
+            message="Couldn't load results."
+          />
+        </CommandEmpty>
+      );
+    }
+    if (search.data.items.length === 0) {
+      return (
+        <CommandEmpty>
+          <Trans
+            id="plugin.menu.itemEditor.searchNoMatches"
+            message="No matches"
+          />
+        </CommandEmpty>
+      );
+    }
+    return search.data.items.map((item) => (
+      <CommandItem
+        key={item.id}
+        value={item.id}
+        data-testid={`menu-picker-option-${item.id}`}
+        onSelect={() => {
+          choose(item);
+        }}
+      >
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">{nameOf(item)}</span>
+          {item.subtitle ? (
+            <span className="text-muted-foreground text-xs">
+              {item.subtitle}
+            </span>
+          ) : null}
+        </div>
+      </CommandItem>
+    ));
+  }
+
+  return (
+    <div
+      data-testid="menu-picker-linked-panel"
+      className="border-border bg-card rounded-lg border"
+    >
+      {/* The server filters, so cmdk's own filter stays off. */}
+      <Command shouldFilter={false} label={searchLabel}>
+        <CommandInput
+          ref={inputRef}
+          data-testid="menu-picker-search-input"
+          placeholder={searchLabel}
+          value={query}
+          onValueChange={setQuery}
+        />
+        <CommandList>{renderResults()}</CommandList>
+      </Command>
+      <div
+        role="status"
+        aria-live="polite"
+        data-testid="menu-picker-announcement"
+        className="sr-only"
+      >
+        <span key={announcement.count}>{announcement.text}</span>
+      </div>
+    </div>
+  );
 }
 
 function CustomUrlPickerPanel({
@@ -547,12 +757,14 @@ function CustomUrlPickerPanel({
               type: "relinkItem",
               key: relinkTargetKey,
               newMeta: { kind: "custom", url: url.trim() },
+              linkedLabel: null,
             });
           } else {
             dispatch({
               type: "addItem",
               title: label.trim() === "" ? null : label.trim(),
               meta: { kind: "custom", url: url.trim() },
+              linkedLabel: null,
             });
           }
           setUrl("");
@@ -690,8 +902,7 @@ function SortableTreeRow({
   const id = item.id ?? item.key;
   const isBroken = item.state === "broken";
   const isUnauthorized = item.state === "unauthorized";
-  const displayLabel = item.title ?? item.resolvedLabel;
-  const reorderTitle = item.title ?? i18n._(M.reorderFallbackTitle);
+  const displayLabel = itemDisplayLabel(item);
   return (
     <div
       ref={setNodeRef}
@@ -720,7 +931,7 @@ function SortableTreeRow({
         data-testid={`menu-item-drag-${String(id)}`}
         aria-label={i18n._(
           M.reorderItemAria.id,
-          { title: reorderTitle },
+          { title: displayLabel },
           { message: M.reorderItemAria.message },
         )}
         disabled={isUnauthorized}
@@ -811,24 +1022,93 @@ function ItemDetailPanel({
       ? null
       : (state.items.find((item) => item.key === state.selectedKey) ?? null);
   if (!selected) return <div data-testid="menu-item-detail-empty" />;
+  return <ItemDetailFields item={selected} dispatch={dispatch} />;
+}
+
+function ItemDetailFields({
+  item,
+  dispatch,
+}: {
+  readonly item: EditorItem;
+  readonly dispatch: Dispatch<EditorAction>;
+}): ReactNode {
+  const inputId = useId();
+  const hintId = useId();
+  const isLinked = item.meta.kind !== "custom";
   return (
     <div
       data-testid="menu-item-detail-panel"
       className="border-border bg-card flex flex-col gap-1 rounded-lg border p-4"
     >
-      <Input
-        type="text"
-        data-testid="menu-item-detail-title"
-        value={selected.title ?? ""}
-        onChange={(event) => {
-          const next = event.target.value;
-          dispatch({
-            type: "updateField",
-            key: selected.key,
-            patch: { title: next === "" ? null : next },
-          });
-        }}
-      />
+      <Field>
+        <FieldLabel htmlFor={inputId}>
+          <Trans
+            id="plugin.menu.itemEditor.navigationLabel"
+            message="Navigation label"
+          />
+        </FieldLabel>
+        <Input
+          id={inputId}
+          type="text"
+          data-testid="menu-item-detail-title"
+          value={item.title ?? ""}
+          placeholder={isLinked ? (item.linkedLabel ?? undefined) : undefined}
+          aria-describedby={isLinked ? hintId : undefined}
+          onChange={(event) => {
+            const next = event.target.value;
+            dispatch({
+              type: "updateField",
+              key: item.key,
+              patch: { title: next === "" ? null : next },
+            });
+          }}
+        />
+        {isLinked ? (
+          <>
+            <FieldDescription id={hintId}>
+              <Trans
+                id="plugin.menu.itemEditor.navigationLabelHint"
+                message="Leave empty to use the linked title."
+              />
+            </FieldDescription>
+            <LinkedTargetLine item={item} />
+          </>
+        ) : null}
+      </Field>
     </div>
+  );
+}
+
+// Names what a linked item points at: its title when known, otherwise its
+// kind and id, so an untitled or vanished target isn't passed off as one
+// without a title.
+function LinkedTargetLine({ item }: { readonly item: EditorItem }): ReactNode {
+  const { i18n } = useLingui();
+  const { meta } = item;
+  if (meta.kind === "custom") return null;
+  let text: string;
+  if (item.linkedLabel !== null) {
+    text = i18n._(
+      M.linkedTarget.id,
+      { label: item.linkedLabel },
+      { message: M.linkedTarget.message },
+    );
+  } else if (meta.kind === "entry") {
+    text = i18n._(
+      M.linkedEntryById.id,
+      { id: meta.entryId },
+      { message: M.linkedEntryById.message },
+    );
+  } else {
+    text = i18n._(
+      M.linkedTermById.id,
+      { id: meta.termId },
+      { message: M.linkedTermById.message },
+    );
+  }
+  return (
+    <FieldDescription data-testid="menu-item-detail-linked">
+      {text}
+    </FieldDescription>
   );
 }

@@ -4,11 +4,18 @@ import {
   buildSavePayload,
   editorReducer,
   initialEditorState,
+  itemDisplayLabel,
 } from "./editor-state.js";
 
 // What the server's resolver attaches to every row it sends back.
 function okResolved(label: string) {
-  return { state: "ok", label, href: null, lastHref: null } as const;
+  return {
+    state: "ok",
+    label,
+    linkedLabel: null,
+    href: null,
+    lastHref: null,
+  } as const;
 }
 
 describe("editorReducer", () => {
@@ -55,6 +62,7 @@ describe("editorReducer", () => {
               resolved: {
                 state: "broken",
                 label: "Mystery",
+                linkedLabel: null,
                 href: null,
                 lastHref: null,
               },
@@ -191,6 +199,7 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "New",
         meta: { kind: "custom", url: "/new" },
+        linkedLabel: null,
       });
       const next = editorReducer(added, {
         type: "applySaveResult",
@@ -212,11 +221,13 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "A",
         meta: { kind: "custom", url: "/a" },
+        linkedLabel: null,
       });
       const ab = editorReducer(a, {
         type: "addItem",
         title: "B",
         meta: { kind: "custom", url: "/b" },
+        linkedLabel: null,
       });
       const aKey = ab.items[0]?.key ?? "";
       const bKey = ab.items[1]?.key ?? "";
@@ -248,11 +259,13 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "Parent",
         meta: { kind: "custom", url: "/p" },
+        linkedLabel: null,
       });
       const child = editorReducer(parent, {
         type: "addItem",
         title: "Child",
         meta: { kind: "custom", url: "/p/c" },
+        linkedLabel: null,
       });
       const childKey = child.items[1]?.key ?? "";
       const parentKey = child.items[0]?.key ?? null;
@@ -443,6 +456,45 @@ describe("editorReducer", () => {
   });
 
   describe("updateField", () => {
+    test("clearing a linked item's own title shows its linked label", () => {
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Who we are",
+              resolved: {
+                state: "ok",
+                label: "Who we are",
+                linkedLabel: "About us",
+                href: "/about-us",
+                lastHref: "/about-us",
+              },
+              meta: { kind: "entry", entryId: 42, lastLabel: "About us" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "updateField",
+        key: "id-10",
+        patch: { title: null },
+      });
+
+      const cleared = next.items[0];
+      expect(cleared?.title).toBeNull();
+      expect(cleared && itemDisplayLabel(cleared)).toBe("About us");
+    });
+
     test("patches the targeted item's title and marks the state dirty", () => {
       const loaded = editorReducer(initialEditorState, {
         type: "loadFromServer",
@@ -553,6 +605,7 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "Home",
         meta: { kind: "custom", url: "/" },
+        linkedLabel: null,
       });
 
       expect(next.items).toHaveLength(1);
@@ -566,6 +619,23 @@ describe("editorReducer", () => {
       expect(next.dirty).toBe(true);
     });
 
+    test("a linked item follows its linked label, with no title of its own", () => {
+      const next = editorReducer(initialEditorState, {
+        type: "addItem",
+        title: null,
+        meta: { kind: "entry", entryId: 42 },
+        linkedLabel: "About us",
+      });
+
+      const added = next.items[0];
+      expect(added?.title).toBeNull();
+      expect(added && itemDisplayLabel(added)).toBe("About us");
+      expect(buildSavePayload(next)[0]).toMatchObject({
+        title: null,
+        meta: { kind: "entry", entryId: 42 },
+      });
+    });
+
     test("never reuses a tmp key after a removeItem clears one", () => {
       // Regression: the tmp counter must be monotonic across the
       // editor's lifetime. A naive `tmp-${items.length}` collides with
@@ -574,11 +644,13 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "A",
         meta: { kind: "custom", url: "/a" },
+        linkedLabel: null,
       });
       const ab = editorReducer(a, {
         type: "addItem",
         title: "B",
         meta: { kind: "custom", url: "/b" },
+        linkedLabel: null,
       });
       const aKey = ab.items[0]?.key ?? "";
       const bKey = ab.items[1]?.key ?? "";
@@ -587,6 +659,7 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "C",
         meta: { kind: "custom", url: "/c" },
+        linkedLabel: null,
       });
 
       const newKey = c.items[1]?.key ?? "";
@@ -622,6 +695,7 @@ describe("editorReducer", () => {
         type: "addItem",
         title: "Second",
         meta: { kind: "custom", url: "/two" },
+        linkedLabel: null,
       });
 
       expect(next.items).toHaveLength(2);
@@ -843,6 +917,7 @@ describe("editorReducer", () => {
               resolved: {
                 state: "unauthorized",
                 label: "A",
+                linkedLabel: null,
                 href: null,
                 lastHref: null,
               },
@@ -856,6 +931,7 @@ describe("editorReducer", () => {
               resolved: {
                 state: "ok",
                 label: "B",
+                linkedLabel: null,
                 href: "/b",
                 lastHref: null,
               },
@@ -1125,6 +1201,7 @@ describe("editorReducer", () => {
           lastLabel: "About v2",
           lastHref: "/about-v2",
         },
+        linkedLabel: "About v2",
       });
 
       expect(next.items[0]?.meta).toEqual({
@@ -1134,6 +1211,47 @@ describe("editorReducer", () => {
         lastHref: "/about-v2",
       });
       expect(next.dirty).toBe(true);
+    });
+
+    test("marks a broken item ok and follows the new target's linked label", () => {
+      const loaded = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "",
+              resolved: {
+                state: "broken",
+                label: "Old news",
+                linkedLabel: "Old news",
+                href: null,
+                lastHref: "/old-news",
+              },
+              meta: { kind: "term", termId: 404, lastLabel: "Old news" },
+            },
+          ],
+        },
+      });
+
+      const next = editorReducer(loaded, {
+        type: "relinkItem",
+        key: "id-10",
+        newMeta: { kind: "term", termId: 7 },
+        linkedLabel: "Guides",
+      });
+
+      const relinked = next.items[0];
+      expect(relinked?.state).toBe("ok");
+      expect(relinked?.linkedLabel).toBe("Guides");
+      expect(relinked && itemDisplayLabel(relinked)).toBe("Guides");
     });
   });
 
@@ -1234,6 +1352,7 @@ describe("buildSavePayload", () => {
       type: "addItem",
       title: "Home",
       meta: { kind: "custom", url: "/" },
+      linkedLabel: null,
     });
 
     const payload = buildSavePayload(state);
