@@ -498,33 +498,11 @@ function ItemsPicker({
         </TabsList>
         {tabs.map((tab) => (
           <TabsContent key={tabKey(tab)} value={tabKey(tab)}>
-            {tab.kind === "custom" ? (
-              <CustomUrlPickerPanel
-                relinkTargetKey={state.relinkTargetKey}
-                dispatch={dispatch}
-              />
-            ) : (tab.kind === "entry" || tab.kind === "term") &&
-              tab.target !== undefined ? (
-              <LinkedTargetPickerPanel
-                kind={tab.kind}
-                target={tab.target}
-                tabLabel={tab.tabLabel}
-                relinkTargetKey={state.relinkTargetKey}
-                dispatch={dispatch}
-              />
-            ) : (
-              // `MenuItemMeta` stores only custom, entry and term links, so a
-              // plugin lookup kind has nowhere to keep what it would pick.
-              <div
-                data-testid="menu-picker-unsupported-panel"
-                className="border-border bg-card text-muted-foreground rounded-lg border p-4 text-sm"
-              >
-                <Trans
-                  id="plugin.menu.itemEditor.sourceUnavailable"
-                  message="This source isn't available yet — add the link via Custom URL."
-                />
-              </div>
-            )}
+            <PickerPanel
+              tab={tab}
+              relinkTargetKey={state.relinkTargetKey}
+              dispatch={dispatch}
+            />
           </TabsContent>
         ))}
       </Tabs>
@@ -536,6 +514,52 @@ function ItemsPicker({
 // `custom` — keeping the existing `menu-picker-tab-custom` testid.
 function tabKey(tab: PickerTab): string {
   return tab.target === undefined ? tab.kind : `${tab.kind}-${tab.target}`;
+}
+
+function PickerPanel({
+  tab,
+  relinkTargetKey,
+  dispatch,
+}: {
+  readonly tab: PickerTab;
+  readonly relinkTargetKey: ItemKey | null;
+  readonly dispatch: Dispatch<EditorAction>;
+}): ReactNode {
+  if (tab.kind === "custom") {
+    return (
+      <CustomUrlPickerPanel
+        relinkTargetKey={relinkTargetKey}
+        dispatch={dispatch}
+      />
+    );
+  }
+  if (
+    (tab.kind === "entry" || tab.kind === "term") &&
+    tab.target !== undefined
+  ) {
+    return (
+      <LinkedTargetPickerPanel
+        kind={tab.kind}
+        target={tab.target}
+        tabLabel={tab.tabLabel}
+        relinkTargetKey={relinkTargetKey}
+        dispatch={dispatch}
+      />
+    );
+  }
+  // `MenuItemMeta` stores only custom, entry and term links, so a plugin
+  // lookup kind has nowhere to keep what it would pick.
+  return (
+    <div
+      data-testid="menu-picker-unsupported-panel"
+      className="border-border bg-card text-muted-foreground rounded-lg border p-4 text-sm"
+    >
+      <Trans
+        id="plugin.menu.itemEditor.sourceUnavailable"
+        message="This source isn't available yet — add the link via Custom URL."
+      />
+    </div>
+  );
 }
 
 function LinkedTargetPickerPanel({
@@ -575,26 +599,68 @@ function LinkedTargetPickerPanel({
         newMeta: meta,
         linkedLabel: item.label,
       });
-      setAnnouncement(
-        i18n._(
-          M.replacedAnnouncement.id,
-          { label },
-          { message: M.replacedAnnouncement.message },
-        ),
-      );
     } else {
       // No title of its own: the item follows the linked title.
       dispatch({ type: "addItem", title: null, meta, linkedLabel: item.label });
-      setAnnouncement(
-        i18n._(
-          M.addedAnnouncement.id,
-          { label },
-          { message: M.addedAnnouncement.message },
-        ),
-      );
     }
+    const descriptor =
+      relinkTargetKey === null ? M.addedAnnouncement : M.replacedAnnouncement;
+    setAnnouncement(
+      i18n._(descriptor.id, { label }, { message: descriptor.message }),
+    );
     // Keep the query and the focus so several results go in a row.
     inputRef.current?.focus();
+  }
+
+  function renderResults(): ReactNode {
+    if (search.isPending) {
+      return (
+        <CommandEmpty>
+          <Trans id="plugin.menu.itemEditor.searchLoading" message="Loading…" />
+        </CommandEmpty>
+      );
+    }
+    if (search.isError) {
+      return (
+        <CommandEmpty>
+          <Trans
+            id="plugin.menu.itemEditor.searchFailed"
+            message="Couldn't load results."
+          />
+        </CommandEmpty>
+      );
+    }
+    if (search.data.items.length === 0) {
+      return (
+        <CommandEmpty>
+          <Trans
+            id="plugin.menu.itemEditor.searchNoMatches"
+            message="No matches"
+          />
+        </CommandEmpty>
+      );
+    }
+    return search.data.items.map((item) => (
+      <CommandItem
+        key={item.id}
+        value={item.id}
+        data-testid={`menu-picker-option-${item.id}`}
+        onSelect={() => {
+          choose(item);
+        }}
+      >
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">
+            {item.label ?? i18n._(M.untitledTarget)}
+          </span>
+          {item.subtitle ? (
+            <span className="text-muted-foreground text-xs">
+              {item.subtitle}
+            </span>
+          ) : null}
+        </div>
+      </CommandItem>
+    ));
   }
 
   return (
@@ -611,52 +677,7 @@ function LinkedTargetPickerPanel({
           value={query}
           onValueChange={setQuery}
         />
-        <CommandList>
-          {search.isPending ? (
-            <CommandEmpty>
-              <Trans
-                id="plugin.menu.itemEditor.searchLoading"
-                message="Loading…"
-              />
-            </CommandEmpty>
-          ) : search.isError ? (
-            <CommandEmpty>
-              <Trans
-                id="plugin.menu.itemEditor.searchFailed"
-                message="Couldn't load results."
-              />
-            </CommandEmpty>
-          ) : search.data.items.length === 0 ? (
-            <CommandEmpty>
-              <Trans
-                id="plugin.menu.itemEditor.searchNoMatches"
-                message="No matches"
-              />
-            </CommandEmpty>
-          ) : (
-            search.data.items.map((item) => (
-              <CommandItem
-                key={item.id}
-                value={item.id}
-                data-testid={`menu-picker-option-${item.id}`}
-                onSelect={() => {
-                  choose(item);
-                }}
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">
-                    {item.label ?? i18n._(M.untitledTarget)}
-                  </span>
-                  {item.subtitle ? (
-                    <span className="text-muted-foreground text-xs">
-                      {item.subtitle}
-                    </span>
-                  ) : null}
-                </div>
-              </CommandItem>
-            ))
-          )}
-        </CommandList>
+        <CommandList>{renderResults()}</CommandList>
       </Command>
       <div role="status" aria-live="polite" className="sr-only">
         {announcement}

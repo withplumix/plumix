@@ -543,23 +543,25 @@ describe("menu RPC", () => {
         status: "published",
         authorId: author.id,
       });
-      const items: { title: string; meta: JsonObject }[] = [
-        { title: "Who we are", meta: { kind: "entry", entryId: post.id } },
-        { title: "Contact", meta: { kind: "custom", url: "/contact" } },
-      ];
-      for (const [index, item] of items.entries()) {
+      const seedItem = async (
+        sortOrder: number,
+        title: string,
+        meta: JsonObject,
+      ): Promise<void> => {
         const row = await entryFactory.transient({ db: h.db }).create({
           type: "menu_item",
-          title: item.title,
-          slug: `mi-linked-${String(index)}-${Date.now()}`,
+          title,
+          slug: `mi-linked-${String(sortOrder)}-${Date.now()}`,
           status: "published",
           authorId: author.id,
-          meta: item.meta,
+          meta,
         });
         await entryTermFactory
           .transient({ db: h.db })
-          .create({ entryId: row.id, termId: m.id, sortOrder: index });
-      }
+          .create({ entryId: row.id, termId: m.id, sortOrder });
+      };
+      await seedItem(0, "Who we are", { kind: "entry", entryId: post.id });
+      await seedItem(1, "Contact", { kind: "custom", url: "/contact" });
 
       const result = (await h.client.menu.get({ termId: m.id })) as {
         items: readonly {
