@@ -196,7 +196,9 @@ export function principalSegment(
 /**
  * The global default: everyone is the `anonymous` audience and passes. Absence
  * of an attached policy is equivalent to this — un-policied routes behave
- * exactly as they do today.
+ * exactly as they do today. A privileged request (a session, an
+ * `Authorization` header, a `?preview=` link) renders `private` under it, as
+ * under no policy, so it never enters the shared cache.
  */
 export const anonymousPolicy: AccessPolicy = definePolicy({
   resolve: () => grant("anonymous"),

@@ -478,6 +478,17 @@ function tryPublicRoutes(
   }
 }
 
+// The segment a policied render is cached and marked under. An `anonymous`
+// grant to a privileged request renders `private`, as it would under no
+// policy: its render can show who signed in, and an `anonymous` segment is
+// stored under the plain URL and left cacheable downstream (#2914).
+function segmentForAudience(ctx: AppContext, segment: Segment): Segment {
+  return segment === "anonymous" &&
+    requestIsPrivileged(ctx.request, ctxHasSession(ctx))
+    ? PRIVATE_SEGMENT
+    : segment;
+}
+
 // Whether this request carries a session, as the site's own authenticator reads
 // it — the CDN's privileged check has to ask it rather than the cookie (#2264).
 function ctxHasSession(ctx: AppContext): boolean {
@@ -531,7 +542,7 @@ async function dispatchPublicRoute(
       // `requestIsPrivileged`; here the segment would otherwise be cacheable.
       segment = requestCarriesEphemeralGrant(ctx.request)
         ? PRIVATE_SEGMENT
-        : access.segment;
+        : segmentForAudience(ctx, access.segment);
     } else {
       segment = requestIsPrivileged(ctx.request, ctxHasSession(ctx))
         ? PRIVATE_SEGMENT
@@ -831,7 +842,7 @@ async function servePoliciedPublicRoute(
   if (gated !== null) return gated;
   ctx.access = access;
   const response = await match.route.handler(ctx.request, ctx, match.params);
-  markAudience(response, ctx, access.segment);
+  markAudience(response, ctx, segmentForAudience(ctx, access.segment));
   return response;
 }
 
