@@ -122,16 +122,11 @@ export function mergeTemplateDepDeclarations(
  *
  * Slugs not present in a loader's returned record render as `null` in
  * the deps map — themes use optional chaining (`settings?.["site"]`).
- *
- * A dep that throws a page outcome ends the request (ADR 0032) unless
- * `honoursOutcome` is `false`, as on an error page, which has no request left
- * to end: there the outcome is as isolated as any other failure.
  */
 export async function loadTemplateDeps(
   template: DepDeclarations,
   registry: ReadonlyMap<string, RegisteredTemplateDep>,
   ctx: AppContext,
-  honoursOutcome = true,
 ): Promise<LoadedTemplateDeps> {
   const declared: {
     kind: string;
@@ -150,9 +145,7 @@ export async function loadTemplateDeps(
     s.set("deps.kinds", () => declared.map((d) => d.kind));
     return Object.fromEntries(
       await Promise.all(
-        declared.map((d) =>
-          loadOne(d.kind, d.slugs, d.dep, ctx, honoursOutcome),
-        ),
+        declared.map((d) => loadOne(d.kind, d.slugs, d.dep, ctx)),
       ),
     );
   });
@@ -163,7 +156,6 @@ async function loadOne(
   slugs: readonly string[],
   loader: RegisteredTemplateDep,
   ctx: AppContext,
-  honoursOutcome: boolean,
 ): Promise<readonly [string, DepResults]> {
   try {
     const raw = await loader.load(slugs, ctx);
@@ -174,7 +166,7 @@ async function loadOne(
   } catch (err) {
     // A dep that ends the request (ADR 0032) is the page's answer, not a
     // failure to degrade around.
-    if (honoursOutcome && isPageOutcome(err)) throw err;
+    if (isPageOutcome(err)) throw err;
     ctx.logger.error("template_dep_load_failed", {
       kind,
       slugs,

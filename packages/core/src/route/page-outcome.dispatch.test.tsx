@@ -457,45 +457,6 @@ describe("the template's own steps", () => {
     expect(response.status).toBe(404);
     expect(await response.text()).toContain("<h1>Nothing here</h1>");
   });
-
-  test("a dep on the 404 template that throws an outcome leaves the 404 page standing", async () => {
-    const cursorPlugin = definePlugin("cursor", (ctx) => {
-      ctx.registerTemplateDep("share-cursor", {
-        keyedBy: "slug",
-        load: () => Promise.reject(redirectTo("/x", 301)),
-      });
-    });
-    const h = await createDispatcherHarness({
-      config: {
-        plugins: [sharePlugin, cursorPlugin],
-        theme: defineTheme({
-          templates: [
-            notFound(
-              defineTemplate({
-                "share-cursor": ["current"],
-                render: () => <h1>Nothing here</h1>,
-              }),
-            ),
-            entry(
-              ({ data }) =>
-                data.entry.contentBlocks && (
-                  <BlockRenderer content={data.entry.contentBlocks} />
-                ),
-            ),
-            fallback(() => null),
-          ],
-        }),
-      },
-    });
-    await seedShare(h, "unknown");
-
-    const response = await h.dispatch(
-      new Request("https://cms.example/post/shared", html),
-    );
-
-    expect(response.status).toBe(404);
-    expect(await response.text()).toContain("<h1>Nothing here</h1>");
-  });
 });
 
 describe("the head reads what a loader found through ctx.memo", () => {
