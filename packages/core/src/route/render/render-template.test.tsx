@@ -147,6 +147,25 @@ describe("SEO — canonical + render:document seam", () => {
     expect(head).not.toContain('rel="canonical"');
   });
 
+  test("a canonical the page declares still renders under canonical: false", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      document: {
+        canonical: false,
+        link: [{ rel: "canonical", href: "https://x.example/y" }],
+      },
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain('href="https://x.example/y"');
+  });
+
   test("a template that leaves canonical unset inherits the theme's canonical: false", async () => {
     const theme = defineTheme({
       templates: [

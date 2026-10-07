@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { DocumentManifest } from "./document-manifest.js";
 import { mergeDocumentManifest } from "./document-merge.js";
@@ -91,8 +91,8 @@ describe("mergeDocumentManifest", () => {
   });
 
   test("canonical accepts only false, so a template cannot re-enable it", () => {
-    // @ts-expect-error - `true` is not a canonical value; omit it instead
-    const fragment: DocumentManifest = { canonical: true };
-    expect(fragment).toBeDefined();
+    expectTypeOf<DocumentManifest["canonical"]>().toEqualTypeOf<
+      false | undefined
+    >();
   });
 });
