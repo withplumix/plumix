@@ -1,9 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import {
-  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -12,17 +17,19 @@ import {
   test,
 } from "vitest";
 
+import type { CommandContext, PlumixApp } from "@plumix/core";
 import { spawnCapturingStderr } from "@plumix/core";
+import { createDispatcherHarness } from "@plumix/core/test";
 
 import {
-  emitRawSqlMigrations,
+  migrateCommand,
   migrateGenerateDeps,
 } from "../src/cli/commands/migrate.js";
 
 /**
  * `migrate generate` leans on two properties of the pinned drizzle-kit that
  * are not documented contracts: a successful generate stays silent on
- * stderr, and a journal entry with no snapshot beside it is tolerated.
+ * stderr, and one that needs a rename decided fails without a terminal.
  * These run the real binary so a `catalog:drizzle` bump breaks here rather
  * than in every build in the repo.
  */
@@ -37,28 +44,6 @@ const SCHEMA = `
     name: t.text().notNull(),
   }));
 `;
-
-const SCHEMA_WITH_SECOND_TABLE = `${SCHEMA}
-  export const gadgets = sqliteTable("gadgets", (t) => ({
-    id: t.integer().primaryKey({ autoIncrement: true }),
-  }));
-`;
-
-// Declared directly rather than collected off a plugin descriptor: this
-// suite diffs a toy schema, and core's own DDL would reference tables it
-// does not have.
-const SEARCH_MIGRATIONS = [
-  {
-    pluginId: "search",
-    name: "widget_fts",
-    statements: [
-      "CREATE VIRTUAL TABLE `widget_fts` USING fts5(name, content='widgets', content_rowid='id')",
-      "CREATE TRIGGER `widget_fts_ai` AFTER INSERT ON `widgets` BEGIN\n" +
-        "  INSERT INTO `widget_fts`(rowid, name) VALUES (new.id, new.name);\n" +
-        "END",
-    ],
-  },
-];
 
 function generate(): Promise<string> {
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(dir);
@@ -80,28 +65,6 @@ function generate(): Promise<string> {
     ],
     { cwd: dir, env: { NODE_OPTIONS: undefined, NODE_DEBUG: undefined } },
   );
-}
-
-async function generateOrThrow(): Promise<void> {
-  const stderr = await generate();
-  if (stderr.trim() !== "") throw new Error(stderr);
-}
-
-function journalTags(): readonly string[] {
-  const journal = JSON.parse(
-    readFileSync(join(dir, "drizzle/meta/_journal.json"), "utf8"),
-  ) as { entries: { tag: string }[] };
-  return journal.entries.map((entry) => entry.tag);
-}
-
-/** Apply every migration the journal names, the way the migrator does. */
-function applyMigrations(db: DatabaseSync): void {
-  for (const tag of journalTags()) {
-    const sql = readFileSync(join(dir, `drizzle/${tag}.sql`), "utf8");
-    for (const statement of sql.split("--> statement-breakpoint")) {
-      if (statement.trim() !== "") db.exec(statement);
-    }
-  }
 }
 
 function makeProjectDir(): void {
@@ -141,44 +104,116 @@ describe("drizzle-kit's stderr contract", () => {
   );
 });
 
-describe("raw SQL migrations", () => {
-  // Both tests below ask about one generated set — the numbering it produces
-  // and the schema it applies to — and building it costs two drizzle-kit
-  // spawns. Generated once here rather than per test: neither test writes to
-  // `dir`, so there is nothing for them to leak into each other, and each
-  // still fails on its own if the other is filtered out.
+describe("plumix migrate generate on a site's own tables", () => {
+  let site: string;
+  let base: PlumixApp;
+
+  // A local plugin's schema module: its table references core's `entries`,
+  // imported (as a site imports `plumix/schema`) but not re-exported.
+  const CORE_STUB = `
+    import { sqliteTable } from "drizzle-orm/sqlite-core";
+
+    export const entries = sqliteTable("entries", (t) => ({
+      id: t.integer().primaryKey({ autoIncrement: true }),
+    }));
+  `;
+  const BOOKMARKS = `
+    import { sqliteTable } from "drizzle-orm/sqlite-core";
+    import { entries } from "./core-stub";
+
+    export const bookmarks = sqliteTable("bookmarks", (t) => ({
+      id: t.integer().primaryKey({ autoIncrement: true }),
+      entryId: t.integer().notNull().references(() => entries.id),
+    }));
+  `;
+
+  function generateCtx(): CommandContext {
+    return {
+      app: {
+        ...base,
+        config: {
+          ...base.config,
+          plugins: [
+            {
+              id: "bookmarks",
+              setup: () => undefined,
+              schemaModule: "../src/schema.ts",
+            },
+          ],
+        },
+      },
+      cwd: site,
+      configPath: join(site, "plumix.config.ts"),
+      argv: ["generate"],
+    };
+  }
+
+  const migrationsDir = () => join(site, "migrations");
+  const sqlFiles = () =>
+    readdirSync(migrationsDir()).filter((file) => file.endsWith(".sql"));
+
   beforeAll(async () => {
-    makeProjectDir();
-    await generateOrThrow();
-    emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
-    writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
-    await generateOrThrow();
-  }, TWO_SPAWNS);
-
-  afterAll(() => {
-    rmSync(dir, { recursive: true, force: true });
+    ({ app: base } = await createDispatcherHarness());
   });
 
-  test("a later schema change is numbered past the raw migration", () => {
-    expect(journalTags()).toEqual([
-      expect.stringMatching(/^0000_/) as unknown as string,
-      "0001_plumix_search_widget_fts",
-      expect.stringMatching(/^0002_/) as unknown as string,
-    ]);
+  beforeEach(() => {
+    site = mkdtempSync(join(tmpdir(), "plumix-site-generate-"));
+    writeFileSync(join(site, "package.json"), JSON.stringify({ name: "site" }));
+    mkdirSync(join(site, "src"));
+    writeFileSync(join(site, "src/core-stub.ts"), CORE_STUB, "utf8");
+    writeFileSync(join(site, "src/schema.ts"), BOOKMARKS, "utf8");
   });
 
-  test("applying the generated set creates the virtual table and its trigger", () => {
-    const db = new DatabaseSync(":memory:");
-    applyMigrations(db);
-    db.exec("INSERT INTO widgets (name) VALUES ('gizmo')");
-
-    expect(
-      db
-        .prepare(
-          "SELECT rowid AS id FROM widget_fts WHERE widget_fts MATCH 'gizmo'",
-        )
-        .all(),
-    ).toEqual([{ id: 1 }]);
-    db.close();
+  afterEach(() => {
+    rmSync(site, { recursive: true, force: true });
   });
+
+  test(
+    "writes a history of only the site's table, with its foreign key, and a second run writes nothing",
+    async () => {
+      await migrateCommand.run(generateCtx());
+
+      const [file] = sqlFiles();
+      const sql = readFileSync(join(migrationsDir(), file ?? ""), "utf8");
+      expect(sqlFiles()).toHaveLength(1);
+      expect(sql.match(/CREATE TABLE `(\w+)`/g)).toEqual([
+        "CREATE TABLE `bookmarks`",
+      ]);
+      expect(sql).toContain(
+        "FOREIGN KEY (`entry_id`) REFERENCES `entries`(`id`)",
+      );
+
+      await migrateCommand.run(generateCtx());
+
+      expect(sqlFiles()).toEqual([file]);
+    },
+    TWO_SPAWNS,
+  );
+
+  test(
+    "a rename it cannot ask about without a terminal fails, advising a terminal rather than any deletion",
+    async () => {
+      await migrateCommand.run(generateCtx());
+      const before = sqlFiles();
+      writeFileSync(
+        join(site, "src/schema.ts"),
+        BOOKMARKS.replace("entryId:", "postId:"),
+        "utf8",
+      );
+
+      const failure = migrateCommand.run(generateCtx());
+
+      await expect(failure).rejects.toMatchObject({
+        code: "migrate_generate_failed",
+        hint: expect.stringContaining(
+          "run `plumix migrate generate` in an interactive terminal",
+        ) as unknown,
+      });
+      await expect(failure).rejects.toMatchObject({
+        hint: expect.not.stringMatching(/delet|remov|rm /i) as unknown,
+      });
+      expect(sqlFiles()).toEqual(before);
+    },
+    TWO_SPAWNS,
+  );
 });

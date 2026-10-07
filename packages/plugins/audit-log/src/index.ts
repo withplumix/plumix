@@ -85,9 +85,8 @@ const AUDIT_LABELS = {
  *
  * - **Storage** is pluggable via the `storage` option. The default
  *   `sqlite()` writes to `ctx.db` against the plugin's own Drizzle
- *   table; the schema is forwarded into `definePlugin({ schema })` so
- *   `plumix migrate generate` picks up the table on the next codegen
- *   run.
+ *   table; the schema is forwarded into `definePlugin({ schema })`, and
+ *   the table's history ships in this package's `migrations/`.
  * - **Service** buffers per-request via a WeakMap keyed by AppContext
  *   and flushes once via `ctx.defer` (the runtime shim from #177).
  *   Multiple events from one RPC become one INSERT.

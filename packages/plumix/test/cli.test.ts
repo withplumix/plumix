@@ -1,6 +1,5 @@
 import {
   existsSync,
-  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -18,23 +17,6 @@ import "@plumix/core";
 
 import { migrateGenerateDeps } from "../src/cli/commands/migrate.js";
 import { run } from "../src/cli/index.js";
-
-// drizzle-kit is mocked away in the generate test below, so the journal a
-// real generate would have written is stood in for.
-function seedDrizzleJournal(dir: string): void {
-  mkdirSync(join(dir, "drizzle/meta"), { recursive: true });
-  writeFileSync(
-    join(dir, "drizzle/meta/_journal.json"),
-    JSON.stringify({
-      version: "7",
-      dialect: "sqlite",
-      entries: [
-        { idx: 0, version: "6", when: 1, tag: "0000_seed", breakpoints: true },
-      ],
-    }),
-    "utf8",
-  );
-}
 
 // Inline config object — avoids importing "plumix" from a tmp dir, which
 // pnpm's strict node_modules layout won't resolve.
@@ -57,7 +39,8 @@ export default {
       origin: "http://localhost:8787",
     },
   },
-  plugins: [],
+  // A local plugin, so the site owns a table for \`migrate generate\`.
+  plugins: [{ id: "local", setup: () => {}, schemaModule: "../schema.ts" }],
   theme: { templates: () => null },
 };
 `;
@@ -70,7 +53,7 @@ describe("plumix CLI dispatch", () => {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-cli-dispatch-"));
     writeFileSync(join(dir, "plumix.config.mjs"), VALID_CONFIG, "utf8");
-    seedDrizzleJournal(dir);
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
     exitCode = undefined;
     process.exit = ((code?: number) => {
       exitCode = code ?? 0;
@@ -83,7 +66,7 @@ describe("plumix CLI dispatch", () => {
     vi.restoreAllMocks();
   });
 
-  test("migrate generate writes .plumix/schema.ts and invokes drizzle-kit", async () => {
+  test("migrate generate writes .plumix/site-schema.ts and invokes drizzle-kit", async () => {
     vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
       "/fake/drizzle-kit/bin.cjs",
     );
@@ -93,10 +76,10 @@ describe("plumix CLI dispatch", () => {
 
     await run(["--cwd", dir, "migrate", "generate"]);
 
-    const emitted = join(dir, ".plumix/schema.ts");
+    const emitted = join(dir, ".plumix/site-schema.ts");
     expect(existsSync(emitted)).toBe(true);
     expect(readFileSync(emitted, "utf8")).toContain(
-      'export * from "plumix/schema";',
+      'export * from "../schema.ts";',
     );
     expect(spawn).toHaveBeenCalledOnce();
     expect(spawn.mock.calls[0]?.[1]).toContain("/fake/drizzle-kit/bin.cjs");

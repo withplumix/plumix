@@ -45,7 +45,7 @@ export const rpc = (origin: string, path: string): Promise<Response> =>
     body: JSON.stringify({ json: {} }),
   });
 
-/** A stub runtime and database: enough for `migrate generate` and a client build. */
+/** A stub runtime and database: enough for a client build. */
 export const STUB_CONFIG = `import { auth } from "plumix/auth";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";

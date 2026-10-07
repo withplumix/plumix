@@ -75,7 +75,7 @@ describe("ensureSearchIndex", () => {
   });
 
   test("rebuilds an index recreated over a projection that outlived it", async () => {
-    // The install whose raw migration never ran: the projection is written
+    // The install whose migration never ran: the projection is written
     // for a while with no index behind it. Creating the objects alone leaves
     // an empty index whose `integrity-check` passes and whose next update
     // raises SQLITE_CORRUPT, so the repair has to repopulate.

@@ -197,8 +197,6 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "CORE_NAV_GROUPS",
       "MANIFEST_SCRIPT_ID",
       "configuredSlotsOf",
-      "collectRawSqlMigrations",
-      "planRawSqlMigrations",
       "CORE_SCHEMA_MODULE",
       "createPluginSetupContext",
       "createPluginAfterSetupContext",
@@ -277,13 +275,11 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
       {
         reason:
-          "raw-migration, schema-codegen and migration-history helpers, " +
+          "schema-codegen and migration-history helpers, " +
           "whose consumers are " +
           "this package's own `migrate` command and plugin tests through " +
           "`plumix/test`",
         names: [
-          "collectRawSqlMigrations",
-          "planRawSqlMigrations",
           "CORE_SCHEMA_MODULE",
           "generateSchemaSource",
           "CORE_MIGRATIONS_FOLDER",

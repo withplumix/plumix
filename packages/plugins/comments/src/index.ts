@@ -71,8 +71,8 @@ export function comments(options: CommentsConfig = {}) {
   const config = resolveConfig(options);
   return definePlugin("comments", {
     schema,
-    // Module specifier `plumix migrate generate` uses to fold this
-    // plugin's table into the host's drizzle-kit codegen.
+    // Module specifier `plumix migrate` resolves to find this package's
+    // migration history.
     schemaModule: "@plumix/plugin-comments/schema",
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,

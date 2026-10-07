@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
@@ -12,11 +11,6 @@ import {
 } from "../test/consumer-project.js";
 
 let dir: string;
-
-// The fixture project links only `plumix` and this package.
-const DRIZZLE = fileURLToPath(
-  new URL("../../node_modules/drizzle-orm", import.meta.url),
-);
 
 beforeEach(() => {
   dir = scaffoldConsumerProject("plumix-bun-migrate-", BUN_CONFIG);
@@ -62,17 +56,12 @@ describe("bun --bun plumix migrate", () => {
     expect(second.stderr).toContain("core: up to date");
   });
 
-  test("adopts a database the legacy generate-and-apply built, running no DDL", async () => {
-    expect(await plumixOn("bun", dir, ["migrate", "generate"])).toMatchObject({
-      code: 0,
-    });
-    // A legacy database: drizzle's migrator over the site's `drizzle/`,
-    // recorded in its default table.
-    mkdirSync(join(dir, "data"));
+  test("adopts a database a legacy single history built, running no DDL", async () => {
+    // A legacy database: the same schema, recorded in drizzle's default
+    // tracking table rather than core's.
+    expect(await plumixOn("bun", dir, ["migrate"])).toMatchObject({ code: 0 });
     await onDatabase(
-      `const { drizzle } = require(${JSON.stringify(`${DRIZZLE}/bun-sqlite`)});
-       const { migrate } = require(${JSON.stringify(`${DRIZZLE}/bun-sqlite/migrator`)});
-       migrate(drizzle(db), { migrationsFolder: "drizzle" });`,
+      `db.exec("ALTER TABLE __drizzle_migrations_core RENAME TO __drizzle_migrations");`,
     );
 
     const adopted = await plumixOn("bun", dir, ["migrate"]);

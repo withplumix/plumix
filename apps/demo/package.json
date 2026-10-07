@@ -6,9 +6,9 @@
   "description": "Plumix anonymous demo sandbox — the deployed \"try the editor\" app and the workspace dev harness",
   "license": "MIT",
   "scripts": {
-    "build": "plumix migrate generate && plumix build",
-    "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
-    "dev": "plumix migrate generate && plumix dev",
+    "build": "plumix build",
+    "clean": "git clean -xdf .plumix .wrangler dist node_modules",
+    "dev": "plumix dev",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "eslint",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",

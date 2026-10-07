@@ -35,9 +35,9 @@ export type EntryContent = Record<string, unknown>;
  * Carries the change-feed triggers in `entries/change-feed.ts`. drizzle emits
  * a table rebuild for some schema changes — adding a `NOT NULL` to an existing
  * column, for one — and every trigger on the table dies at the `DROP TABLE`
- * inside it. A migration that rebuilds this table has to re-create them under
- * a new `sqlMigrations` name — `ENTRY_CHANGE_FEED_RESET_DDL` is the statement
- * list to point it at.
+ * inside it. A migration that rebuilds this table has to re-create them in a
+ * hand-written migration after it, as `migrations/0001_entry_change_feed.sql`
+ * created them.
  *
  * A new column that changes what a consumer's projection of an entry says —
  * its text, its visibility, its URL — belongs in that module's

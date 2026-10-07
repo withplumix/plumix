@@ -257,7 +257,6 @@ export type {
   ProjectImageRolesOptions,
   PublicRouteMatch,
   PublicRouteOptions,
-  RawSqlMigration,
   RedirectResolution,
   RedirectRule,
   RedirectStatus,

@@ -166,8 +166,8 @@ export function forms(options: FormsConfig = {}) {
     // against the consuming site, the way every plugin admin entry is.
     adminEntry: pluginAdminEntryPath("@plumix/plugin-forms"),
     schema,
-    // Module specifier `plumix migrate generate` uses to fold this
-    // plugin's table into the host's drizzle-kit codegen.
+    // Module specifier `plumix migrate` resolves to find this package's
+    // migration history.
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: PLUGIN_I18N_SLOT,
     provides: (ctx) => {

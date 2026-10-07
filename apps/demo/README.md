@@ -16,7 +16,7 @@ mode. Targets Cloudflare Workers + D1.
 pnpm dev
 ```
 
-Runs `plumix migrate generate && plumix dev` — a local Workers dev server on
+Runs `plumix dev` — a local Workers dev server on
 `http://localhost:8787`. Synthetic-admin auto-login means there's no login step;
 enter the editor straight from the public showcase's "Try the editor" CTA.
 
@@ -26,9 +26,10 @@ enter the editor straight from the public showcase's "Try the editor" CTA.
 pnpm build
 ```
 
-Emits the worker bundle to `dist/`. Runs `plumix migrate generate` first — the
-schema (`drizzle/`) is generated from the current core + plugin schema rather
-than committed, so it can't drift — then `plumix build`.
+Emits the worker bundle to `dist/`. Each session's Durable Object database is
+built from the migration histories core and `@plumix/plugin-comments` ship
+(`demo-sql.ts`), followed by `seed.sql`, so the demo generates nothing and keeps
+no `drizzle/`.
 
 ## Test
 
@@ -42,7 +43,6 @@ session provision → admin → create → persist) against this app.
 ## Deploy
 
 ```bash
-pnpm exec plumix migrate generate
 pnpm exec wrangler d1 create plumix_demo
 # paste the returned database_id into wrangler.jsonc
 pnpm exec plumix migrate --remote

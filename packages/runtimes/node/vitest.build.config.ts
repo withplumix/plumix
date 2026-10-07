@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [plumixSourceResolver()],
   test: {
     include: ["src/**/*.build.test.{ts,tsx}"],
-    // `plumix migrate generate` spawns drizzle-kit; cold, that is seconds.
+    // Each test spawns the `plumix` CLI; cold, that is seconds.
     testTimeout: 60_000,
   },
 });

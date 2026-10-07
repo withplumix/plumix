@@ -7,10 +7,6 @@ export {
   declaredSchedules,
   scheduledTasksFor,
 } from "../runtime/contract/schedules.js";
-export {
-  collectRawSqlMigrations,
-  planRawSqlMigrations,
-} from "./raw-migrations.js";
 export { CORE_MIGRATIONS_FOLDER } from "./migrations.js";
 export { CORE_SCHEMA_MODULE, generateSchemaSource } from "./schema-codegen.js";
 export type { SchemaSource } from "./schema-codegen.js";

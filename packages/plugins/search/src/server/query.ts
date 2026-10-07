@@ -161,7 +161,7 @@ interface PageArgs extends ReadArgs {
  * A page of matches, from the index when there is one and from title and
  * excerpt when there is not.
  *
- * A missing index is a real state — a raw migration that never ran, a restored
+ * A missing index is a real state — a migration that never ran, a restored
  * dump, a fresh install before the first drain — and it is not a state a
  * visitor should meet as an error page. So it is recognised rather than
  * guarded against: asking `sqlite_master` first would put a query on every

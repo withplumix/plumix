@@ -1,7 +1,5 @@
 // Every value of core's schema module, which is what a drizzle client is built
-// from: `Db` is typed over exactly that key set (`CoreSchema`), and `plumix
-// migrate generate` re-exports this subpath into the schema drizzle-kit diffs,
-// so a table left off it would be dropped from the next migration.
+// from: `Db` is typed over exactly that key set (`CoreSchema`).
 export type * from "@plumix/core/schema";
 
 // The tables, and the vocabularies their columns store.
