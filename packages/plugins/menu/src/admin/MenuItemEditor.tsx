@@ -111,6 +111,16 @@ const M = {
     message: "Links to {label}",
     comment: "label: the title of the entry or term the item links to",
   },
+  linkedEntryById: {
+    id: "plugin.menu.itemEditor.linkedEntryById",
+    message: "Links to entry #{id}",
+    comment: "id: the linked entry's id, shown when its title is unknown",
+  },
+  linkedTermById: {
+    id: "plugin.menu.itemEditor.linkedTermById",
+    message: "Links to term #{id}",
+    comment: "id: the linked term's id, shown when its title is unknown",
+  },
   replacedAnnouncement: {
     id: "plugin.menu.itemEditor.replacedAnnouncement",
     message: "Replaced the link with {label}",
@@ -1017,7 +1027,6 @@ function ItemDetailFields({
   readonly item: EditorItem;
   readonly dispatch: Dispatch<EditorAction>;
 }): ReactNode {
-  const { i18n } = useLingui();
   const inputId = useId();
   const hintId = useId();
   const isLinked = item.meta.kind !== "custom";
@@ -1057,20 +1066,44 @@ function ItemDetailFields({
                 message="Leave empty to use the linked title."
               />
             </FieldDescription>
-            {/* A target with no known title can't be named; the row's
-                broken-link mark already says what is wrong with it. */}
-            {item.linkedLabel === null ? null : (
-              <FieldDescription data-testid="menu-item-detail-linked">
-                {i18n._(
-                  M.linkedTarget.id,
-                  { label: item.linkedLabel },
-                  { message: M.linkedTarget.message },
-                )}
-              </FieldDescription>
-            )}
+            <LinkedTargetLine item={item} />
           </>
         ) : null}
       </Field>
     </div>
+  );
+}
+
+// Names what a linked item points at: its title when known, otherwise its
+// kind and id, so an untitled or vanished target isn't passed off as one
+// without a title.
+function LinkedTargetLine({ item }: { readonly item: EditorItem }): ReactNode {
+  const { i18n } = useLingui();
+  const { meta } = item;
+  if (meta.kind === "custom") return null;
+  let text: string;
+  if (item.linkedLabel !== null) {
+    text = i18n._(
+      M.linkedTarget.id,
+      { label: item.linkedLabel },
+      { message: M.linkedTarget.message },
+    );
+  } else if (meta.kind === "entry") {
+    text = i18n._(
+      M.linkedEntryById.id,
+      { id: meta.entryId },
+      { message: M.linkedEntryById.message },
+    );
+  } else {
+    text = i18n._(
+      M.linkedTermById.id,
+      { id: meta.termId },
+      { message: M.linkedTermById.message },
+    );
+  }
+  return (
+    <FieldDescription data-testid="menu-item-detail-linked">
+      {text}
+    </FieldDescription>
   );
 }

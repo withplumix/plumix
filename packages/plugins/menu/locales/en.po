@@ -363,3 +363,15 @@ msgstr "Navigation label"
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.navigationLabelHint"
 msgstr "Leave empty to use the linked title."
+
+#. js-lingui-explicit-id
+#. id: the linked entry's id, shown when its title is unknown
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.linkedEntryById"
+msgstr "Links to entry #{id}"
+
+#. js-lingui-explicit-id
+#. id: the linked term's id, shown when its title is unknown
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.linkedTermById"
+msgstr "Links to term #{id}"

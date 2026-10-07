@@ -1,7 +1,6 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
 import {
-  keepPreviousData,
   skipToken,
   useMutation,
   useQuery,
@@ -67,8 +66,6 @@ export function usePickerTabs(): UseQueryResult<MenuOutputs["pickerTabs"]> {
 
 // Keyed on the trimmed query and fetched on every change with no debounce,
 // like the admin's own lookup search: a blank query lists the first page.
-// The last results stay up while the next query loads, so the list doesn't
-// blink to "Loading…" on every keystroke and drop the highlighted row.
 export function useSearchTargets({
   kind,
   target,
@@ -77,7 +74,6 @@ export function useSearchTargets({
   const trimmed = query?.trim() ?? "";
   return useQuery({
     queryKey: ["menu", "searchTargets", kind, target, trimmed] as const,
-    placeholderData: keepPreviousData,
     queryFn: () =>
       rpc.searchTargets({
         kind,

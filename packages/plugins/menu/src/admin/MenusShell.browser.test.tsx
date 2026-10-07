@@ -731,7 +731,7 @@ describe("MenusShell", () => {
       ]);
     });
 
-    test("an entry tab keeps its results on screen while a narrower search is in flight", async () => {
+    test("an entry tab shows its loading state while a narrower search is in flight", async () => {
       window.history.replaceState(
         {},
         "",
@@ -782,10 +782,13 @@ describe("MenusShell", () => {
         expect(searchTargetsCalls().at(-1)?.query).toBe("abo");
       });
 
-      expect(screen.getByTestId("menu-picker-option-11")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("menu-picker-linked-panel"),
-      ).not.toHaveTextContent("Loading…");
+      // No stale rows to pick from while the new query loads.
+      await vi.waitFor(() => {
+        expect(
+          screen.getByTestId("menu-picker-linked-panel"),
+        ).toHaveTextContent("Loading…");
+      });
+      expect(screen.queryByTestId("menu-picker-option-11")).toBeNull();
 
       release?.();
       await vi.waitFor(() => {
@@ -1107,7 +1110,7 @@ describe("MenusShell", () => {
       expect(row).toHaveTextContent("About us");
     });
 
-    test("the detail panel names no linked target when the item's linked title is unknown", async () => {
+    test("the detail panel names the linked target by id when its title is unknown", async () => {
       window.history.replaceState(
         {},
         "",
@@ -1148,7 +1151,9 @@ describe("MenusShell", () => {
       await user.click(await screen.findByTestId("menu-item-row-41"));
 
       expect(await screen.findByTestId("menu-item-detail-title")).toBeVisible();
-      expect(screen.queryByTestId("menu-item-detail-linked")).toBeNull();
+      expect(screen.getByTestId("menu-item-detail-linked")).toHaveTextContent(
+        "Links to entry #404",
+      );
     });
 
     test("custom URL picker tab adds a new item to the in-memory list", async () => {
