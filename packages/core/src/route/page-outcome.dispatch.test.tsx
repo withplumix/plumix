@@ -146,7 +146,7 @@ describe("an archive resolve that throws an outcome", () => {
         routes: ["/members"],
         entries: (q) => q.ofTypes("post"),
         title: "Members",
-        resolve: (appCtx) => {
+        resolve: (appCtx: AppContext) => {
           if (appCtx.user === null) throw redirectTo("/login", 307);
           return {};
         },
@@ -195,7 +195,13 @@ const sharePlugin = definePlugin("share", (ctx) => {
           if (attrs.share === "unknown") throw pageNotFound();
           if (attrs.share === "spent") throw redirectTo("/elsewhere");
           if (attrs.share === "broken") throw new Error("share store down");
+          if (attrs.share === "mixed") throw new Error("share store down");
           return Promise.resolve(`share ${String(attrs.share)}`);
+        },
+        // Declared after `share`, so a block's first rejection is not its outcome.
+        audit: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
+          if (attrs.share === "mixed") throw pageNotFound();
+          return Promise.resolve("audited");
         },
       },
       errorFallback: () => <p>share unavailable</p>,
@@ -254,14 +260,12 @@ describe("a block loader on the entry that throws an outcome", () => {
   });
 
   describe("with the dev gate on", () => {
-    const original = process.env.PLUMIX_DEV;
     afterEach(() => {
-      if (original === undefined) delete process.env.PLUMIX_DEV;
-      else process.env.PLUMIX_DEV = original;
+      vi.unstubAllEnvs();
     });
 
     test("pageNotFound is still a 404, not the dev error page", async () => {
-      process.env.PLUMIX_DEV = "1";
+      vi.stubEnv("PLUMIX_DEV", "1");
       const h = await createDispatcherHarness({
         config: { plugins: [sharePlugin], theme: shareTheme },
       });
@@ -303,6 +307,19 @@ describe("a block loader on the entry that throws an outcome", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("/elsewhere");
+  });
+
+  test("pageNotFound still ends the page when an earlier loader on the block failed", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [sharePlugin], theme: shareTheme },
+    });
+    await seedShare(h, "mixed");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/shared", html),
+    );
+
+    expect(response.status).toBe(404);
   });
 
   test("an ordinary error stays the block's own", async () => {

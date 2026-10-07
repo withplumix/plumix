@@ -26,6 +26,7 @@ import type { LoadedTemplateDeps } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type { ResolvedViewTransitions } from "../../theme-view-transitions.js";
 import type { TemplateData, ThemeDescriptor } from "../../theme.js";
+import type { PageOutcome } from "../contract/page-outcome.js";
 import type { ErrorData } from "../contract/resolved-entry.js";
 import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
@@ -392,6 +393,7 @@ async function prefetchEntryLoaders(
   // in the editor, which has to stay editable. Anywhere else it is an
   // ordinary rejection, isolated to its block.
   const honoursOutcome = "entry" in data && editMode.mode !== "edit";
+  let pageOutcome: PageOutcome | undefined;
   // Dev-only: the first loader rejection, captured so it can be escalated to a
   // fatal error after the fan-out settles (prod leaves it `undefined` and keeps
   // per-block isolation).
@@ -408,7 +410,10 @@ async function prefetchEntryLoaders(
       // otherwise surface as an unhandledRejection and on workers that
       // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
       onLoaderError: (event: LoaderErrorEvent) => {
-        if (honoursOutcome && isPageOutcome(event.error)) return;
+        if (honoursOutcome && isPageOutcome(event.error)) {
+          pageOutcome ??= event.error;
+          return;
+        }
         firstLoaderError ??= event;
         ctx.hooks
           .applyFilter("blocks:loader:error", undefined, event)
@@ -422,11 +427,7 @@ async function prefetchEntryLoaders(
       },
     });
   });
-  if (honoursOutcome) {
-    for (const { error } of loaderData.values()) {
-      if (isPageOutcome(error)) throw error;
-    }
-  }
+  if (pageOutcome !== undefined) throw pageOutcome;
   // Dev-only: a throwing loader is fatal here — it propagates to the dispatcher
   // catch, which serves the dev error page naming the culprit block, instead of
   // silently degrading. `process.env.PLUMIX_DEV` is Vite-empty in prod builds,
