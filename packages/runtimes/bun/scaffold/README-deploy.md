@@ -7,8 +7,7 @@ along with the build output.
 
 ```sh
 bun install
-bun --bun plumix migrate generate
-bun --bun plumix migrate apply
+bun --bun plumix migrate
 bun run build
 PORT=3000 bun dist/server/worker.js
 ```

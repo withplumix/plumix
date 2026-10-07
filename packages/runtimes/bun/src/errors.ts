@@ -1,6 +1,6 @@
-export class MigrateApplyError extends Error {
+export class MigrationsError extends Error {
   static {
-    MigrateApplyError.prototype.name = "MigrateApplyError";
+    MigrationsError.prototype.name = "MigrationsError";
   }
 
   readonly code: "database_not_bun_sqlite";
@@ -16,10 +16,10 @@ export class MigrateApplyError extends Error {
     this.kind = kind;
   }
 
-  static databaseNotBunSqlite(ctx: { kind: string }): MigrateApplyError {
-    return new MigrateApplyError(
+  static databaseNotBunSqlite(ctx: { kind: string }): MigrationsError {
+    return new MigrationsError(
       "database_not_bun_sqlite",
-      `@plumix/runtime-bun: \`migrate apply\` applies to the file \`bunSqlite()\` names, ` +
+      `@plumix/runtime-bun: \`plumix migrate\` applies to the file \`bunSqlite()\` names, ` +
         `but the config's database slot is "${ctx.kind}". Apply its migrations with that database's own tooling.`,
       ctx.kind,
     );

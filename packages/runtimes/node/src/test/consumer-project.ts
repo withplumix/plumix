@@ -30,11 +30,12 @@ export const CLI_ENV: NodeJS.ProcessEnv = {
   PLUMIX_DEV_ALLOW_REMOTE: undefined,
 };
 
-/** Generate and apply the migrations for the project's `nodeSqlite()` file. */
+/** Apply every owner's migrations to the project's `nodeSqlite()` file. */
 export async function prepareDatabase(dir: string): Promise<void> {
-  const run = promisify(execFile);
-  await run(PLUMIX_BIN, ["migrate", "generate"], { cwd: dir, env: CLI_ENV });
-  await run(PLUMIX_BIN, ["migrate", "apply"], { cwd: dir, env: CLI_ENV });
+  await promisify(execFile)(PLUMIX_BIN, ["migrate"], {
+    cwd: dir,
+    env: CLI_ENV,
+  });
 }
 
 export const rpc = (origin: string, path: string): Promise<Response> =>

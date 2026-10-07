@@ -1,6 +1,6 @@
-export class MigrateApplyError extends Error {
+export class MigrationsError extends Error {
   static {
-    MigrateApplyError.prototype.name = "MigrateApplyError";
+    MigrationsError.prototype.name = "MigrationsError";
   }
 
   readonly code: "database_not_node_sqlite";
@@ -16,10 +16,10 @@ export class MigrateApplyError extends Error {
     this.kind = kind;
   }
 
-  static databaseNotNodeSqlite(ctx: { kind: string }): MigrateApplyError {
-    return new MigrateApplyError(
+  static databaseNotNodeSqlite(ctx: { kind: string }): MigrationsError {
+    return new MigrationsError(
       "database_not_node_sqlite",
-      `@plumix/runtime-node: \`migrate apply\` applies to the file \`nodeSqlite()\` names, ` +
+      `@plumix/runtime-node: \`plumix migrate\` applies to the file \`nodeSqlite()\` names, ` +
         `but the config's database slot is "${ctx.kind}". Apply its migrations with that database's own tooling.`,
       ctx.kind,
     );

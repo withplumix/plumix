@@ -13,7 +13,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Overview
 
-`plumix migrate`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy`, `types` and `migrate apply` come from `RuntimeAdapter.commandsModule` instead, so their behaviour — and in `migrate`'s case, which subcommands exist beyond `generate` — is the adapter's to define. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
+`plumix migrate`, `plumix cron`, `plumix meta`, `plumix doctor` and `plumix i18n` are built in: they run the same way regardless of which `runtime` a site configures. `dev`, `build`, and on some runtimes `deploy` and `types` come from `RuntimeAdapter.commandsModule` instead, so their behaviour is the adapter's to define. The same module tells `migrate` how to open the runtime's database, and whether it can reach a remote one. [Runtime Adapters](/deployment/runtimes/#the-adapter) covers `commandsModule` from the package-author side.
 
 `plumix --help` prints every command it can currently resolve, grouped by where it came from: a project with no `plumix.config.ts` in reach sees only the four built-ins, because loading the runtime's commands means loading the config first.
 
@@ -75,12 +75,23 @@ plumix types
 
 ### `migrate`
 
-Generates or applies database migrations. `plumix migrate` and `plumix migrate generate` run `drizzle-kit generate` against the schema Plumix assembles from every plugin's tables, writing it to `.plumix/schema.ts` first. Every other subcommand comes from the runtime: `plumix migrate apply` runs `wrangler d1 migrations apply` on Cloudflare — naming the D1 database from `wrangler.jsonc` when the site has exactly one — and applies the generated files directly to the configured SQLite file on Node.
+Applies every table owner's pending migrations. The owners run in order: core first, then each package a plugin's `schemaModule` resolves into, in the order the plugins appear in `plugins`, then the site itself when a plugin's `schemaModule` lands inside the site's own package (the one holding `plumix.config.ts`, or the file `--config` names) and the site has a `migrations/` folder at its root. Each package ships its own history, and each owner records what it applied in a table of its own, `__drizzle_migrations_<owner>`: `core`, `site`, or the package name lowercased with each run of other characters replaced by `_` (`@plumix/plugin-comments` records in `__drizzle_migrations_plumix_plugin_comments`). It prints a line per owner, such as `core: applied 2 migrations` or `core: up to date`, and under it each migration it applied, with its date and a short hash.
+
+Without a flag it applies to the local database. `--remote` applies to the deployed one, and only Cloudflare accepts it: it reaches the D1 database `wrangler.jsonc` names through wrangler's remote bindings, so it needs `wrangler login` or an API token, as wrangler does. On Node and Bun `--remote` fails, naming the runtime. On Cloudflare the local database is the D1 copy `plumix dev` uses, under `.wrangler/state/v3`. When the wrangler config declares more than one D1 binding, `--binding <name>` picks one, and the error without it names the bindings it found.
+
+`plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash.
+
+`plumix migrate generate` runs `drizzle-kit generate` against the schema Plumix assembles from every plugin's tables, writing it to `.plumix/schema.ts` first and the SQL to `drizzle/`.
 
 ```bash
+plumix migrate
+plumix migrate --remote
+plumix migrate fresh
+plumix migrate status
 plumix migrate generate
-plumix migrate apply
 ```
+
+The first `plumix migrate` against a database set up by an earlier release adopts it. Such a database has the old tracking table, `d1_migrations` on Cloudflare or `__drizzle_migrations` on Node and Bun, and no per-owner table yet. The command applies every owner's history to a scratch in-memory database and compares the two schemas: every table, index and trigger, and each table's columns. When they match, it records every owner's migrations as applied without running any DDL, and prints that the site's `drizzle/` folder is no longer read. When they differ, it changes nothing and fails, listing each difference.
 
 ### `cron`
 
@@ -130,7 +141,7 @@ Unlike every other command, `i18n` runs without loading `plumix.config.ts` — i
 
 ## Global flags
 
-Recognised ahead of the command name; anything after it passes through to the command unparsed, so a subcommand flag like `migrate apply`'s database name is never mistaken for one of these.
+Recognised ahead of the command name; anything after it passes through to the command unparsed, so a command's own flag, like `migrate`'s `--binding`, is never mistaken for one of these.
 
 ### `--config`
 
@@ -174,7 +185,7 @@ plumix --version
 
 ## Related
 
-[Runtime Adapters](/deployment/runtimes/#the-adapter) documents `commandsModule`, the seam a runtime uses to contribute `dev`, `build`, `deploy`, `types` and `migrate apply`. [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/) show what each runtime's commands look like from the operator's side, cron included.
+[Runtime Adapters](/deployment/runtimes/#the-adapter) documents `commandsModule`, the seam a runtime uses to contribute `dev`, `build`, `deploy` and `types`, and to open its database for `migrate`. [Cloudflare Workers](/deployment/cloudflare/) and [Node.js](/deployment/node/) show what each runtime's commands look like from the operator's side, cron included.
 
 ## Next steps
 

@@ -15,6 +15,14 @@ type PlumixCliErrorCode =
   | "migrate_generate_no_drizzle_kit"
   | "migrate_generate_failed"
   | "migrate_generate_journal_unreadable"
+  | "migrate_invalid_arguments"
+  | "migrate_runtime_unsupported"
+  | "migrate_remote_unsupported"
+  | "migrate_fresh_remote"
+  | "migrate_fresh_no_wipe"
+  | "migrate_schema_module_unresolved"
+  | "migrate_owner_history_missing"
+  | "migrate_adoption_mismatch"
   | "config_not_found_explicit"
   | "config_not_found_default"
   | "config_load_failed"
@@ -79,7 +87,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "cron_run_database_unavailable",
       `Could not reach the database a scheduled run writes through: ${ctx.detail}`,
-      "Run `plumix migrate apply` if this deploy has not applied its migrations since upgrading, and check the database path resolves from this directory.",
+      "Run `plumix migrate` if this deploy has not applied its migrations since upgrading, and check the database path resolves from this directory.",
       ctx.cause,
     );
   }
@@ -206,6 +214,85 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       `Could not read the migration journal at ${ctx.journalPath}`,
       "A plugin contributes raw SQL migrations, which are numbered from this file. Delete the `drizzle/` directory to regenerate from scratch.",
       ctx.cause,
+    );
+  }
+
+  static migrateInvalidArguments(ctx: { cause: unknown }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_invalid_arguments",
+      "plumix migrate was given an argument it does not take",
+      "Usage: `plumix migrate [fresh | status | generate] [--remote] [--binding <name>]`.",
+      ctx.cause,
+    );
+  }
+
+  static migrateRuntimeUnsupported(ctx: { runtime: string }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_runtime_unsupported",
+      `The ${ctx.runtime} runtime does not say how to open its database for migration`,
+      "Its commands module exports no `migrations`. Apply each owner's `migrations/` with that database's own tooling.",
+      undefined,
+    );
+  }
+
+  static migrateRemoteUnsupported(ctx: { runtime: string }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_remote_unsupported",
+      `--remote has no database to reach on the ${ctx.runtime} runtime`,
+      "Run `plumix migrate` where the database file lives, without `--remote`.",
+      undefined,
+    );
+  }
+
+  static migrateFreshRemote(): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_fresh_remote",
+      "plumix migrate fresh deletes the local database only and refuses --remote",
+      "Nothing was touched. Run `plumix migrate --remote` to apply pending migrations to the remote database.",
+      undefined,
+    );
+  }
+
+  static migrateFreshNoWipe(ctx: { runtime: string }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_fresh_no_wipe",
+      `The ${ctx.runtime} runtime declares no local state to delete`,
+      "Its package.json needs a `plumix.e2e.wipe` list naming the paths that hold the local database.",
+      undefined,
+    );
+  }
+
+  static migrateSchemaModuleUnresolved(ctx: {
+    spec: string;
+    cause: unknown;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_schema_module_unresolved",
+      `Could not resolve the schemaModule "${ctx.spec}" from this site`,
+      "Install the package that provides it, so Plumix can find the migration history it ships.",
+      ctx.cause,
+    );
+  }
+
+  static migrateOwnerHistoryMissing(ctx: {
+    packageName: string;
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_owner_history_missing",
+      `${ctx.packageName} declares tables but ships no migrations/ folder`,
+      `A package that owns tables must ship its migration history (ADR 0027). Ask the maintainers of ${ctx.packageName} to generate and publish \`migrations/\`. Nothing was applied.`,
+      undefined,
+    );
+  }
+
+  static migrateAdoptionMismatch(ctx: {
+    differences: readonly string[];
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "migrate_adoption_mismatch",
+      `This database was built from a site migration history whose schema differs from what core and the plugins ship:\n${ctx.differences.map((d) => `  - ${d}`).join("\n")}`,
+      "Nothing was changed. Bring those objects in line with the shipped histories, then run `plumix migrate` again.",
+      undefined,
     );
   }
 

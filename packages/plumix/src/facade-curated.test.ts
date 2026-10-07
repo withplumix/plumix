@@ -39,6 +39,12 @@ type Curated =
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
+      "where core's shipped migration history sits, which only this " +
+      "package's own `migrate` command reads",
+    names: ["CORE_MIGRATIONS_FOLDER"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",
@@ -271,7 +277,8 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
       {
         reason:
-          "raw-migration and schema-codegen helpers, whose consumers are " +
+          "raw-migration, schema-codegen and migration-history helpers, " +
+          "whose consumers are " +
           "this package's own `migrate` command and plugin tests through " +
           "`plumix/test`",
         names: [
@@ -279,6 +286,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "planRawSqlMigrations",
           "CORE_SCHEMA_MODULE",
           "generateSchemaSource",
+          "CORE_MIGRATIONS_FOLDER",
         ],
       },
     ],

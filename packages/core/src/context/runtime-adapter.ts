@@ -155,13 +155,71 @@ export interface CommandContext<App extends CommandApp = CommandApp> {
   readonly configPath: string;
   readonly argv: readonly string[];
   /**
-   * Subcommands the active runtime contributes to the built-in `migrate`
-   * verb. The CLI populates this from the runtime's commands module
-   * (`export const migrate: CommandRegistry`); `migrate apply` delegates
-   * here so D1-/Postgres-/etc.-specific apply logic lives with its
-   * runtime.
+   * How the active runtime opens its database for `plumix migrate`. The CLI
+   * populates this from the runtime's commands module
+   * (`export const migrations: RuntimeMigrations`); absent when the runtime
+   * declares none.
    */
-  readonly runtimeMigrate: CommandRegistry;
+  readonly runtimeMigrations?: RuntimeMigrations;
+}
+
+/** One owner's history, as drizzle's migrator takes it. */
+export interface MigrationFolder {
+  readonly migrationsFolder: string;
+  readonly migrationsTable: string;
+}
+
+/**
+ * Which database `plumix migrate` opens: the one `plumix dev` uses, the
+ * deployed one (`--remote`), or a scratch database in memory that adoption
+ * builds every owner's history into to compare against.
+ */
+export type MigrationLocation = "local" | "remote" | "memory";
+
+export interface OpenMigrationDatabaseOptions {
+  readonly cwd: string;
+  readonly app: CommandApp;
+  readonly location: MigrationLocation;
+  /** `--binding`, for a runtime that can have more than one database. */
+  readonly binding: string | undefined;
+}
+
+/**
+ * One row a migration read returns, as the driver hands it back: each column
+ * name to the SQLite value in it. Not JSON — it never went through a parser.
+ */
+export type MigrationRow = Record<string, unknown>;
+
+export interface MigrationStatement {
+  readonly sql: string;
+  readonly params: readonly (string | number)[];
+}
+
+/**
+ * A database opened for migration. `migrate` is drizzle's own migrator for
+ * the runtime's driver; the rest is what the CLI reads to report and adopt.
+ */
+export interface MigrationDatabase {
+  migrate(folder: MigrationFolder): Promise<void>;
+  all(sql: string): Promise<readonly MigrationRow[]>;
+  /** Runs every statement, or none of them. */
+  batch(statements: readonly MigrationStatement[]): Promise<void>;
+  close(): Promise<void>;
+}
+
+/**
+ * What a runtime supplies to `plumix migrate`: only how to open its database.
+ * Which histories apply, in what order, adoption and reporting live in the CLI.
+ */
+export interface RuntimeMigrations {
+  /** Whether `--remote` names a database this runtime can reach. */
+  readonly remote: boolean;
+  /**
+   * The tracking table of the site-wide history `migrate generate` produces,
+   * which marks a database to adopt.
+   */
+  readonly legacyTable: string;
+  open(options: OpenMigrationDatabaseOptions): Promise<MigrationDatabase>;
 }
 
 export interface CommandDefinition<App extends CommandApp = CommandApp> {

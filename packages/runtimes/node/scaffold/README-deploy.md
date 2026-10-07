@@ -6,8 +6,7 @@ rendered with `sharp` and cached under `.cache/plumix/images`; that directory
 can be emptied at any time.
 
 ```sh
-plumix migrate generate
-plumix migrate apply
+plumix migrate
 pnpm build
 PORT=3000 node dist/server/worker.js
 ```

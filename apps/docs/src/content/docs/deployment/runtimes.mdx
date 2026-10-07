@@ -175,7 +175,7 @@ export const adapter: RuntimeAdapter = {
 
 A specifier the CLI imports to load the commands this runtime contributes to `plumix`. `dev`, `build`, `deploy` and `types` come from the runtime rather than from core, which is why swapping the runtime swaps them.
 
-A specifier rather than a live function, deliberately: it keeps build and deploy tooling out of the serving bundle. The module it names exports a `CommandRegistry`, and may export a `migrate` registry too, which `plumix migrate apply` delegates to.
+A specifier rather than a live function, deliberately: it keeps build and deploy tooling out of the serving bundle. The module it names exports its `CommandRegistry` as `commands`, and may export `migrations`, a `RuntimeMigrations` that tells `plumix migrate` how to open the runtime's database for drizzle's migrator: locally, remotely when its `remote` flag says the runtime can, or in memory. It also names the `legacyTable` an earlier release tracked migrations in. The CLI owns the rest: which owners run, in what order, adopting an older database, and what it prints.
 
 ```ts
 import type { RuntimeAdapter } from "plumix";

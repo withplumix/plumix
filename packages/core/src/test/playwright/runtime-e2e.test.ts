@@ -90,7 +90,7 @@ describe("resolvePlaygroundDbPath", () => {
     ]);
 
     expect(() => resolvePlaygroundDbPath(cwd)).toThrow(
-      /no database matches .*miniflare-D1DatabaseObject\/\*\.sqlite.*@plumix\/runtime-cloudflare.*plumix migrate apply/,
+      /no database matches .*miniflare-D1DatabaseObject\/\*\.sqlite.*@plumix\/runtime-cloudflare.*plumix migrate\b(?! apply)/,
     );
   });
 

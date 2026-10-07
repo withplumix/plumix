@@ -17,4 +17,11 @@ export type {
   CommandContext,
   CommandDefinition,
   CommandRegistry,
+  MigrationDatabase,
+  MigrationFolder,
+  MigrationLocation,
+  MigrationRow,
+  MigrationStatement,
+  OpenMigrationDatabaseOptions,
+  RuntimeMigrations,
 } from "@plumix/core";

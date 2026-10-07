@@ -75,7 +75,7 @@ describe("runPostScaffold", () => {
     expect(result).toMatchObject({ installed: false, installFailed: true });
   });
 
-  it("generates then applies migrations to the local database after install", async () => {
+  it("applies every owner's migrations to the local database after install", async () => {
     const runner = fakeRunner(new Set(["git rev-parse"]));
 
     const result = await runPostScaffold({
@@ -87,8 +87,10 @@ describe("runPostScaffold", () => {
     });
 
     const cmds = runner.calls.map((c) => `${c.command} ${c.args.join(" ")}`);
-    expect(cmds).toContain("pnpm exec plumix migrate generate");
-    expect(cmds).toContain("pnpm exec plumix migrate apply --local");
+    expect(cmds).toContain("pnpm exec plumix migrate");
+    expect(cmds.filter((cmd) => cmd.includes("migrate"))).toEqual([
+      "pnpm exec plumix migrate",
+    ]);
     expect(result).toMatchObject({ dbSetup: true });
   });
 
@@ -107,7 +109,7 @@ describe("runPostScaffold", () => {
     expect(result.dbSetup).toBe(false);
   });
 
-  it("does not apply migrations if generate fails", async () => {
+  it("reports the database setup failed when plumix migrate fails", async () => {
     const runner = fakeRunner(new Set(["pnpm exec"]));
 
     const result = await runPostScaffold({
@@ -118,38 +120,28 @@ describe("runPostScaffold", () => {
       runner,
     });
 
-    const applied = runner.calls.some((c) => c.args.includes("apply"));
-    expect(applied).toBe(false);
     expect(result).toMatchObject({ dbSetup: false, dbSetupFailed: true });
   });
 });
 
 describe("nextSteps", () => {
-  it("is just cd + dev when install and db already ran", () => {
-    const opts = { installed: true, dbReady: true };
+  it("is just cd + dev once installed", () => {
+    const opts = { installed: true };
     expect(nextSteps("pnpm", "app", opts)).toEqual(["cd app", "pnpm dev"]);
     expect(nextSteps("bun", "app", opts)).toEqual(["cd app", "bun dev"]);
   });
 
-  it("includes install, migrations, and npm's run prefix when nothing ran", () => {
-    expect(
-      nextSteps("npm", "app", { installed: false, dbReady: false }),
-    ).toEqual([
+  it("includes install and npm's run prefix when install did not run", () => {
+    expect(nextSteps("npm", "app", { installed: false })).toEqual([
       "cd app",
       "npm install",
-      "npm exec -- plumix migrate generate",
-      "npm exec -- plumix migrate apply --local",
       "npm run dev",
     ]);
   });
 
-  it("includes only the migration steps when installed but db is not ready", () => {
-    expect(
-      nextSteps("pnpm", "app", { installed: true, dbReady: false }),
-    ).toEqual([
+  it("never prints a migrate step, even when the database was not set up", () => {
+    expect(nextSteps("pnpm", "app", { installed: true })).toEqual([
       "cd app",
-      "pnpm exec plumix migrate generate",
-      "pnpm exec plumix migrate apply --local",
       "pnpm dev",
     ]);
   });

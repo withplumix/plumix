@@ -71,11 +71,10 @@ Then:
    });
    ```
 
-2. **Generate and apply the migration.** It creates the projection table, the FTS5 index and the triggers over both. The index and the triggers are DDL drizzle cannot express, so they ship as raw SQL rather than as a schema diff.
+2. **Apply the migrations.** The plugin ships its own migration history, which creates the projection table, the FTS5 index and the triggers over both. In production on D1, run `plumix migrate --remote`.
 
    ```sh
-   pnpm plumix migrate generate
-   pnpm plumix migrate apply --local
+   pnpm plumix migrate
    ```
 
 3. **Render the results.** The plugin's page is a `registerArchiveType` archive, so a theme targets it by name rather than through the `search` tier.
@@ -308,7 +307,7 @@ One thing a rebuild does not do is remove a document whose source is gone or has
 
 The extractor version is a hash of every block's text declaration and every searchable meta field, so changing one makes every existing document stale. The scheduled run re-extracts them a bounded slice at a time, and the work is proportional to what actually changed rather than to the corpus: a document whose extracted text is identical is stamped with the new version and never reaches FTS5, because the index's update trigger is scoped to the two columns it shadows.
 
-That scoping arrives as a migration, and so does `meta` joining the change feed's watched columns — so run `plumix migrate generate` and apply it after upgrading. Until you do, a roster change re-tokenizes the whole corpus, which is correct and far more work than it needs to be. A save that changes only meta reaches the index on the next rebuild, or on the next save that also moves the entry's text, rather than at once. The scheduled run recognises the older index trigger and replaces it too, so a site that never generates migrations converges on the new trigger. The change feed's triggers are core's, and only a migration moves those.
+That scoping arrives as a migration, and so does `meta` joining the change feed's watched columns — so run `plumix migrate` after upgrading. Until you do, a roster change re-tokenizes the whole corpus, which is correct and far more work than it needs to be. A save that changes only meta reaches the index on the next rebuild, or on the next save that also moves the entry's text, rather than at once. The scheduled run recognises the older index trigger and replaces it too, so a site that never runs the migration converges on the new trigger. The change feed's triggers are core's, and only a migration moves those.
 
 ## Storage
 
@@ -316,7 +315,7 @@ Search roughly doubles the size of the database. On Cloudflare D1, whose per-dat
 
 ## Related
 
-[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on, and [Deployment](/deployment/overview/) the `plumix migrate generate` step this plugin cannot skip.
+[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on, and [Deployment](/deployment/overview/) the `plumix migrate` step this plugin cannot skip.
 
 What gets indexed is decided where content is declared: [Entry Types](/content-modelling/entry-types/) carries `excludeFromSearch` and `isPublic`, [Taxonomies](/content-modelling/taxonomies/) the same two for terms, and [Meta Boxes](/fields/meta-boxes/) the fields `.searchable()` is chained onto. [Blocks](/blocks/overview/) covers the text declaration a block makes, and [Access & Identity](/access/overview/) the policy that keeps a gated type out of the projection altogether.
 

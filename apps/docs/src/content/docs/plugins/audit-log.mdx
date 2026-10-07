@@ -75,11 +75,10 @@ Then:
    export const plugins: PlumixConfigInput["plugins"] = [recipes, auditLog()];
    ```
 
-2. **Generate and apply the migration.** `plumix migrate generate` rewrites `.plumix/schema.ts` from the resolved config, so it picks up the `audit_log` table only once the descriptor is in the array.
+2. **Apply the migrations.** The plugin ships the migration history for the `audit_log` table, and `plumix migrate` applies it once the descriptor is in the array. In production on D1, run `plumix migrate --remote`.
 
    ```sh
-   pnpm plumix migrate generate
-   pnpm plumix migrate apply --local
+   pnpm plumix migrate
    ```
 
 3. **Restart the dev server.**

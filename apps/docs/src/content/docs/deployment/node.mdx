@@ -84,11 +84,10 @@ This is the path from a scaffolded site to a running process. It assumes a site 
    });
    ```
 
-2. **Create the database.** The migrations are generated from your config and applied to the file `nodeSqlite` names, relative to the project root.
+2. **Create the database.** Core and every plugin that owns tables ship their own migrations, and this applies each one's to the file `nodeSqlite` names, relative to the project root.
 
    ```sh
-   plumix migrate generate
-   plumix migrate apply
+   plumix migrate
    ```
 
 3. **Develop.** One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes. The built server loads the same file from the directory it starts in, with the same rule: the environment wins, and a missing file is not an error. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
@@ -139,7 +138,7 @@ With it on, the forwarded scheme, host and rightmost client address are believed
 
 `nodeSqlite({ path })` opens the file for concurrent readers, which is what lets a backup, a test or a second process read it while the server writes. It creates any missing parent directories and opens the connection with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on.
 
-A relative `path` resolves against the process's working directory, while `plumix migrate apply` resolves it against the project root. Start the server from the project root, or the process opens a different, empty file from the one the migrations went into. Two things to know before you move a file around. It is not portable between runtimes: Cloudflare's D1 and this runtime record applied migrations in different tables, so generate and apply migrations on the runtime that will serve them. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out.
+A relative `path` resolves against the process's working directory, while `plumix migrate` resolves it against the project root. Start the server from the project root, or the process opens a different, empty file from the one the migrations went into. Two things to know before you move a file around. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out.
 
 ## Storage
 
@@ -203,12 +202,12 @@ Mount a volume over `data/` and the database and uploads survive a redeploy. The
 
 ### Migrate before the server starts
 
-`plumix migrate apply` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so the server process itself receives `SIGTERM` rather than a wrapping shell. As `docker-entrypoint.sh`:
+`plumix migrate` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so the server process itself receives `SIGTERM` rather than a wrapping shell. As `docker-entrypoint.sh`:
 
 ```sh
 #!/bin/sh
 set -e
-plumix migrate apply
+plumix migrate
 exec node dist/server/worker.js
 ```
 
@@ -267,7 +266,7 @@ Public pages are a different story. A process with no CDN in front of it renders
 
 ## Commands the runtime adds
 
-`plumix dev` runs the Vite server described in the quickstart and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate apply` applies the generated migrations to the file `nodeSqlite` names. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
+`plumix dev` runs the Vite server described in the quickstart and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate` applies every table owner's migrations to the file `nodeSqlite` names; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
 
 ## Related
 

@@ -47,9 +47,13 @@ describe("scaffold — blank Cloudflare app", () => {
     // A non-empty database_id, so `plumix dev` runs against local D1 out of the
     // box — an empty one crashes wrangler on startup.
     expect(wrangler).toMatch(/"database_id": "[^"]+"/);
+    // `plumix migrate` applies through drizzle, never wrangler's migrations.
+    expect(wrangler).not.toContain("migrations_dir");
     const readme = readFileSync(join(target, "README.md"), "utf8");
     expect(readme).toContain("# my-app");
     expect(readme).toContain("wrangler d1 create my-app");
+    expect(readme).toContain("plumix migrate --remote");
+    expect(readme).not.toContain("migrate generate");
     expect(existsSync(join(target, "theme", "index.tsx"))).toBe(true);
     expect(existsSync(join(target, ".gitignore"))).toBe(true);
   });
@@ -347,7 +351,8 @@ describe("scaffold — Bun app", () => {
     expect(tsconfig.compilerOptions.types).toContain("bun");
     const readme = readFileSync(join(target, "README.md"), "utf8");
     expect(readme).toContain("bun install");
-    expect(readme).toContain("bun --bun plumix migrate apply");
+    expect(readme).toContain("bun --bun plumix migrate\n");
+    expect(readme).not.toContain("migrate apply");
     expect(readme).toContain("bun dist/server/worker.js");
   });
 
@@ -382,7 +387,7 @@ describe("scaffold — Bun app", () => {
     expect(pkg.scripts).toMatchObject({
       dev: "bun --bun plumix dev",
       build: "bun --bun plumix build",
-      "migrate:apply": "bun --bun plumix migrate apply",
+      migrate: "bun --bun plumix migrate",
     });
     expect(pkg.dependencies?.["@plumix/runtime-bun"]).toBe(
       `^${packageVersion("packages/runtimes/bun")}`,

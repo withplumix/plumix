@@ -8,9 +8,12 @@ export default definePlumixE2EConfig({
   // The demo app itself is the fixture — no separate playground.
   configDir: import.meta.dirname,
   playground: "..",
-  // The demo's database is a Durable Object created per session, which applies
-  // its own schema at runtime — there is nothing to migrate before boot.
-  applyMigrations: false,
+  // The demo serves from a Durable Object database created per session, never
+  // the shared one, so there is nothing to pin specs to or snapshot.
+  sharedDatabase: false,
+  // That per-session database is built from `./drizzle/*.sql` (`demo-sql.ts`),
+  // which the baked command does not generate.
+  extraSetup: "pnpm exec plumix migrate generate",
   // The spec enters the demo as an anonymous visitor; there's no admin session
   // to seed.
   seedAdminSession: false,

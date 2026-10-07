@@ -57,7 +57,7 @@ describe("openPlaygroundDb", () => {
     ]);
 
     await expect(openPlaygroundDb({ cwd })).rejects.toThrow(
-      /no database matches .*miniflare-D1DatabaseObject.*plumix migrate apply/,
+      /no database matches .*miniflare-D1DatabaseObject.*plumix migrate\b(?! apply)/,
     );
   });
 });

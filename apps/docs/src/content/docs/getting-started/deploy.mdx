@@ -50,14 +50,13 @@ This is the path from a scaffolded site (`pnpm create plumix-app`, the default r
 
 2. **Set every secret and environment variable the config resolves.** The built server loads `.env` from the directory it starts in, and any variable the host already sets wins over the file, so set `RESEND_API_KEY`, `GITHUB_CLIENT_SECRET` and the rest through whatever your host uses — its own secrets UI, the shell that starts the process, or a `.env` beside it. Do not bake `.env` into a container image. `PORT` and `HOST` control what the server listens on, defaulting to `3000` and `0.0.0.0`.
 
-3. **Generate and apply the migrations.**
+3. **Apply the migrations.**
 
    ```sh
-   pnpm exec plumix migrate generate
-   pnpm exec plumix migrate apply
+   pnpm exec plumix migrate
    ```
 
-   `generate` writes the resolved schema and emits SQL into `drizzle/`; `apply` runs the pending files against the SQLite file `nodeSqlite` names. Run it again after adding a plugin that carries its own tables. Point it at the production database path, not the one you have been developing against.
+   Core and every plugin that carries its own tables ship their own migrations, and this applies each one's pending files to the SQLite file `nodeSqlite` names. Run it again after adding such a plugin. Point it at the production database path, not the one you have been developing against.
 
 4. **Build.**
 
@@ -146,11 +145,10 @@ Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm 
 4. **Apply the migrations to the remote database.**
 
    ```sh
-   pnpm exec plumix migrate generate
-   pnpm exec plumix migrate apply --remote
+   pnpm exec plumix migrate --remote
    ```
 
-   `generate` writes the resolved schema and emits SQL into `drizzle/`; `apply --remote` runs the pending files against the D1 database you just created. Run it again after adding a plugin that carries its own tables.
+   Core and every plugin that carries its own tables ship their own migrations, and `--remote` applies each one's pending files to the D1 database you just created, through wrangler, so it needs `wrangler login` or an API token. Run it again after adding such a plugin.
 
 5. **Build and deploy.**
 

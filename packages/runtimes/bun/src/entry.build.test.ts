@@ -271,11 +271,7 @@ beforeAll(async () => {
     join(dir, "plumix.config.mjs"),
     config({ drained, aborted, fired, photo }),
   );
-  for (const args of [
-    ["migrate", "generate"],
-    ["migrate", "apply"],
-    ["build"],
-  ]) {
+  for (const args of [["migrate"], ["build"]]) {
     const result = await plumixOn("bun", dir, args);
     expect(result, args.join(" ")).toMatchObject({ code: 0 });
   }

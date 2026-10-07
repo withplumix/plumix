@@ -8,6 +8,7 @@ import type {
   PlumixApp,
   PlumixConfig,
   RuntimeAdapter,
+  RuntimeMigrations,
 } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
 
@@ -149,7 +150,6 @@ export async function run(argv: readonly string[]): Promise<void> {
       cwd: args.cwd,
       configPath: "",
       argv: args.rest,
-      runtimeMigrate: {},
     });
     return;
   }
@@ -170,7 +170,7 @@ export async function run(argv: readonly string[]): Promise<void> {
     cwd: args.cwd,
     configPath: loaded.configPath,
     argv: args.rest,
-    runtimeMigrate: runtimeModule.migrate,
+    runtimeMigrations: runtimeModule.migrations,
   });
 }
 
@@ -216,7 +216,10 @@ function appSentinel(makeError: () => PlumixCliError): PlumixApp {
 
 async function printHelp(args: CliArgs): Promise<void> {
   let loaded: LoadedConfig | undefined;
-  let runtimeModule: RuntimeCommandsModule = { commands: {}, migrate: {} };
+  let runtimeModule: RuntimeCommandsModule = {
+    commands: {},
+    migrations: undefined,
+  };
   try {
     loaded = await loadConfig(args.cwd, args.config);
     runtimeModule = await loadRuntimeCommands(loaded.config.runtime, args.cwd);
@@ -252,14 +255,14 @@ function buildGroups(
 
 interface RuntimeCommandsModule {
   readonly commands: CommandRegistry;
-  readonly migrate: CommandRegistry;
+  readonly migrations: RuntimeMigrations | undefined;
 }
 
 async function loadRuntimeCommands(
   adapter: RuntimeAdapter,
   cwd: string,
 ): Promise<RuntimeCommandsModule> {
-  if (!adapter.commandsModule) return { commands: {}, migrate: {} };
+  if (!adapter.commandsModule) return { commands: {}, migrations: undefined };
   const require = createRequire(pathToFileURL(join(cwd, "noop.js")));
   let resolved: string;
   try {
@@ -275,11 +278,11 @@ async function loadRuntimeCommands(
     const mod = (await import(pathToFileURL(resolved).href)) as {
       default?: CommandRegistry;
       commands?: CommandRegistry;
-      migrate?: CommandRegistry;
+      migrations?: RuntimeMigrations;
     };
     return {
       commands: mod.commands ?? mod.default ?? {},
-      migrate: mod.migrate ?? {},
+      migrations: mod.migrations,
     };
   } catch (cause) {
     // A commands module that refuses to load says why in its own terms.

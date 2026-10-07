@@ -44,7 +44,6 @@ function ctx(
     app,
     configPath: join(overrides.cwd, "plumix.config.ts"),
     argv: [],
-    runtimeMigrate: {},
     ...overrides,
   };
 }

@@ -50,7 +50,6 @@ async function seeded(
     cwd: process.cwd(),
     configPath: `${process.cwd()}/plumix.config.ts`,
     argv,
-    runtimeMigrate: {},
   };
   const stored = async (): Promise<unknown> =>
     (

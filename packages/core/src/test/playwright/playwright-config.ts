@@ -39,10 +39,10 @@ export interface PlumixE2EConfigOptions {
   /**
    * Optional path to a playground workspace (relative to `configDir`).
    * When set, `definePlumixE2EConfig` bakes the standard worker-driven
-   * webServer setup: wipe the state the runtime declares → generate
-   * migrations → apply them (unless `applyMigrations: false`) → run
-   * `plumix dev`. What to wipe comes from the `plumix.e2e` block of the
-   * runtime package the playground depends on.
+   * webServer setup: `plumix migrate fresh` (delete the local state the
+   * runtime's `plumix.e2e.wipe` names, then apply every table owner's shipped
+   * migrations) → run `plumix dev`. Nothing is generated, and nothing outside
+   * the runtime's wipe paths is deleted.
    * Also auto-wires `globalSetup.ts` and `storageState.json` by convention.
    * Mutually exclusive with an explicit `webServerCommand`.
    *
@@ -55,13 +55,13 @@ export interface PlumixE2EConfigOptions {
    */
   readonly playground?: string;
   /**
-   * Whether the baked command applies the generated migrations to the
-   * playground's database before starting the worker. Defaults to `true`.
-   * Set `false` when there is no database to migrate up front — e.g. one
-   * created per session at runtime, which applies its own schema. Migrations
-   * are still generated either way. Only meaningful when `playground` is set.
+   * Whether the specs share the playground's one database. Defaults to
+   * `true`, which pins the suite to one worker and has the
+   * `plumixDbBaseline` fixture snapshot and restore it. Set `false` when the
+   * site never serves from it — e.g. one database created per session at
+   * runtime. Only meaningful when `playground` is set.
    */
-  readonly applyMigrations?: boolean;
+  readonly sharedDatabase?: boolean;
   /** Directory passed through to playwright's `testDir`. Defaults to `'.'`. */
   readonly testDir?: string;
   /**
@@ -87,7 +87,7 @@ export interface PlumixE2EConfigOptions {
   readonly webServerPort?: number;
   /**
    * Optional shell step to run inside the baked playground command, after
-   * migrations are generated and applied, and before `plumix dev` starts.
+   * `plumix migrate fresh`, and before `plumix dev` starts.
    * Use for fixture seeds that need to live in the database before the
    * server comes up. Only meaningful when `playground` is set.
    */
@@ -159,29 +159,19 @@ interface PlaygroundCommand {
   readonly playground: string;
   /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
   readonly cli: string;
-  /** Paths the runtime's `plumix.e2e` block says to wipe before a run. */
-  readonly wipe: readonly string[];
   readonly port: number;
   readonly inspectorPort: number | undefined;
   readonly extraSetup: string | undefined;
-  readonly applyMigrations: boolean;
 }
 
 function bakePlaygroundCommand(input: PlaygroundCommand): string {
   const steps = [
     `cd ${input.playground}`,
-    // `drizzle/` is gitignored and regenerated each run; one left from an
-    // older schema makes drizzle-kit ask how to resolve a rename — a
-    // prompt it cannot issue on a pipe — and keep the stale migrations.
-    // Safe only because the generate below refills it: apps/demo globs
-    // `./drizzle/*.sql` for its per-session schema, so these two steps
-    // cannot be separated.
-    `rm -rf ${[...input.wipe, "drizzle"].join(" ")}`,
-    `${input.cli} migrate generate`,
+    // Deletes only the local state the runtime's `plumix.e2e.wipe` names, then
+    // applies every owner's shipped history: nothing is generated, so a
+    // site's committed history is never touched (#2819).
+    `${input.cli} migrate fresh`,
   ];
-  // Already delegated to the runtime by the CLI, so only the prefix it runs
-  // through differs between runtimes.
-  if (input.applyMigrations) steps.push(`${input.cli} migrate apply`);
   if (input.extraSetup) steps.push(input.extraSetup);
   const devFlags = [`--port ${String(input.port)}`];
   if (input.inspectorPort !== undefined) {
@@ -211,8 +201,7 @@ function playgroundRuntime(
  * the build/preview command — as parameters.
  *
  * When `playground` is set, the helper bakes a worker-driven webServer
- * (wipe the runtime's declared state → generate migrations → apply them
- * unless `applyMigrations: false` → `plumix dev`) and wires the
+ * (`plumix migrate fresh` → `plumix dev`) and wires the
  * `globalSetup.ts` / `storageState.json` convention used by the
  * worker-driven plugin e2e pattern. Otherwise the caller supplies
  * `webServerCommand` directly.
@@ -253,11 +242,11 @@ export function definePlumixE2EConfig(
   const baseURL = options.baseURL ?? `${origin}${ADMIN_BASE}/`;
   const isPlayground = options.playground !== undefined;
   const seedAdmin = isPlayground && options.seedAdminSession !== false;
-  // `applyMigrations: false` is how a playground says it has no D1 to
-  // migrate up front — apps/demo builds one per session in a Durable
-  // Object instead. Nothing to pin to one worker, and nothing for the
-  // baseline fixture to snapshot.
-  const hasSharedDb = isPlayground && options.applyMigrations !== false;
+  // `sharedDatabase: false` is how a playground says its specs never share
+  // one database — apps/demo builds one per session in a Durable Object.
+  // Nothing to pin to one worker, and nothing for the baseline fixture to
+  // snapshot.
+  const hasSharedDb = isPlayground && options.sharedDatabase !== false;
   const runtime =
     options.playground === undefined
       ? undefined
@@ -268,14 +257,12 @@ export function definePlumixE2EConfig(
       ? bakePlaygroundCommand({
           playground: options.playground,
           cli: runtime.cli ?? "pnpm exec plumix",
-          wipe: runtime.wipe,
           port,
           inspectorPort:
             options.inspectorPort === undefined
               ? undefined
               : resolveE2EPort(options.inspectorPort),
           extraSetup: options.extraSetup,
-          applyMigrations: options.applyMigrations !== false,
         })
       : "");
 

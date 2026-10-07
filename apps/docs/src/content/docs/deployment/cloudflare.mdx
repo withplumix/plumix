@@ -26,7 +26,7 @@ Three more exports do not fill a slot. `cloudflareDeployOrigin` derives the pass
 
 Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cdn` slot renders every public page live.
 
-`cloudflare()` also tells the CLI where its commands live. That is how `plumix dev`, `plumix build`, `plumix deploy`, `plumix types` and `plumix migrate apply` exist at all. They come from the runtime rather than from core, and swapping the runtime swaps them.
+`cloudflare()` also tells the CLI where its commands live. That is how `plumix dev`, `plumix build`, `plumix deploy` and `plumix types` exist at all, and how `plumix migrate` reaches D1. They come from the runtime rather than from core, and swapping the runtime swaps them.
 
 ## Install
 
@@ -107,7 +107,6 @@ yarn add -D wrangler @cloudflare/workers-types
          "binding": "DB",
          "database_name": "recipes",
          "database_id": "paste-the-id-from-wrangler-d1-create",
-         "migrations_dir": "drizzle",
        },
      ],
      "assets": {
@@ -301,7 +300,7 @@ Signing out takes one more piece. Clearing the Plumix session cookie leaves the 
 
 ## Commands the runtime adds
 
-`plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix deploy` and `plumix types` forward to `wrangler deploy` and `wrangler types` with your arguments appended. `plumix migrate apply` forwards to `wrangler d1 migrations apply`, reading the database name out of your wrangler config when you do not name one.
+`plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix deploy` and `plumix types` forward to `wrangler deploy` and `wrangler types` with your arguments appended. `plumix migrate` applies every table owner's migrations to the local D1 copy `plumix dev` uses, under `.wrangler/state/v3`, and `plumix migrate --remote` to the D1 database your wrangler config names, both through wrangler's `getPlatformProxy`. The remote form needs `wrangler login` or an API token, as wrangler does. When the config declares more than one D1 binding, `--binding <name>` picks one.
 
 ## Related
 

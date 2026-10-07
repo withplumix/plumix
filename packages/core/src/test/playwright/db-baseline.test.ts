@@ -131,6 +131,17 @@ describe("captureDbBaseline / restoreDbBaseline", () => {
   // A virtual table's shadow tables are ordinary tables to `sqlite_master`
   // and carry no prefix marking them, so refilling them independently
   // corrupts the index they belong to.
+  test("leaves each owner's migration tracking table alone", async () => {
+    const client = await makeDb([
+      "CREATE TABLE widget (id INTEGER PRIMARY KEY)",
+      "CREATE TABLE __drizzle_migrations_core (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at numeric)",
+      "INSERT INTO __drizzle_migrations_core (hash, created_at) VALUES ('a', 1)",
+    ]);
+    const baseline = await captureDbBaseline(client);
+
+    expect(baseline.tables.map((table) => table.name)).toEqual(["widget"]);
+  });
+
   test("leaves virtual tables and their shadow tables alone", async () => {
     const client = await makeDb([
       "CREATE VIRTUAL TABLE search USING fts5(body)",

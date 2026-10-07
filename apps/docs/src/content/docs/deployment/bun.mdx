@@ -78,11 +78,10 @@ This is the path from a scaffolded site to a running process.
    });
    ```
 
-3. **Create the database.** Every command runs the `plumix` CLI with `bun --bun`, which runs it on Bun rather than on the Node its bin names. The migrations are generated from your config into `drizzle/` and applied to the file `bunSqlite` names; commit `drizzle/`, because a deploy applies what is in it.
+3. **Create the database.** Every command runs the `plumix` CLI with `bun --bun`, which runs it on Bun rather than on the Node its bin names. Core and every plugin that owns tables ship their own migrations, and this applies each one's to the file `bunSqlite` names.
 
    ```sh
-   bun --bun plumix migrate generate
-   bun run migrate:apply
+   bun run migrate
    ```
 
 4. **Develop.** One Vite server, with the site's code evaluated on Bun behind Vite's own middlewares. An edit to the config, the theme or a plugin is served on the next request, without a restart. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device.
@@ -107,7 +106,7 @@ This is the path from a scaffolded site to a running process.
 
 </Steps>
 
-`bun run dev`, `bun run build` and `bun run migrate:apply` are the scaffold's scripts for `bun --bun plumix dev`, `build` and `migrate apply`; call either form. Run under Node instead, a Bun-runtime command stops with `bun_required` and names `bun --bun` as the fix.
+`bun run dev`, `bun run build` and `bun run migrate` are the scaffold's scripts for `bun --bun plumix dev`, `build` and `migrate`; call either form. Run under Node instead, a Bun-runtime command stops with `bun_required` and names `bun --bun` as the fix.
 
 ## Configuration
 
@@ -149,9 +148,9 @@ A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that c
 
 ## The database
 
-`bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `migrate apply`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `migrate apply` alike, so both open the same file whichever directory you run them from.
+`bunSqlite({ path })` opens the file with WAL journaling, a five-second busy timeout, `synchronous = NORMAL` and foreign keys on. Bun's own defaults differ on all four, so the slot sets each one on connect and again in `plumix migrate`, which is what makes the file behave as it does on Node. Missing parent directories are created, and a relative `path` resolves against the project root in the server and in `plumix migrate` alike, so both open the same file whichever directory you run them from.
 
-The file moves between Bun and Node: `migrate apply` records applied migrations in drizzle's own table, the one `nodeSqlite` reads, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare, whose D1 records migrations in a different table; generate and apply migrations on the runtime that will serve them there.
+The file moves between Bun and Node: `plumix migrate` records each owner's applied migrations in the same `__drizzle_migrations_<owner>` tables on both, so a site can switch between the two runtimes and keep its database. It does not move to Cloudflare: D1 is a database of its own, so a site moving there runs `plumix migrate --remote` against a new D1 database.
 
 For a remote or shared database, `plumix/db/libsql` stays selectable on Bun: point it at Turso or a libsql server and leave `bunSqlite` out.
 
@@ -239,18 +238,18 @@ Mount a volume over `data/` and the database and uploads survive a redeploy. The
 
 ### Migrate before the server starts
 
-`plumix migrate apply` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so Bun itself receives `SIGTERM` rather than a wrapping shell that would swallow it. Applying an already-applied set is a no-op, so it is safe on every start. As `docker-entrypoint.sh`:
+`plumix migrate` needs the volume, which the build step does not have — a builder container has no mount, and a schema baked into the image can't apply to whatever the volume already holds. Run it from the entrypoint, ahead of the server, using `exec` so Bun itself receives `SIGTERM` rather than a wrapping shell that would swallow it. Applying an already-applied set is a no-op, so it is safe on every start. As `docker-entrypoint.sh`:
 
 ```sh
 #!/bin/sh
 set -e
-bun --bun plumix migrate apply
+bun --bun plumix migrate
 exec bun dist/server/worker.js
 ```
 
 ### A multi-stage Dockerfile
 
-Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships. The runtime stage carries what `plumix migrate apply` reads: the config and the theme it imports, and the generated `drizzle/` migrations. Copy any other directory your config imports beside `theme`. As `Dockerfile`:
+Two stages on the official `oven/bun` image: one that installs every dependency and builds, one that installs only production dependencies and runs. The build stage's source and dev dependencies never reach the image that ships. The runtime stage carries what `plumix migrate` reads: the config and the theme it imports, and the installed packages whose migrations it applies. Copy any other directory your config imports beside `theme`, and the site's own `migrations/` when it has one. As `Dockerfile`:
 
 ```dockerfile
 FROM oven/bun:1.4.2 AS build
@@ -267,7 +266,6 @@ COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile --production
 COPY tsconfig.json plumix.config.ts ./
 COPY theme ./theme
-COPY drizzle ./drizzle
 COPY --from=build /app/dist ./dist
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
@@ -303,7 +301,7 @@ Give the container more than the ten seconds the [drain](#the-process) needs bef
 
 ### On a bare VPS
 
-The same three paths live on the host's disk, under the project directory, so nothing extra is needed for them to survive a redeploy: deploy new code over the old, keep `data/`. Install Bun on the host, copy the project with its `drizzle/` and `bunfig.toml`, and run `bun install --frozen-lockfile --production` and `bun run build` there, or copy a `dist/` built elsewhere.
+The same three paths live on the host's disk, under the project directory, so nothing extra is needed for them to survive a redeploy: deploy new code over the old, keep `data/`. Install Bun on the host, copy the project with its `bunfig.toml`, and run `bun install --frozen-lockfile --production` and `bun run build` there, or copy a `dist/` built elsewhere.
 
 Run the process under a supervisor rather than a shell, so it restarts after a crash or a reboot and receives `SIGTERM` on a stop. With systemd, as `/etc/systemd/system/my-site.service`:
 
@@ -316,7 +314,7 @@ After=network-online.target
 User=my-site
 WorkingDirectory=/srv/my-site
 Environment=PORT=3000
-ExecStartPre=/usr/local/bin/bun --bun plumix migrate apply
+ExecStartPre=/usr/local/bin/bun --bun plumix migrate
 ExecStart=/usr/local/bin/bun dist/server/worker.js
 Restart=on-failure
 TimeoutStopSec=30
@@ -337,7 +335,7 @@ Public pages render on every request until the site sits behind a CDN with the `
 
 ## Commands the runtime adds
 
-`plumix dev` runs the site in Vite on Bun and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate apply` applies the generated migrations to the file `bunSqlite` names, through `bun:sqlite`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
+`plumix dev` runs the site in Vite on Bun and accepts `--port` and `--host`. `plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate` applies every table owner's migrations to the file `bunSqlite` names, through `bun:sqlite`; it has no `--remote`. There is no `deploy` and no `types`: the deployment artefact is a directory and a command. Each runs as `bun --bun plumix <command>`.
 
 ## Related
 

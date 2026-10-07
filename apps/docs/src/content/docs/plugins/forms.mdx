@@ -90,14 +90,13 @@ Then:
    });
    ```
 
-2. **Generate and apply the migration.** `plumix migrate generate` picks the plugin's tables up only once the descriptor is in the array.
+2. **Apply the migrations.** The plugin ships its own migration history, and `plumix migrate` applies it once the descriptor is in the array.
 
    ```sh
-   pnpm plumix migrate generate
-   pnpm plumix migrate apply --local
+   pnpm plumix migrate
    ```
 
-   On Cloudflare, `--local` applies to the local D1 database and `--remote` to the deployed one. The Node and Bun runtimes apply to the site's SQLite file and need no flag.
+   On Cloudflare it applies to the local D1 database, and `--remote` to the deployed one. The Node and Bun runtimes apply to the site's SQLite file and take no `--remote`.
 
 3. **Restart the dev server.**
 
