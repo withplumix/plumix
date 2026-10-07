@@ -214,7 +214,7 @@ export async function setStatus(
 }
 
 /** What {@link purgeComment} did, with the row as it stood before. */
-type PurgeOutcome =
+type RemovalOutcome =
   | { readonly result: "tombstoned" | "deleted"; readonly comment: Comment }
   | { readonly result: "missing" };
 
@@ -226,7 +226,7 @@ type PurgeOutcome =
 export async function purgeComment(
   ctx: AppContext,
   id: number,
-): Promise<PurgeOutcome> {
+): Promise<RemovalOutcome> {
   const [comment] = await ctx.db
     .select()
     .from(comments)

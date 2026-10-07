@@ -132,8 +132,8 @@ export function comments(options: CommentsConfig = {}) {
       });
 
       // The approved thread renders only on its entry's permalink, stored
-      // under `e:<entryId>`. The payload carries no previous status, so a
-      // transition purges whatever it moved from.
+      // under `e:<entryId>`. The payload carries no previous status, so every
+      // transition purges, even one that changed nothing visitors see.
       const purgeEntryPage = (comment: Comment, appCtx: AppContext) => {
         enqueuePurgeTags(appCtx, [entryTag(comment.entryId)]);
       };

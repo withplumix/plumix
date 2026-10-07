@@ -90,6 +90,21 @@ async function rpc(s: Site, procedure: string, input: unknown): Promise<void> {
   await s.h.drainDeferred();
 }
 
+async function submit(s: Site, entryId: number) {
+  const response = await s.h.fetch("/_plumix/comments/submit", {
+    method: "POST",
+    json: {
+      entryId,
+      name: "Ada",
+      email: "ada@example.test",
+      body: "hello world",
+    },
+  });
+  response.assertStatus(200);
+  await s.h.drainDeferred();
+  return response.json();
+}
+
 function purged(s: Site): readonly string[] {
   return s.purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
 }
@@ -191,21 +206,6 @@ describe("@plumix/plugin-comments — CDN tags", () => {
     expect(s.purgeTags).not.toHaveBeenCalled();
   });
 
-  async function submit(s: Site, entryId: number) {
-    const response = await s.h.fetch("/_plumix/comments/submit", {
-      method: "POST",
-      json: {
-        entryId,
-        name: "Ada",
-        email: "ada@example.test",
-        body: "hello world",
-      },
-    });
-    response.assertStatus(200);
-    await s.h.drainDeferred();
-    return response.json();
-  }
-
   test("submitting an auto-approved comment purges its entry's tag", async () => {
     const s = await site({ mode: "none" });
     const post = await seedPost(s, "hello");
@@ -221,6 +221,16 @@ describe("@plumix/plugin-comments — CDN tags", () => {
     const post = await seedPost(s, "hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "pending" });
+
+    expect(s.purgeTags).not.toHaveBeenCalled();
+  });
+
+  test("submitting a comment a filter demotes to spam purges nothing", async () => {
+    const s = await site({ mode: "none" });
+    const post = await seedPost(s, "hello");
+    s.h.spyFilter("comment:moderate").override(() => "spam");
+
+    expect(await submit(s, post.id)).toEqual({ status: "spam" });
 
     expect(s.purgeTags).not.toHaveBeenCalled();
   });
