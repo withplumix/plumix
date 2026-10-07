@@ -262,7 +262,7 @@ A plugin that owns tables ships its own history, so a site never generates migra
 
 1. Add a `drizzle.config.ts` at the package root, pointing drizzle-kit at the plugin's schema module:
 
-   ```ts
+   ```ts no-typecheck
    import { defineConfig } from "drizzle-kit";
 
    export default defineConfig({
