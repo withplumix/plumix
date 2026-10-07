@@ -115,7 +115,7 @@ async function withDatabase(
       runtime: ctx.app.config.runtime.name,
     });
   }
-  const owners = resolveOwners(ctx.cwd, ctx.app.config);
+  const owners = resolveOwners(ctx.cwd, ctx.configPath, ctx.app.config);
   beforeOpen?.();
   const db = await migrations.open({
     cwd: ctx.cwd,

@@ -552,6 +552,23 @@ describe("applying owner histories", () => {
       }).toEqual(applied);
     });
 
+    test("names each migration it applied, under its owner", async () => {
+      installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
+      const lines: string[] = [];
+      vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+      vi.spyOn(report, "success").mockImplementation((line) =>
+        lines.push(line),
+      );
+
+      await migrateCommand.run(
+        applyCtx([], [plugin("widgets", "@acme/plugin-widgets/schema")]),
+      );
+
+      expect(lines.join("\n")).toMatch(
+        /^core: applied 2 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
+      );
+    });
+
     test("applies a plugin package added after the first apply, though its migrations are older than core's", async () => {
       await migrateCommand.run(applyCtx([]));
       installPackage("@acme/plugin-widgets", WIDGETS_MIGRATIONS);
@@ -586,6 +603,22 @@ describe("applying owner histories", () => {
       );
 
       expect(names("table")).toContain("widgets");
+      expect(trackingRows("__drizzle_migrations_site")).toBe(1);
+    });
+  });
+
+  describe("a config in its own package, named by --config", () => {
+    test("treats the package holding the config as the site", async () => {
+      const app = join(dir, "app");
+      mkdirSync(app);
+      writeFileSync(join(app, "package.json"), JSON.stringify({ name: "app" }));
+      cpSync(WIDGETS_MIGRATIONS, join(app, "migrations"), { recursive: true });
+
+      await migrateCommand.run({
+        ...applyCtx([], [plugin("local", "../app/src/schema.ts")]),
+        configPath: join(app, "plumix.config.ts"),
+      });
+
       expect(trackingRows("__drizzle_migrations_site")).toBe(1);
     });
   });

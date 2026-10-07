@@ -65,9 +65,11 @@ function readPackageName(root: string): string {
  */
 export function resolveOwners(
   cwd: string,
+  configPath: string,
   config: PlumixConfig,
 ): readonly MigrationOwner[] {
-  const siteRoot = nearestPackageRoot(join(cwd, "plumix.config.ts")) ?? cwd;
+  // The site is the package its config lives in, wherever `--config` points.
+  const siteRoot = nearestPackageRoot(configPath) ?? dirname(configPath);
   const owners: MigrationOwner[] = [
     {
       name: "core",

@@ -39,12 +39,17 @@ export async function applyOwners(
   for (const owner of owners) {
     const before = (await appliedMigrations(db, owner)).length;
     await db.migrate(owner);
-    const applied = (await appliedMigrations(db, owner)).length - before;
-    if (applied === 0) {
+    const applied = (await appliedMigrations(db, owner)).slice(before);
+    if (applied.length === 0) {
       report.info(`${owner.name}: up to date`);
-    } else {
-      report.success(
-        `${owner.name}: applied ${String(applied)} migration${applied === 1 ? "" : "s"}`,
+      continue;
+    }
+    report.success(
+      `${owner.name}: applied ${String(applied.length)} migration${applied.length === 1 ? "" : "s"}`,
+    );
+    for (const migration of applied) {
+      report.info(
+        describeMigration("applied", migration.createdAt, migration.hash),
       );
     }
   }
