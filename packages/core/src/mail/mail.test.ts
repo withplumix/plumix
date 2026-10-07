@@ -238,6 +238,7 @@ describe("overriding a mail", () => {
 describe("ctx.mail.send — a name nobody declared", () => {
   test("throws a MailError naming the mail and sends nothing", async () => {
     const mailer = makeMailer();
+    let outcome: PromiseSettledResult<void> | undefined;
     // `welcome` is typed by this file, but this plugin never declares it.
     const stray = definePlugin("stray", {
       setup: (ctx) => {
@@ -246,18 +247,13 @@ describe("ctx.mail.send — a name nobody declared", () => {
           path: "/send",
           auth: "public",
           handler: async (_request, appCtx) => {
-            try {
-              await appCtx.mail.send(
+            [outcome] = await Promise.allSettled([
+              appCtx.mail.send(
                 "welcome",
                 { name: "Ann" },
                 { to: "ann@example.test" },
-              );
-            } catch (error) {
-              if (error instanceof MailError) {
-                return new Response(`${error.code}:${error.mail}`);
-              }
-              throw error;
-            }
+              ),
+            ]);
             return new Response(null, { status: 204 });
           },
         });
@@ -267,9 +263,15 @@ describe("ctx.mail.send — a name nobody declared", () => {
       config: { mailer, plugins: [stray] },
     });
 
-    const response = await h.fetch("/_plumix/stray/send");
+    await h.fetch("/_plumix/stray/send");
 
-    expect(await response.text()).toBe("mail_not_declared:welcome");
+    expect(outcome).toMatchObject({
+      status: "rejected",
+      reason: expect.any(MailError),
+    });
+    expect(outcome).toMatchObject({
+      reason: { code: "mail_not_declared", mail: "welcome" },
+    });
     expect(mailer.sent).toEqual([]);
   });
 });

@@ -12,11 +12,11 @@ import type { Comment } from "../db/schema.js";
  * fire it unconditionally on every new comment.
  */
 export async function notifyModeratorOfPending(
-  ctx: Pick<AppContext, "db" | "mail" | "origin" | "config">,
+  ctx: Pick<AppContext, "db" | "mail" | "mailer" | "origin" | "config">,
   comment: Comment,
   recipient: string,
 ): Promise<void> {
-  if (comment.status !== "pending") return;
+  if (comment.status !== "pending" || !ctx.mailer) return;
   const entry = await ctx.db.query.entries.findFirst({
     columns: { id: true, type: true, title: true, slug: true },
     where: eq(entries.id, comment.entryId),
