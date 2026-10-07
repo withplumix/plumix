@@ -599,7 +599,12 @@ function LinkedTargetPickerPanel({
   );
 
   function nameOf(item: LinkTarget): string {
-    return item.label ?? i18n._(M.untitledTarget);
+    return (
+      item.label ??
+      i18n._(M.untitledTarget.id, undefined, {
+        message: M.untitledTarget.message,
+      })
+    );
   }
 
   function choose(item: LinkTarget): void {

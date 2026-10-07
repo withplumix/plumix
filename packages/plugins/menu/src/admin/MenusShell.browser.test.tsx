@@ -640,6 +640,40 @@ describe("MenusShell", () => {
       ).toBeInTheDocument();
     });
 
+    test("a plugin lookup kind's tab keeps the unavailable panel and never searches", async () => {
+      // `MenuItemMeta` can't store a media or user pick, so that tab has
+      // nothing to search for.
+      window.history.replaceState(
+        {},
+        "",
+        "/_plumix/admin/pages/menus?menu=main",
+      );
+      mockRpc({
+        list: [{ id: 7, slug: "main", name: "Main", version: 1, itemCount: 0 }],
+        "locations/list": [],
+        pickerTabs: [
+          { kind: "media", tabLabel: "Media" },
+          { kind: "custom", tabLabel: "Custom URL" },
+        ],
+        get: {
+          id: 7,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [],
+        },
+      });
+
+      renderShell();
+
+      expect(
+        await screen.findByTestId("menu-picker-unsupported-panel"),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("menu-picker-linked-panel")).toBeNull();
+      expect(searchTargetsCalls()).toEqual([]);
+    });
+
     test("an entry tab searches its type and adds the chosen entry from the keyboard", async () => {
       window.history.replaceState(
         {},
@@ -743,10 +777,9 @@ describe("MenusShell", () => {
           { id: "12", label: "Contact" },
         ],
       });
+      // Open until the test closes the gate for the narrower search.
+      let gate: Promise<void> = Promise.resolve();
       let release: (() => void) | undefined;
-      const held = new Promise<void>((resolve) => {
-        release = resolve;
-      });
       mockRpc(
         {
           list: [
@@ -765,7 +798,7 @@ describe("MenusShell", () => {
         },
         {
           searchTargets: async (input) => {
-            if ((input as SearchTargetsInput).query !== undefined) await held;
+            await gate;
             return serve(input);
           },
         },
@@ -777,6 +810,9 @@ describe("MenusShell", () => {
       expect(
         await screen.findByTestId("menu-picker-option-12"),
       ).toBeInTheDocument();
+      gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
       await user.type(screen.getByTestId("menu-picker-search-input"), "abo");
       await vi.waitFor(() => {
         expect(searchTargetsCalls().at(-1)?.query).toBe("abo");

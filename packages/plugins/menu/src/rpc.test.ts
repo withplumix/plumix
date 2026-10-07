@@ -266,12 +266,16 @@ describe("menu RPC", () => {
       const author = await adminUser
         .transient({ db: h.db })
         .create({ email: "search-entries@example.test" });
-      const seed = (type: string, title: string, status: string) =>
+      const seed = (
+        type: string,
+        title: string,
+        status: "published" | "draft" | "trash",
+      ) =>
         entryFactory.transient({ db: h.db }).create({
           type,
           title,
           slug: `${type}-${title.toLowerCase().replaceAll(" ", "-")}`,
-          status: status as "published",
+          status,
           authorId: author.id,
         });
       const published = await seed("post", "About us", "published");
