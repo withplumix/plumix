@@ -40,6 +40,11 @@ export interface PageFacts {
    * submitted with nothing in the box carries.
    */
   readonly query: string | null;
+  /**
+   * The registered name of a view (`registerView`), and null on every other
+   * page. A view's own `data` is the plugin's, so this is all core states.
+   */
+  readonly view: string | null;
 }
 
 const NO_SUBJECT = {
@@ -50,6 +55,7 @@ const NO_SUBJECT = {
   entry: null,
   contentType: null,
   query: null,
+  view: null,
 } as const;
 
 /**
@@ -110,6 +116,8 @@ export function pageFacts(data: TemplateData): PageFacts {
         page: data.page ?? 1,
         query: data.query ?? null,
       };
+    case "view":
+      return { ...NO_SUBJECT, kind: data.kind, page: 1, view: data.name };
     case "error":
       return { ...NO_SUBJECT, kind: data.kind, page: 1 };
   }

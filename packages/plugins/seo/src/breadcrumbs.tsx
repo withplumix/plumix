@@ -107,6 +107,7 @@ function trailBelowHome(
       return [{ url: null, name: `Search: ${data.query}` }];
     case "frontPage":
     case "archiveType":
+    case "view":
     case "error":
       return null;
   }

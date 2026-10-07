@@ -160,6 +160,21 @@ export interface ArchiveTypeData {
 }
 
 /**
+ * What a theme receives for a view (`registerView`): a per-visitor app page
+ * that lists nothing. Core builds the envelope — the view's `name` and the
+ * `params` its route captured — around the `data` the view's `resolve`
+ * returned, so the plugin never restates either. Declare the data's shape in
+ * `ViewRegistry` so `forView(name)` types it.
+ */
+export interface ViewData<TData = unknown> {
+  readonly kind: "view";
+  /** The registered view name (`registerView(name, …)`). */
+  readonly name: string;
+  readonly params: Readonly<Record<string, string>>;
+  readonly data: TData;
+}
+
+/**
  * What a theme receives for an archive core listed — a plugin's own fields
  * plus the `entries` and `pagination` every built-in archive already hands
  * over, so a theme's pagination and entry components work on both unchanged.

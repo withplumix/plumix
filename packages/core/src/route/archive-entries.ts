@@ -14,11 +14,11 @@ import { publicEntriesQuery } from "./render/entry-listing.js";
  * An archive described by an entry query, named by the route intent that
  * reaches it: one of core's built-in listings, or a plugin archive. Search is
  * not one — its results are a match, not a set — and neither is a plugin
- * archive that declared no `entries`.
+ * archive that declared no `entries`, nor a view, which lists nothing.
  */
 export type EntryArchive = Exclude<
   RouteIntent,
-  { readonly kind: "entry" | "search" }
+  { readonly kind: "entry" | "search" | "view" }
 >;
 
 declare module "../hooks/types.js" {
@@ -185,7 +185,13 @@ function isEntryArchive(
   plugins: PluginRegistry,
   intent: RouteIntent,
 ): intent is EntryArchive {
-  if (intent.kind === "entry" || intent.kind === "search") return false;
+  if (
+    intent.kind === "entry" ||
+    intent.kind === "search" ||
+    intent.kind === "view"
+  ) {
+    return false;
+  }
   return (
     intent.kind !== "archiveType" ||
     plugins.archiveTypes.get(intent.name)?.entries !== undefined

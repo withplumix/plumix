@@ -201,14 +201,14 @@ The site-specific presentation layer, defined statically (no setup hook): templa
 A theme render unit bound to a route or data kind. See the disambiguation note — distinct from a stored page-template choice.
 
 **Page kind**:
-What a public page is about, named by its subject: `entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `frontPage` or `search`.
+What a public page is about, named by its subject: `entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `view`, `frontPage` or `search`.
 _Avoid_: single, content, content-type-archive, taxonomy (for a term's page), custom, front-page
 
 **Template data**:
-The discriminated union of data shapes a template can receive, keyed by page kind (`entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `frontPage`, `search`) plus `error`.
+The discriminated union of data shapes a template can receive, keyed by page kind (`entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `view`, `frontPage`, `search`) plus `error`.
 
 **Generic tier**:
-The fixed set of catch-all template slots a theme declares: one per page kind (`entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`) except `archiveType`, plus `fallback`, `notFound` and `serverError`.
+The fixed set of catch-all template slots a theme declares: one per page kind (`entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`) except `archiveType` and `view`, plus `fallback`, `notFound` and `serverError`.
 
 **Target matcher**:
 A targeted template rule that binds a template to a specific node (by kind, type, and slug/id/predicate), taking precedence over the generic tier.
@@ -222,6 +222,13 @@ what the archive contains.
 **Archive type**:
 An archive a plugin registers with `registerArchiveType`, which core routes and
 templates by name without knowing what it lists.
+
+**View**:
+A per-visitor app page a plugin registers with `registerView`, such as a sign-in
+form, an account page or a shared comparison. It renders through the theme like
+any page but lists nothing, so it is not an archive. It is never stored by the
+CDN unless it opts in, and claims no automatic canonical link. See ADR 0035.
+_Avoid_: unlisted archive (for a per-visitor page), app route
 
 **Listing**:
 One page of an archive's entries: its entry query run by core, paged, and
@@ -294,7 +301,7 @@ The membership-gating scenario a challenge implements. A scenario label, not a t
 ## Runtime & rendering
 
 **Route intent**:
-What a matched URL represents, named by its page kind — `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, or `archiveType`.
+What a matched URL represents, named by its page kind — `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, `archiveType` or `view`.
 
 **Framework route**:
 A route core compiles without any registration: root pagination (`/page/N`) and the author, date and search routes. A site turns the author, date or search family off with `routes` in `plumix()`, and a family that is off is never compiled. See ADR 0029.
@@ -303,7 +310,7 @@ A route core compiles without any registration: root pagination (`/page/N`) and 
 The content route the current public request matched — the pattern as it was declared and the params it captured — read from `ctx.resolvedRoute` by anything rendering the page that has to address the page's own URL space. `null` on every path the content router did not match.
 
 **Page outcome**:
-A 404 or a redirect that a page step throws to end the request instead of rendering: `pageNotFound()` or `redirectTo(location, status?)` from `plumix/support`. The page steps are an archive type's `resolve`, a template dep, a block loader on the page's own content and the template's `document()`. See ADR 0032.
+A 404 or a redirect that a page step throws to end the request instead of rendering: `pageNotFound()` or `redirectTo(location, status?)` from `plumix/support`. The page steps are an archive type's or a view's `resolve`, a template dep, a block loader on the page's own content and the template's `document()`. See ADR 0032.
 
 **Public route**:
 A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own route handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.

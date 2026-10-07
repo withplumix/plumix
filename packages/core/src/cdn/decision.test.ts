@@ -85,7 +85,7 @@ describe("cdnBypassReason", () => {
         method: "GET",
         segment: "anonymous",
         intentKind: "archiveType",
-        customArchiveCacheable: false,
+        registeredPageCacheable: false,
       }),
     ).toBe("intent");
   });
@@ -96,7 +96,7 @@ describe("cdnBypassReason", () => {
         method: "GET",
         segment: "anonymous",
         intentKind: "archiveType",
-        customArchiveCacheable: true,
+        registeredPageCacheable: true,
       }),
     ).toBe(null);
   });
@@ -107,7 +107,7 @@ describe("cdnBypassReason", () => {
         method: "GET",
         segment: "private",
         intentKind: "archiveType",
-        customArchiveCacheable: true,
+        registeredPageCacheable: true,
       }),
     ).toBe("private");
   });
@@ -118,7 +118,7 @@ describe("cdnBypassReason", () => {
         method: "POST",
         segment: "anonymous",
         intentKind: "archiveType",
-        customArchiveCacheable: true,
+        registeredPageCacheable: true,
       }),
     ).toBe("method");
   });

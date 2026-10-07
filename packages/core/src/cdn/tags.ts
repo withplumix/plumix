@@ -37,12 +37,13 @@ export function pageTags(sources: PageTagSources): string[] {
       // set as the front page, so any publish of those types can change them.
       return sources.frontPageEntryTypes().map(typeTag);
     case "archiveType":
+    case "view":
     case "search":
       // Neither is derivable from the intent alone: search results depend on a
       // query, and a plugin archive's content on what it registered. Both
       // contribute their tags per request instead — a listed archive's from
       // the types its entry query can list, an unlisted one's from whatever
-      // its resolver returns.
+      // its resolver returns. A view is an unlisted resolver's page too.
       return [];
   }
 }

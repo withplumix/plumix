@@ -7,6 +7,7 @@ import type {
   ArchiveTypeName,
   EntryTypeName,
   TermTaxonomyName,
+  ViewDataOf,
 } from "../../template-registry.js";
 import type {
   GenericTier,
@@ -44,6 +45,7 @@ import {
   termMetaEquals,
   termTaxonomyMatch,
   termTaxonomyTargets,
+  viewTargets,
 } from "./rule-selectors.js";
 
 export { NAMED_TEMPLATE_META_KEY };
@@ -280,4 +282,15 @@ export function forArchiveType<K extends ArchiveTypeName>(
   name: K,
 ): TemplateSelector<ArchiveDataOf<K>> {
   return archiveTypeTargets(name, selector<ArchiveDataOf<K>>);
+}
+
+/**
+ * Target a plugin-registered view (`registerView`). Any name is accepted; one
+ * declared in `ViewRegistry` types the template's `data.data`. A view with no
+ * rule of its own renders through `fallback` — views have no generic tier.
+ */
+export function forView<K extends string>(
+  name: K,
+): TemplateSelector<ViewDataOf<K>> {
+  return viewTargets(name, selector<ViewDataOf<K>>);
 }

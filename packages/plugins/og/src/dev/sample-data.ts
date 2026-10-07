@@ -34,7 +34,7 @@ const SAMPLE_ID = 1;
  */
 interface SampleTarget {
   readonly kind: TemplateData["kind"];
-  /** Entry type, taxonomy, or registered archive-type name. */
+  /** Entry type, taxonomy, or registered archive-type or view name. */
   readonly type: string;
   readonly slug: string;
   readonly year: number;
@@ -100,6 +100,7 @@ function targetForMatch(match: TargetMatcher): SampleTarget {
     case "entryType":
     case "author":
     case "archiveType":
+    case "view":
       return { ...named, kind: match.nodeKind };
     case "term":
       return { ...named, kind: "term", slug: match.slug ?? SAMPLE_TERM_SLUG };
@@ -142,6 +143,8 @@ function pageFor(target: SampleTarget): TemplateData {
       return { kind: "search", query: SAMPLE_QUERY, ...listing };
     case "archiveType":
       return { kind: "archiveType", name: target.type };
+    case "view":
+      return { kind: "view", name: target.type, params: {}, data: null };
     default:
       return { kind: "entry", entry: sampleEntry(target) };
   }

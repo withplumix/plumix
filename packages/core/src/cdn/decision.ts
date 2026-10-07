@@ -24,13 +24,13 @@ interface CacheableRequest {
   readonly segment: Segment;
   readonly intentKind: RouteIntent["kind"];
   /**
-   * For an `archiveType` (plugin-registered) archive, whether it opted into CDN
-   * caching via `registerArchiveType({ cacheable: true })`. Core can't know an
-   * archive type's content dependencies, so it caches only on this opt-in.
-   * Ignored for the built-in intents, whose cacheability is fixed by
+   * For a plugin-registered page — an `archiveType` or a `view` — whether it
+   * opted into CDN caching via `cacheable: true` on its registration. Core
+   * can't know such a page's content dependencies, so it caches only on this
+   * opt-in. Ignored for the built-in intents, whose cacheability is fixed by
    * {@link CACHEABLE_INTENTS}.
    */
-  readonly customArchiveCacheable?: boolean;
+  readonly registeredPageCacheable?: boolean;
   /**
    * Whether the bound provider can separate one audience segment's copy from
    * another's. Named for the capability rather than for the store, because a
@@ -152,11 +152,11 @@ export function cdnBypassReason(req: CacheableRequest): CdnBypassReason | null {
   if (req.segment !== "anonymous" && !req.canKeySegments) {
     return "segment-unsupported";
   }
-  // An archive type caches only on its explicit opt-in; the built-in intents
-  // are fixed by CACHEABLE_INTENTS.
+  // An archive type or a view caches only on its explicit opt-in; the
+  // built-in intents are fixed by CACHEABLE_INTENTS.
   const cacheable =
-    req.intentKind === "archiveType"
-      ? req.customArchiveCacheable === true
+    req.intentKind === "archiveType" || req.intentKind === "view"
+      ? req.registeredPageCacheable === true
       : CACHEABLE_INTENTS.has(req.intentKind);
   return cacheable ? null : "intent";
 }

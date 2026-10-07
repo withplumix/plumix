@@ -109,6 +109,7 @@ import type {
   TargetMatcher,
   TemplateData,
   TermArchiveData,
+  ViewData,
 } from "plumix";
 import type { PlumixPrefetch, PlumixStrategy } from "plumix/blocks";
 import type { CANONICAL_INPUT_TYPES } from "plumix/fields";
@@ -476,11 +477,11 @@ type _GenericTiersAreThemeExports = Assert<
  * The targeted matchers, listed against the node kinds they mint. `satisfies`
  * pins each key to a `plumix/theme` export, so a rename fails on the
  * offending line; the assertion pins the kinds, flattened, to
- * `TargetMatcher["nodeKind"]`, so a sixth matcher reaching a new kind fails
+ * `TargetMatcher["nodeKind"]`, so a seventh matcher reaching a new kind fails
  * too.
  *
  * Two things neither catches, both needing the builders to share a return
- * shape they do not have: a sixth matcher minting an *existing* kind, and a
+ * shape they do not have: a seventh matcher minting an *existing* kind, and a
  * key paired with the wrong kinds. The values are a reader's map from matcher
  * to node kind and a lever for the second assertion — they are not themselves
  * checked against what each builder does.
@@ -491,6 +492,7 @@ const TARGETED_MATCHERS = {
   forAuthor: ["author"],
   forDate: ["date"],
   forArchiveType: ["archiveType"],
+  forView: ["view"],
 } as const satisfies Partial<
   Record<ThemeExport, readonly TargetMatcher["nodeKind"][]>
 >;
@@ -517,15 +519,15 @@ const TEMPLATES: readonly string[] = [
  *
  * `satisfies` pins each key to a `plumix/plugin` export, so a rename fails on
  * its own line. The assertion catches the direction nothing else does: a
- * sixth entry in `TARGETED_MATCHERS` arriving without a constructor here.
+ * seventh entry in `TARGETED_MATCHERS` arriving without a constructor here.
  * Its own page would not report that — `templates.mdx` already carries the
  * matcher as a `###`, so its roster stays green while this page silently
  * stops being complete.
  *
  * It shares the holes the map above admits to, for the same reason: the values
- * are compared as a union, so a swapped pairing and a sixth key duplicating an
- * existing matcher both pass. Roster drift catches the second — six keys
- * against five `###` headings — and nothing catches the first.
+ * are compared as a union, so a swapped pairing and a seventh key duplicating an
+ * existing matcher both pass. Roster drift catches the second — seven keys
+ * against six `###` headings — and nothing catches the first.
  *
  * The rest of that page is not a roster. `resolveRule`, `BindRule` and
  * `TierMatchRule` are a mechanism, not a set, so the page carries them as
@@ -537,6 +539,7 @@ const TARGET_CONSTRUCTORS = {
   authorTargets: "forAuthor",
   dateTargets: "forDate",
   archiveTypeTargets: "forArchiveType",
+  viewTargets: "forView",
 } as const satisfies Partial<
   Record<PluginExport, keyof typeof TARGETED_MATCHERS>
 >;
@@ -549,7 +552,7 @@ type _EveryTargetedMatcherHasAConstructor = Assert<
 >;
 
 /**
- * The pieces a rule kind mints a narrowing of *its own* out of, once the five
+ * The pieces a rule kind mints a narrowing of *its own* out of, once the six
  * constructors above have run out. Source: the `*Match` and `*Equals` exports
  * of `rule-selectors.ts`, which `template-builders.ts` builds `named` from.
  *
@@ -578,7 +581,7 @@ const MATCH_CONSTRUCTORS = [
  *
  * The map is the binding: its values are the real types, so a rename or
  * removal fails to compile, and the union of its values is asserted to be
- * `TemplateData` itself, so a tenth shape fails typecheck. A bare array of
+ * `TemplateData` itself, so an eleventh shape fails typecheck. A bare array of
  * names could not do either — type names have no runtime form to compare.
  */
 interface TemplateDataShapes {
@@ -588,6 +591,7 @@ interface TemplateDataShapes {
   AuthorArchiveData: AuthorArchiveData;
   DateArchiveData: DateArchiveData;
   ArchiveTypeData: ArchiveTypeData;
+  ViewData: ViewData;
   FrontPageData: FrontPageData;
   SearchData: SearchData;
   ErrorData: ErrorData;
@@ -604,6 +608,7 @@ const TEMPLATE_DATA = [
   "AuthorArchiveData",
   "DateArchiveData",
   "ArchiveTypeData",
+  "ViewData",
   "FrontPageData",
   "SearchData",
   "ErrorData",

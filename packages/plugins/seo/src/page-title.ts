@@ -62,6 +62,7 @@ function resultCount(data: TemplateData): string {
       return String(data.pagination.total);
     case "entry":
     case "archiveType":
+    case "view":
     case "error":
       return "";
   }

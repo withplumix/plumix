@@ -13,6 +13,7 @@ import type {
   ResolvedTerm,
   SearchData,
   TermArchiveData,
+  ViewData,
 } from "../contract/resolved-entry.js";
 import { pageFacts } from "./page-facts.js";
 
@@ -75,6 +76,7 @@ describe("pageFacts", () => {
       entry,
       contentType: null,
       query: null,
+      view: null,
     });
   });
 
@@ -148,6 +150,7 @@ describe("pageFacts", () => {
       entry: null,
       contentType: null,
       query: null,
+      view: null,
     });
   });
 
@@ -172,6 +175,7 @@ describe("pageFacts", () => {
       entry: null,
       contentType: null,
       query: null,
+      view: null,
     });
   });
 
@@ -196,5 +200,26 @@ describe("pageFacts", () => {
     });
     expect(pageFacts(searched("hello")).query).toBe("hello");
     expect(pageFacts(searched("")).query).toBe("");
+  });
+
+  test("a view names itself and nothing else", () => {
+    const data: ViewData = {
+      kind: "view",
+      name: "compareShare",
+      params: { id: "abc" },
+      data: { entry, term, author },
+    };
+    expect(pageFacts(data)).toEqual({
+      kind: "view",
+      page: 1,
+      published: null,
+      modified: null,
+      author: null,
+      term: null,
+      entry: null,
+      contentType: null,
+      query: null,
+      view: "compareShare",
+    });
   });
 });

@@ -10,6 +10,7 @@ import type { RouteIntent } from "./contract/intent.js";
 import type {
   ListingArchiveData,
   SearchData,
+  ViewData,
 } from "./contract/resolved-entry.js";
 import type { RouteMatch } from "./match.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
@@ -122,6 +123,8 @@ function resolveIntent(
       return resolveDate(ctx, match.params, renderEnv);
     case "archiveType":
       return resolveCustom(ctx, match.intent, match.params, renderEnv);
+    case "view":
+      return resolveView(ctx, match.intent, match.params, renderEnv);
     case "search":
       return resolveSearch(ctx, match.params, renderEnv);
   }
@@ -320,6 +323,41 @@ async function resolveCustom(
     title: result.title,
   });
   return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
+}
+
+// A plugin-registered view (`registerView`): the resolver's `data` is wrapped
+// in the `{ kind, name, params }` envelope its `forView(name)` template reads.
+async function resolveView(
+  ctx: AppContext,
+  intent: Extract<RouteIntent, { kind: "view" }>,
+  params: Record<string, string>,
+  renderEnv: RenderEnv,
+): Promise<Response> {
+  const view = ctx.plugins.views.get(intent.name);
+  // A compiled route always names a registered view; as for archive types,
+  // a defensive 404 rather than a throw if the two ever drift.
+  if (!view) return notFound("public-view-not-registered");
+
+  const result = await view.resolve(ctx, params);
+  if (result === null) return notFound("public-view-not-found");
+
+  // Only stored when the view opted into the CDN (`cacheable`).
+  if (result.tags) declarePageTags(ctx, result.tags);
+
+  const data: ViewData = {
+    kind: "view",
+    name: intent.name,
+    params,
+    data: result.data,
+  };
+  const html = await renderThroughTheme({
+    ctx,
+    renderEnv,
+    node: { kind: "view", name: intent.name },
+    data,
+    title: result.title,
+  });
+  return htmlResponseOrNotFound(html, "public-view-no-template");
 }
 
 /** An archive that declared its entries, with the two listing arms kept apart. */

@@ -74,4 +74,8 @@ export const M = {
     id: "plugin.seo.preview.reason.not_found",
     message: "Pages that were not found are held out of search in settings.",
   },
+  reasonView: {
+    id: "plugin.seo.preview.reason.view",
+    message: "App pages are held out of search unless the site names them.",
+  },
 } as const satisfies Record<string, MessageDescriptor>;

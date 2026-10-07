@@ -18,6 +18,7 @@ import type {
   FrontPageData,
   SearchData,
   TermArchiveData,
+  ViewData,
 } from "./route/contract/resolved-entry.js";
 import type { ResolvedNode } from "./route/contract/resolved-node.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
@@ -67,6 +68,7 @@ export type TemplateData =
   | AuthorArchiveData
   | DateArchiveData
   | ArchiveTypeData
+  | ViewData
   | FrontPageData
   | SearchData
   | ErrorData;
@@ -88,6 +90,9 @@ export function isDate(data: TemplateData): data is DateArchiveData {
 }
 export function isArchiveType(data: TemplateData): data is ArchiveTypeData {
   return data.kind === "archiveType";
+}
+export function isView(data: TemplateData): data is ViewData {
+  return data.kind === "view";
 }
 export function isFrontPage(data: TemplateData): data is FrontPageData {
   return data.kind === "frontPage";

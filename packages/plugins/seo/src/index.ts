@@ -10,6 +10,7 @@ import type { SeoSitemapsOptions } from "./sitemap.js";
 // Also anchors the `registerSitemap` augmentation, as the imports below do theirs.
 import { contributedSitemaps, createRegisterSitemap } from "./contributed.js";
 import { applySeoHead } from "./head.js";
+import { assertIndexViewsNameViews } from "./indexable.js";
 import { registerIndexNow } from "./indexnow.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
 import { SERP_PREVIEW_INPUT_TYPE } from "./preview-box.js";
@@ -98,6 +99,13 @@ export interface SeoOptions {
    * filter, override it.
    */
   readonly sitemaps?: SeoSitemapsOptions;
+  /**
+   * The views (`registerView`) the site offers to search engines. Every view
+   * is `noindex` by default, as an app page is usually per-visitor; a name no
+   * view registered fails the boot. An indexed view still gets no automatic
+   * canonical unless its template's `document` declares one.
+   */
+  readonly indexViews?: readonly string[];
 }
 
 /**
@@ -133,6 +141,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
   const headOptions = {
     articleTags: options.articleTags ?? true,
     structuredData: options.structuredData ?? true,
+    indexViews: new Set(options.indexViews),
   };
   return definePlugin("seo", {
     // The chunk the SERP preview's field renderer ships in. Without it the
@@ -172,6 +181,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     // Each of these is scoped to what the site registered, so it waits for
     // every plugin's `setup` to have registered it.
     afterSetup: (ctx) => {
+      assertIndexViewsNameViews(headOptions.indexViews, ctx.plugins.views);
       registerSeoSettings(ctx);
       registerSitemapRoutes(
         ctx,

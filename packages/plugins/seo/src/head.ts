@@ -228,6 +228,8 @@ function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
 export interface SeoHeadOptions {
   readonly articleTags: boolean;
   readonly structuredData: boolean;
+  /** The views the site offers to search engines (`indexViews`). */
+  readonly indexViews: ReadonlySet<string>;
 }
 
 /**
@@ -254,7 +256,9 @@ export async function applySeoHead(
   const { kind, entry, published, modified, author } = facts;
   const isEntry = kind === "entry";
   const overrides = readPageOverrides(facts);
-  const decision = indexable(facts, seoSettings);
+  const decision = indexable(facts, seoSettings, {
+    indexViews: options.indexViews,
+  });
   const siteName = nonEmpty(site.title);
   // A URL that resolved to nothing is the canonical address of nothing, and
   // core deliberately leaves an error page's canonical unwritten for the same

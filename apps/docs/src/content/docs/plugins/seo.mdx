@@ -70,7 +70,7 @@ Every option is optional. Three of them switch off a default, for a site whose h
 seo({ llmsTxt: false, articleTags: false, structuredData: false });
 ```
 
-`metaBox` is the fourth; [Scope is derived, not configured](#scope-is-derived-not-configured) covers it. `sitemaps` is the fifth; [Sitemap policy](#sitemap-policy) covers it.
+`metaBox` is the fourth; [Scope is derived, not configured](#scope-is-derived-not-configured) covers it. `sitemaps` is the fifth; [Sitemap policy](#sitemap-policy) covers it. `indexViews` is the sixth; [Views](#views) covers it.
 
 ## What lands in the head
 
@@ -184,11 +184,12 @@ Whether a page is offered to a search engine is decided once, by an ordered set 
 | 3   | `type_default`     | Its entry type is held out — on the type's entries and on its archive. |
 | 4   | `taxonomy_default` | Its taxonomy is held out — on that taxonomy's term archives.           |
 | 5   | `search_results`   | The page is a search-results listing.                                  |
-| 6   | `paginated`        | Page 2 or beyond of an archive.                                        |
-| 7   | `not_found`        | The URL resolved to nothing.                                           |
+| 6   | `view`             | The page is a view the site did not name in `indexViews`.              |
+| 7   | `paginated`        | Page 2 or beyond of an archive.                                        |
+| 8   | `not_found`        | The URL resolved to nothing.                                           |
 | —   | `default`          | Nothing asserted; the page is indexable.                               |
 
-The order is the design. A site held out of the index cannot be put back in by one entry, and an editor's answer for one entry outranks the default set for its whole type. The last three are off by default and each is a toggle on the settings screen.
+The order is the design. A site held out of the index cannot be put back in by one entry, and an editor's answer for one entry outranks the default set for its whole type. `search_results`, `paginated` and `not_found` are off by default and each is a toggle on the settings screen.
 
 The directive it produces pairs that answer with the follow one: `index,follow,max-image-preview:large` when the page is offered, `noindex,follow` when it is not, and `nofollow` in place of `follow` when the site is private or the editor asked for it.
 
@@ -201,6 +202,16 @@ The robots directive and sitemap membership both read that one answer, so a page
   explicitly asked to be indexed still gets `noindex,nofollow` while the site is
   held out.
 </Aside>
+
+### Views
+
+A [view](/routing/overview/#app-pages-with-registerview) is an app page such as `/login` or `/account`, usually different for every visitor, so the plugin marks every view `noindex` and lists none in the sitemap or `llms.txt`. A site that wants one offered to search engines names it in `indexViews`:
+
+```ts no-typecheck title="plumix.config.ts"
+seo({ indexViews: ["compareShare"] });
+```
+
+A name that no plugin registered with `registerView` fails the boot, naming it. An indexed view still carries no automatic canonical link; the view's template declares one in `document()` when the page has one address.
 
 ## Title patterns
 

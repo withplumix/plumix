@@ -484,6 +484,20 @@ function ctxHasSession(ctx: AppContext): boolean {
   return requestHasSession(ctx.authenticator, ctx.request);
 }
 
+function registeredPageCacheable(
+  ctx: AppContext,
+  intent: ContentRoute["intent"],
+): boolean | undefined {
+  switch (intent?.kind) {
+    case "archiveType":
+      return ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true;
+    case "view":
+      return ctx.plugins.views.get(intent.name)?.cacheable === true;
+    default:
+      return undefined;
+  }
+}
+
 async function dispatchPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
@@ -550,13 +564,10 @@ async function dispatchPublicRoute(
       request: ctx.request,
       segment,
       intentKind: intent?.kind ?? null,
-      // An archive type caches only when it opted in via `registerArchiveType
-      // ({ cacheable: true })`. Resolved here so the pure decision layer stays
-      // free of the registry lookup.
-      customArchiveCacheable:
-        intent?.kind === "archiveType"
-          ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
-          : undefined,
+      // An archive type or a view caches only when it opted in with
+      // `cacheable: true`. Resolved here so the pure decision layer stays free
+      // of the registry lookup.
+      registeredPageCacheable: registeredPageCacheable(ctx, intent),
       cdn,
       defer: ctx.defer,
       telemetry: ctx.telemetry,

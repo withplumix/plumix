@@ -14,7 +14,7 @@ Plumix compiles one route map at boot from what your plugins registered, then ma
 
 There is no routes file and no directory of URL handlers. Registering `recipe` as an entry type is what puts `/recipe/sicilian-caponata` on the site, and registering `cuisine` as a taxonomy is what puts `/cuisine/italian` there. Both leading segments default to the registered name, and `rewrite: { slug: "recipes" }` in the quickstart below is what turns the first one into `/recipes/sicilian-caponata`. The route map is a projection of the registry.
 
-A match produces a **route intent**, which is what the matched URL represents. There are eight kinds.
+A match produces a **route intent**, which is what the matched URL represents. There are nine kinds.
 
 | Intent        | What it means                            | Example URL                   |
 | ------------- | ---------------------------------------- | ----------------------------- |
@@ -26,6 +26,7 @@ A match produces a **route intent**, which is what the matched URL represents. T
 | `frontPage`   | The site root and its later pages        | `/`, `/page/2`                |
 | `search`      | A search result set                      | `/search/caponata`            |
 | `archiveType` | An archive a plugin registered whole     | whatever the plugin declared  |
+| `view`        | An app page a plugin registered          | `/login`, `/compare/abc`      |
 
 The intent carries only the route shape. The slug, term path and page number ride alongside it as the parameters URLPattern captured. A resolver per kind reads both, loads the data, and hands a typed payload to the theme, which picks a template for it.
 
@@ -109,12 +110,12 @@ A request reaches the public router only after several earlier steps decline it.
 
 ## How rules are ordered
 
-Every compiled rule carries a numeric priority, and lower wins. Rules at equal priority keep the order the compiler emitted them in, and the compiler emits by kind before it emits by registration. It emits the framework routes first, then the taxonomies, then the entry types, then the `registerRewriteRule` rules, then the `registerArchiveType` routes. So at priority 10 every rewrite rule sits ahead of every archive-type route no matter which plugin registered first, and registration order only breaks ties inside one of those groups.
+Every compiled rule carries a numeric priority, and lower wins. Rules at equal priority keep the order the compiler emitted them in, and the compiler emits by kind before it emits by registration. It emits the framework routes first, then the taxonomies, then the entry types, then the `registerRewriteRule` rules, then the `registerArchiveType` routes, then the `registerView` routes. So at priority 10 every rewrite rule sits ahead of every archive-type route no matter which plugin registered first, and registration order only breaks ties inside one of those groups.
 
 | Priority | Rules                                                                                                              |
 | -------- | ------------------------------------------------------------------------------------------------------------------ |
 | 5        | Framework routes: `/page/:page`, `/search`, `/authors/:slug`, the date archives, and the paginated variant of each |
-| 10       | Explicit `registerRewriteRule` and `registerArchiveType` routes, by default                                        |
+| 10       | Explicit `registerRewriteRule`, `registerArchiveType` and `registerView` routes, by default                        |
 | 50       | The single and archive rules generated from `registerEntryType` and `registerTermTaxonomy`                         |
 | 60       | A single rule whose type set `rewrite: { slug: "" }`, so its pattern matches at the URL root                       |
 
@@ -153,7 +154,7 @@ A date archive with no entries answers 404 whatever the switch says, because an 
 
 ## Registering your own routes
 
-Three calls put URLs on your site that no entry-type registration would produce.
+Four calls put URLs on your site that no entry-type registration would produce.
 
 `registerRewriteRule(pattern, intent, options?)` maps a URLPattern pathname onto an existing intent. Use it to serve a type at a second URL, or to give an archive a shape the generated rules do not cover. The only option is `priority`, which defaults to 10.
 
@@ -244,23 +245,28 @@ export const rooms = definePlugin("rooms", {
 
 An archive that leaves `entries` out works exactly as before: `resolve` returns the whole `{ data, title }` payload or `null`, and owns its own paging. That is the shape for an archive whose results are a match rather than a set — `@plumix/plugin-search` registers this way — and only an archive described by an entry query can have a feed.
 
+An archive is the same page for every visitor. A page that lists nothing and differs per visitor, such as a sign-in form, an account page or a shared comparison, is a view. Register it with [`registerView`](#app-pages-with-registerview), not as an archive without `entries`.
+
 ### Redirecting from `resolve`
 
-Either form of `resolve` can end the request instead of naming a page. Throw `redirectTo(location, status?)` from `plumix/support` to send the visitor elsewhere, or `pageNotFound()` for the theme's 404, which is the same answer as returning `null`. `resolve` receives the full `AppContext`, so the decision can read the session:
+Either form of `resolve` can end the request instead of naming a page. Throw `redirectTo(location, status?)` from `plumix/support` to send the visitor elsewhere, or `pageNotFound()` for the theme's 404, which is the same answer as returning `null`. `resolve` receives the full `AppContext`, so the decision can read the session or the store:
 
 ```ts
 import { definePlugin } from "plumix/plugin";
 import { redirectTo } from "plumix/support";
 
-export const login = definePlugin("login", {
+export const rooms = definePlugin("rooms", {
   setup: (ctx) => {
-    ctx.registerArchiveType("login", {
-      routes: ["/login"],
-      resolve: (appCtx) => {
-        if (appCtx.user !== null) throw redirectTo("/");
+    ctx.registerArchiveType("rooms", {
+      routes: ["/rooms/:room"],
+      resolve: (_appCtx, params) => {
+        // The hall was renamed; its old address moves for good.
+        if (params.room === "main-hall") {
+          throw redirectTo("/rooms/auditorium", 301);
+        }
         return {
-          data: { kind: "archiveType", name: "login" },
-          title: "Sign in",
+          data: { kind: "archiveType", name: "rooms" },
+          title: params.room ?? "Rooms",
         };
       },
     });
@@ -269,6 +275,45 @@ export const login = definePlugin("login", {
 ```
 
 The status defaults to 302 and takes any of 301, 302, 307 and 308. The `location` is sent as given, so a site under a `basePath` passes the prefixed path. A redirect from a page step depends on who asked, so the CDN never stores it and it leaves with `cache-control: private, no-store`. [Block loaders](/blocks/overview/#a-loader-that-ends-the-request), template deps and a template's `document()` can throw the same two outcomes.
+
+### App pages with `registerView`
+
+`registerView(name, options)` registers an app page: a sign-in form, an account page, a comparison a visitor shared. It renders through the theme like any page, with a template, the `document()` head and the [access policy](/access/overview/) an archive takes, but it lists nothing. So it has no `entries`, no paging and no feed. It compiles to the `view` intent, and the theme targets it with [`forView(name)`](/themes/templates/#forview).
+
+`resolve(ctx, params)` returns `{ data, title }` or `null` for the theme's 404, and can throw `redirectTo()` or `pageNotFound()` the way an archive's can. Core wraps `data` for the template as `data.data`, beside the view's `name` and the `params` its route captured. Sending a signed-in visitor away from `/login` is one line:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+import { redirectTo } from "plumix/support";
+
+export const login = definePlugin("login", {
+  setup: (ctx) => {
+    ctx.registerView("login", {
+      routes: ["/login"],
+      resolve: (appCtx) => {
+        if (appCtx.user !== null) throw redirectTo("/account");
+        return { data: null, title: "Sign in" };
+      },
+    });
+  },
+});
+```
+
+A view is per-visitor by default:
+
+- **The CDN never stores it** unless you pass `cacheable: true`. A cacheable view's `resolve` returns `tags` too, and a purge of any of them drops the stored page. A view with `access` always renders live.
+- **It claims no canonical address.** The page carries no automatic `<link rel="canonical">`; a view template whose `document()` declares one renders that one.
+- **`@plumix/plugin-seo` marks it `noindex`**, and lists it in no sitemap or `llms.txt`. A site offers a view to search engines with [`indexViews`](/plugins/seo/#views).
+
+A view's name and its routes follow the archive rules. A name registered twice, or a route another registration already claims, fails the boot naming both plugins. To type `data`, add the view to `ViewRegistry`; a name left out still registers, with `data` typed `unknown`:
+
+```ts
+declare module "plumix" {
+  interface ViewRegistry {
+    compareShare: { data: { readonly products: readonly string[] } };
+  }
+}
+```
 
 ### Narrowing an archive
 
@@ -339,4 +384,4 @@ Plumix compiles the route map from registrations rather than from a declaration 
 
 Read [Permalinks and Slugs](/routing/permalinks/) for the outbound half of routing: what a slug may contain, how Plumix composes one into a permalink, and which URL it treats as canonical. Then [Template Hierarchy](/themes/hierarchy/) picks the request up where this page leaves it.
 
-Four pages in this section are not written yet, and everything they describe already ships. Archives covers the paginated listing routes, the `archivePerPage` page size and what an out-of-range page number returns. Redirects covers the three places redirect rules come from, the URLPattern and RegExp forms of `from`, query preservation, and answering `410 Gone` for content you removed on purpose. Rewrite Rules goes deeper into `registerRewriteRule` and `registerArchiveType`, including priorities and the patterns that can never match. Base Path covers serving the whole site under a subdirectory.
+Four pages in this section are not written yet, and everything they describe already ships. Archives covers the paginated listing routes, the `archivePerPage` page size and what an out-of-range page number returns. Redirects covers the three places redirect rules come from, the URLPattern and RegExp forms of `from`, query preservation, and answering `410 Gone` for content you removed on purpose. Rewrite Rules goes deeper into `registerRewriteRule`, `registerArchiveType` and `registerView`, including priorities and the patterns that can never match. Base Path covers serving the whole site under a subdirectory.

@@ -21,6 +21,7 @@ const facts = (overrides: Partial<PageFacts> = {}): PageFacts => ({
   entry: entryOf("post"),
   contentType: null,
   query: null,
+  view: null,
   ...overrides,
 });
 
@@ -122,6 +123,22 @@ describe("the assertion chain, arm by arm", () => {
     expect(
       indexable(facts({ kind: "archiveType", entry: null }), settings()).reason,
     ).toBe("default");
+  });
+
+  test("view — an app page is held out by default", () => {
+    const view = facts({ kind: "view", entry: null, view: "account" });
+    expect(indexable(view, settings())).toEqual({
+      indexable: false,
+      reason: "view",
+    });
+  });
+
+  test("view — a view the site names in indexViews is indexable", () => {
+    const indexViews = new Set(["compareShare"]);
+    const share = facts({ kind: "view", entry: null, view: "compareShare" });
+    const account = facts({ kind: "view", entry: null, view: "account" });
+    expect(indexable(share, settings(), { indexViews }).reason).toBe("default");
+    expect(indexable(account, settings(), { indexViews }).reason).toBe("view");
   });
 
   test("paginated — page two and beyond, by default", () => {
