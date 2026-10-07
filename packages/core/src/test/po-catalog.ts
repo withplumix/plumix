@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import type { CompiledCatalog } from "../blocks/index.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 
-const ENTRY = /^msgid ((?:".*"\n?)+)msgstr ((?:".*"\n?)+)/gm;
+const ENTRY =
+  /^msgid ((?:"(?:[^"\\\n]|\\.)*"(?:\n|$))+)msgstr ((?:"(?:[^"\\\n]|\\.)*"(?:\n|$))+)/gm;
 const PLACEHOLDER = /\{(\w+)\}/g;
 
 // A `.po` string is one or more quoted lines, concatenated.
