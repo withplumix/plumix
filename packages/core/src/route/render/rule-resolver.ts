@@ -81,10 +81,9 @@ export function matchesIdentity(
         (match.day ?? null) === node.day
       );
     case "archiveType":
-      // A `forArchiveType(name)` matcher carries the archive-type name as `type`.
-      return match.type === node.name;
     case "view":
-      // A `forView(name)` matcher carries the view name as `type`.
+      // A `forArchiveType(name)` or `forView(name)` matcher carries the
+      // registered name as `type`.
       return match.type === node.name;
     default:
       return false;
