@@ -431,11 +431,8 @@ describe("access gate — segment-keyed caching (#1740)", () => {
   );
 });
 
-// A type whose policy grants `anonymous` to every principal, signed-in ones
-// included. The theme echoes who it rendered for (a bearer client included), so a test can tell a
-// signed-in body from the anonymous one. A privileged request (a session, an
-// `Authorization` header) renders `private` under such a policy, exactly as
-// under no policy, so its render never lands under the plain URL.
+// The theme echoes who it rendered for (a bearer client included), so a test
+// can tell a signed-in body from the anonymous one.
 const signedInEcho = defineTheme({
   templates: [
     entry(
@@ -454,6 +451,8 @@ const signedInEcho = defineTheme({
   ],
 });
 
+// A type whose policy grants `anonymous` to every principal, signed-in ones
+// included.
 function anonymousGrantPlugin(policy: AccessPolicy) {
   return definePlugin("open-notes", (ctx) => {
     ctx.registerEntryType("note", {
