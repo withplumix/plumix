@@ -830,13 +830,13 @@ describe("MenusShell", () => {
       expect(region).toHaveAttribute("aria-live", "polite");
       // A screen reader speaks a live region when its content is replaced,
       // so an add has to put new text in the region even when it repeats.
-      const announced: string[] = [];
+      const announced: (string | null)[] = [];
       const observer = new MutationObserver((records) => {
-        for (const record of records) {
-          for (const node of record.addedNodes) {
-            announced.push(node.textContent ?? "");
-          }
-        }
+        announced.push(
+          ...records.flatMap((record) =>
+            Array.from(record.addedNodes, (node) => node.textContent),
+          ),
+        );
       });
       observer.observe(region, {
         childList: true,

@@ -588,8 +588,12 @@ function LinkedTargetPickerPanel({
     { message: M.searchTargets.message },
   );
 
+  function nameOf(item: LinkTarget): string {
+    return item.label ?? i18n._(M.untitledTarget);
+  }
+
   function choose(item: LinkTarget): void {
-    const label = item.label ?? i18n._(M.untitledTarget);
+    const label = nameOf(item);
     const meta =
       kind === "entry"
         ? { kind, entryId: Number(item.id) }
@@ -653,9 +657,7 @@ function LinkedTargetPickerPanel({
         }}
       >
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">
-            {item.label ?? i18n._(M.untitledTarget)}
-          </span>
+          <span className="text-sm font-medium">{nameOf(item)}</span>
           {item.subtitle ? (
             <span className="text-muted-foreground text-xs">
               {item.subtitle}
