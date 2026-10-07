@@ -379,6 +379,7 @@ export {
   forDate,
   forEntryType,
   forTermTaxonomy,
+  forView,
   frontPage,
   NAMED_TEMPLATE_META_KEY,
   notFound,
@@ -404,6 +405,7 @@ export {
   termMetaEquals,
   termTaxonomyMatch,
   termTaxonomyTargets,
+  viewTargets,
 } from "./route/render/rule-selectors.js";
 export type {
   AuthorTargets,
@@ -423,6 +425,9 @@ export type {
   TermTaxonomyName,
   TermTaxonomyRegistry,
   TermProjection,
+  ViewDataOf,
+  ViewRegistry,
+  ViewResolvedDataOf,
 } from "./template-registry.js";
 export type {
   EntryMeta,
@@ -474,6 +479,7 @@ export type {
   ResolvedTerm,
   SearchData,
   TermArchiveData,
+  ViewData,
 } from "./route/contract/resolved-entry.js";
 // One page of an archive's entries, as a listed archive's resolver receives it.
 export type { EntryListing } from "./route/contract/entry-listing.js";
@@ -498,6 +504,7 @@ export {
   isFrontPage,
   isSearch,
   isTerm,
+  isView,
 } from "./theme.js";
 export type {
   DocumentLink,

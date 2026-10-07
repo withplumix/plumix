@@ -18,6 +18,8 @@ export function templateNodeLabel(node: ResolvedNode): string {
         .join("-")}`;
     case "archiveType":
       return `archive: ${node.name}`;
+    case "view":
+      return `view: ${node.name}`;
     case "entryType":
       return `${node.entryType} archive`;
     case "frontPage":

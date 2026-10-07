@@ -6,7 +6,11 @@ import type {
   RegisteredTemplateDep,
   TemplateDepKeys,
 } from "../template-deps.js";
-import type { MetaBoxFieldInput, MutablePluginRegistry } from "./manifest.js";
+import type {
+  MetaBoxFieldInput,
+  MutablePluginRegistry,
+  ViewOptions,
+} from "./manifest.js";
 import type { PluginContextExtensions } from "./provides-context.js";
 import type {
   PluginAfterSetupContext,
@@ -223,6 +227,16 @@ function createContextBase({
     registerArchiveType: (name, options) => {
       claimKey(registry.archiveTypes, "archive type", name, pluginId, () => ({
         ...options,
+        name,
+        registeredBy: pluginId,
+      }));
+    },
+
+    registerView: (name, options) => {
+      claimKey(registry.views, "view", name, pluginId, () => ({
+        // Safety: the resolver's `data` was checked against `ViewRegistry` at
+        // the call site; the registry holds every view's as `unknown`.
+        ...(options as ViewOptions),
         name,
         registeredBy: pluginId,
       }));

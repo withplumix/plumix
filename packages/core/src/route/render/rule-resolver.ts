@@ -31,6 +31,8 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   // Plugin archives have no dedicated generic tier — they match via a
   // `forArchiveType(name)` targeted rule, else the universal `fallback`.
   archiveType: "fallback",
+  // Nor have views: a `forView(name)` targeted rule, else `fallback`.
+  view: "fallback",
   frontPage: "frontPage",
   search: "search",
 };
@@ -79,7 +81,9 @@ export function matchesIdentity(
         (match.day ?? null) === node.day
       );
     case "archiveType":
-      // A `forArchiveType(name)` matcher carries the archive-type name as `type`.
+    case "view":
+      // A `forArchiveType(name)` or `forView(name)` matcher carries the
+      // registered name as `type`.
       return match.type === node.name;
     default:
       return false;

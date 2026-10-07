@@ -108,6 +108,7 @@ export {
   termMetaEquals,
   termTaxonomyMatch,
   termTaxonomyTargets,
+  viewTargets,
 } from "@plumix/core";
 
 // Responses a plugin route answers with, and the CDN tag it stores one under.
@@ -286,6 +287,7 @@ export type {
   RegisteredTermMetaBox,
   RegisteredTermTaxonomy,
   RegisteredUserMetaBox,
+  RegisteredView,
   RenderedAssetArgs,
   RequestMemo,
   ResolvedEntity,
@@ -335,5 +337,8 @@ export type {
   UserMetaBoxOptions,
   UserMetaOf,
   UserReferenceSummary,
+  ViewOptions,
+  ViewResolution,
+  ViewResolvedDataOf,
   WithResolvedMeta,
 } from "@plumix/core";

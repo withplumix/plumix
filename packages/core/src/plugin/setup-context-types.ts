@@ -21,6 +21,7 @@ import type { ImageRoleName } from "../images/contract/role-images.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { TemplateDepLoader } from "../template-deps.js";
+import type { ViewResolvedDataOf } from "../template-registry.js";
 import type { TemplateDepKeyedBy, TemplateDepRegistry } from "../template.js";
 import type {
   EntryMetaBoxDrift,
@@ -50,6 +51,7 @@ import type {
   TermMetaBoxOptions,
   TermTaxonomyOptions,
   UserMetaBoxOptions,
+  ViewOptions,
 } from "./manifest.js";
 import type { PluginContextExtensions } from "./provides-context.js";
 
@@ -216,6 +218,25 @@ export interface PluginSetupContextBase {
    * name twice throws.
    */
   registerArchiveType(name: string, options: ArchiveTypeDeclaration): void;
+
+  /**
+   * Register a view — a per-visitor app page such as `/login`, `/account` or
+   * `/compare/:id` — rendered through the theme with the same template,
+   * document and access pipeline as any page, but listing nothing.
+   *
+   * `resolve(ctx, params)` returns `{ data, title, tags? }` or `null` (404),
+   * or throws `pageNotFound()` / `redirectTo()` from `plumix/support`. The
+   * theme targets it with `forView(name)`, else its `fallback` renders it. A
+   * view is never stored by the CDN unless `cacheable: true`, and has no
+   * automatic canonical link.
+   *
+   * Augment `ViewRegistry` with the same `name` to type `data`. Registering
+   * the same name twice throws.
+   */
+  registerView<K extends string>(
+    name: K,
+    options: ViewOptions<ViewResolvedDataOf<K>>,
+  ): void;
 
   /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
   registerRpcRouter(router: PluginRpcRouter): void;

@@ -284,6 +284,11 @@ msgid "plugin.seo.preview.reason.not_found"
 msgstr "Pages that were not found are held out of search in settings."
 
 #. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.view"
+msgstr "App pages are held out of search unless the site names them."
+
+#. js-lingui-explicit-id
 #: src/settings.ts
 msgid "plugin.seo.settings.verification.label"
 msgstr "Site verification"

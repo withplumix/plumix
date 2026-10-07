@@ -1,6 +1,6 @@
 ---
 title: Template Data
-description: The nine shapes a template's render function can receive, the kind that discriminates them, and the guard that narrows each one.
+description: The ten shapes a template's render function can receive, the kind that discriminates them, and the guard that narrows each one.
 tier: P0
 roster: true
 sidebar:
@@ -13,7 +13,7 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## Overview
 
-Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `entryType()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `EntryTypeArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the nine.
+Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `entryType()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `EntryTypeArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the ten.
 
 Narrow the union in one of two ways. A `switch` on `data.kind` narrows in every branch.
 
@@ -34,7 +34,7 @@ export const anything = defineTemplate({
 });
 ```
 
-Dropping the `default` does not make the compiler demand the other seven. `render` returns `ReactNode`, `ReactNode` includes `undefined`, and the shared tsconfig sets no `noImplicitReturns`, so a switch that falls off its last case compiles and renders nothing. To turn a missing case into a build error, replace the `default` return with `const exhaustive: never = data;`, which stops compiling the day a tenth kind lands.
+Dropping the `default` does not make the compiler demand the other eight. `render` returns `ReactNode`, `ReactNode` includes `undefined`, and the shared tsconfig sets no `noImplicitReturns`, so a switch that falls off its last case compiles and renders nothing. To turn a missing case into a build error, replace the `default` return with `const exhaustive: never = data;`, which stops compiling the day an eleventh kind lands.
 
 For a single branch, the guards below read better. Each is a plain function exported from `plumix/theme` that takes `TemplateData` and narrows.
 
@@ -46,7 +46,7 @@ Three projections recur across the shapes.
 
 All three carry `images`: the entity's picture for each [image role](/fields/field-types/#image-roles) its scope declares a field in, keyed by role name and typed from `ImageRoles`, so a template asks for `data.entry.images.featured?.url` rather than guessing a meta key. A role reads `null` when no field in it resolved to an image — an orphaned reference, or one the media adapter refuses — and is absent when the scope declares no field in it at all. The images are projected out of the meta the page already hydrated, so reading them costs no query.
 
-Six of the nine shapes carry `entries` and a `Pagination` of `page`, `perPage`, `total` and `pageCount`. Every listing shape is generic over the entry projection and defaults to `ResolvedEntry`, so a targeted rule can hand you a narrower entry type without a cast.
+Six of the ten shapes carry `entries` and a `Pagination` of `page`, `perPage`, `total` and `pageCount`. Every listing shape is generic over the entry projection and defaults to `ResolvedEntry`, so a targeted rule can hand you a narrower entry type without a cast.
 
 <Aside type="note" title="Narrowing is not access control">
   A guard tells you what shape arrived, nothing more. The [read
@@ -75,7 +75,7 @@ export const single = defineTemplate({
 });
 ```
 
-`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the three listing-free shapes, alongside `ArchiveTypeData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
+`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the four listing-free shapes, alongside `ArchiveTypeData`, `ViewData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
 
 ### `EntryTypeArchiveData`
 
@@ -181,6 +181,20 @@ export const pluginArchive = defineTemplate({
 ```
 
 Core only ever sees the base shape: `kind`, `name`, and two optional facts an archive states about itself — `page`, the 1-based pagination index, and `query`, what the visitor typed on an archive that answers a search. Both are what a consumer such as `@plumix/plugin-seo` classifies the page by; core cannot derive either from the rest of the payload. The [plugin](/plugins/overview/) that called `registerArchiveType` extends it with whatever its archive lists and declares the extended type in `ArchiveTypeRegistry`, so `forArchiveType("seasonal")` types `data` as the plugin's shape rather than this one. Reached through `fallback` instead, it stays the base, and the guard is how you find out which archive you are on.
+
+### `ViewData`
+
+An app page a plugin registered with [`registerView`](/routing/overview/#app-pages-with-registerview). `kind: "view"`, guard `isView`, bound by `forView(name)`.
+
+```tsx
+import { defineTemplate, isView } from "plumix/theme";
+
+export const appPage = defineTemplate({
+  render: ({ data }) => (isView(data) ? <h1>{data.name}</h1> : null),
+});
+```
+
+Core builds the envelope: `name` is the registered view, `params` is what its route captured, and `data` is whatever the view's `resolve` returned. Declare that shape in `ViewRegistry` and `forView(name)` types `data.data` as it; through `fallback` it is `unknown`.
 
 ### `FrontPageData`
 

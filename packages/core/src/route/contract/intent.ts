@@ -21,7 +21,10 @@ export type RouteIntent =
   // A plugin-registered archive type (`registerArchiveType`); `name` looks the
   // resolver up on the registry. This is the open seam — new archive types are
   // registered, not added to this union.
-  | { readonly kind: "archiveType"; readonly name: string };
+  | { readonly kind: "archiveType"; readonly name: string }
+  // A plugin-registered view (`registerView`): a per-visitor app page that
+  // lists nothing. `name` looks the resolver up on the registry.
+  | { readonly kind: "view"; readonly name: string };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

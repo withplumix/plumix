@@ -10,6 +10,7 @@ export type ResolvedNode =
   | ResolvedAuthorNode
   | ResolvedDateNode
   | ResolvedArchiveTypeNode
+  | ResolvedViewNode
   | ResolvedFrontPage
   | ResolvedSearch;
 
@@ -36,6 +37,12 @@ interface ResolvedDateNode {
 interface ResolvedArchiveTypeNode {
   readonly kind: "archiveType";
   /** The registered archive-type name (`registerArchiveType`). */
+  readonly name: string;
+}
+
+interface ResolvedViewNode {
+  readonly kind: "view";
+  /** The registered view name (`registerView`). */
   readonly name: string;
 }
 

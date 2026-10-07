@@ -1,13 +1,15 @@
 type SeoErrorCode =
   | "duplicate_sitemap_scope"
   | "reserved_sitemap_scope"
-  | "unknown_sitemap_policy_key";
+  | "unknown_sitemap_policy_key"
+  | "unknown_index_view";
 
 interface SeoErrorFields {
   scope?: string;
   pluginId?: string;
   existingPluginId?: string;
   key?: string;
+  view?: string;
 }
 
 export class SeoError extends Error {
@@ -20,6 +22,7 @@ export class SeoError extends Error {
   readonly pluginId: string | undefined;
   readonly existingPluginId: string | undefined;
   readonly key: string | undefined;
+  readonly view: string | undefined;
 
   private constructor(
     code: SeoErrorCode,
@@ -32,6 +35,7 @@ export class SeoError extends Error {
     this.pluginId = fields.pluginId;
     this.existingPluginId = fields.existingPluginId;
     this.key = fields.key;
+    this.view = fields.view;
   }
 
   /**
@@ -84,6 +88,19 @@ export class SeoError extends Error {
       `seo: sitemaps.${ctx.key} names no sitemap scope, so its policy would ` +
         `never apply. A scope is a public entry type or taxonomy with no ` +
         `access policy, or one a plugin contributes with \`registerSitemap\`.`,
+      ctx,
+    );
+  }
+
+  /**
+   * The site's `indexViews` option names a view no plugin registered, so the
+   * page it meant to offer would stay `noindex`. Raised at boot, naming it.
+   */
+  static unknownIndexView(ctx: { view: string }): SeoError {
+    return new SeoError(
+      "unknown_index_view",
+      `seo: indexViews names "${ctx.view}", but no plugin registers a view ` +
+        `by that name with \`registerView\`.`,
       ctx,
     );
   }

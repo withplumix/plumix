@@ -186,6 +186,21 @@ export function compileRouteMap(
     }
   }
 
+  // Plugin-registered views (`registerView`): a per-visitor app page lists
+  // nothing, so its routes are taken as written — no derived `/page/:page`.
+  for (const view of registry.views.values()) {
+    for (const rawPattern of view.routes) {
+      rules.push({
+        pattern: new URLPattern({ pathname: rawPattern }),
+        rawPattern,
+        intent: { kind: "view", name: view.name },
+        priority: DEFAULT_REWRITE_RULE_PRIORITY,
+        registeredBy: view.registeredBy,
+        isPermalinkRoute: false,
+      });
+    }
+  }
+
   const sorted = [...rules].sort((a, b) => a.priority - b.priority);
   // Ahead of the duplicate check: an auto archive at `/search` is also a
   // duplicate pattern, and this error names the registration and its slug.

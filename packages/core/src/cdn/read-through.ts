@@ -27,11 +27,11 @@ interface ReadThroughArgs {
    */
   readonly intentKind: RouteIntent["kind"] | null;
   /**
-   * When `intentKind` is `"archiveType"`, whether that plugin-registered archive
-   * opted into CDN caching. The dispatcher resolves it from the archive-type
-   * registry so the pure decision layer stays free of the lookup.
+   * When `intentKind` is `"archiveType"` or `"view"`, whether that
+   * plugin-registered page opted into CDN caching. The dispatcher resolves it
+   * from the registry so the pure decision layer stays free of the lookup.
    */
-  readonly customArchiveCacheable?: boolean;
+  readonly registeredPageCacheable?: boolean;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   /** Records the cache decision + reason as a durationless `cdn` fact. */
@@ -65,7 +65,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
           method: request.method,
           segment,
           intentKind,
-          customArchiveCacheable: args.customArchiveCacheable,
+          registeredPageCacheable: args.registeredPageCacheable,
           canKeySegments: originStore || cdn.segmentVary !== undefined,
         });
   if (reason !== null) {

@@ -79,7 +79,7 @@ const anything = defineTemplate({
 export const rules = [fallback(anything)];
 ```
 
-Its template is typed against the whole `TemplateData` union, so narrow on `data.kind` or with the guards in [Template Data](/themes/template-data/) before reading anything shape-specific. Archives a [plugin](/plugins/overview/) registered have no generic tier of their own and land here unless a `forArchiveType` rule claims them.
+Its template is typed against the whole `TemplateData` union, so narrow on `data.kind` or with the guards in [Template Data](/themes/template-data/) before reading anything shape-specific. Archives and views a [plugin](/plugins/overview/) registered have no generic tier of their own and land here unless a `forArchiveType` or `forView` rule claims them.
 
 ### `entry`
 
@@ -398,6 +398,31 @@ export const rules = [forArchiveType("seasonal").template(seasonal)];
 ```
 
 Augment `ArchiveTypeRegistry` under the same name the plugin registered, and `data` is typed from your projection rather than from the bare `{ kind, name }` core sees. Without a targeted rule these archives resolve to `fallback`, since no generic tier claims them.
+
+### `forView`
+
+Targets an app page a plugin registered with [`registerView`](/routing/overview/#app-pages-with-registerview), such as a sign-in form or a shared comparison. The template receives `kind: "view"`, the view's `name`, the `params` its route captured, and under `data.data` whatever the view's `resolve` returned.
+
+```tsx
+import { forView } from "plumix/theme";
+
+declare module "plumix" {
+  interface ViewRegistry {
+    compareShare: { data: { readonly products: readonly string[] } };
+  }
+}
+
+export const rules = [
+  forView("compareShare").template(({ data }) => (
+    <main>
+      <h1>Comparison {data.params.id}</h1>
+      <p>{data.data.products.join(" vs ")}</p>
+    </main>
+  )),
+];
+```
+
+`forView` accepts any name. One declared in `ViewRegistry` types `data.data`, and any other leaves it `unknown`. A view without a targeted rule resolves to `fallback`, since views have no generic tier. A view page carries no automatic canonical link, so a template whose page has one canonical address declares it in `document()`.
 
 ## Related
 

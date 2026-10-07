@@ -22,6 +22,10 @@ const host = definePlugin("feeds-discovery-host", (ctx) => {
     entryTypes: ["post"],
     isHierarchical: true,
   });
+  ctx.registerView("compare", {
+    routes: ["/compare/:id"],
+    resolve: () => ({ data: null, title: "Compare" }),
+  });
 });
 
 async function seeded(
@@ -96,6 +100,7 @@ describe("feed discovery", () => {
   test.each([
     ["a single entry", "/post/hello", 200],
     ["the search page", "/search/hello", 200],
+    ["a view", "/compare/abc", 200],
     ["a missing term at an archive's URL", "/category/ghost", 404],
   ])("%s advertises nothing", async (_page, path, status) => {
     const h = await seeded();

@@ -70,6 +70,7 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "ThemeDescriptor",
       "UnlistedArchiveTypeOptions",
       "UserMetaContributions",
+      "ViewRegistry",
     ],
   },
   {

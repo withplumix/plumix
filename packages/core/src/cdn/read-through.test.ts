@@ -278,7 +278,7 @@ describe("readThrough", () => {
       request: GET(),
       segment: "anonymous",
       intentKind: "archiveType",
-      customArchiveCacheable: true,
+      registeredPageCacheable: true,
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,

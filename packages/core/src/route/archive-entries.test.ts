@@ -38,6 +38,10 @@ const site = definePlugin("site", (ctx) => {
       title: "L",
     }),
   });
+  ctx.registerView("compare", {
+    routes: ["/compare/:id"],
+    resolve: () => ({ data: null, title: "Compare" }),
+  });
 });
 
 let h: DispatcherHarness;
@@ -76,6 +80,7 @@ describe("archiveAtPath", () => {
     ["a single entry", "/post/hello"],
     ["the search page", "/search/hello"],
     ["a plugin archive without entries", "/legacy/x"],
+    ["a view", "/compare/abc"],
     ["params a plugin archive declines", "/talks/none"],
     ["an unknown path", "/no/such/thing"],
   ])("%s is no archive", (_what, path) => {
@@ -191,6 +196,7 @@ describe("archiveBaseRoutes", () => {
       [],
     );
     expect(patterns).not.toContain("/legacy/:x");
+    expect(patterns).not.toContain("/compare/:id");
   });
 
   test("names no author or date archive where the site turned those routes off", async () => {

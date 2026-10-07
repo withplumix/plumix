@@ -20,6 +20,8 @@ entry-type listing alone.
 > that says what kind a page is spells it with these words, and "archive" is
 > never a page kind.**
 
+Amended by ADR 0035, which adds `view` for a per-visitor app page.
+
 ## What this means
 
 - **Named by subject.** A term's page is `term` because it is about one term,

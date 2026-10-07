@@ -9,8 +9,8 @@ import { feedUnder, servesFeed } from "./routes.js";
  * The path of the RSS feed a page advertises, base prefix included, or null
  * when it has none: the feed of the archive that owns the page, as the
  * dispatcher resolved it. A later page advertises the feed
- * of the route it paginates. A single entry and the search page belong to no
- * archive, so they advertise nothing — and neither does an error page, which
+ * of the route it paginates. A single entry, the search page and a view belong
+ * to no archive, so they advertise nothing — and neither does an error page, which
  * can sit at an archive's URL without being its page.
  */
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
@@ -19,7 +19,13 @@ function feedBase(data: TemplateData, ctx: AppContext): string | null {
   // The route the dispatcher resolved already names the archive, so the page
   // is not matched against the route table a second time.
   const archive = route.intent;
-  if (archive.kind === "entry" || archive.kind === "search") return null;
+  if (
+    archive.kind === "entry" ||
+    archive.kind === "search" ||
+    archive.kind === "view"
+  ) {
+    return null;
+  }
   const pathname = new URL(ctx.request.url).pathname;
   const feedPath = feedUnder(listingPath(route, pathname));
   return servesFeed(ctx.plugins, archive, feedPath)

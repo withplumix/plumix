@@ -1010,3 +1010,62 @@ describe("site verification", () => {
     expect(head).not.toContain("msvalidate.01");
   });
 });
+
+describe("views", () => {
+  const appPlugin = definePlugin("app", (ctx) => {
+    ctx.registerView("compareShare", {
+      routes: ["/compare/:id"],
+      resolve: () => ({ data: null, title: "Comparison" }),
+    });
+    ctx.registerView("account", {
+      routes: ["/account"],
+      resolve: () => ({ data: null, title: "Your account" }),
+    });
+  });
+
+  function viewHarness(options?: SeoOptions): Promise<DispatcherHarness> {
+    return createDispatcherHarness({
+      config: { plugins: [appPlugin, seo(options)], theme },
+    });
+  }
+
+  test("a view page emits noindex by default", async () => {
+    const h = await viewHarness();
+
+    const head = await dispatchHead(h, "https://cms.example/compare/abc");
+
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+    expect(head).not.toContain('rel="canonical"');
+  });
+
+  test("a view named in indexViews is indexable, and no other view is", async () => {
+    const h = await viewHarness({ indexViews: ["compareShare"] });
+
+    const share = await dispatchHead(h, "https://cms.example/compare/abc");
+    const account = await dispatchHead(h, "https://cms.example/account");
+
+    expect(share).toContain(
+      '<meta name="robots" content="index,follow,max-image-preview:large"/>',
+    );
+    expect(share).not.toContain('rel="canonical"');
+    expect(account).toContain('<meta name="robots" content="noindex,follow"/>');
+  });
+
+  test("no view reaches the sitemap or llms.txt, indexed or not", async () => {
+    const h = await viewHarness({ indexViews: ["compareShare"] });
+
+    for (const path of ["/sitemap.xml", "/llms.txt"]) {
+      const res = await h.dispatch(new Request(`https://cms.example${path}`));
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).not.toContain("/compare");
+      expect(body).not.toContain("/account");
+    }
+  });
+
+  test("an indexViews name no view registered fails boot naming it", async () => {
+    await expect(viewHarness({ indexViews: ["nope"] })).rejects.toThrow(
+      /indexViews.*"nope"/,
+    );
+  });
+});

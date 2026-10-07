@@ -79,6 +79,9 @@ export async function policyForMatch(
   if (intent.kind === "archiveType") {
     return ctx.plugins.archiveTypes.get(intent.name)?.access ?? null;
   }
+  if (intent.kind === "view") {
+    return ctx.plugins.views.get(intent.name)?.access ?? null;
+  }
   return null;
 }
 

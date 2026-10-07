@@ -250,6 +250,11 @@ export function dateTargets<S>(bind: BindRule<S>): DateTargets<S> {
     });
 }
 
+/** One plugin-registered view (`registerView`). */
+export function viewTargets<S>(name: string, bind: BindRule<S>): S {
+  return bind({ match: { nodeKind: "view", type: name } });
+}
+
 /** One plugin-registered archive type (`registerArchiveType`). */
 export function archiveTypeTargets<S>(name: string, bind: BindRule<S>): S {
   return bind({ match: { nodeKind: "archiveType", type: name } });

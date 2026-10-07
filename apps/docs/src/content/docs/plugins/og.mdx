@@ -22,13 +22,13 @@ The route answers a request carrying a matching `If-None-Match` with `304`. With
 
 `<target>` names the page a card is about — `entry/12`, `term/3`, `archive/post`, `author/7`, `date/2026-03`, `front-page` — and each of those six gets a card from the bundled template with nothing configured. See [which page kinds have a card](#which-page-kinds-have-a-card) for when each one is served.
 
-<Aside type="note" title="Two page kinds have no card">
-  A search page and a `registerArchiveType` archive get none: a search page's
-  subject is whatever the visitor typed, so a card per query would fill your
-  bucket from the query string, and a plugin archive is resolved by its own
-  plugin from route parameters no card URL can name. `card.search()` and
-  `card.forArchiveType()` rules still type-check and resolve — they are simply
-  never addressed.
+<Aside type="note" title="Three page kinds have no card">
+  A search page, a `registerArchiveType` archive and a `registerView` view get
+  none: a search page's subject is whatever the visitor typed, so a card per
+  query would fill your bucket from the query string, and a plugin archive or
+  view is resolved by its own plugin from route parameters no card URL can name.
+  `card.search()` and `card.forArchiveType()` rules still type-check and resolve
+  — they are simply never addressed.
 </Aside>
 
 ## Quickstart

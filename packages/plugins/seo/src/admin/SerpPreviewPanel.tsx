@@ -28,6 +28,7 @@ const REASONS: Record<
   search_results: M.reasonSearchResults,
   paginated: M.reasonPaginated,
   not_found: M.reasonNotFound,
+  view: M.reasonView,
 };
 
 interface PanelProps {

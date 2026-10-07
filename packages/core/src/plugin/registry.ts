@@ -689,6 +689,57 @@ export type RegisteredArchiveType = ArchiveTypeDeclaration & {
 };
 
 /**
+ * What a view's resolver produces: the `data` its template receives under
+ * `data.data`, the document title, and — for a view that opted into the CDN —
+ * the tags that purge it.
+ */
+export interface ViewResolution<TData = unknown> {
+  readonly data: TData;
+  readonly title: string;
+  /**
+   * CDN tags for what this view read (see {@link typeTag}). Only consumed when
+   * the view is `cacheable`; ignored otherwise.
+   */
+  readonly tags?: readonly string[];
+}
+
+/**
+ * `registerView` options. A view is a per-visitor app page — a sign-in form,
+ * an account page, a shared comparison — rendered through the theme like any
+ * other page but listing nothing, so it has no `entries`, no paging and no
+ * feed (ADR 0035).
+ */
+export interface ViewOptions<TData = unknown> {
+  /** URLPattern pathnames that dispatch to this view (`/compare/:id`). */
+  readonly routes: readonly string[];
+  /**
+   * Access-control policy gating the view, as on an archive type. Absent ⇒
+   * the global `anonymous` default.
+   */
+  readonly access?: AccessPolicyFor<AppContext>;
+  /**
+   * Opt this view's anonymous GET renders into the built-in CDN. Off by
+   * default: a view is usually different for every visitor. Pair it with
+   * {@link ViewResolution.tags} so a change purges the stored page.
+   */
+  readonly cacheable?: boolean;
+  /**
+   * The view's data and title, or `null` for a 404. It may instead throw
+   * `pageNotFound()` or `redirectTo()` from `plumix/support` to end the
+   * request, reading the session off `ctx` (ADR 0032).
+   */
+  readonly resolve: (
+    ctx: AppContext,
+    params: Record<string, string>,
+  ) => Promise<ViewResolution<TData> | null> | ViewResolution<TData> | null;
+}
+
+export type RegisteredView = ViewOptions & {
+  readonly name: string;
+  readonly registeredBy: string | null;
+};
+
+/**
  * Reference to a React component contributed by a plugin. The string is
  * the export name on the plugin's `adminEntry` module — the plumix vite
  * pipeline namespace-imports each plugin's entry and emits the matching
@@ -1065,6 +1116,7 @@ export interface PluginRegistry {
   readonly rewriteRules: readonly RegisteredRewriteRule[];
   readonly redirects: readonly RedirectRule[];
   readonly archiveTypes: ReadonlyMap<string, RegisteredArchiveType>;
+  readonly views: ReadonlyMap<string, RegisteredView>;
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
@@ -1103,6 +1155,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rewriteRules: RegisteredRewriteRule[];
   readonly redirects: RedirectRule[];
   readonly archiveTypes: Map<string, RegisteredArchiveType>;
+  readonly views: Map<string, RegisteredView>;
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly mcpTools: Map<string, RegisteredMcpTool>;
   readonly rawRoutes: RegisteredRawRoute[];
@@ -1138,6 +1191,7 @@ export function createPluginRegistry(
     rewriteRules: [],
     redirects: [],
     archiveTypes: new Map(),
+    views: new Map(),
     rpcRouters: new Map(),
     mcpTools: new Map(),
     rawRoutes: [],

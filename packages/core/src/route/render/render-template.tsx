@@ -178,9 +178,13 @@ async function renderThroughThemeInner({
     ctx,
     deps,
   });
+  // A view is a per-visitor page, so it claims no canonical address unless
+  // its `document` declares a canonical link of its own (ADR 0035).
+  const pageDocument: DocumentManifest =
+    data.kind === "view" ? { ...merged, canonical: false } : merged;
   const filtered = await ctx.hooks.applyFilter(
     "render:document",
-    merged,
+    pageDocument,
     data,
     ctx,
     title,

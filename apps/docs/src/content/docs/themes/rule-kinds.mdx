@@ -158,7 +158,7 @@ Everything the walk does for `templates` it now does for `feeds`. A theme writes
 
 ## The target constructors
 
-Five constructors, one per matcher family. Between them they reach all six node kinds — `entryTypeTargets` is the one that covers two, an entry and that entry type's archive — and they mint every matcher the shared vocabulary knows how to compare. Each takes your bind function and returns the selector chain with the narrowings hung off it, so the shapes stay identical across rule kinds and a matcher the framework adds reaches yours without being mirrored.
+Six constructors, one per matcher family. Between them they reach all seven node kinds — `entryTypeTargets` is the one that covers two, an entry and that entry type's archive — and they mint every matcher the shared vocabulary knows how to compare. Each takes your bind function and returns the selector chain with the narrowings hung off it, so the shapes stay identical across rule kinds and a matcher the framework adds reaches yours without being mirrored.
 
 The samples below bind to a bare probe — a selector that keeps the selected match and carries no payload at all — because what each constructor publishes is the vocabulary, not what any one rule kind does with it.
 
@@ -263,13 +263,28 @@ export const matcher = archiveTypeTargets("seasonal", bind).selected;
 
 `name` is a plain `string` here, unlike the two above it. The constructor mints `{ nodeKind: "archiveType", type: "seasonal" }` and types nothing from it, so a rule kind that wants the name checked against `ArchiveTypeRegistry` adds that constraint on its own wrapper — which is also where it would type the payload against the archive's data shape. Without a rule at all these archives fall to `fallback`, since no generic tier claims them.
 
+### `viewTargets`
+
+One app page a plugin registered with `registerView`. No narrowings — a view is a single node, so the name is the whole matcher.
+
+```ts
+import type { TierMatchRule } from "plumix/plugin";
+import { viewTargets } from "plumix/plugin";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+export const matcher = viewTargets("compareShare", bind).selected;
+```
+
+The constructor mints `{ nodeKind: "view", type: "compareShare" }`. Like `archiveTypeTargets`, it types nothing from the name; `forView` is where a theme gets `data` typed from `ViewRegistry`. A view without a rule falls to `fallback`.
+
 ## The match constructors
 
-The five above publish the narrowings core already knows how to mint. A rule kind wanting one of _its own_ — the way `named` is `templates`' own — needs the two pieces underneath them: the node prefix a narrowing hangs off, and the predicate that goes inside it. Four constructors, and they are the same four `templates` builds `named` out of.
+The six above publish the narrowings core already knows how to mint. A rule kind wanting one of _its own_ — the way `named` is `templates`' own — needs the two pieces underneath them: the node prefix a narrowing hangs off, and the predicate that goes inside it. Four constructors, and they are the same four `templates` builds `named` out of.
 
-Reach for them only after the five above have run out. A narrowing they already publish is one you should be taking rather than re-minting: `.whereMeta("season", "winter")` is `entryTypeMatch` and `metaEquals` already composed, with the key and the value typed for you.
+Reach for them only after the six above have run out. A narrowing they already publish is one you should be taking rather than re-minting: `.whereMeta("season", "winter")` is `entryTypeMatch` and `metaEquals` already composed, with the key and the value typed for you.
 
-Two prefixes, not five: an author, date or archive-type matcher carries a fixed `type` and no name to check, so `authorTargets`, `dateTargets` and `archiveTypeTargets` are already the whole of theirs, and a narrowing of your own on one of those writes its `match` inline.
+Two prefixes, not six: an author, date, archive-type or view matcher carries a fixed `type` and no name to check, so `authorTargets`, `dateTargets`, `archiveTypeTargets` and `viewTargets` are already the whole of theirs, and a narrowing of your own on one of those writes its `match` inline.
 
 Then hang the narrowing off your own builder exactly where `forEntryType` hangs `named` — beside the constructor's, not inside it:
 
@@ -371,7 +386,7 @@ The two are not interchangeable, and nothing rejects the wrong one — `TargetMa
 
 ## What a bind function has to return
 
-A `BindRule<S>` has to return **a fresh object literal carrying nothing but its own terminal**. `entryTypeTargets`, `termTaxonomyTargets` and `authorTargets` spread what it returns and hang the narrowings off the result, so anything that is not an own, enumerable key is lost, and any own key named for a narrowing is overwritten by it. `dateTargets` and `archiveTypeTargets` have no narrowings to hang and return your selector untouched — but the contract is what all five hold you to, because one bind function normally serves the lot.
+A `BindRule<S>` has to return **a fresh object literal carrying nothing but its own terminal**. `entryTypeTargets`, `termTaxonomyTargets` and `authorTargets` spread what it returns and hang the narrowings off the result, so anything that is not an own, enumerable key is lost, and any own key named for a narrowing is overwritten by it. `dateTargets`, `archiveTypeTargets` and `viewTargets` have no narrowings to hang and return your selector untouched — but the contract is what all six hold you to, because one bind function normally serves the lot.
 
 Both failures typecheck cleanly. Neither shows up until a request runs.
 
@@ -447,7 +462,7 @@ If what you want is an author-selectable choice, the mechanism underneath `named
 
 ## The worked example
 
-`@plumix/plugin-og` is this page in production. Its `ogCards` slot on `ThemeDescriptor` holds `CardRule`, which is `TierMatchRule` plus a `card`; its `card.forEntryType("recipe").define({ ... })` builders come from the same five constructors; it snapshots the theme's rules at `theme:ready` into a registry whose own defaults sit behind them in declaration order, so a card the theme declared outranks the plugin's; and it resolves through `resolveRule` rather than a second walk. A theme therefore places a social card exactly the way it places a template.
+`@plumix/plugin-og` is this page in production. Its `ogCards` slot on `ThemeDescriptor` holds `CardRule`, which is `TierMatchRule` plus a `card`; its `card.forEntryType("recipe").define({ ... })` builders come from the same constructors; it snapshots the theme's rules at `theme:ready` into a registry whose own defaults sit behind them in declaration order, so a card the theme declared outranks the plugin's; and it resolves through `resolveRule` rather than a second walk. A theme therefore places a social card exactly the way it places a template.
 
 Two decisions in it are worth copying. Its selectors erase the per-tier data type on the way into the rule, which keeps `ogCards` a homogeneous array rather than a tuple of one shape per tier. And its defaults are appended rather than merged, which makes "the theme wins" a property of array order instead of a precedence rule someone has to maintain.
 

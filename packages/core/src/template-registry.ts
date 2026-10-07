@@ -2,6 +2,7 @@ import type {
   ArchiveTypeData,
   ResolvedEntry,
   ResolvedTerm,
+  ViewData,
 } from "./route/contract/resolved-entry.js";
 
 /**
@@ -61,6 +62,24 @@ export interface TermTaxonomyRegistry {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface ArchiveTypeRegistry {}
 
+/**
+ * Augmentable map of plugin-registered view names to the `data` their
+ * `resolve` returns. A plugin augments it alongside its `registerView` call so
+ * `forView(name)` types `data.data` and `registerView` holds the resolver to
+ * the same shape. A name with no entry here still registers and templates,
+ * with `data` left `unknown`.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface ViewRegistry {
+ *     compareShare: { data: CompareShare };
+ *   }
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
+export interface ViewRegistry {}
+
 export type EntryTypeName = keyof EntryTypeRegistry;
 export type TermTaxonomyName = keyof TermTaxonomyRegistry;
 export type ArchiveTypeName = keyof ArchiveTypeRegistry;
@@ -70,6 +89,16 @@ export type ArchiveDataOf<K extends ArchiveTypeName> =
   ArchiveTypeRegistry[K] extends { data: infer D extends ArchiveTypeData }
     ? D
     : ArchiveTypeData;
+
+/** What a view's `resolve` returns as `data`, `unknown` for an undeclared name. */
+export type ViewResolvedDataOf<K extends string> = K extends keyof ViewRegistry
+  ? ViewRegistry[K] extends { data: infer D }
+    ? D
+    : unknown
+  : unknown;
+
+/** The template data for a view, typed from `ViewRegistry` when declared there. */
+export type ViewDataOf<K extends string> = ViewData<ViewResolvedDataOf<K>>;
 
 /** The entry projection for a registered type, defaulting to `ResolvedEntry`. */
 export type EntryProjection<K extends EntryTypeName> =
