@@ -1,4 +1,6 @@
 import type { Label } from "plumix/i18n";
+import type { AppContext } from "plumix/plugin";
+import { enqueuePurgeTags, entryTag } from "plumix/db";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -6,6 +8,7 @@ import {
 } from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "./config.js";
+import type { Comment } from "./db/schema.js";
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import { LIST_ROUTE_PATH, SUBMIT_ROUTE_PATH } from "./contract.js";
@@ -127,6 +130,21 @@ export function comments(options: CommentsConfig = {}) {
         output: commentsEnvelopeSchema,
         handler: createCommentsRestHandler(config),
       });
+
+      // The approved thread renders only on its entry's permalink, stored
+      // under `e:<entryId>`. The payload carries no previous status, so a
+      // transition purges whatever it moved from.
+      const purgeEntryPage = (comment: Comment, appCtx: AppContext) => {
+        enqueuePurgeTags(appCtx, [entryTag(comment.entryId)]);
+      };
+      ctx.addAction("comment:created", (comment, appCtx) => {
+        // A held or spam comment changes nothing a visitor sees.
+        if (comment.status === "approved") purgeEntryPage(comment, appCtx);
+      });
+      ctx.addAction("comment:approved", purgeEntryPage);
+      ctx.addAction("comment:spam", purgeEntryPage);
+      ctx.addAction("comment:trashed", purgeEntryPage);
+      ctx.addAction("comment:deleted", purgeEntryPage);
 
       if (config.notifyEmail) {
         const recipient = config.notifyEmail;

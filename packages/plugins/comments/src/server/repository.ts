@@ -213,6 +213,11 @@ export async function setStatus(
   return row ?? null;
 }
 
+/** What {@link purgeComment} did, with the row as it stood before. */
+type PurgeOutcome =
+  | { readonly result: "tombstoned" | "deleted"; readonly comment: Comment }
+  | { readonly result: "missing" };
+
 /**
  * Hard-remove a comment. A comment with replies is tombstoned (body and
  * author identity blanked, node kept) so the thread structure survives; a
@@ -221,7 +226,14 @@ export async function setStatus(
 export async function purgeComment(
   ctx: AppContext,
   id: number,
-): Promise<"tombstoned" | "deleted" | "missing"> {
+): Promise<PurgeOutcome> {
+  const [comment] = await ctx.db
+    .select()
+    .from(comments)
+    .where(eq(comments.id, id))
+    .limit(1);
+  if (!comment) return { result: "missing" };
+
   const [child] = await ctx.db
     .select({ id: comments.id })
     .from(comments)
@@ -240,12 +252,14 @@ export async function purgeComment(
       })
       .where(eq(comments.id, id))
       .returning({ id: comments.id });
-    return row ? "tombstoned" : "missing";
+    return row ? { result: "tombstoned", comment } : { result: "missing" };
   }
 
   const deleted = await ctx.db
     .delete(comments)
     .where(eq(comments.id, id))
     .returning({ id: comments.id });
-  return deleted.length > 0 ? "deleted" : "missing";
+  return deleted.length > 0
+    ? { result: "deleted", comment }
+    : { result: "missing" };
 }

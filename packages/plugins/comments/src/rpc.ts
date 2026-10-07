@@ -111,7 +111,15 @@ export function createCommentsRouter() {
         input,
         context,
       }): Promise<{ result: "tombstoned" | "deleted" | "missing" }> => {
-        return { result: await purgeComment(context, input.id) };
+        const outcome = await purgeComment(context, input.id);
+        if (outcome.result !== "missing") {
+          await context.hooks.doAction(
+            "comment:deleted",
+            outcome.comment,
+            context,
+          );
+        }
+        return { result: outcome.result };
       },
     );
 

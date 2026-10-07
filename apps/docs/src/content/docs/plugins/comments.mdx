@@ -24,6 +24,7 @@ What it registers:
 - A REST resource at `/{collection}/{entry}/comments`, behind the site's `api.enabled` switch. An entry that isn't a published one open to anonymous visitors, or isn't of the named collection's type, is a 404; one whose type has commenting off is an empty page.
 - A moderation queue in the admin, gated on the `comment:moderate` capability the plugin mints for the editor role.
 - A `comment:moderate` filter and a `comment:created` action, which is where a spam or notification plugin attaches.
+- The lifecycle actions a moderator's writes fire: `comment:approved` (also on restore), `comment:spam`, `comment:trashed`, and `comment:deleted` when a comment is removed for good, tombstoned or not. Each passes the comment row, and `comment:deleted` passes it as it stood before the removal.
 
 Two surfaces render the form. `PlumixCommentForm` from `@plumix/plugin-comments/theme` is the plugin's own markup, and `usePlumixCommentForm` from `@plumix/plugin-comments/hooks` is the same submission with none of the markup, for a theme writing its own controls.
 
@@ -191,6 +192,8 @@ It posts to the same endpoint the rendered form posts to, so a comment sent from
 A comment from a signed-in author takes a fast path to `approved` whatever the mode — subject to the divergence above, which is the one place that fast path is not taken.
 
 The `comment:moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A filter returning anything that is not a known status is ignored rather than persisted.
+
+Approving, restoring, spamming, trashing or deleting a comment purges the cached copy of its entry's page from the CDN, and so does a new comment that arrives approved. A held comment purges nothing, since the page does not show it. Only the entry's own page is purged: the thread renders nowhere else.
 
 Two spam defences sit below it. The honeypot is a field a person never sees and a bot fills; a comment that trips it is answered exactly as a real one is — telling a bot it was caught only teaches it to stop filling the trap — and no row is written. The rate limit is a sliding window over a salted hash of the visitor's address. Off Cloudflare that address is client-spoofable, so the limiter is best-effort there and edge or WAF rules are the real flood defence.
 

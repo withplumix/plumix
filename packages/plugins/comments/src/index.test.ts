@@ -82,11 +82,13 @@ describe("comments() plugin", () => {
     expect(s.rpcRouter).toBe(true);
   });
 
-  test("registers a comment:created listener only when notifyEmail is set", () => {
-    expect(captureSetup({}).actions).not.toContain("comment:created");
-    expect(captureSetup({ notifyEmail: "mod@example.test" }).actions).toContain(
-      "comment:created",
-    );
+  // The CDN purge listens always; the moderator email only with an address.
+  test("adds a comment:created listener for notifyEmail only when it is set", () => {
+    const created = (options: CommentsConfig) =>
+      captureSetup(options).actions.filter((name) => name === "comment:created")
+        .length;
+    expect(created({})).toBe(1);
+    expect(created({ notifyEmail: "mod@example.test" })).toBe(2);
   });
 });
 
