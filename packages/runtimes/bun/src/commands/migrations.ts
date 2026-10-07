@@ -4,7 +4,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { BunSqliteClient } from "../bun-sqlite-client.js";
 import { drizzleBunSqlite, openBunSqlite } from "../bun-sqlite-client.js";
 import { databaseFile, isBunSqlite } from "../bun-sqlite.js";
-import { MigrateApplyError } from "../errors.js";
+import { MigrationsError } from "../errors.js";
 
 function migrationDatabase(client: BunSqliteClient): MigrationDatabase {
   return {
@@ -43,7 +43,7 @@ export const migrations: RuntimeMigrations = {
     const database = app.config.database;
     if (!isBunSqlite(database)) {
       return Promise.reject(
-        MigrateApplyError.databaseNotBunSqlite({ kind: database.kind }),
+        MigrationsError.databaseNotBunSqlite({ kind: database.kind }),
       );
     }
     const path =

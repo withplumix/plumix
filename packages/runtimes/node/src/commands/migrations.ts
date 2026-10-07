@@ -3,7 +3,7 @@ import type { MigrationDatabase, RuntimeMigrations } from "plumix";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import type { NodeSqliteClient } from "../node-sqlite-client.js";
-import { MigrateApplyError } from "../errors.js";
+import { MigrationsError } from "../errors.js";
 import { drizzleNodeSqlite, openNodeSqlite } from "../node-sqlite-client.js";
 import { isNodeSqlite } from "../node-sqlite.js";
 
@@ -44,7 +44,7 @@ export const migrations: RuntimeMigrations = {
     const database = app.config.database;
     if (!isNodeSqlite(database)) {
       return Promise.reject(
-        MigrateApplyError.databaseNotNodeSqlite({ kind: database.kind }),
+        MigrationsError.databaseNotNodeSqlite({ kind: database.kind }),
       );
     }
     const path =

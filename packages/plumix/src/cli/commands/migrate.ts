@@ -33,11 +33,12 @@ const MIGRATIONS_OUT = "drizzle";
 export const migrateCommand: CommandDefinition = {
   describe: "Apply each table owner's migrations, or generate the site's",
   async run(ctx) {
-    const { sub, remote, binding } = parseMigrateArgs(ctx.argv);
-    if (sub === "generate") {
+    // `generate` never read its arguments, so it parses none.
+    if (ctx.argv[0] === "generate") {
       await migrateGenerate(ctx);
       return;
     }
+    const { sub, remote, binding } = parseMigrateArgs(ctx.argv);
     if (sub === undefined) {
       await withDatabase(ctx, { remote, binding }, adoptAndApply(ctx, binding));
       return;
@@ -153,9 +154,9 @@ function adoptAndApply(
   };
 }
 
-// The paths the runtime's `plumix.e2e.wipe` names — the same local state an
-// e2e run starts from nothing — read off the runtime package that provides the
-// commands module.
+// The paths the runtime's `plumix.e2e.wipe` names, the local state an e2e run
+// starts from nothing, read off the runtime package that provides the commands
+// module.
 function wipeLocalState(ctx: CommandContext): void {
   const runtime = ctx.app.config.runtime;
   const wipe = runtime.commandsModule

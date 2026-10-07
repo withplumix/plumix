@@ -188,10 +188,8 @@ export async function adoptLegacyDatabase(
   legacyTable: string,
   openScratch: () => Promise<MigrationDatabase>,
 ): Promise<void> {
-  const legacy = await db.all(
-    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${quote(legacyTable)}`,
-  );
-  if (legacy.length === 0 || (await trackingTables(db)).length > 0) return;
+  if (!(await tableExists(db, legacyTable))) return;
+  if ((await trackingTables(db)).length > 0) return;
 
   const scratch = await openScratch();
   let expected: Map<string, Map<string, string>>;
