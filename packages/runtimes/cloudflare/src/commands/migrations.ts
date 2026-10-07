@@ -5,7 +5,7 @@ import type {
   MigrationDatabase,
   MigrationLocation,
   RuntimeMigrations,
-} from "plumix";
+} from "plumix/cli";
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";

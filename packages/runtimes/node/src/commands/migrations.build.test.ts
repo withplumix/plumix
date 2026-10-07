@@ -52,7 +52,7 @@ async function plumix(
 function query(sql: string): Record<string, unknown>[] {
   const db = new DatabaseSync(join(dir, "data/site.sqlite"));
   try {
-    return db.prepare(sql).all() as Record<string, unknown>[];
+    return db.prepare(sql).all();
   } finally {
     db.close();
   }

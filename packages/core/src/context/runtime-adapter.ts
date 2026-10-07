@@ -184,6 +184,12 @@ export interface OpenMigrationDatabaseOptions {
   readonly binding: string | undefined;
 }
 
+/**
+ * One row a migration read returns, as the driver hands it back: each column
+ * name to the SQLite value in it. Not JSON — it never went through a parser.
+ */
+export type MigrationRow = Record<string, unknown>;
+
 export interface MigrationStatement {
   readonly sql: string;
   readonly params: readonly (string | number)[];
@@ -195,7 +201,7 @@ export interface MigrationStatement {
  */
 export interface MigrationDatabase {
   migrate(folder: MigrationFolder): Promise<void>;
-  all(sql: string): Promise<readonly Record<string, unknown>[]>;
+  all(sql: string): Promise<readonly MigrationRow[]>;
   /** Runs every statement, or none of them. */
   batch(statements: readonly MigrationStatement[]): Promise<void>;
   close(): Promise<void>;
