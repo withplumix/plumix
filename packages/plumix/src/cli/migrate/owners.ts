@@ -83,8 +83,7 @@ export function sitePlugins(
   const siteRoot = siteRootOf(configPath);
   return config.plugins.filter(
     (plugin) =>
-      plugin.schemaModule !== undefined &&
-      plugin.schemaModule !== "" &&
+      plugin.schemaModule &&
       schemaOwnerRoot(cwd, siteRoot, plugin.schemaModule) === null,
   );
 }

@@ -43,7 +43,7 @@ export async function applySearchSchema(db: SearchTestDb): Promise<void> {
 
 /**
  * Take the index and its triggers away, leaving the projection behind — the
- * shape an install has when the plugin's raw SQL migration never ran.
+ * shape an install has when the plugin's migration never ran.
  *
  * The triggers go with the table because they write to it: leaving one behind
  * would make every projection write fail, which is a different fault from the
