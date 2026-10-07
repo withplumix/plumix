@@ -265,12 +265,13 @@ describe("ctx.mail.send — a name nobody declared", () => {
 
     await h.fetch("/_plumix/stray/send");
 
-    expect(outcome).toMatchObject({
-      status: "rejected",
-      reason: expect.any(MailError),
-    });
-    expect(outcome).toMatchObject({
-      reason: { code: "mail_not_declared", mail: "welcome" },
+    expect(outcome?.status).toBe("rejected");
+    const reason: unknown =
+      outcome?.status === "rejected" ? outcome.reason : undefined;
+    expect(reason).toBeInstanceOf(MailError);
+    expect(reason).toMatchObject({
+      code: "mail_not_declared",
+      mail: "welcome",
     });
     expect(mailer.sent).toEqual([]);
   });
