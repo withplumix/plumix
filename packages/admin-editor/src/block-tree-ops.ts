@@ -1,20 +1,28 @@
-import type { BlockNode, JsonValue } from "@plumix/core/blocks";
+import type {
+  BlockNode,
+  BlockSpecLookup,
+  JsonValue,
+} from "@plumix/core/blocks";
 import {
+  blockSlotKeys,
   freshBlockId,
   isBlockNodeArray,
   rewriteBlockNodeIds,
 } from "@plumix/core/blocks";
 
-/** Find a block by id anywhere in the tree, descending into slot attrs. */
+// Every op takes the block specs as `blocks`: a node's slots are the inputs its
+// spec declares, so an attr holding a data array is never walked as children.
+
+/** Find a block by id anywhere in the tree, descending into its slots. */
 export function findBlock(
   nodes: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): BlockNode | undefined {
   for (const node of nodes) {
     if (node.id === id) return node;
-    for (const value of Object.values(node.attrs ?? {})) {
-      if (!isBlockNodeArray(value)) continue;
-      const found = findBlock(value, id);
+    for (const children of slotChildren(node, blocks)) {
+      const found = findBlock(children, id, blocks);
       if (found) return found;
     }
   }
@@ -29,13 +37,13 @@ export function findBlock(
 export function findParentId(
   nodes: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
   parent: string | null = null,
 ): string | null {
   for (const node of nodes) {
     if (node.id === id) return parent;
-    for (const value of Object.values(node.attrs ?? {})) {
-      if (!isBlockNodeArray(value)) continue;
-      const hit = findParentId(value, id, node.id);
+    for (const children of slotChildren(node, blocks)) {
+      const hit = findParentId(children, id, blocks, node.id);
       if (hit !== null) return hit;
     }
   }
@@ -51,10 +59,11 @@ export function findParentId(
 export function topLevelIndexAfter(
   tree: readonly BlockNode[],
   activeId: string | null,
+  blocks: BlockSpecLookup,
 ): number {
   let rootId = activeId;
   while (rootId !== null) {
-    const parent = findParentId(tree, rootId);
+    const parent = findParentId(tree, rootId, blocks);
     if (parent === null) break;
     rootId = parent;
   }
@@ -83,7 +92,10 @@ export interface FlatNode {
  * block lists each slot's children in turn, in declaration order; `slotKey`
  * tells them apart so a drag lands back in the slot it was dropped among.
  */
-export function flattenTree(tree: readonly BlockNode[]): readonly FlatNode[] {
+export function flattenTree(
+  tree: readonly BlockNode[],
+  blocks: BlockSpecLookup,
+): readonly FlatNode[] {
   const out: FlatNode[] = [];
   const walk = (
     nodes: readonly BlockNode[],
@@ -92,7 +104,7 @@ export function flattenTree(tree: readonly BlockNode[]): readonly FlatNode[] {
     inSlot: string | null,
   ): void => {
     for (const node of nodes) {
-      const keys = slotKeys(node);
+      const keys = slotKeys(node, blocks);
       out.push({
         id: node.id,
         name: node.name,
@@ -211,33 +223,38 @@ export function moveBlock(
   tree: readonly BlockNode[],
   sourceId: string,
   target: MoveTarget,
+  blocks: BlockSpecLookup,
   allowed?: readonly string[],
 ): readonly BlockNode[] {
   if (target.parentId === sourceId) return tree;
-  const source = findBlock(tree, sourceId);
+  const source = findBlock(tree, sourceId, blocks);
   if (!source) return tree;
   if (allowed && !allowed.includes(source.name)) return tree;
-  if (!slotTargetExists(tree, target)) return tree;
-  if (target.parentId !== null && containsBlock(source, target.parentId)) {
+  if (!slotTargetExists(tree, target, blocks)) return tree;
+  if (
+    target.parentId !== null &&
+    containsBlock(source, target.parentId, blocks)
+  ) {
     return tree;
   }
-  return insertNode(removeNode(tree, sourceId), source, target);
+  return insertNode(removeNode(tree, sourceId, blocks), source, target, blocks);
 }
 
 // Whether `target` names a real slot on a real parent. The top level always
-// exists; a nested target needs the parent present and the slot either already
-// populated or unset — an unset declared slot is simply empty, and insertNode
-// creates its array. A non-array value (a scalar attr) is never a slot. Callers
-// resolve `slotKey` from the registry/geometry, so it always names a real slot.
+// exists; a nested target needs the parent present and the key one of its
+// declared slots, either already populated or unset — an unset slot is simply
+// empty, and insertNode creates its array.
 function slotTargetExists(
   tree: readonly BlockNode[],
   target: MoveTarget,
+  blocks: BlockSpecLookup,
 ): boolean {
   if (target.parentId === null) return true;
-  const parent = findBlock(tree, target.parentId);
+  const parent = findBlock(tree, target.parentId, blocks);
   if (!parent) return false;
-  const key = target.slotKey ?? slotKey(parent);
-  if (key === null) return false;
+  const keys = slotKeys(parent, blocks);
+  const key = target.slotKey ?? keys[0];
+  if (key === undefined || !keys.includes(key)) return false;
   const value = parent.attrs?.[key];
   return value === undefined || isBlockNodeArray(value);
 }
@@ -252,11 +269,12 @@ export function insertBlockAt(
   tree: readonly BlockNode[],
   node: BlockNode,
   target: MoveTarget,
+  blocks: BlockSpecLookup,
   allowed?: readonly string[],
 ): readonly BlockNode[] {
   if (allowed && !allowed.includes(node.name)) return tree;
-  if (!slotTargetExists(tree, target)) return tree;
-  return insertNode(tree, node, target);
+  if (!slotTargetExists(tree, target, blocks)) return tree;
+  return insertNode(tree, node, target, blocks);
 }
 
 /**
@@ -267,6 +285,7 @@ export function insertBlockAt(
 export function removeBlocks(
   nodes: readonly BlockNode[],
   ids: ReadonlySet<string>,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
   if (ids.size === 0) return nodes;
   const kept = nodes.filter((node) => !ids.has(node.id));
@@ -275,9 +294,10 @@ export function removeBlocks(
     const attrs = node.attrs;
     if (!attrs) return node;
     let nextAttrs: Record<string, JsonValue> | undefined;
-    for (const [key, value] of Object.entries(attrs)) {
+    for (const key of slotKeys(node, blocks)) {
+      const value = attrs[key];
       if (!isBlockNodeArray(value)) continue;
-      const pruned = removeBlocks(value, ids);
+      const pruned = removeBlocks(value, ids, blocks);
       if (pruned !== value) (nextAttrs ??= { ...attrs })[key] = pruned;
     }
     if (!nextAttrs) return node;
@@ -295,15 +315,16 @@ export function removeBlocks(
 export function duplicateBlock(
   tree: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): { readonly tree: readonly BlockNode[]; readonly newId: string | null } {
-  const source = findBlock(tree, id);
+  const source = findBlock(tree, id, blocks);
   if (!source) return { tree, newId: null };
-  const [clone] = rewriteBlockNodeIds([source]);
+  const [clone] = rewriteBlockNodeIds([source], blocks);
   if (!clone) return { tree, newId: null };
-  const slot = siblingsOf(tree, id);
+  const slot = siblingsOf(tree, id, blocks);
   const index = slot.siblings.findIndex((n) => n.id === id) + 1;
   return {
-    tree: insertNode(tree, clone, { ...slot.at, index }),
+    tree: insertNode(tree, clone, { ...slot.at, index }, blocks),
     newId: clone.id,
   };
 }
@@ -312,8 +333,11 @@ export function duplicateBlock(
 // container with content. Ungroup only unwraps these: a multi-slot block (e.g.
 // columns) has no unambiguous "the" slot, and unwrapping one would silently
 // drop the others when the node is removed.
-function soleSlotChildren(node: BlockNode): readonly BlockNode[] | null {
-  const keys = slotKeys(node);
+function soleSlotChildren(
+  node: BlockNode,
+  blocks: BlockSpecLookup,
+): readonly BlockNode[] | null {
+  const keys = slotKeys(node, blocks);
   const key = keys.length === 1 ? keys[0] : undefined;
   if (key === undefined) return null;
   const slot = node.attrs?.[key];
@@ -327,19 +351,21 @@ function soleSlotChildren(node: BlockNode): readonly BlockNode[] | null {
 export function canGroupSelection(
   tree: readonly BlockNode[],
   selectedIds: ReadonlySet<string>,
+  blocks: BlockSpecLookup,
 ): boolean {
-  const roots = selectionRoots(tree, selectedIds);
+  const roots = selectionRoots(tree, selectedIds, blocks);
   if (roots.length === 0) return false;
-  const slot = siblingsOf(tree, roots[0] ?? "");
+  const slot = siblingsOf(tree, roots[0] ?? "", blocks);
   return roots.every((id) => slot.siblings.some((n) => n.id === id));
 }
 
 export function canUngroupBlock(
   tree: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): boolean {
-  const node = findBlock(tree, id);
-  return node ? soleSlotChildren(node) !== null : false;
+  const node = findBlock(tree, id, blocks);
+  return node ? soleSlotChildren(node, blocks) !== null : false;
 }
 
 /**
@@ -354,16 +380,17 @@ export function canUngroupBlock(
 export function ungroupBlock(
   tree: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): { readonly tree: readonly BlockNode[]; readonly childIds: string[] } | null {
-  const node = findBlock(tree, id);
+  const node = findBlock(tree, id, blocks);
   if (!node) return null;
-  const children = soleSlotChildren(node);
+  const children = soleSlotChildren(node, blocks);
   if (!children) return null;
-  const slot = siblingsOf(tree, id);
+  const slot = siblingsOf(tree, id, blocks);
   const at = slot.siblings.findIndex((n) => n.id === id);
-  let next = removeBlocks(tree, new Set([id]));
+  let next = removeBlocks(tree, new Set([id]), blocks);
   children.forEach((child, i) => {
-    next = insertNode(next, child, { ...slot.at, index: at + i });
+    next = insertNode(next, child, { ...slot.at, index: at + i }, blocks);
   });
   return { tree: next, childIds: children.map((c) => c.id) };
 }
@@ -378,10 +405,11 @@ export function groupBlocks(
   tree: readonly BlockNode[],
   ids: ReadonlySet<string>,
   groupId: string,
+  blocks: BlockSpecLookup,
 ): { readonly tree: readonly BlockNode[]; readonly groupId: string } | null {
-  const roots = new Set(selectionRoots(tree, ids));
+  const roots = new Set(selectionRoots(tree, ids, blocks));
   if (roots.size === 0) return null;
-  const slot = siblingsOf(tree, [...roots][0] ?? "");
+  const slot = siblingsOf(tree, [...roots][0] ?? "", blocks);
   const siblings = slot.siblings;
   const content = siblings.filter((n) => roots.has(n.id));
   // All roots must be siblings in the same slot of the same parent.
@@ -394,9 +422,9 @@ export function groupBlocks(
   // Every sibling before the first root is, by definition, not a root, so the
   // post-removal insert position is just the first root's index.
   const insertIndex = siblings.findIndex((n) => roots.has(n.id));
-  const pruned = removeBlocks(tree, roots);
+  const pruned = removeBlocks(tree, roots, blocks);
   return {
-    tree: insertNode(pruned, group, { ...slot.at, index: insertIndex }),
+    tree: insertNode(pruned, group, { ...slot.at, index: insertIndex }, blocks),
     groupId,
   };
 }
@@ -409,8 +437,9 @@ export function groupBlocks(
 export function collectBlocks(
   tree: readonly BlockNode[],
   ids: ReadonlySet<string>,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const roots = new Set(selectionRoots(tree, ids));
+  const roots = new Set(selectionRoots(tree, ids, blocks));
   const out: BlockNode[] = [];
   const walk = (nodes: readonly BlockNode[]): void => {
     for (const node of nodes) {
@@ -418,10 +447,7 @@ export function collectBlocks(
         out.push(node); // a root is taken whole — never descend into it
         continue;
       }
-      for (const key of slotKeys(node)) {
-        const slot = node.attrs?.[key];
-        if (isBlockNodeArray(slot)) walk(slot);
-      }
+      for (const children of slotChildren(node, blocks)) walk(children);
     }
   };
   walk(tree);
@@ -438,17 +464,18 @@ export function pasteBlocks(
   tree: readonly BlockNode[],
   nodes: readonly BlockNode[],
   afterId: string | null,
+  blocks: BlockSpecLookup,
 ): { readonly tree: readonly BlockNode[]; readonly newIds: readonly string[] } {
-  const clones = rewriteBlockNodeIds(nodes);
+  const clones = rewriteBlockNodeIds(nodes, blocks);
   if (clones.length === 0) return { tree, newIds: [] };
-  const slot = afterId ? siblingsOf(tree, afterId) : topLevelSlot(tree);
+  const slot = afterId ? siblingsOf(tree, afterId, blocks) : topLevelSlot(tree);
   const siblings = slot.siblings;
   const after = afterId ? siblings.findIndex((n) => n.id === afterId) : -1;
   const start = after >= 0 ? after + 1 : siblings.length;
   let next = tree;
   const newIds: string[] = [];
   clones.forEach((clone, i) => {
-    next = insertNode(next, clone, { ...slot.at, index: start + i });
+    next = insertNode(next, clone, { ...slot.at, index: start + i }, blocks);
     newIds.push(clone.id);
   });
   return { tree: next, newIds };
@@ -462,12 +489,13 @@ export function pasteBlocks(
 export function selectionRoots(
   tree: readonly BlockNode[],
   ids: ReadonlySet<string>,
+  blocks: BlockSpecLookup,
 ): string[] {
   return [...ids].filter((id) => {
-    let parent = findParentId(tree, id);
+    let parent = findParentId(tree, id, blocks);
     while (parent !== null) {
       if (ids.has(parent)) return false;
-      parent = findParentId(tree, parent);
+      parent = findParentId(tree, parent, blocks);
     }
     return true;
   });
@@ -481,13 +509,14 @@ export function moveBlockBy(
   tree: readonly BlockNode[],
   id: string,
   delta: number,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const { siblings, at } = siblingsOf(tree, id);
+  const { siblings, at } = siblingsOf(tree, id, blocks);
   const from = siblings.findIndex((n) => n.id === id);
   if (from === -1) return tree;
   const to = from + delta;
   if (to < 0 || to >= siblings.length) return tree;
-  return moveBlock(tree, id, { ...at, index: to });
+  return moveBlock(tree, id, { ...at, index: to }, blocks);
 }
 
 const TABLE = "core/table";
@@ -510,11 +539,12 @@ function cellsOf(row: BlockNode): readonly BlockNode[] {
 export function enclosingTableId(
   tree: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): string | null {
   let current: string | null = id;
   while (current) {
-    if (findBlock(tree, current)?.name === TABLE) return current;
-    current = findParentId(tree, current);
+    if (findBlock(tree, current, blocks)?.name === TABLE) return current;
+    current = findParentId(tree, current, blocks);
   }
   return null;
 }
@@ -534,8 +564,9 @@ function columnCount(rows: readonly BlockNode[]): number {
 export function appendTableColumn(
   tree: readonly BlockNode[],
   tableId: string,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const table = findBlock(tree, tableId);
+  const table = findBlock(tree, tableId, blocks);
   if (table?.name !== TABLE) return tree;
   const rows = table.attrs?.rows;
   if (!isBlockNodeArray(rows) || rows.length === 0) return tree;
@@ -544,7 +575,7 @@ export function appendTableColumn(
     const cell: BlockNode = { id: freshBlockId(), name };
     return { ...row, attrs: { ...row.attrs, cells: [...cellsOf(row), cell] } };
   });
-  return setTableRows(tree, tableId, grown);
+  return setTableRows(tree, tableId, grown, blocks);
 }
 
 /**
@@ -555,8 +586,9 @@ export function appendTableColumn(
 export function appendTableRow(
   tree: readonly BlockNode[],
   tableId: string,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const table = findBlock(tree, tableId);
+  const table = findBlock(tree, tableId, blocks);
   if (table?.name !== TABLE) return tree;
   const raw = table.attrs?.rows;
   const rows = isBlockNodeArray(raw) ? raw : [];
@@ -569,7 +601,7 @@ export function appendTableRow(
     name: BODY_ROW,
     attrs: { cells },
   };
-  return setTableRows(tree, tableId, [...rows, row]);
+  return setTableRows(tree, tableId, [...rows, row], blocks);
 }
 
 /**
@@ -581,8 +613,9 @@ export function appendTableRow(
 export function removeTableColumn(
   tree: readonly BlockNode[],
   tableId: string,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const table = findBlock(tree, tableId);
+  const table = findBlock(tree, tableId, blocks);
   if (table?.name !== TABLE) return tree;
   const rows = table.attrs?.rows;
   if (!isBlockNodeArray(rows) || columnCount(rows) <= 1) return tree;
@@ -592,7 +625,7 @@ export function removeTableColumn(
       ? { ...row, attrs: { ...row.attrs, cells: cells.slice(0, -1) } }
       : row;
   });
-  return setTableRows(tree, tableId, shrunk);
+  return setTableRows(tree, tableId, shrunk, blocks);
 }
 
 /**
@@ -603,13 +636,14 @@ export function removeTableColumn(
 export function removeTableRow(
   tree: readonly BlockNode[],
   tableId: string,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  const table = findBlock(tree, tableId);
+  const table = findBlock(tree, tableId, blocks);
   if (table?.name !== TABLE) return tree;
   const raw = table.attrs?.rows;
   const rows = isBlockNodeArray(raw) ? raw : [];
   if (rows.length <= 1) return tree;
-  return setTableRows(tree, tableId, rows.slice(0, -1));
+  return setTableRows(tree, tableId, rows.slice(0, -1), blocks);
 }
 
 // Replace a table's `rows` slot, descending through slots so a nested table is
@@ -618,6 +652,7 @@ function setTableRows(
   nodes: readonly BlockNode[],
   tableId: string,
   rows: readonly BlockNode[],
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
   return nodes.map((node) => {
     if (node.id === tableId) {
@@ -626,9 +661,10 @@ function setTableRows(
     const attrs = node.attrs;
     if (!attrs) return node;
     let nextAttrs: Record<string, JsonValue> | undefined;
-    for (const [key, value] of Object.entries(attrs)) {
+    for (const key of slotKeys(node, blocks)) {
+      const value = attrs[key];
       if (!isBlockNodeArray(value)) continue;
-      const replaced = setTableRows(value, tableId, rows);
+      const replaced = setTableRows(value, tableId, rows, blocks);
       if (replaced !== value) (nextAttrs ??= { ...attrs })[key] = replaced;
     }
     return nextAttrs ? { ...node, attrs: nextAttrs } : node;
@@ -649,14 +685,18 @@ function topLevelSlot(tree: readonly BlockNode[]): SiblingSlot {
 // The slot that directly holds `id` — whichever of its parent's slots that is,
 // so an op relative to a node stays in that node's slot. An absent id resolves
 // to the top level, where a sibling-relative op finds nothing to act on.
-function siblingsOf(tree: readonly BlockNode[], id: string): SiblingSlot {
+function siblingsOf(
+  tree: readonly BlockNode[],
+  id: string,
+  blocks: BlockSpecLookup,
+): SiblingSlot {
   const find = (
     nodes: readonly BlockNode[],
     at: Omit<MoveTarget, "index">,
   ): SiblingSlot | null => {
     if (nodes.some((n) => n.id === id)) return { siblings: nodes, at };
     for (const node of nodes) {
-      for (const key of slotKeys(node)) {
+      for (const key of slotKeys(node, blocks)) {
         const slot = node.attrs?.[key];
         if (!isBlockNodeArray(slot)) continue;
         const hit = find(slot, { parentId: node.id, slotKey: key });
@@ -668,41 +708,42 @@ function siblingsOf(tree: readonly BlockNode[], id: string): SiblingSlot {
   return find(tree, { parentId: null }) ?? topLevelSlot(tree);
 }
 
-// The first attr key holding a child-block array, or null if the block has no
-// slot — where a move lands when its target names no slot.
-function slotKey(node: BlockNode): string | null {
-  for (const [key, value] of Object.entries(node.attrs ?? {})) {
-    if (isBlockNodeArray(value)) return key;
-  }
-  return null;
+function slotKeys(node: BlockNode, blocks: BlockSpecLookup): readonly string[] {
+  return blockSlotKeys(node, blocks.get(node.name));
 }
 
-/** Every attr key holding a child-block array, in declaration order — the
- *  block's slots. Empty for a slotless (leaf) block. */
-export function slotKeys(node: BlockNode): string[] {
-  const keys: string[] = [];
-  for (const [key, value] of Object.entries(node.attrs ?? {})) {
-    if (isBlockNodeArray(value)) keys.push(key);
+// The children held in each of the node's slots, in declaration order. A slot
+// that is unset, or holds something other than nodes, has none to walk.
+function slotChildren(
+  node: BlockNode,
+  blocks: BlockSpecLookup,
+): (readonly BlockNode[])[] {
+  const out: (readonly BlockNode[])[] = [];
+  for (const key of slotKeys(node, blocks)) {
+    const value = node.attrs?.[key];
+    if (isBlockNodeArray(value)) out.push(value);
   }
-  return keys;
+  return out;
 }
 
 /** Whether `id` is `node` itself or anywhere in its subtree. */
-function containsBlock(node: BlockNode, id: string): boolean {
+function containsBlock(
+  node: BlockNode,
+  id: string,
+  blocks: BlockSpecLookup,
+): boolean {
   if (node.id === id) return true;
-  for (const value of Object.values(node.attrs ?? {})) {
-    if (isBlockNodeArray(value) && value.some((c) => containsBlock(c, id))) {
-      return true;
-    }
-  }
-  return false;
+  return slotChildren(node, blocks).some((children) =>
+    children.some((c) => containsBlock(c, id, blocks)),
+  );
 }
 
 function removeNode(
   nodes: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
-  return removeBlocks(nodes, new Set([id]));
+  return removeBlocks(nodes, new Set([id]), blocks);
 }
 
 function clampIndex(index: number, length: number): number {
@@ -713,6 +754,7 @@ function insertNode(
   nodes: readonly BlockNode[],
   node: BlockNode,
   target: MoveTarget,
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
   if (target.parentId === null) {
     const at = clampIndex(target.index, nodes.length);
@@ -720,8 +762,8 @@ function insertNode(
   }
   return nodes.map((current) => {
     if (current.id === target.parentId) {
-      const key = target.slotKey ?? slotKey(current);
-      if (key === null) return current;
+      const key = target.slotKey ?? slotKeys(current, blocks)[0];
+      if (key === undefined) return current;
       const slot = current.attrs?.[key];
       // A scalar attr is never a slot; an unset slot starts empty.
       if (slot !== undefined && !isBlockNodeArray(slot)) return current;
@@ -738,9 +780,10 @@ function insertNode(
     const attrs = current.attrs;
     if (!attrs) return current;
     let nextAttrs: Record<string, JsonValue> | undefined;
-    for (const [key, value] of Object.entries(attrs)) {
+    for (const key of slotKeys(current, blocks)) {
+      const value = attrs[key];
       if (!isBlockNodeArray(value)) continue;
-      const inserted = insertNode(value, node, target);
+      const inserted = insertNode(value, node, target, blocks);
       if (inserted !== value) (nextAttrs ??= { ...attrs })[key] = inserted;
     }
     return nextAttrs ? { ...current, attrs: nextAttrs } : current;

@@ -36,6 +36,7 @@ const registry = createBlockRegistry([
     render: () => null,
     category: "layout",
     title: "Group",
+    inputs: [{ name: "content", type: "slot" }],
     variations: [
       { slug: "group/two-col", title: "Two columns", attrs: { cols: 2 } },
     ],
@@ -60,7 +61,7 @@ function renderCatalog(
         tokens={{}}
         capabilities={NO_CAPS}
       >
-        <EditorProvider initialTree={[]}>
+        <EditorProvider registry={registry} initialTree={[]}>
           <BlockCatalog patterns={patterns} onInsert={onInsert} />
           <TreeProbe />
         </EditorProvider>
@@ -86,7 +87,7 @@ describe("BlockCatalog", () => {
           tokens={{}}
           capabilities={NO_CAPS}
         >
-          <EditorProvider initialTree={[]}>
+          <EditorProvider registry={registry} initialTree={[]}>
             <BlockCatalog allowed={["core/heading"]} />
           </EditorProvider>
         </EditorConfigProvider>
@@ -156,7 +157,7 @@ describe("BlockCatalog", () => {
             tokens={{}}
             capabilities={NO_CAPS}
           >
-            <EditorProvider initialTree={tree}>
+            <EditorProvider registry={registry} initialTree={tree}>
               <Selector id={id} />
               <BlockCatalog patterns={patterns} />
               <TreeProbe />

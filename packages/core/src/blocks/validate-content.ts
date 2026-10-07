@@ -2,6 +2,7 @@ import type { BlockSpec } from "./block-registry.js";
 import type { EntryContent } from "./entry-content.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { BlockContentValidationIssue } from "./validation-errors.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 export type BlockContentValidationResult =
@@ -61,7 +62,8 @@ function walk(
         nodeName: node.name,
       });
     }
-    for (const [key, value] of Object.entries(node.attrs ?? {})) {
+    for (const key of blockSlotKeys(node, spec)) {
+      const value = node.attrs?.[key];
       if (!isBlockNodeArray(value)) continue;
       // Absent `allowedBlocks` = any child (general content slots), by design.
       const allowed = spec.inputs?.find(

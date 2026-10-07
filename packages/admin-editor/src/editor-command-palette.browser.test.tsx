@@ -46,7 +46,7 @@ function renderPalette(
         tokens={{}}
         capabilities={new Set()}
       >
-        <EditorProvider initialTree={TREE}>
+        <EditorProvider registry={registry} initialTree={TREE}>
           <EditorCommandPalette {...props} />
           <StateProbe />
         </EditorProvider>

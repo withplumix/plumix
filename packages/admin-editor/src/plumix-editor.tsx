@@ -167,6 +167,7 @@ export function PlumixEditor({
   if (readOnly) {
     return (
       <EditorProvider
+        registry={registry}
         initialTree={defaultValue?.blocks}
         breakpoints={breakpoints}
       >
@@ -190,6 +191,7 @@ export function PlumixEditor({
   }
   return (
     <EditorProvider
+      registry={registry}
       initialTree={defaultValue?.blocks}
       breakpoints={breakpoints}
       starterOpen={seedStarterOpen}

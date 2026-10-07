@@ -10,6 +10,7 @@ import {
 } from "@plumix/admin-ui/dialog";
 
 import { findBlock } from "./block-tree-ops.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
 // Code-split: the highlighter only loads when the dialog first renders output.
@@ -31,12 +32,13 @@ const JSON_PRE_CLASS =
  * mutates the tree. Rendered inside {@link JsonSourceDialog}.
  */
 export function JsonInspector(): ReactElement {
+  const { registry } = useEditorConfig();
   const [scope, setScope] = useState<JsonScope>("page");
   const tree = useEditorStore((s) => s.tree);
   const activeId = useEditorStore((s) => s.activeId);
 
   const block =
-    scope === "block" && activeId ? findBlock(tree, activeId) : null;
+    scope === "block" && activeId ? findBlock(tree, activeId, registry) : null;
   const value = scope === "page" ? tree : block;
 
   return (

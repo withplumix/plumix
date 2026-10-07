@@ -78,12 +78,15 @@ const roster = blockTextRoster(coreBlocks);
 
 // What the reading-length counter read before blocks declared their own text:
 // four block names, one input each, hardcoded in the counter.
-const LEGACY_ROSTER: BlockTextRoster = new Map([
-  ["core/rich-text", [{ name: "body", html: true }]],
-  ["core/details", [{ name: "summary" }]],
-  ["core/table-header-cell", [{ name: "text" }]],
-  ["core/table-cell", [{ name: "text" }]],
-]);
+const LEGACY_ROSTER: BlockTextRoster = {
+  text: new Map([
+    ["core/rich-text", [{ name: "body", html: true }]],
+    ["core/details", [{ name: "summary" }]],
+    ["core/table-header-cell", [{ name: "text" }]],
+    ["core/table-cell", [{ name: "text" }]],
+  ]),
+  specs: roster.specs,
+};
 
 // The typography showcase post: the one entry exercising every styled element.
 const showcaseBlocks =

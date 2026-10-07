@@ -101,6 +101,11 @@ const registry: BlockRegistry = createBlockRegistry([
       },
     ],
   },
+  {
+    name: "core/table-header-row",
+    render: () => null,
+    inputs: [{ name: "cells", type: "slot" }],
+  },
 ]);
 
 const NO_CAPS: ReadonlySet<string> = new Set();
@@ -163,7 +168,7 @@ function renderInspector(
   return render(
     <I18nProvider i18n={i18n}>
       <Config>
-        <EditorProvider initialTree={tree}>
+        <EditorProvider registry={registry} initialTree={tree}>
           <Selector id={selectId} />
           <BlockInspector onRefreshBlockLoader={onRefreshBlockLoader} />
         </EditorProvider>
@@ -194,6 +199,7 @@ describe("BlockInspector", () => {
       <I18nProvider i18n={i18n}>
         <Config>
           <EditorProvider
+            registry={registry}
             initialTree={[
               { id: "p1", name: "core/prose", attrs: { body: "<p>Hello</p>" } },
             ]}
@@ -332,7 +338,7 @@ describe("BlockInspector", () => {
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
         <Config>
-          <EditorProvider initialTree={tree}>
+          <EditorProvider registry={registry} initialTree={tree}>
             <Selector id="cols" />
             <BlockInspector />
             <ColumnsProbe id="cols" />
@@ -373,6 +379,7 @@ describe("BlockInspector", () => {
       <I18nProvider i18n={i18n}>
         <Config resolve={(t) => (t === "media" ? StubField : undefined)}>
           <EditorProvider
+            registry={registry}
             initialTree={[
               {
                 id: "m1",
@@ -424,7 +431,7 @@ describe("BlockInspector", () => {
     return render(
       <I18nProvider i18n={i18n}>
         <Config>
-          <EditorProvider initialTree={tableTree}>
+          <EditorProvider registry={registry} initialTree={tableTree}>
             <Selector id="tbl" />
             <BlockInspector />
             <TableProbe id="tbl" />
@@ -474,7 +481,7 @@ describe("BlockInspector", () => {
     return render(
       <I18nProvider i18n={i18n}>
         <Config>
-          <EditorProvider initialTree={grid2x2}>
+          <EditorProvider registry={registry} initialTree={grid2x2}>
             <Selector id="tbl" />
             <BlockInspector />
             <TableProbe id="tbl" />
@@ -510,7 +517,7 @@ describe("BlockInspector", () => {
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
         <Config>
-          <EditorProvider initialTree={tableTree}>
+          <EditorProvider registry={registry} initialTree={tableTree}>
             <Selector id="c0" />
             <BlockInspector />
             <TableProbe id="tbl" />

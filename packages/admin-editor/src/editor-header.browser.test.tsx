@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { EditorHeaderProps } from "./editor-header.js";
+import { treeBlocks } from "../test/tree-blocks.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -27,7 +28,7 @@ function renderHeader(
 ): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={[]}>
+      <EditorProvider registry={treeBlocks} initialTree={[]}>
         <EditorHeader {...props} />
         <Capture />
       </EditorProvider>
@@ -46,7 +47,7 @@ describe("EditorHeader", () => {
 
     rerender(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[]}>
+        <EditorProvider registry={treeBlocks} initialTree={[]}>
           <EditorHeader />
         </EditorProvider>
       </I18nProvider>,
@@ -183,7 +184,7 @@ describe("EditorHeader", () => {
 
     rerender(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[]}>
+        <EditorProvider registry={treeBlocks} initialTree={[]}>
           <EditorHeader />
         </EditorProvider>
       </I18nProvider>,

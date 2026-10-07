@@ -37,6 +37,8 @@ export {
   isBlockNodeArray,
   renderBlockTree,
 } from "./render-block-tree.js";
+export { blockSlotKeys } from "./block-slots.js";
+export type { BlockSpecLookup } from "./block-slots.js";
 export { resolveMessage } from "./i18n-label.js";
 export type { CompiledCatalog, MessageValues } from "./i18n-label.js";
 export { editAppender } from "./edit-appender.js";

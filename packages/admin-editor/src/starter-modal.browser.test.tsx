@@ -7,6 +7,8 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/core/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
+import { treeBlocks } from "../test/tree-blocks.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 import { StarterModal } from "./starter-modal.js";
 
@@ -53,10 +55,20 @@ function renderModal(
   storeApi = undefined;
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree} starterOpen={candidates.length > 0}>
-        <Capture />
-        <StarterModal candidates={candidates} />
-      </EditorProvider>
+      <EditorConfigProvider
+        registry={treeBlocks}
+        tokens={{}}
+        capabilities={new Set()}
+      >
+        <EditorProvider
+          registry={treeBlocks}
+          initialTree={tree}
+          starterOpen={candidates.length > 0}
+        >
+          <Capture />
+          <StarterModal candidates={candidates} />
+        </EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>,
   );
 }

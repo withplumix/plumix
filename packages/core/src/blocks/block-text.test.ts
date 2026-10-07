@@ -25,6 +25,7 @@ const labelBlock = defineBlock({
 const wrapperBlock = defineBlock({
   name: "test/wrapper",
   render: noRender,
+  inputs: [{ name: "content", type: "slot" }],
 });
 
 const roster = blockTextRoster([proseBlock, labelBlock, wrapperBlock]);
@@ -85,6 +86,21 @@ describe("extractBlockText", () => {
       },
     ];
     expect(extractBlockText(blocks, roster)).toBe("outer\ninner");
+  });
+
+  // The item is shaped like a `test/label` node, so only the slot rule keeps
+  // its text out.
+  test.each([
+    ["an empty data array", []],
+    [
+      "a data array of id/name objects",
+      [{ id: "1", name: "test/label", attrs: { label: "Alice" } }],
+    ],
+  ])("skips %s in an attr no slot declares", (_, people) => {
+    const blocks: readonly BlockNode[] = [
+      { id: "p1", name: "test/prose", attrs: { body: "<p>Team</p>", people } },
+    ];
+    expect(extractBlockText(blocks, roster)).toBe("Team");
   });
 
   test("drops script and style bodies, not just their tags", () => {
@@ -158,7 +174,7 @@ describe("extractBlockText", () => {
 describe("blockTextVersion", () => {
   test("a re-registered block that declares nothing drops the old roster", () => {
     const silenced = defineBlock({ name: "test/prose", render: noRender });
-    expect(blockTextRoster([proseBlock, silenced]).has("test/prose")).toBe(
+    expect(blockTextRoster([proseBlock, silenced]).text.has("test/prose")).toBe(
       false,
     );
   });

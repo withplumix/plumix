@@ -247,4 +247,31 @@ describe("commitBlockVariations", () => {
       /innerBlocks\[0\]\.content\[0\] references unknown block "core\/ghost"/,
     );
   });
+
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("does not walk %s in an attr no slot declares", (_, people) => {
+    const team = defineBlock({
+      name: "x-test/team",
+      title: "Team",
+      inputs: [{ name: "people", type: "json" }],
+      render: () => null,
+    });
+    const group = defineBlock({
+      name: "core/group-test",
+      title: "Group",
+      inputs: [{ name: "content", type: "slot" }],
+      render: () => null,
+      variations: [
+        {
+          slug: "with-team",
+          title: "With team",
+          innerBlocks: [{ id: "t1", name: "x-test/team", attrs: { people } }],
+        },
+      ],
+    });
+    const blocks = createBlockRegistry([group, team]);
+    expect(() => commitBlockVariations(blocks)).not.toThrow();
+  });
 });

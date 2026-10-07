@@ -1913,6 +1913,42 @@ describe("buildManifest visibility projection", () => {
     });
   });
 
+  test("numbers a pattern's blank ids through the slots its blocks declare", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerBlock(defineBlock({ name: "acme/team", render: () => null }));
+      ctx.registerPattern({
+        name: "acme/team-intro",
+        title: "Team intro",
+        content: [
+          {
+            id: "",
+            name: "core/group",
+            attrs: { content: [{ id: "", name: "core/rich-text" }] },
+          },
+          {
+            id: "",
+            name: "acme/team",
+            attrs: { people: [{ id: "1", name: "Alice" }] },
+          },
+        ],
+      });
+    });
+
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const [group, team] = buildManifest(registry).patterns[0]?.content ?? [];
+
+    expect(group).toMatchObject({
+      id: "p2",
+      attrs: { content: [{ id: "p1", name: "core/rich-text" }] },
+    });
+    expect(team).toEqual({
+      id: "p3",
+      name: "acme/team",
+      attrs: { people: [{ id: "1", name: "Alice" }] },
+    });
+  });
+
   test("projects the starter-modal fields — target, entryTypes, priority — through the manifest", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

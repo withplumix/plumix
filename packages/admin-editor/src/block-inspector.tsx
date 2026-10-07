@@ -45,10 +45,10 @@ export function BlockInspector({
   const loaderPushRef = useLoaderPushRef();
 
   const bucket = deviceBucket(device);
-  const block = activeId ? findBlock(tree, activeId) : undefined;
+  const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   // The table the selection sits in (the table itself, or the one owning the
   // selected row/cell), so the table controls stay in reach while editing cells.
-  const tableId = block ? enclosingTableId(tree, block.id) : null;
+  const tableId = block ? enclosingTableId(tree, block.id, registry) : null;
   const handleChange = useCallback(
     (key: string, value: JsonValue): void => {
       if (activeId) updateBlockAttrs(activeId, { [key]: value });

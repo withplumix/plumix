@@ -13,6 +13,7 @@ import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
 import { expandPattern } from "./block-catalog.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
 interface StarterModalProps {
@@ -30,6 +31,7 @@ export function StarterModal({
   candidates,
 }: StarterModalProps): ReactElement | null {
   const { i18n } = useLingui();
+  const { registry } = useEditorConfig();
   const open = useEditorStore((s) => s.starterOpen);
   const setStarterOpen = useEditorStore((s) => s.setStarterOpen);
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
@@ -37,7 +39,7 @@ export function StarterModal({
 
   const dismiss = (): void => setStarterOpen(false);
   const select = (pattern: InserterPattern): void => {
-    insertBlocks(expandPattern(pattern), 0);
+    insertBlocks(expandPattern(pattern, registry), 0);
     setStarterOpen(false);
   };
 

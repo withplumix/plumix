@@ -61,7 +61,7 @@ function Wrapper({ children }: { readonly children: ReactNode }): ReactElement {
         tokens={{}}
         capabilities={NO_CAPS}
       >
-        <EditorProvider>{children}</EditorProvider>
+        <EditorProvider registry={registry}>{children}</EditorProvider>
       </EditorConfigProvider>
     </I18nProvider>
   );
@@ -257,7 +257,7 @@ describe("CanvasFrame", () => {
             tokens={{}}
             capabilities={NO_CAPS}
           >
-            <EditorProvider>
+            <EditorProvider registry={registry}>
               <Profiler
                 id="cf"
                 onRender={() => {
@@ -426,7 +426,7 @@ describe("CanvasFrame nested drop", () => {
           tokens={{}}
           capabilities={NO_CAPS}
         >
-          <EditorProvider initialTree={tree}>
+          <EditorProvider registry={nestRegistry} initialTree={tree}>
             <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
             <Capture />
           </EditorProvider>

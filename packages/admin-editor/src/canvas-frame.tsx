@@ -87,7 +87,12 @@ export function CanvasFrame({
   const camera = useCameraStoreApi();
   const clipboard = useMemo(
     () =>
-      createClipboardOps(store, navigator.clipboard, pasteableAtRoot(registry)),
+      createClipboardOps(
+        store,
+        registry,
+        navigator.clipboard,
+        pasteableAtRoot(registry),
+      ),
     [store, registry],
   );
   const loaderPushRef = useLoaderPushRef();
@@ -264,7 +269,7 @@ export function CanvasFrame({
       ? { parentId: pendingAdd.parentId, slotKey: pendingAdd.slotKey }
       : undefined;
   const pendingParentName = pendingTarget
-    ? findBlock(store.getState().tree, pendingTarget.parentId)?.name
+    ? findBlock(store.getState().tree, pendingTarget.parentId, registry)?.name
     : undefined;
   const pendingAllowed =
     pendingTarget && pendingParentName

@@ -72,7 +72,7 @@ function renderTab(
   const utils = render(
     <I18nProvider i18n={i18n}>
       <Config resolve={resolve}>
-        <EditorProvider initialTree={tree}>
+        <EditorProvider registry={registry} initialTree={tree}>
           <ActiveSeed activeId={activeId} />
           <StylesTab />
           <StyleProbe id={tree[0]?.id ?? ""} />
@@ -303,6 +303,7 @@ describe("StylesTab", () => {
         <I18nProvider i18n={i18n}>
           <Config>
             <EditorProvider
+              registry={registry}
               initialTree={[{ id: "a", name: "core/x", style }]}
               device="mobile"
             >
@@ -938,7 +939,7 @@ function renderNodeSection(
   const utils = render(
     <I18nProvider i18n={i18n}>
       <Config>
-        <EditorProvider initialTree={tree}>
+        <EditorProvider registry={registry} initialTree={tree}>
           <ActiveSeed activeId={activeId} />
           <StylesTab />
           <NodeProbe id={tree[0]?.id ?? ""} />
@@ -996,7 +997,7 @@ describe("StylesTab — HTML attributes & tag name", () => {
     const { getByTestId, queryByTestId } = render(
       <I18nProvider i18n={i18n}>
         <Config>
-          <EditorProvider initialTree={[withAttrs]}>
+          <EditorProvider registry={registry} initialTree={[withAttrs]}>
             <ActiveSeed activeId="a" />
             <StylesTab />
           </EditorProvider>

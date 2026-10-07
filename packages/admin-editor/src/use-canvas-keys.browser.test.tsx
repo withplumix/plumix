@@ -7,6 +7,7 @@ import { SidebarProvider, useSidebar } from "@plumix/admin-ui/sidebar";
 
 import type { View } from "./canvas-view.js";
 import type { CanvasKeys } from "./use-canvas-keys.js";
+import { treeBlocks } from "../test/tree-blocks.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 import { useCanvasKeys } from "./use-canvas-keys.js";
 
@@ -44,6 +45,7 @@ function renderKeys(): void {
   render(
     <SidebarProvider>
       <EditorProvider
+        registry={treeBlocks}
         initialTree={[
           { id: "a", name: "core/x" },
           { id: "b", name: "core/x" },

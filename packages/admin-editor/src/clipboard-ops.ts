@@ -64,12 +64,13 @@ export function clipboardOpFromEvent(e: KeyboardEvent): ClipboardOp | null {
  */
 export function createClipboardOps(
   store: EditorStoreApi,
+  registry: BlockRegistry,
   clipboard: ClipboardLike = navigator.clipboard,
   canPaste?: (node: BlockNode) => boolean,
 ): ClipboardOps {
   const copy = async (): Promise<boolean> => {
     const { tree, selectedIds } = store.getState();
-    const blocks = collectBlocks(tree, selectedIds);
+    const blocks = collectBlocks(tree, selectedIds, registry);
     if (blocks.length === 0) return false;
     await clipboard.writeText(serializeBlocks(blocks));
     return true;

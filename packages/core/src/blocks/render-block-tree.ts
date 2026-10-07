@@ -18,6 +18,7 @@ import type {
   ThemeBreakpoints,
   VisibilityFlags,
 } from "./styles/style-emitter.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { resolveRootTag } from "./html/root-tag.js";
@@ -238,6 +239,13 @@ function isDevMode(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
+/**
+ * Whether `value` is shaped like a block tree: an array whose every item has a
+ * string `id` and `name`. The check for a whole stored tree (an entry's
+ * `blocks`, a clipboard payload). It does not decide whether an attr is a
+ * slot: `[]` and a data array of `{ id, name }` objects pass it too. A node's
+ * slots are the ones {@link blockSlotKeys} reads from its spec.
+ */
 export function isBlockNodeArray(
   value: unknown,
 ): value is readonly BlockNode[] {
@@ -257,23 +265,14 @@ function materializeSlots(
   childContext: BlockContext,
 ): MaterializedAttrs {
   const attrs = node.attrs ?? {};
-  const inputs = env.registry.get(node.name)?.inputs;
+  const spec = env.registry.get(node.name);
+  const inputs = spec?.inputs;
 
-  // Slots to materialize: any attr that already holds a child array, plus —
-  // when editing — every declared slot input even if unset, so an empty slot
-  // still renders its placeholder + "Add a block" affordance. Outside edit
-  // mode an unset slot stays absent, keeping SSR output byte-identical.
-  const slotKeys = new Set<string>();
-  for (const [key, value] of Object.entries(attrs)) {
-    if (isBlockNodeArray(value)) slotKeys.add(key);
-  }
-  if (env.editing) {
-    for (const input of inputs ?? []) {
-      if (input.type === "slot" && input.rawSlot !== true)
-        slotKeys.add(input.name);
-    }
-  }
-  if (slotKeys.size === 0) return attrs;
+  // Every declared slot is materialized, an unset one as an empty slot, so in
+  // edit mode it still renders its placeholder + "Add a block" affordance.
+  // Every other attr reaches the block as stored, arrays included.
+  const slotKeys = blockSlotKeys(node, spec);
+  if (slotKeys.length === 0) return attrs;
 
   const materialized: Record<string, unknown> = { ...attrs };
   for (const key of slotKeys) {

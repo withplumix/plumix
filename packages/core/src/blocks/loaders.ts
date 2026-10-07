@@ -1,6 +1,7 @@
 import type { JsonObject } from "../json.js";
 import type { BlockRegistry, BlockSpec } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 // `blocks/` sits in the foundation layer, below `context/`, so `AppContext`
@@ -82,8 +83,8 @@ function collectInto(
   for (const node of nodes) {
     const spec = registry.get(node.name);
     if (spec?.loaders) out.push({ nodeId: node.id, node, spec });
-    if (!node.attrs) continue;
-    for (const value of Object.values(node.attrs)) {
+    for (const key of blockSlotKeys(node, spec)) {
+      const value = node.attrs?.[key];
       if (isBlockNodeArray(value)) collectInto(value, registry, out);
     }
   }

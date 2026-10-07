@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { BlockNode } from "@plumix/core/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/core/blocks/renderer";
 
+import { treeBlocks } from "../test/tree-blocks.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { createEditorStore } from "./store.js";
 
@@ -34,7 +35,7 @@ function hostMessages(posted: unknown[]): { type?: string; tree?: unknown }[] {
 describe("connectCanvas", () => {
   test("pushes the current tree when the canvas reports ready", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/heading" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 
@@ -46,7 +47,7 @@ describe("connectCanvas", () => {
   });
 
   test("a canvas:select message updates the store's active block", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 
@@ -57,7 +58,7 @@ describe("connectCanvas", () => {
   });
 
   test("a canvas:wheel message is delivered to onWheel", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const onWheel = vi.fn();
     const conn = connectCanvas({
@@ -87,7 +88,7 @@ describe("connectCanvas", () => {
   });
 
   test("a canvas:key message is delivered to onKey", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const onKey = vi.fn();
     const conn = connectCanvas({
@@ -113,7 +114,7 @@ describe("connectCanvas", () => {
   });
 
   test("a canvas:requestAdd message is delivered to onRequestAdd", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const onRequestAdd = vi.fn();
     const conn = connectCanvas({
@@ -138,7 +139,7 @@ describe("connectCanvas", () => {
 
   test("pushes host:config to the canvas on ready when config is given", () => {
     const catalog = { "blocks.appender.addBlock": ["Ajouter un bloc"] };
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({
       store,
@@ -157,7 +158,7 @@ describe("connectCanvas", () => {
   });
 
   test("sends no host:config when no config is given", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 
@@ -170,7 +171,7 @@ describe("connectCanvas", () => {
   });
 
   test("an additive canvas:select extends the selection set", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 
@@ -183,7 +184,7 @@ describe("connectCanvas", () => {
   });
 
   test("re-pushes the tree when the store tree changes after ready", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
     fromCanvas({ type: "canvas:ready" });
@@ -197,7 +198,7 @@ describe("connectCanvas", () => {
   });
 
   test("pushLoaderData posts host:loader-data to the canvas", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win, posted } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 
@@ -215,7 +216,7 @@ describe("connectCanvas", () => {
   test("re-announces hello until the canvas acks, then stops", () => {
     vi.useFakeTimers();
     try {
-      const store = createEditorStore();
+      const store = createEditorStore(treeBlocks);
       const { win, posted } = fakeFrame();
       const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
       const helloCount = (): number =>
@@ -240,7 +241,7 @@ describe("connectCanvas", () => {
   });
 
   test("ignores messages from a foreign origin", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();
     const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
 

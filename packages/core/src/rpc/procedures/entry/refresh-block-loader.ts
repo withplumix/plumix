@@ -34,7 +34,7 @@ export const refreshBlockLoader = base
     );
     const content = autosave?.content ?? live.content;
     const node = isEntryContent(content)
-      ? findBlockNode(content.blocks, input.blockId)
+      ? findBlockNode(content.blocks, input.blockId, context.blocks)
       : null;
     if (!node) {
       throw errors.NOT_FOUND({ data: { kind: "block", id: input.blockId } });

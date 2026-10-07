@@ -23,7 +23,11 @@ describe("collectLoaderEntries", () => {
 
   test("recurses into slot-children to find nested loader-bearing blocks", () => {
     const registry = createBlockRegistry([
-      { name: "core/group", render: () => null },
+      {
+        name: "core/group",
+        render: () => null,
+        inputs: [{ name: "children", type: "slot" }],
+      },
       {
         name: "acme/posts",
         render: () => null,
@@ -46,6 +50,27 @@ describe("collectLoaderEntries", () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0]?.nodeId).toBe("nested");
+  });
+
+  // The item's `name` matches a loader-bearing block, so only the slot rule
+  // keeps it from being collected.
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "acme/posts" }]],
+  ])("does not collect from %s in an attr no slot declares", (_, people) => {
+    const registry = createBlockRegistry([
+      { name: "acme/team", render: () => null },
+      {
+        name: "acme/posts",
+        render: () => null,
+        loaders: { posts: () => Promise.resolve([]) },
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      { id: "t1", name: "acme/team", attrs: { people } },
+    ];
+
+    expect(collectLoaderEntries(tree, registry)).toEqual([]);
   });
 
   test("emits one entry per block whose spec declares loaders", () => {

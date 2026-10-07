@@ -12,6 +12,7 @@ import type {
   CapabilityNamespaces,
 } from "../access/contract/capability.js";
 import type {
+  BlockRegistry,
   BlockSpec,
   ThemeBreakpoints,
   ThemeTokens,
@@ -70,7 +71,12 @@ import {
   spellTermCapability,
 } from "../access/contract/capability.js";
 import { namespacedEntryCapability } from "../access/contract/entry-capabilities.js";
-import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
+import {
+  coreBlocks,
+  createBlockRegistry,
+  DEFAULT_BREAKPOINTS,
+} from "../blocks/index.js";
+import { assignPatternIds } from "../blocks/pattern-registry.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { projectMetaBoxField } from "./fields/project-field.js";
@@ -231,17 +237,21 @@ export function buildManifest(
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
-  const blocks = collectContributedBlocks(
+  const contributedBlocks = collectContributedBlocks(
     registry.blockSpecs.values(),
     options?.blocks,
-  )
+  );
+  const blocks = contributedBlocks
     .map(toBlockEntry)
     .sort((a, b) => a.name.localeCompare(b.name));
   const marks = Array.from(registry.markSpecs.values())
     .map(toMarkEntry)
     .sort((a, b) => a.name.localeCompare(b.name));
+  // The same precedence the runtime registry gives (core < plugin < theme), so
+  // a pattern's slots are the ones its blocks render with.
+  const blockSpecs = createBlockRegistry([...coreBlocks, ...contributedBlocks]);
   const patterns = Array.from(registry.patternSpecs.values())
-    .map(toPatternEntry)
+    .map((pattern) => toPatternEntry(pattern, blockSpecs))
     .sort((a, b) => a.name.localeCompare(b.name));
   return {
     entryTypes: entries,
@@ -1037,7 +1047,10 @@ function toBlockEntry(spec: BlockSpec): BlockManifestEntry {
   };
 }
 
-function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
+function toPatternEntry(
+  pattern: RegisteredPattern,
+  blocks: BlockRegistry,
+): PatternManifestEntry {
   const {
     name,
     title,
@@ -1058,7 +1071,7 @@ function toPatternEntry(pattern: RegisteredPattern): PatternManifestEntry {
     target,
     entryTypes,
     priority,
-    content,
+    content: assignPatternIds(content, blocks),
   };
 }
 

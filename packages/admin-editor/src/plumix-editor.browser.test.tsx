@@ -8,6 +8,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import type { EntryContent } from "@plumix/core/blocks";
 import { createBlockRegistry } from "@plumix/core/blocks";
 
+import { treeBlocks } from "../test/tree-blocks.js";
 import { PlumixEditor, TreeChangeEmitter } from "./plumix-editor.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -177,7 +178,7 @@ describe("TreeChangeEmitter", () => {
     }
 
     render(
-      <EditorProvider initialTree={[]}>
+      <EditorProvider registry={treeBlocks} initialTree={[]}>
         <TreeChangeEmitter onChange={onChange} />
         <Mutator />
       </EditorProvider>,

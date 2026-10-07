@@ -113,7 +113,7 @@ Three layers contribute specs, and boot merges them in one order: the 17 core bl
 
 `BlockRenderer` walks the nodes in order. For each one it looks up the spec, materializes the attrs, and calls the spec's `render`.
 
-Materializing is the step that makes slots work. Before it calls `render`, the walker replaces every attr holding an array of child nodes with a component that renders those children. A container block therefore receives `attrs.content` as a component it drops into its JSX, and React renders the children lazily instead of the walker building them up front. That is also why a block's rendered attrs are not JSON, while the stored ones are.
+Materializing is the step that makes slots work. Before it calls `render`, the walker replaces every slot input the spec declares with a component that renders that slot's children, an empty or unset slot included. The spec decides, never the value: any other attr reaches `render` as stored, so an array of data stays an array even when it is empty. A container block therefore receives `attrs.content` as a component it drops into its JSX, and React renders the children lazily instead of the walker building them up front. That is also why a block's rendered attrs are not JSON, while the stored ones are.
 
 Around `render`, the walker builds the node's root element. It merges the allowlisted `htmlAttrs`, the author's classes and the generated style class into one set of props. A block that declares `selfSeam` spreads those props onto its own element, which is how `core/separator` puts them on the `<hr>` and `core/table-cell` on the `<td>`, where a wrapper `<div>` would be invalid. Every other block gets the wrapper.
 

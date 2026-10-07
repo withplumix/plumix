@@ -1,7 +1,9 @@
 import type { Label } from "../i18n/label.js";
 import type { JsonObject, JsonValue } from "../json.js";
+import type { BlockSpecLookup } from "./block-slots.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
@@ -79,13 +81,13 @@ export interface BlockPattern {
   readonly content: readonly BlockNode[];
 }
 
-// `block()` writes a blank placeholder ID; `definePattern` numbers nodes
+// `block()` writes a blank placeholder ID; `assignPatternIds` numbers nodes
 // `p1, p2, ...` per pattern body so preview React keys are stable. Inserting
 // rewrites them.
 const PLACEHOLDER_ID = "";
 
 export function definePattern(spec: BlockPattern): BlockPattern {
-  return Object.freeze({ ...spec, content: assignPatternIds(spec.content) });
+  return Object.freeze({ ...spec });
 }
 
 export function block<TName extends string>(
@@ -104,13 +106,23 @@ export function block<TName extends string>(
   return options?.style ? { ...base, style: options.style } : base;
 }
 
-function assignPatternIds(nodes: readonly BlockNode[]): readonly BlockNode[] {
+/**
+ * Number every blank id in a pattern body `p1, p2, ...` in document order,
+ * descending into the slots `blocks` declares on each node. An id the author
+ * wrote is kept. Run where the block registry is known, which a pattern's
+ * definition is not.
+ */
+export function assignPatternIds(
+  nodes: readonly BlockNode[],
+  blocks: BlockSpecLookup,
+): readonly BlockNode[] {
   let counter = 0;
   function walk(input: readonly BlockNode[]): readonly BlockNode[] {
     return input.map((node) => {
-      const next: Record<string, JsonValue> = {};
-      for (const [key, value] of Object.entries(node.attrs ?? {})) {
-        next[key] = isBlockNodeArray(value) ? walk(value) : value;
+      const next: Record<string, JsonValue> = { ...node.attrs };
+      for (const key of blockSlotKeys(node, blocks.get(node.name))) {
+        const value = next[key];
+        if (isBlockNodeArray(value)) next[key] = walk(value);
       }
       return {
         ...node,

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { groupBlock } from "./group/index.js";
 import { DEFAULT_BLOCK_CONTEXT, renderBlockTree } from "./render-block-tree.js";
 
 function withProductionEnv<T>(fn: () => T): T {
@@ -257,6 +258,7 @@ describe("renderBlockTree", () => {
       },
       {
         name: "core/section",
+        inputs: [{ name: "content", type: "slot" }],
         render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
           return (
@@ -303,6 +305,7 @@ describe("renderBlockTree", () => {
       },
       {
         name: "core/section",
+        inputs: [{ name: "content", type: "slot" }],
         render: ({ attrs }) => {
           const Content = attrs.content as () => React.ReactNode;
           return (
@@ -334,6 +337,83 @@ describe("renderBlockTree", () => {
 
     expect(html).toBe(
       "<div><section>" + "<div><h2>Inside</h2></div>" + "</section></div>",
+    );
+  });
+
+  test("passes an empty data array through to the block as an array", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "acme/address",
+        render: ({ attrs }) => {
+          const lines = attrs.lines as readonly string[];
+          return <p>{[...lines, "UK"].join(", ")}</p>;
+        },
+      },
+    ]);
+    const tree: readonly BlockNode[] = [
+      { id: "1", name: "acme/address", attrs: { lines: [] } },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toBe("<div><p>UK</p></div>");
+  });
+
+  test("passes a data array of id/name objects through unchanged", () => {
+    const received: unknown[] = [];
+    const registry = createBlockRegistry([
+      {
+        name: "acme/team",
+        render: ({ attrs }) => {
+          received.push(attrs.people);
+          return null;
+        },
+      },
+    ]);
+    const people = [{ id: "1", name: "Alice" }];
+    const tree: readonly BlockNode[] = [
+      { id: "1", name: "acme/team", attrs: { people } },
+    ];
+
+    renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(received).toEqual([people]);
+  });
+
+  test.each([
+    ["emptied", { content: [] }],
+    ["missing", {}],
+  ])("renders core/group with its slot %s and no children", (_, attrs) => {
+    const tree: readonly BlockNode[] = [
+      { id: "g1", name: "core/group", attrs },
+    ];
+
+    const html = renderToStaticMarkup(
+      renderBlockTree(tree, createBlockRegistry([groupBlock])),
+    );
+
+    expect(html).toBe("<div></div>");
+  });
+
+  test("never walks into an unregistered block's children", () => {
+    const visited: string[] = [];
+    const tree: readonly BlockNode[] = [
+      {
+        id: "u1",
+        name: "acme/missing",
+        attrs: { content: [{ id: "h1", name: "core/heading", attrs: {} }] },
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      renderBlockTree(tree, headingRegistry, {
+        hooks: { beforeRender: (node) => visited.push(node.id) },
+      }),
+    );
+
+    expect(visited).toEqual(["u1"]);
+    expect(html).toBe(
+      '<template data-plumix-unknown-block="acme/missing"></template>',
     );
   });
 
@@ -564,6 +644,7 @@ describe("renderBlockTree", () => {
       const registry = createBlockRegistry([
         {
           name: "core/section",
+          inputs: [{ name: "content", type: "slot" }],
           render: ({ attrs }) => {
             const Content = attrs.content as () => React.ReactNode;
             return (

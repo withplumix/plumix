@@ -3,6 +3,7 @@ import { createStore } from "zustand/vanilla";
 
 import type {
   BlockNode,
+  BlockSpecLookup,
   InsertableBlockEntry,
   JsonObject,
   JsonValue,
@@ -12,6 +13,7 @@ import type {
   VisibilityFlags,
 } from "@plumix/core/blocks";
 import {
+  blockSlotKeys,
   DEFAULT_BREAKPOINTS,
   freshBlockId,
   isBlockNodeArray,
@@ -236,15 +238,16 @@ interface EditorActions {
 }
 
 // Rebuild the tree with `transform` applied to the node carrying `id`,
-// descending into slot attrs (any attr whose value is a BlockNode[]) so a
-// nested target is reachable. Untouched branches — and the whole tree when
-// nothing changed — keep their reference, so React skips them.
+// descending into the slots `blocks` declares so a nested target is reachable.
+// Untouched branches — and the whole tree when nothing changed — keep their
+// reference, so React skips them.
 function mapNodeById(
   nodes: readonly BlockNode[],
   id: string,
+  blocks: BlockSpecLookup,
   transform: (node: BlockNode) => BlockNode,
 ): readonly BlockNode[] {
-  const next = nodes.map((node) => mapNode(node, id, transform));
+  const next = nodes.map((node) => mapNode(node, id, blocks, transform));
   return next.some((node, i) => node !== nodes[i]) ? next : nodes;
 }
 
@@ -261,15 +264,17 @@ function holdsPatch(node: BlockNode, patch: JsonObject): boolean {
 function mapNode(
   node: BlockNode,
   id: string,
+  blocks: BlockSpecLookup,
   transform: (node: BlockNode) => BlockNode,
 ): BlockNode {
   if (node.id === id) return transform(node);
   const attrs = node.attrs;
   if (!attrs) return node;
   let nextAttrs: Record<string, JsonValue> | undefined;
-  for (const [key, value] of Object.entries(attrs)) {
+  for (const key of blockSlotKeys(node, blocks.get(node.name))) {
+    const value = attrs[key];
     if (!isBlockNodeArray(value)) continue;
-    const patched = mapNodeById(value, id, transform);
+    const patched = mapNodeById(value, id, blocks, transform);
     if (patched !== value) (nextAttrs ??= { ...attrs })[key] = patched;
   }
   return nextAttrs ? { ...node, attrs: nextAttrs } : node;
@@ -420,10 +425,11 @@ function commitTree(
 function restoreTree(
   state: InternalState,
   history: TreeHistory,
+  blocks: BlockSpecLookup,
 ): Partial<InternalState> {
   if (history === state.history) return {};
   const tree = history.present;
-  const present = new Set(flattenTree(tree).map((n) => n.id));
+  const present = new Set(flattenTree(tree, blocks).map((n) => n.id));
   const kept = [...state.selectedIds].filter((id) => present.has(id));
   const selection =
     kept.length === state.selectedIds.size
@@ -448,7 +454,9 @@ function commitTreeWithSelection(
   return "tree" in committed ? { ...committed, ...selection } : committed;
 }
 
+/** `blocks` are the specs that decide each node's slots for every tree edit. */
 export function createEditorStore(
+  blocks: BlockSpecLookup,
   initial?: Partial<
     Pick<EditorState, "tree" | "device" | "breakpoints" | "starterOpen">
   >,
@@ -503,29 +511,40 @@ export function createEditorStore(
       set((state) =>
         commitTreeWithSelection(
           state,
-          insertBlockAt(state.tree, node, target, allowed),
+          insertBlockAt(state.tree, node, target, blocks, allowed),
           { selectedIds: new Set([node.id]), activeId: node.id },
         ),
       ),
     moveBlock: (sourceId, target, allowed) =>
       set((state) =>
-        commitTree(state, moveBlockOp(state.tree, sourceId, target, allowed)),
+        commitTree(
+          state,
+          moveBlockOp(state.tree, sourceId, target, blocks, allowed),
+        ),
       ),
     // Keep the table selected (activeId unchanged) so its inspector buttons stay
     // put for repeated clicks, unlike a single-block insert that selects itself.
     addTableColumn: (tableId) =>
-      set((state) => commitTree(state, appendTableColumn(state.tree, tableId))),
+      set((state) =>
+        commitTree(state, appendTableColumn(state.tree, tableId, blocks)),
+      ),
     addTableRow: (tableId) =>
-      set((state) => commitTree(state, appendTableRow(state.tree, tableId))),
+      set((state) =>
+        commitTree(state, appendTableRow(state.tree, tableId, blocks)),
+      ),
     removeTableColumn: (tableId) =>
-      set((state) => commitTree(state, removeTableColumn(state.tree, tableId))),
+      set((state) =>
+        commitTree(state, removeTableColumn(state.tree, tableId, blocks)),
+      ),
     removeTableRow: (tableId) =>
-      set((state) => commitTree(state, removeTableRow(state.tree, tableId))),
+      set((state) =>
+        commitTree(state, removeTableRow(state.tree, tableId, blocks)),
+      ),
     updateBlockAttrs: (id, patch) =>
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             holdsPatch(node, patch)
               ? node
               : { ...node, attrs: { ...node.attrs, ...patch } },
@@ -539,7 +558,7 @@ export function createEditorStore(
         const label = rawLabel.trim() || undefined;
         return commitTree(
           state,
-          mapNodeById(state.tree, id, (node) => ({ ...node, label })),
+          mapNodeById(state.tree, id, blocks, (node) => ({ ...node, label })),
           // Coalesce a rename's keystrokes into one undo step.
           `label:${id}`,
         );
@@ -548,7 +567,7 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             setNodeStyle(node, bucket, property, value),
           ),
           // Coalesce edits to one property+bucket (e.g. typing a raw value).
@@ -559,7 +578,7 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             setNodeHidden(node, bucket, hidden),
           ),
           // Each device toggle is one discrete action — never coalesced.
@@ -571,7 +590,7 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             renameNodeStyleProperty(node, bucket, from, to),
           ),
         ),
@@ -583,7 +602,7 @@ export function createEditorStore(
         // the label rename's keystroke burst).
         return commitTree(
           state,
-          mapNodeById(state.tree, id, (node) => ({ ...node, tagName })),
+          mapNodeById(state.tree, id, blocks, (node) => ({ ...node, tagName })),
         );
       }),
     setBlockClassName: (id, rawClassName) =>
@@ -591,7 +610,10 @@ export function createEditorStore(
         const className = rawClassName.trim() || undefined;
         return commitTree(
           state,
-          mapNodeById(state.tree, id, (node) => ({ ...node, className })),
+          mapNodeById(state.tree, id, blocks, (node) => ({
+            ...node,
+            className,
+          })),
           // Coalesce a typing burst in the classes field into one undo step.
           `class:${id}`,
         );
@@ -600,7 +622,7 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             setNodeHtmlAttr(node, key, value),
           ),
           // Coalesce keystrokes for one attribute into a single undo step.
@@ -611,7 +633,7 @@ export function createEditorStore(
       set((state) =>
         commitTree(
           state,
-          mapNodeById(state.tree, id, (node) =>
+          mapNodeById(state.tree, id, blocks, (node) =>
             renameNodeHtmlAttr(node, from, to),
           ),
         ),
@@ -639,7 +661,7 @@ export function createEditorStore(
       set((state) =>
         commitTreeWithSelection(
           state,
-          removeBlocks(state.tree, state.selectedIds),
+          removeBlocks(state.tree, state.selectedIds, blocks),
           { selectedIds: new Set(), activeId: null },
         ),
       ),
@@ -649,8 +671,8 @@ export function createEditorStore(
         const newIds: string[] = [];
         // Only clone selection roots; a nested block whose container is also
         // selected is already copied inside that container's clone.
-        for (const id of selectionRoots(tree, state.selectedIds)) {
-          const result = duplicateBlock(tree, id);
+        for (const id of selectionRoots(tree, state.selectedIds, blocks)) {
+          const result = duplicateBlock(tree, id, blocks);
           tree = result.tree;
           if (result.newId) newIds.push(result.newId);
         }
@@ -666,11 +688,16 @@ export function createEditorStore(
         // clipboard can't honor. (Smart paste-as-sibling is a follow-up.)
         let afterId = state.activeId;
         while (afterId !== null) {
-          const parent = findParentId(state.tree, afterId);
+          const parent = findParentId(state.tree, afterId, blocks);
           if (parent === null) break;
           afterId = parent;
         }
-        const { tree, newIds } = pasteBlocksOp(state.tree, nodes, afterId);
+        const { tree, newIds } = pasteBlocksOp(
+          state.tree,
+          nodes,
+          afterId,
+          blocks,
+        );
         return commitTreeWithSelection(state, tree, {
           selectedIds: new Set(newIds),
           activeId: newIds.at(-1) ?? null,
@@ -682,6 +709,7 @@ export function createEditorStore(
           state.tree,
           state.selectedIds,
           freshBlockId(),
+          blocks,
         );
         if (!result) return {};
         return commitTreeWithSelection(state, result.tree, {
@@ -692,7 +720,7 @@ export function createEditorStore(
     ungroupSelected: () =>
       set((state) => {
         if (state.activeId === null) return {};
-        const result = ungroupBlock(state.tree, state.activeId);
+        const result = ungroupBlock(state.tree, state.activeId, blocks);
         if (!result) return {};
         return commitTreeWithSelection(state, result.tree, {
           selectedIds: new Set(result.childIds),
@@ -708,7 +736,7 @@ export function createEditorStore(
     selectParent: () =>
       set((state) => {
         if (!state.activeId) return {};
-        const parentId = findParentId(state.tree, state.activeId);
+        const parentId = findParentId(state.tree, state.activeId, blocks);
         if (!parentId) return {};
         return { selectedIds: new Set([parentId]), activeId: parentId };
       }),
@@ -717,7 +745,7 @@ export function createEditorStore(
         if (!state.activeId) return {};
         return commitTree(
           state,
-          moveBlockBy(state.tree, state.activeId, delta),
+          moveBlockBy(state.tree, state.activeId, delta, blocks),
         );
       }),
     setHover: (hoverId) => set({ hoverId }),
@@ -732,7 +760,7 @@ export function createEditorStore(
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),
     endMove: () => set({ movingId: null }),
-    undo: () => set((state) => restoreTree(state, undo(state.history))),
-    redo: () => set((state) => restoreTree(state, redo(state.history))),
+    undo: () => set((state) => restoreTree(state, undo(state.history), blocks)),
+    redo: () => set((state) => restoreTree(state, redo(state.history), blocks)),
   }));
 }

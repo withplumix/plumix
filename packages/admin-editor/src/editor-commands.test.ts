@@ -30,7 +30,7 @@ function context(
   over: Partial<EditorCommandContext> = {},
 ): EditorCommandContext {
   return {
-    store: createEditorStore({ tree: TREE }),
+    store: createEditorStore(REGISTRY, { tree: TREE }),
     registry: REGISTRY,
     capabilities: new Set<string>(),
     tree: TREE,
@@ -78,8 +78,13 @@ describe("buildEditorCommands", () => {
     const grouped: readonly BlockNode[] = [
       { id: "g", name: "core/group", attrs: { content: TREE } },
     ];
+    const registry = createBlockRegistry([
+      ...REGISTRY,
+      spec({ name: "core/group", inputs: [{ name: "content", type: "slot" }] }),
+    ]);
     const ctx = context({
-      store: createEditorStore({ tree: grouped }),
+      store: createEditorStore(registry, { tree: grouped }),
+      registry,
       tree: grouped,
     });
     expect(byId(buildEditorCommands(ctx), "selection.ungroup")).toBeUndefined();

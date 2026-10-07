@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/core/blocks";
 
+import { treeBlocks } from "../test/tree-blocks.js";
 import {
   createEditorStore,
   DESKTOP_CANVAS_WIDTH,
@@ -19,7 +20,7 @@ describe("deviceBucket", () => {
 
 describe("editor store", () => {
   test("select replaces the selection and marks the block active", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().select("a");
     expect(store.getState().activeId).toBe("a");
@@ -31,7 +32,7 @@ describe("editor store", () => {
   });
 
   test("starterOpen defaults closed and is toggled by setStarterOpen", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     expect(store.getState().starterOpen).toBe(false);
 
     store.getState().setStarterOpen(true);
@@ -42,12 +43,12 @@ describe("editor store", () => {
   });
 
   test("starterOpen can be seeded open at creation", () => {
-    const store = createEditorStore({ starterOpen: true });
+    const store = createEditorStore(treeBlocks, { starterOpen: true });
     expect(store.getState().starterOpen).toBe(true);
   });
 
   test("additive select extends the set, keeping the latest as active", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().select("a");
     store.getState().select("b", { additive: true });
@@ -57,7 +58,7 @@ describe("editor store", () => {
   });
 
   test("additive select toggles a block off and repoints the active block", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().select("a");
     store.getState().select("b", { additive: true });
@@ -69,7 +70,7 @@ describe("editor store", () => {
   });
 
   test("clearSelection empties the set and the active block", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     store.getState().select("a");
 
     store.getState().clearSelection();
@@ -86,7 +87,7 @@ describe("editor store", () => {
   });
 
   test("setDevice switches the active device", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     expect(store.getState().device).toBe("desktop");
 
     store.getState().setDevice("mobile");
@@ -97,19 +98,19 @@ describe("editor store", () => {
   });
 
   test("breakpoints default and seed from the initializer", () => {
-    expect(createEditorStore().getState().breakpoints).toEqual({
+    expect(createEditorStore(treeBlocks).getState().breakpoints).toEqual({
       tablet: 991,
       mobile: 640,
     });
     expect(
-      createEditorStore({
+      createEditorStore(treeBlocks, {
         breakpoints: { tablet: 800, mobile: 400 },
       }).getState().breakpoints,
     ).toEqual({ tablet: 800, mobile: 400 });
   });
 
   test("updateBlockAttrs merges a patch into the targeted block's attrs", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "h1", name: "core/heading", attrs: { level: 2, text: "Hi" } },
       ],
@@ -123,7 +124,7 @@ describe("editor store", () => {
   });
 
   test("updateBlockAttrs reaches a block nested inside a slot", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "group",
@@ -147,7 +148,7 @@ describe("editor store", () => {
 
   test("updateBlockAttrs leaves untouched blocks referentially stable", () => {
     const sibling: BlockNode = { id: "b", name: "core/spacer" };
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [{ id: "a", name: "core/heading", attrs: { text: "x" } }, sibling],
     });
 
@@ -162,7 +163,7 @@ describe("editor store", () => {
     const tree: readonly BlockNode[] = [
       { id: "a", name: "core/x", attrs: { body: "<p>Hi</p>", list: [1, 2] } },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     // A control echoing its value back on mount must not leave an undo step.
     store.getState().updateBlockAttrs("a", { body: "<p>Hi</p>", list: [1, 2] });
@@ -171,9 +172,23 @@ describe("editor store", () => {
     expect(store.getState().canUndo).toBe(false);
   });
 
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("updateBlockAttrs never reaches into %s no slot declares", (_, people) => {
+    const tree: readonly BlockNode[] = [
+      { id: "t1", name: "acme/team", attrs: { people } },
+    ];
+    const store = createEditorStore(treeBlocks, { tree });
+
+    store.getState().updateBlockAttrs("1", { name: "Bob" });
+
+    expect(store.getState().tree).toBe(tree);
+  });
+
   test("updateBlockAttrs is a no-op when the id is absent", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/heading" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().updateBlockAttrs("missing", { text: "y" });
 
@@ -183,7 +198,7 @@ describe("editor store", () => {
 
 describe("insertBlock", () => {
   test("inserts a block at the given top-level index and selects it", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/heading" },
         { id: "b", name: "core/spacer" },
@@ -199,7 +214,9 @@ describe("insertBlock", () => {
   });
 
   test("clamps an out-of-range index to the ends", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().insertBlock({ id: "head", name: "core/y" }, -5);
     store.getState().insertBlock({ id: "tail", name: "core/z" }, 99);
@@ -212,7 +229,7 @@ describe("insertBlock", () => {
   });
 
   test("inserts into an empty tree", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().insertBlock({ id: "first", name: "core/heading" }, 0);
 
@@ -222,7 +239,9 @@ describe("insertBlock", () => {
 
 describe("insertBlocks", () => {
   test("inserts multiple blocks at a top-level index and selects the first", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().insertBlocks(
       [
@@ -239,7 +258,7 @@ describe("insertBlocks", () => {
 
   test("is a no-op for an empty list", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().insertBlocks([], 0);
 
@@ -247,7 +266,9 @@ describe("insertBlocks", () => {
   });
 
   test("a pattern insert is one undo step", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
     store.getState().insertBlocks(
       [
         { id: "p1", name: "core/y" },
@@ -263,7 +284,9 @@ describe("insertBlocks", () => {
 
 describe("undo / redo", () => {
   test("undo reverts an insert; redo replays it", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
     expect(store.getState().tree.map((n) => n.id)).toEqual(["a", "b"]);
@@ -276,7 +299,7 @@ describe("undo / redo", () => {
   });
 
   test("a typing burst on one field collapses into one undo step", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [{ id: "h", name: "core/heading", attrs: { text: "" } }],
     });
 
@@ -290,7 +313,7 @@ describe("undo / redo", () => {
   });
 
   test("a new edit after undo drops the redo", () => {
-    const store = createEditorStore({ tree: [] });
+    const store = createEditorStore(treeBlocks, { tree: [] });
     store.getState().insertBlock({ id: "a", name: "core/x" }, 0);
     store.getState().undo();
     store.getState().insertBlock({ id: "b", name: "core/y" }, 0);
@@ -301,7 +324,7 @@ describe("undo / redo", () => {
   });
 
   test("canUndo / canRedo track whether a step exists on each side", () => {
-    const store = createEditorStore({ tree: [] });
+    const store = createEditorStore(treeBlocks, { tree: [] });
     const flags = () => [store.getState().canUndo, store.getState().canRedo];
     expect(flags()).toEqual([false, false]);
     // @ts-expect-error the undo stack's storage format is not published
@@ -318,7 +341,9 @@ describe("undo / redo", () => {
   });
 
   test("undo drops a selection that names the block it removed; redo keeps it in the tree", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
     const treeIds = () => new Set(store.getState().tree.map((n) => n.id));
 
     store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
@@ -337,7 +362,7 @@ describe("undo / redo", () => {
   });
 
   test("undo drops only the nested id it removed and keeps a surviving selection", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "cols",
@@ -361,7 +386,9 @@ describe("undo / redo", () => {
   });
 
   test("an undo that removes nothing selected leaves the selection alone", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
     store.getState().insertBlock({ id: "b", name: "core/y" }, 1);
     store.getState().select("a");
     const selectedIds = store.getState().selectedIds;
@@ -375,7 +402,7 @@ describe("undo / redo", () => {
 
 describe("insertBlockInto", () => {
   const withColumns = (): ReturnType<typeof createEditorStore> =>
-    createEditorStore({
+    createEditorStore(treeBlocks, {
       tree: [
         {
           id: "cols",
@@ -423,7 +450,7 @@ describe("insertBlockInto", () => {
 
 describe("removeSelected", () => {
   test("removes every selected block and clears the selection", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/x" },
@@ -442,7 +469,7 @@ describe("removeSelected", () => {
 
   test("is a no-op when nothing is selected", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().removeSelected();
 
@@ -450,7 +477,9 @@ describe("removeSelected", () => {
   });
 
   test("a removal is undoable", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
     store.getState().select("a");
 
     store.getState().removeSelected();
@@ -463,7 +492,7 @@ describe("removeSelected", () => {
 
 describe("duplicateSelected", () => {
   test("clones each selected block and selects the clones", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/x" },
@@ -484,7 +513,7 @@ describe("duplicateSelected", () => {
 
   test("is a no-op when nothing is selected", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().duplicateSelected();
 
@@ -492,7 +521,7 @@ describe("duplicateSelected", () => {
   });
 
   test("clones a container once when it and its child are both selected", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "g",
@@ -517,7 +546,7 @@ describe("duplicateSelected", () => {
 
 describe("selectParent", () => {
   test("selects the active block's container", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "g",
@@ -535,7 +564,9 @@ describe("selectParent", () => {
   });
 
   test("is a no-op for a top-level active block", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
     store.getState().select("a");
 
     store.getState().selectParent();
@@ -546,7 +577,7 @@ describe("selectParent", () => {
 
 describe("moveSelectedBy", () => {
   test("moves the active block down among its siblings", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/x" },
@@ -564,7 +595,7 @@ describe("moveSelectedBy", () => {
       { id: "a", name: "core/x" },
       { id: "b", name: "core/x" },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
     store.getState().select("a");
 
     store.getState().moveSelectedBy(-1);
@@ -575,7 +606,7 @@ describe("moveSelectedBy", () => {
 
 describe("moveBlock action", () => {
   test("reorders the tree through the store", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/x" },
@@ -592,7 +623,7 @@ describe("moveBlock action", () => {
       { id: "btn", name: "core/button" },
       { id: "g", name: "core/group", attrs: { content: [] } },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store
       .getState()
@@ -604,7 +635,7 @@ describe("moveBlock action", () => {
 
 describe("move drag", () => {
   test("startMove marks the moving block; endMove clears it", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().startMove("a");
     expect(store.getState().movingId).toBe("a");
@@ -616,7 +647,9 @@ describe("move drag", () => {
 
 describe("updateBlockStyle", () => {
   test("sets a token style value in the given bucket", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store
       .getState()
@@ -628,7 +661,7 @@ describe("updateBlockStyle", () => {
   });
 
   test("clears a property when the value is null, dropping empty buckets", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "a",
@@ -644,7 +677,7 @@ describe("updateBlockStyle", () => {
   });
 
   test("updates a nested block's style", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "g",
@@ -664,7 +697,7 @@ describe("updateBlockStyle", () => {
 
   test("is a no-op (stable tree) for an unknown block", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store
       .getState()
@@ -676,7 +709,9 @@ describe("updateBlockStyle", () => {
 
 describe("updateBlockHidden", () => {
   test("sets and clears a per-device visibility flag, pruning empty", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().updateBlockHidden("a", "small", true);
     expect(store.getState().tree[0]?.hidden).toEqual({ small: true });
@@ -686,7 +721,7 @@ describe("updateBlockHidden", () => {
   });
 
   test("hiding then unhiding a device preserves the bucket's layout display", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x", style: { large: { display: "flex" } } },
       ],
@@ -704,7 +739,7 @@ describe("updateBlockHidden", () => {
 
   test("is a no-op (stable tree) for an unknown block", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().updateBlockHidden("nope", "large", true);
 
@@ -714,7 +749,7 @@ describe("updateBlockHidden", () => {
 
 describe("renameBlockStyleProperty", () => {
   test("renames a property in place, preserving its value and position", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "a",
@@ -756,7 +791,7 @@ describe("renameBlockStyleProperty", () => {
         },
       },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store
       .getState()
@@ -766,7 +801,7 @@ describe("renameBlockStyleProperty", () => {
   });
 
   test("preserves a token value across a rename", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "a",
@@ -789,7 +824,7 @@ describe("renameBlockStyleProperty", () => {
     const tree: readonly BlockNode[] = [
       { id: "a", name: "core/x", style: { large: { color: "#333" } } },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().renameBlockStyleProperty("a", "large", "nope", "gap");
 
@@ -799,7 +834,7 @@ describe("renameBlockStyleProperty", () => {
 
 describe("xray", () => {
   test("defaults off and toggles", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     expect(store.getState().xray).toBe(false);
 
     store.getState().toggleXray();
@@ -812,7 +847,9 @@ describe("xray", () => {
 
 describe("updateBlockHtmlAttr", () => {
   test("sets an attribute on a block", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().updateBlockHtmlAttr("a", "id", "hero");
 
@@ -820,7 +857,7 @@ describe("updateBlockHtmlAttr", () => {
   });
 
   test("clears an attribute when value is null, pruning empty htmlAttrs", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [{ id: "a", name: "core/x", htmlAttrs: { id: "hero" } }],
     });
 
@@ -831,7 +868,7 @@ describe("updateBlockHtmlAttr", () => {
 
   test("is a no-op (stable tree) for an unknown block", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().updateBlockHtmlAttr("nope", "id", "x");
 
@@ -841,7 +878,9 @@ describe("updateBlockHtmlAttr", () => {
 
 describe("setBlockTagName", () => {
   test("sets the root-element override on a block", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().setBlockTagName("a", "section");
 
@@ -849,7 +888,7 @@ describe("setBlockTagName", () => {
   });
 
   test("clears the override when passed an empty string", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [{ id: "a", name: "core/x", tagName: "nav" }],
     });
 
@@ -860,7 +899,7 @@ describe("setBlockTagName", () => {
 
   test("is a no-op (stable tree) for an unknown block", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().setBlockTagName("nope", "section");
 
@@ -870,7 +909,9 @@ describe("setBlockTagName", () => {
 
 describe("setBlockClassName", () => {
   test("sets author CSS classes on a block", () => {
-    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+    const store = createEditorStore(treeBlocks, {
+      tree: [{ id: "a", name: "core/x" }],
+    });
 
     store.getState().setBlockClassName("a", "hero big");
 
@@ -878,7 +919,7 @@ describe("setBlockClassName", () => {
   });
 
   test("clears the classes when passed a blank string", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [{ id: "a", name: "core/x", className: "hero" }],
     });
 
@@ -889,7 +930,7 @@ describe("setBlockClassName", () => {
 
   test("is a no-op (stable tree) for an unknown block", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().setBlockClassName("nope", "hero");
 
@@ -899,7 +940,7 @@ describe("setBlockClassName", () => {
 
 describe("renameBlockHtmlAttr", () => {
   test("renames an attribute in place, preserving value and position", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "a",
@@ -929,7 +970,7 @@ describe("renameBlockHtmlAttr", () => {
         htmlAttrs: { id: "hero", title: "t" },
       },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
 
     store.getState().renameBlockHtmlAttr("a", "id", "title");
     expect(store.getState().tree).toBe(tree);
@@ -941,7 +982,7 @@ describe("renameBlockHtmlAttr", () => {
 
 describe("groupSelected", () => {
   test("wraps the selected siblings in a group and selects it", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/y" },
@@ -972,7 +1013,7 @@ describe("groupSelected", () => {
         attrs: { content: [{ id: "c1", name: "core/y" }] },
       },
     ];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
     store.getState().select("a");
     store.getState().select("c1", { additive: true });
 
@@ -984,7 +1025,7 @@ describe("groupSelected", () => {
 
 describe("ungroupSelected", () => {
   test("replaces the active group with its children and selects them", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "g",
@@ -1010,7 +1051,7 @@ describe("ungroupSelected", () => {
 
   test("is a no-op when the active block has no children", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
-    const store = createEditorStore({ tree });
+    const store = createEditorStore(treeBlocks, { tree });
     store.getState().select("a");
 
     store.getState().ungroupSelected();
@@ -1027,7 +1068,7 @@ describe("pasteBlocks", () => {
   };
 
   test("appends pasted blocks with fresh ids and selects them", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
 
     store.getState().pasteBlocks([copied]);
 
@@ -1041,7 +1082,7 @@ describe("pasteBlocks", () => {
   });
 
   test("inserts after the active block, not at the end", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         { id: "a", name: "core/x" },
         { id: "b", name: "core/y" },
@@ -1056,7 +1097,7 @@ describe("pasteBlocks", () => {
   });
 
   test("rewrites ids through nested children (no source-id collision)", () => {
-    const store = createEditorStore();
+    const store = createEditorStore(treeBlocks);
     const group: BlockNode = {
       id: "g",
       name: "core/group",
@@ -1072,7 +1113,7 @@ describe("pasteBlocks", () => {
   });
 
   test("pastes at the top level even when a nested block is active", () => {
-    const store = createEditorStore({
+    const store = createEditorStore(treeBlocks, {
       tree: [
         {
           id: "g",

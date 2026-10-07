@@ -135,6 +135,20 @@ describe("validateEntryContent", () => {
     expect(result).toEqual({ ok: true });
   });
 
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("accepts %s in an attr no slot declares", (_, people) => {
+    const result = validateEntryContent(
+      {
+        version: "plumix.v2",
+        blocks: [{ id: "t1", name: "core/rich-text", attrs: { people } }],
+      },
+      registry,
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
   test("rejects a child a slot's allowedBlocks doesn't permit", () => {
     const result = validateEntryContent(
       {
