@@ -217,14 +217,14 @@ msgstr "تعليقات كثيرة جدًا — حاول مرة أخرى بعد �
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.subject"
-msgstr ""
+msgstr "تعليق بانتظار الإشراف"
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.intro"
-msgstr ""
+msgstr "ترك {authorName} تعليقًا على «{entryTitle}» وهو بانتظار المراجعة:"
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.review"
-msgstr ""
+msgstr "راجعه في قائمة الإشراف:"

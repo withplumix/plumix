@@ -11,59 +11,59 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.subject"
-msgstr ""
+msgstr "تسجيل الدخول إلى {siteName}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.intro"
-msgstr ""
+msgstr "سجّل الدخول إلى {siteName} بفتح هذا الرابط:"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.expires"
-msgstr ""
+msgstr "تنتهي صلاحية الرابط خلال {minutes} دقيقة."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.ignore"
-msgstr ""
+msgstr "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.subject"
-msgstr ""
+msgstr "أكّد بريدك الإلكتروني الجديد لدى {siteName}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.intro"
-msgstr ""
+msgstr "طلب شخص ما — نأمل أن يكون أنت — تغيير البريد الإلكتروني لحسابك في {siteName}."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.from"
-msgstr ""
+msgstr "من: {oldEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.to"
-msgstr ""
+msgstr "إلى: {newEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.confirm"
-msgstr ""
+msgstr "أكّد التغيير بفتح هذا الرابط:"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresOneHour"
-msgstr ""
+msgstr "تنتهي صلاحية الرابط خلال ساعة واحدة."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresHours"
-msgstr ""
+msgstr "تنتهي صلاحية الرابط خلال {hours} ساعة."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
-msgstr ""
+msgstr "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة — سيبقى حسابك على {oldEmail}."

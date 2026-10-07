@@ -217,14 +217,14 @@ msgstr "评论过于频繁 — 请稍后再试。"
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.subject"
-msgstr ""
+msgstr "有一条评论等待审核"
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.intro"
-msgstr ""
+msgstr "{authorName} 在“{entryTitle}”下发表了一条等待审核的评论："
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.review"
-msgstr ""
+msgstr "请在审核队列中处理："

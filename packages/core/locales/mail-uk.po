@@ -11,59 +11,59 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.subject"
-msgstr ""
+msgstr "Вхід на {siteName}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.intro"
-msgstr ""
+msgstr "Увійдіть на {siteName}, відкривши це посилання:"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.expires"
-msgstr ""
+msgstr "Посилання діє {minutes} хв."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.ignore"
-msgstr ""
+msgstr "Якщо ви цього не запитували, просто проігноруйте цей лист."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.subject"
-msgstr ""
+msgstr "Підтвердьте нову адресу електронної пошти для {siteName}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.intro"
-msgstr ""
+msgstr "Хтось — сподіваємося, ви — попросив змінити адресу електронної пошти вашого облікового запису {siteName}."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.from"
-msgstr ""
+msgstr "Було: {oldEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.to"
-msgstr ""
+msgstr "Стане: {newEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.confirm"
-msgstr ""
+msgstr "Підтвердьте зміну, відкривши це посилання:"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresOneHour"
-msgstr ""
+msgstr "Посилання діє 1 год."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresHours"
-msgstr ""
+msgstr "Посилання діє {hours} год."
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
-msgstr ""
+msgstr "Якщо ви цього не запитували, просто проігноруйте цей лист — ваш обліковий запис залишиться на {oldEmail}."

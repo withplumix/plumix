@@ -217,14 +217,14 @@ msgstr "Забагато коментарів — спробуйте трохи 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.subject"
-msgstr ""
+msgstr "Коментар очікує на модерацію"
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.intro"
-msgstr ""
+msgstr "{authorName} залишає коментар до «{entryTitle}», який очікує на перевірку:"
 
 #. js-lingui-explicit-id
 #: src/server/mail.ts
 msgid "plugin.comments.mail.pending.review"
-msgstr ""
+msgstr "Перегляньте його в черзі модерації:"

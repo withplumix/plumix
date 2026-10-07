@@ -11,59 +11,59 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.subject"
-msgstr ""
+msgstr "登录 {siteName}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.intro"
-msgstr ""
+msgstr "打开此链接登录 {siteName}："
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.expires"
-msgstr ""
+msgstr "该链接将在 {minutes} 分钟后失效。"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.magicLink.ignore"
-msgstr ""
+msgstr "如果这不是你发起的请求，请忽略此邮件。"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.subject"
-msgstr ""
+msgstr "确认你在 {siteName} 的新邮箱"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.intro"
-msgstr ""
+msgstr "有人（希望是你）请求更改你在 {siteName} 的账户邮箱。"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.from"
-msgstr ""
+msgstr "原邮箱：{oldEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.to"
-msgstr ""
+msgstr "新邮箱：{newEmail}"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.confirm"
-msgstr ""
+msgstr "打开此链接确认更改："
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresOneHour"
-msgstr ""
+msgstr "该链接将在 1 小时后失效。"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.expiresHours"
-msgstr ""
+msgstr "该链接将在 {hours} 小时后失效。"
 
 #. js-lingui-explicit-id
 #: src/mail/core-mails.ts
 msgid "core.mail.emailChange.ignore"
-msgstr ""
+msgstr "如果这不是你发起的请求，请忽略此邮件，你的账户仍将使用 {oldEmail}。"
