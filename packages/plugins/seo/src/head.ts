@@ -87,6 +87,13 @@ function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
   return link?.some((entry) => entry.rel === "canonical") ?? false;
 }
 
+function declaredCanonical(
+  link: readonly DocumentLink[] | undefined,
+): string | null {
+  const href = link?.find((entry) => entry.rel === "canonical")?.href;
+  return nonEmpty(href);
+}
+
 /**
  * Pure gap-filler for the head: appends a `<meta>` only when its
  * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
@@ -243,9 +250,16 @@ export async function applySeoHead(
   const siteName = nonEmpty(site.title);
   // A URL that resolved to nothing is the canonical address of nothing, and
   // core deliberately leaves an error page's canonical unwritten for the same
-  // reason — so neither the tag nor `og:url` is claimed there.
+  // reason — so neither the tag nor `og:url` is claimed there. A page that
+  // opted out with `canonical: false` gets no derived URL either: only one it
+  // declared itself, or an editor's override.
   const canonical =
-    kind === "error" ? null : (overrides.canonical ?? canonicalUrl(ctx));
+    kind === "error"
+      ? null
+      : (overrides.canonical ??
+        (manifest.canonical === false
+          ? declaredCanonical(manifest.link)
+          : canonicalUrl(ctx)));
   const tagline = nonEmpty(site.tagline);
   const description =
     overrides.description ?? nonEmpty(entry?.excerpt) ?? tagline;
@@ -291,7 +305,8 @@ export async function applySeoHead(
   // it offers no structured data — the alternative is a page whose graph and
   // whose robots directive say different things about it. Nor does a URL that
   // resolved to nothing, which has no subject to describe and no canonical to
-  // hang one off.
+  // hang one off — nor a page that opted out of its canonical and declared
+  // none of its own, since every `@id` in the graph is built from it.
   //
   // A site that turned the graph off gets none built, so no `seo:schema:*`
   // subscriber runs.

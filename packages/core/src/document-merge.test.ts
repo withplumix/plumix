@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { DocumentManifest } from "./document-manifest.js";
 import { mergeDocumentManifest } from "./document-merge.js";
 
 describe("mergeDocumentManifest", () => {
@@ -81,5 +82,17 @@ describe("mergeDocumentManifest", () => {
     expect(merged.link).toEqual([
       { rel: "preconnect", href: "https://cdn.example" },
     ]);
+  });
+
+  test("a template's canonical: false wins over a theme that set none", () => {
+    expect(mergeDocumentManifest({}, { canonical: false }).canonical).toBe(
+      false,
+    );
+  });
+
+  test("canonical accepts only false, so a template cannot re-enable it", () => {
+    // @ts-expect-error - `true` is not a canonical value; omit it instead
+    const fragment: DocumentManifest = { canonical: true };
+    expect(fragment).toBeDefined();
   });
 });

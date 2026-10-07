@@ -123,6 +123,85 @@ describe("SEO — canonical + render:document seam", () => {
     expect(head.match(/rel="canonical"/g)).toHaveLength(1);
     expect(head).toContain('href="https://cms.example/from-theme"');
   });
+
+  test("a template whose document returns canonical: false renders no canonical", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: () => ({ canonical: false }),
+            render: () => null,
+          }),
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain("<title>");
+    expect(head).not.toContain('rel="canonical"');
+  });
+
+  test("a template that leaves canonical unset inherits the theme's canonical: false", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: { meta: [{ name: "x-template", content: "entry" }] },
+            render: () => null,
+          }),
+        ),
+      ],
+      document: { canonical: false },
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('name="x-template"');
+    expect(head).not.toContain('rel="canonical"');
+  });
+
+  test("a document function that opts one entry out leaves the others' canonicals", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: ({ data }) =>
+              data.entry.slug === "shortlist" ? { canonical: false } : {},
+            render: () => null,
+          }),
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blogPlugin], theme: theme },
+    });
+    await seedPost(h, { slug: "shortlist", title: "Shortlist" });
+    await seedPost(h);
+
+    const optedOut = await dispatchHead(
+      h,
+      "https://cms.example/post/shortlist",
+    );
+    const other = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(optedOut).toContain("<title>Shortlist</title>");
+    expect(optedOut).not.toContain('rel="canonical"');
+    expect(other).toContain(
+      '<link rel="canonical" href="https://cms.example/post/hello"/>',
+    );
+  });
 });
 
 async function seedSiteSettings(
