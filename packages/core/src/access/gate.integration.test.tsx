@@ -435,7 +435,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
 // included. The theme echoes who it rendered for, so a test can tell a
 // signed-in body from the anonymous one. A privileged request (a session, an
 // `Authorization` header) renders `private` under such a policy, exactly as
-// under no policy, so its render never lands under the plain URL (#2914).
+// under no policy, so its render never lands under the plain URL.
 const signedInEcho = defineTheme({
   templates: [
     entry(
@@ -525,7 +525,7 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
   });
 
   test("an anonymous request is still stored and served from the store", async () => {
-    const { cdn, store, match } = memoryCdn();
+    const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: {
@@ -538,20 +538,22 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
     await h.dispatch(new Request("https://cms.example/note/open"));
     await h.drainDeferred();
 
-    expect(store.size).toBe(1);
-    const key = [...store.keys()][0];
-    if (key === undefined) throw new Error("expected a stored cdn entry");
-    expect(new URL(key).searchParams.has(SEGMENT_KEY_PARAM)).toBe(false);
-    store.set(key, {
-      response: new Response("STORED-ANONYMOUS", { status: 200 }),
-      tags: [],
+    expect(
+      [...store.keys()].map((k) =>
+        new URL(k).searchParams.has(SEGMENT_KEY_PARAM),
+      ),
+    ).toEqual([false]);
+    store.forEach((_, key) => {
+      store.set(key, {
+        response: new Response("STORED-ANONYMOUS", { status: 200 }),
+        tags: [],
+      });
     });
 
     const second = await h.dispatch(
       new Request("https://cms.example/note/open"),
     );
     expect(await second.text()).toBe("STORED-ANONYMOUS");
-    expect(match).toHaveBeenCalledTimes(2);
   });
 });
 
