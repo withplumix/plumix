@@ -328,6 +328,9 @@ A config slot that holds an adapter the admin could offer an action for: `storag
 **Configured slot**:
 An infrastructure slot the site's resolved config sets. The plugin manifest carries only whether each one is configured; an admin affordance backed by one is hidden when it isn't. Not a capability. See ADR 0014.
 
+**Refused admin area**:
+An admin area a runtime adapter refuses for every visitor, named by what its actions would produce: `apiTokens`, `deviceAuthorization`, `passkeys`, `oauthLinking`, `emailDelivery`. The plugin manifest carries the list, and the admin hides every surface of a refused area; the runtime's own routing still refuses the requests. Not a capability. See ADR 0014.
+
 **Client address**:
 The network address a request came from, as the runtime's trusted proxy reported it and the runtime adapter handed core. Advisory: it describes the network path, never the principal, so no access decision reads it.
 _Avoid_: IP, client IP, remote address

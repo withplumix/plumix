@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
 import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
+import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
@@ -186,6 +187,9 @@ function UsersListRoute(): ReactNode {
   // "Invite user" button. The route behind it also redirects on
   // `beforeLoad` for defense-in-depth.
   const canInvite = hasCap(user.capabilities, "user:create");
+  // A deployment that refuses email delivery can't invite anyone, so the
+  // action is hidden rather than disabled.
+  const offersInvite = isSurfaceOffered("userInvite");
 
   const { formatDate, formatRelative } = useFormatters();
   const columns = useMemo(
@@ -210,7 +214,7 @@ function UsersListRoute(): ReactNode {
             <Trans id="users.list.title" message="Users" />
           </h1>
         </div>
-        {canInvite ? (
+        {canInvite && offersInvite ? (
           <Button asChild>
             <Link to="/users/create" data-testid="users-list-invite-button">
               <UserPlus />
@@ -246,7 +250,9 @@ function UsersListRoute(): ReactNode {
           data={rows}
           isLoading={query.isPending}
           loadingLabel={label(M.loadingLabel)}
-          emptyState={<EmptyState canInvite={canInvite} />}
+          emptyState={
+            <EmptyState canInvite={canInvite} offersInvite={offersInvite} />
+          }
         />
       )}
 
@@ -409,7 +415,13 @@ function RoleFilter({
   );
 }
 
-function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
+function EmptyState({
+  canInvite,
+  offersInvite,
+}: {
+  canInvite: boolean;
+  offersInvite: boolean;
+}): ReactNode {
   return (
     <Empty data-testid="users-list-empty-state" variant="outline">
       <EmptyHeader>
@@ -426,21 +438,23 @@ function EmptyState({ canInvite }: { canInvite: boolean }): ReactNode {
           />
         </EmptyDescription>
       </EmptyHeader>
-      <EmptyContent>
-        {canInvite ? (
-          <Button asChild>
-            <Link to="/users/create">
+      {offersInvite ? (
+        <EmptyContent data-testid="users-list-empty-invite">
+          {canInvite ? (
+            <Button asChild>
+              <Link to="/users/create">
+                <Plus />
+                <Trans id="users.list.empty.invite" message="Invite user" />
+              </Link>
+            </Button>
+          ) : (
+            <Button disabled>
               <Plus />
               <Trans id="users.list.empty.invite" message="Invite user" />
-            </Link>
-          </Button>
-        ) : (
-          <Button disabled>
-            <Plus />
-            <Trans id="users.list.empty.invite" message="Invite user" />
-          </Button>
-        )}
-      </EmptyContent>
+            </Button>
+          )}
+        </EmptyContent>
+      ) : null}
     </Empty>
   );
 }

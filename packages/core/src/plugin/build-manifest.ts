@@ -18,6 +18,7 @@ import type {
   ThemeTokens,
 } from "../blocks/index.js";
 import type { ResolvedI18n } from "../config.js";
+import type { AdminArea } from "../context/runtime-adapter.js";
 import type { Label } from "../i18n/label.js";
 import type { NamedTemplateChoice } from "../route/contract/named-template.js";
 import type { PluginI18nSlot } from "./define.js";
@@ -171,9 +172,14 @@ export function buildManifest(
      *  read off the site config, not the plugin registry. Omitted means no
      *  slot is configured. */
     readonly configuredSlots?: ConfiguredSlots;
+    /** Routed through options — like `configuredSlots` — because the
+     *  runtime declares them, not the plugin registry. Omitted means the
+     *  deployment refuses none. */
+    readonly refusedAdminAreas?: readonly AdminArea[];
   },
 ): BuiltManifest {
   const configuredSlots = options?.configuredSlots ?? configuredSlotsOf({});
+  const refusedAdminAreas = options?.refusedAdminAreas ?? [];
   const entries = Array.from(registry.entryTypes.values())
     .map((pt) => toEntryTypeManifest(pt, options?.namedTemplates?.[pt.name]))
     .sort(byPriorityThen((e) => e.name));
@@ -230,6 +236,7 @@ export function buildManifest(
     entries,
     termTaxonomies,
     configuredSlots,
+    refusedAdminAreas,
   );
   const dashboardWidgets = Array.from(registry.dashboardWidgets.values())
     .map((widget) => toDashboardWidgetEntry(widget, registry))
@@ -282,6 +289,7 @@ export function buildManifest(
       options?.adminBundledPluginIds,
     ),
     configuredSlots,
+    refusedAdminAreas,
     frameworkRoutes: { author: registry.frameworkRoutes.author },
   };
 }
@@ -335,11 +343,13 @@ interface MutableAdminNavGroup {
 // time (the manifest projection ships every item, the sidebar drops
 // what the user can't see). A row naming a `slot` is dropped here when
 // the deployment doesn't fill it: the user may, but the site can't. A
-// row marked `settingsPages` is dropped when no settings page is
+// row naming an `area` is dropped, for the same reason, when the runtime
+// refuses that area. A row marked `settingsPages` is dropped when no settings page is
 // registered, since its page would have nothing to show.
 const CORE_NAV_ITEMS: readonly {
   groupId: string;
   slot?: InfrastructureSlot;
+  area?: AdminArea;
   settingsPages?: true;
   item: AdminNavItem;
 }[] = [
@@ -393,6 +403,7 @@ const CORE_NAV_ITEMS: readonly {
   {
     groupId: "management",
     slot: "mailer",
+    area: "emailDelivery",
     item: {
       to: "/mailer",
       label: { id: "core.adminNav.item.mailer", message: "Mailer" },
@@ -454,6 +465,7 @@ function humanizeGroupId(id: string): string {
 
 function seedNavGroups(
   configuredSlots: ConfiguredSlots,
+  refusedAdminAreas: readonly AdminArea[],
   hasSettingsPages: boolean,
 ): Map<string, MutableAdminNavGroup> {
   const groups = new Map<string, MutableAdminNavGroup>();
@@ -465,8 +477,9 @@ function seedNavGroups(
       items: [],
     });
   }
-  for (const { groupId, slot, settingsPages, item } of CORE_NAV_ITEMS) {
+  for (const { groupId, slot, area, settingsPages, item } of CORE_NAV_ITEMS) {
     if (slot !== undefined && !configuredSlots[slot]) continue;
+    if (area !== undefined && refusedAdminAreas.includes(area)) continue;
     if (settingsPages && !hasSettingsPages) continue;
     groups.get(groupId)?.items.push(item);
   }
@@ -570,9 +583,11 @@ function projectAdminNav(
   entries: readonly EntryTypeManifestEntry[],
   termTaxonomies: readonly TermTaxonomyManifestEntry[],
   configuredSlots: ConfiguredSlots,
+  refusedAdminAreas: readonly AdminArea[],
 ): readonly AdminNavGroup[] {
   const groups = seedNavGroups(
     configuredSlots,
+    refusedAdminAreas,
     registry.settingsPages.size > 0,
   );
   addEntryNavItems(groups, entries);

@@ -21,6 +21,9 @@ const TOOLBAR_STYLE = `
   #plumix-demo-toolbar .pdt-brand { font-weight: 700; }
   #plumix-demo-toolbar .pdt-time { opacity: 0.7; font-variant-numeric: tabular-nums; }
   #plumix-demo-toolbar .pdt-note { opacity: 0.7; }
+  #plumix-demo-toolbar .pdt-off {
+    opacity: 0.7; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  }
   #plumix-demo-toolbar .pdt-sep { width: 1px; height: 16px; background: rgba(255, 255, 255, 0.18); }
   #plumix-demo-toolbar a { color: #fff; }
   #plumix-demo-toolbar .pdt-reset {
@@ -34,20 +37,23 @@ const TOOLBAR_STYLE = `
   #plumix-demo-toolbar .pdt-deploy-short { display: none; }
   @media (max-width: 420px) {
     #plumix-demo-toolbar { gap: 8px; padding: 6px 6px 6px 13px; font-size: 12px; }
-    #plumix-demo-toolbar .pdt-note { display: none; }
+    #plumix-demo-toolbar .pdt-note, #plumix-demo-toolbar .pdt-off { display: none; }
     #plumix-demo-toolbar .pdt-deploy { padding: 6px 12px; }
     #plumix-demo-toolbar .pdt-deploy-full { display: none; }
     #plumix-demo-toolbar .pdt-deploy-short { display: inline; }
   }
 </style>`;
 
-// Session-holder pill: a live countdown to expiry, a reset control, and a
-// deploy CTA. The countdown is client-side — it reads the readable
-// `plumix_demo_expires` cookie rather than any server-rendered time.
-const SESSION_TOOLBAR = `
+// Session-holder pill: a live countdown to expiry, what's off in the demo, a
+// reset control, and a deploy CTA. The countdown is client-side — it reads the
+// readable `plumix_demo_expires` cookie rather than any server-rendered time.
+function sessionToolbar(off: string): string {
+  return `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
   <span class="pdt-brand">Demo</span>
   <span class="pdt-time" id="plumix-demo-time">—</span>
+  <span class="pdt-sep"></span>
+  <span class="pdt-off" data-testid="demo-off" title="${off}">${off}</span>
   <span class="pdt-sep"></span>
   <a class="pdt-reset" href="/_demo/reset">Reset</a>
   <a class="pdt-deploy" href="${DEPLOY_URL}" target="_blank" rel="noopener"
@@ -71,6 +77,7 @@ const SESSION_TOOLBAR = `
   setInterval(tick, 30000);
 })();
 </script>`;
+}
 
 // Anonymous pill: the read-only showcase's single entry point into the editor.
 // "Try the editor" hits `/demo`, which mints a session and redirects to admin.
@@ -82,20 +89,40 @@ const ANONYMOUS_TOOLBAR = `
   <a class="pdt-deploy" href="/demo" data-testid="try-editor">Try the editor</a>
 </div>`;
 
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 /**
  * A floating pill injected into the demo's HTML responses. Plain HTML + inline
  * styles + a small script — no dependencies. A session holder gets the
- * countdown/reset/deploy pill; an anonymous visitor on the read-only showcase
- * gets the "Try the editor" CTA.
+ * countdown/off/reset/deploy pill, where `off` is the localized list of the
+ * admin areas the demo refuses; an anonymous visitor on the read-only
+ * showcase gets the "Try the editor" CTA.
  */
-export function renderDemoToolbar(hasSession: boolean): string {
-  return `${TOOLBAR_STYLE}${hasSession ? SESSION_TOOLBAR : ANONYMOUS_TOOLBAR}`;
+export function renderDemoToolbar(hasSession: boolean, off: string): string {
+  return `${TOOLBAR_STYLE}${
+    hasSession
+      ? sessionToolbar(escapeHtml(`Off in this demo: ${off}`))
+      : ANONYMOUS_TOOLBAR
+  }`;
 }
 
 /** Insert the toolbar just before `</body>`; a no-op on non-HTML documents. */
-export function injectDemoToolbar(html: string, hasSession: boolean): string {
+export function injectDemoToolbar(
+  html: string,
+  hasSession: boolean,
+  off: string,
+): string {
   if (!html.includes("</body>")) return html;
-  return html.replace("</body>", `${renderDemoToolbar(hasSession)}</body>`);
+  return html.replace(
+    "</body>",
+    `${renderDemoToolbar(hasSession, off)}</body>`,
+  );
 }
 
 /**

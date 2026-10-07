@@ -1,8 +1,8 @@
 // What a runtime adapter composes a Plumix app from: the app and its request
 // handler, scheduled tasks and the loop that fires them in a self-hosted
 // process, query tracing, the in-memory stores a test or a local run stands in
-// with, the dev boot page, and the request rules every self-hosted runtime
-// applies alike.
+// with, the dev boot page, the request rules every self-hosted runtime
+// applies alike, and the labels for the admin areas a runtime refuses.
 export {
   buildApp,
   connectScheduledDb,
@@ -22,6 +22,7 @@ export {
   isPermittedImageSource,
   isSameHostImageSource,
   isTrustedDevHost,
+  listAdminAreas,
   memoryKv,
   memoryStorage,
   negotiateImageFormat,
@@ -43,6 +44,7 @@ export {
 } from "@plumix/core";
 
 export type {
+  AdminArea,
   AssetPath,
   AssetsBinding,
   BindingName,

@@ -285,6 +285,19 @@ export interface RuntimeHandlerSpec {
   ) => PlumixHandler;
 }
 
+/**
+ * An admin area a deployment can refuse whatever the user's role: each names
+ * the credential or the email its actions would produce. The admin hides
+ * every surface of a refused area (ADR 0014). A new area joins this union, and
+ * the admin's roster fails typecheck until it names the area's surfaces.
+ */
+export type AdminArea =
+  | "apiTokens"
+  | "deviceAuthorization"
+  | "passkeys"
+  | "oauthLinking"
+  | "emailDelivery";
+
 export interface RuntimeAdapter {
   readonly name: string;
   /** How core builds the handler the entry calls; see {@link RuntimeHandlerSpec}. */
@@ -319,4 +332,10 @@ export interface RuntimeAdapter {
    * tooling never ends up in the worker bundle.
    */
   readonly commandsModule?: string;
+  /**
+   * The admin areas this deployment refuses, whoever is signed in. The plumix
+   * Vite plugin carries them into the plugin manifest, and the admin hides
+   * their surfaces. Omit when the runtime refuses none (the common case).
+   */
+  readonly refusedAdminAreas?: readonly AdminArea[];
 }

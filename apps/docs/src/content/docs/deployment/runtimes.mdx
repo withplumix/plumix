@@ -105,7 +105,7 @@ The smallest adapter that runs a Plumix site: a `RuntimeAdapter` declaring what 
 
 ## The adapter
 
-Three members are required; the last two exist for platforms that need them.
+Three members are required; the rest exist for platforms and deployments that need them.
 
 ### `RuntimeAdapter.name`
 
@@ -185,6 +185,27 @@ declare const base: RuntimeAdapter;
 export const adapter: RuntimeAdapter = {
   ...base,
   commandsModule: "@example/runtime-deno/commands",
+};
+```
+
+### `RuntimeAdapter.refusedAdminAreas`
+
+The admin areas this deployment refuses whoever is signed in, as `AdminArea`s: `apiTokens`, `deviceAuthorization`, `passkeys`, `oauthLinking` and `emailDelivery`. The plumix Vite plugin carries them into the admin, which hides every card, page and action of a refused area instead of offering one that can only fail. A role or capability can't say this: it is the same for every visitor.
+
+Declaring an area hides its surfaces and nothing more. Refuse the requests behind them in your own routing too, usually in `handler.wrap`.
+
+The demo runtime from `@plumix/runtime-cloudflare/demo` is the example. Every visitor works against their own sandbox database, so its gate refuses only what reaches past that sandbox, a credential usable outside the visitor's tab or a real email, and it declares all five areas so the demo admin hides them.
+
+Omit it. A deployment that refuses nothing shows every surface.
+
+```ts
+import type { RuntimeAdapter } from "plumix";
+
+declare const base: RuntimeAdapter;
+
+export const adapter: RuntimeAdapter = {
+  ...base,
+  refusedAdminAreas: ["apiTokens", "passkeys"],
 };
 ```
 

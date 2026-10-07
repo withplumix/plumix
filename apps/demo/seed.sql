@@ -11,6 +11,7 @@ DELETE FROM settings WHERE "group" IN ('site', 'menu_locations');
 
 -- Author
 INSERT OR IGNORE INTO users (id, email, slug, name, avatar_url, role, meta) VALUES (1, 'editorial@plumix.example', 'the-plumix-editors', 'The Plumix Editors', 'https://i.pravatar.cc/160?img=15', 'admin', '{}');
+INSERT OR IGNORE INTO users (id, email, slug, name, role, meta) VALUES (2, 'contributor@plumix.example', 'a-contributor', 'A Contributor', 'contributor', '{}');
 
 -- Settings
 INSERT INTO settings ("group", "key", "value") VALUES ('site', 'title', '"The Plumix Gazette"');

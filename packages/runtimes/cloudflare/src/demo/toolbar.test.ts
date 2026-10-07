@@ -8,7 +8,7 @@ import {
 
 describe("renderDemoToolbar", () => {
   describe("session holder", () => {
-    const html = renderDemoToolbar(true);
+    const html = renderDemoToolbar(true, "API tokens and <Passkeys>");
 
     test("offers reset and deploy actions", () => {
       expect(html).toContain('href="/_demo/reset"');
@@ -19,43 +19,58 @@ describe("renderDemoToolbar", () => {
       expect(html).toContain("plumix_demo_expires");
     });
 
+    test("names what's off in this demo, escaped", () => {
+      expect(html).toContain(
+        "Off in this demo: API tokens and &lt;Passkeys&gt;",
+      );
+    });
+
     test("does not offer the anonymous try-editor CTA", () => {
       expect(html).not.toContain('data-testid="try-editor"');
     });
   });
 
   describe("anonymous visitor", () => {
-    const html = renderDemoToolbar(false);
+    const html = renderDemoToolbar(false, "API tokens");
 
     test("offers the try-editor CTA into /demo", () => {
       expect(html).toContain('data-testid="try-editor"');
       expect(html).toContain('href="/demo"');
     });
 
-    test("omits reset and the countdown (no session yet)", () => {
+    test("omits reset, the countdown and what's off (no session yet)", () => {
       expect(html).not.toContain("/_demo/reset");
       expect(html).not.toContain("plumix_demo_expires");
+      expect(html).not.toContain("Off in this demo");
     });
   });
 });
 
 describe("injectDemoToolbar", () => {
   test("inserts the session pill before </body>", () => {
-    const out = injectDemoToolbar("<html><body><p>hi</p></body></html>", true);
+    const out = injectDemoToolbar(
+      "<html><body><p>hi</p></body></html>",
+      true,
+      "",
+    );
     expect(out).toContain("<p>hi</p>");
     expect(out).toContain("_demo/reset");
     expect(out.indexOf("_demo/reset")).toBeLessThan(out.indexOf("</body>"));
   });
 
   test("inserts the anonymous CTA pill before </body>", () => {
-    const out = injectDemoToolbar("<html><body><p>hi</p></body></html>", false);
+    const out = injectDemoToolbar(
+      "<html><body><p>hi</p></body></html>",
+      false,
+      "",
+    );
     expect(out).toContain('data-testid="try-editor"');
     expect(out.indexOf("try-editor")).toBeLessThan(out.indexOf("</body>"));
   });
 
   test("returns the document unchanged when there is no </body>", () => {
     const doc = "not html";
-    expect(injectDemoToolbar(doc, true)).toBe(doc);
+    expect(injectDemoToolbar(doc, true, "")).toBe(doc);
   });
 });
 

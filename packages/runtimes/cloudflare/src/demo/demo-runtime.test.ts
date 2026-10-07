@@ -76,6 +76,22 @@ describe("demoRuntime — the handler core builds for it", () => {
   });
 });
 
+describe("demoRuntime — the admin areas it refuses", () => {
+  test("declares every area the demo gate refuses", () => {
+    expect([...(runtime.refusedAdminAreas ?? [])].sort()).toEqual([
+      "apiTokens",
+      "deviceAuthorization",
+      "emailDelivery",
+      "oauthLinking",
+      "passkeys",
+    ]);
+  });
+
+  test("the base runtime it wraps refuses none", () => {
+    expect(cloudflare().refusedAdminAreas).toBeUndefined();
+  });
+});
+
 describe("demoRuntime — the site origin", () => {
   // An inner handler that answers with the origin the app would resolve.
   const echoOrigin: PlumixHandler = {
@@ -128,5 +144,54 @@ describe("demoRuntime — the site origin", () => {
     expect(
       resolveEnvInput(passkey.origin, { PUBLIC_ORIGIN: "https://x.example" }),
     ).toBe("https://x.example");
+  });
+});
+
+describe("demoRuntime — the toolbar names what's off", () => {
+  const page: PlumixHandler = {
+    fetch: () =>
+      new Response("<html><body><p>post</p></body></html>", {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }),
+  };
+  const config = plumix({
+    runtime,
+    database: stubDatabase,
+    auth: auth({
+      passkey: {
+        rpName: "Plumix Test",
+        rpId: "cms.example",
+        origin: "https://cms.example",
+      },
+    }),
+    theme: defineTheme({ templates: () => null }),
+  });
+  const fetchPage = async (headers: HeadersInit): Promise<string> => {
+    const wrap = runtime.handler.wrap;
+    if (!wrap) throw new Error("the demo runtime wraps its handler");
+    const response = await wrap(page, config).fetch(
+      new Request("https://demo.plumix.dev/posts/hello", { headers }),
+      { env: {} },
+    );
+    return response.text();
+  };
+
+  test("lists every refused area to a session holder", async () => {
+    const html = await fetchPage({ cookie: `${DEMO_COOKIE_NAME}=t1` });
+
+    expect(html).toContain(
+      "Off in this demo: API tokens, Device sign-in, Passkeys, OAuth sign-in, and Email delivery",
+    );
+  });
+
+  // Unit tests read an empty stand-in for the compiled catalogs, so the labels
+  // stay English; the list's own grammar shows the visitor's locale won.
+  test("lists them in the visitor's language", async () => {
+    const html = await fetchPage({
+      cookie: `${DEMO_COOKIE_NAME}=t1`,
+      "accept-language": "de-DE,de;q=0.9",
+    });
+
+    expect(html).toContain("OAuth sign-in und Email delivery");
   });
 });

@@ -167,7 +167,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
-    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome --src src/blocks",
+    "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-area --src src/admin-bar --src src/welcome --src src/blocks",
     "i18n:compile": "node bin/plumix-compile-catalogs.mjs --dts",
     "lint": "eslint",
     "publint": "publint",

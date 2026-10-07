@@ -258,6 +258,30 @@ describe("buildManifest", () => {
     ]);
   });
 
+  test("drops Mailer when the deployment refuses email delivery, even with a mailer slot", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      configuredSlots: { ...configuredSlotsOf({}), mailer: true },
+      refusedAdminAreas: ["emailDelivery"],
+    });
+    const management = manifest.adminNav.find((g) => g.id === "management");
+    expect(management?.items.map((i) => i.to)).toEqual([
+      "/users",
+      "/allowed-domains",
+      "/field-values",
+    ]);
+  });
+
+  test("carries the admin areas the deployment refuses", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      refusedAdminAreas: ["passkeys", "apiTokens"],
+    });
+    expect(manifest.refusedAdminAreas).toEqual(["passkeys", "apiTokens"]);
+  });
+
+  test("refuses no admin area when the deployment declares none", () => {
+    expect(buildManifest(createPluginRegistry()).refusedAdminAreas).toEqual([]);
+  });
+
   test("plugin field types project by name, sorted", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {
