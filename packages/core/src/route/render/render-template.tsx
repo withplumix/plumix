@@ -299,6 +299,7 @@ async function renderErrorThroughThemeInner({
     mergeTemplateDepDeclarations(theme, template),
     templateDeps,
     ctx,
+    false,
   );
   const merged = await resolveRenderDocument({
     template,
