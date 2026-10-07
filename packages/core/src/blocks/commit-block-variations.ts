@@ -1,6 +1,7 @@
 import type { JsonObject } from "../json.js";
 import type { BlockRegistry } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 import { BlockVariationError } from "./variation-errors.js";
 
@@ -115,7 +116,7 @@ function walk(
     const declared = spec.inputs
       ? new Set(spec.inputs.map((input) => input.name))
       : undefined;
-    for (const [key, value] of Object.entries(node.attrs ?? {})) {
+    for (const key of Object.keys(node.attrs ?? {})) {
       if (declared && !declared.has(key)) {
         throw BlockVariationError.undeclaredAttr(
           parentBlock,
@@ -125,6 +126,9 @@ function walk(
           key,
         );
       }
+    }
+    for (const key of blockSlotKeys(node, spec)) {
+      const value = node.attrs?.[key];
       if (isBlockNodeArray(value)) {
         walk(parentBlock, variationSlug, value, `${path}.${key}`, blocks);
       }

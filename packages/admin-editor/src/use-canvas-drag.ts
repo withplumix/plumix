@@ -106,7 +106,9 @@ export function useCanvasDrag({
     if (!iframe) return;
     const draggingName =
       dragSpec?.name ??
-      (movingId ? findBlock(store.getState().tree, movingId)?.name : undefined);
+      (movingId
+        ? findBlock(store.getState().tree, movingId, registry)?.name
+        : undefined);
     if (!draggingName) return;
 
     const endDrag = (): void => {
@@ -164,7 +166,7 @@ export function useCanvasDrag({
     const onUp = (e: PointerEvent): void => {
       const slot = slotTargetAt(e.clientX, e.clientY);
       const parent = slot
-        ? findBlock(store.getState().tree, slot.parentId)
+        ? findBlock(store.getState().tree, slot.parentId, registry)
         : undefined;
       // A resolved slot supersedes the top-level line, so only hit-test the
       // top level when no slot won.

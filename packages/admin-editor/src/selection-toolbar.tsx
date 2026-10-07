@@ -25,6 +25,7 @@ import {
   canUngroupBlock,
   findParentId,
 } from "./block-tree-ops.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { px } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
@@ -44,17 +45,18 @@ export function SelectionToolbar({
   readonly box: OverlayBox;
 }): ReactElement | null {
   const { i18n } = useLingui();
+  const { registry } = useEditorConfig();
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
   const hasParent = useEditorStore((s) =>
-    s.activeId ? findParentId(s.tree, s.activeId) !== null : false,
+    s.activeId ? findParentId(s.tree, s.activeId, registry) !== null : false,
   );
   const canGroup = useEditorStore((s) =>
-    canGroupSelection(s.tree, s.selectedIds),
+    canGroupSelection(s.tree, s.selectedIds, registry),
   );
   const canUngroup = useEditorStore((s) =>
-    s.activeId ? canUngroupBlock(s.tree, s.activeId) : false,
+    s.activeId ? canUngroupBlock(s.tree, s.activeId, registry) : false,
   );
   if (!activeId) return null;
 

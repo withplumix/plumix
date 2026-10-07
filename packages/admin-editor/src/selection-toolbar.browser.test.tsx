@@ -6,6 +6,8 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/core/blocks";
 
+import { treeBlocks } from "../test/tree-blocks.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";
 
@@ -29,10 +31,16 @@ function Capture(): null {
 function renderToolbar(tree: readonly BlockNode[]): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree}>
-        <SelectionToolbar box={BOX} />
-        <Capture />
-      </EditorProvider>
+      <EditorConfigProvider
+        registry={treeBlocks}
+        tokens={{}}
+        capabilities={new Set()}
+      >
+        <EditorProvider registry={treeBlocks} initialTree={tree}>
+          <SelectionToolbar box={BOX} />
+          <Capture />
+        </EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>,
   );
 }

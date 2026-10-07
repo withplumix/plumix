@@ -115,7 +115,7 @@ export function buildEditorCommands(
   // Group and ungroup are dropped rather than shown inert: both are no-ops when
   // the selection can't take them, and a palette row that does nothing when
   // picked reads as a broken command.
-  if (canGroupSelection(tree, selectedIds)) {
+  if (canGroupSelection(tree, selectedIds, registry)) {
     commands.push({
       id: "selection.group",
       group: "actions",
@@ -123,7 +123,7 @@ export function buildEditorCommands(
       run: () => store.getState().groupSelected(),
     });
   }
-  if (activeId !== null && canUngroupBlock(tree, activeId)) {
+  if (activeId !== null && canUngroupBlock(tree, activeId, registry)) {
     commands.push({
       id: "selection.ungroup",
       group: "actions",
@@ -168,15 +168,15 @@ export function buildEditorCommands(
           const { tree: current, activeId } = store.getState();
           store
             .getState()
-            .insertBlock(node, topLevelIndexAfter(current, activeId));
+            .insertBlock(node, topLevelIndexAfter(current, activeId, registry));
           store.getState().revealBlock(node.id);
         },
       });
     }
   }
-  for (const node of flattenTree(tree)) {
+  for (const node of flattenTree(tree, registry)) {
     const spec = registry.get(node.name);
-    const block = findBlock(tree, node.id);
+    const block = findBlock(tree, node.id, registry);
     const detail = block ? blockExcerpt(block, spec) : null;
     commands.push({
       id: `goto:${node.id}`,

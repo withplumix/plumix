@@ -2,7 +2,11 @@ import type { ReactElement, ReactNode, RefObject } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 
-import type { BlockNode, ThemeBreakpoints } from "@plumix/core/blocks";
+import type {
+  BlockNode,
+  BlockRegistry,
+  ThemeBreakpoints,
+} from "@plumix/core/blocks";
 import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 
 import type { CameraStore, CameraStoreApi } from "./camera-store.js";
@@ -28,6 +32,7 @@ const LoaderPushContext =
  * persists via callbacks and never feeds the tree back mid-session.
  */
 export function EditorProvider({
+  registry,
   initialTree,
   device,
   zoom,
@@ -35,6 +40,8 @@ export function EditorProvider({
   starterOpen,
   children,
 }: {
+  /** The block specs, which decide each node's slots for every tree edit. */
+  readonly registry: BlockRegistry;
   readonly initialTree?: readonly BlockNode[];
   readonly device?: EditorDevice;
   readonly zoom?: number;
@@ -45,7 +52,7 @@ export function EditorProvider({
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
-    createEditorStore({
+    createEditorStore(registry, {
       tree: initialTree,
       device,
       breakpoints,

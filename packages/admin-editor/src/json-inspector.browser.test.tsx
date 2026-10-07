@@ -12,6 +12,8 @@ import { page } from "vitest/browser";
 
 import type { BlockNode } from "@plumix/core/blocks";
 
+import { treeBlocks } from "../test/tree-blocks.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { JsonInspector, JsonSourceDialog } from "./json-inspector.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -38,10 +40,16 @@ function Selector({ id }: { readonly id?: string }): null {
 function renderInspector(selectId?: string): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={TREE}>
-        <Selector id={selectId} />
-        <JsonInspector />
-      </EditorProvider>
+      <EditorConfigProvider
+        registry={treeBlocks}
+        tokens={{}}
+        capabilities={new Set()}
+      >
+        <EditorProvider registry={treeBlocks} initialTree={TREE}>
+          <Selector id={selectId} />
+          <JsonInspector />
+        </EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>,
   );
 }
@@ -84,10 +92,16 @@ describe("JsonSourceDialog", () => {
   test("renders the page tree once the store opens it", async () => {
     render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={TREE}>
-          <Opener />
-          <JsonSourceDialog />
-        </EditorProvider>
+        <EditorConfigProvider
+          registry={treeBlocks}
+          tokens={{}}
+          capabilities={new Set()}
+        >
+          <EditorProvider registry={treeBlocks} initialTree={TREE}>
+            <Opener />
+            <JsonSourceDialog />
+          </EditorProvider>
+        </EditorConfigProvider>
       </I18nProvider>,
     );
     // Dialog content is portalled to the body, not the render container.
@@ -103,10 +117,16 @@ describe("JsonSourceDialog", () => {
     try {
       render(
         <I18nProvider i18n={i18n}>
-          <EditorProvider initialTree={TREE}>
-            <Opener />
-            <JsonSourceDialog />
-          </EditorProvider>
+          <EditorConfigProvider
+            registry={treeBlocks}
+            tokens={{}}
+            capabilities={new Set()}
+          >
+            <EditorProvider registry={treeBlocks} initialTree={TREE}>
+              <Opener />
+              <JsonSourceDialog />
+            </EditorProvider>
+          </EditorConfigProvider>
         </I18nProvider>,
       );
       const dialog = await findByTestId(document.body, "json-source-dialog");

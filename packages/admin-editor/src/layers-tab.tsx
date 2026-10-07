@@ -64,13 +64,14 @@ export function LayersTab(): ReactElement {
   const setBlockLabel = useEditorStore((s) => s.setBlockLabel);
   const removeSelected = useEditorStore((s) => s.removeSelected);
   const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
-  const items = useMemo(() => flattenTree(tree), [tree]);
+  const items = useMemo(() => flattenTree(tree, registry), [tree, registry]);
   // Layers builds its own clipboard ops over the same store/tree as the canvas
   // frame, so copy/paste work from the panel without depending on canvas focus.
   const clipboard = useMemo(
     () =>
       createClipboardOps(
         storeApi,
+        registry,
         navigator.clipboard,
         pasteableAtRoot(registry),
       ),
@@ -122,7 +123,7 @@ export function LayersTab(): ReactElement {
   };
 
   const excerptOf = (id: string): string | null => {
-    const node = findBlock(tree, id);
+    const node = findBlock(tree, id, registry);
     return node ? blockExcerpt(node, registry.get(node.name)) : null;
   };
 

@@ -20,7 +20,12 @@ afterEach(cleanup);
 
 const registry = createBlockRegistry([
   { name: "core/heading", render: () => null, title: "Heading" },
-  { name: "core/group", render: () => null, title: "Group" },
+  {
+    name: "core/group",
+    render: () => null,
+    title: "Group",
+    inputs: [{ name: "content", type: "slot" }],
+  },
   {
     name: "core/prose",
     render: () => null,
@@ -56,7 +61,7 @@ function TreeProbe(): ReactElement {
   const tree = useEditorStore((s) => s.tree);
   return (
     <output data-testid="tree-probe">
-      {flattenTree(tree)
+      {flattenTree(tree, registry)
         .map((n) => n.id)
         .join(",")}
     </output>
@@ -71,7 +76,7 @@ function renderLayers(tree: readonly BlockNode[]): ReturnType<typeof render> {
         tokens={{}}
         capabilities={new Set()}
       >
-        <EditorProvider initialTree={tree}>
+        <EditorProvider registry={registry} initialTree={tree}>
           <LayersTab />
           <ActiveProbe />
           <TreeProbe />

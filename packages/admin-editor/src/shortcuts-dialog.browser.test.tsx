@@ -3,6 +3,7 @@ import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import { treeBlocks } from "../test/tree-blocks.js";
 import { EditorProvider } from "./provider.js";
 import { MARK_SHORTCUTS } from "./shortcut-display.js";
 import { MARK_LABELS, ShortcutsDialog } from "./shortcuts-dialog.js";
@@ -20,7 +21,7 @@ afterEach(() => {
 function renderDialog(): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={[]}>
+      <EditorProvider registry={treeBlocks} initialTree={[]}>
         <ShortcutsDialog />
       </EditorProvider>
     </I18nProvider>,

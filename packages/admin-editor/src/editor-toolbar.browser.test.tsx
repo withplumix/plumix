@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/core/blocks";
 import { SidebarProvider, useSidebar } from "@plumix/admin-ui/sidebar";
 
+import { treeBlocks } from "../test/tree-blocks.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import {
@@ -41,7 +42,7 @@ function renderToolbar(options?: {
 }): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={options?.tree ?? []}>
+      <EditorProvider registry={treeBlocks} initialTree={options?.tree ?? []}>
         <SidebarProvider>
           <EditorToolbar hasStarters={options?.hasStarters} />
         </SidebarProvider>
@@ -136,7 +137,7 @@ describe("header / toolbar alignment", () => {
   test("both chrome bars share the same horizontal inset and toggle size", () => {
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[]}>
+        <EditorProvider registry={treeBlocks} initialTree={[]}>
           <EditorHeader onBack={() => undefined} />
           <SidebarProvider>
             <EditorToolbar />

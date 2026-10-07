@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { block, definePattern } from "./pattern-registry.js";
+import type { BlockNode } from "./render-block-tree.js";
+import { createBlockRegistry, defineBlock } from "./block-registry.js";
+import { groupBlock } from "./group/index.js";
+import { assignPatternIds, block, definePattern } from "./pattern-registry.js";
 
 // Test-scoped augmentations — exercise that downstream consumers can
 // extend both registries via `declare module`.
@@ -30,23 +33,6 @@ describe("definePattern", () => {
     expect(pattern.category).toBe("hero");
     expect(pattern.content).toEqual([]);
     expect(Object.isFrozen(pattern)).toBe(true);
-  });
-
-  test("assigns sequential pattern-local IDs to nodes, regardless of definition order", () => {
-    // Defining another pattern first must NOT affect the IDs of the
-    // second pattern's nodes — they're scoped to the pattern body.
-    definePattern({
-      name: "x/unused",
-      title: "Unused",
-      content: [block("core/h", { level: 1 }), block("core/h", { level: 2 })],
-    });
-    const pattern = definePattern({
-      name: "x/hero",
-      title: "Hero",
-      content: [block("core/h", { level: 1 }), block("core/p", { text: "x" })],
-    });
-
-    expect(pattern.content.map((n) => n.id)).toEqual(["p1", "p2"]);
   });
 
   test("preserves the starter-modal fields — target, entryTypes, priority", () => {
@@ -136,5 +122,42 @@ describe("block()", () => {
     // Unregistered name → loose attrs fallback (compiles).
     const loose = block("acme/unregistered", { anything: 123 });
     expect(loose.name).toBe("acme/unregistered");
+  });
+});
+
+describe("assignPatternIds", () => {
+  const blocks = createBlockRegistry([
+    groupBlock,
+    defineBlock({ name: "acme/team", render: () => null }),
+  ]);
+
+  // A node's slot children are numbered before the node itself.
+  test("numbers blank ids p1, p2, ... through declared slots", () => {
+    const content = [
+      block("core/group", { content: [block("core/h", { level: 1 })] }),
+      block("core/p", { text: "x" }),
+    ];
+
+    const out = assignPatternIds(content, blocks);
+    const inner = out[0]?.attrs?.content as readonly BlockNode[];
+
+    expect([out[0]?.id, inner[0]?.id, out[1]?.id]).toEqual(["p2", "p1", "p3"]);
+  });
+
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("leaves %s in an attr no slot declares as stored", (_, people) => {
+    const out = assignPatternIds([block("acme/team", { people })], blocks);
+
+    expect(out[0]?.attrs?.people).toEqual(people);
+  });
+
+  test("leaves an unregistered block's children as stored", () => {
+    const content = [block("core/h", { level: 1 })];
+
+    const out = assignPatternIds([block("acme/missing", { content })], blocks);
+
+    expect(out[0]?.attrs?.content).toEqual(content);
   });
 });

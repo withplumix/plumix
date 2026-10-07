@@ -1,13 +1,20 @@
 import type { BlockSpec, BlockTextInput } from "./block-registry.js";
+import type { BlockSpecLookup } from "./block-slots.js";
 import type { BlockNode } from "./render-block-tree.js";
+import { createBlockRegistry } from "./block-registry.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
- * The merged `block name → declared text inputs` roster the walk reads. Built
- * once from a registry (or any spec list) and reused, so a walk over many
- * entries doesn't re-merge it per entry.
+ * What the walk reads, merged from a registry (or any spec list). Built once
+ * and reused, so a walk over many entries doesn't re-merge it per entry.
  */
-export type BlockTextRoster = ReadonlyMap<string, readonly BlockTextInput[]>;
+export interface BlockTextRoster {
+  /** Each block's declared text inputs, by block name. */
+  readonly text: ReadonlyMap<string, readonly BlockTextInput[]>;
+  /** The merged specs, which decide the slots the walk descends into. */
+  readonly specs: BlockSpecLookup;
+}
 
 /** One extracted run of text, tagged with whether it is body copy. */
 export interface BlockTextSegment {
@@ -99,12 +106,13 @@ const isProse = (input: BlockTextInput): boolean => input.prose !== false;
  * the overriding spec declares no text, which drops the name entirely.
  */
 export function blockTextRoster(specs: Iterable<BlockSpec>): BlockTextRoster {
-  const roster = new Map<string, readonly BlockTextInput[]>();
-  for (const spec of specs) {
-    if (spec.text && spec.text.length > 0) roster.set(spec.name, spec.text);
-    else roster.delete(spec.name);
+  const merged = [...specs];
+  const text = new Map<string, readonly BlockTextInput[]>();
+  for (const spec of merged) {
+    if (spec.text && spec.text.length > 0) text.set(spec.name, spec.text);
+    else text.delete(spec.name);
   }
-  return roster;
+  return { text, specs: createBlockRegistry(merged) };
 }
 
 /**
@@ -120,14 +128,15 @@ export function collectBlockText(
   const walk = (nodes: readonly BlockNode[]): void => {
     for (const block of nodes) {
       const attrs = block.attrs ?? {};
-      for (const input of roster.get(block.name) ?? []) {
+      for (const input of roster.text.get(block.name) ?? []) {
         const raw = attrs[input.name];
         if (typeof raw !== "string") continue;
         const text = input.html ? htmlToText(raw) : raw.trim();
         if (text.length > 0) segments.push({ text, prose: isProse(input) });
       }
       // Recurse into slots (group / columns / table rows / details content).
-      for (const value of Object.values(attrs)) {
+      for (const key of blockSlotKeys(block, roster.specs.get(block.name))) {
+        const value = attrs[key];
         if (isBlockNodeArray(value)) walk(value);
       }
     }
@@ -163,7 +172,7 @@ export function extractBlockText(
  * means affected rows never reindex, so 32 bits is thinner than it needs to be.
  */
 export function blockTextVersion(roster: BlockTextRoster): string {
-  const declarations = [...roster]
+  const declarations = [...roster.text]
     .map(([name, inputs]): readonly [string, readonly string[]] => [
       name,
       [...inputs]

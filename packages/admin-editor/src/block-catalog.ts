@@ -3,10 +3,10 @@ import type {
   BlockPattern,
   BlockRegistry,
   InsertableBlockEntry,
-  JsonObject,
   JsonValue,
 } from "@plumix/core/blocks";
 import {
+  blockSlotKeys,
   expandBlockVariations,
   isBlockNodeArray,
   rewriteBlockNodeIds,
@@ -156,19 +156,19 @@ export function createNodeFromEntry(
   // container's descendants (e.g. the equal-split columns and their paragraphs)
   // are treated like a directly-inserted child. The top node's own defaults are
   // already merged above; only descendants recurse.
-  for (const key of Object.keys(attrs)) {
-    const value = attrs[key];
-    if (isBlockNodeArray(value)) {
-      attrs[key] = value.map((child) => seedNodeDefaults(child, registry));
-    }
-  }
   const seed: BlockNode = {
     id: "seed",
     name: entry.name,
     attrs,
     ...(spec?.defaultStyles ? { style: spec.defaultStyles } : {}),
   };
-  const [node = seed] = rewriteBlockNodeIds([seed]);
+  for (const key of blockSlotKeys(seed, spec)) {
+    const value = attrs[key];
+    if (isBlockNodeArray(value)) {
+      attrs[key] = value.map((child) => seedNodeDefaults(child, registry));
+    }
+  }
+  const [node = seed] = rewriteBlockNodeIds([seed], registry);
   return node;
 }
 
@@ -179,12 +179,12 @@ export function createNodeFromEntry(
 // own children, as core/columns' DEFAULT_COLUMNS does.
 function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   const spec = registry.get(node.name);
-  const base: JsonObject = { ...spec?.defaults, ...node.attrs };
-  const attrs: Record<string, JsonValue> = {};
-  for (const [key, value] of Object.entries(base)) {
-    attrs[key] = isBlockNodeArray(value)
-      ? value.map((child) => seedNodeDefaults(child, registry))
-      : value;
+  const attrs: Record<string, JsonValue> = { ...spec?.defaults, ...node.attrs };
+  for (const key of blockSlotKeys(node, spec)) {
+    const value = attrs[key];
+    if (isBlockNodeArray(value)) {
+      attrs[key] = value.map((child) => seedNodeDefaults(child, registry));
+    }
   }
   const style = node.style ?? spec?.defaultStyles;
   return {
@@ -195,8 +195,11 @@ function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
 }
 
 /** Ids are re-minted so inserting the same pattern twice cannot collide. */
-export function expandPattern(pattern: InserterPattern): readonly BlockNode[] {
-  return rewriteBlockNodeIds(pattern.content);
+export function expandPattern(
+  pattern: InserterPattern,
+  registry: BlockRegistry,
+): readonly BlockNode[] {
+  return rewriteBlockNodeIds(pattern.content, registry);
 }
 
 function matchesEntry(entry: InsertableBlockEntry, needle: string): boolean {

@@ -223,6 +223,7 @@ describe("createNodeFromEntry", () => {
       name: "core/group",
       category: "layout",
       defaults: { align: "start" },
+      inputs: [{ name: "content", type: "slot" }],
     }),
   ]);
 
@@ -241,6 +242,23 @@ describe("createNodeFromEntry", () => {
     const content = node.attrs?.content as readonly BlockNode[];
     expect(content.map((n) => n.name)).toEqual(["core/heading"]);
     expect(content[0]?.id).not.toBe("seed-child");
+  });
+
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("keeps %s in a default no slot declares as stored", (_, people) => {
+    const team = createBlockRegistry([
+      spec({ name: "acme/team", defaults: { people } }),
+    ]);
+
+    const node = createNodeFromEntry(team, {
+      name: "acme/team",
+      slug: "acme/team",
+      title: "Team",
+    });
+
+    expect(node.attrs?.people).toEqual(people);
   });
 
   test("seeds node.style from the spec's defaultStyles", () => {
@@ -413,18 +431,39 @@ describe("createNodeFromEntry", () => {
 
 describe("expandPattern", () => {
   test("clones the composition with fresh ids", () => {
-    const nodes = expandPattern({
-      name: "hero",
-      title: "Hero",
-      content: [
-        { id: "p1", name: "core/heading", attrs: { text: "Hi" } },
-        { id: "p2", name: "core/rich-text" },
-      ],
-    });
+    const nodes = expandPattern(
+      {
+        name: "hero",
+        title: "Hero",
+        content: [
+          { id: "p1", name: "core/heading", attrs: { text: "Hi" } },
+          { id: "p2", name: "core/rich-text" },
+        ],
+      },
+      createBlockRegistry([]),
+    );
     expect(nodes.map((n) => n.name)).toEqual([
       "core/heading",
       "core/rich-text",
     ]);
     expect(nodes.map((n) => n.id)).not.toContain("p1");
+  });
+
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("keeps %s in an attr no slot declares as stored", (_, people) => {
+    const team = createBlockRegistry([spec({ name: "acme/team" })]);
+
+    const [node] = expandPattern(
+      {
+        name: "team",
+        title: "Team",
+        content: [{ id: "p1", name: "acme/team", attrs: { people } }],
+      },
+      team,
+    );
+
+    expect(node?.attrs?.people).toEqual(people);
   });
 });

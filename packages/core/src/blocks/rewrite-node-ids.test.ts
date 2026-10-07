@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "./render-block-tree.js";
+import { createBlockRegistry, defineBlock } from "./block-registry.js";
+import { groupBlock } from "./group/index.js";
 import { rewriteBlockNodeIds } from "./rewrite-node-ids.js";
+
+const blocks = createBlockRegistry([
+  groupBlock,
+  defineBlock({ name: "acme/team", render: () => null }),
+]);
 
 const heading = (id: string, text: string): BlockNode => ({
   id,
@@ -16,7 +23,7 @@ describe("rewriteBlockNodeIds", () => {
       heading("p2", "B"),
     ];
 
-    const out = rewriteBlockNodeIds(input);
+    const out = rewriteBlockNodeIds(input, blocks);
 
     expect(out).toHaveLength(2);
     expect(out[0]?.id).not.toBe("p1");
@@ -32,7 +39,7 @@ describe("rewriteBlockNodeIds", () => {
       heading("p1", "C"),
     ];
 
-    const out = rewriteBlockNodeIds(input);
+    const out = rewriteBlockNodeIds(input, blocks);
     const ids = out.map((n) => n.id);
 
     expect(new Set(ids).size).toBe(ids.length);
@@ -50,7 +57,7 @@ describe("rewriteBlockNodeIds", () => {
       },
     ];
 
-    const out = rewriteBlockNodeIds(input);
+    const out = rewriteBlockNodeIds(input, blocks);
     const root = out[0];
     const innerContent = root?.attrs?.content as readonly BlockNode[];
 
@@ -76,7 +83,7 @@ describe("rewriteBlockNodeIds", () => {
     const input: readonly BlockNode[] = [root];
     const snapshot = JSON.stringify(input);
 
-    rewriteBlockNodeIds(input);
+    rewriteBlockNodeIds(input, blocks);
 
     expect(JSON.stringify(input)).toBe(snapshot);
     expect(root.id).toBe("g-orig");
@@ -89,8 +96,8 @@ describe("rewriteBlockNodeIds", () => {
       heading("p2", "B"),
     ];
 
-    const first = rewriteBlockNodeIds(input).map((n) => n.id);
-    const second = rewriteBlockNodeIds(input).map((n) => n.id);
+    const first = rewriteBlockNodeIds(input, blocks).map((n) => n.id);
+    const second = rewriteBlockNodeIds(input, blocks).map((n) => n.id);
 
     expect(first).not.toEqual(second);
   });
@@ -111,11 +118,35 @@ describe("rewriteBlockNodeIds", () => {
       },
     ];
 
-    const out = rewriteBlockNodeIds(input);
+    const out = rewriteBlockNodeIds(input, blocks);
     const root = out[0];
     const innerContent = root?.attrs?.content as readonly BlockNode[];
 
     expect(root?.style).toEqual(rootStyle);
     expect(innerContent[0]?.style).toEqual(innerStyle);
+  });
+
+  test.each([
+    ["an empty data array", []],
+    ["a data array of id/name objects", [{ id: "1", name: "Alice" }]],
+  ])("leaves %s in an attr no slot declares as stored", (_, people) => {
+    const input: readonly BlockNode[] = [
+      { id: "t1", name: "acme/team", attrs: { people } },
+    ];
+
+    const out = rewriteBlockNodeIds(input, blocks);
+
+    expect(out[0]?.attrs?.people).toEqual(people);
+  });
+
+  test("leaves an unregistered block's children as stored", () => {
+    const content = [heading("h-1", "Inner")];
+    const input: readonly BlockNode[] = [
+      { id: "u1", name: "acme/missing", attrs: { content } },
+    ];
+
+    const out = rewriteBlockNodeIds(input, blocks);
+
+    expect(out[0]?.attrs?.content).toEqual(content);
   });
 });

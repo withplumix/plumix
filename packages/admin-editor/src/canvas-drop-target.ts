@@ -49,7 +49,7 @@ function slotsUnderPointer({
     ) {
       continue;
     }
-    const parent = findBlock(tree, slot.parentId);
+    const parent = findBlock(tree, slot.parentId, registry);
     if (!parent) continue;
     const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
     hits.push({

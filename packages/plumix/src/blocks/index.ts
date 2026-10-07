@@ -28,6 +28,7 @@ declare module "@plumix/core/blocks" {
 
 export {
   BlockContentValidationError,
+  blockSlotKeys,
   blockTextRoster,
   blockTextVersion,
   coreBlocks,

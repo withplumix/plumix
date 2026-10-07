@@ -1,5 +1,7 @@
 import type { JsonValue } from "../json.js";
+import type { BlockSpecLookup } from "./block-slots.js";
 import type { BlockNode } from "./render-block-tree.js";
+import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 // 12 chars × 64 = 72 bits entropy — ample for React keys with no
@@ -21,15 +23,19 @@ export function freshBlockId(): string {
   return out;
 }
 
+/** Fresh ids for every node in `nodes` and in the slots `blocks` declares on
+ *  each, so a pasted or duplicated subtree is independent of its source. */
 export function rewriteBlockNodeIds(
   nodes: readonly BlockNode[],
+  blocks: BlockSpecLookup,
 ): readonly BlockNode[] {
   return nodes.map((node) => {
-    const nextAttrs: Record<string, JsonValue> = {};
-    for (const [key, value] of Object.entries(node.attrs ?? {})) {
-      nextAttrs[key] = isBlockNodeArray(value)
-        ? rewriteBlockNodeIds(value)
-        : value;
+    const nextAttrs: Record<string, JsonValue> = { ...node.attrs };
+    for (const key of blockSlotKeys(node, blocks.get(node.name))) {
+      const value = nextAttrs[key];
+      if (isBlockNodeArray(value)) {
+        nextAttrs[key] = rewriteBlockNodeIds(value, blocks);
+      }
     }
     return { ...node, id: freshBlockId(), attrs: nextAttrs };
   });

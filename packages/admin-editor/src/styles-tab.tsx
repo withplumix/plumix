@@ -173,11 +173,11 @@ const SECTION_IDS = [
  * responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab(): ReactElement {
-  const { tokens } = useEditorConfig();
+  const { registry, tokens } = useEditorConfig();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
-    s.activeId ? findBlock(s.tree, s.activeId) : null,
+    s.activeId ? findBlock(s.tree, s.activeId, registry) : null,
   );
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
   const updateBlockHidden = useEditorStore((s) => s.updateBlockHidden);

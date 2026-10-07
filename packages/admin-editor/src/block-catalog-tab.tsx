@@ -61,7 +61,7 @@ export function BlockCatalog({
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
   const insertAt = useEditorStore((s) =>
-    topLevelIndexAfter(s.tree, s.activeId),
+    topLevelIndexAfter(s.tree, s.activeId, registry),
   );
 
   const groups = useMemo(
@@ -164,7 +164,7 @@ export function BlockCatalog({
               key={pattern.name}
               testId={`block-catalog-pattern-${pattern.name}`}
               label={resolveLabel(pattern.title, i18n)}
-              onClick={() => insertPattern(expandPattern(pattern))}
+              onClick={() => insertPattern(expandPattern(pattern, registry))}
             />
           ))}
         </CatalogGroup>
