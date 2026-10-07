@@ -337,6 +337,21 @@ describe("public route dispatch — access policy", () => {
     expect(response.headers.get("cache-control")).toBeNull();
   });
 
+  test("an anonymous grant to a signed-in reader forbids downstream caches from storing it", async () => {
+    const { plugin } = policied(
+      definePolicy({ resolve: () => grant("anonymous") }),
+    );
+    const harness = await createDispatcherHarness({
+      config: { plugins: [plugin] },
+    });
+    const reader = await harness.seedUser("subscriber");
+
+    const response = await harness.fetch("/feed", { as: reader });
+
+    response.assertStatus(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   test("a soft challenge runs the handler and signals the challenge", async () => {
     const { plugin } = policied(
       definePolicy({ resolve: () => challenge("subscribe", { soft: true }) }),

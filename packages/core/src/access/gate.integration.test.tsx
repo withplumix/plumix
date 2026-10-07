@@ -1,14 +1,22 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { JsonObject } from "../json.js";
-import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
+import type {
+  ArchiveTypeData,
+  EntryData,
+} from "../route/contract/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
+import type { AccessPolicy } from "./policy.js";
 import {
   responseAllowsSharedStorage,
   SEGMENT_KEY_PARAM,
 } from "../cdn/decision.js";
 import { definePlugin } from "../plugin/define.js";
-import { fallback, forArchiveType } from "../route/render/template-builders.js";
+import {
+  entry,
+  fallback,
+  forArchiveType,
+} from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
@@ -421,6 +429,140 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       expect(put).not.toHaveBeenCalled();
     },
   );
+});
+
+// The theme echoes who it rendered for (a bearer client included), so a test
+// can tell a signed-in body from the anonymous one.
+const signedInEcho = defineTheme({
+  templates: [
+    entry(
+      defineTemplate<EntryData>({
+        render: ({ ctx }) => (
+          <main data-testid="viewer">
+            {ctx.user?.email ??
+              (ctx.request.headers.has("authorization")
+                ? "BEARER-CLIENT"
+                : "ANONYMOUS")}
+          </main>
+        ),
+      }),
+    ),
+    fallback(() => null),
+  ],
+});
+
+// A type whose policy grants `anonymous` to every principal, signed-in ones
+// included.
+function anonymousGrantPlugin(policy: AccessPolicy) {
+  return definePlugin("open-notes", (ctx) => {
+    ctx.registerEntryType("note", {
+      label: "Notes",
+      isPublic: true,
+      access: { default: policy },
+    });
+  });
+}
+
+// A developer's own policy that hands a signed-in principal the shared
+// `anonymous` segment: the guard keys on the segment, not on the policy.
+const customAnonymousGrant = definePolicy({
+  resolve: () => grant("anonymous"),
+});
+
+describe("access gate — an anonymous grant to a privileged request (#2914)", () => {
+  test.each([
+    ["anonymousPolicy", anonymousPolicy],
+    ["a custom policy granting anonymous", customAnonymousGrant],
+  ])(
+    "a signed-in render under %s is private and never stored",
+    async (_name, policy) => {
+      const { cdn, store, put } = memoryCdn();
+      const h = await createDispatcherHarness({
+        cdn,
+        config: {
+          plugins: [anonymousGrantPlugin(policy)],
+          theme: signedInEcho,
+        },
+      });
+      await seedEntry(h, "note", "open");
+      const sub = await h.seedUser("subscriber");
+
+      const signedIn = await h.dispatch(await authed(h, "/note/open", sub.id));
+      await h.drainDeferred();
+
+      expect(signedIn.status).toBe(200);
+      expect(await signedIn.text()).toContain(sub.email);
+      expect(signedIn.headers.get("cache-control")).toBe("private, no-store");
+      expect(put).not.toHaveBeenCalled();
+      expect(store.size).toBe(0);
+
+      const anonymous = await h.dispatch(
+        new Request("https://cms.example/note/open"),
+      );
+      const body = await anonymous.text();
+      expect(body).toContain("ANONYMOUS");
+      expect(body).not.toContain(sub.email);
+    },
+  );
+
+  test("a request with an Authorization header is private and never stored", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: {
+        plugins: [anonymousGrantPlugin(anonymousPolicy)],
+        theme: signedInEcho,
+      },
+    });
+    await seedEntry(h, "note", "open");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/note/open", {
+        headers: { authorization: "Bearer some-token" },
+      }),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toContain("BEARER-CLIENT");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+
+    const anonymous = await h.dispatch(
+      new Request("https://cms.example/note/open"),
+    );
+    const body = await anonymous.text();
+    expect(body).toContain("ANONYMOUS");
+    expect(body).not.toContain("BEARER-CLIENT");
+  });
+
+  test("an anonymous request is still stored and served from the store", async () => {
+    const { cdn, store } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: {
+        plugins: [anonymousGrantPlugin(anonymousPolicy)],
+        theme: signedInEcho,
+      },
+    });
+    await seedEntry(h, "note", "open");
+
+    await h.dispatch(new Request("https://cms.example/note/open"));
+    await h.drainDeferred();
+
+    // One entry, stored under the plain URL — no segment in the key.
+    const plainUrl = "https://cms.example/note/open";
+    expect([...store.keys()]).toEqual([plainUrl]);
+    store.set(plainUrl, {
+      response: new Response("STORED-ANONYMOUS", { status: 200 }),
+      tags: [],
+    });
+
+    const second = await h.dispatch(
+      new Request("https://cms.example/note/open"),
+    );
+    expect(await second.text()).toBe("STORED-ANONYMOUS");
+  });
 });
 
 // The paywall: a soft gate. An active `entitlement:premium` gets the full
