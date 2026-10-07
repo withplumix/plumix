@@ -54,8 +54,19 @@ interface Harness {
       readonly locations: {
         readonly list: () => Promise<readonly LocationRow[]>;
       };
+      readonly searchTargets: (input: {
+        kind: "entry" | "term";
+        target: string;
+        query?: string;
+      }) => Promise<{ readonly items: readonly SearchResult[] }>;
     };
   };
+}
+
+interface SearchResult {
+  readonly id: string;
+  readonly label: string | null;
+  readonly subtitle?: string;
 }
 
 interface LocationRow {
@@ -244,6 +255,136 @@ describe("menu RPC", () => {
     });
   });
 
+  describe("menu.searchTargets", () => {
+    test("lists only the entry type's matching, non-trashed entries, drafts included", async () => {
+      const h = await buildHarness("editor", {}, [
+        contentHost,
+        definePlugin("pages-host", (setup) => {
+          setup.registerEntryType("page", { label: "Pages", isPublic: true });
+        }),
+      ]);
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "search-entries@example.test" });
+      const seed = (type: string, title: string, status: string) =>
+        entryFactory.transient({ db: h.db }).create({
+          type,
+          title,
+          slug: `${type}-${title.toLowerCase().replaceAll(" ", "-")}`,
+          status: status as "published",
+          authorId: author.id,
+        });
+      const published = await seed("post", "About us", "published");
+      const draft = await seed("post", "About the team", "draft");
+      await seed("post", "About trash", "trash");
+      await seed("post", "Contact", "published");
+      await seed("page", "About page", "published");
+
+      const result = await h.client.menu.searchTargets({
+        kind: "entry",
+        target: "post",
+        query: "  About ",
+      });
+
+      // The adapter orders by title.
+      expect(result.items.map((item) => item.id)).toEqual([
+        String(draft.id),
+        String(published.id),
+      ]);
+      expect(result.items[0]).toMatchObject({
+        label: "About the team",
+        subtitle: "post · draft",
+      });
+    });
+    test("matches the taxonomy's terms by name and by slug", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const news = await h.factories.term.create({
+        taxonomy: "category",
+        slug: "news",
+        name: "Latest updates",
+      });
+      const guides = await h.factories.term.create({
+        taxonomy: "category",
+        slug: "how-to",
+        name: "Guides",
+      });
+
+      const bySlug = await h.client.menu.searchTargets({
+        kind: "term",
+        target: "category",
+        query: "news",
+      });
+      const byName = await h.client.menu.searchTargets({
+        kind: "term",
+        target: "category",
+        query: "Guid",
+      });
+
+      expect(bySlug.items.map((item) => item.id)).toEqual([String(news.id)]);
+      expect(byName.items.map((item) => item.id)).toEqual([String(guides.id)]);
+    });
+    test.each([
+      { kind: "entry", target: "missing" },
+      { kind: "entry", target: "memo" },
+      { kind: "entry", target: "aside" },
+      { kind: "term", target: "missing" },
+      { kind: "term", target: "internal" },
+      { kind: "term", target: "hidden" },
+    ] as const)(
+      "rejects $kind target $target, which isn't menu-eligible, as NOT_FOUND",
+      async ({ kind, target }) => {
+        const h = await buildHarness("editor", {}, [
+          definePlugin("ineligible-host", (setup) => {
+            setup.registerEntryType("memo", {
+              label: "Memos",
+              isPublic: false,
+            });
+            setup.registerEntryType("aside", {
+              label: "Asides",
+              isPublic: true,
+              isShownInMenus: false,
+            });
+            setup.registerTermTaxonomy("internal", {
+              label: "Internal",
+              isPublic: false,
+            });
+            setup.registerTermTaxonomy("hidden", {
+              label: "Hidden",
+              isPublic: true,
+              isShownInMenus: false,
+            });
+          }),
+        ]);
+
+        await expect(
+          h.client.menu.searchTargets({ kind, target }),
+        ).rejects.toMatchObject({
+          code: "NOT_FOUND",
+          data: { kind: "menu_target", id: target },
+        });
+      },
+    );
+
+    test("rejects a caller without the lookup adapter's capability as FORBIDDEN", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      replaceLookupAdapter(h.registry, "entry", (registered) => ({
+        ...registered,
+        capability: "entry:post:secret",
+      }));
+
+      await expect(
+        h.client.menu.searchTargets({ kind: "entry", target: "post" }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    test("rejects a caller without the menu capability", async () => {
+      const h = await buildHarness("subscriber", {}, [contentHost]);
+      await expect(
+        h.client.menu.searchTargets({ kind: "entry", target: "post" }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+  });
+
   describe("menu.get", () => {
     test("returns a menu's items when found", async () => {
       const h = await buildHarness();
@@ -305,6 +446,7 @@ describe("menu RPC", () => {
       expect(result.items[0]?.resolved).toEqual({
         state: "ok",
         label: "Contact",
+        linkedLabel: null,
         href: "/contact",
         lastHref: null,
       });
@@ -386,6 +528,49 @@ describe("menu RPC", () => {
         state: "ok",
         label: "Admissions",
       });
+    });
+
+    test("reports the linked title as resolved.linkedLabel beside an override, and null for a custom item", async () => {
+      const h = await buildHarness("editor", {}, [contentHost]);
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "linked-label@example.test" });
+      const post = await entryFactory.transient({ db: h.db }).create({
+        type: "post",
+        title: "About us",
+        slug: `about-us-${Date.now()}`,
+        status: "published",
+        authorId: author.id,
+      });
+      const items: { title: string; meta: JsonObject }[] = [
+        { title: "Who we are", meta: { kind: "entry", entryId: post.id } },
+        { title: "Contact", meta: { kind: "custom", url: "/contact" } },
+      ];
+      for (const [index, item] of items.entries()) {
+        const row = await entryFactory.transient({ db: h.db }).create({
+          type: "menu_item",
+          title: item.title,
+          slug: `mi-linked-${String(index)}-${Date.now()}`,
+          status: "published",
+          authorId: author.id,
+          meta: item.meta,
+        });
+        await entryTermFactory
+          .transient({ db: h.db })
+          .create({ entryId: row.id, termId: m.id, sortOrder: index });
+      }
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly {
+          resolved: { label: string; linkedLabel: string | null };
+        }[];
+      };
+
+      expect(result.items.map((item) => item.resolved)).toMatchObject([
+        { label: "Who we are", linkedLabel: "About us" },
+        { label: "Contact", linkedLabel: null },
+      ]);
     });
 
     test("entry-kind item of a non-public type resolves to broken even with isShownInMenus: true", async () => {

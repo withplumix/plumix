@@ -113,6 +113,10 @@ A menu item links to one of three things:
 - **A term.** There is one picker tab per eligible taxonomy.
 - **A custom URL.** This tab is always last.
 
+Each entry and term tab searches as you type. Entries match by title, and terms by name or slug. The tab lists the first 20 matches, so type more of a title to narrow it down. Click a match, or move to it with the arrow keys and press Enter, to add it to the end of the menu. The search keeps its text and focus, so you can add several in a row. Drafts are listed too: a draft item stays off the site until its entry is published.
+
+A linked item's label follows the linked entry's title or term's name, so a rename shows up in the menu without editing it. Type a navigation label in the item's details to use your own instead, and clear it to go back to the linked title.
+
 Items nest into a tree up to the menu's max depth. The depth is 5 by default, and you can set it per menu anywhere from 1 to 20. The editor refuses to lower it below the depth the menu already uses. A single save holds at most 500 items.
 
 A custom URL is either relative (starting with `/`, `#`, `?`, `./` or `../`) or absolute with an `http`, `https`, `mailto` or `tel` scheme. Saving the menu refuses anything else, including `javascript:` and protocol-relative `//host` URLs.
