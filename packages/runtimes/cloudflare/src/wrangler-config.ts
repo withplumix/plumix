@@ -7,7 +7,7 @@ import { parse as parseToml } from "smol-toml";
 
 import { WranglerConfigError } from "./errors.js";
 
-interface D1BindingEntry {
+export interface D1BindingEntry {
   readonly binding?: string;
   readonly database_name?: string;
   readonly database_id?: string;
@@ -19,6 +19,8 @@ const WRANGLER_FILENAMES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"];
 interface LoadedWranglerConfig {
   readonly filename: string;
   readonly d1Databases: readonly D1BindingEntry[];
+  readonly compatibilityDate?: string;
+  readonly accountId?: string;
 }
 
 /**
@@ -46,7 +48,14 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
         )
       : [];
 
-    return { filename, d1Databases };
+    const { compatibility_date: compatibilityDate, account_id: accountId } =
+      parsed as { compatibility_date?: unknown; account_id?: unknown };
+    return {
+      filename,
+      d1Databases,
+      ...(typeof compatibilityDate === "string" ? { compatibilityDate } : {}),
+      ...(typeof accountId === "string" ? { accountId } : {}),
+    };
   }
   return null;
 }

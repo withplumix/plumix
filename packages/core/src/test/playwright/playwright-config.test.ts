@@ -104,34 +104,22 @@ describe("definePlumixE2EConfig", () => {
     const cmd = webServerCommandOf(config);
     expect(cmd).toBe(
       superviseWebServer(
-        "cd .. && rm -rf .wrangler/state drizzle && pnpm exec plumix migrate generate && pnpm exec plumix migrate apply && pnpm exec plumix dev --port 3040",
+        "cd .. && pnpm exec plumix migrate fresh && pnpm exec plumix dev --port 3040",
       ),
     );
-    // The runtime's paths may name its tooling; no step may invoke it.
-    expect(
-      cmd.split(" && ").filter((step) => step.includes("wrangler")),
-    ).toEqual(["rm -rf .wrangler/state drizzle"]);
   });
 
-  test("the wipe list is the runtime's, not the helper's", async () => {
-    const nodePlayground = await playground([
-      runtimePackage("@plumix/runtime-node", {
-        wipe: ["data", ".plumix"],
-        database: { glob: "data/plumix.sqlite" },
-      }),
-    ]);
-
-    const config = definePlumixE2EConfig({
-      configDir: nodePlayground,
-      playground: ".",
-    });
-
-    expect(webServerCommandOf(config)).toContain(
-      "cd . && rm -rf data .plumix drizzle && ",
+  test("generates and deletes nothing, so a committed drizzle/ survives the run (#2819)", () => {
+    const cmd = webServerCommandOf(
+      definePlumixE2EConfig({ configDir, playground: ".." }),
     );
+
+    expect(cmd).not.toContain("rm -rf");
+    expect(cmd).not.toContain("drizzle");
+    expect(cmd).not.toContain("migrate generate");
   });
 
-  test("a runtime's cli prefix runs generate, apply and dev in place of pnpm exec plumix", async () => {
+  test("a runtime's cli prefix runs migrate fresh and dev in place of pnpm exec plumix", async () => {
     const bunPlayground = await playground([
       runtimePackage("@plumix/runtime-bun", {
         cli: "bun --bun node_modules/plumix/bin/plumix.mjs",
@@ -148,25 +136,12 @@ describe("definePlumixE2EConfig", () => {
 
     expect(webServerCommandOf(config)).toBe(
       superviseWebServer(
-        "cd . && rm -rf data drizzle && bun --bun node_modules/plumix/bin/plumix.mjs migrate generate && bun --bun node_modules/plumix/bin/plumix.mjs migrate apply && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
+        "cd . && bun --bun node_modules/plumix/bin/plumix.mjs migrate fresh && bun --bun node_modules/plumix/bin/plumix.mjs dev --port 3130",
       ),
     );
   });
 
-  test("applyMigrations=false drops the apply step but keeps migrate generate", () => {
-    const config = definePlumixE2EConfig({
-      port: 3070,
-      configDir,
-      playground: "..",
-      applyMigrations: false,
-    });
-
-    const cmd = webServerCommandOf(config);
-    expect(cmd).toContain("plumix migrate generate");
-    expect(cmd).not.toContain("plumix migrate apply");
-  });
-
-  test("extraSetup injects an additional step between migrations apply and plumix dev", () => {
+  test("extraSetup injects an additional step between migrate fresh and plumix dev", () => {
     const config = definePlumixE2EConfig({
       configDir,
       playground: "..",
@@ -174,7 +149,7 @@ describe("definePlumixE2EConfig", () => {
     });
 
     expect(webServerCommandOf(config)).toMatch(
-      /plumix migrate apply && pnpm exec plumix seed --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
+      /plumix migrate fresh && pnpm exec plumix seed --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
     );
   });
 
@@ -334,15 +309,18 @@ describe("definePlumixE2EConfig", () => {
     });
   });
 
-  test("applyMigrations: false means no shared D1, so workers stay parallel", () => {
+  test("sharedDatabase: false means no shared D1, so workers stay parallel and nothing is snapshotted", () => {
     withCI("true", () => {
       const config = definePlumixE2EConfig({
         configDir,
         playground: "..",
-        applyMigrations: false,
+        sharedDatabase: false,
       });
 
       expect(config.workers).toBeUndefined();
+      expect(config.use?.plumixPlayground).toBeUndefined();
+      // The baked command still runs: only the shared-database pinning goes.
+      expect(webServerCommandOf(config)).toContain("plumix migrate fresh");
     });
   });
 });

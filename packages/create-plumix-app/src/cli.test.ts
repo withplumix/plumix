@@ -266,11 +266,7 @@ describe("runCli", () => {
     );
 
     expect(code).toBe(0);
-    expect(calls).toEqual([
-      "bun install",
-      "bun --bun plumix migrate generate",
-      "bun --bun plumix migrate apply --local",
-    ]);
+    expect(calls).toEqual(["bun install", "bun --bun plumix migrate"]);
     expect(stdout.join("\n")).toContain("bun dev");
   });
 

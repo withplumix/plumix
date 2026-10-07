@@ -57,8 +57,8 @@ function plumixCommand(
 
 /**
  * Run the optional post-scaffold steps: install dependencies, set up the
- * local database (generate migrations for the selected plugins and apply
- * them to the local dev DB), then initialize git with one commit (skipped
+ * local database (`plumix migrate` applies core's and each selected plugin's
+ * shipped migrations to the local dev DB), then initialize git with one commit (skipped
  * inside an existing repo). Every failure is reported, never thrown — the
  * generated project still stands and the caller prints manual recovery.
  */
@@ -87,8 +87,7 @@ export async function runPostScaffold({
     const [cmd, ...prefix] = plumixCommand(pm, cli);
     const plumix = (...args: string[]) =>
       runner.run(cmd, [...prefix, ...args], targetDir);
-    const generated = await plumix("migrate", "generate");
-    dbSetup = generated.ok && (await plumix("migrate", "apply", "--local")).ok;
+    dbSetup = (await plumix("migrate")).ok;
     dbSetupFailed = !dbSetup;
   }
 
@@ -115,7 +114,7 @@ export async function runPostScaffold({
 
 /**
  * Copy-pasteable commands to finish getting started. Includes install and
- * the local-migration steps only when they did not already run, so the
+ * `plumix migrate` only when they did not already run, so the
  * output is always a complete path to a working `dev` — a project whose DB
  * was never migrated would otherwise hit "no such table" on first run.
  */
@@ -127,10 +126,7 @@ export function nextSteps(
   const plumix = plumixCommand(pm, done.cli).join(" ");
   const steps = [`cd ${name}`];
   if (!done.installed) steps.push(`${pm} install`);
-  if (!done.dbReady) {
-    steps.push(`${plumix} migrate generate`);
-    steps.push(`${plumix} migrate apply --local`);
-  }
+  if (!done.dbReady) steps.push(`${plumix} migrate`);
   steps.push(pm === "npm" ? "npm run dev" : `${pm} dev`);
   return steps;
 }

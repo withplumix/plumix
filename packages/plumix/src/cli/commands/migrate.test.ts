@@ -18,11 +18,7 @@ import {
   vi,
 } from "vitest";
 
-import type {
-  CommandContext,
-  CommandDefinition,
-  PlumixApp,
-} from "@plumix/core";
+import type { CommandContext, PlumixApp } from "@plumix/core";
 import { createDispatcherHarness } from "@plumix/core/test";
 
 import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
@@ -42,7 +38,6 @@ function ctx(overrides: Partial<CommandContext>): CommandContext {
     cwd: process.cwd(),
     configPath: join(process.cwd(), "plumix.config.ts"),
     argv: [],
-    runtimeMigrate: {},
     ...overrides,
   };
 }
@@ -83,38 +78,17 @@ describe("migrate dispatch", () => {
     vi.restoreAllMocks();
   });
 
-  test("apply delegates to runtimeMigrate.apply with the remaining argv", async () => {
-    const apply = vi.fn<(c: CommandContext) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
-    const runtimeApply: CommandDefinition = { describe: "apply", run: apply };
-
-    await migrateCommand.run(
-      ctx({
-        cwd: dir,
-        argv: ["apply", "my-db", "--remote"],
-        runtimeMigrate: { apply: runtimeApply },
-      }),
-    );
-
-    expect(apply).toHaveBeenCalledOnce();
-    expect(apply.mock.calls[0]?.[0].argv).toEqual(["my-db", "--remote"]);
-  });
-
   test("unknown subcommand surfaces the available list in the hint", async () => {
     await expect(
       migrateCommand.run(
         ctx({
           cwd: dir,
           argv: ["nope"],
-          runtimeMigrate: {
-            apply: { describe: "apply", run: () => undefined },
-          },
         }),
       ),
     ).rejects.toMatchObject({
       code: "unknown_subcommand",
-      hint: expect.stringContaining("plumix migrate apply") as unknown,
+      hint: expect.stringContaining("plumix migrate fresh") as unknown,
     });
   });
 
@@ -175,18 +149,6 @@ describe("migrate generate", () => {
       cwd: dir,
       env: { NODE_OPTIONS: undefined, NODE_DEBUG: undefined },
     });
-  });
-
-  test("defaulting to the generate subcommand (no argv) behaves the same", async () => {
-    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
-      "/fake/drizzle-kit/bin.cjs",
-    );
-    const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
-      .mockResolvedValue("");
-
-    await migrateCommand.run(ctx({ cwd: dir, argv: [] }));
-    expect(spawn).toHaveBeenCalledOnce();
   });
 
   test("throws a structured CliError when drizzle-kit is not installed", async () => {

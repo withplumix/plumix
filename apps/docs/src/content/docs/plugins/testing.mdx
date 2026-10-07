@@ -168,6 +168,30 @@ test("a PNG upload starts with the PNG signature", async () => {
 });
 ```
 
+## End-to-end tests against a playground
+
+`definePlumixE2EConfig` from `plumix/test/playwright` runs a plugin's admin pages against a real site. Point `playground` at a small site that installs your plugin, and pass `configDir: import.meta.dirname`:
+
+```ts
+import { definePlumixE2EConfig } from "plumix/test/playwright";
+
+export default definePlumixE2EConfig({
+  port: 3010,
+  configDir: import.meta.dirname,
+  playground: "../playground",
+});
+```
+
+The server command it builds is:
+
+```sh
+cd <playground> && plumix migrate fresh && <extraSetup> && plumix dev --port <port>
+```
+
+`plumix migrate fresh` deletes the playground's local database, at the paths its runtime declares, then applies core's and every plugin's shipped migrations. `<extraSetup>` runs only when you pass `extraSetup`, such as a seed command. Nothing is generated and nothing outside the runtime's local state is deleted, so a playground's committed `drizzle/` stays as it is. A runtime that runs its CLI some other way, as Bun does with `bun --bun`, supplies its own prefix in place of `plumix`.
+
+Every spec shares the playground's one database. The suite runs on a single worker, and the `plumixDbBaseline` fixture restores the database after each attempt. It leaves each owner's `__drizzle_migrations_*` table alone. Pass `sharedDatabase: false` for a site that never serves from that database, such as one that creates a database per session. The suite then runs on parallel workers with no snapshot.
+
 ## Related
 
 [Overview](/plugins/overview/) covers installing a plugin and the registration context your plugin's `setup` receives. [Project Structure](/getting-started/project-structure/) lists every `plumix` subpath, `plumix/test` and `plumix/vite` among them. [Content Modelling](/content-modelling/overview/) covers writing the descriptor these tests boot.

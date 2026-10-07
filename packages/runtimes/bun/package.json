@@ -65,7 +65,7 @@
       "scripts": {
         "build": "bun --bun plumix build",
         "dev": "bun --bun plumix dev",
-        "migrate:apply": "bun --bun plumix migrate apply"
+        "migrate": "bun --bun plumix migrate"
       },
       "cli": "bun --bun plumix",
       "secretsFile": ".env",

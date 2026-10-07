@@ -222,7 +222,7 @@ function normalise(expression: string): string {
  * Run `work` under the guard, turning a database failure into a CliError.
  *
  * The guard is the first thing here to touch the database, so an install that
- * has not run `plumix migrate apply` since upgrading would otherwise meet a raw
+ * has not run `plumix migrate` since upgrading would otherwise meet a raw
  * driver message and a stack trace. Every other way this command fails names
  * its fix.
  */

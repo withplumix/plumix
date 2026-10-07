@@ -74,11 +74,7 @@ describe("create-plumix-app bin", () => {
   test("installs and runs post-scaffold steps with pnpm when pnpm invoked it", async () => {
     const { stdout, calls } = await scaffold("pnpm/10.0.0 npm/? node/v24");
 
-    expect(calls).toEqual([
-      "pnpm install",
-      "pnpm exec plumix migrate generate",
-      "pnpm exec plumix migrate apply --local",
-    ]);
+    expect(calls).toEqual(["pnpm install", "pnpm exec plumix migrate"]);
     expect(stdout).toContain("pnpm dev");
   });
 
@@ -87,22 +83,14 @@ describe("create-plumix-app bin", () => {
       "bun/1.4.2 npm/? node/v24.3.0 linux x64",
     );
 
-    expect(calls).toEqual([
-      "bun install",
-      "bun x plumix migrate generate",
-      "bun x plumix migrate apply --local",
-    ]);
+    expect(calls).toEqual(["bun install", "bun x plumix migrate"]);
     expect(stdout).toContain("bun dev");
   });
 
   test("falls back to npm when no user agent is set", async () => {
     const { stdout, calls } = await scaffold(undefined);
 
-    expect(calls).toEqual([
-      "npm install",
-      "npm exec -- plumix migrate generate",
-      "npm exec -- plumix migrate apply --local",
-    ]);
+    expect(calls).toEqual(["npm install", "npm exec -- plumix migrate"]);
     expect(stdout).toContain("npm run dev");
   });
 
@@ -112,11 +100,7 @@ describe("create-plumix-app bin", () => {
       "yarn",
     ]);
 
-    expect(calls).toEqual([
-      "yarn install",
-      "yarn exec plumix migrate generate",
-      "yarn exec plumix migrate apply --local",
-    ]);
+    expect(calls).toEqual(["yarn install", "yarn exec plumix migrate"]);
     expect(stdout).toContain("yarn dev");
   });
 });

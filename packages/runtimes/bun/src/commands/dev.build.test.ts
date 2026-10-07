@@ -147,14 +147,7 @@ beforeAll(async () => {
   // dev loader is the only reader of `.env`.
   writeFileSync(join(dir, "bunfig.toml"), "env = false\n");
   writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
-  for (const args of [
-    ["migrate", "generate"],
-    ["migrate", "apply"],
-  ]) {
-    expect(await plumixOn("bun", dir, args), args.join(" ")).toMatchObject({
-      code: 0,
-    });
-  }
+  expect(await plumixOn("bun", dir, ["migrate"])).toMatchObject({ code: 0 });
   dev = await startDev(dir, await freePort());
 }, 240_000);
 

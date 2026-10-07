@@ -13,7 +13,6 @@
       // database_id here before deploying — the remote deploy needs the real
       // one.
       "database_id": "local-development-only",
-      "migrations_dir": "drizzle",
     },
   ],
   "assets": {

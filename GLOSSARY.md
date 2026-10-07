@@ -316,7 +316,7 @@ The platform-neutral object a runtime adapter produces — a `fetch`, optionally
 What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
 
 **Migration history**:
-The ordered migrations that build the tables one owner declares — core, a plugin, or a site's own tables — shipped and committed with that owner and replayed by every database it reaches. Source its owner alone writes: it only grows, and nothing that applies it ever deletes or rewrites it. A site's database is built from every history its config pulls in, each migration applied once, in timestamp order.
+The ordered migrations that build the tables one owner declares — core, a plugin, or a site's own tables — shipped and committed with that owner and replayed by every database it reaches. Source its owner alone writes: it only grows, and nothing that applies it ever deletes or rewrites it. A site's database is built from every history its config pulls in, each migration applied once: owner by owner (core, then plugins in config order, then the site), each history in its own order.
 _Avoid_: migrations folder, `drizzle/` (a folder holds a history; it is not the concept)
 
 **Config slot**:

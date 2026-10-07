@@ -37,7 +37,7 @@ Options:
                        (oauth, magic-link; cfAccess on cloudflare).
   --pm <name>          Package manager (npm, pnpm, yarn, bun); auto-detected.
   --no-install         Skip installing dependencies.
-  --no-db              Skip generating and applying local migrations.
+  --no-db              Skip applying migrations to the local database.
   --no-git             Skip initializing a git repository.
   -y, --yes            Accept defaults for anything not specified.
 

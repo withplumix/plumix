@@ -97,7 +97,7 @@ export function resolvePlaygroundDbPath(playgroundDir: string): string {
   const [match, ...more] = matches;
   if (match === undefined) {
     throw new Error(
-      `resolvePlaygroundDbPath: no database matches ${database.glob} under ${playgroundDir} (declared by ${packageName}) — run plumix migrate apply, or plumix dev, first.`,
+      `resolvePlaygroundDbPath: no database matches ${database.glob} under ${playgroundDir} (declared by ${packageName}) — run plumix migrate, or plumix dev, first.`,
     );
   }
   if (more.length > 0) {

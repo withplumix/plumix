@@ -61,7 +61,6 @@ async function context(
     cwd: process.cwd(),
     configPath: `${process.cwd()}/plumix.config.ts`,
     argv,
-    runtimeMigrate: {},
   };
 }
 
@@ -284,7 +283,7 @@ describe("plumix cron run — parity with the in-process scheduler", () => {
     }
 
     expect(isCliError(error)).toBe(true);
-    expect(isCliError(error) ? error.hint : "").toContain("migrate apply");
+    expect(isCliError(error) ? error.hint : "").toContain("plumix migrate`");
   });
 });
 
@@ -427,7 +426,6 @@ describe("plumix cron run — both connections, composed", () => {
       cwd: process.cwd(),
       configPath: `${process.cwd()}/plumix.config.ts`,
       argv: ["run", "*/5 * * * *"],
-      runtimeMigrate: {},
     });
 
     // Two: the guard's, then the one the handler binds for the tasks.

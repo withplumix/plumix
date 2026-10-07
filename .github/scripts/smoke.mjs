@@ -362,16 +362,12 @@ async function scaffoldAndInstall(workDir, npmEnv) {
 
 async function migrateAndBoot(appDir) {
   const bin = path.join(appDir, "node_modules", ".bin");
-  // Put the app's .bin first so `plumix` resolves and so `plumix migrate
-  // apply`'s `wrangler` spawn (and drizzle-kit) are found.
+  // Put the app's .bin first so `plumix` resolves, and the tools it spawns.
   const env = { PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   const plumix = path.join(bin, "plumix");
 
-  log("plumix migrate generate…");
-  await run(plumix, ["migrate", "generate"], { cwd: appDir, env });
-
-  log("plumix migrate apply --local (miniflare D1)…");
-  await run(plumix, ["migrate", "apply", "--local"], { cwd: appDir, env });
+  log("plumix migrate (miniflare D1)…");
+  await run(plumix, ["migrate"], { cwd: appDir, env });
 
   const logFile = path.join(appDir, "plumix-dev.log");
   log(`plumix dev --port ${APP_PORT} (logs: ${logFile})…`);

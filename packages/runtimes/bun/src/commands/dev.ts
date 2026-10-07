@@ -34,7 +34,7 @@ export const devCommand: CommandDefinition = {
           : bun().config;
         // The staged public dir, so admin deep links resolve to the shell
         // Vite also serves; the project root, so a relative `bunSqlite()`
-        // path opens the file `migrate apply` wrote.
+        // path opens the file `plumix migrate` wrote.
         const env = {
           ...process.env,
           [ASSETS_DIR_ENV]: publicDir,
