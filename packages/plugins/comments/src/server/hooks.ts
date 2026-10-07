@@ -39,5 +39,13 @@ declare module "plumix" {
       comment: Comment,
       ctx: AppContext,
     ) => void | Promise<void>;
+    /**
+     * A moderator removed the comment, as a tombstone or outright. The
+     * payload is the row as it stood before removal.
+     */
+    "comment:deleted": (
+      comment: Comment,
+      ctx: AppContext,
+    ) => void | Promise<void>;
   }
 }

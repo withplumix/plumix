@@ -186,7 +186,10 @@ describe("moderation repository ops", () => {
       .transient({ db })
       .create({ entryId: entry.id, status: "spam" });
 
-    expect(await purgeComment(ctxFor(db), c.id)).toBe("deleted");
+    expect(await purgeComment(ctxFor(db), c.id)).toEqual({
+      result: "deleted",
+      comment: c,
+    });
     expect(
       (
         await listForModeration(ctxFor(db), {
@@ -215,7 +218,10 @@ describe("moderation repository ops", () => {
       parentId: parent.id,
     });
 
-    expect(await purgeComment(ctxFor(db), parent.id)).toBe("tombstoned");
+    expect(await purgeComment(ctxFor(db), parent.id)).toEqual({
+      result: "tombstoned",
+      comment: parent,
+    });
     const [kept] = await listForModeration(ctxFor(db), {
       status: "approved",
       limit: 10,
