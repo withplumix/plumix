@@ -83,6 +83,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "meta/": server("capabilities"),
   "access/": server("capabilities"),
   "auth/": server("capabilities"),
+  "mail/": server("capabilities"),
   "entries/": server("capabilities"),
   "terms/": server("capabilities"),
   "users/": server("capabilities"),

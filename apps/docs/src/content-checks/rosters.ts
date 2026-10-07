@@ -187,6 +187,7 @@ const CONFIG_OPTIONS = [
   "kv",
   "cdn",
   "mailer",
+  "mail",
   "theme",
   "plugins",
   "i18n",

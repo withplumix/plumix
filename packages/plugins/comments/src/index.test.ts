@@ -100,12 +100,15 @@ describe("moderator notification", () => {
       .transient({ db })
       .create({ entryId: entry.id, status: "pending" });
     const hooks = new HookRegistry();
-    await installPlugins({
-      hooks,
-      plugins: [comments({ notifyEmail: "mod@example.test" })],
-    });
+    const plugin = comments({ notifyEmail: "mod@example.test" });
+    await installPlugins({ hooks, plugins: [plugin] });
     const send = vi.fn(() => Promise.resolve());
-    const ctx = createTestContext({ db, hooks, config: { mailer: { send } } });
+    // The config declares the plugin's mails, as a site's does.
+    const ctx = createTestContext({
+      db,
+      hooks,
+      config: { mailer: { send }, plugins: [plugin] },
+    });
 
     await hooks.doAction("comment:created", comment, ctx);
 

@@ -3,6 +3,9 @@ import "./template-deps-core.js";
 // Side-effect: anchors public core hook augmentations (seo:*, render:document,
 // resolve:*, admin_bar:nodes, …) into the published declaration graph (#1698).
 import "./hooks/public-hooks.js";
+// Side-effect: anchors core's `MailRegistry` entries (`magicLink`,
+// `emailChange`) into the published declaration graph, the same way.
+import "./mail/core-mails.js";
 
 export * from "./access/index.js";
 export * from "./admin/index.js";
@@ -35,6 +38,27 @@ export type { JsonObject, JsonValue } from "./json.js";
 // record or a block prop is handed a `JsonValue` and has to narrow it before it
 // can read a field.
 export { isJsonArray, isJsonObject } from "./json.js";
+export { defineMail } from "./mail/contract/define.js";
+export { MailerNotConfigured } from "./mail/contract/errors.js";
+export type {
+  AnyMailDefinition,
+  MailConfig,
+  MailDefinition,
+  MailName,
+  MailOverride,
+  MailOverrides,
+  MailParts,
+  MailRecipient,
+  MailRegistry,
+  MailRender,
+  MailRenderContext,
+  MailSender,
+  MailSendOptions,
+} from "./mail/contract/registry.js";
+export type {
+  EmailChangeMailProps,
+  MagicLinkMailProps,
+} from "./mail/core-mails.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";
 export {

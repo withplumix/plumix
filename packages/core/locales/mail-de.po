@@ -1,0 +1,69 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-07\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (mails render server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.subject"
+msgstr "Bei {siteName} anmelden"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.intro"
+msgstr "Melden Sie sich bei {siteName} über diesen Link an:"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.expires"
+msgstr "Der Link läuft in {minutes} Minuten ab."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.ignore"
+msgstr "Falls Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.subject"
+msgstr "Bestätigen Sie Ihre neue E-Mail für {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.intro"
+msgstr "Jemand — hoffentlich Sie — hat darum gebeten, die E-Mail-Adresse Ihres {siteName}-Kontos zu ändern."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.from"
+msgstr "Von: {oldEmail}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.to"
+msgstr "An:  {newEmail}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.confirm"
+msgstr "Bestätigen Sie die Änderung über diesen Link:"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.expiresOneHour"
+msgstr "Der Link läuft in 1 Stunde ab."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.expiresHours"
+msgstr "Der Link läuft in {hours} Stunden ab."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.ignore"
+msgstr "Falls Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren — Ihr Konto bleibt bei {oldEmail}."

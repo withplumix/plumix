@@ -385,6 +385,10 @@ _Avoid_: bare "manifest"
 **Document manifest**:
 The declarative `<head>`/`<html>` descriptor (title, meta, link, script tags) a theme or template contributes to the rendered document.
 
+**Mail**:
+A message core or a plugin declares by name with `defineMail`, typed by the props it renders from, and sends with `ctx.mail.send`. It renders in its recipient's locale, and a site or a theme overrides its subject, text or HTML by name. Distinct from the mailer, the infrastructure slot that delivers what a mail renders. See ADR 0036.
+_Avoid_: email template, notification
+
 ## Caching
 
 **CDN**:

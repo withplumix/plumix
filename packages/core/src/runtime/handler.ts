@@ -387,6 +387,8 @@ export function requestContextArgs({
     authMethods: app.authMethods,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
+    mails: app.mails,
+    mailCatalogs: app.mailCatalogs,
     origin: app.origin,
     appContextExtensions: app.appContextExtensions,
   };

@@ -213,3 +213,18 @@ msgstr "Потрібна електронна адреса."
 #: src/refusals.ts
 msgid "plugin.comments.error.rate_limited"
 msgstr "Забагато коментарів — спробуйте трохи згодом."
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.subject"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.intro"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.review"
+msgstr ""

@@ -11,6 +11,7 @@ import { users } from "../../db/schema/users.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { poCatalogs } from "../../test/po-catalog.js";
 
 interface CapturedSend {
   readonly to: string;
@@ -82,6 +83,69 @@ describe("magic-link request route", () => {
     expect(sent[0]?.text).toContain(
       "https://cms.example/_plumix/auth/magic-link/verify?token=",
     );
+  });
+
+  test("sends core's magicLink mail, text and HTML, in English", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      config: { mailer, auth: { magicLink: { siteName: "Plumix Test" } } },
+    });
+    await h.factory.user.create({ email: "alice@example.com" });
+
+    await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+      }),
+    );
+
+    const url = /https:\/\/\S+token=[\w-]+/.exec(sent[0]?.text ?? "")?.[0];
+    expect(sent[0]).toMatchObject({
+      to: "alice@example.com",
+      subject: "Sign in to Plumix Test",
+      text: [
+        "Sign in to Plumix Test by opening this link:",
+        "",
+        url,
+        "",
+        "The link expires in 15 minutes.",
+        "",
+        "If you didn't request this, you can ignore this email.",
+      ].join("\n"),
+    });
+    expect(sent[0]?.html).toContain(`<a href="${url}">`);
+    expect(sent[0]?.html).toContain("The link expires in 15 minutes.");
+  });
+
+  test("sends it in German to a user whose locale is German", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Plumix Test" } },
+        i18n: { defaultLocale: "en", locales: ["en", "de"] },
+      },
+      // Core's own catalog, which unit tests otherwise resolve to empty.
+      pluginCatalogs: poCatalogs({
+        de: new URL("../../../locales/mail-de.po", import.meta.url),
+      }),
+    });
+    await h.factory.user.create({
+      email: "klaus@example.com",
+      meta: { locale: "de" },
+    });
+
+    await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "klaus@example.com",
+      }),
+    );
+
+    expect(sent[0]?.subject).toBe("Bei Plumix Test anmelden");
+    expect(sent[0]?.text).toContain(
+      "Melden Sie sich bei Plumix Test über diesen Link an:",
+    );
+    expect(sent[0]?.text).toContain("Der Link läuft in 15 Minuten ab.");
+    expect(sent[0]?.html).toContain("Der Link läuft in 15 Minuten ab.");
   });
 
   test("the verify link in the email carries the configured basePath", async () => {

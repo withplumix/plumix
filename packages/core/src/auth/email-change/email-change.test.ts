@@ -1,9 +1,13 @@
 import { describe, expect, test } from "vitest";
 
+import type { Db } from "../../context/app-context.js";
+import type { MailSender } from "../../mail/contract/registry.js";
+import type { Mailer } from "../contract/mailer.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { createTestContext } from "../../test/context.js";
 import { authTokenFactory, userFactory } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { makeMailer } from "../../test/mailer.js";
@@ -18,6 +22,14 @@ import {
 const ORIGIN = "https://cms.example";
 const SITE_NAME = "Test Site";
 
+/** `ctx.mail` on a site whose transport is `mailer`. */
+function mailVia(db: Db, mailer: Mailer): MailSender {
+  return createTestContext({
+    db,
+    config: { mailer, auth: { magicLink: { siteName: SITE_NAME } } },
+  }).mail;
+}
+
 describe("requestEmailChange", () => {
   test("persists a hashed token and ships verification email to the new address", async () => {
     const db = await createTestDb();
@@ -30,8 +42,7 @@ describe("requestEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer,
-      siteName: SITE_NAME,
+      mail: mailVia(db, mailer),
     });
 
     expect(result.token.length).toBeGreaterThan(20);
@@ -70,8 +81,7 @@ describe("requestEmailChange", () => {
         userId: user.id,
         newEmail: "same@example.test",
         origin: ORIGIN,
-        mailer,
-        siteName: SITE_NAME,
+        mail: mailVia(db, mailer),
       }),
     ).rejects.toThrow(EmailChangeError);
     expect(mailer.sent).toHaveLength(0);
@@ -90,8 +100,7 @@ describe("requestEmailChange", () => {
         userId: userA.id,
         newEmail: "b@example.test",
         origin: ORIGIN,
-        mailer,
-        siteName: SITE_NAME,
+        mail: mailVia(db, mailer),
       }),
     ).rejects.toMatchObject({ code: "email_taken" });
   });
@@ -109,8 +118,7 @@ describe("requestEmailChange", () => {
         userId: user.id,
         newEmail: "alice@new.example",
         origin: ORIGIN,
-        mailer,
-        siteName: SITE_NAME,
+        mail: mailVia(db, mailer),
       }),
     ).rejects.toMatchObject({ code: "account_disabled" });
   });
@@ -126,15 +134,13 @@ describe("requestEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new1.example",
       origin: ORIGIN,
-      mailer,
-      siteName: SITE_NAME,
+      mail: mailVia(db, mailer),
     });
     const second = await requestEmailChange(db, {
       userId: user.id,
       newEmail: "alice@new2.example",
       origin: ORIGIN,
-      mailer,
-      siteName: SITE_NAME,
+      mail: mailVia(db, mailer),
     });
 
     // The first link no longer verifies — the row was purged before
@@ -158,8 +164,7 @@ describe("requestEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer,
-      siteName: SITE_NAME,
+      mail: mailVia(db, mailer),
       logger: { warn: (msg, meta) => warned.push({ msg, meta }) },
     });
 
@@ -185,8 +190,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      mail: mailVia(db, makeMailer()),
     });
 
     const result = await verifyEmailChange(db, token);
@@ -247,8 +251,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      mail: mailVia(db, makeMailer()),
     });
     // Race: another user grabs the target email before the click lands.
     await userFactory.transient({ db }).create({
@@ -267,8 +270,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      mail: mailVia(db, makeMailer()),
     });
     await verifyEmailChange(db, token);
 
@@ -284,8 +286,7 @@ describe("verifyEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      mail: mailVia(db, makeMailer()),
     });
     await db
       .update(users)
@@ -306,8 +307,7 @@ describe("cancelEmailChange", () => {
       userId: user.id,
       newEmail: "alice@new.example",
       origin: ORIGIN,
-      mailer: makeMailer(),
-      siteName: SITE_NAME,
+      mail: mailVia(db, makeMailer()),
     });
 
     const result = await cancelEmailChange(db, { userId: user.id });

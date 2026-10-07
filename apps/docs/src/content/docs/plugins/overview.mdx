@@ -348,7 +348,7 @@ Picking media this way is what puts `storage: r2({ binding: "MEDIA" })` in the c
 
 ## Related
 
-The `plugins` array is one slot among twenty in [Configuration](/getting-started/configuration/), which covers the file these snippets edit. Writing a descriptor rather than installing one is [Content Modelling](/content-modelling/overview/), and the registration options these plugins pass are documented in [Entry Types](/content-modelling/entry-types/). A plugin that contributes a field type, as the media plugin does, extends the roster in [Field Types](/fields/field-types/). A plugin can also contribute a per-request data dependency a template declares and receives, which the blog and comments plugins both do, and [Themes](/themes/overview/) covers the render layer that reads it.
+The `plugins` array is one slot among twenty-two in [Configuration](/getting-started/configuration/), which covers the file these snippets edit. Writing a descriptor rather than installing one is [Content Modelling](/content-modelling/overview/), and the registration options these plugins pass are documented in [Entry Types](/content-modelling/entry-types/). A plugin that contributes a field type, as the media plugin does, extends the roster in [Field Types](/fields/field-types/). A plugin can also contribute a per-request data dependency a template declares and receives, which the blog and comments plugins both do, and [Themes](/themes/overview/) covers the render layer that reads it. A plugin that sends email declares each mail in its descriptor's `mails` field, which [Mail](/going-further/mail/) covers.
 
 ## Next steps
 

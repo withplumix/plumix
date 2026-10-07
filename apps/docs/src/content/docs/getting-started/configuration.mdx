@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: plumix.config.ts, the three slots it requires, the seventeen it accepts, and how a secret reaches one through an EnvInput resolver.
+description: plumix.config.ts, the three slots it requires, the nineteen it accepts, and how a secret reaches one through an EnvInput resolver.
 tier: P0
 roster: true
 sidebar:
@@ -9,7 +9,7 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-`plumix.config.ts` default-exports one call to `plumix()`. Three slots are required, seventeen are optional, and each one is either a value or a factory from the package that owns it.
+`plumix.config.ts` default-exports one call to `plumix()`. Three slots are required, nineteen are optional, and each one is either a value or a factory from the package that owns it.
 
 ## Overview
 
@@ -211,6 +211,22 @@ The outbound email transport, shared by every feature that sends mail. The inter
 import { consoleMailer } from "plumix";
 
 export const mailer = consoleMailer();
+```
+
+### mail
+
+Overrides for the mails core and your plugins declare, by name. Each override replaces any of a mail's `subject`, `text` and `html`, and wins over the theme's `mail` and the declaring owner's own. Overriding a name nothing declares stops the build. [Mail](/going-further/mail/) covers declaring, sending and overriding.
+
+```ts
+import type { MailConfig } from "plumix";
+
+export const mail: MailConfig = {
+  overrides: {
+    magicLink: {
+      subject: (_props, ctx) => `Your ${ctx.siteName} sign-in link`,
+    },
+  },
+};
 ```
 
 ### theme

@@ -212,7 +212,7 @@ Every option has a default, and `comments()` on its own is a complete registrati
 | `rateLimit`      | `{ max: 5, windowMin: 10 }` | The sliding window, per hashed source.                                   |
 | `notifyEmail`    | `null`                      | Email a moderator when a comment is held. Needs a configured mailer.     |
 
-`notifyEmail` sends through the top-level [`mailer`](/getting-started/configuration/#mailer) in the site config. With no mailer configured, the plugin ignores the address and sends no email.
+`notifyEmail` sends the `commentAwaitingModeration` mail through the top-level [`mailer`](/getting-started/configuration/#mailer) in the site config: the comment, the entry it was left on and a link to the moderation queue, in the moderator's own locale when the address belongs to a user. A site or theme can override its subject, text or HTML by that name, as [Mail](/going-further/mail/) describes. With no mailer configured, the plugin ignores the address and sends no email.
 
 ## Related
 

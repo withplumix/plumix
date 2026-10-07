@@ -3,8 +3,10 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
+import { createTestContext } from "../../../test/context.js";
 import { createDispatcherHarness } from "../../../test/dispatcher.js";
 import { makeMailer } from "../../../test/mailer.js";
+import { poCatalogs } from "../../../test/po-catalog.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("user.requestEmailChange", () => {
@@ -120,6 +122,85 @@ describe("user.requestEmailChange", () => {
   });
 });
 
+describe("the emailChange mail", () => {
+  test("goes to the new address in English, text and HTML", async () => {
+    const mailer = makeMailer();
+    const h = await createDispatcherHarness({
+      config: { mailer, auth: { magicLink: { siteName: "Test" } } },
+    });
+    const user = await h.factory.user.create({
+      email: "alice@old.example",
+      role: "editor",
+    });
+
+    const response = await h.fetch("/_plumix/rpc/user/requestEmailChange", {
+      as: user,
+      json: { json: { id: user.id, newEmail: "alice@new.example" } },
+    });
+
+    response.assertStatus(200);
+    const url = /https:\/\/\S+token=[\w-]+/.exec(
+      mailer.sent[0]?.text ?? "",
+    )?.[0];
+    expect(url).toContain(
+      "https://cms.example/_plumix/auth/verify-email?token=",
+    );
+    expect(mailer.sent[0]).toMatchObject({
+      to: "alice@new.example",
+      subject: "Confirm your new email for Test",
+      text: [
+        "Someone — hopefully you — asked to change the email on your Test account.",
+        "",
+        "From: alice@old.example",
+        "To:   alice@new.example",
+        "",
+        "Confirm the change by opening this link:",
+        "",
+        url,
+        "",
+        "The link expires in 24 hours.",
+        "",
+        "If you didn't request this, you can ignore this email — your account stays on alice@old.example.",
+      ].join("\n"),
+    });
+    expect(mailer.sent[0]?.html).toContain(`<a href="${url}">`);
+  });
+
+  test("is in the user's own locale, German here", async () => {
+    const mailer = makeMailer();
+    const h = await createDispatcherHarness({
+      config: {
+        mailer,
+        auth: { magicLink: { siteName: "Test" } },
+        i18n: { defaultLocale: "en", locales: ["en", "de"] },
+      },
+      // Core's own catalog, which unit tests otherwise resolve to empty.
+      pluginCatalogs: poCatalogs({
+        de: new URL("../../../../locales/mail-de.po", import.meta.url),
+      }),
+    });
+    const user = await h.factory.user.create({
+      email: "klaus@old.example",
+      role: "editor",
+      meta: { locale: "de" },
+    });
+
+    await h.fetch("/_plumix/rpc/user/requestEmailChange", {
+      as: user,
+      json: { json: { id: user.id, newEmail: "klaus@new.example" } },
+    });
+
+    expect(mailer.sent[0]?.subject).toBe(
+      "Bestätigen Sie Ihre neue E-Mail für Test",
+    );
+    expect(mailer.sent[0]?.text).toContain("Von: klaus@old.example");
+    expect(mailer.sent[0]?.text).toContain("Der Link läuft in 24 Stunden ab.");
+    expect(mailer.sent[0]?.html).toContain(
+      "Bestätigen Sie die Änderung über diesen Link:",
+    );
+  });
+});
+
 describe("user.cancelEmailChange", () => {
   test("self cancels their own pending change", async () => {
     const h = await createRpcHarness({
@@ -218,8 +299,10 @@ describe("GET /_plumix/auth/verify-email", () => {
       userId: seeded.id,
       newEmail: "alice@new.example",
       origin: "https://cms.example",
-      mailer,
-      siteName: "Test",
+      mail: createTestContext({
+        db: h.db,
+        config: { mailer, auth: { magicLink: { siteName: "Test" } } },
+      }).mail,
     });
 
     const response = await h.dispatch(
@@ -304,8 +387,10 @@ describe("GET /_plumix/auth/verify-email lands on auth.loginPath", () => {
       userId: seeded.id,
       newEmail: "alice@new.example",
       origin: "https://cms.example",
-      mailer,
-      siteName: "Test",
+      mail: createTestContext({
+        db: h.db,
+        config: { mailer, auth: { magicLink: { siteName: "Test" } } },
+      }).mail,
     });
 
     const response = await h.dispatch(

@@ -15,6 +15,7 @@ import { LIST_ROUTE_PATH, SUBMIT_ROUTE_PATH } from "./contract.js";
 import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
+import { commentAwaitingModerationMail } from "./server/mail.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
 import {
   COMMENTS_REST_PATH,
@@ -76,6 +77,7 @@ export function comments(options: CommentsConfig = {}) {
     schemaModule: "@plumix/plugin-comments/schema",
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    mails: [commentAwaitingModerationMail],
     provides: (ctx) => {
       ctx.extendAppContext("comments", { requireEmail: config.requireEmail });
     },

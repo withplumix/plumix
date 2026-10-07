@@ -228,3 +228,18 @@ msgstr "An email address is required."
 #: src/refusals.ts
 msgid "plugin.comments.error.rate_limited"
 msgstr "Too many comments — try again in a little while."
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.subject"
+msgstr "A comment is awaiting moderation"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.intro"
+msgstr "{authorName} left a comment on “{entryTitle}” that's held for review:"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.review"
+msgstr "Review it in the moderation queue:"

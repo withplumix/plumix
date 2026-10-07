@@ -7,6 +7,7 @@ import type {
   ThemeTokens,
 } from "./blocks/index.js";
 import type { DocumentManifest } from "./document-manifest.js";
+import type { MailOverrides } from "./mail/contract/registry.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
 import type {
   ArchiveTypeData,
@@ -229,6 +230,12 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    * theme's CSS owns every animation.
    */
   readonly viewTransitions?: ViewTransitionsInput;
+  /**
+   * The theme's look for mails it did not declare, by mail name: any of a
+   * mail's `subject`, `text` and `html`. A site's `mail.overrides` win over
+   * these, and these over the declaring owner's own.
+   */
+  readonly mail?: MailOverrides;
 }
 
 const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;

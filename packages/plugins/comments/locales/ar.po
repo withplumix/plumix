@@ -213,3 +213,18 @@ msgstr "البريد الإلكتروني مطلوب."
 #: src/refusals.ts
 msgid "plugin.comments.error.rate_limited"
 msgstr "تعليقات كثيرة جدًا — حاول مرة أخرى بعد قليل."
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.subject"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.intro"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.review"
+msgstr ""

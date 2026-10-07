@@ -215,6 +215,7 @@ const everySlot: Required<PlumixConfigInput> = {
   kv: { kind: "mock", connect: () => ({}) as never },
   cdn: { kind: "mock", connect: () => null },
   mailer: { send: () => Promise.resolve() },
+  mail: { overrides: {} },
   theme,
   plugins: [],
   i18n: { defaultLocale: "en", locales: ["en", "fr"] },
