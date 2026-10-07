@@ -432,7 +432,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
 });
 
 // A type whose policy grants `anonymous` to every principal, signed-in ones
-// included. The theme echoes who it rendered for, so a test can tell a
+// included. The theme echoes who it rendered for (a bearer client included), so a test can tell a
 // signed-in body from the anonymous one. A privileged request (a session, an
 // `Authorization` header) renders `private` under such a policy, exactly as
 // under no policy, so its render never lands under the plain URL.
@@ -441,7 +441,12 @@ const signedInEcho = defineTheme({
     entry(
       defineTemplate<EntryData>({
         render: ({ ctx }) => (
-          <main data-testid="viewer">{ctx.user?.email ?? "ANONYMOUS"}</main>
+          <main data-testid="viewer">
+            {ctx.user?.email ??
+              (ctx.request.headers.has("authorization")
+                ? "BEARER-CLIENT"
+                : "ANONYMOUS")}
+          </main>
         ),
       }),
     ),
@@ -519,9 +524,17 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
     );
     await h.drainDeferred();
 
+    expect(await response.text()).toContain("BEARER-CLIENT");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(put).not.toHaveBeenCalled();
     expect(store.size).toBe(0);
+
+    const anonymous = await h.dispatch(
+      new Request("https://cms.example/note/open"),
+    );
+    const body = await anonymous.text();
+    expect(body).toContain("ANONYMOUS");
+    expect(body).not.toContain("BEARER-CLIENT");
   });
 
   test("an anonymous request is still stored and served from the store", async () => {
