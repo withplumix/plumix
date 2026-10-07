@@ -119,6 +119,50 @@ Around `render`, the walker builds the node's root element. It merges the allowl
 
 A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
 
+### A loader that ends the request
+
+A loader whose subject does not exist, such as an unknown share id or a spent token, can fail the whole page rather than render a fallback inside a 200. Throw `pageNotFound()` from `plumix/support` for the theme's 404, or `redirectTo(location, status?)` for a redirect, which defaults to 302 and is never stored by the CDN. Any other rejection stays isolated to its block as above.
+
+The outcome is honoured only where the block is the page's own content, on an entry page or its `?preview=` link. On an archive listing that prefetches loaders, and under `?plumix.edit` or the editor's loader refresh, it is that block's ordinary loader error, so one entry cannot 404 an archive and the editor stays usable.
+
+Loaders run before the template's `document()`, so the head can use what a loader found. Put the lookup in one function that goes through `ctx.memo`, and call it from both. It runs once per request, and both callers keep its type:
+
+```tsx
+import type { AppContext } from "plumix";
+import type { BlockLoaderArgs } from "plumix/blocks";
+import { defineBlock } from "plumix/blocks";
+import { pageNotFound } from "plumix/support";
+import { defineTemplate, entry } from "plumix/theme";
+
+declare function loadShare(token: string): Promise<{ title: string } | null>;
+
+function findShare(ctx: AppContext) {
+  const token = new URL(ctx.request.url).searchParams.get("token") ?? "";
+  return ctx.memo(`share:${token}`, () => loadShare(token));
+}
+
+export const shareBlock = defineBlock({
+  name: "acme/share",
+  loaders: {
+    share: async ({ ctx }: BlockLoaderArgs) => {
+      const share = await findShare(ctx);
+      if (share === null) throw pageNotFound();
+      return share;
+    },
+  },
+  render: ({ loaders }) => <h1>{loaders.share.title}</h1>,
+});
+
+export const shareTemplate = entry(
+  defineTemplate({
+    document: async ({ ctx }) => ({
+      title: (await findShare(ctx))?.title ?? "Share",
+    }),
+    render: () => null,
+  }),
+);
+```
+
 ## Building a tree outside the editor
 
 The editor is the usual writer, but any code holding the entry can build a tree: a seed script, an import from another system, a migration. Use `defineEntryContent` to stamp the envelope, as in the Overview above. A tree without the envelope fails the shape check and reads back as no content at all.

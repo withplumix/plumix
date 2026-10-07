@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
+import { pageNotFound } from "../../../route/contract/page-outcome.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // A registry with a public post type and a loader-backed block.
@@ -24,6 +25,14 @@ function loaderRegistry() {
         // the block's current attrs.
         items: ({ attrs }) => Promise.resolve({ count: attrs.count }),
       },
+    },
+    registeredBy: "test",
+  });
+  registry.blockSpecs.set("test/share", {
+    spec: {
+      name: "test/share",
+      render: () => null,
+      loaders: { share: () => Promise.reject(pageNotFound()) },
     },
     registeredBy: "test",
   });
@@ -52,6 +61,28 @@ describe("entry.refreshBlockLoader", () => {
     });
 
     expect(result.data).toEqual({ feed1: { items: { count: 7 } } });
+  });
+
+  test("a loader throwing a page outcome answers as a loader error", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: loaderRegistry(),
+    });
+    const draft = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "share1", name: "test/share", attrs: {} }],
+      },
+    });
+
+    const result = await h.client.entry.refreshBlockLoader({
+      id: draft.id,
+      blockId: "share1",
+    });
+
+    // An errored block is left out of the map, as any rejected loader is.
+    expect(result.data).toEqual({});
   });
 
   test("404s an unknown block id", async () => {

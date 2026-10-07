@@ -7,6 +7,8 @@ export {
   isJsonObject,
   nonEmpty,
   normalizeBasePath,
+  pageNotFound,
+  redirectTo,
   slugify,
   withBasePath,
   xmlEscape,

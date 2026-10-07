@@ -23,8 +23,13 @@ import { entrySearchCondition } from "../db/search-conditions.js";
 import { canEditEntry } from "../entries/editability.js";
 import { findAuthorBySlug, findTermBySlug } from "../entries/slug-lookups.js";
 import { getAutosave, overlayAutosave } from "../revisions/repository.js";
-import { notFound, permanentRedirect } from "../runtime/contract/http.js";
+import {
+  notFound,
+  permanentRedirect,
+  redirect,
+} from "../runtime/contract/http.js";
 import { archiveEntries, termSlugParam } from "./archive-entries.js";
+import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
@@ -84,6 +89,24 @@ export async function resolvePublicRoute(
     params: match.params,
     intent: match.intent,
   };
+  try {
+    return await resolveIntent(ctx, match, renderEnv);
+  } catch (error) {
+    if (!isPageOutcome(error)) throw error;
+    // A page step ended the request (ADR 0032). The 404 is a resolver's `null`
+    // by another name; a redirect depends on who asked, so nothing keeps it.
+    if (error.kind === "not-found") return notFound("public-page-not-found");
+    const response = redirect(error.location, error.status);
+    response.headers.set("cache-control", "private, no-store");
+    return response;
+  }
+}
+
+function resolveIntent(
+  ctx: AppContext,
+  match: RouteMatch,
+  renderEnv: RenderEnv,
+): Promise<Response> {
   switch (match.intent.kind) {
     case "entry":
       return resolveSingle(ctx, match.intent, match.params, renderEnv);

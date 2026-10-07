@@ -55,6 +55,7 @@ import {
   viewTransitionsStyleTag,
 } from "../../theme-view-transitions.js";
 import { validateDocumentManifest } from "../../theme.js";
+import { isPageOutcome } from "../contract/page-outcome.js";
 import { LIVE_EDIT_MODE } from "../edit-mode.js";
 import {
   bundledCssTags,
@@ -166,7 +167,16 @@ async function renderThroughThemeInner({
     templateDeps,
     ctx,
   );
-  const merged = resolveRenderDocument({ template, document, data, ctx, deps });
+  // Before `document()`, so a loader that ends the request (ADR 0032) stops
+  // the render before any of the page is built.
+  const loaderData = await prefetchEntryLoaders(ctx, data, template, editMode);
+  const merged = await resolveRenderDocument({
+    template,
+    document,
+    data,
+    ctx,
+    deps,
+  });
   const filtered = await ctx.hooks.applyFilter(
     "render:document",
     merged,
@@ -181,7 +191,6 @@ async function renderThroughThemeInner({
     loadSiteSettings(ctx),
   );
   const renderDocument = applyCanonical(filtered, ctx);
-  const loaderData = await prefetchEntryLoaders(ctx, data, template);
   // The `<title>` falls back to the resolver title, then the site name — so an
   // untitled entry gets `<title>Site</title>`, not an empty one.
   const titleFallback = nonEmpty(title) ?? nonEmpty(site.title) ?? title;
@@ -291,7 +300,7 @@ async function renderErrorThroughThemeInner({
     templateDeps,
     ctx,
   );
-  const merged = resolveRenderDocument({
+  const merged = await resolveRenderDocument({
     template,
     document,
     data,
@@ -374,9 +383,14 @@ async function prefetchEntryLoaders(
   ctx: AppContext,
   data: TemplateData,
   template: Template,
+  editMode: EditModeDecision,
 ): Promise<ResolvedBlockLoaders | undefined> {
   const blocks = collectLoaderBlocks(data, template);
   if (blocks.length === 0) return undefined;
+  // A thrown outcome ends the page only from the page's own content, and not
+  // in the editor, which has to stay editable. Anywhere else it is an
+  // ordinary rejection, isolated to its block.
+  const honoursOutcome = "entry" in data && editMode.mode !== "edit";
   // Dev-only: the first loader rejection, captured so it can be escalated to a
   // fatal error after the fan-out settles (prod leaves it `undefined` and keeps
   // per-block isolation).
@@ -393,6 +407,7 @@ async function prefetchEntryLoaders(
       // otherwise surface as an unhandledRejection and on workers that
       // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
       onLoaderError: (event: LoaderErrorEvent) => {
+        if (honoursOutcome && isPageOutcome(event.error)) return;
         firstLoaderError ??= event;
         ctx.hooks
           .applyFilter("blocks:loader:error", undefined, event)
@@ -406,6 +421,11 @@ async function prefetchEntryLoaders(
       },
     });
   });
+  if (honoursOutcome) {
+    for (const { error } of loaderData.values()) {
+      if (isPageOutcome(error)) throw error;
+    }
+  }
   // Dev-only: a throwing loader is fatal here — it propagates to the dispatcher
   // catch, which serves the dev error page naming the culprit block, instead of
   // silently degrading. `process.env.PLUMIX_DEV` is Vite-empty in prod builds,
@@ -436,18 +456,18 @@ interface ResolveDocumentArgs {
 
 // Merge the matched template's `document` fragment (a literal or a per-request
 // function) onto the theme-wide document. No fragment → the theme document.
-function resolveRenderDocument({
+async function resolveRenderDocument({
   template,
   document,
   data,
   ctx,
   deps,
-}: ResolveDocumentArgs): DocumentManifest {
+}: ResolveDocumentArgs): Promise<DocumentManifest> {
   const fragment = template.document;
   if (fragment === undefined) return document;
   const resolved =
     typeof fragment === "function"
-      ? fragment({ ...deps, data, ctx })
+      ? await fragment({ ...deps, data, ctx })
       : fragment;
   const merged = mergeDocumentManifest(document, resolved);
   validateDocumentManifest(merged);

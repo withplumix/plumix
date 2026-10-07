@@ -302,6 +302,9 @@ A route core compiles without any registration: root pagination (`/page/N`) and 
 **Resolved route**:
 The content route the current public request matched — the pattern as it was declared and the params it captured — read from `ctx.resolvedRoute` by anything rendering the page that has to address the page's own URL space. `null` on every path the content router did not match.
 
+**Page outcome**:
+A 404 or a redirect that a page step throws to end the request instead of rendering: `pageNotFound()` or `redirectTo(location, status?)` from `plumix/support`. The page steps are an archive type's `resolve`, a template dep, a block loader on the page's own content and the template's `document()`. See ADR 0032.
+
 **Public route**:
 A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own route handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.
 
