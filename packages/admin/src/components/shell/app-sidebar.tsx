@@ -62,6 +62,7 @@ export function AppSidebar({
                     >
                       <Link
                         to={item.to}
+                        data-testid={`app-sidebar-nav-${item.to}`}
                         activeProps={{ "data-active": "true" }}
                         activeOptions={{ exact: item.exact ?? false }}
                       >

@@ -279,7 +279,8 @@ test("users and the profile offer only what the demo serves, and each of it succ
   await page.goto("users");
   await expect(page.getByTestId("users-list-row-2")).toBeVisible();
   await expect(page.getByTestId("users-list-invite-button")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Mailer" })).toHaveCount(0);
+  await expect(page.getByTestId("app-sidebar-nav-/users")).toBeVisible();
+  await expect(page.getByTestId("app-sidebar-nav-/mailer")).toHaveCount(0);
 
   // Another user: rename, disable, delete.
   await page.goto("users/2/edit");
