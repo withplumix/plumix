@@ -4,10 +4,14 @@ import { FIXTURES_ROOT } from "../../test/fixtures-root";
 import { readContentTree } from "./content-tree";
 import { CONTENT_ROOT, runContentChecks } from "./index";
 
+// One TypeScript program over every fenced sample in the tree, per call. Each
+// runs while the file is collected, where no test timer is running: the tests
+// are synchronous, so a timeout could never interrupt one, only fail a slow
+// pass after the fact.
 const findings = runContentChecks(FIXTURES_ROOT);
-// One TypeScript program over every fenced sample in the tree. Run while the
-// file is collected, where no test timer is running: the test is synchronous,
-// so a timeout could never interrupt it, only fail a slow pass after the fact.
+const rosterFindings = runContentChecks(FIXTURES_ROOT, [
+  { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },
+]);
 const realTreeFindings = runContentChecks(CONTENT_ROOT);
 
 describe("runContentChecks", () => {
@@ -19,9 +23,7 @@ describe("runContentChecks", () => {
   });
 
   it("runs every check over the one traversal", () => {
-    const rules = runContentChecks(FIXTURES_ROOT, [
-      { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },
-    ]).map((finding) => finding.rule);
+    const rules = rosterFindings.map((finding) => finding.rule);
 
     expect(rules).toContain("roster-drift/unknown-item");
   });
