@@ -148,11 +148,7 @@ export async function runCli(
       runner,
       cli: runtime?.cli,
     });
-    const steps = nextSteps(pm, result.name, {
-      installed: post.installed,
-      dbReady: post.dbSetup,
-      cli: runtime?.cli,
-    });
+    const steps = nextSteps(pm, result.name, { installed: post.installed });
 
     reporter.created({
       name: result.name,

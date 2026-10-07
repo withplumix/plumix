@@ -125,26 +125,24 @@ describe("runPostScaffold", () => {
 });
 
 describe("nextSteps", () => {
-  it("is just cd + dev when install and db already ran", () => {
-    const opts = { installed: true, dbReady: true };
+  it("is just cd + dev once installed", () => {
+    const opts = { installed: true };
     expect(nextSteps("pnpm", "app", opts)).toEqual(["cd app", "pnpm dev"]);
     expect(nextSteps("bun", "app", opts)).toEqual(["cd app", "bun dev"]);
   });
 
-  it("includes install, migrations, and npm's run prefix when nothing ran", () => {
-    expect(
-      nextSteps("npm", "app", { installed: false, dbReady: false }),
-    ).toEqual([
+  it("includes install and npm's run prefix when install did not run", () => {
+    expect(nextSteps("npm", "app", { installed: false })).toEqual([
       "cd app",
       "npm install",
-      "npm exec -- plumix migrate",
       "npm run dev",
     ]);
   });
 
-  it("includes only the migration steps when installed but db is not ready", () => {
-    expect(
-      nextSteps("pnpm", "app", { installed: true, dbReady: false }),
-    ).toEqual(["cd app", "pnpm exec plumix migrate", "pnpm dev"]);
+  it("never prints a migrate step, even when the database was not set up", () => {
+    expect(nextSteps("pnpm", "app", { installed: true })).toEqual([
+      "cd app",
+      "pnpm dev",
+    ]);
   });
 });

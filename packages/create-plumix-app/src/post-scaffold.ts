@@ -113,20 +113,16 @@ export async function runPostScaffold({
 }
 
 /**
- * Copy-pasteable commands to finish getting started. Includes install and
- * `plumix migrate` only when they did not already run, so the
- * output is always a complete path to a working `dev` — a project whose DB
- * was never migrated would otherwise hit "no such table" on first run.
+ * Copy-pasteable commands to finish getting started: install when it did not
+ * already run, then `dev`.
  */
 export function nextSteps(
   pm: PackageManager,
   name: string,
-  done: { installed: boolean; dbReady: boolean; cli?: string },
+  done: { installed: boolean },
 ): string[] {
-  const plumix = plumixCommand(pm, done.cli).join(" ");
   const steps = [`cd ${name}`];
   if (!done.installed) steps.push(`${pm} install`);
-  if (!done.dbReady) steps.push(`${plumix} migrate`);
   steps.push(pm === "npm" ? "npm run dev" : `${pm} dev`);
   return steps;
 }
