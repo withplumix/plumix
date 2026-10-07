@@ -87,6 +87,21 @@ function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
   return link?.some((entry) => entry.rel === "canonical") ?? false;
 }
 
+function declaredCanonical(
+  link: readonly DocumentLink[] | undefined,
+): string | null {
+  const href = link?.find((entry) => entry.rel === "canonical")?.href;
+  return nonEmpty(href);
+}
+
+function derivedCanonical(
+  manifest: DocumentManifest,
+  ctx: AppContext,
+): string | null {
+  if (manifest.canonical === false) return declaredCanonical(manifest.link);
+  return canonicalUrl(ctx);
+}
+
 /**
  * Pure gap-filler for the head: appends a `<meta>` only when its
  * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
@@ -243,9 +258,13 @@ export async function applySeoHead(
   const siteName = nonEmpty(site.title);
   // A URL that resolved to nothing is the canonical address of nothing, and
   // core deliberately leaves an error page's canonical unwritten for the same
-  // reason — so neither the tag nor `og:url` is claimed there.
+  // reason — so neither the tag nor `og:url` is claimed there. A page that
+  // opted out with `canonical: false` gets no derived URL either: only one it
+  // declared itself, or an editor's override.
   const canonical =
-    kind === "error" ? null : (overrides.canonical ?? canonicalUrl(ctx));
+    kind === "error"
+      ? null
+      : (overrides.canonical ?? derivedCanonical(manifest, ctx));
   const tagline = nonEmpty(site.tagline);
   const description =
     overrides.description ?? nonEmpty(entry?.excerpt) ?? tagline;
@@ -290,14 +309,13 @@ export async function applySeoHead(
   // A page asking not to be indexed has no rich result to be eligible for, so
   // it offers no structured data — the alternative is a page whose graph and
   // whose robots directive say different things about it. Nor does a URL that
-  // resolved to nothing, which has no subject to describe and no canonical to
-  // hang one off.
+  // resolved to nothing, which has no subject to describe.
   //
   // A site that turned the graph off gets none built, so no `seo:schema:*`
   // subscriber runs.
   if (
     !options.structuredData ||
-    canonical === null ||
+    kind === "error" ||
     !decision.indexable ||
     hasJsonLd(manifest.script)
   ) {
@@ -305,7 +323,10 @@ export async function applySeoHead(
   }
 
   const graph = await schemaGraph(ctx, facts, {
-    canonical,
+    // A page that opted out of its canonical still needs identifiers, so they
+    // hang off the request's own address; it just claims no `url` with them.
+    canonical: canonical ?? canonicalUrl(ctx),
+    url: canonical,
     home: siteRoot(ctx),
     title: searchTitle ?? nonEmpty(title),
     description,

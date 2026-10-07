@@ -30,6 +30,7 @@ export function mergeDocumentManifest(
     script: concatArrays(theme.script, fragment?.script),
     title: fragment?.title ?? theme.title,
     titleTemplate: fragment?.titleTemplate ?? theme.titleTemplate,
+    canonical: fragment?.canonical ?? theme.canonical,
   };
 }
 

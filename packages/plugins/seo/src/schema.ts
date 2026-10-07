@@ -102,6 +102,11 @@ export function toSchemaType(value: string | null): SchemaType | null {
 export interface SchemaInputs {
   /** The page's own URL — every page-scoped `@id` hangs off it. */
   readonly canonical: string;
+  /**
+   * The URL the `WebPage` claims — null on a page that opted out of its
+   * canonical, which still has identifiers but claims no address.
+   */
+  readonly url: string | null;
   /** The site root — every site-scoped `@id`'s base. */
   readonly home: string;
   readonly title: string | null;
@@ -197,7 +202,7 @@ function buildSchemaGraph(
   pieces.set(
     "webpage",
     piece("WebPage", id.webpage, {
-      url: inputs.canonical,
+      url: inputs.url ?? undefined,
       name: inputs.title ?? undefined,
       description: inputs.description ?? undefined,
       isPartOf: ref(id.website),

@@ -18,7 +18,7 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 
 `templates` is the only required slot. It holds an array of rules built by the [template builders](/themes/templates/), or a bare component as shorthand for a theme with nothing but a catch-all. The rest are optional:
 
-- `document` is the `<head>` descriptor: `title`, `titleTemplate`, `meta`, `link`, `script`, plus attributes for `<html>` and `<body>`. A template can merge its own fragment over it per render.
+- `document` is the `<head>` descriptor: `title`, `titleTemplate`, `meta`, `link`, `script`, plus attributes for `<html>` and `<body>`, and `canonical: false` for a page that should carry [no canonical link](#opting-a-page-out-of-the-canonical). A template can merge its own fragment over it per render.
 - `tokens` are named design values grouped by CSS property, and they are a registry rather than a stylesheet. Plumix emits no CSS for them. Picking a token in the editor writes `var(--plumix-<group>-<slug>, <value>)` into the block's style, where `<group>` is the group name in kebab-case and `<value>` is the token's registered literal, used as the inline fallback. A token registered without a `value` gets the bare reference and no fallback. Your own stylesheet declares the custom property. The known groups are `color`, `spacing`, `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `borderWidth`, `borderRadius`, `boxShadow`, `textShadow`, `backgroundImage` and `maxWidth`, and a theme may add a group for any other CSS property.
 - `breakpoints` sets the `tablet` and `mobile` max-widths in pixels, defaulting to 991 and 640. The server style emitter and the editor canvas read the same two numbers, so what an author previews is what ships.
 - `blocks` and `shortcodes` are presentation components the theme owns. They merge into the per-app registries at boot at the highest precedence, so a theme shortcode replaces a plugin or core shortcode of the same name. A theme block only ever settles against a plugin block, because the `core/` namespace is reserved and `defineTheme` throws on a theme block that claims it.
@@ -93,6 +93,23 @@ A template may also carry `document`, either a literal manifest or a function ca
   no deps and no `document`, so `defineTemplate` earns its two extra lines on
   any template that needs one of the three.
 </Aside>
+
+### Opting a page out of the canonical
+
+Every public page gets `<link rel="canonical" href="…">`, written from the site origin and the request path after every `render:document` subscriber has run. A page that is the canonical address of nothing shareable — an account view, a per-user shortlist — sets `canonical: false` in its `document` and gets none:
+
+```tsx
+import type { EntryData } from "plumix/theme";
+import { defineTemplate } from "plumix/theme";
+
+export const shortlist = defineTemplate<EntryData>({
+  document: ({ data }) =>
+    data.entry.slug === "shortlist" ? { canonical: false } : {},
+  render: ({ data }) => <main>{data.entry.title}</main>,
+});
+```
+
+A function decides it per entry, so other entries the same template renders keep their canonical. Set on the theme's `document`, it covers every page, and a template that leaves it unset inherits it. The only value is `false`: a template cannot turn the tag back on with `true`. It stops the automatic tag only. A `<link rel="canonical">` the page declares in `link` still renders, and so does an [SEO plugin](/plugins/seo/) canonical override. A `noindex` page still gets the automatic canonical unless it opts out too.
 
 ## The welcome theme
 

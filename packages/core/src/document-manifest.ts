@@ -61,4 +61,11 @@ export interface DocumentManifest {
   readonly script?: readonly DocumentScript[];
   readonly title?: string;
   readonly titleTemplate?: string | ((title: string | undefined) => string);
+  /**
+   * `false` opts the page out of the automatic `<link rel="canonical">` (and
+   * the tags a plugin derives from it). A canonical the page declares in
+   * `link` still renders. Only `false`: the automatic tag is the default, so
+   * there is nothing for `true` to turn back on.
+   */
+  readonly canonical?: false;
 }

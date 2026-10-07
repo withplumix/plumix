@@ -1,8 +1,8 @@
-import type { JsonValue } from "plumix";
+import type { DocumentManifest, JsonValue } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
-import { defineTheme, fallback } from "plumix/theme";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
 
 import type { SeoOptions } from "./index.js";
@@ -596,6 +596,100 @@ describe("per-entry overrides", () => {
     const head = await dispatchHead(h, "https://cms.example/post/hello");
 
     expect(head).toContain('<meta name="robots" content="noindex,nofollow"/>');
+  });
+});
+
+describe("a page that opts out of the automatic canonical", () => {
+  // The `WebPage` piece as it left the page, parsed out of the rendered script.
+  function webPageOf(head: string): Record<string, JsonValue> | undefined {
+    const body =
+      /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/s.exec(
+        head,
+      )?.[1];
+    if (body === undefined) return undefined;
+    const doc = JSON.parse(body) as {
+      readonly "@graph": readonly Record<string, JsonValue>[];
+    };
+    return doc["@graph"].find((node) => node["@type"] === "WebPage");
+  }
+
+  function optedOutHarness(
+    document: DocumentManifest = { canonical: false },
+  ): Promise<DispatcherHarness> {
+    return createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin, seo()],
+        theme: defineTheme({
+          templates: [
+            fallback(() => null),
+            entry(defineTemplate({ document, render: () => null })),
+          ],
+        }),
+      },
+    });
+  }
+
+  test("carries no canonical, no og:url and no JSON-LD url", async () => {
+    const h = await optedOutHarness();
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('<meta name="robots"');
+    expect(head).not.toContain('rel="canonical"');
+    expect(head).not.toContain('property="og:url"');
+    const webPage = webPageOf(head);
+    expect(webPage?.["@id"]).toBe("https://cms.example/post/hello#webpage");
+    expect(webPage).not.toHaveProperty("url");
+  });
+
+  test("a canonical the page declares still renders, and og:url follows it", async () => {
+    const h = await optedOutHarness({
+      canonical: false,
+      link: [{ rel: "canonical", href: "https://x.example/y" }],
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<link rel="canonical" href="https://x.example/y"/>',
+    );
+    expect(head).toContain(
+      '<meta property="og:url" content="https://x.example/y"/>',
+    );
+    expect(webPageOf(head)?.url).toBe("https://x.example/y");
+  });
+
+  test("an editor's canonical override still renders", async () => {
+    const h = await optedOutHarness();
+    await seedPost(h, {
+      meta: { seo_canonical: "https://syndicated.example/original" },
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<link rel="canonical" href="https://syndicated.example/original"/>',
+    );
+    expect(head).toContain(
+      '<meta property="og:url" content="https://syndicated.example/original"/>',
+    );
+    expect(webPageOf(head)?.url).toBe("https://syndicated.example/original");
+  });
+
+  test("a noindex page that did not opt out keeps the automatic canonical", async () => {
+    const h = await createHarness();
+    await seedPost(h, { meta: { seo_noindex: true } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+    expect(head).toContain(
+      '<link rel="canonical" href="https://cms.example/post/hello"/>',
+    );
   });
 });
 
