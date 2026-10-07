@@ -600,6 +600,19 @@ describe("per-entry overrides", () => {
 });
 
 describe("a page that opts out of the automatic canonical", () => {
+  // The `WebPage` piece as it left the page, parsed out of the rendered script.
+  function webPageOf(head: string): Record<string, JsonValue> | undefined {
+    const body =
+      /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/s.exec(
+        head,
+      )?.[1];
+    if (body === undefined) return undefined;
+    const doc = JSON.parse(body) as {
+      readonly "@graph": readonly Record<string, JsonValue>[];
+    };
+    return doc["@graph"].find((node) => node["@type"] === "WebPage");
+  }
+
   function optedOutHarness(
     document: DocumentManifest = { canonical: false },
   ): Promise<DispatcherHarness> {
@@ -625,7 +638,9 @@ describe("a page that opts out of the automatic canonical", () => {
     expect(head).toContain('<meta name="robots"');
     expect(head).not.toContain('rel="canonical"');
     expect(head).not.toContain('property="og:url"');
-    expect(head).not.toContain('"url":');
+    const webPage = webPageOf(head);
+    expect(webPage?.["@id"]).toBe("https://cms.example/post/hello#webpage");
+    expect(webPage).not.toHaveProperty("url");
   });
 
   test("a canonical the page declares still renders, and og:url follows it", async () => {
@@ -644,6 +659,7 @@ describe("a page that opts out of the automatic canonical", () => {
     expect(head).toContain(
       '<meta property="og:url" content="https://x.example/y"/>',
     );
+    expect(webPageOf(head)?.url).toBe("https://x.example/y");
   });
 
   test("an editor's canonical override still renders", async () => {
@@ -661,6 +677,7 @@ describe("a page that opts out of the automatic canonical", () => {
     expect(head).toContain(
       '<meta property="og:url" content="https://syndicated.example/original"/>',
     );
+    expect(webPageOf(head)?.url).toBe("https://syndicated.example/original");
   });
 
   test("a noindex page that did not opt out keeps the automatic canonical", async () => {

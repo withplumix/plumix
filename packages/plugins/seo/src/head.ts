@@ -309,15 +309,13 @@ export async function applySeoHead(
   // A page asking not to be indexed has no rich result to be eligible for, so
   // it offers no structured data — the alternative is a page whose graph and
   // whose robots directive say different things about it. Nor does a URL that
-  // resolved to nothing, which has no subject to describe and no canonical to
-  // hang one off — nor a page that opted out of its canonical and declared
-  // none of its own, since every `@id` in the graph is built from it.
+  // resolved to nothing, which has no subject to describe.
   //
   // A site that turned the graph off gets none built, so no `seo:schema:*`
   // subscriber runs.
   if (
     !options.structuredData ||
-    canonical === null ||
+    kind === "error" ||
     !decision.indexable ||
     hasJsonLd(manifest.script)
   ) {
@@ -325,7 +323,10 @@ export async function applySeoHead(
   }
 
   const graph = await schemaGraph(ctx, facts, {
-    canonical,
+    // A page that opted out of its canonical still needs identifiers, so they
+    // hang off the request's own address; it just claims no `url` with them.
+    canonical: canonical ?? canonicalUrl(ctx),
+    url: canonical,
     home: siteRoot(ctx),
     title: searchTitle ?? nonEmpty(title),
     description,
