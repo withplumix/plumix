@@ -139,6 +139,34 @@ describe("an archive resolve that throws an outcome", () => {
     expect(await response.text()).toContain("<h1>Nothing here</h1>");
   });
 
+  test("a listed archive's resolve is honoured too", async () => {
+    const membersPlugin = definePlugin("members", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerArchiveType("members", {
+        routes: ["/members"],
+        entries: (q) => q.ofTypes("post"),
+        title: "Members",
+        resolve: (appCtx) => {
+          if (appCtx.user === null) throw redirectTo("/login", 307);
+          return {};
+        },
+      });
+    });
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [membersPlugin],
+        theme: defineTheme({ templates: [fallback(() => null)] }),
+      },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/members"),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("/login");
+  });
+
   test("an anonymous visitor gets the page", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [loginPlugin], theme: loginTheme },
@@ -191,9 +219,9 @@ const shareTheme = defineTheme({
 async function seedShare(
   h: DispatcherHarness,
   share: string,
-): Promise<{ readonly authorId: number }> {
+): Promise<{ readonly authorId: number; readonly entryId: number }> {
   const author = await h.seedUser("admin");
-  await h.factory.entry.create({
+  const created = await h.factory.entry.create({
     type: "post",
     slug: "shared",
     title: "Shared",
@@ -205,7 +233,7 @@ async function seedShare(
     authorId: author.id,
     publishedAt: new Date(),
   });
-  return { authorId: author.id };
+  return { authorId: author.id, entryId: created.id };
 }
 
 const html = { headers: { accept: "text/html" } };
@@ -256,6 +284,21 @@ describe("a block loader on the entry that throws an outcome", () => {
 
     const response = await h.dispatch(
       new Request("https://cms.example/post/shared"),
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/elsewhere");
+  });
+
+  test("a ?preview= render honours it", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [sharePlugin], theme: shareTheme },
+    });
+    const { authorId, entryId } = await seedShare(h, "spent");
+    const token = await h.mintPreviewToken({ entryId, userId: authorId });
+
+    const response = await h.dispatch(
+      new Request(`https://cms.example/post/shared?preview=${token}`),
     );
 
     expect(response.status).toBe(302);
