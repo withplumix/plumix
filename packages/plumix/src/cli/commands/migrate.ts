@@ -33,7 +33,7 @@ const MIGRATIONS_OUT = "drizzle";
 export const migrateCommand: CommandDefinition = {
   describe: "Apply each table owner's migrations, or generate the site's",
   async run(ctx) {
-    // `generate` never read its arguments, so it parses none.
+    // `generate` takes no arguments, so it parses none.
     if (ctx.argv[0] === "generate") {
       await migrateGenerate(ctx);
       return;
@@ -105,7 +105,7 @@ function runtimeMigrations(ctx: CommandContext): RuntimeMigrations {
 // fails with the database untouched.
 async function withDatabase(
   ctx: CommandContext,
-  target: { readonly remote: boolean; readonly binding: string | undefined },
+  target: Pick<MigrateArgs, "remote" | "binding">,
   work: MigrationWork,
   beforeOpen?: () => void,
 ): Promise<void> {

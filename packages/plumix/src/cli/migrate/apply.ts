@@ -95,11 +95,11 @@ export async function reportStatus(
 // than to any owner's schema.
 const BOOKKEEPING_PREFIXES = ["sqlite_", "_cf_", "__drizzle_migrations"];
 
-async function trackingTables(db: MigrationDatabase): Promise<unknown[]> {
+async function hasTrackingTables(db: MigrationDatabase): Promise<boolean> {
   const rows = await db.all(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '\\_\\_drizzle\\_migrations\\_%' ESCAPE '\\'",
   );
-  return rows.map((row) => row.name);
+  return rows.length > 0;
 }
 
 function quote(value: string): string {
@@ -194,7 +194,7 @@ export async function adoptLegacyDatabase(
   openScratch: () => Promise<MigrationDatabase>,
 ): Promise<void> {
   if (!(await tableExists(db, legacyTable))) return;
-  if ((await trackingTables(db)).length > 0) return;
+  if (await hasTrackingTables(db)) return;
 
   const scratch = await openScratch();
   let expected: Map<string, Map<string, string>>;

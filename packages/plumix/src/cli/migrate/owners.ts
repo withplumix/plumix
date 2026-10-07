@@ -2,17 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
-import type { PlumixConfig } from "@plumix/core";
+import type { MigrationFolder, PlumixConfig } from "@plumix/core";
 import { CORE_MIGRATIONS_FOLDER } from "@plumix/core/cli";
 
 import { PlumixCliError } from "../errors.js";
 
 /** A table owner whose history applies to this site (ADR 0027). */
-export interface MigrationOwner {
+export interface MigrationOwner extends MigrationFolder {
   /** `core`, `site`, or the package name. */
   readonly name: string;
-  readonly migrationsFolder: string;
-  readonly migrationsTable: string;
 }
 
 const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
