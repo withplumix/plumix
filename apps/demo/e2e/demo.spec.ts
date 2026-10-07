@@ -2,7 +2,7 @@
 // per-session Durable Object as the database. No globalSetup / storageState:
 // the demo mints its own session at `/demo` and the synthetic authenticator
 // provides identity, so the spec drives the same path a visitor does —
-// public showcase → CTA → provision → admin → create → persist → blocked.
+// public showcase → CTA → provision → admin → create → persist → refused.
 
 import { expect, test } from "@playwright/test";
 import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
@@ -57,8 +57,8 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   await expect(page.getByTestId("post-card").first()).toBeVisible();
   await expect(page.getByTestId("try-editor")).toHaveCount(0);
 
-  // A security-gated route is refused even with a live demo session.
-  const blocked = await page.request.get("/_plumix/rpc/user/list");
+  // Minting a credential is refused even with a live demo session.
+  const blocked = await page.request.get("/_plumix/rpc/auth/apiTokens/list");
   expect(blocked.status()).toBe(403);
 });
 
@@ -264,4 +264,78 @@ test("deleting a media item from the library removes its card", async ({
   expect((await deleted).status()).toBe(200);
 
   await expect(page.getByTestId(cardTestId)).toHaveCount(0);
+});
+
+// The demo refuses what reaches past the visitor's sandbox (a credential, a
+// real email) and the admin hides it; everything left in users and the profile
+// acts on the sandbox and succeeds.
+test("users and the profile offer only what the demo serves, and each of it succeeds", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("try-editor").click();
+  await page.waitForURL(/\/_plumix\/admin/);
+
+  await page.goto("users");
+  await expect(page.getByTestId("users-list-row-2")).toBeVisible();
+  await expect(page.getByTestId("users-list-invite-button")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Mailer" })).toHaveCount(0);
+
+  // Another user: rename, disable, delete.
+  await page.goto("users/2/edit");
+  await page.getByTestId("user-edit-name-input").fill("Renamed Contributor");
+  const updated = page.waitForResponse((r) => r.url().endsWith("/user/update"));
+  await page.getByTestId("user-edit-submit").click();
+  expect((await updated).status()).toBe(200);
+  const disabled = page.waitForResponse((r) =>
+    r.url().endsWith("/user/disable"),
+  );
+  await page.getByTestId("user-edit-disable-button").click();
+  expect((await disabled).status()).toBe(200);
+  await expect(page.getByTestId("user-edit-enable-button")).toBeVisible();
+  await page.getByTestId("user-edit-delete-button").click();
+  const deleted = page.waitForResponse((r) => r.url().endsWith("/user/delete"));
+  await page.getByTestId("user-delete-confirm-button").click();
+  expect((await deleted).status()).toBe(200);
+  await page.waitForURL(/\/users(\?|$)/);
+  await expect(page.getByTestId("users-list-row-2")).toHaveCount(0);
+
+  // The visitor's own profile: no credential or email-change surface.
+  await page.goto("users/1/edit");
+  await expect(page.getByTestId("language-card")).toBeVisible();
+  await expect(page.getByTestId("profile-sessions-card")).toBeVisible();
+  await expect(page.getByTestId("profile-sessions-error")).toHaveCount(0);
+  await expect(page.getByTestId("profile-passkeys-card")).toHaveCount(0);
+  await expect(page.getByTestId("api-tokens-card")).toHaveCount(0);
+  await expect(page.getByTestId("user-edit-email-change-button")).toHaveCount(
+    0,
+  );
+
+  // The demo configures one locale, so the card has nothing to switch to;
+  // the procedure behind it is served all the same.
+  const setLocale = await page.request.post("/_plumix/rpc/user/setLocale", {
+    headers: { "x-plumix-request": "1" },
+    data: { json: { code: "en" } },
+  });
+  expect(setLocale.status()).toBe(200);
+
+  // Device authorization is off, so its page sends the visitor away.
+  await page.goto("auth/device");
+  await expect(page.getByTestId("auth-device-heading")).toHaveCount(0);
+});
+
+test("the demo pill names what's off in the visitor's language", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ locale: "de-DE" });
+  const page = await context.newPage();
+  await page.goto("/");
+  await page.getByTestId("try-editor").click();
+  await page.waitForURL(/\/_plumix\/admin/);
+
+  await page.goto(`/posts/${SHOWCASE_SLUG}`);
+  await expect(page.getByTestId("demo-off")).toHaveText(
+    "Off in this demo: API-Tokens, Geräteanmeldung, Passkeys, OAuth-Anmeldung und E-Mail-Versand",
+  );
+  await context.close();
 });

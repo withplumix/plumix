@@ -57,6 +57,7 @@ export type { RedirectResolution } from "./route/redirects.js";
 export type { ResolvedNode } from "./route/render/rule-resolver.js";
 export * from "./rpc/index.js";
 export type * from "./context/runtime-adapter.js";
+export { listAdminAreas } from "./admin-area/i18n.js";
 export { buildApp } from "./runtime/app.js";
 export type { PlumixApp } from "./runtime/app.js";
 // Dev-only: the generated worker entry references this under its

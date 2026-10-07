@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { orpc } from "@/lib/orpc.js";
 import { parseScopesText } from "@/lib/scopes.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -8,7 +9,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useForm, useWatch } from "react-hook-form";
 import * as v from "valibot";
 
@@ -148,6 +149,13 @@ const deviceSearchSchema = v.object({
 
 export const Route = createFileRoute("/_authenticated/auth/device")({
   validateSearch: deviceSearchSchema,
+  beforeLoad: () => {
+    // A deployment that refuses device authorization would 403 the lookup.
+    if (!isSurfaceOffered("deviceAuthorizationPage")) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
+      throw redirect({ to: "/" });
+    }
+  },
   component: DeviceApprovalRoute,
 });
 

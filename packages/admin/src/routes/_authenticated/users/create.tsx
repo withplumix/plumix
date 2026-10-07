@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { copyText } from "@/lib/clipboard.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
@@ -99,7 +100,11 @@ export const Route = createFileRoute("/_authenticated/users/create")({
     // `user:create` is admin-only. Defense in depth — the sidebar button
     // is already gated on this cap but someone following a direct link
     // shouldn't land on a forbidden form.
-    if (!hasCap(context.user.capabilities, "user:create")) {
+    // A deployment that refuses email delivery can't send the invite either.
+    if (
+      !hasCap(context.user.capabilities, "user:create") ||
+      !isSurfaceOffered("userInvite")
+    ) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/users", search: USERS_LIST_DEFAULT_SEARCH });
     }

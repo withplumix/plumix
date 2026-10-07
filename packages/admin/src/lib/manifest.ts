@@ -1,4 +1,4 @@
-import type { JsonObject } from "@plumix/core";
+import type { AdminArea, JsonObject } from "@plumix/core";
 import type { ThemeBreakpoints, ThemeTokens } from "@plumix/core/blocks";
 import type {
   AccessPolicyChoice,
@@ -70,6 +70,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   i18n: false,
   pluginI18n: false,
   configuredSlots: false,
+  refusedAdminAreas: true,
   frameworkRoutes: false,
 } as const satisfies Record<keyof PlumixManifest, boolean>;
 
@@ -124,6 +125,14 @@ export function getConfiguredSlots(
   source: PlumixManifest = currentManifest(),
 ): ConfiguredSlots {
   return source.configuredSlots ?? configuredSlotsOf({});
+}
+
+/** The admin areas the deployment refuses; none when the manifest names
+ *  none. */
+export function getRefusedAdminAreas(
+  source: PlumixManifest = currentManifest(),
+): readonly AdminArea[] {
+  return source.refusedAdminAreas ?? [];
 }
 
 /** Whether the site keeps core's author routes; on when the manifest is

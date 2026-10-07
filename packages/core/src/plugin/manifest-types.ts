@@ -20,6 +20,7 @@ import type {
   ThemeTokens,
 } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
+import type { AdminArea } from "../context/runtime-adapter.js";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
@@ -412,6 +413,12 @@ export interface PlumixManifest {
    */
   readonly configuredSlots?: ConfiguredSlots;
   /**
+   * The admin areas the deployment's runtime refuses, whoever is signed in.
+   * Fixed at build time like `configuredSlots`: the admin hides every surface
+   * of a refused area (ADR 0014).
+   */
+  readonly refusedAdminAreas?: readonly AdminArea[];
+  /**
    * Whether the site keeps core's author routes, so the user screen names the
    * `/authors/` URL only where one exists. The other families are left out:
    * no admin surface reads them.
@@ -513,6 +520,7 @@ export function emptyManifest(): PlumixManifest {
     i18n: { defaultLocale: "en", locales: [] },
     pluginI18n: {},
     configuredSlots: configuredSlotsOf({}),
+    refusedAdminAreas: [],
     frameworkRoutes: { author: true },
   };
 }

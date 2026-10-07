@@ -635,6 +635,7 @@ async function regenerate(
       blocks: config.theme.blocks,
       i18n: config.i18n,
       configuredSlots: configuredSlotsOf(config),
+      refusedAdminAreas: config.runtime.refusedAdminAreas,
       theme: config.theme,
       routes: config.routes,
       projectRoot: cwd,

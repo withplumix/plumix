@@ -1,4 +1,5 @@
 import type {
+  AdminArea,
   collectNamedTemplates,
   ConfiguredSlots,
   PluginRegistry,
@@ -30,6 +31,8 @@ export interface ManifestBuildOptions {
   readonly blocks?: readonly BlockSpec[];
   readonly i18n?: ResolvedI18n;
   readonly configuredSlots?: ConfiguredSlots;
+  /** What the runtime adapter refuses; see `RuntimeAdapter.refusedAdminAreas`. */
+  readonly refusedAdminAreas?: readonly AdminArea[];
   /**
    * The site's theme, handed to plugins the way the runtime hands it over.
    * Required, because every registration a plugin makes from `theme:ready` is

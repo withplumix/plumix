@@ -1,11 +1,12 @@
 import type { PlumixEnv, RuntimeAdapter } from "plumix";
 import { resolveEnvInput } from "plumix";
+import { listAdminAreas } from "plumix/runtime";
 
 import type { WorkerEnv } from "../read-env.js";
 import type { TurnstileConfig } from "./turnstile.js";
 import { DemoError } from "../errors.js";
 import { readEnvString } from "../read-env.js";
-import { isBlockedInDemo } from "./gate.js";
+import { DEMO_REFUSED_AREAS, isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
   clearDemoCookies,
@@ -50,6 +51,9 @@ export function demoRuntime(
     name: `${inner.name}+demo`,
     commandsModule: inner.commandsModule,
     workerExports: [...(inner.workerExports ?? []), DEMO_EXPORTS_MODULE],
+    // What the gate below refuses, so the admin hides it rather than offering
+    // an action that can only 403.
+    refusedAdminAreas: DEMO_REFUSED_AREAS,
     // Demo mode changes what the handler does, not the shape the platform
     // serves, so the entry is the base runtime's.
     generateEntry(options) {
@@ -163,7 +167,14 @@ export function demoRuntime(
                 : { ...invocation, env: withOrigin },
             );
             return shouldInjectDemoToolbar(request)
-              ? injectToolbar(response, hasSession)
+              ? injectToolbar(
+                  response,
+                  hasSession,
+                  listAdminAreas(
+                    DEMO_REFUSED_AREAS,
+                    request.headers.get("accept-language"),
+                  ),
+                )
               : response;
           },
         };
@@ -193,6 +204,7 @@ function activeTurnstile(
 async function injectToolbar(
   response: Response,
   hasSession: boolean,
+  off: string,
 ): Promise<Response> {
   // Skip null-body statuses (204/304/…) — `new Response(body, { status })`
   // throws for those — and any non-HTML payload.
@@ -202,7 +214,7 @@ async function injectToolbar(
   ) {
     return response;
   }
-  const html = injectDemoToolbar(await response.text(), hasSession);
+  const html = injectDemoToolbar(await response.text(), hasSession, off);
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   return new Response(html, { status: response.status, headers });

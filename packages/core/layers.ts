@@ -97,6 +97,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "rpc/": server("surfaces"),
   "rest/": client("surfaces"),
   "mcp/": server("surfaces"),
+  "admin-area/": client("surfaces"),
   "admin-bar/": client("surfaces"),
   "admin/": client("surfaces"),
   "dev/": server("surfaces"),

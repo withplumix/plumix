@@ -1,28 +1,46 @@
+import type { AdminArea } from "plumix";
+
 /**
- * Demo-mode route gate. The demo allows the full editing surface — content,
- * taxonomies, settings, search, media — but blocks routes that are
- * security-sensitive or abuse-prone in an anonymous, no-real-auth sandbox:
- * real auth flows, auth/token/session management, and user management. Pure
- * and path-only (any blocked path is blocked for every method; RPC procedures
- * are addressed by URL after the `/_plumix/rpc/` prefix).
+ * Demo-mode route gate. Every visitor works against their own sandbox
+ * database, so user management, sessions and settings are theirs to break.
+ * The gate refuses only what reaches past that sandbox: a credential usable
+ * outside the visitor's tab, or a real email. Each refused path is filed under
+ * the admin area whose surfaces offer it, so the areas the demo declares to
+ * the admin can't drift from what the gate refuses. Pure and path-only (any
+ * refused path is refused for every method; RPC procedures are addressed by
+ * URL after the `/_plumix/rpc/` prefix).
  */
+const REFUSED_PREFIXES = {
+  // An API token authenticates from anywhere.
+  apiTokens: ["/_plumix/rpc/auth/apiTokens/"],
+  // Approving a device mints an API token for it.
+  deviceAuthorization: [
+    "/_plumix/rpc/auth/deviceFlow/",
+    "/_plumix/auth/device/",
+  ],
+  // Registering a passkey creates a credential; signing in with one mints a
+  // session.
+  passkeys: ["/_plumix/rpc/auth/credentials/", "/_plumix/auth/passkey/"],
+  // The callback links a provider account and mints a session.
+  oauthLinking: ["/_plumix/auth/oauth/"],
+  // Each sends a real email, or redeems a link one carried.
+  emailDelivery: [
+    "/_plumix/rpc/user/invite",
+    "/_plumix/auth/invite/",
+    "/_plumix/auth/magic-link/",
+    "/_plumix/rpc/user/requestEmailChange",
+    "/_plumix/auth/verify-email",
+    "/_plumix/rpc/auth/mailer/",
+  ],
+} as const satisfies Record<AdminArea, readonly string[]>;
 
-/** Allowed even though a blocked prefix would otherwise catch them. */
-const ALLOWED = new Set([
-  // The admin's boot probe (current user / needs-bootstrap).
-  "/_plumix/rpc/auth/session",
-]);
+/** The admin areas the demo deployment refuses. */
+export const DEMO_REFUSED_AREAS = Object.keys(
+  REFUSED_PREFIXES,
+) as readonly AdminArea[];
 
-const BLOCKED_PREFIXES = [
-  // Real auth flows: passkey, magic-link, OAuth, invite, device, signout.
-  "/_plumix/auth/",
-  // Auth management RPCs: API tokens, sessions, credentials, mailer, domains.
-  "/_plumix/rpc/auth/",
-  // User management RPCs: invite, create, delete, disable, update.
-  "/_plumix/rpc/user/",
-];
+const PREFIXES: readonly string[] = Object.values(REFUSED_PREFIXES).flat();
 
 export function isBlockedInDemo(pathname: string): boolean {
-  if (ALLOWED.has(pathname)) return false;
-  return BLOCKED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }

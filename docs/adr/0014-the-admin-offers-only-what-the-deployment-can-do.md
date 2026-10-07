@@ -20,8 +20,8 @@ needs both asks both questions: the sidebar drops **Mailer** for a user without
 
 ## Where each answer travels
 
-The two kinds of "can" are known at different times, so they travel on different
-channels.
+The three kinds of "can" are known at different times or by different owners,
+so they travel on different channels.
 
 - **Slot presence travels in the plugin manifest.** It is fixed at build time:
   the plumix Vite plugin already holds the resolved `PlumixConfig` when it builds
@@ -35,6 +35,24 @@ channels.
   `isSlotConfigured(slot)` from `plumix/admin`.
 - **Sign-in methods travel over the public auth RPC.** The app resolves them at
   runtime, from env the plugin manifest is built before (#2610).
+- **A runtime's refused areas travel in the plugin manifest.** A runtime adapter
+  that refuses part of the admin for every visitor, as the demo sandbox does,
+  says so on `RuntimeAdapter.refusedAdminAreas`, an `AdminArea[]` (#2613). The
+  plumix Vite plugin copies it into the plugin manifest's `refusedAdminAreas`,
+  `buildManifest` drops a core nav item filed under a refused area, and the
+  admin hides every card, page and action of one through a single roster that
+  maps each `AdminArea` to its surfaces. The runtime's own gate keeps refusing
+  the requests behind those surfaces, as defence in depth: hiding a surface is
+  not what makes the deployment safe.
+
+`AdminArea` names an area by what its actions would produce, not by who may
+use them: `apiTokens`, `deviceAuthorization`, `passkeys`, `oauthLinking`,
+`emailDelivery`. The demo runtime refuses all five, because each reaches past a
+visitor's sandbox database with a credential usable outside their tab or a real
+email. A new area joins the union, and the admin's roster fails typecheck until
+it names the area's surfaces. A capability still does not model a deployment
+limit: the demo visitor stays an `admin`, and a restricted demo role was
+rejected for the same reason **Model it as a capability** is below.
 
 `InfrastructureSlot` names the `plumix()` keys that hold an adapter the admin
 could offer an action for: `storage`, `imageDelivery`, `kv`, `cdn`, `mailer`.

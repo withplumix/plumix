@@ -14,6 +14,7 @@ import { LanguageCard } from "@/components/profile/language-card.js";
 import { PasskeysCard } from "@/components/profile/passkeys-card.js";
 import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
+import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { hasAuthorRoutes, visibleUserMetaBoxes } from "@/lib/manifest.js";
 import {
@@ -424,7 +425,7 @@ function UserEditForm({
               <UserEmailField
                 userId={target.id}
                 email={target.email}
-                canEdit={canSave}
+                canEdit={canSave && isSurfaceOffered("emailChange")}
               />
 
               <FormField
@@ -593,14 +594,20 @@ function UserEditForm({
           available, even to admins, since both surfaces are second-
           factor security primitives. */}
       {isSelf ? <LanguageCard userLocale={target.meta.locale} /> : null}
-      {isSelf ? <PasskeysCard userEmail={target.email} /> : null}
+      {isSelf && isSurfaceOffered("passkeysCard") ? (
+        <PasskeysCard userEmail={target.email} />
+      ) : null}
       {isSelf ? <SessionsCard /> : null}
 
       {/* API tokens — self can mint + revoke own; admins with
           `user:manage_tokens` see + revoke (not mint, by design)
           another user's. */}
-      {isSelf ? <SelfApiTokensCard /> : null}
-      {!isSelf && canManageOtherTokens ? (
+      {isSelf && isSurfaceOffered("selfApiTokens") ? (
+        <SelfApiTokensCard />
+      ) : null}
+      {!isSelf &&
+      canManageOtherTokens &&
+      isSurfaceOffered("otherUsersApiTokens") ? (
         <AdminApiTokensCard userId={target.id} />
       ) : null}
     </div>

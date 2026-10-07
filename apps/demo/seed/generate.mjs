@@ -28,6 +28,16 @@ const author = {
   role: "admin",
 };
 
+// A second account, so a visitor has someone besides themselves to edit,
+// disable and delete in Users. Authors nothing.
+const contributor = {
+  id: 2,
+  email: "contributor@plumix.example",
+  slug: "a-contributor",
+  name: "A Contributor",
+  role: "contributor",
+};
+
 const settings = [
   ["site", "title", "The Plumix Gazette"],
   [
@@ -438,6 +448,9 @@ emit("");
 emit("-- Author");
 emit(
   `INSERT OR IGNORE INTO users (id, email, slug, name, avatar_url, role, meta) VALUES (${author.id}, ${q(author.email)}, ${q(author.slug)}, ${q(author.name)}, ${q(author.avatarUrl)}, ${q(author.role)}, '{}');`,
+);
+emit(
+  `INSERT OR IGNORE INTO users (id, email, slug, name, role, meta) VALUES (${contributor.id}, ${q(contributor.email)}, ${q(contributor.slug)}, ${q(contributor.name)}, ${q(contributor.role)}, '{}');`,
 );
 emit("");
 
