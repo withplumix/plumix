@@ -44,6 +44,7 @@ export {
 } from "@plumix/core";
 
 export type {
+  AdminArea,
   AssetPath,
   AssetsBinding,
   BindingName,

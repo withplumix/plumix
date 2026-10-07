@@ -949,6 +949,7 @@ const ADAPTER_MEMBERS = [
   "generateEntry",
   "workerExports",
   "commandsModule",
+  "refusedAdminAreas",
 ] as const;
 
 type _AdapterMembersMatchSource = Assert<
