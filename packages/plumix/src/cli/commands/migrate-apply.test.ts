@@ -364,8 +364,8 @@ describe("plumix migrate status", () => {
 });
 
 describe("adopting a database built from a legacy site history", () => {
-  // What `migrate generate && migrate apply` left: the same tables, recorded
-  // in drizzle's default tracking table.
+  // A legacy database: the same tables, recorded in drizzle's default
+  // tracking table.
   async function buildLegacy(): Promise<void> {
     const db = sqliteDatabase(join(dir, "site.sqlite"));
     await db.migrate({

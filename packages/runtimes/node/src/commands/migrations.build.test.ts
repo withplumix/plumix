@@ -63,8 +63,8 @@ const schema = () =>
     "SELECT type, name, sql FROM sqlite_master WHERE tbl_name NOT LIKE '\\_\\_drizzle%' ESCAPE '\\' ORDER BY name",
   );
 
-// What `migrate generate && migrate apply` built before owner histories: the
-// site's single `drizzle/` history, recorded in drizzle's default table.
+// A legacy database: the site's single `drizzle/` history, recorded in
+// drizzle's default table.
 async function buildLegacyDatabase(): Promise<void> {
   expect(await plumix("migrate", "generate")).toMatchObject({ code: 0 });
   const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");

@@ -12,7 +12,7 @@ export default definePlumixE2EConfig({
   // the shared one, so there is nothing to pin specs to or snapshot.
   sharedDatabase: false,
   // That per-session database is built from `./drizzle/*.sql` (`demo-sql.ts`),
-  // which the baked command no longer generates.
+  // which the baked command does not generate.
   extraSetup: "pnpm exec plumix migrate generate",
   // The spec enters the demo as an anonymous visitor; there's no admin session
   // to seed.

@@ -11,7 +11,7 @@ async function tableExists(
   table: string,
 ): Promise<boolean> {
   const rows = await db.all(
-    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${table}'`,
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${quote(table)}`,
   );
   return rows.length > 0;
 }
@@ -50,8 +50,13 @@ export async function applyOwners(
   }
 }
 
-const describeMigration = (state: string, createdAt: number, hash: string) =>
-  `  ${state} ${new Date(createdAt).toISOString()} ${hash.slice(0, 8)}`;
+function describeMigration(
+  state: string,
+  createdAt: number,
+  hash: string,
+): string {
+  return `  ${state} ${new Date(createdAt).toISOString()} ${hash.slice(0, 8)}`;
+}
 
 /** Each owner in order, with the migrations it has applied and has pending. */
 export async function reportStatus(
@@ -92,7 +97,9 @@ async function trackingTables(db: MigrationDatabase): Promise<unknown[]> {
   return rows.map((row) => row.name);
 }
 
-const quote = (value: string): string => `'${value.replaceAll("'", "''")}'`;
+function quote(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
 
 /**
  * Every table, index and trigger, keyed `<type> <name>`: a table by its

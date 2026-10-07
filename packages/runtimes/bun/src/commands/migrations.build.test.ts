@@ -66,8 +66,8 @@ describe("bun --bun plumix migrate", () => {
     expect(await plumixOn("bun", dir, ["migrate", "generate"])).toMatchObject({
       code: 0,
     });
-    // What the removed `migrate apply` ran: drizzle's migrator over the
-    // site's `drizzle/`, recorded in its default table.
+    // A legacy database: drizzle's migrator over the site's `drizzle/`,
+    // recorded in its default table.
     mkdirSync(join(dir, "data"));
     await onDatabase(
       `const { drizzle } = require(${JSON.stringify(`${DRIZZLE}/bun-sqlite`)});

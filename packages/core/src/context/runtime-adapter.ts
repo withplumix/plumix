@@ -209,8 +209,8 @@ export interface RuntimeMigrations {
   /** Whether `--remote` names a database this runtime can reach. */
   readonly remote: boolean;
   /**
-   * The tracking table this runtime's single-history apply wrote, which marks
-   * a database to adopt.
+   * The tracking table of the site-wide history `migrate generate` produces,
+   * which marks a database to adopt.
    */
   readonly legacyTable: string;
   open(options: OpenMigrationDatabaseOptions): Promise<MigrationDatabase>;
