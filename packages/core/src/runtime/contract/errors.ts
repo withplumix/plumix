@@ -153,14 +153,21 @@ export class AppBootError extends Error {
     );
   }
 
+  // A theme has no id, so the culprit is named by the field it came from and
+  // the render functions it replaces.
   static mailOverrideUndeclared(ctx: {
     overriddenBy: "site" | "theme";
     mail: string;
+    parts: readonly string[];
   }): AppBootError {
+    const field =
+      ctx.overriddenBy === "site"
+        ? "The site config's `mail.overrides`"
+        : "The theme's `mail` field";
     return new AppBootError(
       "mail_override_undeclared",
-      `The ${ctx.overriddenBy} overrides mail "${ctx.mail}", which nothing ` +
-        `declares.`,
+      `${field} replaces the ${ctx.parts.join(", ")} of mail "${ctx.mail}", ` +
+        `which nothing declares.`,
       {},
     );
   }

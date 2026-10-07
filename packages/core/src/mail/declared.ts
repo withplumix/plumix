@@ -75,9 +75,13 @@ function assertDeclared(
   overrides: OverridesByName,
   declared: DeclaredMails,
 ): void {
-  for (const name of Object.keys(overrides)) {
+  for (const [name, override] of Object.entries(overrides)) {
     if (!declared.has(name)) {
-      throw AppBootError.mailOverrideUndeclared({ overriddenBy, mail: name });
+      throw AppBootError.mailOverrideUndeclared({
+        overriddenBy,
+        mail: name,
+        parts: Object.keys(override ?? {}),
+      });
     }
   }
 }

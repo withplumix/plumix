@@ -59,7 +59,7 @@ describe("buildApp — mail declarations", () => {
         }),
       ),
     ).rejects.toThrow(
-      'The site overrides mail "digest", which nothing declares.',
+      'The site config\'s `mail.overrides` replaces the subject of mail "digest", which nothing declares.',
     );
   });
 
@@ -70,7 +70,7 @@ describe("buildApp — mail declarations", () => {
     });
 
     await expect(buildApp(testConfig({ theme }))).rejects.toThrow(
-      'The theme overrides mail "digest", which nothing declares.',
+      'The theme\'s `mail` field replaces the text of mail "digest", which nothing declares.',
     );
   });
 });
