@@ -4,6 +4,7 @@ import type {
   TemplateDepKeyedBy,
   TemplateDepRegistry,
 } from "./template.js";
+import { isPageOutcome } from "./route/contract/page-outcome.js";
 
 /**
  * The declared keys, named after the field the kind's registry entry keys
@@ -163,6 +164,9 @@ async function loadOne(
     const filled = Object.fromEntries(slugs.map((s) => [s, raw[s] ?? null]));
     return [kind, filled];
   } catch (err) {
+    // A dep that ends the request (ADR 0032) is the page's answer, not a
+    // failure to degrade around.
+    if (isPageOutcome(err)) throw err;
     ctx.logger.error("template_dep_load_failed", {
       kind,
       slugs,

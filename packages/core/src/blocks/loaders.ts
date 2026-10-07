@@ -16,6 +16,13 @@ export type BlockLoaderContext = BlockLoaderContextRegistry extends {
   ? C
   : unknown;
 
+/**
+ * What a block's loader receives. A loader on the page's own content can end
+ * the request by throwing `pageNotFound()` or `redirectTo()` from
+ * `plumix/support` (ADR 0032). On an archive listing, under `?plumix.edit` and
+ * in the editor's loader refresh, it is an ordinary rejection, isolated to its
+ * block like any other.
+ */
 export interface BlockLoaderArgs {
   /**
    * The request's `AppContext`. When the editor refreshes a loader no public

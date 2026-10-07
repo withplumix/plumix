@@ -223,7 +223,7 @@ export async function handlerFor(config: PlumixConfig) {
 
 ### plumix/support
 
-Small helpers any file can use: `escapeHtml`, `xmlEscape`, `slugify`, `nonEmpty`, `withBasePath`, `normalizeBasePath`, `escapeLikePattern` and the `isJsonObject` / `isJsonArray` narrowings. It never loads core's server runtime, so an admin chunk or an island can import it as well as a server file.
+Small helpers any file can use: `escapeHtml`, `xmlEscape`, `slugify`, `nonEmpty`, `withBasePath`, `normalizeBasePath`, `escapeLikePattern`, the `pageNotFound` / `redirectTo` page outcomes and the `isJsonObject` / `isJsonArray` narrowings. It never loads core's server runtime, so an admin chunk or an island can import it as well as a server file.
 
 ```ts
 import { escapeHtml, slugify } from "plumix/support";

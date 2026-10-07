@@ -86,10 +86,15 @@ export type TemplateRender<TData extends TemplateData> = (
 
 /**
  * Literal manifest is merged at boot; function form is called per
- * request with the same args `render` sees.
+ * request with the same args `render` sees, after the page's block loaders
+ * have run, so it can await the same `ctx.memo` lookup a loader made. It may
+ * throw `pageNotFound()` or `redirectTo()` to end the request (ADR 0032).
  */
 type TemplateDocument<TData extends TemplateData> =
-  DocumentManifest | ((args: TemplateRenderArgs<TData>) => DocumentManifest);
+  | DocumentManifest
+  | ((
+      args: TemplateRenderArgs<TData>,
+    ) => DocumentManifest | Promise<DocumentManifest>);
 
 /**
  * Output of `defineTemplate`. The brand symbol is non-enumerable so

@@ -244,6 +244,32 @@ export const rooms = definePlugin("rooms", {
 
 An archive that leaves `entries` out works exactly as before: `resolve` returns the whole `{ data, title }` payload or `null`, and owns its own paging. That is the shape for an archive whose results are a match rather than a set — `@plumix/plugin-search` registers this way — and only an archive described by an entry query can have a feed.
 
+### Redirecting from `resolve`
+
+Either form of `resolve` can end the request instead of naming a page. Throw `redirectTo(location, status?)` from `plumix/support` to send the visitor elsewhere, or `pageNotFound()` for the theme's 404, which is the same answer as returning `null`. `resolve` receives the full `AppContext`, so the decision can read the session:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+import { redirectTo } from "plumix/support";
+
+export const login = definePlugin("login", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("login", {
+      routes: ["/login"],
+      resolve: (appCtx) => {
+        if (appCtx.user !== null) throw redirectTo("/");
+        return {
+          data: { kind: "archiveType", name: "login" },
+          title: "Sign in",
+        };
+      },
+    });
+  },
+});
+```
+
+The status defaults to 302 and takes any of 301, 302, 307 and 308. The `location` is sent as given, so a site under a `basePath` passes the prefixed path. A redirect from a page step depends on who asked, so the CDN never stores it and it leaves with `cache-control: private, no-store`. [Block loaders](/blocks/overview/#a-loader-that-ends-the-request), template deps and a template's `document()` can throw the same two outcomes.
+
 ### Narrowing an archive
 
 `archive:entries` hands any archive's entry query to a plugin to narrow — core's front page, type, term, author and date archives as well as a plugin archive with `entries`. It is Plumix's `pre_get_posts` for archives. The handler receives the query, the archive it describes, and what the archive's URL captured, and returns a query. It runs wherever the archive's query is read, so the archive's page, its pagination and its feed all change together.

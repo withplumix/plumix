@@ -630,7 +630,8 @@ export interface ListingArchiveTypeOptions extends ArchiveTypeOptions {
 /**
  * A listed archive's resolver. It is handed the finished page rather than
  * building one, and is left with what only it can do: load a subject the route
- * names, and add fields of its own.
+ * names, and add fields of its own. `null` is a 404; it may instead throw
+ * `pageNotFound()` or `redirectTo()` from `plumix/support` (ADR 0032).
  */
 type ListingArchiveResolve<TResolution extends ListingArchiveResolution> = (
   ctx: AppContext,
@@ -657,6 +658,11 @@ interface ResolvedListingArchiveOptions extends ListingArchiveTypeOptions {
  */
 export interface UnlistedArchiveTypeOptions extends ArchiveTypeOptions {
   readonly entries?: undefined;
+  /**
+   * The whole payload, or `null` for a 404. It may instead throw
+   * `pageNotFound()` or `redirectTo()` from `plumix/support` to end the
+   * request, reading the session off `ctx` (ADR 0032).
+   */
   readonly resolve: (
     ctx: AppContext,
     params: Record<string, string>,

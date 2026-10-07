@@ -61,7 +61,7 @@ export const recipe = defineTemplate<EntryData>({
 });
 ```
 
-The type parameter names the data shape and defaults to the whole union. `render` receives `data`, `ctx` and the results of any template deps the template declares. Two optional keys ride alongside it: `document`, a head fragment merged over the theme's, either a literal or a function called per request; and `prefetchArchiveLoaders`, which resolves block loader data for every entry in a listing in one pass.
+The type parameter names the data shape and defaults to the whole union. `render` receives `data`, `ctx` and the results of any template deps the template declares. Two optional keys ride alongside it: `document`, a head fragment merged over the theme's, either a literal or a function called per request, which may be async, runs after the page's block loaders, and may throw `pageNotFound()` or `redirectTo()` from `plumix/support` to end the request; and `prefetchArchiveLoaders`, which resolves block loader data for every entry in a listing in one pass.
 
 The brand is a module-local symbol, so nothing outside `defineTemplate` can mint a template. Plumix rejects a hand-written `{ render }` literal at boot rather than ignoring the fields it cannot read, and wraps a plain component instead.
 
