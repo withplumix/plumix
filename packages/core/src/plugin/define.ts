@@ -38,20 +38,6 @@ export interface PluginI18nSlot {
   readonly catalogPath: string;
 }
 
-/** DDL drizzle-kit cannot express — a virtual table, a trigger. `plumix
- *  migrate generate` emits each one as its own migration file after the
- *  schema diff, and records it in drizzle's journal so ordering is not
- *  filename luck. */
-export interface RawSqlMigration {
-  /** Identity within the plugin, and the suffix of the emitted tag. A
-   *  migration already in the journal is never emitted twice, so renaming
-   *  one emits it again rather than editing what shipped. */
-  readonly name: string;
-  /** One statement per entry, joined with drizzle's own breakpoint marker
-   *  so the migrator runs them separately. */
-  readonly statements: readonly string[];
-}
-
 export interface PluginDescriptor<TConfig = undefined> {
   readonly id: string;
   readonly version?: string;
@@ -73,7 +59,6 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly shortcodes?: readonly ShortcodeSpec[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
-  readonly sqlMigrations?: readonly RawSqlMigration[];
   /** Translation catalog declaration — opts the plugin into the i18n
    *  pipeline. Omit to keep all labels rendered as their authored
    *  strings (no translation lookup, no catalog discovery). */
@@ -98,7 +83,6 @@ export interface DefinePluginOptions {
   readonly version?: string;
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
-  readonly sqlMigrations?: readonly RawSqlMigration[];
   readonly adminEntry?: string;
   readonly adminChunk?: string;
   readonly adminCss?: string;
@@ -177,7 +161,6 @@ export function definePlugin<TConfig = undefined>(
       setup: setupOrInput,
       schema: legacyOptions?.schema,
       schemaModule: legacyOptions?.schemaModule,
-      sqlMigrations: legacyOptions?.sqlMigrations,
       adminEntry: legacyOptions?.adminEntry,
       adminChunk: legacyOptions?.adminChunk,
       adminCss: legacyOptions?.adminCss,
@@ -198,7 +181,6 @@ export function definePlugin<TConfig = undefined>(
     shortcodes: setupOrInput.shortcodes,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
-    sqlMigrations: setupOrInput.sqlMigrations,
     adminEntry: setupOrInput.adminEntry,
     adminChunk: setupOrInput.adminChunk,
     adminCss: setupOrInput.adminCss,
@@ -222,8 +204,8 @@ function warnIfSchemaWithoutSchemaModule(
   console.warn(
     `[plumix] plugin "${id}" declares \`schema\` but not ` +
       `\`schemaModule\`. Runtime queries will work, but ` +
-      `\`plumix migrate generate\` won't include this plugin's tables ` +
-      `in the generated migrations — you'll hit "no such table" the ` +
+      `\`plumix migrate\` won't find the migration history of this ` +
+      `plugin's tables — you'll hit "no such table" the ` +
       `first time a query runs. Add ` +
       `\`schemaModule: "<package>/schema"\` and export the matching ` +
       `subpath.`,

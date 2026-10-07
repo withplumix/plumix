@@ -63,21 +63,15 @@ const schema = () =>
     "SELECT type, name, sql FROM sqlite_master WHERE tbl_name NOT LIKE '\\_\\_drizzle%' ESCAPE '\\' ORDER BY name",
   );
 
-// A legacy database: the site's single `drizzle/` history, recorded in
-// drizzle's default table.
+// A legacy database: the same schema, recorded in drizzle's default tracking
+// table rather than core's.
 async function buildLegacyDatabase(): Promise<void> {
-  expect(await plumix("migrate", "generate")).toMatchObject({ code: 0 });
-  const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
-  const { drizzleNodeSqlite, openNodeSqlite } =
-    await import("../node-sqlite-client.js");
-  const client = openNodeSqlite(join(dir, "data/site.sqlite"));
-  try {
-    migrate(drizzleNodeSqlite(client, {}), {
-      migrationsFolder: join(dir, "drizzle"),
-    });
-  } finally {
-    client.close();
-  }
+  expect(await plumix("migrate")).toMatchObject({ code: 0 });
+  const db = new DatabaseSync(join(dir, "data/site.sqlite"));
+  db.exec(
+    "ALTER TABLE __drizzle_migrations_core RENAME TO __drizzle_migrations",
+  );
+  db.close();
 }
 
 describe("plumix migrate on the node runtime", () => {
@@ -103,7 +97,7 @@ describe("plumix migrate on the node runtime", () => {
     ).toEqual([{ n: 2 }]);
   });
 
-  test("adopts a database the legacy generate-and-apply built, running no DDL", async () => {
+  test("adopts a database a legacy single history built, running no DDL", async () => {
     await buildLegacyDatabase();
     const before = schema();
 

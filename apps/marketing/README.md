@@ -16,8 +16,10 @@ error page and debug bar were captured from this app's `plumix dev`.
 pnpm dev
 ```
 
-Runs `plumix migrate generate && plumix dev` — a local Workers dev server on
-`http://localhost:8787`.
+Runs `plumix dev` — a local Workers dev server on `http://localhost:8787`. Run
+`pnpm exec plumix migrate` first to apply core's and the plugins' migration
+histories to the local database. The site owns no tables, so it keeps no
+history of its own.
 
 ## Build
 

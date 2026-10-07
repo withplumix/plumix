@@ -31,7 +31,7 @@ my-site/
 
 Nothing here is a copy of a fixed template. The scaffolder resolves your runtime and plugin choices into imports, config slots and registrations, then splices them into one config file. Choosing the media plugin is what put `storage` and `imageDelivery` in the config and an `r2_buckets` entry in `wrangler.jsonc`.
 
-Two directories appear later. `drizzle/` holds the SQL migrations `plumix migrate generate` emits. `.plumix/` holds everything the build generates, and both it and `.wrangler/` are in `.gitignore`.
+Two directories may appear later. `migrations/` exists only when the site owns tables of its own, declared by a plugin in the site's folder rather than in a package. It holds their history, which `plumix migrate generate` writes and you commit. `.plumix/` holds everything the build generates, and both it and `.wrangler/` are in `.gitignore`. A `drizzle/` folder from a site created by an earlier release is no longer read, because core and each plugin package now ship their own histories.
 
 **`plumix.config.ts`**
 
@@ -75,7 +75,7 @@ The committed template for `.env`: the file you copy to start one, and where a n
 
 `.plumix/` is regenerated from your config on every dev start and every build. Do not edit it, and do not commit it. Six files land there.
 
-`worker.ts` is the Worker entry point, which is why `wrangler.jsonc` points `main` at it rather than at anything you wrote. `schema.ts` is the resolved database schema, core's tables plus every table your plugins declare, and it is what `plumix migrate generate` hands to drizzle-kit.
+`worker.ts` is the Worker entry point, which is why `wrangler.jsonc` points `main` at it rather than at anything you wrote. `schema.ts` is the resolved database schema, core's tables plus every table your plugins declare.
 
 Four more are client entry points, each bundled as its own chunk so the browser fetches only what a page needs.
 

@@ -81,7 +81,7 @@ Without a flag it applies to the local database. `--remote` applies to the deplo
 
 `plumix migrate fresh` deletes the local database and applies every owner from nothing. It deletes the paths the runtime names as its local state: `.wrangler/state` on Cloudflare, and `data` on Node and Bun, which takes uploads stored under `data/` with it. It refuses `--remote`. `plumix migrate status` lists each owner in order with its applied and pending migrations, each with its date and a short hash.
 
-`plumix migrate generate` runs `drizzle-kit generate` against the schema Plumix assembles from every plugin's tables, writing it to `.plumix/schema.ts` first and the SQL to `drizzle/`.
+`plumix migrate generate` writes the next migration of the site's own tables, the ones declared by a plugin whose `schemaModule` resolves inside the site's package. It writes `.plumix/site-schema.ts`, re-exporting only those schema modules, then runs `drizzle-kit generate --dialect sqlite --casing snake_case --schema .plumix/site-schema.ts --out migrations`, and the SQL lands in the site's `migrations/`. Commit that folder. Core's tables and every package's tables are never part of it, because they ship in their own histories, though a site table may reference one of them by foreign key. When nothing has changed it writes nothing, and when the site owns no tables it says so and writes nothing. When drizzle-kit needs to know whether a column or table was renamed, it asks, and without a terminal to ask in the command fails: run `plumix migrate generate` in an interactive terminal to answer it.
 
 ```bash
 plumix migrate
@@ -91,7 +91,7 @@ plumix migrate status
 plumix migrate generate
 ```
 
-The first `plumix migrate` against a database set up by an earlier release adopts it. Such a database has the old tracking table, `d1_migrations` on Cloudflare or `__drizzle_migrations` on Node and Bun, and no per-owner table yet. The command applies every owner's history to a scratch in-memory database and compares the two schemas: every table, index and trigger, and each table's columns. When they match, it records every owner's migrations as applied without running any DDL, and prints that the site's `drizzle/` folder is no longer read. When they differ, it changes nothing and fails, listing each difference.
+The first `plumix migrate` against a database set up by an earlier release adopts it. Such a database has the old tracking table, `d1_migrations` on Cloudflare or `__drizzle_migrations` on Node and Bun, and no per-owner table yet. The command applies every owner's history to a scratch in-memory database and compares the two schemas: every table, index and trigger, and each table's columns. When they match, it records every owner's migrations as applied without running any DDL, and prints that the site's `drizzle/` folder is no longer read. When they differ, it changes nothing and fails, listing each difference. When a difference is a table the site's own schema declares and its `migrations/` has no migration for, the failure says to run `plumix migrate generate` first.
 
 ### `cron`
 

@@ -250,7 +250,7 @@ A storage has four parts:
 - `query(ctx, filter)`, which serves the admin feed. It receives the filters described above, a `limit`, and the opaque `cursor` it returned as `nextCursor` for the previous page, and returns `{ rows, nextCursor }`.
 - `purge(ctx, { cutoff })`, which is optional and deletes rows older than `cutoff`. A storage without it skips retention and logs a warning each time the task runs.
 
-A storage can also declare `schema`, naming the Drizzle tables it writes. `sqlite()` does, which is how the `audit_log` table reaches `plumix migrate generate`. A storage without `schema` adds no table to your migrations.
+A storage can also declare `schema`, naming the Drizzle tables it writes and the module specifier they live at. `sqlite()` does, which is how `plumix migrate` finds the `audit_log` table's history in this package. A storage whose `schema` names another package needs that package to ship the history of its tables. A storage without `schema` adds no table.
 
 ## Related
 

@@ -70,7 +70,7 @@ export interface AuditLogStorage {
   readonly schema?: {
     /** Drizzle module runtime queries bind against. */
     readonly module: SchemaModule;
-    /** Specifier `plumix migrate generate` imports to emit the tables' migrations. */
+    /** Specifier `plumix migrate` resolves to find the tables' migration history. */
     readonly specifier: string;
   };
   /** Batch insert. The audit-log service buffers per-request and calls this once. */

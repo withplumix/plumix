@@ -14,7 +14,6 @@ type PlumixCliErrorCode =
   | "runtime_commands_load_failed"
   | "migrate_generate_no_drizzle_kit"
   | "migrate_generate_failed"
-  | "migrate_generate_journal_unreadable"
   | "migrate_invalid_arguments"
   | "migrate_runtime_unsupported"
   | "migrate_remote_unsupported"
@@ -200,20 +199,8 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "migrate_generate_failed",
       "drizzle-kit generate failed — migrations were not updated",
-      "Its output is above. A prompt that needs a TTY means drizzle-kit is diffing against stale migrations and wants a column rename resolved: delete the `drizzle/` directory to regenerate from scratch, or rerun in an interactive terminal to answer it.",
+      "Its output is above. A prompt that needs a TTY means drizzle-kit wants to know whether a column or table was renamed: run `plumix migrate generate` in an interactive terminal to answer it.",
       undefined,
-    );
-  }
-
-  static migrateGenerateJournalUnreadable(ctx: {
-    journalPath: string;
-    cause: unknown;
-  }): PlumixCliError {
-    return new PlumixCliError(
-      "migrate_generate_journal_unreadable",
-      `Could not read the migration journal at ${ctx.journalPath}`,
-      "A plugin contributes raw SQL migrations, which are numbered from this file. Delete the `drizzle/` directory to regenerate from scratch.",
-      ctx.cause,
     );
   }
 
@@ -287,11 +274,14 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
 
   static migrateAdoptionMismatch(ctx: {
     differences: readonly string[];
+    ungenerated: readonly string[];
   }): PlumixCliError {
     return new PlumixCliError(
       "migrate_adoption_mismatch",
       `This database was built from a site migration history whose schema differs from what core and the plugins ship:\n${ctx.differences.map((d) => `  - ${d}`).join("\n")}`,
-      "Nothing was changed. Bring those objects in line with the shipped histories, then run `plumix migrate` again.",
+      ctx.ungenerated.length > 0
+        ? `Nothing was changed. The site's own schema declares ${ctx.ungenerated.join(", ")}, which its migrations/ has no migration for: run \`plumix migrate generate\`, then \`plumix migrate\` again.`
+        : "Nothing was changed. Bring those objects in line with the shipped histories, then run `plumix migrate` again.",
       undefined,
     );
   }

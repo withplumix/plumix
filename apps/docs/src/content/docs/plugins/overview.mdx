@@ -258,31 +258,46 @@ The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `en
 
 [Cloudflare Workers](/deployment/cloudflare/) covers applying a migration to a deployed D1 database rather than the local one.
 
+A plugin that owns tables ships its own history, so a site never generates migrations for a package's tables. As the author of a plugin published as a package, you keep that history in four steps:
+
+1. Add a `drizzle.config.ts` at the package root, pointing drizzle-kit at the plugin's schema module:
+
+   ```ts
+   import { defineConfig } from "drizzle-kit";
+
+   export default defineConfig({
+     dialect: "sqlite",
+     casing: "snake_case",
+     schema: "./src/db/schema.ts",
+     out: "./migrations",
+   });
+   ```
+
+2. Run `drizzle-kit generate` after every change to the schema, and commit what it writes to `migrations/`. A table may reference core's tables, such as `entries` or `users`, by foreign key. Its history holds only the plugin's own tables.
+3. Add `migrations` to the `files` of `package.json`, so the history reaches npm with the package.
+4. Point `schemaModule` at a subpath of the package that exports the schema, such as `"@acme/plugin-bookmarks/schema"`, so `plumix migrate` can find the package.
+
+A plugin that lives in the site's own folder, rather than in a package, declares the site's own tables. [`plumix migrate generate`](/deployment/cli/#migrate) writes their history to the site's `migrations/`.
+
 ## Schema drizzle cannot express
 
-drizzle-kit models tables, columns and indexes. A plugin needing DDL outside that — a full-text virtual table, a trigger — declares it as `sqlMigrations` instead: a name, and the statements to run.
+drizzle-kit models tables, columns and indexes. DDL outside that, such as a full-text virtual table or a trigger, goes in a hand-written migration in the plugin's own history:
 
-```ts
-import { definePlugin } from "plumix/plugin";
-
-export const archive = definePlugin("archive", {
-  setup: () => {},
-  sqlMigrations: [
-    {
-      name: "fts_index",
-      statements: [
-        "CREATE VIRTUAL TABLE `entry_fts` USING fts5(body, content='entry_search', content_rowid='id')",
-      ],
-    },
-  ],
-});
+```bash
+pnpm exec drizzle-kit generate --custom --name fts_index
 ```
 
-`plumix migrate generate` emits each one as its own migration after the schema diff, so the DDL lands behind the tables it references, and records it in drizzle's journal. `wrangler d1 migrations apply` orders by the number a filename starts with, and drizzle-kit numbers its next migration from the journal's last entry — so a hand-written file dropped into `drizzle/` gets the same number as the next generated one, and which of the two runs first is down to the rest of the filename.
+drizzle-kit adds an empty migration to `migrations/` and records it in the history's journal. Write the statements into it, with `--> statement-breakpoint` on its own line between two statements:
 
-One rule about the SQL itself: wrangler decides where a `BEGIN … END` block ends by looking for whitespace before the `END`, and appends its own bookkeeping statement to the file it runs. A trigger whose `END` sits directly on the previous statement's semicolon would leave the block open and take that statement into the trigger body, so generation moves a trailing `END` onto its own line.
+```sql
+CREATE VIRTUAL TABLE `entry_fts` USING fts5(body, content='entry_search', content_rowid='id');
+--> statement-breakpoint
+CREATE TRIGGER `entry_search_ai` AFTER INSERT ON `entry_search` BEGIN
+  INSERT INTO `entry_fts`(rowid, body) VALUES (new.id, new.body);
+END;
+```
 
-A name is the migration's identity within its plugin, and a migration already in the journal is never emitted twice. Renaming one emits it again rather than editing what already shipped — the same rule that applies to any migration that has reached a database.
+It applies after the migrations before it, so the DDL lands behind the tables it references. Like any migration that has reached a database, it is never edited afterwards. A change is a new migration.
 
 ## Plugins that ship admin UI
 

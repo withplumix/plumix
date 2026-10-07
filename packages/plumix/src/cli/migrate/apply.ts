@@ -190,6 +190,7 @@ function differences(
 export async function adoptLegacyDatabase(
   db: MigrationDatabase,
   owners: readonly MigrationOwner[],
+  siteTables: readonly string[],
   legacyTable: string,
   openScratch: () => Promise<MigrationDatabase>,
 ): Promise<void> {
@@ -204,9 +205,18 @@ export async function adoptLegacyDatabase(
   } finally {
     await scratch.close();
   }
-  const found = differences(expected, await schemaOf(db, legacyTable));
+  const actual = await schemaOf(db, legacyTable);
+  const found = differences(expected, actual);
   if (found.length > 0) {
-    throw PlumixCliError.migrateAdoptionMismatch({ differences: found });
+    // The site's own tables the database has and its history does not.
+    const ungenerated = siteTables.filter(
+      (table) =>
+        actual.has(`table ${table}`) && !expected.has(`table ${table}`),
+    );
+    throw PlumixCliError.migrateAdoptionMismatch({
+      differences: found,
+      ungenerated,
+    });
   }
 
   // drizzle's own tracking-table DDL and row, as its migrator writes them.

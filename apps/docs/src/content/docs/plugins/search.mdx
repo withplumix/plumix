@@ -275,7 +275,7 @@ Saving an entry through the editor indexes it after the response is sent, so nob
 
 A save that leaves the text where it was writes nothing: the change feed's guard ignores it, and the projection's upsert is a no-op when the extracted text has not moved. Bulk status changes stay cheap.
 
-The FTS5 index and its triggers ship as a raw SQL migration, and every scheduled drain re-creates them first if they are missing. A migration that never ran therefore delays search until the next scheduled run rather than breaking it.
+The FTS5 index and its triggers ship as a hand-written migration in the plugin's history, and every scheduled drain re-creates them first if they are missing. A migration that never ran therefore delays search until the next scheduled run rather than breaking it.
 
 ### A missing index degrades the page rather than breaking it
 

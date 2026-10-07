@@ -121,14 +121,8 @@ describe("subpath-only modules stay off the root barrel", () => {
   );
 });
 
-// `cli/raw-migrations.ts` is loaded by every `plumix migrate generate`, and all
-// it wants from the change feed is a pair of `readonly string[]` constants.
-// While those lived beside the feed's drizzle-backed helpers, asking for two
-// strings cost 255ms against 1ms for the errors module sitting next to it.
-//
-// Rooted at the `cli` barrel rather than that one file: the barrel re-exports
-// it, `importsOf` counts `export … from` as static, and the 218ms this is
-// guarding was measured there.
+// The `cli` barrel is loaded by every `plumix` command. Reaching the query
+// layer from it once cost 218ms, against 1ms for the errors module beside it.
 const CLI_GRAPH = staticClosureOf([path.join(SRC, "cli/index.ts")]);
 
 // The whole subtree, not `db/index.ts` alone. DDL naturally wants column names,

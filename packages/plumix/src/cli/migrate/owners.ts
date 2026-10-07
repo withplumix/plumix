@@ -15,9 +15,9 @@ export interface MigrationOwner extends MigrationFolder {
 
 const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
 
-// Where `plumix migrate generate` writes the module that re-exports every
-// `schemaModule`, so a spec resolves from here the way that module imports it.
-const SCHEMA_MODULE_BASE = ".plumix/schema.ts";
+// Where `plumix migrate generate` writes the module that re-exports the
+// site's `schemaModule`s, so a spec resolves from here the way it imports them.
+export const SITE_SCHEMA_OUT = ".plumix/site-schema.ts";
 
 /** `@plumix/plugin-comments` → `plumix_plugin_comments`. */
 function trackingSuffix(packageName: string): string {
@@ -38,7 +38,7 @@ export function nearestPackageRoot(file: string): string | null {
 }
 
 function resolveSchemaModule(cwd: string, spec: string): string {
-  const base = join(cwd, SCHEMA_MODULE_BASE);
+  const base = join(cwd, SITE_SCHEMA_OUT);
   // A relative spec need not exist with its extension to name the folder it
   // sits in; a bare one is the package its resolution lands in.
   if (spec.startsWith(".")) return resolve(dirname(base), spec);
@@ -56,6 +56,39 @@ function readPackageName(root: string): string {
   return pkg.name ?? root;
 }
 
+// The site is the package its config lives in, wherever `--config` points.
+export function siteRootOf(configPath: string): string {
+  return nearestPackageRoot(configPath) ?? dirname(configPath);
+}
+
+/** The package a plugin's `schemaModule` resolves into, or `null` for the site. */
+function schemaOwnerRoot(
+  cwd: string,
+  siteRoot: string,
+  schemaModule: string,
+): string | null {
+  const root = nearestPackageRoot(resolveSchemaModule(cwd, schemaModule));
+  return root === null || root === siteRoot ? null : root;
+}
+
+/**
+ * The plugins that declare the site's own tables: those whose `schemaModule`
+ * resolves inside the site's package rather than an installed one.
+ */
+export function sitePlugins(
+  cwd: string,
+  configPath: string,
+  config: PlumixConfig,
+): PlumixConfig["plugins"] {
+  const siteRoot = siteRootOf(configPath);
+  return config.plugins.filter(
+    (plugin) =>
+      plugin.schemaModule !== undefined &&
+      plugin.schemaModule !== "" &&
+      schemaOwnerRoot(cwd, siteRoot, plugin.schemaModule) === null,
+  );
+}
+
 /**
  * Every owner whose history applies, in the order it applies: core, then each
  * package a plugin's `schemaModule` resolves into, in config order and each
@@ -66,8 +99,7 @@ export function resolveOwners(
   configPath: string,
   config: PlumixConfig,
 ): readonly MigrationOwner[] {
-  // The site is the package its config lives in, wherever `--config` points.
-  const siteRoot = nearestPackageRoot(configPath) ?? dirname(configPath);
+  const siteRoot = siteRootOf(configPath);
   const owners: MigrationOwner[] = [
     {
       name: "core",
@@ -79,10 +111,8 @@ export function resolveOwners(
   let siteOwnsTables = false;
   for (const plugin of config.plugins) {
     if (!plugin.schemaModule) continue;
-    const root = nearestPackageRoot(
-      resolveSchemaModule(cwd, plugin.schemaModule),
-    );
-    if (root === null || root === siteRoot) {
+    const root = schemaOwnerRoot(cwd, siteRoot, plugin.schemaModule);
+    if (root === null) {
       siteOwnsTables = true;
       continue;
     }

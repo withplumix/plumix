@@ -3,9 +3,9 @@ import { sql } from "plumix/db";
 
 /**
  * The DDL drizzle cannot express: the FTS5 virtual table and the triggers
- * that keep it in step with the projection. Shipped as the plugin's raw SQL
- * migration and, statement for statement, as the runtime repair path, so
- * every test exercises the same statements production applies.
+ * that keep it in step with the projection. The plugin's migration history
+ * creates them; these are the runtime repair path for an install missing
+ * them.
  *
  * The index is **external-content** over `search_documents`: it stores the
  * inverted terms and reads the text back from the projection. That is why
@@ -16,7 +16,7 @@ import { sql } from "plumix/db";
  * find, and `integrity-check` starts failing on rows nobody touched again.
  *
  * One statement per entry — the callers that apply these run them one at a
- * time, and `wrangler d1 migrations apply` needs each `END` on its own line.
+ * time.
  */
 export const SEARCH_INDEX_DDL: readonly string[] = [
   // Porter stems English, so "running" finds "run" — the difference between a
@@ -62,12 +62,9 @@ export const SEARCH_INDEX_TRIGGER_DROP_DDL: readonly string[] = [
 ];
 
 /**
- * Replaces the triggers an install already has.
- *
- * A migration the journal carries is never emitted again, so correcting one
- * takes a second migration rather than an edit to the first. Shares its DDL
- * with the list above, so an install generating both for the first time
- * converges on the same triggers either way.
+ * Replaces the triggers an install already has, which `CREATE TRIGGER IF NOT
+ * EXISTS` would leave in place. Shares its DDL with the list above, so either
+ * path converges on the same triggers.
  */
 export const SEARCH_INDEX_TRIGGER_RESET_DDL: readonly string[] = [
   ...SEARCH_INDEX_TRIGGER_DROP_DDL,
@@ -93,7 +90,7 @@ const INDEX_OBJECT_LIST = INDEX_OBJECTS.map((name) => `'${name}'`).join(", ");
 /**
  * Repair the index and its triggers if any of them is absent. The projection
  * table itself is drizzle's, created by an ordinary migration — this covers
- * the half a migration cannot describe, for the install whose raw migration
+ * the half drizzle's schema cannot describe, for the install whose migration
  * never ran.
  *
  * Creating the objects is not enough on its own, and this is the trap: an

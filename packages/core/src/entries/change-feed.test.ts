@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Db } from "../context/app-context.js";
-import { asc, eq, sql } from "../db/index.js";
+import { asc, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
 import {
@@ -12,7 +12,6 @@ import {
 import { adminUser, entryFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createRpcHarness } from "../test/rpc.js";
-import { ENTRY_CHANGE_FEED_RESET_DDL } from "./change-feed-ddl.js";
 import { ackEntryChanges, readEntryChanges } from "./change-feed.js";
 
 let db: Db;
@@ -115,31 +114,6 @@ describe("entry change feed", () => {
     await clearFeed();
 
     await pruneOldRevisions(db, { entryId: entry.id, maxRevisions: 1 });
-
-    expect(await feed()).toEqual([]);
-  });
-
-  // The path no other test reaches: a test database is always a fresh install,
-  // but the second migration exists for the ones that already ran the first.
-  test("replaces the unguarded triggers an existing install carries", async () => {
-    await db.run(sql.raw("DROP TRIGGER entries_change_feed_insert"));
-    await db.run(
-      sql.raw(`CREATE TRIGGER entries_change_feed_insert AFTER INSERT ON entries
-      BEGIN
-        INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
-      END`),
-    );
-    const entry = await entryFactory.transient({ db }).create({ authorId });
-    await clearFeed();
-    await snapshotAsRevision(db, { entry, authorId });
-    // The defect the migration corrects, reproduced.
-    expect(await feed()).toHaveLength(1);
-
-    for (const statement of ENTRY_CHANGE_FEED_RESET_DDL) {
-      await db.run(sql.raw(statement));
-    }
-    await clearFeed();
-    await snapshotAsRevision(db, { entry, authorId });
 
     expect(await feed()).toEqual([]);
   });

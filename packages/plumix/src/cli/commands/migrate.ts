@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { getTableName, is } from "drizzle-orm";
+import { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import type {
   CommandContext,
@@ -10,12 +12,7 @@ import type {
   MigrationDatabase,
   RuntimeMigrations,
 } from "@plumix/core";
-import {
-  collectRawSqlMigrations,
-  generateSchemaSource,
-  planRawSqlMigrations,
-  spawnCapturingStderr,
-} from "@plumix/core/cli";
+import { spawnCapturingStderr } from "@plumix/core/cli";
 
 import type { MigrationOwner } from "../migrate/owners.js";
 import { PlumixCliError } from "../errors.js";
@@ -24,11 +21,14 @@ import {
   applyOwners,
   reportStatus,
 } from "../migrate/apply.js";
-import { nearestPackageRoot, resolveOwners } from "../migrate/owners.js";
+import {
+  nearestPackageRoot,
+  resolveOwners,
+  SITE_SCHEMA_OUT,
+  sitePlugins,
+  siteRootOf,
+} from "../migrate/owners.js";
 import { report } from "../report.js";
-
-const SCHEMA_OUT = ".plumix/schema.ts";
-const MIGRATIONS_OUT = "drizzle";
 
 export const migrateCommand: CommandDefinition = {
   describe: "Apply each table owner's migrations, or generate the site's",
@@ -142,16 +142,31 @@ function adoptAndApply(
   binding: string | undefined,
 ): MigrationWork {
   return async (db, owners, migrations) => {
-    await adoptLegacyDatabase(db, owners, migrations.legacyTable, () =>
-      migrations.open({
-        cwd: ctx.cwd,
-        app: ctx.app,
-        location: "memory",
-        binding,
-      }),
+    await adoptLegacyDatabase(
+      db,
+      owners,
+      siteTables(ctx),
+      migrations.legacyTable,
+      () =>
+        migrations.open({
+          cwd: ctx.cwd,
+          app: ctx.app,
+          location: "memory",
+          binding,
+        }),
     );
     await applyOwners(db, owners);
   };
+}
+
+/** The tables the site's own schema modules declare. */
+function siteTables(ctx: CommandContext): readonly string[] {
+  return sitePlugins(ctx.cwd, ctx.configPath, ctx.app.config).flatMap(
+    (plugin) =>
+      Object.values(plugin.schema ?? {}).flatMap((value) =>
+        is(value, SQLiteTable) ? [getTableName(value)] : [],
+      ),
+  );
 }
 
 // The paths the runtime's `plumix.e2e.wipe` names, the local state an e2e run
@@ -184,14 +199,29 @@ function readRuntimeWipe(
 }
 
 async function migrateGenerate(ctx: CommandContext): Promise<void> {
-  const { cwd, app } = ctx;
-  const schemaPath = writeSchema(cwd, app.config);
+  const { cwd, configPath, app } = ctx;
+  const modules = [
+    ...new Set(
+      sitePlugins(cwd, configPath, app.config).flatMap(
+        (plugin) => plugin.schemaModule ?? [],
+      ),
+    ),
+  ];
+  if (modules.length === 0) {
+    report.info(
+      "This site owns no tables: no plugin's schemaModule resolves inside it, so there is nothing to generate.",
+    );
+    return;
+  }
+  writeSiteSchema(cwd, modules);
 
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(cwd);
   if (bin === null) {
     throw PlumixCliError.migrateGenerateNoDrizzleKit();
   }
 
+  // Where `plumix migrate` reads the site's history from.
+  const out = relative(cwd, join(siteRootOf(configPath), "migrations"));
   report.info("Running drizzle-kit generate…");
   const stderr = await migrateGenerateDeps.spawnCapturingStderr(
     process.execPath,
@@ -201,18 +231,18 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
       "--no-warnings",
       bin,
       "generate",
-      "--schema",
-      schemaPath,
       "--dialect",
       "sqlite",
-      "--out",
-      MIGRATIONS_OUT,
       // Match the runtime drizzle config, which sets `casing: "snake_case"`
       // for D1. Without this, generated SQL keeps schema-side camelCase
       // (`emailVerifiedAt`) but runtime queries snake_case (`email_verified_at`)
       // — every INSERT/SELECT then fails with `no such column`.
       "--casing",
       "snake_case",
+      "--schema",
+      SITE_SCHEMA_OUT,
+      "--out",
+      out,
     ],
     // Failure is read off this child's stderr, so nothing inherited may
     // write there: `NODE_OPTIONS=--inspect` prints a debugger banner and
@@ -223,70 +253,22 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   // A successful generate — including one that finds nothing to do —
   // writes nothing here, so anything at all means it bailed.
   if (stderr.trim() !== "") throw PlumixCliError.migrateGenerateFailed();
-  report.success(`Migrations emitted in ${MIGRATIONS_OUT}/`);
-
-  for (const tag of emitRawSqlMigrations(
-    cwd,
-    collectRawSqlMigrations(app.config.plugins),
-  )) {
-    report.success(`Raw SQL migration emitted: ${MIGRATIONS_OUT}/${tag}.sql`);
-  }
+  report.success(`The site's own tables are migrated in ${out}/`);
 }
 
-/** Runs after the diff so the DDL lands behind the tables it touches. */
-export function emitRawSqlMigrations(
-  cwd: string,
-  declared: RawSqlMigrations,
-): readonly string[] {
-  if (declared.length === 0) return [];
-
-  const outDir = resolve(cwd, MIGRATIONS_OUT);
-  const journalPath = join(outDir, "meta", "_journal.json");
-  const plan = planRawSqlMigrations(
-    declared,
-    readJournal(journalPath),
-    Date.now(),
-  );
-  if (plan.emit.length === 0) return [];
-
-  for (const migration of plan.emit) {
-    writeFileSync(join(outDir, `${migration.tag}.sql`), migration.sql, "utf8");
-  }
-  writeFileSync(journalPath, JSON.stringify(plan.journal, null, 2), "utf8");
-  return plan.emit.map((migration) => migration.tag);
-}
-
-// The collected declarations and drizzle-kit's on-disk journal shape,
-// borrowed rather than re-declared so they stay off `@plumix/core`'s
-// published surface.
-type RawSqlMigrations = Parameters<typeof planRawSqlMigrations>[0];
-type MigrationJournal = Parameters<typeof planRawSqlMigrations>[1];
-
-// A successful generate always leaves a journal, so a missing one means
-// drizzle-kit wrote nothing — and numbering core's DDL from zero would put
-// the triggers ahead of the `CREATE TABLE` they reference.
-function readJournal(journalPath: string): MigrationJournal {
-  try {
-    return JSON.parse(readFileSync(journalPath, "utf8")) as MigrationJournal;
-  } catch (cause) {
-    throw PlumixCliError.migrateGenerateJournalUnreadable({
-      journalPath,
-      cause,
-    });
-  }
-}
-
-function writeSchema(
-  cwd: string,
-  config: Parameters<typeof generateSchemaSource>[0],
-): string {
-  const { source } = generateSchemaSource(config);
-  const outFile = resolve(cwd, SCHEMA_OUT);
+// Only the site's own schema modules: core's and every package's tables are
+// in the histories those packages ship.
+function writeSiteSchema(cwd: string, modules: readonly string[]): void {
+  const source = [
+    "// Generated by plumix migrate generate — do not edit.",
+    "",
+    ...modules.map((spec) => `export * from ${JSON.stringify(spec)};`),
+    "",
+  ].join("\n");
+  const outFile = resolve(cwd, SITE_SCHEMA_OUT);
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, source, "utf8");
-  const rel = relative(cwd, outFile) || outFile;
-  report.success(`Schema emitted: ${rel}`);
-  return rel;
+  report.success(`Schema emitted: ${SITE_SCHEMA_OUT}`);
 }
 
 function resolveDrizzleKitBin(cwd: string): string | null {

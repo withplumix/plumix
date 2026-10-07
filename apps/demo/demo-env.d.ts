@@ -9,7 +9,7 @@ declare module "*?raw" {
 
 interface ImportMeta {
   glob<T = unknown>(
-    pattern: string,
-    options: { query: string; import: string; eager: true },
+    pattern: string | readonly string[],
+    options: { query?: string; import: string; eager: true },
   ): Record<string, T>;
 }

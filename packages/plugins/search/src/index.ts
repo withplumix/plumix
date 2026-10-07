@@ -4,7 +4,6 @@ import { definePlugin } from "plumix/plugin";
 import type { RankingAlgorithm } from "./ranking.js";
 import { registerSearchArchive } from "./archive.js";
 import { REINDEX_CAPABILITY, REINDEX_ROUTE_PATH } from "./contract.js";
-import { SEARCH_INDEX_DDL, SEARCH_INDEX_TRIGGER_RESET_DDL } from "./db/ddl.js";
 import * as schema from "./db/schema.js";
 import { runSearchMaintenance } from "./server/drain.js";
 import { registerAdminSearch } from "./server/palette.js";
@@ -58,19 +57,9 @@ export interface SearchConfig {
 export function search(options: SearchConfig = {}): PluginDescriptor {
   return definePlugin("search", {
     schema,
-    // Module specifier `plumix migrate generate` uses to fold the projection
-    // into the host's drizzle-kit codegen.
+    // Names this package as the owner of the projection's tables, whose
+    // history (FTS5 index and triggers included) ships in `migrations/`.
     schemaModule: "@plumix/plugin-search/schema",
-    // The FTS5 virtual table and its triggers, which drizzle-kit models
-    // nothing of. Emitted after the schema diff, so they land behind the
-    // table they shadow.
-    sqlMigrations: [
-      { name: "index", statements: SEARCH_INDEX_DDL },
-      {
-        name: "index_triggers",
-        statements: SEARCH_INDEX_TRIGGER_RESET_DDL,
-      },
-    ],
     setup: (ctx) => {
       registerIndexInvalidator(ctx);
       ctx.registerCapability(REINDEX_CAPABILITY, "admin");
