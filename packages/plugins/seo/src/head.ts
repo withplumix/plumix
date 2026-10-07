@@ -94,6 +94,14 @@ function declaredCanonical(
   return nonEmpty(href);
 }
 
+function derivedCanonical(
+  manifest: DocumentManifest,
+  ctx: AppContext,
+): string | null {
+  if (manifest.canonical === false) return declaredCanonical(manifest.link);
+  return canonicalUrl(ctx);
+}
+
 /**
  * Pure gap-filler for the head: appends a `<meta>` only when its
  * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
@@ -256,10 +264,7 @@ export async function applySeoHead(
   const canonical =
     kind === "error"
       ? null
-      : (overrides.canonical ??
-        (manifest.canonical === false
-          ? declaredCanonical(manifest.link)
-          : canonicalUrl(ctx)));
+      : (overrides.canonical ?? derivedCanonical(manifest, ctx));
   const tagline = nonEmpty(site.tagline);
   const description =
     overrides.description ?? nonEmpty(entry?.excerpt) ?? tagline;

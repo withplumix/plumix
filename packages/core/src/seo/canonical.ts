@@ -89,8 +89,8 @@ function hasCanonical(manifest: DocumentManifest): boolean {
 /**
  * Gap-filler: emit `<link rel="canonical">` only when neither the template nor
  * a `render:document` subscriber already set one — so a higher layer's canonical
- * always wins and the tag never duplicates — and the page did not opt out with
- * `canonical: false`.
+ * always wins and the tag never duplicates. A page that opted out with
+ * `canonical: false` gets none.
  */
 export function applyCanonical(
   manifest: DocumentManifest,
