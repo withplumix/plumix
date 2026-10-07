@@ -48,9 +48,8 @@ function intro(
   });
 }
 
-export const commentAwaitingModerationMail = defineMail(
-  "commentAwaitingModeration",
-  {
+export const commentAwaitingModerationMail =
+  defineMail<CommentAwaitingModerationProps>("commentAwaitingModeration", {
     subject: (_props, ctx) => ctx.t(M.subject),
     text: (props, ctx) =>
       [
@@ -89,5 +88,4 @@ export const commentAwaitingModerationMail = defineMail(
       entry: { id: 1, type: "post", title: "Hello world", slug: "hello-world" },
       moderationUrl: "https://example.com/_plumix/admin/pages/comments",
     },
-  },
-);
+  });

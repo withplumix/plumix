@@ -7,8 +7,9 @@ message. No site or theme could change what any of them said or how it looked,
 nothing could render one without sending it, and a plugin had no way to
 localize its own (#2928, part of #2927).
 
-> **A mail is declared once, by name, with `defineMail(name, { subject, text,
-html?, preview })`. Its props are registered in `MailRegistry`, and
+> **A mail is declared once, by name, with
+> `defineMail<Props>(name, { subject, text, html?, preview })`. Its name and
+> props are registered in `MailRegistry`. Sending it with
 > `ctx.mail.send(name, props, { to })` renders it in the recipient's locale and
 > hands the result to the configured `Mailer`. Core declares its own mails; a
 > plugin declares its mails in its descriptor's `mails` field. A site's
@@ -22,10 +23,12 @@ handed.
 ## What this means
 
 - **Typed by a registry.** `MailRegistry` maps a mail's name to its props, the
-  pattern `FilterRegistry` and `ActionRegistry` set. `defineMail`, `send` and
-  every override take their props from it, so an unknown name or the wrong
-  props fail to compile. Core seeds `magicLink` and `emailChange`; a plugin
-  augments `"plumix"` from its own module.
+  pattern `FilterRegistry` and `ActionRegistry` set. `send` and every override
+  take their props from it, so an unknown name or the wrong props fail to
+  compile. `defineMail` takes its props as its own type argument (or infers
+  them from `preview`), so a mail can be defined before, or without, the
+  registry entry that types sending it. Core seeds `magicLink` and
+  `emailChange`; a plugin augments `"plumix"` from its own module.
 - **Known at boot.** Declarations are descriptor data, not setup calls, so
   `buildApp` sees every mail before the first request. Two owners declaring
   one name stop the boot with an error naming both. So does an override of a

@@ -12,7 +12,7 @@ A mail in Plumix is declared once, by name, with the props it renders from. Code
 
 Three pieces make up the mail system, and each has one owner:
 
-- **The declaration.** `defineMail(name, { subject, text, html, preview })` says what a mail looks like. Core declares its own mails, `magicLink` and `emailChange`. A plugin lists its mails in its descriptor's `mails` field, so every mail is known when the site boots.
+- **The declaration.** `defineMail<Props>(name, { subject, text, html, preview })` says what a mail looks like, rendered from `Props`. Pass `Props` explicitly or let `preview` infer it. Core declares its own mails, `magicLink` and `emailChange`. A plugin lists its mails in its descriptor's `mails` field, so every mail is known when the site boots.
 - **The registry.** `MailRegistry` maps each mail's name to its props, the same way `FilterRegistry` maps a hook to its handler. `ctx.mail.send` and every override are typed against it, so an unknown name or the wrong props fail to compile.
 - **The transport.** The `mailer` slot in `plumix.config.ts` delivers what a mail renders: an `EmailMessage` with `to`, `subject`, `text` and an optional `html`. A mailer never sees a mail's name or props, so any provider fits.
 
@@ -39,7 +39,7 @@ const GREETING = {
   message: "Welcome, {name}!",
 };
 
-export const welcomeMail = defineMail("welcome", {
+export const welcomeMail = defineMail<{ readonly name: string }>("welcome", {
   subject: (props, ctx) => ctx.t(GREETING, { name: props.name }),
   text: (props, ctx) =>
     `${ctx.t(GREETING, { name: props.name })}\n\n${ctx.baseUrl}`,

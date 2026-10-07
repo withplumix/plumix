@@ -122,7 +122,7 @@ function magicLinkBody(
   ];
 }
 
-export const magicLinkMail = defineMail("magicLink", {
+export const magicLinkMail = defineMail<MagicLinkMailProps>("magicLink", {
   subject: (_props, ctx) =>
     ctx.t(M.magicLinkSubject, { siteName: ctx.siteName }),
   text: (props, ctx) => textBody(magicLinkBody(props, ctx)),
@@ -154,7 +154,7 @@ function emailChangeBody(
   ];
 }
 
-export const emailChangeMail = defineMail("emailChange", {
+export const emailChangeMail = defineMail<EmailChangeMailProps>("emailChange", {
   subject: (_props, ctx) =>
     ctx.t(M.emailChangeSubject, { siteName: ctx.siteName }),
   text: (props, ctx) => textBody(emailChangeBody(props, ctx)),

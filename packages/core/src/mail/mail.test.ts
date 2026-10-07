@@ -286,6 +286,18 @@ describe("ctx.mail.send types", () => {
     void unsent;
   });
 
+  test("defineMail takes its props explicitly, before any registry entry", () => {
+    // `notYetRegistered` has no MailRegistry entry; the props are the type
+    // argument, and the render functions and preview are checked against it.
+    const digest = defineMail<{ readonly count: number }>("notYetRegistered", {
+      subject: (props) => `${String(props.count)} new`,
+      text: (props) => String(props.count),
+      // @ts-expect-error - `count` is a number.
+      preview: { count: "three" },
+    });
+    expect(digest.name).toBe("notYetRegistered");
+  });
+
   test("types an override against its mail's props", () => {
     // Checked by the compiler, never run.
     const overrides: MailOverrides = {
