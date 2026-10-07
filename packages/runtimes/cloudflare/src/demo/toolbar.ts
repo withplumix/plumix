@@ -47,7 +47,8 @@ const TOOLBAR_STYLE = `
 // Session-holder pill: a live countdown to expiry, what's off in the demo, a
 // reset control, and a deploy CTA. The countdown is client-side — it reads the
 // readable `plumix_demo_expires` cookie rather than any server-rendered time.
-const sessionToolbar = (off: string): string => `
+function sessionToolbar(off: string): string {
+  return `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
   <span class="pdt-brand">Demo</span>
   <span class="pdt-time" id="plumix-demo-time">—</span>
@@ -76,6 +77,7 @@ const sessionToolbar = (off: string): string => `
   setInterval(tick, 30000);
 })();
 </script>`;
+}
 
 // Anonymous pill: the read-only showcase's single entry point into the editor.
 // "Try the editor" hits `/demo`, which mints a session and redirects to admin.

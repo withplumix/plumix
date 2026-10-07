@@ -321,7 +321,7 @@ test("users and the profile offer only what the demo serves, and each of it succ
 
   // Device authorization is off, so its page sends the visitor away.
   await page.goto("auth/device");
-  await expect(page.getByTestId("auth-device-heading")).toHaveCount(0);
+  await expect(page).not.toHaveURL(/auth\/device/);
 });
 
 test("the demo pill names what's off in the visitor's language", async ({

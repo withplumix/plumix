@@ -1,15 +1,8 @@
 import type { AdminArea } from "plumix";
 
-/**
- * Demo-mode route gate. Every visitor works against their own sandbox
- * database, so user management, sessions and settings are theirs to break.
- * The gate refuses only what reaches past that sandbox: a credential usable
- * outside the visitor's tab, or a real email. Each refused path is filed under
- * the admin area whose surfaces offer it, so the areas the demo declares to
- * the admin can't drift from what the gate refuses. Pure and path-only (any
- * refused path is refused for every method; RPC procedures are addressed by
- * URL after the `/_plumix/rpc/` prefix).
- */
+// Each refused path is filed under the admin area whose surfaces offer it, so
+// the areas the demo declares to the admin can't drift from what the gate
+// refuses.
 const REFUSED_PREFIXES = {
   // An API token authenticates from anywhere.
   apiTokens: ["/_plumix/rpc/auth/apiTokens/"],
@@ -41,6 +34,14 @@ export const DEMO_REFUSED_AREAS = Object.keys(
 
 const PREFIXES: readonly string[] = Object.values(REFUSED_PREFIXES).flat();
 
+/**
+ * Demo-mode route gate. Every visitor works against their own sandbox
+ * database, so user management, sessions and settings are theirs to break.
+ * The gate refuses only what reaches past that sandbox: a credential usable
+ * outside the visitor's tab, or a real email. Pure and path-only: a refused
+ * path is refused for every method, and RPC procedures are addressed by URL
+ * after the `/_plumix/rpc/` prefix.
+ */
 export function isBlockedInDemo(pathname: string): boolean {
   return PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
