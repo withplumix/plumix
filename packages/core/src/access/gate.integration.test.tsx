@@ -550,16 +550,12 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
     await h.dispatch(new Request("https://cms.example/note/open"));
     await h.drainDeferred();
 
-    expect(
-      [...store.keys()].map((k) =>
-        new URL(k).searchParams.has(SEGMENT_KEY_PARAM),
-      ),
-    ).toEqual([false]);
-    store.forEach((_, key) => {
-      store.set(key, {
-        response: new Response("STORED-ANONYMOUS", { status: 200 }),
-        tags: [],
-      });
+    // One entry, stored under the plain URL — no segment in the key.
+    const plainUrl = "https://cms.example/note/open";
+    expect([...store.keys()]).toEqual([plainUrl]);
+    store.set(plainUrl, {
+      response: new Response("STORED-ANONYMOUS", { status: 200 }),
+      tags: [],
     });
 
     const second = await h.dispatch(
