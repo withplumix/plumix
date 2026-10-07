@@ -93,7 +93,8 @@ export interface MailSender {
   /**
    * Renders the mail in the recipient's locale and hands it to the configured
    * mailer. Throws `MailerNotConfigured` when the site has no mailer,
-   * and whatever the mailer throws.
+   * `MailError` when no installed owner declares the name, and whatever the
+   * mailer throws.
    */
   send<Name extends MailName>(
     name: Name,

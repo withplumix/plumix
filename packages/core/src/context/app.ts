@@ -213,8 +213,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       db: args.db as unknown as Db,
       i18n: args.config.i18n,
       locale: locale.code,
-      // The name the magic-link mail has always carried; a site without
-      // magic-link is named by its host.
+      // The magic-link slot names the site; a site without it is named by
+      // its host.
       siteName: args.config.auth.magicLink?.siteName ?? new URL(origin).host,
       baseUrl: new URL(`${args.config.basePath}/`, origin).href,
     }),

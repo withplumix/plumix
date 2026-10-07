@@ -1,13 +1,14 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
+import type { MailOverrides } from "./contract/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { defaultTestTheme } from "../test/default-theme.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { makeMailer } from "../test/mailer.js";
 import { defineTheme } from "../theme.js";
 import { defineMail } from "./contract/define.js";
-import { MailerNotConfigured } from "./contract/errors.js";
+import { MailerNotConfigured, MailError } from "./contract/errors.js";
 
 declare module "./contract/registry.js" {
   interface MailRegistry {
@@ -234,6 +235,45 @@ describe("overriding a mail", () => {
   });
 });
 
+describe("ctx.mail.send — a name nobody declared", () => {
+  test("throws a MailError naming the mail and sends nothing", async () => {
+    const mailer = makeMailer();
+    // `welcome` is typed by this file, but this plugin never declares it.
+    const stray = definePlugin("stray", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/send",
+          auth: "public",
+          handler: async (_request, appCtx) => {
+            try {
+              await appCtx.mail.send(
+                "welcome",
+                { name: "Ann" },
+                { to: "ann@example.test" },
+              );
+            } catch (error) {
+              if (error instanceof MailError) {
+                return new Response(`${error.code}:${error.mail}`);
+              }
+              throw error;
+            }
+            return new Response(null, { status: 204 });
+          },
+        });
+      },
+    });
+    const h = await createDispatcherHarness({
+      config: { mailer, plugins: [stray] },
+    });
+
+    const response = await h.fetch("/_plumix/stray/send");
+
+    expect(await response.text()).toBe("mail_not_declared:welcome");
+    expect(mailer.sent).toEqual([]);
+  });
+});
+
 describe("ctx.mail.send types", () => {
   test("refuses an undeclared name and the wrong props at compile time", () => {
     // Checked by the compiler, never run.
@@ -244,5 +284,17 @@ describe("ctx.mail.send types", () => {
       ctx.mail.send("welcome", { nam: "Ann" }, { to: "a@example.test" }),
     ];
     void unsent;
+  });
+
+  test("types an override against its mail's props", () => {
+    // Checked by the compiler, never run.
+    const overrides: MailOverrides = {
+      welcome: {
+        subject: (props) => props.name,
+        // @ts-expect-error - `welcome` takes `{ name }`, not `{ nam }`.
+        text: (props: { readonly nam: string }) => props.nam,
+      },
+    };
+    void overrides;
   });
 });
