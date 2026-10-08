@@ -16,7 +16,7 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { ResolvedMenuItem } from "./server/types.js";
 import { menu } from "./index.js";
@@ -281,6 +281,10 @@ describe("menu hook surface", () => {
     });
 
     test("subscriber failure does not abort the commit", async () => {
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+      onTestFinished(() => warn.mockRestore());
       const termId = await seedMenuTerm(b, "primary");
 
       b.hooks.addAction("menu:saved", () => {
@@ -293,6 +297,10 @@ describe("menu hook surface", () => {
         items: [],
       });
       expect(result.version).toBe(1);
+      expect(warn).toHaveBeenCalledWith(
+        "[plumix] action failed hook=menu:saved plugin=core",
+        expect.objectContaining({ message: "subscriber blew up" }),
+      );
     });
   });
 });
