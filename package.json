@@ -78,7 +78,8 @@
       "proxy-addr@<2.0.8": ">=2.0.8 <3",
       "postcss-selector-parser@<7.1.6": ">=7.1.6 <8",
       "source-map-js@<1.2.2": ">=1.2.2 <2",
-      "smol-toml@<1.9.0": ">=1.9.0 <2"
+      "smol-toml@<1.9.0": ">=1.9.0 <2",
+      "handlebars@<4.7.10": ">=4.7.10 <5"
     }
   },
   "prettier": "@plumix/prettier-config"
