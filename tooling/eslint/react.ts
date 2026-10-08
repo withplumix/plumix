@@ -53,6 +53,15 @@ export const reactConfig = defineConfig(
     },
   },
   reactHooks.configs.flat["recommended-latest"]!,
+  // The preset ships these three as `warn`; a warning blocks nothing, so they
+  // are errors like every other rule. Unscoped, like the preset itself.
+  {
+    rules: {
+      "react-hooks/exhaustive-deps": "error",
+      "react-hooks/incompatible-library": "error",
+      "react-hooks/unsupported-syntax": "error",
+    },
+  },
   // Layer the physical-class guard alongside the base config's
   // throw-new-error selector. Flat config replaces `no-restricted-syntax`
   // wholesale, so consumers that re-extend it must re-include both.

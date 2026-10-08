@@ -87,7 +87,7 @@ export const baseConfig = defineConfig(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/consistent-type-imports": [
-        "warn",
+        "error",
         { prefer: "type-imports", fixStyle: "separate-type-imports" },
       ],
       "@typescript-eslint/no-misused-promises": [
@@ -190,7 +190,7 @@ export const baseConfig = defineConfig(
     },
   },
   {
-    linterOptions: { reportUnusedDisableDirectives: true },
+    linterOptions: { reportUnusedDisableDirectives: "error" },
     languageOptions: {
       parserOptions: {
         projectService: true,
