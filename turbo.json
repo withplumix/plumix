@@ -25,7 +25,8 @@
       // at the root so a plugin added later gets the ordering too.
       "dependsOn": ["^build"],
       "inputs": ["locales/*.po"],
-      "outputs": ["locales/*.mjs", "locales/*.d.mts"]
+      "outputs": ["locales/*.mjs", "locales/*.d.mts"],
+      "outputLogs": "new-only"
     },
     "build": {
       "dependsOn": ["^build", "i18n:compile"],
@@ -42,6 +43,11 @@
         "!screenshots/**"
       ],
       "outputs": [".cache/build.tsbuildinfo", "dist/**"],
+      // Every cached task sets this: a task's log shows on the run that
+      // executes it, and a cache hit prints only its hash. So a warning shows
+      // once, where it was produced, not in every later job that restores the
+      // result. A failure is never cached, so this hides no error.
+      "outputLogs": "new-only",
       "env": [
         "WORKERS_CI",
         "WORKERS_CI_BRANCH",
@@ -68,7 +74,11 @@
         "$TURBO_ROOT$/.prettierignore",
         "$TURBO_ROOT$/tooling/prettier/index.js"
       ],
-      "outputs": [".cache/.prettiercache"],
+      // The `.prettiercache` the root script asks for is not an output. A hit
+      // means Prettier never runs, so restoring the file buys nothing, and a
+      // run without the root script's `--cache` writes none, which turbo
+      // reports as a misconfigured `outputs` key.
+      "outputs": [],
       "outputLogs": "new-only"
     },
     // Root-level files sit in no workspace, so the per-package `format` tasks
@@ -86,16 +96,21 @@
         ".prettierignore",
         "tooling/prettier/index.js"
       ],
-      "outputs": [".cache/.prettiercache"],
+      // Same as `format` above.
+      "outputs": [],
       "outputLogs": "new-only"
     },
     "lint": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
-      "outputs": [".cache/.eslintcache"]
+      // Same as `format`: the `.eslintcache` the root script asks for is not
+      // an output, and `turbo run lint` run directly writes none.
+      "outputs": [],
+      "outputLogs": "new-only"
     },
     "typecheck": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
-      "outputs": [".cache/typecheck.tsbuildinfo"]
+      "outputs": [".cache/typecheck.tsbuildinfo"],
+      "outputLogs": "new-only"
     },
     "test:unit": {
       // Low-level tests: resolve workspace imports to source and stub
@@ -133,7 +148,8 @@
       // cap costs no wall clock there, while 1 leaves it idle. Measured cold on
       // a 10-core box, slowest single test: 6607ms at 10, 2287ms at 2, 1237ms
       // at 1.
-      "dependsOn": ["^topo"]
+      "dependsOn": ["^topo"],
+      "outputLogs": "new-only"
     },
     "@plumix/e2e-ports#test:unit": {
       // The guard scans every playwright config in the repo, so its verdict
@@ -146,7 +162,8 @@
       // it, so `^topo` has to be repeated here or this one task keeps the
       // no-edge hashing the base moved away from.
       "dependsOn": ["^topo"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"],
+      "outputLogs": "new-only"
     },
     "@plumix/core#test:unit": {
       // The block-text corpus test asserts against the demo site's seeded
@@ -155,7 +172,8 @@
       // breaks the test. Same `pkg#task` caveat as above: the entry replaces
       // the base definition, so `^topo` is repeated.
       "dependsOn": ["^topo"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/demo/seed.sql"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/demo/seed.sql"],
+      "outputLogs": "new-only"
     },
     "@plumix/admin-ui#test:unit": {
       // The roster guard also reads the `plumix/admin/ui` façade entry, which
@@ -165,13 +183,15 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/packages/plumix/src/admin/ui.ts"
-      ]
+      ],
+      "outputLogs": "new-only"
     },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
       // the artifacts of a real Vite build and the façade's published types,
       // and the docs content checks compile samples against the `.d.ts` files.
-      "dependsOn": ["build", "^build"]
+      "dependsOn": ["build", "^build"],
+      "outputLogs": "new-only"
     },
     "@plumix/published-surface#test:build": {
       // Coverage is read from the workspace, not from this package's own
@@ -188,7 +208,8 @@
         "$TURBO_ROOT$/packages/plumix/src/**/*.ts",
         "$TURBO_ROOT$/packages/plumix/test/facade-entries.ts",
         "!$TURBO_ROOT$/**/node_modules/**"
-      ]
+      ],
+      "outputLogs": "new-only"
     },
     "@plumix-apps/docs#test:build": {
       // Only `^build` — the samples are compiled against the packages' types,
@@ -196,7 +217,8 @@
       // would rebuild the whole Starlight site on every content edit, which is
       // exactly when this check runs, and would surface a broken page as an
       // Astro error before the finding this check exists to report.
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputLogs": "new-only"
     },
     "test:e2e": {
       // Cached, like `test:unit`, `test:build` and `docs:screenshots` — which
@@ -214,7 +236,8 @@
       // green on its third attempt stays green until its inputs change.
       // Caching does not lower that bar, it stops re-rolling identical inputs.
       "dependsOn": ["build", "^build"],
-      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
     },
     "@plumix/runtime-cloudflare#test:e2e": {
       // The runtime's playground wires the blog and media plugins, which
@@ -229,7 +252,8 @@
         "@plumix/plugin-blog#build",
         "@plumix/plugin-media#build"
       ],
-      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
     },
     "@plumix/runtime-node#test:e2e": {
       // Same reason as the Cloudflare entry above.
@@ -239,7 +263,8 @@
         "@plumix/plugin-blog#build",
         "@plumix/plugin-media#build"
       ],
-      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
     },
     "@plumix/runtime-bun#test:e2e": {
       // Same reason as the Cloudflare entry above.
@@ -249,7 +274,8 @@
         "@plumix/plugin-blog#build",
         "@plumix/plugin-media#build"
       ],
-      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
     },
     "docs:screenshots": {
       // Same graph as `test:e2e`: the capture drives the built admin through
@@ -269,7 +295,8 @@
       // across `src/assets` would revert edits to hand-authored images there.
       "dependsOn": ["build", "^build"],
       "outputs": ["../../apps/docs/src/assets/screenshots/**"],
-      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"],
+      "outputLogs": "new-only"
     },
     "clean": {
       "cache": false
@@ -288,7 +315,8 @@
         "!**/*.spec.ts",
         "!e2e/**",
         "!screenshots/**"
-      ]
+      ],
+      "outputLogs": "new-only"
     },
     "attw": {
       // Same surface as publint above.
@@ -300,7 +328,8 @@
         "!**/*.spec.ts",
         "!e2e/**",
         "!screenshots/**"
-      ]
+      ],
+      "outputLogs": "new-only"
     },
     "i18n:check": {
       // Cacheable: a pure comparison of the message ids in source against the
@@ -308,7 +337,8 @@
       // recorded, which made these nine tasks — and the `plumix#build` they
       // pull — the floor under every commit, including README-only ones.
       // Verified: deleting a msgid from every locale still fails on a warm cache.
-      "dependsOn": ["plumix#build"]
+      "dependsOn": ["plumix#build"],
+      "outputLogs": "new-only"
     }
   },
   "globalPassThroughEnv": [
