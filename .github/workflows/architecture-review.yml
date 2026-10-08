@@ -85,9 +85,10 @@ jobs:
         run: |
           npm run architecture-review
           # The report is agent-written text: a random delimiter keeps it from
-          # closing the output early.
+          # closing the output early. `jq -c` ends the value with a newline, so
+          # the delimiter lands on its own line; `cat` left it glued to the `}`.
           delimiter="EOF_$(openssl rand -hex 16)"
-          { echo "result<<$delimiter"; cat "$OUTPUT_DIR/architecture-review.json"; echo "$delimiter"; } >> "$GITHUB_OUTPUT"
+          { echo "result<<$delimiter"; jq -c . "$OUTPUT_DIR/architecture-review.json"; echo "$delimiter"; } >> "$GITHUB_OUTPUT"
 
   publish:
     name: File the report
