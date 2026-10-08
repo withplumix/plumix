@@ -61,6 +61,10 @@ An empty string in a config slot means the option is off, the same as `false` or
 out. Validation rejects only the shapes a ticket names as rejected; it does not turn an empty
 string into a boot error on its own.
 
+Code adds nothing to a tool's output: no warning, deprecation notice or stray log in a build, test
+or lint run. A test that takes an error path spies on the log it expects. A suppressed false
+positive is filtered at its source by code and message, with a comment naming why.
+
 ## Performance
 
 - Load a set of records in one query (`WHERE id IN (…)`), never one query per record. On the

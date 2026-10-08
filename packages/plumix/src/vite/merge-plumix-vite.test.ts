@@ -1,6 +1,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { UserConfig } from "vite";
+import { build, createLogger, mergeConfig } from "vite";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { plumix } from "./index.js";
@@ -104,6 +106,78 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       if (previous === undefined) delete process.env.PLUMIX_EDITOR;
       else process.env.PLUMIX_EDITOR = previous;
     }
+  });
+
+  // Builds `entry.js` with the `build` options the plugin's `config()` returns
+  // and collects every warning that reaches Vite's logger.
+  async function buildWarnings(
+    userConfig: UserConfig,
+    entrySource: string,
+  ): Promise<string[]> {
+    const configPath = join(dir, "plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+      };`,
+      "utf8",
+    );
+    const plugin = plumix({ configFile: configPath });
+    const result = (
+      await (
+        plugin.config as (
+          userConfig: UserConfig,
+          env: unknown,
+        ) => Promise<UserConfig>
+      )({ ...userConfig, root: dir }, { command: "build", mode: "production" })
+    ).build;
+    const entry = join(dir, "entry.js");
+    writeFileSync(entry, entrySource, "utf8");
+    const warnings: string[] = [];
+    const logger = createLogger("warn");
+    logger.warn = (message) => {
+      warnings.push(message);
+    };
+    await build({
+      root: dir,
+      configFile: false,
+      logLevel: "warn",
+      customLogger: logger,
+      build: mergeConfig(userConfig.build ?? {}, {
+        ...result,
+        write: false,
+        rolldownOptions: { ...result?.rolldownOptions, input: entry },
+      }),
+    });
+    return warnings;
+  }
+
+  test('keeps rolldown\'s "use client" directive warning out of the build output', async () => {
+    const warnings = await buildWarnings(
+      {},
+      `"use client";\nexport const island = 1;\n`,
+    );
+    expect(warnings.join("\n")).not.toContain("MODULE_LEVEL_DIRECTIVE");
+  });
+
+  test("still hands every other warning to the site's own onLog", async () => {
+    const seen: string[] = [];
+    await buildWarnings(
+      {
+        build: {
+          rolldownOptions: {
+            onLog(level, log) {
+              if (level === "warn") seen.push(log.message);
+            },
+          },
+        },
+      },
+      `"use client";\n"use strict-ish";\nexport const island = 1;\n`,
+    );
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain(`"use strict-ish"`);
   });
 });
 
