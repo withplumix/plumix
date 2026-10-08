@@ -30,6 +30,17 @@ describe("serializeProps / deserializeProps", () => {
     expect(deserializeProps(serialized)).toEqual(props);
   });
 
+  test.each([
+    { where: "a top-level prop", props: { returnTo: undefined } },
+    { where: "an object field", props: { form: { returnTo: undefined } } },
+    { where: "an array slot", props: { list: ["a", undefined] } },
+  ])(
+    "round-trips undefined in $where rather than turning it into null",
+    ({ props }) => {
+      expect(deserializeProps(serializeProps(props))).toStrictEqual(props);
+    },
+  );
+
   test("round-trips Date", () => {
     const d = new Date("2026-01-01T12:00:00.000Z");
     const out = deserializeProps(serializeProps({ when: d })) as {

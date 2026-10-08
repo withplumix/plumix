@@ -66,7 +66,7 @@ interface SerializePropsOptions {
   readonly displayName?: string;
 }
 
-type Encoded = readonly [PROP_TYPE, unknown];
+type Encoded = readonly [PROP_TYPE, unknown?];
 
 /**
  * An island's props as the codec moves them, distinct from the `IslandProps<T>`
@@ -105,6 +105,9 @@ function encode(
   if (value === Infinity) return [PROP_TYPE.Infinity, 1];
   if (value === -Infinity) return [PROP_TYPE.Infinity, -1];
   if (typeof value === "bigint") return [PROP_TYPE.BigInt, value.toString()];
+  // A one-element tuple: `JSON.stringify` would write an `undefined` payload
+  // as `null`, and the island would read a prop typed `T | undefined` as null.
+  if (value === undefined) return [PROP_TYPE.Value];
   if (value === null || typeof value !== "object")
     return [PROP_TYPE.Value, value];
 
