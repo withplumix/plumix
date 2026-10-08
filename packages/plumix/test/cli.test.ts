@@ -15,8 +15,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 // to keep the CLI's cold path fast (see `cold-start.test.ts`).
 import "@plumix/core";
 
+import packageJson from "../package.json" with { type: "json" };
 import { migrateGenerateDeps } from "../src/cli/commands/migrate.js";
 import { run } from "../src/cli/index.js";
+import { report } from "../src/cli/report.js";
 
 // Inline config object — avoids importing "plumix" from a tmp dir, which
 // pnpm's strict node_modules layout won't resolve.
@@ -73,6 +75,10 @@ describe("plumix CLI dispatch", () => {
     const spawn = vi
       .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
       .mockResolvedValue("");
+    vi.spyOn(report, "info").mockImplementation(() => undefined);
+    const success = vi
+      .spyOn(report, "success")
+      .mockImplementation(() => undefined);
 
     await run(["--cwd", dir, "migrate", "generate"]);
 
@@ -84,6 +90,9 @@ describe("plumix CLI dispatch", () => {
     expect(spawn).toHaveBeenCalledOnce();
     expect(spawn.mock.calls[0]?.[1]).toContain("/fake/drizzle-kit/bin.cjs");
     expect(exitCode).toBeUndefined();
+    expect(success).toHaveBeenCalledWith(
+      "Schema emitted: .plumix/site-schema.ts",
+    );
   });
 
   test("unknown command throws CliError with unknown_command", async () => {
@@ -93,15 +102,19 @@ describe("plumix CLI dispatch", () => {
   });
 
   test("--help exits cleanly without loading a command", async () => {
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
     await run(["--cwd", dir, "--help"]);
     expect(exitCode).toBeUndefined();
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
   });
 
   test("--version prints without requiring a config", async () => {
+    const info = vi.spyOn(report, "info").mockImplementation(() => undefined);
     const emptyDir = mkdtempSync(join(tmpdir(), "plumix-cli-version-"));
     try {
       await run(["--cwd", emptyDir, "--version"]);
       expect(exitCode).toBeUndefined();
+      expect(info).toHaveBeenCalledWith(packageJson.version);
     } finally {
       rmSync(emptyDir, { recursive: true, force: true });
     }

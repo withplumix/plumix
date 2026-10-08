@@ -427,6 +427,10 @@ describe("applying owner histories", () => {
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
     installRuntime(["site.sqlite", "uploads"]);
     opened = [];
+    // What each owner applied is the command's own output; a test that reads
+    // it collects the lines through these.
+    vi.spyOn(report, "info").mockImplementation(() => undefined);
+    vi.spyOn(report, "success").mockImplementation(() => undefined);
   });
 
   afterEach(() => {

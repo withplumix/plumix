@@ -15,6 +15,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
@@ -25,6 +26,7 @@ import {
   migrateCommand,
   migrateGenerateDeps,
 } from "../src/cli/commands/migrate.js";
+import { report } from "../src/cli/report.js";
 
 /**
  * `migrate generate` leans on two properties of the pinned drizzle-kit that
@@ -162,10 +164,14 @@ describe("plumix migrate generate on a site's own tables", () => {
     mkdirSync(join(site, "src"));
     writeFileSync(join(site, "src/core-stub.ts"), CORE_STUB, "utf8");
     writeFileSync(join(site, "src/schema.ts"), BOOKMARKS, "utf8");
+    // The command's own progress lines; what these tests read is on disk.
+    vi.spyOn(report, "info").mockImplementation(() => undefined);
+    vi.spyOn(report, "success").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     rmSync(site, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
   test(
@@ -200,6 +206,10 @@ describe("plumix migrate generate on a site's own tables", () => {
         BOOKMARKS.replace("entryId:", "postId:"),
         "utf8",
       );
+      // The child's stderr is forwarded to ours, so the reason is on screen.
+      const stderr = vi
+        .spyOn(process.stderr, "write")
+        .mockImplementation(() => true);
 
       const failure = migrateCommand.run(generateCtx());
 
@@ -213,6 +223,9 @@ describe("plumix migrate generate on a site's own tables", () => {
         hint: expect.not.stringMatching(/delet|remov|rm /i) as unknown,
       });
       expect(sqlFiles()).toEqual(before);
+      expect(
+        stderr.mock.calls.map(([chunk]) => String(chunk)).join(""),
+      ).toMatch(/Interactive prompts require a TTY/);
     },
     TWO_SPAWNS,
   );

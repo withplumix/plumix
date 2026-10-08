@@ -11,6 +11,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { MockInstance } from "vitest";
 import {
   afterEach,
   beforeAll,
@@ -24,6 +25,7 @@ import {
 import type { CommandContext, PlumixApp } from "@plumix/core";
 import { createDispatcherHarness } from "@plumix/core/test";
 
+import { report } from "../report.js";
 import {
   computeIdDrift,
   i18nCommand,
@@ -648,13 +650,16 @@ describe("i18nCommand", () => {
         readFileSync(join(cwd, "package.json"), "utf8"),
       ) as PartialPackageJson;
 
+    let info: MockInstance<typeof report.info>;
     beforeEach(() => {
-      // `report.info` writes to stdout; silence it in tests.
-      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      info = vi.spyOn(report, "info").mockImplementation(() => undefined);
     });
 
     test("scaffolds lingui.config.ts at the package root", async () => {
       await i18nCommand.run(ctx({ cwd: dir, argv: ["init"] }));
+      expect(info).toHaveBeenCalledWith(
+        "  lingui.config.ts:                created",
+      );
       const configPath = join(dir, "lingui.config.ts");
       expect(existsSync(configPath)).toBe(true);
       const config = readFileSync(configPath, "utf8");
