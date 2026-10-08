@@ -58,6 +58,19 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+// Vitest's browser runner listens for window `error` and `unhandledrejection`
+// events, and once the page listens too it re-logs each one through
+// `console.error`. That line is the runner's, not the code under test's, so a
+// test dispatching one keeps it out of the output for the dispatch alone.
+function dispatchUncaught(event: Event): void {
+  const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  try {
+    window.dispatchEvent(event);
+  } finally {
+    relog.mockRestore();
+  }
+}
+
 function island(componentExport: string): HTMLElement {
   const el = document.createElement("plumix-island");
   el.setAttribute("component-export", componentExport);
@@ -350,7 +363,7 @@ describe("installIslandErrorOverlay", () => {
   });
 
   test("captures async window errors and unhandled rejections", async () => {
-    window.dispatchEvent(
+    dispatchUncaught(
       new ErrorEvent("error", { error: new Error("async boom") }),
     );
     const badge = await shown("plumix-island-overlay-badge");
@@ -363,7 +376,7 @@ describe("installIslandErrorOverlay", () => {
       reason: unknown;
     };
     rejection.reason = new Error("rejected boom");
-    window.dispatchEvent(rejection);
+    dispatchUncaught(rejection);
     await vi.waitFor(
       () =>
         expect(query("plumix-island-overlay-badge")?.textContent).toContain(
@@ -374,7 +387,7 @@ describe("installIslandErrorOverlay", () => {
   });
 
   test("ignores resource-load error events that carry no error object", async () => {
-    window.dispatchEvent(new ErrorEvent("error", { message: "404 img" }));
+    dispatchUncaught(new ErrorEvent("error", { message: "404 img" }));
     await flush();
     expect(host()).toBeNull();
   });

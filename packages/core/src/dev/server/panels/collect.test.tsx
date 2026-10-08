@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { AppContext } from "../../../context/app-context.js";
 import type { DevErrorPanel } from "./types.js";
@@ -45,6 +45,10 @@ describe("collectDevErrorPanels", () => {
   });
 
   test("isolates a throwing handler so one bad subscriber can't sink the rest", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const hooks = new HookRegistry();
     hooks.addFilter("error_page:panels", () => {
       throw new Error("subscriber blew up");
@@ -57,9 +61,17 @@ describe("collectDevErrorPanels", () => {
     expect(
       collectDevErrorPanels(hooks, new Error("boom"), ctx).map((p) => p.id),
     ).toEqual(["survives"]);
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] error_page:panels handler failed plugin=core",
+      expect.objectContaining({ message: "subscriber blew up" }),
+    );
   });
 
   test("renders a panel whose own render throws as a fallback, not a crash", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const hooks = new HookRegistry();
     hooks.addFilter("error_page:panels", (panels) => [
       ...panels,
@@ -77,6 +89,10 @@ describe("collectDevErrorPanels", () => {
     // The bad panel degrades to a notice naming its id; the good one renders.
     expect(rendered[0]?.html).toContain("bad");
     expect(rendered[1]?.html).toBe("<p>ok</p>");
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] dev error panel "bad" failed to render`,
+      expect.objectContaining({ message: "panel blew up" }),
+    );
   });
 
   test("dedupes by id (last contributor wins) and orders by ascending order", () => {

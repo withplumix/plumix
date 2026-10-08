@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import {
   color,
@@ -17,6 +17,7 @@ import {
   toggle,
   url,
 } from "../plugin/fields/index.js";
+import { RichtextValidationError } from "../plugin/fields/richtext-validate.js";
 import { META_FIELD_MESSAGES } from "./contract/field-messages.js";
 import { runFieldPipeline } from "./field-pipeline.js";
 
@@ -680,6 +681,10 @@ describe("composite .sanitize() output is structurally re-checked", () => {
   });
 
   test("a throwing sanitizer rounds to invalid at the composite path", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const result = await runFieldPipeline(
       faq(() => {
         throw new Error("boom");
@@ -690,6 +695,10 @@ describe("composite .sanitize() output is structurally re-checked", () => {
     expect(result.errors).toEqual([
       { path: "faq", message: META_FIELD_MESSAGES.invalid },
     ]);
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] sanitize callback for meta field "faq" threw:`,
+      expect.objectContaining({ message: "boom" }),
+    );
   });
 });
 
@@ -1213,6 +1222,10 @@ describe("group members", () => {
 
 describe("richtext allowlists", () => {
   test("a disallowed mark rejects at the field path", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const field = richtext("body").marks(["bold"]).build();
     const doc = {
       type: "doc",
@@ -1227,6 +1240,10 @@ describe("richtext allowlists", () => {
     expect(result.errors).toEqual([
       { path: "body", message: META_FIELD_MESSAGES.invalid },
     ]);
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] richtext doc for meta field "body" rejected:`,
+      expect.any(RichtextValidationError),
+    );
   });
 
   test("an allowlisted doc passes through", async () => {
@@ -1285,6 +1302,10 @@ describe(".validate()", () => {
   });
 
   test("a throwing validator becomes a generic invalid error", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const field = text("slug")
       .validate(() => {
         throw new Error("boom");
@@ -1294,6 +1315,10 @@ describe(".validate()", () => {
     expect(result.errors).toEqual([
       { path: "slug", message: META_FIELD_MESSAGES.invalid },
     ]);
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] validate callback for meta field "slug" threw:`,
+      expect.objectContaining({ message: "boom" }),
+    );
   });
 });
 
@@ -1308,6 +1333,10 @@ describe(".sanitize()", () => {
   });
 
   test("a throwing sanitize callback becomes a path-addressed invalid error", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const field = text("slug")
       .sanitize(() => {
         throw new Error("nope");
@@ -1317,6 +1346,10 @@ describe(".sanitize()", () => {
     expect(result.errors).toEqual([
       { path: "slug", message: META_FIELD_MESSAGES.invalid },
     ]);
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] sanitize callback for meta field "slug" threw:`,
+      expect.objectContaining({ message: "nope" }),
+    );
   });
 
   test("a transform cannot smuggle a value past the shape gates", async () => {
