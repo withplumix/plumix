@@ -203,18 +203,20 @@ const CONFIG_OPTIONS = [
   "vite",
 ] as const;
 
-type _ConfigOptionsMatchSource = Assert<
-  Equals<(typeof CONFIG_OPTIONS)[number], keyof PlumixConfigInput>
->;
+interface TypeLevelBindings {
+  configOptionsMatchSource: Assert<
+    Equals<(typeof CONFIG_OPTIONS)[number], keyof PlumixConfigInput>
+  >;
+}
 
 // --- Content Modelling -----------------------------------------------------
 
 /** The statuses an entry moves between. Source: `ENTRY_STATUSES`. */
 const STATUSES = ["draft", "published", "scheduled", "trash"] as const;
 
-type _StatusesMatchSource = Assert<
-  Equals<(typeof STATUSES)[number], EntryStatus>
->;
+interface TypeLevelBindings {
+  statusesMatchSource: Assert<Equals<(typeof STATUSES)[number], EntryStatus>>;
+}
 
 /**
  * Every option `registerEntryType` accepts, in declaration order. Source:
@@ -243,9 +245,11 @@ const ENTRY_TYPE_OPTIONS = [
   "access",
 ] as const;
 
-type _EntryTypeOptionsMatchSource = Assert<
-  Equals<(typeof ENTRY_TYPE_OPTIONS)[number], keyof EntryTypeOptions>
->;
+interface TypeLevelBindings {
+  entryTypeOptionsMatchSource: Assert<
+    Equals<(typeof ENTRY_TYPE_OPTIONS)[number], keyof EntryTypeOptions>
+  >;
+}
 
 /**
  * Every per-type chrome string, in declaration order. Source:
@@ -273,9 +277,11 @@ const ENTRY_TYPE_LABELS = [
   "moveToTrash",
 ] as const;
 
-type _EntryTypeLabelsMatchSource = Assert<
-  Equals<(typeof ENTRY_TYPE_LABELS)[number], keyof EntryTypeLabels>
->;
+interface TypeLevelBindings {
+  entryTypeLabelsMatchSource: Assert<
+    Equals<(typeof ENTRY_TYPE_LABELS)[number], keyof EntryTypeLabels>
+  >;
+}
 
 /**
  * The entry-type reference hosts both rosters, so they merge into one list —
@@ -325,9 +331,11 @@ const FIELD_TYPES = [
   "link",
 ] as const;
 
-type _FieldTypesMatchSource = Assert<
-  Equals<(typeof FIELD_TYPES)[number], (typeof CANONICAL_INPUT_TYPES)[number]>
->;
+interface TypeLevelBindings {
+  fieldTypesMatchSource: Assert<
+    Equals<(typeof FIELD_TYPES)[number], (typeof CANONICAL_INPUT_TYPES)[number]>
+  >;
+}
 
 // --- Blocks ----------------------------------------------------------------
 
@@ -396,9 +404,11 @@ const HYDRATION_STRATEGIES = [
   "only",
 ] as const;
 
-type _HydrationStrategiesMatchSource = Assert<
-  Equals<(typeof HYDRATION_STRATEGIES)[number], PlumixStrategy>
->;
+interface TypeLevelBindings {
+  hydrationStrategiesMatchSource: Assert<
+    Equals<(typeof HYDRATION_STRATEGIES)[number], PlumixStrategy>
+  >;
+}
 
 /**
  * The strategies also valid as a prefetch trigger. Source: `PlumixPrefetch` —
@@ -407,9 +417,11 @@ type _HydrationStrategiesMatchSource = Assert<
  */
 const PREFETCH_TRIGGERS = ["load", "idle", "visible"] as const;
 
-type _PrefetchTriggersMatchSource = Assert<
-  Equals<(typeof PREFETCH_TRIGGERS)[number], PlumixPrefetch>
->;
+interface TypeLevelBindings {
+  prefetchTriggersMatchSource: Assert<
+    Equals<(typeof PREFETCH_TRIGGERS)[number], PlumixPrefetch>
+  >;
+}
 
 /**
  * Both axes on one page. The prop each value belongs to is part of the item
@@ -466,13 +478,17 @@ const GENERIC_TIERS = [
   "serverError",
 ] as const;
 
-type _GenericTiersMatchSource = Assert<
-  Equals<(typeof GENERIC_TIERS)[number], GenericTier>
->;
+interface TypeLevelBindings {
+  genericTiersMatchSource: Assert<
+    Equals<(typeof GENERIC_TIERS)[number], GenericTier>
+  >;
+}
 
-type _GenericTiersAreThemeExports = Assert<
-  (typeof GENERIC_TIERS)[number] extends ThemeExport ? true : false
->;
+interface TypeLevelBindings {
+  genericTiersAreThemeExports: Assert<
+    (typeof GENERIC_TIERS)[number] extends ThemeExport ? true : false
+  >;
+}
 
 /**
  * The targeted matchers, listed against the node kinds they mint. `satisfies`
@@ -498,12 +514,14 @@ const TARGETED_MATCHERS = {
   Record<ThemeExport, readonly TargetMatcher["nodeKind"][]>
 >;
 
-type _TargetedMatchersCoverEveryNodeKind = Assert<
-  Equals<
-    (typeof TARGETED_MATCHERS)[keyof typeof TARGETED_MATCHERS][number],
-    TargetMatcher["nodeKind"]
-  >
->;
+interface TypeLevelBindings {
+  targetedMatchersCoverEveryNodeKind: Assert<
+    Equals<
+      (typeof TARGETED_MATCHERS)[keyof typeof TARGETED_MATCHERS][number],
+      TargetMatcher["nodeKind"]
+    >
+  >;
+}
 
 /** `defineTemplate` heads the page: every rule below wraps one. */
 const TEMPLATES: readonly string[] = [
@@ -545,12 +563,14 @@ const TARGET_CONSTRUCTORS = {
   Record<PluginExport, keyof typeof TARGETED_MATCHERS>
 >;
 
-type _EveryTargetedMatcherHasAConstructor = Assert<
-  Equals<
-    (typeof TARGET_CONSTRUCTORS)[keyof typeof TARGET_CONSTRUCTORS],
-    keyof typeof TARGETED_MATCHERS
-  >
->;
+interface TypeLevelBindings {
+  everyTargetedMatcherHasAConstructor: Assert<
+    Equals<
+      (typeof TARGET_CONSTRUCTORS)[keyof typeof TARGET_CONSTRUCTORS],
+      keyof typeof TARGETED_MATCHERS
+    >
+  >;
+}
 
 /**
  * The pieces a rule kind mints a narrowing of *its own* out of, once the six
@@ -598,9 +618,11 @@ interface TemplateDataShapes {
   ErrorData: ErrorData;
 }
 
-type _TemplateDataShapesMatchSource = Assert<
-  Equals<TemplateDataShapes[keyof TemplateDataShapes], TemplateData>
->;
+interface TypeLevelBindings {
+  templateDataShapesMatchSource: Assert<
+    Equals<TemplateDataShapes[keyof TemplateDataShapes], TemplateData>
+  >;
+}
 
 const TEMPLATE_DATA = [
   "EntryData",
@@ -615,9 +637,11 @@ const TEMPLATE_DATA = [
   "ErrorData",
 ] as const;
 
-type _TemplateDataMatchesShapes = Assert<
-  Equals<(typeof TEMPLATE_DATA)[number], keyof TemplateDataShapes>
->;
+interface TypeLevelBindings {
+  templateDataMatchesShapes: Assert<
+    Equals<(typeof TEMPLATE_DATA)[number], keyof TemplateDataShapes>
+  >;
+}
 
 // --- Access & Identity -----------------------------------------------------
 
@@ -630,7 +654,9 @@ const ROLES = [
   "admin",
 ] as const;
 
-type _RolesMatchSource = Assert<Equals<(typeof ROLES)[number], UserRole>>;
+interface TypeLevelBindings {
+  rolesMatchSource: Assert<Equals<(typeof ROLES)[number], UserRole>>;
+}
 
 /**
  * The core capabilities, then the actions derived for every other entry type
@@ -803,16 +829,20 @@ const FILTER_HOOKS = [
   "rpc:settings.upsert:output",
 ] as const;
 
-type _FilterHooksMatchSource = Assert<
-  Equals<SourceHookName<(typeof FILTER_HOOKS)[number]>, FilterName>
->;
+interface TypeLevelBindings {
+  filterHooksMatchSource: Assert<
+    Equals<SourceHookName<(typeof FILTER_HOOKS)[number]>, FilterName>
+  >;
+}
 
-type _EveryPerTypeFilterUsesTheStar = Assert<
-  Equals<
-    Extract<(typeof FILTER_HOOKS)[number], `entry:${string}:${string}`>,
-    Extract<(typeof FILTER_HOOKS)[number], `entry:*:${string}`>
-  >
->;
+interface TypeLevelBindings {
+  everyPerTypeFilterUsesTheStar: Assert<
+    Equals<
+      Extract<(typeof FILTER_HOOKS)[number], `entry:${string}:${string}`>,
+      Extract<(typeof FILTER_HOOKS)[number], `entry:*:${string}`>
+    >
+  >;
+}
 
 /**
  * Every action, grouped by family. Source: `ActionName` — same registry
@@ -872,9 +902,11 @@ const ACTION_HOOKS = [
   "settings:group_changed",
 ] as const;
 
-type _ActionHooksMatchSource = Assert<
-  Equals<SourceHookName<(typeof ACTION_HOOKS)[number]>, ActionName>
->;
+interface TypeLevelBindings {
+  actionHooksMatchSource: Assert<
+    Equals<SourceHookName<(typeof ACTION_HOOKS)[number]>, ActionName>
+  >;
+}
 
 // A per-type hook spelled with a concrete type — `entry:post:published` — is
 // absorbed by its template-literal sibling when TypeScript reduces the union,
@@ -882,12 +914,14 @@ type _ActionHooksMatchSource = Assert<
 // for a name no registry spells. `CAPABILITIES` legitimately writes
 // `entry:post:read`, which is what puts the spelling in reach of this file, so
 // the two lists say in types which convention each follows.
-type _EveryPerTypeActionUsesTheStar = Assert<
-  Equals<
-    Extract<(typeof ACTION_HOOKS)[number], `entry:${string}:${string}`>,
-    Extract<(typeof ACTION_HOOKS)[number], `entry:*:${string}`>
-  >
->;
+interface TypeLevelBindings {
+  everyPerTypeActionUsesTheStar: Assert<
+    Equals<
+      Extract<(typeof ACTION_HOOKS)[number], `entry:${string}:${string}`>,
+      Extract<(typeof ACTION_HOOKS)[number], `entry:*:${string}`>
+    >
+  >;
+}
 
 const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 
@@ -937,16 +971,20 @@ const CLI_REFERENCE = [
 /** Source: `Invocation`. */
 const INVOCATION_MEMBERS = ["env", "waitUntil", "clientAddress"] as const;
 
-type _InvocationMembersMatchSource = Assert<
-  Equals<(typeof INVOCATION_MEMBERS)[number], keyof Invocation>
->;
+interface TypeLevelBindings {
+  invocationMembersMatchSource: Assert<
+    Equals<(typeof INVOCATION_MEMBERS)[number], keyof Invocation>
+  >;
+}
 
 /** Source: `PlumixHandler`. */
 const HANDLER_MEMBERS = ["fetch", "scheduled", "run", "dispose"] as const;
 
-type _HandlerMembersMatchSource = Assert<
-  Equals<(typeof HANDLER_MEMBERS)[number], keyof PlumixHandler>
->;
+interface TypeLevelBindings {
+  handlerMembersMatchSource: Assert<
+    Equals<(typeof HANDLER_MEMBERS)[number], keyof PlumixHandler>
+  >;
+}
 
 /** Source: `RuntimeAdapter`. */
 const ADAPTER_MEMBERS = [
@@ -958,9 +996,11 @@ const ADAPTER_MEMBERS = [
   "refusedAdminAreas",
 ] as const;
 
-type _AdapterMembersMatchSource = Assert<
-  Equals<(typeof ADAPTER_MEMBERS)[number], keyof RuntimeAdapter>
->;
+interface TypeLevelBindings {
+  adapterMembersMatchSource: Assert<
+    Equals<(typeof ADAPTER_MEMBERS)[number], keyof RuntimeAdapter>
+  >;
+}
 
 /**
  * The three interfaces on one page, each member qualified by the interface
@@ -1011,17 +1051,24 @@ const PLUGIN_PACKAGES = [
  */
 const PLUGIN_I18N_SLOT = ["sourceLocale", "locales", "catalogPath"] as const;
 
-type _PluginI18nSlotMatchesSource = Assert<
-  Equals<(typeof PLUGIN_I18N_SLOT)[number], keyof PluginI18nSlot>
->;
+interface TypeLevelBindings {
+  pluginI18nSlotMatchesSource: Assert<
+    Equals<(typeof PLUGIN_I18N_SLOT)[number], keyof PluginI18nSlot>
+  >;
+}
 
 /**
- * How a roster's items reach the source they enumerate. Naming it per entry is
- * what makes losing a binding visible: deleting an `Assert` is a one-line diff
- * that changes no count, whereas demoting an entry to `"page-only"` shows up
- * against the tally `rosters.test.ts` keeps.
+ * How a roster's items reach the source they enumerate. Each
+ * `TypeLevelBindings` member is an `Assert` declared beside the list it pins,
+ * and the declarations merge into one interface. A type-level roster names
+ * the members that hold it, so deleting one fails to
+ * compile at the entry that cites it, and demoting an entry to `"page-only"`
+ * shows up against the tally `rosters.test.ts` keeps.
  */
-type Binding = "type-level" | "runtime" | "page-only";
+type Binding =
+  | readonly [keyof TypeLevelBindings, ...(keyof TypeLevelBindings)[]]
+  | "runtime"
+  | "page-only";
 
 interface RegisteredRoster extends Roster {
   readonly binding: Binding;
@@ -1041,45 +1088,78 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   {
     page: "getting-started/configuration.mdx",
     items: CONFIG_OPTIONS,
-    binding: "type-level",
+    binding: ["configOptionsMatchSource"],
   },
   {
     page: "content-modelling/statuses.mdx",
     items: STATUSES,
-    binding: "type-level",
+    binding: ["statusesMatchSource"],
   },
   {
     page: "content-modelling/entry-type-reference.mdx",
     items: ENTRY_TYPE_REFERENCE,
-    binding: "type-level",
+    binding: ["entryTypeOptionsMatchSource", "entryTypeLabelsMatchSource"],
   },
-  { page: "fields/field-types.mdx", items: FIELD_TYPES, binding: "type-level" },
+  {
+    page: "fields/field-types.mdx",
+    items: FIELD_TYPES,
+    binding: ["fieldTypesMatchSource"],
+  },
   { page: "blocks/core-blocks.mdx", items: CORE_BLOCKS, binding: "runtime" },
   { page: "blocks/marks.mdx", items: CORE_MARKS, binding: "runtime" },
   { page: "blocks/shortcodes.mdx", items: CORE_SHORTCODES, binding: "runtime" },
-  { page: "islands/hydration.mdx", items: HYDRATION, binding: "type-level" },
-  { page: "themes/templates.mdx", items: TEMPLATES, binding: "type-level" },
+  {
+    page: "islands/hydration.mdx",
+    items: HYDRATION,
+    binding: ["hydrationStrategiesMatchSource", "prefetchTriggersMatchSource"],
+  },
+  {
+    page: "themes/templates.mdx",
+    items: TEMPLATES,
+    binding: [
+      "genericTiersMatchSource",
+      "genericTiersAreThemeExports",
+      "targetedMatchersCoverEveryNodeKind",
+    ],
+  },
   {
     page: "themes/template-data.mdx",
     items: TEMPLATE_DATA,
-    binding: "type-level",
+    binding: ["templateDataShapesMatchSource", "templateDataMatchesShapes"],
   },
   {
     page: "themes/rule-kinds.mdx",
     items: [...Object.keys(TARGET_CONSTRUCTORS), ...MATCH_CONSTRUCTORS],
-    binding: "type-level",
+    binding: ["everyTargetedMatcherHasAConstructor"],
   },
-  { page: "access/roles.mdx", items: ROLES, binding: "type-level" },
+  { page: "access/roles.mdx", items: ROLES, binding: ["rolesMatchSource"] },
   { page: "access/capabilities.mdx", items: CAPABILITIES, binding: "runtime" },
   { page: "apis/mcp.mdx", items: MCP_TOOLS, binding: "page-only" },
-  { page: "hooks/reference.mdx", items: HOOKS, binding: "type-level" },
+  {
+    page: "hooks/reference.mdx",
+    items: HOOKS,
+    binding: [
+      "filterHooksMatchSource",
+      "everyPerTypeFilterUsesTheStar",
+      "actionHooksMatchSource",
+      "everyPerTypeActionUsesTheStar",
+    ],
+  },
   { page: "deployment/cdn.mdx", items: CACHE_TAGS, binding: "runtime" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
   {
     page: "deployment/runtimes.mdx",
     items: RUNTIME_CONTRACT_MEMBERS,
-    binding: "type-level",
+    binding: [
+      "adapterMembersMatchSource",
+      "handlerMembersMatchSource",
+      "invocationMembersMatchSource",
+    ],
   },
   { page: "plugins/overview.mdx", items: PLUGIN_PACKAGES, binding: "runtime" },
-  { page: "plugins/i18n.mdx", items: PLUGIN_I18N_SLOT, binding: "type-level" },
+  {
+    page: "plugins/i18n.mdx",
+    items: PLUGIN_I18N_SLOT,
+    binding: ["pluginI18nSlotMatchesSource"],
+  },
 ];
