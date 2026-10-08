@@ -1,3 +1,5 @@
+# Plugin playgrounds are listed by name: not every plugin has one, and sherif
+# warns about any `packages/plugins/*/playground` expansion that names no package.
 packages:
   - "apps/*"
   - "packages/admin"
@@ -9,7 +11,16 @@ packages:
   - "packages/runtimes/*"
   - "packages/runtimes/*/playground"
   - "packages/plugins/*"
-  - "packages/plugins/*/playground"
+  - "packages/plugins/audit-log/playground"
+  - "packages/plugins/blog/playground"
+  - "packages/plugins/comments/playground"
+  - "packages/plugins/feeds/playground"
+  - "packages/plugins/forms/playground"
+  - "packages/plugins/media/playground"
+  - "packages/plugins/menu/playground"
+  - "packages/plugins/og/playground"
+  - "packages/plugins/pages/playground"
+  - "packages/plugins/seo/playground"
   - "tooling/*"
 
 # Let a release age a week before resolving to it, matching the Dependabot
