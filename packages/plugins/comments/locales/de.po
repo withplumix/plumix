@@ -213,3 +213,18 @@ msgstr "Eine E-Mail-Adresse ist erforderlich."
 #: src/refusals.ts
 msgid "plugin.comments.error.rate_limited"
 msgstr "Zu viele Kommentare — versuchen Sie es in Kürze erneut."
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.subject"
+msgstr "Ein Kommentar wartet auf Freigabe"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.intro"
+msgstr "{authorName} hat einen Kommentar zu „{entryTitle}“ hinterlassen, der auf Prüfung wartet:"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.review"
+msgstr "Prüfen Sie ihn in der Moderationswarteschlange:"

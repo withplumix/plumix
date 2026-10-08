@@ -1,14 +1,19 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { Db } from "../../context/app-context.js";
+import type { MailSender } from "../../mail/contract/registry.js";
 import type { Mailer } from "../contract/mailer.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
+import { createMailCatalogs } from "../../mail/catalogs.js";
+import { createTestContext } from "../../test/context.js";
 import {
   allowedDomainFactory,
   authTokenFactory,
   userFactory,
 } from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
+import { poCatalogs } from "../../test/po-catalog.js";
 import { hashToken } from "../tokens.js";
 import { requestMagicLink } from "./request.js";
 
@@ -32,6 +37,33 @@ function captureMailer(): { mailer: Mailer; sent: CapturedSend[] } {
   };
 }
 
+/**
+ * `ctx.mail` for a request to the magic-link route, `?lang=` set when given,
+ * with core's committed catalogs (unit tests otherwise resolve them empty).
+ */
+function mailFor(
+  db: Db,
+  mailer: Mailer,
+  options: { readonly siteName?: string; readonly lang?: string } = {},
+): MailSender {
+  const url = new URL("https://cms.example/_plumix/auth/magic-link/request");
+  if (options.lang !== undefined) url.searchParams.set("lang", options.lang);
+  return createTestContext({
+    db,
+    request: new Request(url),
+    config: {
+      mailer,
+      auth: { magicLink: { siteName: options.siteName ?? "Test" } },
+      i18n: { defaultLocale: "en", locales: ["en", "de"] },
+    },
+    mailCatalogs: createMailCatalogs(
+      poCatalogs({
+        de: new URL("../../../locales/mail-de.po", import.meta.url),
+      }),
+    ),
+  }).mail;
+}
+
 describe("requestMagicLink", () => {
   test("issues a token + sends email when the user exists", async () => {
     const db = await createTestDb();
@@ -45,8 +77,7 @@ describe("requestMagicLink", () => {
       email: "alice@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test Site",
+      mail: mailFor(db, mailer, { siteName: "Test Site" }),
     });
 
     expect(sent).toHaveLength(1);
@@ -56,9 +87,9 @@ describe("requestMagicLink", () => {
     expect(message?.text).toContain(
       "https://cms.example/_plumix/auth/magic-link/verify?token=",
     );
-    // Plumix doesn't ship HTML — operators template in their own mailer
-    // wrapper if they want it. The text body alone is the contract.
-    expect(message?.html).toBeUndefined();
+    expect(message?.html).toContain(
+      "https://cms.example/_plumix/auth/magic-link/verify?token=",
+    );
 
     // The DB row exists, keyed by SHA-256(token), pointing at the user.
     // Recover the token from the URL and verify hash storage.
@@ -82,8 +113,7 @@ describe("requestMagicLink", () => {
       email: "stranger@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(0);
@@ -104,8 +134,7 @@ describe("requestMagicLink", () => {
       email: "blocked@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(0);
@@ -123,8 +152,7 @@ describe("requestMagicLink", () => {
       email: "  Alice@Example.com  ",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(1);
@@ -145,8 +173,7 @@ describe("requestMagicLink", () => {
       email: "newcomer@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(1);
@@ -176,8 +203,7 @@ describe("requestMagicLink", () => {
       email: "newcomer@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(0);
@@ -194,8 +220,7 @@ describe("requestMagicLink", () => {
       email: "stranger@unknown.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(0);
@@ -214,8 +239,7 @@ describe("requestMagicLink", () => {
       email: "first@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(0);
@@ -236,8 +260,7 @@ describe("requestMagicLink", () => {
       email: "first@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
       bootstrapAllowed: true,
     });
 
@@ -260,8 +283,7 @@ describe("requestMagicLink", () => {
       email: "stranger@anywhere.test",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
       selfSignupOpen: true,
     });
 
@@ -280,8 +302,7 @@ describe("requestMagicLink", () => {
       email: "first@anywhere.test",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
       selfSignupOpen: true,
     });
 
@@ -299,8 +320,7 @@ describe("requestMagicLink", () => {
       email: "not-an-email",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
       selfSignupOpen: true,
     });
 
@@ -322,15 +342,13 @@ describe("requestMagicLink", () => {
         email: "alice@example.com",
         origin: "https://cms.example",
         basePath: "",
-        mailer,
-        siteName: "Test",
+        mail: mailFor(db, mailer),
       }),
     ).resolves.toBeUndefined();
   });
 
-  test("renders the email body in the recipient's locale when supplied", async () => {
-    // Pre-auth flow: the caller (routes.ts) supplies the resolved
-    // admin-shell locale. With "de", subject + body should be German.
+  test("renders the email in the request's locale for a user with none stored", async () => {
+    // The login form's `?lang=` pick reaches the mail through `ctx.mail`.
     const db = await createTestDb();
     await userFactory.transient({ db }).create({
       email: "klaus@example.com",
@@ -342,9 +360,7 @@ describe("requestMagicLink", () => {
       email: "klaus@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test Site",
-      locale: "de",
+      mail: mailFor(db, mailer, { siteName: "Test Site", lang: "de" }),
     });
 
     const [message] = sent;
@@ -352,7 +368,7 @@ describe("requestMagicLink", () => {
     expect(message?.text).toContain("Melden Sie sich bei Test Site");
   });
 
-  test("falls back to English when locale is omitted or unknown", async () => {
+  test("falls back to English when the request's locale is unknown", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({
       email: "fallback@example.com",
@@ -364,9 +380,7 @@ describe("requestMagicLink", () => {
       email: "fallback@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test Site",
-      locale: "xx-INVALID",
+      mail: mailFor(db, mailer, { siteName: "Test Site", lang: "xx-INVALID" }),
     });
 
     const [message] = sent;
@@ -403,8 +417,7 @@ describe("requestMagicLink — per-email issuance cap", () => {
       email: "alice@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     // Over the cap → silent no-op, no sixth token minted.
@@ -426,8 +439,7 @@ describe("requestMagicLink — per-email issuance cap", () => {
       email: "alice@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(1);
@@ -449,8 +461,7 @@ describe("requestMagicLink — per-email issuance cap", () => {
       email: "alice@example.com",
       origin: "https://cms.example",
       basePath: "",
-      mailer,
-      siteName: "Test",
+      mail: mailFor(db, mailer),
     });
 
     expect(sent).toHaveLength(1);

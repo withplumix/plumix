@@ -1,11 +1,11 @@
 import type { Db, Logger } from "../../context/app-context.js";
-import type { Mailer } from "../contract/mailer.js";
+import type { User } from "../../db/schema/users.js";
+import type { MailSender } from "../../mail/contract/registry.js";
 import { withBasePath } from "../../base-path.js";
 import { and, eq, gte } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
-import { emailStringsFor } from "../email/messages.js";
 import { extractDomain } from "../identity.js";
 import { generateToken, hashToken } from "../tokens.js";
 
@@ -41,16 +41,12 @@ interface RequestMagicLinkInput {
   readonly origin: string;
   /** Subdirectory prefix the verify link must carry (`""` at the root). */
   readonly basePath: string;
-  readonly mailer: Mailer;
-  readonly siteName: string;
-  readonly ttlSeconds?: number;
   /**
-   * Locale for the email body. Pre-auth flow: caller supplies the
-   * resolved admin-shell locale (Accept-Language fallback chain) since
-   * the recipient has no stored preference yet. Falls back to English
-   * when omitted or unknown. See `auth/email/messages.ts`.
+   * Sends core's `magicLink` mail: in the user's stored locale on sign-in,
+   * in the request's on sign-up, where the recipient has none yet.
    */
-  readonly locale?: string;
+  readonly mail: MailSender;
+  readonly ttlSeconds?: number;
   /**
    * Optional logger for swallowed mailer errors. The function never
    * throws (so the response can stay shape-identical on every code
@@ -120,6 +116,7 @@ export async function requestMagicLink(
     await issueAndSend(db, input, ttlSeconds, {
       userId: user.id,
       email: user.email,
+      recipient: user,
     });
     return;
   }
@@ -156,12 +153,18 @@ export async function requestMagicLink(
     }
   }
 
-  await issueAndSend(db, input, ttlSeconds, { userId: null, email });
+  await issueAndSend(db, input, ttlSeconds, {
+    userId: null,
+    email,
+    recipient: email,
+  });
 }
 
 interface IssueAndSendInput {
   readonly userId: number | null;
   readonly email: string;
+  /** The user signing in, or the bare address signing up. */
+  readonly recipient: User | string;
 }
 
 async function issueAndSend(
@@ -203,19 +206,11 @@ async function issueAndSend(
   }
 
   try {
-    // Plain-text body only. Branded HTML / template rendering is the
-    // operator's call — they wrap their `Mailer` adapter and template
-    // however they like. Plumix is not in the email-design business.
-    const strings = emailStringsFor(input.locale);
-    await input.mailer.send({
-      to: target.email,
-      subject: strings.magicLink.subject(input.siteName),
-      text: strings.magicLink.body(
-        input.siteName,
-        verifyUrl.toString(),
-        ttlSeconds,
-      ),
-    });
+    await input.mail.send(
+      "magicLink",
+      { url: verifyUrl.toString(), ttlSeconds },
+      { to: target.recipient },
+    );
   } catch (error) {
     // Swallow toward the caller — surfacing this would leak that the
     // recipient is registered. Log it server-side so the operator sees

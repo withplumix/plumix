@@ -1,0 +1,173 @@
+---
+title: Mail
+description: How core and plugins declare a mail by name with defineMail, send it with ctx.mail.send, and how a site or theme overrides its subject, text or HTML, and how a mail is localized for its recipient.
+tier: P1
+sidebar:
+  order: 30
+---
+
+A mail in Plumix is declared once, by name, with the props it renders from. Code that sends it names it and hands it props; the mail renders itself in its recipient's language and goes out through the site's `mailer`. A site or a theme can restyle any mail by name without touching the code that sends it.
+
+## Overview
+
+Three pieces make up the mail system, and each has one owner:
+
+- **The declaration.** `defineMail<Props>(name, { subject, text, html, preview })` says what a mail looks like, rendered from `Props`. Pass `Props` explicitly or let `preview` infer it. Core declares its own mails, `magicLink` and `emailChange`. A plugin lists its mails in its descriptor's `mails` field, so every mail is known when the site boots.
+- **The registry.** `MailRegistry` maps each mail's name to its props, the same way `FilterRegistry` maps a hook to its handler. `ctx.mail.send` and every override are typed against it, so an unknown name or the wrong props fail to compile.
+- **The transport.** The `mailer` slot in `plumix.config.ts` delivers what a mail renders: an `EmailMessage` with `to`, `subject`, `text` and an optional `html`. A mailer never sees a mail's name or props, so any provider fits.
+
+`ctx.mail.send(name, props, { to })` renders the mail and hands it to the mailer. With no `mailer` configured it throws `MailerNotConfigured` instead, so a feature whose mail is optional catches that and carries on. The comments plugin does that, so a site without a mailer still takes comments.
+
+Two owners declaring the same name stop the boot, and the error names both. So does an override of a name nobody declared.
+
+## Quickstart
+
+Declare the name and its props, define the mail, list it in the plugin's `mails`, and send it from anywhere that holds a request context:
+
+```ts
+import type { AppContext } from "plumix";
+import { defineMail, definePlugin } from "plumix/plugin";
+
+declare module "plumix" {
+  interface MailRegistry {
+    welcome: { readonly name: string };
+  }
+}
+
+const GREETING = {
+  id: "acme.mail.welcome.greeting",
+  message: "Welcome, {name}!",
+};
+
+export const welcomeMail = defineMail<{ readonly name: string }>("welcome", {
+  subject: (props, ctx) => ctx.t(GREETING, { name: props.name }),
+  text: (props, ctx) =>
+    `${ctx.t(GREETING, { name: props.name })}\n\n${ctx.baseUrl}`,
+  preview: { name: "Ann" },
+});
+
+export const welcome = definePlugin("welcome", {
+  mails: [welcomeMail],
+  setup: () => undefined,
+});
+
+export async function greet(ctx: AppContext, email: string): Promise<void> {
+  await ctx.mail.send("welcome", { name: "Ann" }, { to: email });
+}
+```
+
+`preview` is required. It is the sample a mail renders with when there is no real send behind it.
+
+## Declaring a mail
+
+Each render function takes the mail's props and a render context, and returns a string:
+
+| Render function | Required | What it returns                                   |
+| --------------- | -------- | ------------------------------------------------- |
+| `subject`       | yes      | The subject line.                                 |
+| `text`          | yes      | The plain-text body. Every mail has one.          |
+| `html`          | no       | An HTML body. Without one the mail is text alone. |
+
+The render context carries the `locale` the mail renders in, the `siteName`, the site's `baseUrl` (the public root with its base path and a trailing slash) and `t`, which translates a descriptor into that locale. The site name is `auth.magicLink.siteName` when the site configures one, and the origin's host otherwise.
+
+An HTML body is a string, so escape everything it did not write itself. A commenter's name, a comment body and an address are all input. `escapeHtml` from `plumix/support` covers element text; an attribute value also needs its quotes escaped.
+
+## Sending a mail
+
+`to` is an address or a user. The locale the mail renders in is decided per recipient:
+
+1. The recipient's own `meta.locale`, when the recipient is a user, or the address belongs to one, and the site enables that locale.
+2. Otherwise the request's locale, which a sign-in form's `?lang=` choice sets.
+3. Otherwise the site's default locale.
+
+Pass a user when the address is not yet theirs. Core's `emailChange` goes to the address the user is moving to, which belongs to nobody, so it passes `{ email: newEmail, meta: user.meta }` and the user's own locale still applies.
+
+`send` throws whatever the mailer throws. Whether a failed send should fail the request is the caller's decision. Core's magic-link request swallows and logs it, because a response that differed would reveal whether the address is registered.
+
+```ts
+import type { AppContext } from "plumix";
+import { MailerNotConfigured } from "plumix/plugin";
+
+declare module "plumix" {
+  interface MailRegistry {
+    welcome: { readonly name: string };
+  }
+}
+
+export async function greetIfPossible(
+  ctx: AppContext,
+  email: string,
+): Promise<void> {
+  try {
+    await ctx.mail.send("welcome", { name: "Ann" }, { to: email });
+  } catch (error) {
+    if (error instanceof MailerNotConfigured) return;
+    throw error;
+  }
+}
+```
+
+## Overriding a mail
+
+A site or a theme replaces any of a mail's render functions by name, typed against that mail's props. Each render function comes from the first of these that sets it:
+
+1. The site's `mail.overrides` in `plumix.config.ts`.
+2. The theme's `mail` field.
+3. The declaring owner's own.
+
+A site override of only `subject` keeps the theme's or the owner's `text` and `html`. A site sets its overrides in the `mail` slot:
+
+```ts
+import type { MailConfig } from "plumix";
+
+export const mail: MailConfig = {
+  overrides: {
+    magicLink: {
+      subject: (_props, ctx) => `Your ${ctx.siteName} sign-in link`,
+    },
+  },
+};
+```
+
+A theme gives the mails it did not declare its own look:
+
+```ts
+import type { TemplateData } from "plumix/theme";
+import { defineTemplate, defineTheme, fallback } from "plumix/theme";
+
+const index = defineTemplate<TemplateData>({ render: () => null });
+
+export const theme = defineTheme({
+  templates: [fallback(index)],
+  mail: {
+    magicLink: {
+      html: (props) => `<p><a href="${props.url}">Sign in</a></p>`,
+    },
+  },
+});
+```
+
+Core's mails take these props. Both URLs are the single-use links core generates, and `ttlSeconds` is how long each stays valid.
+
+| Mail          | Props                                     |
+| ------------- | ----------------------------------------- |
+| `magicLink`   | `{ url, ttlSeconds }`                     |
+| `emailChange` | `{ url, oldEmail, newEmail, ttlSeconds }` |
+
+## Localizing a mail
+
+`ctx.t(descriptor, values)` resolves a descriptor against core's mail catalog and every installed plugin's catalog, in the locale the mail renders in, and falls back to the descriptor's English `message`. Only `{name}` placeholders are filled, so a count that needs a plural takes one message per form.
+
+A plugin's mail strings go in the same catalogs as the rest of its strings, through its `i18n` slot. [Plugin i18n](/plugins/i18n/) covers the catalogs; write the descriptors as object literals, since a mail renders on the server and no Babel macro pass reads it.
+
+## Related
+
+- [Configuration](/getting-started/configuration/#mailer) — the `mailer` slot every mail goes out through, and the `mail` slot a site overrides mails in.
+- [Plugins](/plugins/overview/) — the descriptor whose `mails` field declares a plugin's mails.
+- [Themes](/themes/overview/) — the descriptor whose `mail` field overrides them.
+- [Type Augmentation](/going-further/type-augmentation/) — `MailRegistry` among the other registries you extend with `declare module "plumix"`.
+
+## Next steps
+
+- Configure a real `mailer` before you deploy; [Secrets](/deployment/secrets/) walks through one.
+- Give core's `magicLink` mail your theme's HTML with the theme's `mail` field.

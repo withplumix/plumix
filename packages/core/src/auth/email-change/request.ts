@@ -1,10 +1,9 @@
 import type { Db, Logger } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
-import type { Mailer } from "../contract/mailer.js";
+import type { MailSender } from "../../mail/contract/registry.js";
 import { and, eq, ne } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
-import { emailStringsFor } from "../email/messages.js";
 import { generateToken, hashToken } from "../tokens.js";
 import { EmailChangeError } from "./errors.js";
 
@@ -22,15 +21,13 @@ export interface RequestEmailChangeInput {
   readonly newEmail: string;
   /** `${origin}/_plumix/auth/verify-email?token=…` for the recipient. */
   readonly origin: string;
-  readonly mailer: Mailer;
-  readonly siteName: string;
-  readonly ttlSeconds?: number;
   /**
-   * Locale for the email body. Post-auth flow: caller passes
-   * `user.meta.locale`. Falls back to English when omitted or unknown.
-   * See `auth/email/messages.ts`.
+   * Sends core's `emailChange` mail, in the user's stored locale rather than
+   * the actor's: an admin in English changing a German user's email mails
+   * the German user in German.
    */
-  readonly locale?: string;
+  readonly mail: MailSender;
+  readonly ttlSeconds?: number;
   /**
    * Optional logger for swallowed mailer errors. Same rationale as
    * magic-link: never throw out of the request — the verification
@@ -119,18 +116,17 @@ export async function requestEmailChange(
   verifyUrl.searchParams.set("token", token);
 
   try {
-    const strings = emailStringsFor(input.locale);
-    await input.mailer.send({
-      to: newEmail,
-      subject: strings.emailChange.subject(input.siteName),
-      text: strings.emailChange.body({
-        siteName: input.siteName,
+    await input.mail.send(
+      "emailChange",
+      {
+        url: verifyUrl.toString(),
         oldEmail: user.email,
         newEmail,
-        url: verifyUrl.toString(),
         ttlSeconds,
-      }),
-    });
+      },
+      // The user, at the address they are moving to.
+      { to: { email: newEmail, meta: user.meta } },
+    );
   } catch (error) {
     // Don't leak transport failures to the caller — the request still
     // succeeded persistence-wise. The user can re-request if the email

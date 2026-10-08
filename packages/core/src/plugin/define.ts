@@ -1,4 +1,5 @@
 import type { ShortcodeSpec } from "../blocks/index.js";
+import type { AnyMailDefinition } from "../mail/contract/registry.js";
 import type { SchemaModule } from "../runtime/contract/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type {
@@ -57,6 +58,12 @@ export interface PluginDescriptor<TConfig = undefined> {
    * editor canvas, so a body expands there as it does on the page.
    */
   readonly shortcodes?: readonly ShortcodeSpec[];
+  /**
+   * The mails the plugin sends, each made with `defineMail`. Declared here
+   * rather than registered, so they are known at boot: a name another owner
+   * declared fails it, and a site or theme override is checked against them.
+   */
+  readonly mails?: readonly AnyMailDefinition[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   /** Translation catalog declaration — opts the plugin into the i18n
@@ -96,6 +103,8 @@ export interface DefinePluginInput<TConfig> extends DefinePluginOptions {
   readonly afterSetup?: PluginAfterSetup;
   /** See {@link PluginDescriptor.shortcodes}. */
   readonly shortcodes?: readonly ShortcodeSpec[];
+  /** See {@link PluginDescriptor.mails}. */
+  readonly mails?: readonly AnyMailDefinition[];
 }
 
 /** The standard on-disk location of a plugin's compiled admin bundle, given
@@ -179,6 +188,7 @@ export function definePlugin<TConfig = undefined>(
     setup: setupOrInput.setup,
     afterSetup: setupOrInput.afterSetup,
     shortcodes: setupOrInput.shortcodes,
+    mails: setupOrInput.mails,
     schema: setupOrInput.schema,
     schemaModule: setupOrInput.schemaModule,
     adminEntry: setupOrInput.adminEntry,

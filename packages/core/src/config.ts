@@ -15,6 +15,7 @@ import type {
   LocaleResolverOverrideFor,
   ResolvedI18nFor,
 } from "./i18n/locale-registry.js";
+import type { MailConfig } from "./mail/contract/registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type {
   FrameworkRoutes,
@@ -142,6 +143,13 @@ export interface PlumixConfigInput {
    * is the dev default.
    */
   readonly mailer?: MailerInput;
+  /**
+   * The site's mails. `overrides` replaces any of a declared mail's
+   * `subject`, `text` and `html` by name, winning over the theme's `mail`
+   * and the declaring owner's own. Overriding a name nobody declared fails
+   * the boot.
+   */
+  readonly mail?: MailConfig;
   /**
    * The site's theme. Optional: a site that registers none falls back to
    * the built-in `welcomeTheme`, which renders a self-contained

@@ -2,8 +2,8 @@ import { defineLinguiConfig } from "@plumix/lingui-config";
 
 // Per-surface catalog naming keeps each translatable surface's catalog
 // distinct in one flat locales/ dir: the admin-area labels a runtime shows
-// outside the admin, the SSR admin bar, the zero-theme welcome screen and the
-// block primitives each own a `<surface>-{locale}.po` set.
+// outside the admin, the SSR admin bar, the zero-theme welcome screen, the
+// block primitives and core's mails each own a `<surface>-{locale}.po` set.
 export default defineLinguiConfig({
   surfaces: [
     {
@@ -21,6 +21,10 @@ export default defineLinguiConfig({
     {
       catalogPath: "<rootDir>/locales/blocks-{locale}",
       include: ["src/blocks"],
+    },
+    {
+      catalogPath: "<rootDir>/locales/mail-{locale}",
+      include: ["src/mail"],
     },
   ],
 });

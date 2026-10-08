@@ -6,7 +6,9 @@ type AppBootErrorCode =
   | "public_route_path_conflict"
   | "public_route_shadows_core"
   | "public_route_pattern_invalid"
-  | "invalid_scheduled_task_cron";
+  | "invalid_scheduled_task_cron"
+  | "mail_name_conflict"
+  | "mail_override_undeclared";
 
 export class AppBootError extends Error {
   static {
@@ -135,6 +137,38 @@ export class AppBootError extends Error {
       `Scheduled task "${ctx.pluginId}:${ctx.taskId}" declares a schedule ` +
         `this deploy cannot fire. ${ctx.detail}`,
       ctx,
+    );
+  }
+
+  static mailNameConflict(ctx: {
+    pluginId: string;
+    mail: string;
+    previousOwner: string;
+  }): AppBootError {
+    return new AppBootError(
+      "mail_name_conflict",
+      `Plugin "${ctx.pluginId}" declares mail "${ctx.mail}", already ` +
+        `declared by "${ctx.previousOwner}".`,
+      { pluginId: ctx.pluginId, previousOwner: ctx.previousOwner },
+    );
+  }
+
+  // A theme has no id, so the culprit is named by the field it came from and
+  // the render functions it replaces.
+  static mailOverrideUndeclared(ctx: {
+    overriddenBy: "site" | "theme";
+    mail: string;
+    parts: readonly string[];
+  }): AppBootError {
+    const field =
+      ctx.overriddenBy === "site"
+        ? "The site config's `mail.overrides`"
+        : "The theme's `mail` field";
+    return new AppBootError(
+      "mail_override_undeclared",
+      `${field} replaces the ${ctx.parts.join(", ")} of mail "${ctx.mail}", ` +
+        `which nothing declares.`,
+      {},
     );
   }
 }

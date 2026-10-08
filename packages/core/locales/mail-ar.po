@@ -1,0 +1,69 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-07\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (mails render server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.subject"
+msgstr "تسجيل الدخول إلى {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.intro"
+msgstr "سجّل الدخول إلى {siteName} بفتح هذا الرابط:"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.expires"
+msgstr "تنتهي صلاحية الرابط خلال {minutes} دقيقة."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.magicLink.ignore"
+msgstr "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.subject"
+msgstr "أكّد بريدك الإلكتروني الجديد لدى {siteName}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.intro"
+msgstr "طلب شخص ما — نأمل أن يكون أنت — تغيير البريد الإلكتروني لحسابك في {siteName}."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.from"
+msgstr "من: {oldEmail}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.to"
+msgstr "إلى: {newEmail}"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.confirm"
+msgstr "أكّد التغيير بفتح هذا الرابط:"
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.expiresOneHour"
+msgstr "تنتهي صلاحية الرابط خلال ساعة واحدة."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.expiresHours"
+msgstr "تنتهي صلاحية الرابط خلال {hours} ساعة."
+
+#. js-lingui-explicit-id
+#: src/mail/core-mails.ts
+msgid "core.mail.emailChange.ignore"
+msgstr "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة — سيبقى حسابك على {oldEmail}."

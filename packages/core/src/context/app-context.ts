@@ -15,6 +15,7 @@ import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonObject } from "../json.js";
+import type { MailSender } from "../mail/contract/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
 import type { ResolvedRoute } from "../route/contract/resolved-route.js";
@@ -261,13 +262,17 @@ export interface AppContextBase<
   readonly imageDelivery?: ImageDelivery;
   /**
    * Configured outbound email transport. Present when the operator
-   * passed `mailer:` at the top of `plumix({...})`. Magic-link reads
-   * this; future invite-email / password-reset / plugin-defined
-   * notifications read the same instance — operators configure once,
-   * every feature reuses. Plugin handlers should null-check and
-   * degrade if mail is optional for their feature.
+   * passed `mailer:` at the top of `plumix({...})`. Every declared mail
+   * goes out through it via {@link mail}, so operators configure once and
+   * every feature reuses it.
    */
   readonly mailer?: Mailer;
+  /**
+   * Sends a declared mail by name: renders it in the recipient's locale and
+   * hands it to {@link mailer}. Throws `MailerNotConfigured` when there is
+   * no mailer, so a feature whose mail is optional catches that.
+   */
+  readonly mail: MailSender;
   /**
    * Canonical site origin (`https://cms.example.com`). Sourced from
    * `auth.passkey.origin` at app build time. Magic-link, email-change,

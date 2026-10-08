@@ -83,14 +83,10 @@ export async function handleMagicLinkRequest(
         : undefined,
       origin: ctx.origin,
       basePath: app.config.basePath,
-      mailer: ctx.mailer,
-      siteName: app.config.auth.magicLink.siteName,
+      // A new address has no stored locale, so `ctx.mail` falls back to the
+      // request's: the login form's `?lang=` or `plumix_locale` pick.
+      mail: ctx.mail,
       ttlSeconds: app.config.auth.magicLink.ttlSeconds,
-      // `ctx.locale` already reflects the unified resolver — the user's
-      // pre-auth dropdown pick reaches us via `?lang=` or `plumix_locale`
-      // cookie, so the magic-link email goes out in the locale they were
-      // looking at the login form in.
-      locale: ctx.locale.code,
       logger: ctx.logger,
       bootstrapAllowed: ctx.bootstrapAllowed,
       // Open self-signup lets any valid email register; the verify route

@@ -7,6 +7,8 @@ import type {
 } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { HookExecutor } from "../hooks/registry.js";
+import type { MailCatalogs } from "../mail/catalogs.js";
+import type { DeclaredMails } from "../mail/declared.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
@@ -34,6 +36,9 @@ import { createBlockRegistry } from "../blocks/index.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { createMailCatalogs } from "../mail/catalogs.js";
+import { declareMails } from "../mail/declared.js";
+import { createMailSender } from "../mail/sender.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
@@ -52,6 +57,9 @@ import {
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
 const EMPTY_SHORTCODE_REGISTRY: ShortcodeRegistry = new Map();
+// A context built without an app (bare test/util contexts) renders against
+// core's own catalogs.
+const CORE_MAIL_CATALOGS_ONLY: MailCatalogs = createMailCatalogs();
 // Fallback for contexts built without an app wiring auth (bare test/util
 // contexts). The real app always passes `app.authMethods`.
 const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
@@ -92,6 +100,14 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly authMethods?: AuthMethodsSummary;
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
+  /**
+   * The mails `ctx.mail` sends and the catalogs they render against, which
+   * `buildApp` resolves once (`app.mails`, `app.mailCatalogs`). Without them
+   * the context declares the mails of `config` itself and renders against
+   * core's catalog alone.
+   */
+  readonly mails?: DeclaredMails;
+  readonly mailCatalogs?: MailCatalogs;
   /**
    * Plugin-contributed `extendAppContext` entries — usually piped
    * directly from `installPlugins(...).appContextExtensions`. Each
@@ -145,6 +161,16 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     i18n: args.config.i18n,
   });
   const mailer = resolveMailer(args.config.mailer, args.env);
+  // Best-effort fallback for tests / runtimes that don't pass an explicit
+  // origin: derive from the inbound request URL. Production always passes the
+  // canonical operator-set origin so URLs in outgoing email are stable across
+  // worker geos. The origin may be an `(env) => …` resolver — resolve it here,
+  // where the runtime env exists.
+  const origin =
+    args.origin !== undefined
+      ? resolveEnvInput(args.origin, args.env)
+      : new URL(args.request.url).origin;
+  const tracedMailer = mailer && traceMailer(mailer, () => base.telemetry);
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
@@ -171,7 +197,27 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     cdn: args.cdn && traceCdn(args.cdn, () => base.telemetry),
     kv: args.kv && traceKv(args.kv, () => base.telemetry),
     imageDelivery: args.imageDelivery,
-    mailer: mailer && traceMailer(mailer, () => base.telemetry),
+    mailer: tracedMailer,
+    mail: createMailSender({
+      mails:
+        args.mails ??
+        declareMails({
+          plugins: args.config.plugins,
+          theme: args.config.theme.mail,
+          site: args.config.mail?.overrides,
+        }),
+      catalogs: args.mailCatalogs ?? CORE_MAIL_CATALOGS_ONLY,
+      mailer: tracedMailer,
+      // Safety: a site's schema carries core's tables beside its own, and the
+      // sender reads only `users`.
+      db: args.db as unknown as Db,
+      i18n: args.config.i18n,
+      locale: locale.code,
+      // The magic-link slot names the site; a site without it is named by
+      // its host.
+      siteName: args.config.auth.magicLink?.siteName ?? new URL(origin).host,
+      baseUrl: new URL(`${args.config.basePath}/`, origin).href,
+    }),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
@@ -181,15 +227,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     resolvedRoute: null,
     resolvedTemplate: null,
     access: null,
-    // Best-effort fallback for tests / runtimes that don't pass an
-    // explicit origin: derive from the inbound request URL. Production
-    // always passes the canonical operator-set origin so URLs in
-    // outgoing email are stable across worker geos. The origin may be an
-    // `(env) => …` resolver — resolve it here, where the runtime env exists.
-    origin:
-      args.origin !== undefined
-        ? resolveEnvInput(args.origin, args.env)
-        : new URL(args.request.url).origin,
+    origin,
     dev: args.dev,
     // Provisional no-op — swapped for the real collector below iff a consumer
     // votes to sample this request. Consumers see the assembled context when

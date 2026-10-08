@@ -15,6 +15,8 @@ import type {
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app-context.js";
 import type { DocumentManifest } from "../document-manifest.js";
+import type { MailCatalogs } from "../mail/catalogs.js";
+import type { DeclaredMails } from "../mail/declared.js";
 import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
@@ -53,6 +55,8 @@ import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { createMailCatalogs } from "../mail/catalogs.js";
+import { declareMails } from "../mail/declared.js";
 import { resolveImageRoleIndex } from "../plugin/image-roles.js";
 import {
   collectContributedBlocks,
@@ -210,6 +214,13 @@ export interface PlumixApp {
    * `theme.shortcodes`, last-wins, built once at boot.
    */
   readonly shortcodes: ShortcodeRegistry;
+  /**
+   * Every declared mail by name — core's and each plugin's `mails` — with the
+   * site's and the theme's overrides applied, checked once at boot.
+   */
+  readonly mails: DeclaredMails;
+  /** Core's mail catalog under every plugin's, per locale, for `ctx.mail`. */
+  readonly mailCatalogs: MailCatalogs;
   /**
    * Sanitizer allowlist the blocks that render stored HTML
    * (`core/html`, `core/rich-text`) are held to, built once from the
@@ -482,6 +493,12 @@ export async function buildApp(
     blocks,
     marks,
     shortcodes,
+    mails: declareMails({
+      plugins: config.plugins,
+      theme: config.theme.mail,
+      site: config.mail?.overrides,
+    }),
+    mailCatalogs: createMailCatalogs(runtime.pluginCatalogs),
     htmlAllowlist,
     document,
     assetManifest,

@@ -213,3 +213,18 @@ msgstr "Потрібна електронна адреса."
 #: src/refusals.ts
 msgid "plugin.comments.error.rate_limited"
 msgstr "Забагато коментарів — спробуйте трохи згодом."
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.subject"
+msgstr "Коментар очікує на модерацію"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.intro"
+msgstr "{authorName} залишає коментар до «{entryTitle}», який очікує на перевірку:"
+
+#. js-lingui-explicit-id
+#: src/server/mail.ts
+msgid "plugin.comments.mail.pending.review"
+msgstr "Перегляньте його в черзі модерації:"
