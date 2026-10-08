@@ -83,7 +83,7 @@ export async function computeManifestAndRegistry(
   // If `@plumix/admin`'s dist is stale — a workspace plugin added since it
   // was last built — the link resolves but the glob never saw it, and the
   // plugin's strings fall back to `descriptor.message` silently. Rebuild
-  // @plumix/admin to refresh. The info line below makes that debuggable.
+  // @plumix/admin to refresh.
   const adminBundledPluginIds = new Set(
     plugins
       .filter(
@@ -97,11 +97,6 @@ export async function computeManifestAndRegistry(
       )
       .map((p) => p.id),
   );
-  if (adminBundledPluginIds.size > 0) {
-    console.info(
-      `[plumix] skipping pluginI18n URLs for workspace-bundled plugins (admin's import.meta.glob is expected to cover): ${Array.from(adminBundledPluginIds).join(", ")}`,
-    );
-  }
   // Forward plugin descriptors so `buildManifest` can emit
   // `pluginI18n` URL maps for plugins declaring an `i18n` slot
   // (slice 17 #697 runtime catalog registry).
