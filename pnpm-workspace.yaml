@@ -19,7 +19,6 @@ minimumReleaseAge: 10080
 # A security override may name a version younger than that. List the package
 # here while it does, and drop it the next time the override is refreshed.
 minimumReleaseAgeExclude:
-  - source-map-js # 1.2.2 closes GHSA-68fv-2mgg-jv7q
   - handlebars # 4.7.10 closes GHSA-p8wg-vrv2-v86f, GHSA-8r5x-fm3f-whwj, GHSA-xw65-4hp5-5hc7
 
 # Default catalog: version-coordinated deps that aren't part of a multi-package
