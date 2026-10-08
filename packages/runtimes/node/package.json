@@ -64,7 +64,8 @@
       ],
       "readme": "scaffold/README-deploy.md",
       "files": {
-        ".env.example": "scaffold/env.example"
+        ".env.example": "scaffold/env.example",
+        "pnpm-workspace.yaml": "scaffold/pnpm-workspace.yaml"
       },
       "capabilities": {
         "storage": {
