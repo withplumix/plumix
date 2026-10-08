@@ -1,6 +1,13 @@
 name: "Setup and install"
 description: "Common setup steps for CI"
 
+inputs:
+  turbo-cache:
+    description: >-
+      Restore and save this job's local turbo cache. Off in a job that never
+      runs turbo, which would otherwise have no cache directory to save.
+    default: "true"
+
 runs:
   using: composite
   steps:
@@ -30,10 +37,12 @@ runs:
     #
     # Keyed per job: each one caches only the tasks it runs, and restores its
     # own previous state rather than racing the other sixteen for one key.
-    - shell: bash
+    - if: inputs.turbo-cache == 'true'
+      shell: bash
       run: echo "TURBO_CACHE_DIR=.turbo/cache" >> "$GITHUB_ENV"
 
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - if: inputs.turbo-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
         key: turbo-${{ github.job }}-${{ github.sha }}

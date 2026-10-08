@@ -78,7 +78,12 @@ jobs:
 
       # no npm auth on purpose: a token .npmrc resolves to an empty token and
       # shadows OIDC trusted publishing
+      #
+      # A publish builds without a turbo cache, and an ordinary merge runs no
+      # turbo at all.
       - uses: ./.github/actions/setup
+        with:
+          turbo-cache: "false"
 
       # Ordinary merges have nothing to publish; skip the step below so they
       # don't run a full cold build for a no-op `changeset publish`.
