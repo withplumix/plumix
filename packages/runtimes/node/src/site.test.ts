@@ -6,6 +6,7 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { PluginDescriptor } from "plumix/plugin";
 import type { Scheduler } from "plumix/runtime";
+import type { MockInstance } from "vitest";
 import { plumix } from "plumix";
 import { auth as authConfig } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
@@ -123,6 +124,9 @@ async function siteFor({ plugins = [], runtime = {} }: SiteOptions = {}) {
 
 describe("createNodeSite — scheduled", () => {
   test("answers with the run's report, so a failed task is not swallowed", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const { site } = await siteFor({ plugins: [failing] });
 
     const report = await site.handler.scheduled({
@@ -132,12 +136,19 @@ describe("createNodeSite — scheduled", () => {
 
     // `ran` also counts core's own `*/5` task, which shares this minute.
     expect(report).toMatchObject({ failed: ["failing:always-fails"] });
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "failing:always-fails" failed: boom`,
+      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
+    );
   });
 
   test("the report reaches the scheduler's failure logging", async () => {
     // The whole chain the shipped cron path walks: firing → handler → report →
     // the one line that says the firing did not do its job. Dropping the
     // return anywhere along it leaves an operator with silence (#2303).
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const { site } = await siteFor({ plugins: [failing] });
     const clock = virtualClock("2026-09-07T02:58:00Z");
     const logger = quiet();
@@ -152,6 +163,10 @@ describe("createNodeSite — scheduled", () => {
 
     expect(logger.error).toHaveBeenCalledWith(
       `[plumix] cron "${CRON}": 1 task(s) failed: failing:always-fails`,
+    );
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "failing:always-fails" failed: boom`,
+      expect.objectContaining({ taskId: "always-fails", plugin: "failing" }),
     );
   });
 
@@ -227,6 +242,7 @@ describe("createNodeSite — serveWhenMain", () => {
       const exit = vi
         .spyOn(process, "exit")
         .mockImplementation(() => undefined as never);
+      const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
       const { site, connected, closed } = await siteFor({ runtime: { cron } });
       signal.throwIfAborted();
 
@@ -243,12 +259,20 @@ describe("createNodeSite — serveWhenMain", () => {
       await running.drain("SIGTERM");
       expect(exit).toHaveBeenCalledWith(0);
       expect(closed).toContain("/");
+      expect(log).toHaveBeenCalledWith("plumix: SIGTERM received, draining");
     },
   );
 });
 
 describe("serveProcess", () => {
   const noop: ServeProcessOptions["listener"] = (_req, res) => res.end();
+
+  // A serving process announces binding and draining on stdout. Whether the
+  // bind lands before a test drains is a race, so every test here takes it.
+  let log: MockInstance<typeof console.log>;
+  beforeEach(() => {
+    log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  });
 
   function harness(overrides: Partial<ServeProcessOptions> = {}) {
     const exit = vi.fn();
@@ -342,6 +366,9 @@ describe("serveProcess", () => {
     // A stop close to the budget leaves the drain a real but small slice, so
     // the two worlds are far apart: one budget spends 600ms, one per step
     // spends 1100. The slack either side of the threshold is STOP / 2.
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const BUDGET = 600;
     const STOP = 500;
     const scheduler: Scheduler = {
@@ -373,6 +400,12 @@ describe("serveProcess", () => {
     // The 5ms covers a timer firing early against `Date.now()` rounding on a
     // busy host (#2582); per-step spending is still ~500ms away.
     expect(elapsed).toBeGreaterThanOrEqual(BUDGET - 5);
+    expect(log).toHaveBeenCalledWith(
+      `plumix: listening on http://127.0.0.1:${String(port)}`,
+    );
+    expect(error).toHaveBeenCalledWith(
+      `plumix: exiting with in-flight responses cut; the ${String(BUDGET)}ms shutdown budget ran out`,
+    );
   });
 
   test("exits non-zero and says so when the budget cut a scheduled run", async () => {
@@ -395,6 +428,9 @@ describe("serveProcess", () => {
   });
 
   test("exits non-zero when deferred work is abandoned", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const { exit, drain } = harness({
       dispose: () => Promise.resolve({ abandoned: 2 }),
     });
@@ -402,6 +438,9 @@ describe("serveProcess", () => {
     await drain("SIGTERM");
 
     expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(
+      "plumix: exiting with 2 deferred task(s) abandoned",
+    );
   });
 
   test("exits zero when everything drained", async () => {
@@ -410,5 +449,6 @@ describe("serveProcess", () => {
     await drain("SIGTERM");
 
     expect(exit).toHaveBeenCalledWith(0);
+    expect(log).toHaveBeenCalledWith("plumix: SIGTERM received, draining");
   });
 });
