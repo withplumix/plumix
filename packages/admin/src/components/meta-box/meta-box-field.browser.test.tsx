@@ -481,15 +481,20 @@ describe("MetaBoxField dispatcher", () => {
 
       // Invalid JSON — error surfaces, form value untouched. `paste` avoids
       // userEvent treating `{` as a kbd-shortcut delimiter.
+      // Chromium takes its select-all shortcut from the host OS: Cmd+A on
+      // macOS, Ctrl+A elsewhere.
+      const selectAll = /Mac/i.test(navigator.userAgent)
+        ? "{Meta>}a{/Meta}"
+        : "{Control>}a{/Control}";
       await userEvent.click(editor);
-      await userEvent.keyboard("{Control>}a{/Control}");
+      await userEvent.keyboard(selectAll);
       await userEvent.paste("{not-json");
       expect(
         screen.getByTestId("meta-box-field-k-input-error"),
       ).toHaveTextContent("Invalid JSON");
 
       // Valid JSON — error clears, parsed value propagates.
-      await userEvent.keyboard("{Control>}a{/Control}");
+      await userEvent.keyboard(selectAll);
       await userEvent.paste('{"b":2}');
       expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
       expect(
