@@ -17,10 +17,14 @@ function exportsFor(pkg: string, subpath: string): string[] {
   return file === undefined ? [] : (published.get(file) ?? []);
 }
 
-test("every covered package is a devDependency, so turbo builds it first", () => {
+// Only a package with a covered subpath has declarations to read. Depending
+// on one without (create-plumix-app exports only `./package.json`) orders
+// nothing, and its `bin` would point at a `dist/` a fresh install lacks.
+test("every covered package with declarations is a devDependency, so turbo builds it first", () => {
   const dependencies = ownDevDependencies();
   expect(
     covered
+      .filter(({ subpaths }) => subpaths.size > 0)
       .map(({ name }) => name)
       .filter((name) => !dependencies.includes(name)),
     "add each one to tooling/published-surface/package.json's devDependencies",
