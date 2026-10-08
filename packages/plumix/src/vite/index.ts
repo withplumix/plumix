@@ -40,6 +40,7 @@ import {
 import type { LoadConfigOptions } from "../cli/load-config.js";
 import type { BlockModuleRef } from "./block-module-resolver.js";
 import type { DiscoveredIsland } from "./island-transform.js";
+import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import { loadConfig } from "../cli/load-config.js";
 import {
   ADMIN_URL_PREFIX,
@@ -118,7 +119,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let workerExports: readonly string[] = [];
   // Populated from each plugin's `i18n` slot on each regenerate; served by the
   // `virtual:plumix/plugin-catalogs` module the generated entry imports.
-  let pluginCatalogFiles: ReadonlyMap<string, readonly string[]> = new Map();
+  let pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]> =
+    new Map();
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
@@ -559,7 +561,7 @@ async function regenerate(
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
   workerExports: readonly string[];
-  pluginCatalogFiles: ReadonlyMap<string, readonly string[]>;
+  pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]>;
   editorBlockModules: readonly BlockModuleRef[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
