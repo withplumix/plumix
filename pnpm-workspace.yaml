@@ -129,9 +129,9 @@ catalogs:
     "@vitejs/plugin-react": ^6.1.1
     vite: ^8.3.0
   vitest:
-    "@vitest/browser-playwright": ^5.0.1
-    "@vitest/coverage-v8": ^5.0.1
-    vitest: ^5.0.1
+    "@vitest/browser-playwright": ^5.0.3
+    "@vitest/coverage-v8": ^5.0.3
+    vitest: ^5.0.3
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
