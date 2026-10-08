@@ -44,6 +44,8 @@ export default defineConfig({
       // Keeps a roster page's right rail a section index rather than a list as
       // long as the page. Pages override in frontmatter.
       tableOfContents: { maxHeadingLevel: 2 },
+      // `src/pages/404.astro` renders the not-found page; it says why.
+      disable404Route: true,
       social: [
         {
           icon: "github",
