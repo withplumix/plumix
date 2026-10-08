@@ -113,7 +113,11 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers only .github/workflows; a composite action is read from its
+    # own directory.
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"
       day: "monday"
