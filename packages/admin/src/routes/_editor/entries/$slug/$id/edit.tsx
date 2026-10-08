@@ -7,7 +7,6 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
-import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import {
   resolveEditorMode,
   supportsEditor,
@@ -54,6 +53,7 @@ import type { EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
 import {
+  coreBlocks,
   createBlockRegistry,
   defineEntryContent,
   isEntryContent,
@@ -95,10 +95,12 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Core + plugin blocks supply the inspector's input schemas. Built once at
-// module load.
-registerCoreBlocks();
-const registry = createBlockRegistry(getRegisteredBlocks());
+// Core + plugin blocks supply the inspector's input schemas, plugin specs
+// winning a name clash (`createBlockRegistry` is last-write-wins). Only the
+// component reads it, so the router's code-splitter moves it, and every core
+// block with its highlighter and sanitizer, out of the entry chunk. A
+// top-level call here would stay behind in the route file the entry imports.
+const registry = createBlockRegistry([...coreBlocks, ...getRegisteredBlocks()]);
 
 // Theme + plugin patterns, surfaced in the inserter alongside the blocks.
 const patterns = getPatterns();

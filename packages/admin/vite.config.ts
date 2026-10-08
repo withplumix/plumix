@@ -108,6 +108,45 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      // The timings warning blames @tailwindcss/vite for most of the build, but
+      // it counts wall time across awaits. A CPU profile of this build puts
+      // Tailwind at ~0.5 s (its scan of every source is ~0.1 s), and its
+      // compile setup mostly waits behind other plugins' synchronous work. The
+      // real CPU cost is TanStack's code-splitter, ~2.8 s of Babel: it parses
+      // each route file once per split it emits, which is how it splits.
+      // Nothing here is misconfigured, so the warning has nothing to act on.
+      checks: { bundlerTimings: false },
+      output: {
+        // The entry hands these libraries to plugin chunks as whole namespaces
+        // on `window.plumix.runtime` (lib/plumix-globals.ts), so they load at
+        // boot whatever the routes import. Giving each family its own chunk
+        // keeps their hashes stable across admin-only releases, so a browser
+        // re-downloads only the admin's own code, and lets them load in
+        // parallel. Higher priority claims a shared dependency first.
+        codeSplitting: {
+          groups: [
+            {
+              name: "react",
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              priority: 30,
+            },
+            {
+              name: "tanstack",
+              test: /[\\/]node_modules[\\/]@tanstack[\\/](history|query-core|react-query|react-router|react-store|router-core|store)[\\/]/,
+              priority: 20,
+            },
+            {
+              name: "radix",
+              test: /[\\/]node_modules[\\/](radix-ui|@radix-ui[\\/][^\\/]+)[\\/]/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
+  },
   server: {
     port: ADMIN_DEV_PORT,
     strictPort: true,
