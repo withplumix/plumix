@@ -79,10 +79,12 @@ jobs:
       # no npm auth on purpose: a token .npmrc resolves to an empty token and
       # shadows OIDC trusted publishing
       #
-      # A publish builds without a turbo cache, and an ordinary merge runs no
-      # turbo at all.
+      # A push to main is the only run whose cache every pull request can
+      # restore, so this job saves the pnpm store. A publish builds without a
+      # turbo cache, and an ordinary merge runs no turbo at all.
       - uses: ./.github/actions/setup
         with:
+          save-pnpm-store: "true"
           turbo-cache: "false"
 
       # Ordinary merges have nothing to publish; skip the step below so they
