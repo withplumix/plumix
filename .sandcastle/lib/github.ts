@@ -254,8 +254,10 @@ export const pushBranch = async (
   worktreePath: string,
 ): Promise<void> => {
   await retryWhatGitHubDropped(
-    async () =>
-      git(["push", "--force-with-lease", "-u", "origin", branch], worktreePath),
+    async () => {
+      git(["remote", "prune", "origin"], worktreePath);
+      git(["push", "--force-with-lease", "-u", "origin", branch], worktreePath);
+    },
     (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   );
 };
