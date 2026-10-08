@@ -43,6 +43,13 @@ interface ReadThroughArgs {
    * so it can read the route's resolved entity (e.g. the entry id).
    */
   readonly tags: () => readonly string[];
+  /**
+   * Whether the render read the principal (ADR 0030). Evaluated after
+   * `render`: a personal render is one member's page, so it is neither stored
+   * under the segment's entry nor announced as shared, and the `cdn` record
+   * says so. A stored copy of the same segment is still served on a hit.
+   */
+  readonly personal: () => boolean;
 }
 
 /**
@@ -54,8 +61,17 @@ interface ReadThroughArgs {
  * non-GET/HEAD, search, no route) render live and touch the CDN not at all.
  */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const { request, segment, intentKind, cdn, defer, telemetry, render, tags } =
-    args;
+  const {
+    request,
+    segment,
+    intentKind,
+    cdn,
+    defer,
+    telemetry,
+    render,
+    tags,
+    personal,
+  } = args;
 
   const originStore = cdn.store !== undefined;
   const reason =
@@ -88,6 +104,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
     fact: { segment },
     render,
     tags,
+    personal,
   });
 }
 
@@ -182,9 +199,14 @@ interface LookupArgs {
   readonly tags: () => readonly string[];
   /**
    * A condition on the fresh response beyond its status. Only the route path
-   * sets one; a page render is shareable on its status alone.
+   * sets one.
    */
   readonly shareable?: (fresh: Response) => boolean;
+  /**
+   * Whether the render read the principal. Only the page path sets one: a
+   * route answers for its opt-in, and its response speaks for itself above.
+   */
+  readonly personal?: () => boolean;
 }
 
 // Shared by both read-throughs, once their own bypass rules have passed. The
@@ -204,12 +226,21 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
   }
 
   const fresh = await render();
+  const personal = args.personal?.() === true;
   const shared =
-    responseIsShareable(fresh.status) && (shareable?.(fresh) ?? true);
+    responseIsShareable(fresh.status) &&
+    !personal &&
+    (shareable?.(fresh) ?? true);
   // The Workers Cache API persists GET responses only, so a HEAD render is
   // decorated and served without filling an entry.
   const stored = store !== undefined && shared && key.method === "GET";
-  telemetry.record("cdn", { ...fact, decision: "miss", stored, originStore });
+  telemetry.record("cdn", {
+    ...fact,
+    decision: "miss",
+    stored,
+    originStore,
+    ...(personal ? { personal: true } : {}),
+  });
   if (!shared) return fresh;
 
   const entryTags = tags();

@@ -68,6 +68,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: () => ["e:7"],
+      personal: () => false,
     });
 
     // The visitor's copy carries the freshness and tags the CDN reads — the
@@ -97,6 +98,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     // The stored copy was decorated on the way in; decorating it again would
@@ -122,6 +124,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: () => ["e:7"],
+      personal: () => false,
     });
 
     expect(result.headers.get(DECORATED)).toBe("e:7");
@@ -143,6 +146,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(result).toBe(fresh);
@@ -168,6 +172,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     // The stored/looked-up key folds the segment into the URL and carries no
@@ -200,6 +205,7 @@ describe("readThrough", () => {
       telemetry,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(result).toBe(fresh);
@@ -234,6 +240,7 @@ describe("readThrough", () => {
       telemetry,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(cdnFacts(telemetry)).toEqual([
@@ -242,6 +249,41 @@ describe("readThrough", () => {
         stored: false,
         segment: "authenticated",
         originStore: false,
+      },
+    ]);
+  });
+
+  it("neither stores nor decorates a personal render, and the record says so", async () => {
+    const { cdn, match, put, decorate } = spies();
+    const fresh = new Response("members", { status: 200 });
+    const render = vi.fn(() => Promise.resolve(fresh));
+    const telemetry = createTelemetryCollector();
+
+    const result = await readThrough({
+      request: GET("https://site.test/members"),
+      segment: "authenticated",
+      intentKind: "entry",
+      cdn,
+      defer: immediateDefer,
+      telemetry,
+      render,
+      tags: () => ["e:7"],
+      personal: () => true,
+    });
+
+    // The lookup still ran: a stored copy of the segment is served on a hit,
+    // and the personal render does not evict it.
+    expect(match).toHaveBeenCalledOnce();
+    expect(result).toBe(fresh);
+    expect(put).not.toHaveBeenCalled();
+    expect(decorate).not.toHaveBeenCalled();
+    expect(cdnFacts(telemetry)).toEqual([
+      {
+        decision: "miss",
+        stored: false,
+        segment: "authenticated",
+        originStore: true,
+        personal: true,
       },
     ]);
   });
@@ -261,6 +303,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(match).not.toHaveBeenCalled();
@@ -284,6 +327,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: () => ["t:school"],
+      personal: () => false,
     });
 
     expect(match).toHaveBeenCalledOnce();
@@ -306,6 +350,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(render).toHaveBeenCalledOnce();
@@ -331,6 +376,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: () => ["t:post"],
+      personal: () => false,
     });
 
     // The store strips the cookie from a copy nobody else holds, so it keeps
@@ -355,6 +401,7 @@ describe("readThrough", () => {
       telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
+      personal: () => false,
     });
 
     expect(result).toBe(fresh);
@@ -375,6 +422,7 @@ describe("readThrough", () => {
       telemetry,
       render: () => Promise.resolve(new Response("body")),
       tags: noTags,
+      personal: () => false,
     });
 
     expect(cdnFacts(telemetry)).toEqual([
@@ -399,6 +447,7 @@ describe("readThrough", () => {
       telemetry,
       render: () => Promise.resolve(new Response("body")),
       tags: noTags,
+      personal: () => false,
     });
 
     // Nothing ever hits at the origin here, so `stored: false` is permanent and

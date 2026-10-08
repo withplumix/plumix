@@ -1,18 +1,24 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
-import type { AuthNamespace } from "../context/app-context.js";
+import type {
+  AuthenticatedUser,
+  AuthNamespace,
+  Db,
+} from "../context/app-context.js";
+import type { UserRole } from "../db/schema/users.js";
 import type { AdminBarNode } from "./types.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
-import { PlumixAdminBar } from "./component.js";
+import { createTestContext } from "../test/context.js";
+import { adminBarChrome, PlumixAdminBar } from "./component.js";
 import { registerCoreAdminBarContributors } from "./core-contributors.js";
 
 const emptyRegistry = createBlockRegistry([]);
 
-const user = {
+const user: AuthenticatedUser = {
   id: 7,
   email: "editor@cms.example",
   role: "editor",
@@ -23,96 +29,66 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
-describe("PlumixAdminBar", () => {
-  test("renders nothing when user is null", () => {
-    const hooks = new HookRegistry();
+// The chrome as a page renders it: the bar for the principal on the context,
+// with the core contributors registered unless a test registers its own.
+function renderChrome(
+  viewer: AuthenticatedUser | null,
+  hooks = withCoreContributors(),
+): string {
+  const ctx = createTestContext({ db: {} as Db, user: viewer, hooks });
+  return renderToStaticMarkup(
+    <PlumixProvider value={{ registry: emptyRegistry }}>
+      {adminBarChrome(ctx, undefined)}
+    </PlumixProvider>,
+  );
+}
 
-    const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: null }}>
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="My Site"
-          auth={auth}
-          entryTypes={entryTypes}
-        />
-      </PlumixProvider>,
-    );
+function withCoreContributors(): HookRegistry {
+  const hooks = new HookRegistry();
+  registerCoreAdminBarContributors(hooks);
+  return hooks;
+}
 
-    expect(html).toBe("");
+describe("adminBarChrome", () => {
+  test("renders nothing when there is no principal", () => {
+    expect(renderChrome(null)).toBe("");
   });
 
   test("renders nothing for a subscriber, who may not use the admin", () => {
-    const subscriber = { ...user, role: "subscriber" };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
-    const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: subscriber }}>
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="My Site"
-          auth={auth}
-          entryTypes={entryTypes}
-        />
-      </PlumixProvider>,
-    );
-
-    expect(html).toBe("");
+    expect(renderChrome({ ...user, role: "subscriber" })).toBe("");
   });
 
   test("does not run admin_bar:nodes handlers for a subscriber", () => {
-    const subscriber = { ...user, role: "subscriber" };
     const hooks = new HookRegistry();
     const handler = vi.fn((nodes: readonly AdminBarNode[]) => nodes);
     hooks.addFilter("admin_bar:nodes", handler, { plugin: "test" });
 
-    renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: subscriber }}>
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="My Site"
-          auth={auth}
-          entryTypes={entryTypes}
-        />
-      </PlumixProvider>,
-    );
+    renderChrome({ ...user, role: "subscriber" }, hooks);
 
     expect(handler).not.toHaveBeenCalled();
   });
 
-  test.each(["contributor", "admin"])("renders the bar for a %s", (role) => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
+  test.each<UserRole>(["contributor", "admin"])(
+    "renders the bar for a %s",
+    (role) => {
+      expect(renderChrome({ ...user, role })).toContain(
+        'data-testid="plumix-admin-bar"',
+      );
+    },
+  );
+});
 
-    const html = renderToStaticMarkup(
-      <PlumixProvider
-        value={{ registry: emptyRegistry, user: { ...user, role } }}
-      >
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="My Site"
-          auth={auth}
-          entryTypes={entryTypes}
-        />
-      </PlumixProvider>,
-    );
-
-    expect(html).toContain('data-testid="plumix-admin-bar"');
-  });
-
+describe("PlumixAdminBar", () => {
   test("renders nothing when a filter empties the node list", () => {
-    const admin = { ...user, role: "admin" };
+    const admin: AuthenticatedUser = { ...user, role: "admin" };
     const hooks = new HookRegistry();
     registerCoreAdminBarContributors(hooks);
     hooks.addFilter("admin_bar:nodes", () => [], { plugin: "theme" });
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: admin }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={admin}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -130,8 +106,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -149,8 +126,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -175,8 +153,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -205,8 +184,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -224,8 +204,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: ukUser }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={ukUser}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -244,8 +225,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: arUser }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={arUser}
           hooks={hooks}
           request={request}
           siteName="موقعي"
@@ -267,8 +249,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: arUser }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={arUser}
           hooks={hooks}
           request={request}
           siteName="موقعي"
@@ -289,8 +272,9 @@ describe("PlumixAdminBar", () => {
     ]);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -312,8 +296,9 @@ describe("PlumixAdminBar", () => {
     ]);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -336,8 +321,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -363,8 +349,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -384,8 +371,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -407,8 +395,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: named }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={named}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -429,8 +418,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"
@@ -451,8 +441,9 @@ describe("PlumixAdminBar", () => {
     registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user }}>
+      <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
+          viewer={user}
           hooks={hooks}
           request={request}
           siteName="My Site"

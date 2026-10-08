@@ -463,9 +463,12 @@ async function resolveSingle(
     preview: overlaid !== null,
   };
 
+  const editParam = new URL(ctx.request.url).searchParams.has("plumix.edit");
   const editMode = resolveEditMode({
-    editParam: new URL(ctx.request.url).searchParams.has("plumix.edit"),
-    canEdit: canEditEntry(ctx, row),
+    editParam,
+    // Asked only when the editor was: the edit check is a principal read, which
+    // marks a render personal (ADR 0030), and a plain visit never needs it.
+    canEdit: editParam && canEditEntry(ctx, row),
     previewGrant: await previewTokenGrantsEntry(ctx, row),
   });
 

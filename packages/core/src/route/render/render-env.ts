@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { HtmlAllowlist } from "../../blocks/index.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { DocumentManifest } from "../../document-manifest.js";
+import type { EntryEditRow } from "../../entries/editability.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { ThemeDescriptor } from "../../theme.js";
 import type { AssetManifest } from "./asset-manifest.js";
@@ -33,23 +34,20 @@ export interface RenderEnv {
   readonly chrome: RenderChrome;
 }
 
-/** The entry a page renders, as the admin bar's edit link reads it. */
-export interface QueriedEntryDetails {
-  readonly type: string;
-  readonly canEdit: boolean;
-}
-
 /**
  * The bars a live or preview page carries after its template, inside the same
- * provider so they read the request's user. The composition root fills it:
- * both bars are surfaces, which the renderer may not import. Edit mode renders
- * neither.
+ * provider. The composition root fills it: both bars are surfaces, which the
+ * renderer may not import. Edit mode renders neither.
  */
 export interface RenderChrome {
-  /** The front-end admin bar. It renders nothing for an anonymous visitor. */
+  /**
+   * The front-end admin bar, for the staff principal the render phase decided
+   * on (ADR 0030); nothing for anyone else. `queriedEntry` is the entry the
+   * page renders, which the bar's edit link reads.
+   */
   readonly adminBar: (
     ctx: AppContext,
-    queriedEntryDetails: QueriedEntryDetails | undefined,
+    queriedEntry: EntryEditRow | undefined,
   ) => ReactNode;
   /**
    * The dev debug bar. Unset outside the dev server, so a build carries none
