@@ -40,7 +40,6 @@ import {
 } from "../../blocks/index.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
-import { canEditEntry } from "../../entries/editability.js";
 import { escapeHtml } from "../../escape-html.js";
 import { nonEmpty } from "../../non-empty.js";
 import { applyCanonical } from "../../seo/canonical.js";
@@ -535,10 +534,7 @@ function renderTree({
   // silently clobber the canonical args.
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
-  const queriedEntryDetails =
-    "entry" in data
-      ? { type: data.entry.type, canEdit: canEditEntry(ctx, data.entry) }
-      : undefined;
+  const queriedEntry = "entry" in data ? data.entry : undefined;
   // Body shortcodes get the post-expansion entry — its `title` is already
   // rendered, not the raw `[year]` source the title pass itself expands.
   // Spread rather than asserted: a shortcode reads the entry's fields by name,
@@ -572,7 +568,11 @@ function renderTree({
         tokens,
         breakpoints,
         loaderData,
-        user: ctx.user,
+        // Read on demand: `useUser()` is a principal read, and reading it here
+        // would mark every render personal (ADR 0030).
+        get user() {
+          return ctx.user;
+        },
         authMethods: ctx.authMethods,
         queriedEntry: ctx.resolvedEntity,
         locale: ctx.locale.code,
@@ -598,7 +598,7 @@ function renderTree({
     // own toolbar, and its injected `body { padding-top }` ratchets the
     // auto-sized canvas iframe against the theme's `min-h-screen` into a
     // runaway height loop. Live/preview renders keep it.
-    editMode.mode === "edit" ? null : chrome.adminBar(ctx, queriedEntryDetails),
+    editMode.mode === "edit" ? null : chrome.adminBar(ctx, queriedEntry),
     // Dev-only debug bar — standalone and auth-independent (unlike the admin
     // bar it never gates on a user). `process.env.PLUMIX_DEV` is Vite-empty
     // in prod builds, so this branch tree-shakes out, and the composition root

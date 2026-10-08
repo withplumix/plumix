@@ -293,7 +293,7 @@ _Avoid_: membership, plan, tier — and never "capability" (that is the RBAC sen
 An unmet-requirement outcome — _hard_ (terminal 402/403, no content) or _soft_ (a 200 teaser variant).
 
 **Teaser**:
-The public, principal-invariant preview a soft challenge serves in place of the gated body.
+The public preview a soft challenge serves in place of the gated body. Shared per segment like any other render, so one that reads the principal is a personal render.
 
 **Paywall**:
 The membership-gating scenario a challenge implements. A scenario label, not a type — the mechanics are challenge plus entitlement.
@@ -393,6 +393,10 @@ _Avoid_: email template, notification
 
 **CDN**:
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
+
+**Personal render**:
+A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next member. See ADR 0030.
+_Avoid_: personalized render, per-user render
 
 **Cache tag**:
 A coarse label a stored response carries for invalidation — a type tag (`t:<type>`), an entry tag (`e:<id>`), or a settings tag (`s:<group>`). A page is stored under its resolved intent's tags plus the tags its render declared: the entities it embedded (`embeddedCacheTags`), the settings groups it read (`s:<group>`), and whatever a plugin named with `tagCdnEntry` from a loader, a component or a hook. A plugin route that opted into the CDN is stored under the tags declared while its handler ran, with no intent tags: what it named with `tagCdnEntry`, plus whatever core declared for what it read. A plugin tags in the same vocabulary or in a namespace of its own that nothing purges.

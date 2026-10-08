@@ -53,11 +53,12 @@ export interface ChallengeOptions {
    * The teaser is a *public* document: it is keyed to the visitor's free
    * segment (`anonymous` shares the plain-URL, crawler-indexable entry;
    * `authenticated` shares one entry across every signed-in un-entitled
-   * visitor), so it must be principal-invariant — never place per-user content,
-   * or gated content the operator isn't willing to serve publicly, in a soft
-   * teaser. Withholding the protected body means rendering less of it
-   * server-side; a client-only lock over a fully-delivered body is presentation,
-   * not protection.
+   * visitor). A teaser that reads the principal is personal and leaves the
+   * shared entry unfilled (ADR 0030), so per-user content in it costs the
+   * caching rather than leaking; gated content the operator isn't willing to
+   * serve publicly must still stay out of it. Withholding the protected body
+   * means rendering less of it server-side; a client-only lock over a
+   * fully-delivered body is presentation, not protection.
    */
   readonly soft?: boolean;
 }

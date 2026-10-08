@@ -5,12 +5,13 @@ import type {
   AuthenticatedUser,
   AuthNamespace,
 } from "../context/app-context.js";
+import type { EntryEditRow } from "../entries/editability.js";
 import type { HookExecutor } from "../hooks/registry.js";
-import type { QueriedEntryDetails } from "../route/render/render-env.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
-import { canAccessAdmin } from "../access/contract/rbac.js";
-import { useQueriedEntry, useUser } from "../blocks/renderer/index.js";
+import { useQueriedEntry } from "../blocks/renderer/index.js";
+import { canEditEntry } from "../entries/editability.js";
+import { adminBarViewer } from "../route/render/personal-render.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
 import { barDirection, barMessages, resolveBarLocale } from "./i18n.js";
@@ -22,6 +23,8 @@ import {
 } from "./styles.js";
 
 interface PlumixAdminBarProps {
+  /** The staff principal the bar is for; see {@link adminBarViewer}. */
+  readonly viewer: AuthenticatedUser;
   readonly hooks: HookExecutor;
   readonly request: Request;
   readonly siteName: string;
@@ -31,6 +34,7 @@ interface PlumixAdminBarProps {
 }
 
 export function PlumixAdminBar({
+  viewer,
   hooks,
   request,
   siteName,
@@ -38,15 +42,8 @@ export function PlumixAdminBar({
   queriedEntryDetails,
   entryTypes,
 }: PlumixAdminBarProps): ReactNode {
-  const user = useUser();
   const queriedEntry = useQueriedEntry();
-  if (user === null) return null;
-  // Renderer types widen these structurally to keep blocks free of core.
-  const viewer = user as AuthenticatedUser;
-  // The admin shell refuses a non-staff viewer, so the bar has nothing to
-  // offer them; bail before any `admin_bar:nodes` handler runs.
-  if (!canAccessAdmin(viewer.role)) return null;
-  const locale = resolveBarLocale(user);
+  const locale = resolveBarLocale(viewer);
   const direction = barDirection(locale);
   const strings = barMessages(locale);
   const tree = buildAdminBarTree(
@@ -98,18 +95,33 @@ export function PlumixAdminBar({
   );
 }
 
-/** The bar as a page's chrome; see `RenderChrome.adminBar`. */
+/**
+ * The bar as a page's chrome; see `RenderChrome.adminBar`. Whether it shows
+ * was decided before the render, so nothing here reads the principal for a
+ * page that carries no bar. The staff member's render is personal (ADR 0030),
+ * so the reads the bar then makes change nothing.
+ */
 export function adminBarChrome(
   ctx: AppContext,
-  queriedEntryDetails: QueriedEntryDetails | undefined,
+  queriedEntry: EntryEditRow | undefined,
 ): ReactNode {
+  const viewer = adminBarViewer(ctx);
+  if (viewer === null) return null;
   return (
     <PlumixAdminBar
+      viewer={viewer}
       hooks={ctx.hooks}
       request={ctx.request}
       siteName={ctx.config.auth.magicLink?.siteName ?? "Site"}
       auth={ctx.auth}
-      queriedEntryDetails={queriedEntryDetails}
+      queriedEntryDetails={
+        queriedEntry === undefined
+          ? undefined
+          : {
+              type: queriedEntry.type,
+              canEdit: canEditEntry(ctx, queriedEntry),
+            }
+      }
       entryTypes={ctx.plugins.entryTypes}
     />
   );

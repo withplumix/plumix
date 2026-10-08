@@ -48,6 +48,10 @@ import {
   STATIC_ASSET_EXT,
 } from "../route/index.js";
 import {
+  renderIsPersonal,
+  trackPrincipalReads,
+} from "../route/render/personal-render.js";
+import {
   injectAdminBaseHref,
   rewriteAdminShellLangDir,
 } from "./admin-shell.js";
@@ -564,6 +568,12 @@ async function dispatchPublicRoute(
         : "anonymous";
     }
 
+    // The render phase starts here. The reads above — loading the principal,
+    // the policy resolver, the gate — chose the segment; a principal read from
+    // this point on makes the render personal (ADR 0030), so the context the
+    // render runs with records them.
+    ctx = trackPrincipalReads(ctx);
+
     const cdn = ctx.cdn;
     // No CDN binding ⇒ every render is live and the read-through is never
     // consulted. With a CDN, a `private` segment still flows through it: the
@@ -605,6 +615,7 @@ async function dispatchPublicRoute(
           ? routeTags
           : [...new Set([...routeTags, ...declared])];
       },
+      personal: () => renderIsPersonal(ctx),
     });
   } catch (err) {
     return renderPublicError(app, ctx, url, err);

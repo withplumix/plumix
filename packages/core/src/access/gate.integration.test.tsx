@@ -1,5 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { BlockSpec } from "../blocks/index.js";
+import type { AppContext } from "../context/app-context.js";
+import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type { JsonObject } from "../json.js";
 import type {
   ArchiveTypeData,
@@ -7,6 +10,8 @@ import type {
 } from "../route/contract/resolved-entry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import type { AccessPolicy } from "./policy.js";
+import { defineBlock } from "../blocks/index.js";
+import { BlockRenderer, useUser } from "../blocks/renderer/index.js";
 import {
   responseAllowsSharedStorage,
   SEGMENT_KEY_PARAM,
@@ -942,5 +947,436 @@ describe("access gate — per-entry visibility (#1742)", () => {
     expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
       "authenticated",
     );
+  });
+});
+
+// A shared segment stores one copy per segment, so a render that read the
+// principal must never fill it (ADR 0030). Each fixture reads the principal
+// from one seam of the render phase under `authenticatedPolicy`.
+function memberArticles(blocks: readonly BlockSpec[]) {
+  return definePlugin("member-articles", (ctx) => {
+    ctx.registerEntryType("article", {
+      label: "Articles",
+      isPublic: true,
+      access: { default: authenticatedPolicy },
+    });
+    for (const block of blocks) ctx.registerBlock(block);
+  });
+}
+
+// Core's own program has no `plumix/blocks` façade to name the loader context,
+// so each loader narrows the context the dispatcher hands it to what it reads.
+const whoamiBlock = defineBlock({
+  name: "acme/whoami",
+  loaders: {
+    email: ({ ctx }: { readonly ctx: unknown }) => {
+      const { user } = ctx as Pick<AppContext, "user">;
+      return Promise.resolve(user?.email ?? "nobody");
+    },
+  },
+  render: ({ loaders }) => <p data-testid="whoami">{loaders.email}</p>,
+});
+
+// A loader that reads the request but never the principal.
+const plainBlock = defineBlock({
+  name: "acme/plain",
+  loaders: {
+    path: ({ ctx }: { readonly ctx: unknown }) => {
+      const { request } = ctx as Pick<AppContext, "request">;
+      return Promise.resolve(new URL(request.url).pathname);
+    },
+  },
+  render: ({ loaders }) => <p data-testid="plain">{loaders.path}</p>,
+});
+
+const blocksTheme = defineTheme({
+  templates: [
+    entry(({ data }) =>
+      data.entry.contentBlocks ? (
+        <BlockRenderer content={data.entry.contentBlocks} />
+      ) : null,
+    ),
+    fallback(() => null),
+  ],
+});
+
+function Viewer() {
+  return <p data-testid="viewer">{useUser()?.email ?? "nobody"}</p>;
+}
+
+const useUserTheme = defineTheme({
+  templates: [entry(() => <Viewer />), fallback(() => null)],
+});
+
+const documentUserTheme = defineTheme({
+  templates: [
+    entry(
+      defineTemplate<EntryData>({
+        document: ({ ctx }) => ({ title: ctx.user?.email ?? "nobody" }),
+        render: () => null,
+      }),
+    ),
+    fallback(() => null),
+  ],
+});
+
+async function seedArticleWith(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  blockName?: string,
+) {
+  const author = await h.seedUser("admin");
+  return h.factory.entry.create({
+    type: "article",
+    slug: "gated",
+    title: "gated title",
+    content:
+      blockName === undefined
+        ? null
+        : {
+            version: "plumix.v2",
+            blocks: [{ id: "n", name: blockName, attrs: {} }],
+          },
+    status: "published",
+    authorId: author.id,
+    parentId: null,
+  });
+}
+
+function recordedSnapshots() {
+  const snapshots: TelemetrySnapshot[] = [];
+  const telemetry = {
+    consumers: [
+      {
+        id: "in-test",
+        onRequestEnd: (snapshot: TelemetrySnapshot) => {
+          snapshots.push(snapshot);
+        },
+      },
+    ],
+  };
+  const cdnRecords = () =>
+    snapshots.map((snapshot) => snapshot.records.cdn?.map((r) => r.data));
+  return { telemetry, cdnRecords };
+}
+
+describe("access gate — a render that reads the principal is personal (#2915)", () => {
+  test.each([
+    ["a block loader reading ctx.user", blocksTheme, "acme/whoami"],
+    ["a theme component calling useUser()", useUserTheme, undefined],
+    ["a document function reading ctx.user", documentUserTheme, undefined],
+  ])(
+    "%s keeps each member's render out of the shared entry",
+    async (_seam, theme, blockName) => {
+      const { cdn, store, put } = memoryCdn();
+      const { telemetry, cdnRecords } = recordedSnapshots();
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [memberArticles([whoamiBlock])], theme, telemetry },
+      });
+      await seedArticleWith(h, blockName);
+      const alice = await h.seedUser("subscriber");
+      const bob = await h.seedUser("subscriber");
+
+      const first = await h.dispatch(
+        await authed(h, "/article/gated", alice.id),
+      );
+      await h.drainDeferred();
+
+      expect(first.status).toBe(200);
+      expect(await first.text()).toContain(alice.email);
+      expect(first.headers.get("cache-control")).toBe("private, no-store");
+      expect(first.headers.get("vary")?.toLowerCase()).toContain("cookie");
+      expect(put).not.toHaveBeenCalled();
+      expect(store.size).toBe(0);
+      expect(cdnRecords()).toEqual([
+        [
+          {
+            decision: "miss",
+            stored: false,
+            segment: "authenticated",
+            originStore: true,
+            personal: true,
+          },
+        ],
+      ]);
+
+      const second = await h.dispatch(
+        await authed(h, "/article/gated", bob.id),
+      );
+      const body = await second.text();
+      expect(body).toContain(bob.email);
+      expect(body).not.toContain(alice.email);
+    },
+  );
+
+  test("a render:document filter calling ctx.auth.can() keeps the render out of the shared entry", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const can = vi.fn((ctx: AppContext) => ctx.auth.can("entry:article:read"));
+    const headWriter = definePlugin("head-writer", (ctx) => {
+      ctx.addFilter("render:document", (manifest, _data, requestCtx) => ({
+        ...manifest,
+        meta: [{ name: "can-read", content: String(can(requestCtx)) }],
+      }));
+    });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([]), headWriter] },
+    });
+    await seedArticleWith(h);
+    const alice = await h.seedUser("subscriber");
+    const bob = await h.seedUser("subscriber");
+
+    const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
+    await h.drainDeferred();
+    const second = await h.dispatch(await authed(h, "/article/gated", bob.id));
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+    // Rendered twice: the second member never read the first member's copy.
+    expect(can).toHaveBeenCalledTimes(2);
+  });
+
+  test("a document function reading ctx.tokenScopes keeps the render out of the shared entry", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const theme = defineTheme({
+      templates: [
+        entry(
+          defineTemplate<EntryData>({
+            document: ({ ctx }) => ({
+              title: ctx.tokenScopes === null ? "unscoped" : "scoped",
+            }),
+            render: () => null,
+          }),
+        ),
+        fallback(() => null),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])], theme },
+    });
+    await seedArticleWith(h);
+    const member = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toContain("<title>unscoped</title>");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  test("a render that reads no principal is stored once and serves the next member", async () => {
+    const { cdn, store } = memoryCdn();
+    const { telemetry, cdnRecords } = recordedSnapshots();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: {
+        plugins: [memberArticles([plainBlock])],
+        theme: blocksTheme,
+        telemetry,
+      },
+    });
+    await seedArticleWith(h, "acme/plain");
+    const alice = await h.seedUser("subscriber");
+    const bob = await h.seedUser("subscriber");
+
+    const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
+    await h.drainDeferred();
+
+    expect(await first.text()).toContain("/article/gated");
+    expect(store.size).toBe(1);
+    expect(cdnRecords()).toEqual([
+      [
+        {
+          decision: "miss",
+          stored: true,
+          segment: "authenticated",
+          originStore: true,
+        },
+      ],
+    ]);
+
+    const [key] = [...store.keys()];
+    if (key === undefined) throw new Error("expected a stored cdn entry");
+    store.set(key, {
+      response: new Response("SHARED-VARIANT", { status: 200 }),
+      tags: [],
+    });
+    const second = await h.dispatch(await authed(h, "/article/gated", bob.id));
+    expect(await second.text()).toBe("SHARED-VARIANT");
+  });
+
+  test("a policy resolver reading the principal to choose the segment does not make the render personal", async () => {
+    const { cdn, store } = memoryCdn();
+    const readers = definePlugin("readers", (ctx) => {
+      ctx.registerEntryType("article", {
+        label: "Articles",
+        isPublic: true,
+        access: {
+          default: definePolicy({
+            segments: ["readers"],
+            resolve: (c) => {
+              if (!c.user) return redirectToLogin();
+              return c.auth.can("entry:article:read")
+                ? grant("readers")
+                : challenge("forbidden");
+            },
+          }),
+        },
+      });
+      ctx.registerBlock(plainBlock);
+    });
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [readers], theme: blocksTheme },
+    });
+    await seedArticleWith(h, "acme/plain");
+    const member = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    const [key] = [...store.keys()];
+    if (key === undefined) throw new Error("expected a stored cdn entry");
+    expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe("readers");
+  });
+
+  test("a staff member's render carries the admin bar and is personal", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const { telemetry, cdnRecords } = recordedSnapshots();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])], telemetry },
+    });
+    await seedArticleWith(h);
+    const editor = await h.seedUser("editor");
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", editor.id),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('data-testid="plumix-admin-bar"');
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+    expect(cdnRecords()[0]?.[0]).toMatchObject({ personal: true });
+  });
+
+  test("a member whose render would be personal still reads the segment's stored copy", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])], theme: useUserTheme },
+    });
+    await seedArticleWith(h);
+    const editor = await h.seedUser("editor");
+    const key = new URL("https://cms.example/article/gated");
+    key.searchParams.set(SEGMENT_KEY_PARAM, "authenticated");
+    store.set(key.href, {
+      response: new Response("SHARED-VARIANT", { status: 200 }),
+      tags: [],
+    });
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", editor.id),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toBe("SHARED-VARIANT");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(1);
+  });
+
+  test("a subscriber's render carries no admin bar and fills the shared entry", async () => {
+    const { cdn, store } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])] },
+    });
+    await seedArticleWith(h);
+    const member = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).not.toContain("plumix-admin-bar");
+    expect(store.size).toBe(1);
+  });
+
+  // The site resolves a member's saved locale on the public site; the request
+  // alone resolves to the default.
+  const savedLocale = {
+    defaultLocale: "en",
+    locales: ["en", "de"],
+    resolveLocale: (_request: Request, user: { meta: JsonObject } | null) =>
+      user?.meta.locale === "de"
+        ? {
+            code: "de",
+            label: "German",
+            direction: "ltr" as const,
+            enabled: true,
+          }
+        : null,
+  };
+
+  test("a member whose saved locale differs from the request's gets a personal render", async () => {
+    const { cdn, store, put } = memoryCdn();
+    const { telemetry, cdnRecords } = recordedSnapshots();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])], i18n: savedLocale, telemetry },
+    });
+    await seedArticleWith(h);
+    const member = await h.factory.user.create({
+      role: "subscriber",
+      meta: { locale: "de" },
+    });
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toContain('<html lang="de"');
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+    expect(cdnRecords()[0]?.[0]).toMatchObject({ personal: true });
+  });
+
+  test("a member whose preference resolves to the request's locale shares the entry", async () => {
+    const { cdn, store } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [memberArticles([])], i18n: savedLocale },
+    });
+    await seedArticleWith(h);
+    const member = await h.factory.user.create({
+      role: "subscriber",
+      meta: { locale: "en" },
+    });
+
+    const response = await h.dispatch(
+      await authed(h, "/article/gated", member.id),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toContain('<html lang="en"');
+    expect(store.size).toBe(1);
   });
 });
