@@ -78,6 +78,38 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     expect(server?.hmr?.overlay).toBe(true);
   });
 
+  test("keeps the admin staging directory out of the dev server's file watcher", async () => {
+    const configPath = join(dir, "plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+      };`,
+      "utf8",
+    );
+    const plugin = plumix({ configFile: configPath });
+    const result = await (
+      plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
+    )({ root: dir }, { command: "serve", mode: "development" });
+    const ignored = (
+      result as {
+        server?: { watch?: { ignored?: ((path: string) => boolean)[] } };
+      }
+    ).server?.watch?.ignored;
+    const isIgnored = (path: string): boolean =>
+      (ignored ?? []).some((matches) => matches(path));
+
+    expect(isIgnored(join(dir, ".plumix/admin-staging/a1/index.html"))).toBe(
+      true,
+    );
+    expect(
+      isIgnored(join(dir, ".plumix/public/_plumix/admin/index.html")),
+    ).toBe(false);
+    expect(isIgnored(join(dir, ".plumix/worker.ts"))).toBe(false);
+  });
+
   test("defines process.env.PLUMIX_EDITOR from the dev machine's setting so the worker reads it", async () => {
     const configPath = join(dir, "plumix.config.mjs");
     writeFileSync(

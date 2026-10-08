@@ -1,16 +1,14 @@
-import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   copyFile,
   cp,
   mkdir,
   readFile,
-  rm,
   stat,
   writeFile,
 } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
@@ -77,7 +75,7 @@ import {
 } from "./plugin-catalog-resolve.js";
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
 import { stageUserPublic } from "./public-staging.js";
-import { swapIntoPlace } from "./swap-into-place.js";
+import { stageIntoPlace } from "./stage-into-place.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
 // The pre-compiled admin SPA ships as its own package (@plumix/admin). Locate
@@ -265,7 +263,15 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         // entry installs plumix's own overlay, which renders the same
         // `vite:error` payload through the shared dev error surface — the two
         // must not stack. A user can re-enable Vite's in their own config.
-        server: { forwardConsole: false, hmr: { overlay: false } },
+        //
+        // The admin is staged under `.plumix/admin-staging/` before it is swapped
+        // into `publicDir`. Vite would announce every `index.html` written
+        // there as a page reload, so the watcher skips it.
+        server: {
+          forwardConsole: false,
+          hmr: { overlay: false },
+          watch: { ignored: [isInAdminStaging(resolve(scanRoot))] },
+        },
       };
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";
@@ -358,10 +364,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       workerExports = emitted.workerExports;
       pluginCatalogFiles = emitted.pluginCatalogFiles;
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
-      // User `public/` is staged BEFORE admin so the admin SPA's
-      // freshness check still works against its own source mtime —
-      // and the `_plumix/` filter in `stageUserPublic` keeps users
-      // from corrupting admin's subtree on collision.
+      // The `_plumix/` filter in `stageUserPublic` keeps a user's files
+      // out of the admin's subtree, which `stageAdminAssets` owns.
       await stageUserPublic({ workspaceRoot: root, publicDir });
       await stageAdminAssets(
         publicDir,
@@ -655,14 +659,27 @@ async function regenerate(
   };
 }
 
+// Where each process builds its private copy of the admin. A sibling of the
+// default publicDir under the project root, so the swap into place is a
+// rename on one filesystem, and outside publicDir, so the half-built copy is
+// never served or watched.
+function adminStagingRoot(projectRoot: string): string {
+  return resolve(projectRoot, ".plumix/admin-staging");
+}
+
+function isInAdminStaging(projectRoot: string): (path: string) => boolean {
+  const stagingRoot = adminStagingRoot(projectRoot);
+  return (path) =>
+    path === stagingRoot || path.startsWith(`${stagingRoot}${sep}`);
+}
+
 // Copies the compiled admin SPA from the @plumix/admin package into the
 // effective publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
 // (Cloudflare Workers Assets today, equivalents in future adapters) picks the
-// files up from publicDir automatically. Skips the bulk copy when the
-// destination is already at least as fresh as the source so repeated
-// regenerate() calls during dev don't bounce Vite's file watcher — but
-// always rewrites `index.html` with the current manifest, since that one
-// depends on consumer config rather than admin source mtime.
+// files up from publicDir automatically. The copy is built in full outside
+// publicDir and swapped in only when it differs from what is there, so a
+// restart or a config edit that leaves the admin unchanged doesn't bounce
+// Vite's file watcher.
 async function stageAdminAssets(
   publicDir: string,
   manifest: PlumixManifest,
@@ -671,22 +688,21 @@ async function stageAdminAssets(
   projectRoot: string,
   blockModules: readonly BlockModuleRef[],
 ): Promise<void> {
-  const dest = resolve(publicDir, "_plumix/admin");
-  const staging = resolve(publicDir, `_plumix/.admin-staging-${randomUUID()}`);
-  await cp(ADMIN_SOURCE_DIR, staging, { recursive: true });
-  try {
-    await stageAdminInto(
-      staging,
-      manifest,
-      plugins,
-      registry,
-      projectRoot,
-      blockModules,
-    );
-    await swapIntoPlace(staging, dest);
-  } finally {
-    await rm(staging, { recursive: true, force: true });
-  }
+  await stageIntoPlace({
+    stagingRoot: adminStagingRoot(projectRoot),
+    dest: resolve(publicDir, "_plumix/admin"),
+    populate: async (staging) => {
+      await cp(ADMIN_SOURCE_DIR, staging, { recursive: true });
+      await stageAdminInto(
+        staging,
+        manifest,
+        plugins,
+        registry,
+        projectRoot,
+        blockModules,
+      );
+    },
+  });
 }
 
 async function stageAdminInto(
