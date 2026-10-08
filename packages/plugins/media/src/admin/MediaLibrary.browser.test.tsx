@@ -194,6 +194,10 @@ describe.each(MODES)("MediaLibrary in %s mode", (mode) => {
     });
 
     test("a dropped file requests an upload URL", async () => {
+      // The stub's rejection carries no reason the page maps, so it is logged.
+      const error = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
       renderLibrary(mode);
       await screen.findByTestId("media-library-dropzone");
 
@@ -204,6 +208,11 @@ describe.each(MODES)("MediaLibrary in %s mode", (mode) => {
           contentType: "image/png",
           size: 1,
         });
+      });
+      await waitFor(() => {
+        expect(error).toHaveBeenCalledWith(
+          expect.objectContaining({ message: "CONFLICT" }),
+        );
       });
     });
   });
