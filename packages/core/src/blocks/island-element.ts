@@ -344,9 +344,10 @@ type ModuleNamespace = Readonly<Record<string, unknown>>;
 
 // Test-injectable dynamic import. A unit test has no real module URLs to
 // resolve; swapping this lets the retry-and-error paths be exercised
-// without spinning up a bundler.
+// without spinning up a bundler. The URL is the chunk's, read off the page at
+// runtime, so there is nothing for Vite to analyze.
 let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
-  import(url);
+  import(/* @vite-ignore */ url);
 
 export function setDynamicImport(
   fn: (url: string) => Promise<ModuleNamespace>,
