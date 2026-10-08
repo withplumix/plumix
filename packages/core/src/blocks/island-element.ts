@@ -148,7 +148,11 @@ export class PlumixIslandElement extends HTMLElement {
           detail: { element: this },
         }),
       );
-      this.root?.unmount();
+      // A parent island's commit can be what detached us, and React will not
+      // unmount a root synchronously inside another root's render. A
+      // microtask runs once that commit returns.
+      const root = this.root;
+      queueMicrotask(() => root?.unmount());
       this.root = null;
       this.component = null;
     }
