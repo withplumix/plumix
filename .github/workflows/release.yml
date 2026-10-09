@@ -139,4 +139,6 @@ jobs:
         env:
           # No NPM_TOKEN: v2 dropped .npmrc handling entirely, so OIDC trusted
           # publishing is reachable without the empty-token workaround v1 needed.
-          NPM_CONFIG_PROVENANCE: "true"
+          # `changeset publish` runs `pnpm publish`, which reads pnpm_config_*;
+          # pnpm 11+ ignores NPM_CONFIG_*.
+          pnpm_config_provenance: "true"

@@ -108,10 +108,10 @@ describe("planInstall", () => {
     "@plumix/runtime-node": "file:/packs/plumix-runtime-node-0.3.0.tgz",
   };
 
-  it("redirects pnpm through pnpm.overrides, outside any enclosing workspace", () => {
+  it("redirects pnpm through the project's own pnpm-workspace.yaml overrides", () => {
     expect(planInstall("pnpm", tarballs)).toEqual({
-      manifest: { pnpm: { overrides: redirected } },
-      command: ["pnpm", "install", "--ignore-workspace", "--silent"],
+      workspaceOverrides: redirected,
+      command: ["pnpm", "install", "--silent"],
     });
   });
 

@@ -35,7 +35,7 @@ describe("radix context packages resolve to a single instance", () => {
       expect(
         [...versions],
         `${pkg} resolved to multiple versions — run \`pnpm dedupe\` or add a ` +
-          `pnpm.overrides pin. Duplicate React-context packages split the ` +
+          `pnpm-workspace.yaml override. Duplicate React-context packages split the ` +
           `provider from its consumers (the RTL direction bug).`,
       ).toHaveLength(1);
     },
