@@ -83,12 +83,15 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
 
 type Overrides = Readonly<Record<string, string>>;
 
-/** How a combo installs: package.json keys merged in, then the command. */
+/**
+ * How a combo installs: overrides written where its package manager reads
+ * them, then the command.
+ */
 export interface SmokeInstall {
-  readonly manifest: {
-    readonly pnpm?: { readonly overrides: Overrides };
-    readonly overrides?: Overrides;
-  };
+  /** Merged into package.json's top-level `overrides` (Bun). */
+  readonly manifest?: { readonly overrides: Overrides };
+  /** Written as `overrides` in the project's pnpm-workspace.yaml (pnpm). */
+  readonly workspaceOverrides?: Overrides;
   readonly command: readonly [string, ...string[]];
 }
 
@@ -106,11 +109,12 @@ export function planInstall(
   );
   switch (packageManager) {
     case "pnpm":
-      // The project is generated outside the repo, but a workspace above the
-      // temp dir would otherwise swallow it.
+      // pnpm 11+ reads overrides only from pnpm-workspace.yaml. The project's
+      // own file also makes it a workspace root, so a workspace above the temp
+      // dir cannot swallow it.
       return {
-        manifest: { pnpm: { overrides } },
-        command: ["pnpm", "install", "--ignore-workspace", "--silent"],
+        workspaceOverrides: overrides,
+        command: ["pnpm", "install", "--silent"],
       };
     case "bun":
       return {

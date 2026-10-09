@@ -416,7 +416,7 @@ Node 23.8 has `URLPattern` but exports it from `node:url` only, and core uses th
   before publishing a floor of your own.
 </Aside>
 
-Plumix's own repository pins Node to `^24.15.0`, above that floor. A runtime adapter can ask more of its engine than core does: `@plumix/runtime-bun` needs Bun 1.4, whose server waits for in-flight requests on `stop()`, and the repository pins Bun to 1.4.2 in `.bun-version`. [Bun](/deployment/bun/) covers what that adapter adds.
+Plumix's own repository pins Node to `^24.21.0`, above that floor. A runtime adapter can ask more of its engine than core does: `@plumix/runtime-bun` needs Bun 1.4, whose server waits for in-flight requests on `stop()`, and the repository pins Bun to 1.4.2 in `.bun-version`. [Bun](/deployment/bun/) covers what that adapter adds.
 
 ## Proving a slot
 

@@ -69,7 +69,7 @@ pnpm --filter <package>-playground dev    # e.g. @plumix/plugin-blog-playground
 
 A playground serves its package's built output, so rebuild the package after a change (`pnpm exec turbo run build --filter <package>`) and restart it. The apps under `apps/` run the same way.
 
-To try a change in a dependency before its release, point the root `package.json` at your local copy with `pnpm.overrides`, and remove the override before you commit.
+To try a change in a dependency before its release, point an entry under `overrides` in `pnpm-workspace.yaml` at your local copy, and remove the override before you commit.
 
 ## Tests
 

@@ -77,13 +77,36 @@ function packPlumixPackages(destination) {
   return tarballs;
 }
 
-function redirectToTarballs(appDir, patch) {
-  const manifestPath = join(appDir, "package.json");
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  for (const [key, value] of Object.entries(patch)) {
-    manifest[key] = { ...manifest[key], ...value };
+function redirectToTarballs(appDir, install) {
+  if (install.manifest) {
+    const manifestPath = join(appDir, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    for (const [key, value] of Object.entries(install.manifest)) {
+      manifest[key] = { ...manifest[key], ...value };
+    }
+    writeFileSync(
+      manifestPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      "utf8",
+    );
   }
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  if (install.workspaceOverrides) {
+    // The scaffold's pnpm-workspace.yaml declares no `overrides`, so the block
+    // is appended. A missing file is created, which makes the project its own
+    // workspace root either way.
+    const workspacePath = join(appDir, "pnpm-workspace.yaml");
+    const existing = existsSync(workspacePath)
+      ? readFileSync(workspacePath, "utf8")
+      : "";
+    const entries = Object.entries(install.workspaceOverrides).map(
+      ([name, spec]) => `  ${JSON.stringify(name)}: ${JSON.stringify(spec)}`,
+    );
+    writeFileSync(
+      workspacePath,
+      `${existing}${existing && !existing.endsWith("\n") ? "\n" : ""}overrides:\n${entries.join("\n")}\n`,
+      "utf8",
+    );
+  }
 }
 
 /**
@@ -358,7 +381,7 @@ async function smoke(combo, tarballs) {
     if (combo.secondLocale) enableSecondLocale(app);
     if (combo.typescript7) useTypeScript7(app);
     const install = planInstall(pm, tarballs);
-    redirectToTarballs(app, install.manifest);
+    redirectToTarballs(app, install);
     const [installer, ...installArgs] = install.command;
     run(installer, installArgs, app);
     assertNothingFromRegistry(app, pm);

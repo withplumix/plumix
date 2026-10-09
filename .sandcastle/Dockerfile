@@ -50,7 +50,7 @@ ENV PNPM_HOME="/home/agent/.pnpm-bin"
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN mkdir -p /home/agent/.pnpm-bin \
   && corepack enable --install-directory /home/agent/.pnpm-bin \
-  && corepack prepare pnpm@10.33.0 --activate \
+  && corepack prepare pnpm@12.9.0 --activate \
   && pnpm config set store-dir /home/agent/.pnpm-store
 
 # The plugin skills the prompts compose (mattpocock-skills). The repo's
