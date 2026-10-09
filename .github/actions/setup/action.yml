@@ -27,17 +27,21 @@ runs:
       shell: bash
       run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
+    # A lockfile change gives the key a new hash; restore-keys falls back to the
+    # closest older store, so install fetches only what changed.
     - if: inputs.save-pnpm-store == 'true'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
 
     - if: inputs.save-pnpm-store != 'true'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
 
     # The Bun runtime's suites run on real Bun, at the version the repo pins.
     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -46,6 +50,13 @@ runs:
 
     - shell: bash
       run: pnpm install --frozen-lockfile
+
+    # The saving job's store started from an older store via restore-keys;
+    # drop what this lockfile no longer references so the cache doesn't grow
+    # with every lockfile change.
+    - if: inputs.save-pnpm-store == 'true'
+      shell: bash
+      run: pnpm store prune
 
     # Turbo checks its local cache before the remote one and never opens a
     # connection when the local copy answers. Without this every job starts
