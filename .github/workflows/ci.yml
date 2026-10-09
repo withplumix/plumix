@@ -17,7 +17,7 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
   # BENCHMARK ONLY, dropped before merge.
-  CI_BENCH_SALT: shared-build-lintfix-1
+  CI_BENCH_SALT: remote-only-1
 
 jobs:
   commitlint:
@@ -31,8 +31,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          turbo-cache: "false"
       - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
   changesets:
@@ -45,8 +43,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          turbo-cache: "false"
       # We're deliberately in 0.x. A `major` changeset resolves straight to
       # 1.0.0 (changesets does no 0.x demotion), so block it from shipping as a
       # side effect of merging a feature PR — crossing 1.0 is a decision.
@@ -94,15 +90,6 @@ jobs:
       - uses: ./.github/actions/setup
       # The same filter as the smoke job, the widest any job builds.
       - run: pnpm exec turbo run build --filter './packages/**'
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: turbo-build
-          path: .turbo/cache
-          include-hidden-files: true
-          if-no-files-found: error
-          # Turbo's entries are already zstd archives.
-          compression-level: 0
-          retention-days: 1
 
   lint:
     name: Lint
@@ -117,7 +104,6 @@ jobs:
       # than race to reserve the same key.
       - uses: ./.github/actions/setup
         with:
-          build-artifact: "true"
           save-pnpm-store: "true"
       # Not `pnpm lint`: turbo hashes the args after `--` into the dependency
       # `build` tasks as well, so they would miss the shared build.
@@ -144,8 +130,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       - run: pnpm typecheck
 
   knip:
@@ -158,8 +142,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       # Catalogs are gitignored build output; generate them so core's
       # static catalog imports resolve before knip walks the graph.
       - run: pnpm exec turbo run i18n:compile
@@ -175,8 +157,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       # drizzle-kit loads each schema module, and a plugin's imports
       # `plumix/schema`, which resolves to `dist/`.
       - run: pnpm exec turbo run build --filter plumix
@@ -192,8 +172,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       - run: pnpm i18n:check
 
   test:
@@ -246,8 +224,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       # `*.build.test.ts` suites inspect what the build produced; the turbo
       # task pulls the build graph.
       - run: pnpm test:build
@@ -262,8 +238,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       # The scaffolder packs every publishable package to redirect the
       # generated projects at this commit. It depends on none of them, so
       # turbo's `^build` won't build them — do it explicitly.
@@ -294,8 +268,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
 
       # Cache the Playwright browser binaries (~120 MB) keyed on the resolved
       # @playwright/test version (declared via the pnpm catalog, so read the
@@ -424,8 +396,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       - run: pnpm exec turbo run publint attw
 
   spellcheck:
@@ -484,8 +454,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          build-artifact: "true"
       # `starlight-links-validator` runs inside `astro build`, so building the
       # docs site is the link-and-anchor gate for every published page.
       - run: pnpm exec turbo run build --filter @plumix-apps/docs
