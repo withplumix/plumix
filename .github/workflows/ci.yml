@@ -17,7 +17,7 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
   # BENCHMARK ONLY, dropped before merge.
-  CI_BENCH_SALT: grouped-vercel-only-1
+  CI_BENCH_SALT: grouped-vercel-only-2
 
 jobs:
   commitlint:
@@ -88,14 +88,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # The same filter as the smoke job, the widest any job builds. publint and
-      # attw read the packed tarball, so they run where the build is.
-      - run: pnpm exec turbo run build publint attw --filter './packages/**'
+      # The same filter as the smoke job, the widest any job builds.
+      - run: pnpm exec turbo run build --filter './packages/**'
 
-  # Everything that reads the build and nothing else: one turbo run, so the
-  # build arrives once per job rather than once per check.
-  checks:
-    name: Checks
+  # The checks that read the build, in two jobs that each fetch it once.
+  # Tests run as their own step: vitest's timeouts are wall clock, and sharing
+  # the runner with tsc and ESLint is what times them out.
+  lint:
+    name: Lint
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -108,9 +108,22 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           save-pnpm-store: "true"
-      - run: pnpm exec turbo run lint typecheck test:build i18n:check --continue
-      # drizzle-kit loads each schema module through `plumix/schema`, which the
-      # run above has built.
+      - run: pnpm exec turbo run lint i18n:check publint attw --continue
+
+  typecheck:
+    name: Typecheck
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm exec turbo run typecheck --continue
+      - run: pnpm test:build
+      # drizzle-kit loads each schema module through `plumix/schema`, built
+      # by the steps above.
       - run: pnpm migrations:check
 
   format:
