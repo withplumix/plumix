@@ -275,7 +275,6 @@ const config: KnipConfig = {
         // imported. Compiled `.mjs` catalogs are loaded by `i18n-boot`
         // via a template-literal dynamic import that knip can't follow.
         "lingui.config.ts",
-        "locales/*.mjs",
         // Catalog-extractor mirror for `@plumix/core` chrome descriptors
         // (CORE_NAV_GROUPS + CORE_NAV_ITEMS). Exists so `lingui extract`
         // picks the ids into admin's `.po`; never imported at runtime.
@@ -307,7 +306,6 @@ const config: KnipConfig = {
         // (extract/compile) — never statically imported. Same pattern
         // as the `packages/admin` entry above.
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // @plumix/runtime-cloudflare is consumed by the plugin's playground
       // (a sibling workspace), not by `src/`. Declared as a devDep so
@@ -327,7 +325,7 @@ const config: KnipConfig = {
     // pipeline and the self-referencing `./locales/*` subpath — knip
     // can't see either consumer.
     "packages/core": {
-      entry: ["lingui.config.ts", "locales/*.mjs", ...coreExportEntries],
+      entry: ["lingui.config.ts", ...coreExportEntries],
     },
     // The editor's lingui config + compiled catalogs are loaded by the CLI
     // and merged into admin's i18n at runtime (i18n-boot glob) — knip can't
@@ -339,7 +337,6 @@ const config: KnipConfig = {
         // build inputs, which otherwise drops the package.json `exports` entry.
         "src/index.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
         // Visual e2e for the standalone editor playground. With the playwright
         // plugin off (below), list the config + specs so they aren't flagged;
         // the Vite playground entries (vite.config.ts, the HTML script modules)
@@ -359,7 +356,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -376,7 +372,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -390,7 +385,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       playwright: false,
@@ -405,7 +399,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a box off.
@@ -425,7 +418,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
@@ -444,7 +436,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because the playground needs an entry type to hang a card off.
@@ -470,7 +461,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Pages
       // is here because the playground composes it for the `page` entry
@@ -495,7 +485,6 @@ const config: KnipConfig = {
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",
-        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Blog is
       // here because this is the one playground that composes a second

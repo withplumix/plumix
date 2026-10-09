@@ -16,6 +16,8 @@ env:
   FORCE_COLOR: 3
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  # BENCHMARK ONLY, dropped before merge.
+  CI_BENCH_SALT: grouped-vercel-only-2
 
 jobs:
   commitlint:
@@ -29,8 +31,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          turbo-cache: "false"
       - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
   changesets:
@@ -43,8 +43,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-        with:
-          turbo-cache: "false"
       # We're deliberately in 0.x. A `major` changeset resolves straight to
       # 1.0.0 (changesets does no 0.x demotion), so block it from shipping as a
       # side effect of merging a feature PR — crossing 1.0 is a decision.
@@ -78,10 +76,29 @@ jobs:
           vulnerability-check: false
           show-openssf-scorecard: false
 
+  # Builds the package graph once and hands its turbo cache to every job that
+  # needs `dist/`. Each of those jobs used to build it for itself, all at once,
+  # so the remote cache answered with 429s and nothing was shared.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # The same filter as the smoke job, the widest any job builds.
+      - run: pnpm exec turbo run build --filter './packages/**'
+
+  # The checks that read the build, in two jobs that each fetch it once.
+  # Tests run as their own step: vitest's timeouts are wall clock, and sharing
+  # the runner with tsc and ESLint is what times them out.
   lint:
     name: Lint
+    needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,7 +108,23 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           save-pnpm-store: "true"
-      - run: pnpm lint
+      - run: pnpm exec turbo run lint i18n:check publint attw --continue
+
+  typecheck:
+    name: Typecheck
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm exec turbo run typecheck --continue
+      - run: pnpm test:build
+      # drizzle-kit loads each schema module through `plumix/schema`, built
+      # by the steps above.
+      - run: pnpm migrations:check
 
   format:
     name: Format
@@ -104,17 +137,6 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm format
 
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: pnpm typecheck
-
   knip:
     name: Knip
     runs-on: ubuntu-latest
@@ -124,35 +146,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # Catalogs are gitignored build output; generate them so core's
-      # static catalog imports resolve before knip walks the graph.
-      - run: pnpm exec turbo run i18n:compile
       - run: pnpm knip
-
-  migrations:
-    name: Migrations
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      # drizzle-kit loads each schema module, and a plugin's imports
-      # `plumix/schema`, which resolves to `dist/`.
-      - run: pnpm exec turbo run build --filter plumix
-      - run: pnpm migrations:check
-
-  i18n:
-    name: i18n
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: pnpm i18n:check
 
   test:
     name: Test
@@ -194,21 +188,9 @@ jobs:
 
       - run: pnpm test:unit
 
-  test-build:
-    name: Test (build)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      # `*.build.test.ts` suites inspect what the build produced; the turbo
-      # task pulls the build graph.
-      - run: pnpm test:build
-
   smoke:
     name: Smoke (scaffold)
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -236,6 +218,7 @@ jobs:
 
   test-e2e:
     name: Test (e2e)
+    needs: build
     runs-on: ubuntu-latest
     # The heaviest job (Playwright across admin + plugins) runs close to 10 min;
     # give it headroom so a slow/loaded runner doesn't cancel it mid-suite.
@@ -361,28 +344,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 5
 
-  publint:
-    name: Publint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: pnpm publint
-
-  attw:
-    name: Are The Types Wrong
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: pnpm attw
-
   spellcheck:
     name: Spellcheck
     runs-on: ubuntu-latest
@@ -431,6 +392,7 @@ jobs:
 
   docs:
     name: Docs (build)
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
