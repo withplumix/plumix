@@ -1,4 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import { definePlugin, defineTheme } from "@plumix/core";
 
@@ -92,5 +95,38 @@ describe("computeManifestAndRegistry", () => {
 
     expect(registry.frameworkRoutes).toEqual(routes);
     expect(manifest.frameworkRoutes).toEqual({ author: false });
+  });
+
+  test("a workspace-bundled plugin builds without a console line", async () => {
+    // The plumix monorepo's own layout: pnpm links the plugin straight at
+    // `packages/plugins/<id>`, which admin's glob bakes in. That is the
+    // expected case on every site build there, so it is not worth a line.
+    const projectRoot = await realpath(
+      await mkdtemp(join(tmpdir(), "plumix-manifest-")),
+    );
+    onTestFinished(() => rm(projectRoot, { recursive: true, force: true }));
+    const bundledPluginsDir = join(projectRoot, "packages/plugins");
+    const pluginDir = join(bundledPluginsDir, "bundled");
+    await mkdir(pluginDir, { recursive: true });
+    await mkdir(join(projectRoot, "node_modules/@plumix"), { recursive: true });
+    await symlink(
+      pluginDir,
+      join(projectRoot, "node_modules/@plumix/plugin-bundled"),
+      "dir",
+    );
+    const bundled = definePlugin("bundled", {
+      i18n: { sourceLocale: "en", locales: ["en"], catalogPath: "./locales" },
+      setup: () => undefined,
+    });
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    onTestFinished(() => info.mockRestore());
+
+    await computeManifestAndRegistry([bundled], {
+      ...OPTIONS,
+      projectRoot,
+      bundledPluginsDir,
+    });
+
+    expect(info).not.toHaveBeenCalled();
   });
 });

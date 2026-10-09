@@ -11,6 +11,27 @@ export default defineConfig({
   // Introduction the front door, so `/` lands there rather than on a second
   // page competing to be first.
   redirects: { "/": "/getting-started/introduction/" },
+  vite: {
+    build: {
+      rolldownOptions: {
+        // Astro 7.3.5 opens every content module's `?astroPropagatedAssets`
+        // wrapper with a `"use astro:head-inject"` directive nothing reads, and
+        // rolldown warns once per page that bundling drops it. Astro 7.3.6
+        // deletes the directive (withastro/astro#18087, fixed by #18088); drop
+        // this filter with the bump, which `minimumReleaseAge` holds back until
+        // 2026-10-13. Any other directive, or other log, still prints.
+        onLog(level, log, handler) {
+          if (
+            log.code === "MODULE_LEVEL_DIRECTIVE" &&
+            log.message.includes('"use astro:head-inject"')
+          ) {
+            return;
+          }
+          handler(level, log);
+        },
+      },
+    },
+  },
   integrations: [
     starlight({
       title: "Plumix",
@@ -23,6 +44,8 @@ export default defineConfig({
       // Keeps a roster page's right rail a section index rather than a list as
       // long as the page. Pages override in frontmatter.
       tableOfContents: { maxHeadingLevel: 2 },
+      // `src/pages/404.astro` renders the not-found page; it says why.
+      disable404Route: true,
       social: [
         {
           icon: "github",
