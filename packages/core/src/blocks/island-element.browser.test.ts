@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from "vitest";
 
 import type { IslandStrategy } from "./island-element.js";
 import {
@@ -467,6 +475,43 @@ describe("PlumixIslandElement lifecycle", () => {
     // it can claim (the only one belongs to the nested child), so its
     // `children` prop is absent.
     expect(seen[0]?.children).toBeUndefined();
+  });
+
+  test("a hydrated island its parent's render removes unmounts after that render commits", async () => {
+    // The parent's commit detaches the nested island, which fires its
+    // `disconnectedCallback` inside React's render. Unmounting the nested
+    // root there is the synchronous unmount React refuses to finish.
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
+    const Parent = () => null;
+    const Child = () => "child-mounted";
+    restoreImport = setDynamicImport((url) =>
+      Promise.resolve({ default: url === "/p.js" ? Parent : Child }),
+    );
+    const loads = new Map<string, () => Promise<void>>();
+    stubStrategies((loadFn, _opts, el) => {
+      loads.set(el.getAttribute("chunk-url") ?? "", loadFn);
+    });
+    const parent = makeIsland({
+      client: "load",
+      "chunk-url": "/p.js",
+      "component-export": "default",
+      opts: "{}",
+      props: serializeProps({}),
+    });
+    parent.innerHTML = `<plumix-island client="load" chunk-url="/c.js" component-export="default" opts="{}" props="{}"></plumix-island>`;
+    document.body.appendChild(parent);
+    await vi.waitFor(() => expect(loads.size).toBe(2));
+    await loads.get("/c.js")?.();
+    await vi.waitFor(() => expect(parent.textContent).toBe("child-mounted"));
+
+    await loads.get("/p.js")?.();
+    await vi.waitFor(() => expect(parent.textContent).toBe(""));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(error).not.toHaveBeenCalled();
   });
 
   test("reads props from the `props` attribute and forwards them to the component", async () => {
