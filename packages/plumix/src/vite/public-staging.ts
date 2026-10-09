@@ -9,9 +9,8 @@ import { relative, resolve, sep } from "node:path";
  *   - `vite build` copies them into the static-asset output directory
  *
  * No-op when the workspace has no `public/` directory. Files under the
- * reserved `_plumix/` namespace are skipped — admin staging owns that
- * subtree and a user copy would corrupt the freshness check that gates
- * `stageAdminAssets`.
+ * reserved `_plumix/` namespace are skipped — `stageAdminAssets` owns that
+ * subtree and replaces it whole.
  */
 export async function stageUserPublic(args: {
   readonly workspaceRoot: string;

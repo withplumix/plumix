@@ -18,7 +18,9 @@ export const swapIntoPlace = async (
   dest: string,
 ): Promise<void> => {
   for (let attempt = 1; ; attempt += 1) {
-    const aside = `${dest}.replaced-${randomUUID()}`;
+    // Beside the staged copy, not `dest`: the copy being replaced never
+    // appears where a watcher of `dest`'s parent would see it.
+    const aside = `${staged}.replaced-${randomUUID()}`;
     try {
       await rename(dest, aside);
     } catch (error) {
