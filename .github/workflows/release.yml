@@ -11,8 +11,13 @@ on:
   merge_group:
 
 concurrency:
-  # never cancel an in-flight publish; PR gate runs are cancellable
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'release' }}
+  # never cancel an in-flight publish; PR gate runs are cancellable. Keyed on
+  # the ref outside a pull request: a group holds one pending run and a newer
+  # one cancels it, so merge_group runs sharing a group with each other and
+  # with pushes to main were cancelled before `Release gate` ever reported,
+  # and the queue timed the entry out. Each queue ref is unique; pushes to
+  # main still share `refs/heads/main`.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
