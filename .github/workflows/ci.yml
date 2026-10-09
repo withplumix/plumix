@@ -16,6 +16,8 @@ env:
   FORCE_COLOR: 3
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  # BENCHMARK ONLY, dropped before merge.
+  CI_BENCH_SALT: baseline-1
 
 jobs:
   commitlint:
