@@ -167,7 +167,7 @@ describe("views (registerView)", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  test("a cacheable view is stored under the tags its resolve returned", async () => {
+  test("a cacheable view is stored under the tags of what its resolve read", async () => {
     const { cdn, put } = recordingCdn();
     const cacheablePlugin = definePlugin("compare", (ctx) => {
       ctx.registerView("compareShare", {
@@ -176,7 +176,7 @@ describe("views (registerView)", () => {
         resolve: () => ({
           data: { products: ["kettle"] },
           title: "Comparison",
-          tags: ["t:product"],
+          reads: [{ kind: "entryType", type: "product" }],
         }),
       });
     });

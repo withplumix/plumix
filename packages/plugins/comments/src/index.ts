@@ -1,10 +1,10 @@
 import type { Label } from "plumix/i18n";
 import type { AppContext } from "plumix/plugin";
-import { enqueuePurgeTags, entryTag } from "plumix/db";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
   pluginAdminEntryPath,
+  recordWrite,
 } from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "./config.js";
@@ -23,7 +23,10 @@ import {
   createCommentsRestHandler,
 } from "./server/rest.js";
 import { createSubmitHandler } from "./server/submit.js";
-import { createCommentsThreadLoader } from "./server/template-dep.js";
+import {
+  createCommentsThreadLoader,
+  threadRead,
+} from "./server/template-dep.js";
 
 export type { CommentsConfig, CommentStatus, ModerationMode } from "./types.js";
 export { COMMENT_STATUSES } from "./types.js";
@@ -133,11 +136,11 @@ export function comments(options: CommentsConfig = {}) {
         handler: createCommentsRestHandler(config),
       });
 
-      // The approved thread renders only on its entry's permalink, stored
-      // under `e:<entryId>`. The payload carries no previous status, so every
-      // transition purges, even one that changed nothing visitors see.
+      // A page that rendered the thread read it (see the `comments` template
+      // dep). The payload carries no previous status, so every transition
+      // purges, even one that changed nothing visitors see.
       const purgeEntryPage = (comment: Comment, appCtx: AppContext) => {
-        enqueuePurgeTags(appCtx, [entryTag(comment.entryId)]);
+        recordWrite(appCtx, [threadRead(comment.entryId)]);
       };
       ctx.addAction("comment:created", (comment, appCtx) => {
         // A held or spam comment changes nothing a visitor sees.

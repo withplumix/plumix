@@ -190,6 +190,17 @@ export const mediaLookupAdapter = {
       ? { url, alt, width, height }
       : { url, alt };
   },
+
+  // A page that embedded a media item reads the media library as a whole: a
+  // page can show a picture per entry it lists (a sitemap page shows hundreds),
+  // so a read per item would overrun what a CDN's tag header holds, while a
+  // media write is rare. Any media write then purges every page that showed a
+  // picture (ADR 0042).
+  embeddedRead(id) {
+    return parseMediaId(id) === null
+      ? null
+      : { kind: "entryType", type: MEDIA_ENTRY_TYPE };
+  },
 } satisfies LookupAdapter<MediaFieldScope>;
 
 function parseMediaId(id: string): number | null {

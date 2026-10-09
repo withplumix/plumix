@@ -67,6 +67,11 @@ export { createRequestMemo } from "../context/memo.js";
 export { createDeferQueue } from "./defer.js";
 export type { DeferQueue } from "./defer.js";
 
+// A CDN that stores and purges for real, so a test proves a write retires the
+// page that read it.
+export { memoryCdn } from "./memory-cdn.js";
+export type { MemoryCdn } from "./memory-cdn.js";
+
 export { createRpcHarness } from "./rpc.js";
 export type {
   RpcHarness,

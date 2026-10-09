@@ -1,94 +1,55 @@
 import { describe, expect, it } from "vitest";
 
-import { entryPurgeTags, termPurgeTags, typeTag } from "./contract/tags.js";
-import { pageTags } from "./tags.js";
+import { pageReads } from "./tags.js";
 
-describe("entryPurgeTags", () => {
-  it("purges the type tag and the entry tag", () => {
-    expect(entryPurgeTags("post", 42)).toEqual(["t:post", "e:42"]);
-  });
+describe("pageReads", () => {
+  const base = { resolvedEntity: null, frontPageEntryTypes: () => [] };
 
-  it("carries the lowercased type tag", () => {
-    expect(entryPurgeTags("EventSeries", 42)).toEqual([
-      "t:eventseries",
-      "e:42",
-    ]);
-  });
-});
-
-describe("typeTag", () => {
-  // At least one target CDN matches tags case-insensitively, so a mixed-case
-  // entry type would be two tags on one vendor and one on another.
-  it("lowercases the entry type at construction", () => {
-    expect(typeTag("EventSeries")).toBe("t:eventseries");
-  });
-});
-
-describe("termPurgeTags", () => {
-  it("purges a type tag for each of the taxonomy's entry types", () => {
-    expect(termPurgeTags(["post", "note"])).toEqual(["t:post", "t:note"]);
-  });
-
-  it("purges nothing for a taxonomy with no entry types", () => {
-    expect(termPurgeTags([])).toEqual([]);
-  });
-
-  it("carries lowercased type tags", () => {
-    expect(termPurgeTags(["Post"])).toEqual(["t:post"]);
-  });
-});
-
-describe("pageTags", () => {
-  const base = {
-    resolvedEntity: null,
-    frontPageEntryTypes: () => [],
-    taxonomyEntryTypes: () => [],
-  };
-
-  it("tags an entry permalink with both the type and the entry tag", () => {
+  it("reads an entry permalink's type and the entry itself", () => {
     expect(
-      pageTags({
+      pageReads({
         ...base,
         intent: { kind: "entry", entryType: "post" },
         resolvedEntity: { kind: "entry", id: 7, preview: false },
       }),
-    ).toEqual(["t:post", "e:7"]);
+    ).toEqual([
+      { kind: "entryType", type: "post" },
+      { kind: "entry", id: 7 },
+    ]);
   });
 
-  it("tags a type archive with the type tag", () => {
+  it("reads a type archive's type", () => {
     expect(
-      pageTags({ ...base, intent: { kind: "entryType", entryType: "post" } }),
-    ).toEqual(["t:post"]);
+      pageReads({ ...base, intent: { kind: "entryType", entryType: "post" } }),
+    ).toEqual([{ kind: "entryType", type: "post" }]);
   });
 
-  it("tags the front page with each listed type", () => {
+  it("reads each type the front page lists", () => {
     expect(
-      pageTags({
+      pageReads({
         ...base,
         intent: { kind: "frontPage" },
         frontPageEntryTypes: () => ["post", "note"],
       }),
-    ).toEqual(["t:post", "t:note"]);
+    ).toEqual([
+      { kind: "entryType", type: "post" },
+      { kind: "entryType", type: "note" },
+    ]);
   });
 
-  it("tags a term archive with the taxonomy's entry types", () => {
+  it("reads a term archive's taxonomy", () => {
     expect(
-      pageTags({
-        ...base,
-        intent: { kind: "term", taxonomy: "category" },
-        taxonomyEntryTypes: (taxonomy) =>
-          taxonomy === "category" ? ["post"] : [],
-      }),
-    ).toEqual(["t:post"]);
+      pageReads({ ...base, intent: { kind: "term", taxonomy: "category" } }),
+    ).toEqual([{ kind: "taxonomy", taxonomy: "category" }]);
   });
 
-  it("tags search pages with nothing", () => {
-    expect(pageTags({ ...base, intent: { kind: "search" } })).toEqual([]);
+  it("reads nothing for a search page", () => {
+    expect(pageReads({ ...base, intent: { kind: "search" } })).toEqual([]);
   });
 
-  it("tags nothing when a single render resolved no entry", () => {
+  it("reads nothing when a single render resolved no entry", () => {
     expect(
-      pageTags({ ...base, intent: { kind: "entry", entryType: "post" } }),
+      pageReads({ ...base, intent: { kind: "entry", entryType: "post" } }),
     ).toEqual([]);
   });
 });

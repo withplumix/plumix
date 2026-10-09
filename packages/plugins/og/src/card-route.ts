@@ -2,10 +2,10 @@ import type { TemplateData } from "plumix";
 import type { AppContext, ResolvedNode } from "plumix/plugin";
 import { eq } from "plumix/db";
 import {
+  recordRead,
   resolveEntryData,
   resolveListingPage,
   serveRenderedAsset,
-  tagCdnEntry,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { withBasePath } from "plumix/support";
@@ -133,10 +133,10 @@ export function createCardRoute(
     if (asked.digest !== identity.digest) {
       return redirect(cardUrl(ctx, asked.target, identity.digest, extension));
     }
-    // What a purge of this card names, which for an entry card is the entry
-    // tag the publish hook already sweeps. Belt and braces: the URL moved with
-    // the edit, so nothing that reads the old one is stale.
-    tagCdnEntry(ctx, [identity.key.tag]);
+    // What the card read, which for an entry card is the entry the publish
+    // hook already sweeps. Belt and braces: the URL moved with the edit, so
+    // nothing that reads the old one is stale.
+    recordRead(ctx, [identity.key.read]);
 
     let response: Response;
     try {

@@ -12,15 +12,14 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { entryQuery, sql, typeTag } from "plumix/db";
+import { entryQuery, sql } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, memoryCdn } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import { feeds } from "./index.js";
 import { FEED_LIMIT } from "./items.js";
-import { FEED_TAG } from "./respond.js";
 
 // Every suite below installs the plugin over the host plugin it syndicates:
 // the plugin claims its routes in `afterSetup`, so what it serves is decided
@@ -1762,7 +1761,7 @@ describe("a feed at the edge", () => {
     expect(res.headers.get("cache-control")).toBe(
       "public, max-age=0, s-maxage=3600",
     );
-    expect(tagsFor(put, "/post/feed")).toContain(typeTag("post"));
+    expect(tagsFor(put, "/post/feed")).toContain("t:post");
   });
 
   test("publishing a post purges every cached feed it can appear in", async () => {
@@ -1928,14 +1927,14 @@ describe("a feed at the edge", () => {
     await publishPost(h);
 
     const purged = purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
-    expect(purged).toContain(typeTag("post"));
-    expect(tagsFor(put, "/series/summer/feed")).toContain(typeTag("post"));
+    expect(purged).toContain("t:post");
+    expect(tagsFor(put, "/series/summer/feed")).toContain("t:post");
   });
 
   // The channel's title and description, and whether there is a feed at all,
   // come from the site settings, which no entry purge reaches.
   test("saving the site settings purges every cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const { cdn, stored } = memoryCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -1943,6 +1942,7 @@ describe("a feed at the edge", () => {
     const admin = await h.seedUser("admin");
     (await h.fetch("/post/feed")).assertStatus(200);
     await h.drainDeferred();
+    expect(stored("/post/feed")).toBeDefined();
 
     const saved = await h.fetch("/_plumix/rpc/settings/upsert", {
       as: admin,
@@ -1951,11 +1951,7 @@ describe("a feed at the edge", () => {
     saved.assertStatus(200);
     await h.drainDeferred();
 
-    expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual([
-      "s:site",
-      FEED_TAG,
-    ]);
-    expect(tagsFor(put, "/post/feed")).toContain(FEED_TAG);
+    expect(stored("/post/feed")).toBeUndefined();
   });
 
   test("a private site's feed 404s and is never stored", async () => {

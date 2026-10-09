@@ -140,21 +140,68 @@ RPC also answers anything but POST with a 405. oRPC reads a GET's input from `?d
 
 ## Cache tags
 
-A cached page is stored under tags, and a publish purges by tag rather than by URL. The content vocabulary is these two — coarse by design, since a page that lists content cannot enumerate what it will list next week. Every tag is lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
+A cached page is stored under tags, and a write purges by tag rather than by URL. Nobody spells a tag by hand. A response says what it read and a write says what it changed, both in the domain's terms, and core turns each into tags with one rule. A write's tags are the tags of everything it changed, so a page and the write that should clear it cannot work their tags out differently. Every tag is lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
 
-A page is stored under the tags its route implies plus every tag its render declared. Core declares the entries it embedded and the settings groups it read, as `s:<group>`; every render reads the `site` group, so every page carries `s:site`. A plugin declares its own with `tagCdnEntry`, from a template dep's loader, a component or a hook.
+A page is stored under what its route reads plus everything its render read. Core records the entries, terms, users and media a render embedded and the settings groups it read; every render reads the `site` group. A plugin records its own reads with `recordRead` from `plumix/plugin`, from a template dep's loader, a component, a hook or a cacheable route's handler:
 
-### t:\*
+```ts
+import type { AppContext } from "plumix/plugin";
+import { recordRead } from "plumix/plugin";
 
-`t:<type>` — the entry type tag. It goes on every page that lists or embeds content of that type: its archives, the front page, term archives, and permalinks, which can render sibling content of their own. Any publish of that type reaches all of them.
+// A loader that showed one entry and an event series the plugin keeps itself.
+function showSeries(ctx: AppContext, entryId: number, seriesId: number): void {
+  recordRead(ctx, [
+    { kind: "entry", id: entryId },
+    { kind: "own", namespace: "events", id: seriesId },
+  ]);
+}
+```
 
-### e:\*
+The kinds a read can name:
 
-`e:<id>` — the single entry tag. An entry's own permalink carries it, and so does any page that resolved a reference to that entry while rendering: resolution contributes the tag as it materializes the entity, and the page stores under it. So editing one recipe clears its permalink and every page that embedded it.
+### entry
+
+One entry, by id. An entry's own permalink reads it, and so does any page that resolved a reference to it while rendering. Editing that entry clears its permalink and every page that embedded it. A media reference is the exception: a page can show a picture for every entry it lists, so it reads the media library as a whole (`entryType` `media`) rather than each picture, and any media write clears every page that showed one.
+
+### entryType
+
+Every entry of a type, the way a listing reads them: archives, the front page, feeds, and permalinks, which can render sibling content of their own. Any write to an entry of that type reaches all of them.
+
+### taxonomy
+
+A taxonomy's term archive and what it lists: the entry types the taxonomy names, or every public type when it names none.
+
+### term
+
+One term, by id: a menu item that links it, or a reference field that shows it. Renaming the term reaches a page of any type that printed it.
+
+### user
+
+One user, by id, as a reference field shows them. Every public page prints its author, so a write to any user also reaches every public type.
+
+### settings
+
+A settings group, which a page read when it printed one of its values.
+
+### own
+
+A record of a plugin's own, under a namespace of its own: a menu, a comment thread, the sitemap set. Only a write naming the same namespace and id reaches it.
 
 ## Purging
 
-Publishing an entry enqueues `t:<type>` and `e:<id>`; editing a term enqueues the `t:<type>` of every entry type its taxonomy lists; saving a settings group enqueues its `s:<group>`. A plugin's own cacheable route is stored under what was declared while its handler ran, so it stays untagged unless the handler calls `tagCdnEntry` or reads something core tags. That call is how a route puts its entry under the same tags the entry's pages carry and clears it on the same publish.
+Core's own writes say what they changed through their lifecycle hooks: an entry write reaches the entry and its type, a term write reaches the term and its taxonomy, a user write reaches the user and every public type, and a settings save reaches the group. A plugin that writes `ctx.db` directly fires none of those hooks, so it says what it changed itself, with `recordWrite`:
+
+```ts
+import type { AppContext } from "plumix/plugin";
+import { recordWrite } from "plumix/plugin";
+
+// After a direct `ctx.db` update of one recipe.
+function recipeSaved(ctx: AppContext, id: number): void {
+  recordWrite(ctx, [{ kind: "entry", id, type: "recipe" }]);
+}
+```
+
+A cacheable route is stored under what its handler read, with no route reads of its own, so it stays untagged unless the handler records reads or reads something core records.
 
 The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
 

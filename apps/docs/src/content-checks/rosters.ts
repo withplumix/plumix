@@ -894,14 +894,23 @@ const HOOKS: readonly string[] = [...FILTER_HOOKS, ...ACTION_HOOKS];
 // --- Deployment ------------------------------------------------------------
 
 /**
- * The content cache-tag vocabulary, coarse by design. Sources: `typeTag` and
- * `entryTag`, the only tag minters the façade exports. Core's settings tag
- * (`s:<group>`) is internal and stays in the page's prose.
- *
- * A third minter on the façade without a heading here is the drift a reader
- * would feel — the page promises the content vocabulary is these two.
+ * What a response can say it read. Source: the `CacheRead` union on
+ * `plumix/plugin`, which `recordRead` takes and core spells as cache tags. A
+ * new kind there without a heading here is a read a plugin can make that the
+ * page never explains.
  */
-const CACHE_TAGS = ["t:*", "e:*"] as const;
+const CACHE_READS = [
+  "entry",
+  "entryType",
+  "taxonomy",
+  "term",
+  "user",
+  "settings",
+  "own",
+] as const;
+type _CacheReadsMatchSource = Assert<
+  Equals<(typeof CACHE_READS)[number], PlumixPlugin.CacheRead["kind"]>
+>;
 
 /**
  * Every command, then the global flags that precede any of them. Sources: the
@@ -1073,7 +1082,7 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   { page: "access/capabilities.mdx", items: CAPABILITIES, binding: "runtime" },
   { page: "apis/mcp.mdx", items: MCP_TOOLS, binding: "page-only" },
   { page: "hooks/reference.mdx", items: HOOKS, binding: "type-level" },
-  { page: "deployment/cdn.mdx", items: CACHE_TAGS, binding: "runtime" },
+  { page: "deployment/cdn.mdx", items: CACHE_READS, binding: "type-level" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
   {
     page: "deployment/runtimes.mdx",

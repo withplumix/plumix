@@ -1,21 +1,10 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { AppContext, Db } from "../context/app-context.js";
+import type { Db } from "../context/app-context.js";
 import { withUser } from "../auth/with-user.js";
-import { HookRegistry } from "../hooks/registry.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
-import {
-  toRegisteredEntryType,
-  toRegisteredTermTaxonomy,
-} from "../plugin/registry.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
-import { userTag } from "./contract/tags.js";
-import {
-  enqueuePurgeTags,
-  flushPurgeTags,
-  registerCorePurgeInvalidator,
-} from "./purge.js";
+import { enqueuePurgeTags, flushPurgeTags } from "./purge.js";
 
 let db: Db;
 beforeAll(async () => {
@@ -30,26 +19,6 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
     void p;
   });
   const store = { match: vi.fn(), put: vi.fn() };
-  const plugins = createPluginRegistry();
-  for (const [name, options] of [
-    ["post", { label: "Posts", isPublic: true }],
-    ["page", { label: "Pages", isPublic: true, isHierarchical: true }],
-    ["note", { label: "Notes", isPublic: false }],
-  ] as const) {
-    plugins.entryTypes.set(name, toRegisteredEntryType(name, options, "test"));
-  }
-  plugins.termTaxonomies.set(
-    "category",
-    toRegisteredTermTaxonomy(
-      "category",
-      { label: "Categories", entryTypes: ["post"] },
-      "test",
-    ),
-  );
-  plugins.termTaxonomies.set(
-    "tag",
-    toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
-  );
   const ctx = createTestContext({
     db,
     cdn:
@@ -61,7 +30,6 @@ function fakeCtx(cdn: "purges" | "cannot-purge" | "absent" = "purges") {
             ...(cdn === "purges" ? { purgeTags } : {}),
           },
     defer,
-    plugins,
   });
   return { ctx, purgeTags, defer };
 }
@@ -119,213 +87,5 @@ describe("purge accumulator", () => {
     flushPurgeTags(ctx);
     expect(purgeTags).not.toHaveBeenCalled();
     expect(defer).not.toHaveBeenCalled();
-  });
-});
-
-describe("registerCorePurgeInvalidator", () => {
-  // Loose-typed: each action's payload differs, so the tests fire by name.
-  const fire = (hooks: HookRegistry, name: string, ...args: unknown[]) =>
-    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
-      hooks,
-      name,
-      ...args,
-    );
-
-  const entry = { id: 9, type: "post" };
-  const changes = { set: {}, removed: [] };
-  const ENTRY_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ["entry:published", [entry]],
-    ["entry:updated", [entry, entry]],
-    ["entry:meta_changed", [entry, changes]],
-    ["entry:trashed", [entry]],
-    ["entry:restored", [entry]],
-    ["entry:deleted", [entry]],
-  ];
-
-  it.each(ENTRY_EVENTS)(
-    "%s enqueues the entry's purge tags",
-    async (event, payload) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
-
-      await fire(hooks, event, ...payload, ctx);
-      flushPurgeTags(ctx);
-
-      expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:9"]);
-    },
-  );
-
-  // Any public entry can render its author — a hierarchical `page` permalink
-  // included — so every public type is purged; only the private `note` is not.
-  it("user:updated enqueues the tags of every public entry type", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
-    const user = { id: 4, name: "Jane", slug: "jane" };
-
-    await fire(hooks, "user:updated", user, user, ctx);
-    flushPurgeTags(ctx);
-
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
-  });
-
-  // Deleting a user reassigns their entries without firing an entry action, so
-  // their cached author feed and every page showing those entries stay stale.
-  it("user:deleted enqueues the tags of every public entry type", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
-    const user = { id: 4, name: "Jane", slug: "jane" };
-
-    await fire(hooks, "user:deleted", user, { reassignedTo: 1 }, ctx);
-    flushPurgeTags(ctx);
-
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
-  });
-
-  const term = { id: 3, taxonomy: "category" };
-  const TERM_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ["term:created", [term]],
-    ["term:updated", [term, term]],
-    ["term:meta_changed", [term, changes]],
-    ["term:deleted", [term]],
-  ];
-
-  it.each(TERM_EVENTS)(
-    "%s enqueues purge tags for the taxonomy's entry types",
-    async (event, payload) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
-
-      await fire(hooks, event, ...payload, ctx);
-      flushPurgeTags(ctx);
-
-      expect(purgeTags).toHaveBeenCalledWith(["t:post"]);
-    },
-  );
-
-  // A taxonomy that lists no entry types still has term feeds, which list every
-  // public type attached to the term — so its term changes purge those types.
-  it.each(TERM_EVENTS)(
-    "%s in a taxonomy without entryTypes enqueues the public types' tags",
-    async (event, payload) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
-      const untyped = payload.map((arg) =>
-        arg === term ? { ...term, taxonomy: "tag" } : arg,
-      );
-
-      await fire(hooks, event, ...untyped, ctx);
-      flushPurgeTags(ctx);
-
-      expect(purgeTags).toHaveBeenCalledWith(["t:post", "t:page"]);
-    },
-  );
-
-  // A page that printed a settings group is stored under its tag, so saving
-  // the group has to reach the CDN, not only this request's memo.
-  it("settings:group_changed enqueues the group's tag", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
-
-    await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
-    flushPurgeTags(ctx);
-
-    expect(purgeTags).toHaveBeenCalledWith(["s:site"]);
-  });
-
-  const jane = { id: 4, name: "Jane", slug: "jane" };
-  const PURGING_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ...ENTRY_EVENTS,
-    ...TERM_EVENTS,
-    ["user:updated", [jane, jane]],
-    ["user:deleted", [jane, { reassignedTo: 1 }]],
-    ["settings:group_changed", [{ group: "site" }]],
-  ];
-
-  // A memo that loads each key on a miss and records which keys it loaded.
-  function recordingMemo(ctx: AppContext) {
-    const loads: string[] = [];
-    const read = (key: string, tags?: readonly string[]) =>
-      ctx.memo(
-        key,
-        () => {
-          loads.push(key);
-          return Promise.resolve(key);
-        },
-        tags,
-      );
-    return { loads, read };
-  }
-
-  // The memo is the roster's second consumer (#2517): whatever an action
-  // purges, it also drops from the request memo — read here off the purge
-  // itself, so the two cannot be checked against separate lists — and on a
-  // site with no cdn at all.
-  it.each(PURGING_EVENTS)(
-    "%s drops the memo entries tagged with what it purges",
-    async (event, payload) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const purging = fakeCtx();
-      await fire(hooks, event, ...payload, purging.ctx);
-      flushPurgeTags(purging.ctx);
-      const purged = purging.purgeTags.mock.calls[0]?.[0] ?? [];
-      const { ctx } = fakeCtx("absent");
-      const { loads, read } = recordingMemo(ctx);
-      for (const tag of purged) await read(tag, [tag]);
-      await read("untagged");
-      await read("unrelated", ["e:999"]);
-      loads.length = 0;
-
-      await fire(hooks, event, ...payload, ctx);
-      for (const tag of purged) await read(tag, [tag]);
-      await read("untagged");
-      await read("unrelated", ["e:999"]);
-
-      expect(purged).not.toHaveLength(0);
-      expect(loads).toEqual(purged);
-    },
-  );
-
-  // A tag no page is stored under: the memo drops it, the CDN never hears.
-  it.each([
-    ["user:updated", [jane, jane], userTag(jane.id)],
-    ["user:deleted", [jane, { reassignedTo: 1 }], userTag(jane.id)],
-  ] as const)(
-    "%s drops its memo-only tag without purging it",
-    async (event, payload, tag) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
-      const { ctx, purgeTags } = fakeCtx();
-      const { loads, read } = recordingMemo(ctx);
-      await read("own", [tag]);
-      loads.length = 0;
-
-      await fire(hooks, event, ...payload, ctx);
-      await read("own", [tag]);
-      flushPurgeTags(ctx);
-
-      expect(loads).toEqual(["own"]);
-      const purged = purgeTags.mock.calls.flatMap(([tags]) => tags);
-      expect(purged).not.toContain(tag);
-    },
-  );
-
-  it("batches a bulk publish into one purge call", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
-    const { ctx, purgeTags } = fakeCtx();
-
-    await fire(hooks, "entry:published", { id: 1, type: "post" }, ctx);
-    await fire(hooks, "entry:published", { id: 2, type: "post" }, ctx);
-    flushPurgeTags(ctx);
-
-    expect(purgeTags).toHaveBeenCalledTimes(1);
-    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1", "e:2"]);
   });
 });

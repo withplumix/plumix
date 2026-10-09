@@ -48,9 +48,9 @@ export type {
   SitemapUrl,
 } from "./sitemap.js";
 export { SITEMAP_PAGE_SIZE } from "./sitemap.js";
-// The set-wide cache tag, for a `seo:sitemap:urls` subscriber whose own data
-// changed and which has to retire what it contributed rows to.
-export { SITEMAP_TAG } from "./routes.js";
+// The sitemap set as a whole, for a `seo:sitemap:urls` subscriber whose own
+// data changed and which has to retire what it contributed rows to.
+export { SITEMAP_SET } from "./routes.js";
 // The site-wide answers the head reads, for a plugin that has to end the
 // `og:image` chain the same way this one does.
 export type { SeoSettings } from "./settings.js";

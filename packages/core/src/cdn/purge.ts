@@ -1,18 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
-import type { HookRegistry } from "../hooks/registry.js";
-import {
-  publicEntryTypeNames,
-  termPageEntryTypeNames,
-} from "../plugin/registry.js";
-import {
-  entryPurgeTags,
-  normalizeTag,
-  settingsTag,
-  termPurgeTags,
-  usersPurgeTags,
-  userTag,
-} from "./contract/tags.js";
+import { normalizeTag } from "./contract/tags.js";
 
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
@@ -20,7 +8,7 @@ import {
 // purge call.
 //
 // Keyed on the request's memo rather than on the context itself, for the reason
-// `route-tags.ts` is: core derives contexts by spreading (basePath stripping,
+// `contract/page-tags.ts` is: core derives contexts by spreading (basePath stripping,
 // `withUser`, the formPost session swap), and the flush runs against the
 // outermost one — so a listener that enqueued against a derived context would
 // fill a set nothing reads, and skip the purge with no way to notice. The memo
@@ -62,74 +50,4 @@ export function flushPurgeTags(ctx: AppContext): void {
   const cdn = ctx.cdn;
   if (cdn?.purgeTags === undefined || set.size === 0) return;
   ctx.defer(cdn.purgeTags([...set]));
-}
-
-/**
- * Register core's roster of writes: each lifecycle action becomes the tags of
- * what it changed. Each entry mutation enqueues `t:<type>` + `e:<id>`, each
- * term mutation `t:<type>` for the taxonomy's entry types, each user mutation
- * every public type's tag, each settings write its group's `s:<group>`.
- *
- * One roster, two consumers: the CDN purge and the request memo both read what
- * {@link enqueuePurgeTags} is handed, so they cannot disagree about which
- * write means which tag. A user write also names `u:<id>`, a tag no page is
- * stored under, so it goes to the memo alone rather than costing a site a
- * purge that could clear nothing. Registered at every boot, CDN or not — the
- * memo needs it everywhere, and without a CDN the purge half accumulates
- * nothing. Every handler is synchronous for the memo's
- * sake; see `RequestMemo.invalidate`.
- */
-export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
-  // Entry lifecycle actions that change what the public sees — published,
-  // edited, meta-changed, or removed from view (trash/delete) / restored. Every
-  // payload's leading arg carries `{ id, type }`.
-  const onEntry = (
-    entry: { readonly id: number; readonly type: string },
-    ctx: AppContext,
-  ): void => {
-    enqueuePurgeTags(ctx, entryPurgeTags(entry.type, entry.id));
-  };
-  hooks.addAction("entry:published", onEntry);
-  hooks.addAction("entry:trashed", onEntry);
-  hooks.addAction("entry:restored", onEntry);
-  hooks.addAction("entry:deleted", onEntry);
-  hooks.addAction("entry:updated", (entry, _previous, ctx) =>
-    onEntry(entry, ctx),
-  );
-  hooks.addAction("entry:meta_changed", (entry, _changes, ctx) =>
-    onEntry(entry, ctx),
-  );
-
-  // A delete reassigns entries without an entry action, so the public types'
-  // tags are what reaches the pages that printed the author.
-  const onUser = (user: { readonly id: number }, ctx: AppContext): void => {
-    enqueuePurgeTags(ctx, usersPurgeTags(publicEntryTypeNames(ctx.plugins)));
-    ctx.memo.invalidate([userTag(user.id)]);
-  };
-  hooks.addAction("user:updated", (user, _previous, ctx) => onUser(user, ctx));
-  hooks.addAction("user:deleted", (user, _deletion, ctx) => onUser(user, ctx));
-
-  // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
-  // A term archive is stored under the `t:<type>` tags of its taxonomy's entry
-  // types, so creating, renaming, meta-changing, or deleting a term purges those.
-  const onTerm = (
-    term: { readonly taxonomy: string },
-    ctx: AppContext,
-  ): void => {
-    enqueuePurgeTags(
-      ctx,
-      termPurgeTags(termPageEntryTypeNames(ctx.plugins, term.taxonomy)),
-    );
-  };
-  hooks.addAction("term:created", onTerm);
-  hooks.addAction("term:deleted", onTerm);
-  hooks.addAction("term:updated", (term, _previous, ctx) => onTerm(term, ctx));
-  hooks.addAction("term:meta_changed", (term, _changes, ctx) =>
-    onTerm(term, ctx),
-  );
-
-  // A response that printed a settings group is stored under its tag.
-  hooks.addAction("settings:group_changed", (changes, ctx) => {
-    enqueuePurgeTags(ctx, [settingsTag(changes.group)]);
-  });
 }

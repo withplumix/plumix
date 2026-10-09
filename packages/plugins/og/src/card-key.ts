@@ -1,10 +1,10 @@
-import { entryTag } from "plumix/db";
+import type { CacheRead } from "plumix/plugin";
 
 /**
- * What a card's `key` callback returns: what the card read, and the tag a
- * purge names it by. Emitted together by the {@link cardKey} helpers so the
- * two cannot drift — a card keyed on an entry is tagged for that entry, and
- * there is no second place to keep them in step.
+ * What a card's `key` callback returns: what the card read, as the id its URL
+ * folds in and as the read a write retires it by. Emitted together by the
+ * {@link cardKey} helpers so the two cannot drift — a card keyed on an entry
+ * reads that entry, and there is no second place to keep them in step.
  */
 export interface CardKey {
   /**
@@ -14,11 +14,11 @@ export interface CardKey {
    */
   readonly id: string;
   /**
-   * What a purge of this card names. The route stores its edge entry under it,
+   * What the card read, for the CDN. The route stores its edge entry under it,
    * so a card keyed on an entry is swept by the same publish that sweeps that
    * entry's pages.
    */
-  readonly tag: string;
+  readonly read: CacheRead;
 }
 
 /** Anything a card can be keyed on, in the shape the helpers read. */
@@ -34,15 +34,15 @@ interface KeyedEntry {
 export const cardKey = {
   /**
    * Name a card by its inputs — `cardKey.of("front-page", siteTitle)`. Every
-   * part is folded into both the id and the tag, so two pages that read
+   * part is folded into both the id and the read, so two pages that read
    * different things cannot collide on one card.
    */
   of: (...parts: readonly (string | number)[]): CardKey => {
     const slug = joinParts(parts);
     // A namespace of its own, because what this card reads is whatever the
-    // author named — core's `t:`/`e:` purges cannot know to sweep it. The URL
-    // is what invalidates such a card: a changed input is a changed link.
-    return { id: slug, tag: `og:${slug}` };
+    // author named — no core write can know to sweep it. The URL is what
+    // invalidates such a card: a changed input is a changed link.
+    return { id: slug, read: { kind: "own", namespace: "og", id: slug } };
   },
 
   /**
@@ -60,7 +60,7 @@ export const cardKey = {
       entry.updatedAt.getTime(),
       ...parts,
     ]),
-    tag: entryTag(entry.id),
+    read: { kind: "entry", id: entry.id },
   }),
 };
 

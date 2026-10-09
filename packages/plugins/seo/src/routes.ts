@@ -3,20 +3,14 @@ import type {
   PluginAfterSetupContext,
   PluginSetupContext,
 } from "plumix/plugin";
-import { enqueuePurgeTags, typeTag } from "plumix/db";
-import { tagCdnEntry } from "plumix/plugin";
+import { recordRead } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
 import type { ContributedSitemap } from "./contributed.js";
 import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
-import {
-  loadSeoSettings,
-  SEO_ROBOTS_GROUP,
-  SEO_SETTINGS_GROUP,
-  SEO_VERIFICATION_GROUP,
-} from "./settings.js";
+import { loadSeoSettings } from "./settings.js";
 import {
   assertSitemapPolicyNamesScopes,
   collectSitemapUrls,
@@ -38,24 +32,15 @@ const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * Carried by every sitemap response on top of its scope tags. The indexing
- * toggle changes which URLs (if any) the whole set may expose, so flipping it
- * has to retire all of them — the one invalidation that is legitimately global.
+ * The sitemap set as a whole, read by every sitemap response on top of its
+ * scope's reads. A plugin whose `seo:sitemap:urls` rows come from data of its
+ * own records a write to it when that data changes, retiring the whole set.
  */
-export const SITEMAP_TAG = "seo:sitemap";
-
-// Which settings groups change what an already-cached response says: the
-// sitemap's URL set, or a page's robots directive, title and verification
-// tags. Content pages are retired by entry-type tag rather than individually —
-// the shipped cache has no site-wide tag, and every page core caches carries
-// the tag of the type it draws from. `site` is here because the site-wide
-// toggle answers from this plugin's own key falling back to the legacy one.
-const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
-  SEO_SETTINGS_GROUP,
-  SEO_ROBOTS_GROUP,
-  SEO_VERIFICATION_GROUP,
-  "site",
-]);
+export const SITEMAP_SET = {
+  kind: "own",
+  namespace: "seo",
+  id: "sitemap",
+} as const;
 
 // The page segment is the sitemap's own pagination, not a slug, so the route
 // pattern spells that out — a path that is not a 1-based page number then goes
@@ -80,8 +65,8 @@ async function handleSitemapIndex(
   ctx: AppContext,
   scopes: readonly SitemapScope[],
 ): Promise<Response> {
-  // `tagCdnEntry` unions, so scopes sharing a type tag need no dedupe here.
-  tagCdnEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
+  // `recordRead` unions, so scopes sharing a type need no dedupe here.
+  recordRead(ctx, [SITEMAP_SET, ...scopes.flatMap((scope) => scope.reads)]);
   // A site held out of the index is held out of search, and so is a scope its
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
@@ -99,7 +84,7 @@ async function handleSubSitemap(
   scope: SitemapScope,
   page: number,
 ): Promise<Response> {
-  tagCdnEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
+  recordRead(ctx, [SITEMAP_SET, ...scope.reads]);
   const settings = await loadSeoSettings(ctx);
   const urls = scopeIsOffered(scope, settings)
     ? await collectSitemapUrls(ctx, scope, page)
@@ -109,9 +94,11 @@ async function handleSubSitemap(
 
 /**
  * Claim `/robots.txt`, `/llms.txt` (unless the site turned it off) and the
- * sitemap stylesheet, and keep the cached sitemap honest about the indexing
- * toggle. None of it depends on what the site registered; the sitemap does, so
- * {@link registerSitemapRoutes} claims it from `afterSetup`.
+ * sitemap stylesheet. None of it depends on what the site registered; the
+ * sitemap does, so {@link registerSitemapRoutes} claims it from `afterSetup`.
+ * The cached sitemap needs no listener for the indexing toggle: it read the
+ * settings groups the toggle lives in, so core's purge of a saved group
+ * retires it.
  */
 export function registerSeoRoutes(
   ctx: PluginSetupContext,
@@ -142,17 +129,6 @@ export function registerSeoRoutes(
           "cache-control": SITEMAP_CACHE_CONTROL,
         },
       }),
-  });
-
-  // The indexing toggle decides whether the sitemap has any URLs at all, so a
-  // save has to retire the cached set. Both groups, because the toggle answers
-  // from this plugin's own key falling back to the legacy `site` one.
-  ctx.addAction("settings:group_changed", (changes, appCtx) => {
-    if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
-    enqueuePurgeTags(appCtx, [
-      SITEMAP_TAG,
-      ...[...appCtx.plugins.entryTypes.keys()].map(typeTag),
-    ]);
   });
 }
 

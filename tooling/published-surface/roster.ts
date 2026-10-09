@@ -465,14 +465,14 @@ export const ROSTER: Readonly<
         reason:
           "the sitemap: the source a plugin hands `ctx.registerSitemap`, " +
           "the `seo:sitemap:urls` payload and the scope it names, its page " +
-          "size, and the tag a subscriber retires its rows under",
+          "size, and the set a subscriber retires its rows by",
         names: [
           "SitemapSource",
           "SitemapUrl",
           "SitemapChangeFrequency",
           "SitemapScopeRef",
           "SITEMAP_PAGE_SIZE",
-          "SITEMAP_TAG",
+          "SITEMAP_SET",
         ],
       },
       {

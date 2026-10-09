@@ -6,13 +6,13 @@ import type { Entry, EntryStatus } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
-import { entryTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { entrySearchCondition } from "../db/search-conditions.js";
 import { resolveEntriesMeta, resolveEntryMeta } from "../meta/entry.js";
+import { readTags } from "../plugin/cache-tags.js";
 import { tokenizeSearchQuery } from "../search/contract/search-terms.js";
 import { isAuthoredEntryType, loadAuthoredEntry } from "./authored.js";
 import { EntryReadError } from "./errors.js";
@@ -44,7 +44,7 @@ export async function readEntryType(
         .where(eq(entries.id, id));
       return row?.type ?? null;
     },
-    [entryTag(id)],
+    readTags(ctx.plugins, [{ kind: "entry", id }]),
   );
 }
 

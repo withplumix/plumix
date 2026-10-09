@@ -211,10 +211,10 @@ Styling is ordinary CSS against ordinary class names. Whatever your theme declar
 
 ### Every rule needs a key
 
-`key` names everything the card read. It is required rather than derived, because a card reading a setting or a dep has an input no derivation can see. The helpers keep it to one line and emit the URL's digest and the cache tag together, so the two cannot drift:
+`key` names everything the card read. It is required rather than derived, because a card reading a setting or a dep has an input no derivation can see. The helpers keep it to one line and emit the URL's digest and what the card read for the CDN together, so the two cannot drift:
 
-- `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, tagged `e:<id>` so the publish that clears the entry's pages clears its card too.
-- `cardKey.of("home", locale)` — anything else, keyed and tagged on what you name. Its tag lands in an `og:` namespace of its own, because only you know what such a card read.
+- `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, and reading that entry so the publish that clears the entry's pages clears its card too.
+- `cardKey.of("home", locale)` — anything else, keyed on what you name. It reads an `og` namespace of its own, because only you know what such a card read.
 
 Three inputs fold in without being named: the card's own source, so a redesign invalidates what it replaced with no version bump; the font set; and the theme's tokens. The source covers the card's own `render` and `styles`, not a component `render` calls out to. A card whose design lives in a child component needs the child's identity in its `key`.
 

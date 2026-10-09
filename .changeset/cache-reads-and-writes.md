@@ -1,0 +1,5 @@
+---
+"plumix": minor
+---
+
+Adds `recordRead` and `recordWrite` (from `plumix/plugin`), which say what a response read and what a write changed in the domain's terms (`CacheRead`, `CacheWrite`): an entry, an entry type, a taxonomy, a term, a user, a settings group, or a plugin's own namespace. Core spells the cache tags, so a cached page and the write that should clear it can no longer disagree. Removes `tagCdnEntry` (use `recordRead`) and `typeTag`, `entryTag`, `entryPurgeTags`, `termPurgeTags` and `enqueuePurgeTags` from `plumix/db` (use `recordWrite`). An archive type's or a view's resolver returns `reads` in place of `tags`; a resolver still returning `tags` compiles but is no longer tagged, so rename it. A lookup adapter's `embeddedCacheTags(id)` becomes `embeddedRead(id)`, returning one `CacheRead` or `null`. Fixes cached pages staying stale after a user save that changed only meta, an entry update that changed only its terms, and a term rename on a page that showed the term or a user through a reference field. Adds `memoryCdn()` to `plumix/test`, a CDN that stores and purges for real.

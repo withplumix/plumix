@@ -193,7 +193,7 @@ A comment from a signed-in author takes a fast path to `approved` whatever the m
 
 The `comment:moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A filter returning anything that is not a known status is ignored rather than persisted.
 
-Approving, restoring, spamming, trashing or deleting a comment purges the cached copy of its entry's page from the CDN, and so does a new comment that arrives approved. A held comment purges nothing, since the page does not show it. Only the entry's own page is purged: the thread renders nowhere else.
+Approving, restoring, spamming, trashing or deleting a comment purges the cached copy of its entry's page from the CDN, and so does a new comment that arrives approved. A held comment purges nothing, since the page does not show it. Only the pages that rendered the thread are purged, not every page of the entry's type.
 
 Two spam defences sit below it. The honeypot is a field a person never sees and a bot fills; a comment that trips it is answered exactly as a real one is — telling a bot it was caught only teaches it to stop filling the trap — and no row is written. The rate limit is a sliding window over a salted hash of the visitor's address. Off Cloudflare that address is client-spoofable, so the limiter is best-effort there and edge or WAF rules are the real flood defence.
 

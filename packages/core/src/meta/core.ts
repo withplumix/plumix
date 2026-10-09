@@ -3,6 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { Capability } from "../access/contract/capability.js";
+import type { CacheRead } from "../cdn/contract/subjects.js";
 import type { AppContext } from "../context/app-context.js";
 import type { JsonObject, JsonValue } from "../json.js";
 import type { MetaFieldValues } from "../plugin/fields/condition.js";
@@ -20,11 +21,12 @@ import type {
 import type { ConflictErrors } from "../rpc-errors.js";
 import type { ResolvedMeta } from "./contract/bags.js";
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
-import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { recordRead } from "../cdn/invalidation.js";
 import { memoBatch } from "../context/memo.js";
 import { and, chunkForD1, eq } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
 import { isJsonArray, isJsonObject } from "../json.js";
+import { readTags } from "../plugin/cache-tags.js";
 import {
   conditionReadsAny,
   isConditionHidden,
@@ -1163,8 +1165,12 @@ async function resolveGroup(
     const groupKey = referenceGroupKey(target);
     // Tagged by id, so the entity's own write in this request drops the
     // entry — a memoized miss included (#2517).
+    const readsFor = (id: string): readonly CacheRead[] => {
+      const read = adapter.embeddedRead?.(id) ?? null;
+      return read === null ? [] : [read];
+    };
     const tagsFor = (id: string): readonly string[] =>
-      adapter.embeddedCacheTags?.(id) ?? [];
+      readTags(ctx.plugins, readsFor(id));
     const payloads = await memoBatch(
       ctx.memo,
       idList,
@@ -1190,13 +1196,13 @@ async function resolveGroup(
       const payload = payloads[index];
       if (payload === null || payload === undefined) continue;
       byId.set(id, payload);
-      // Fold this embedded entity's cache tag into the page's tags so a
-      // change to it purges the page that hydrated it (#1508). Runs on
-      // every read surface; only the read-throughs read the accumulator
-      // back, so admin/REST reads populate it harmlessly.
-      // Folded here rather than at the hydrate, so a batch answered from
+      // Record this embedded entity as read, so a change to it purges the
+      // page that hydrated it (#1508). Runs on every read surface; only the
+      // read-throughs read the accumulator back, so admin/REST reads
+      // populate it harmlessly.
+      // Recorded here rather than at the hydrate, so a batch answered from
       // the memo tags the page exactly as the batch that loaded it did.
-      declarePageTags(ctx, tagsFor(id));
+      recordRead(ctx, readsFor(id));
     }
     return { kind: "hydrated", byId };
   }

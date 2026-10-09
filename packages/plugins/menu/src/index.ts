@@ -5,16 +5,16 @@ import type {
   PluginDescriptor,
   TermTaxonomyLabels,
 } from "plumix/plugin";
-import { enqueuePurgeTags } from "plumix/db";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
   pluginAdminEntryPath,
+  recordWrite,
 } from "plumix/plugin";
 
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
-import { menuTag } from "./server/cache-tags.js";
+import { menuRead } from "./server/cache-tags.js";
 import { getMenusForLocations } from "./server/getMenuForLocation.js";
 import { declareLocations } from "./server/locations.js";
 
@@ -234,12 +234,12 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
 
       ctx.registerRpcRouter(createMenuRouter(registered));
 
-      // A rendered menu is stored under `menu:<termId>` (see `resolveMenus`).
+      // A rendered menu read its own record (see `resolveMenus`).
       const purgeMenu = (
         { termId }: { readonly termId: number },
         appCtx: AppContext,
       ) => {
-        enqueuePurgeTags(appCtx, [menuTag(termId)]);
+        recordWrite(appCtx, [menuRead(termId)]);
       };
       ctx.addAction("menu:saved", purgeMenu);
       ctx.addAction("menu:deleted", purgeMenu);

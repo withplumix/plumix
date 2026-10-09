@@ -51,21 +51,16 @@ export {
   rowsAffected,
 } from "@plumix/core/db";
 
-// Purge vocabulary, meta settling, core's search conditions, visitor metadata,
-// and the entry query — a query that narrows is built with the same operators
-// everything else on this path uses.
+// Meta settling, core's search conditions, visitor metadata, and the entry
+// query — a query that narrows is built with the same operators everything else
+// on this path uses.
 export {
   compileEntryQuery,
-  entryPurgeTags,
   entryQuery,
   entrySearchCondition,
-  entryTag,
-  enqueuePurgeTags,
   loadAuthoredEntry,
   publicEntryRows,
   readVisitorMeta,
   settleMeta,
-  termPurgeTags,
   tokenizeSearchQuery,
-  typeTag,
 } from "@plumix/core/db";

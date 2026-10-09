@@ -1,4 +1,5 @@
 import type { Capability } from "../access/contract/capability.js";
+import type { CacheRead } from "../cdn/contract/subjects.js";
 import type { AppContext } from "../context/app-context.js";
 import type { ResolvedImage } from "../images/contract/role-images.js";
 
@@ -150,20 +151,18 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<readonly HydratedReference[]>;
 
   /**
-   * Cache tags a referenced id contributes to whatever read it, so editing
-   * or deleting the referenced entity reaches everything that hydrated it.
-   * Feeds two readers: the tags fold into the embedding page's stored cache
-   * tags, so the entity's purge purges the page (#1508), and they tag the
-   * id's request-memo entry, so the entity's write in the same request drops
-   * it (#2517). Return the same tag the entity's own purge enqueues — the
-   * entry adapter returns `e:<id>`, the precise per-entity tag. Handed the
-   * id rather than a payload: a purge tag is identity, and an id that
-   * hydrated to nothing has no payload but still needs its tag, so it
-   * re-queries once the entity becomes visible. Kinds whose entities carry
-   * no per-entity purge identity (e.g. `user`) omit this method; their
-   * references embed without a cache-tag dependency. Optional.
+   * What embedding a referenced id reads, so editing or deleting the
+   * referenced entity reaches everything that hydrated it. Feeds two readers:
+   * the embedding page records the read, so the entity's write purges the
+   * page (#1508), and the id's request-memo entry carries it, so the entity's
+   * write in the same request drops it (#2517). The entry adapter answers
+   * `{ kind: "entry", id }`. Handed the id rather than a payload: what was
+   * read is identity, and an id that hydrated to nothing has no payload but
+   * still needs it, so it re-queries once the entity becomes visible. `null`
+   * for an id that names no entity. Kinds without it embed without a
+   * cache dependency. Optional.
    */
-  embeddedCacheTags?(id: string): readonly string[];
+  embeddedRead?(id: string): CacheRead | null;
 
   /**
    * The image a hydrated payload of this kind stands for. The adapter that

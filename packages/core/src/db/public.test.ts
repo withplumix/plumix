@@ -21,11 +21,6 @@ describe("@plumix/core/db surface", () => {
       "getTableColumns",
       "getTableName",
       "is",
-      "typeTag",
-      "entryTag",
-      "entryPurgeTags",
-      "termPurgeTags",
-      "enqueuePurgeTags",
       "readVisitorMeta",
       "settleMeta",
     ]) {
@@ -37,10 +32,16 @@ describe("@plumix/core/db surface", () => {
     expect(db).not.toHaveProperty("entries");
   });
 
-  it("does not leak core-owned purge lifecycle internals", () => {
+  // A direct writer says what it changed with `recordWrite`, and core spells
+  // the tags, so no tag minter or raw purge is reachable here (ADR 0042).
+  it("hands a direct writer no way to spell or purge a tag", () => {
     for (const name of [
+      "typeTag",
+      "entryTag",
+      "entryPurgeTags",
+      "termPurgeTags",
+      "enqueuePurgeTags",
       "flushPurgeTags",
-      "registerCorePurgeInvalidator",
       "pageTags",
     ]) {
       expect(db).not.toHaveProperty(name);

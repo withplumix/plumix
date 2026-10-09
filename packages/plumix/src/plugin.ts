@@ -113,15 +113,18 @@ export {
   viewTargets,
 } from "@plumix/core";
 
-// Responses a plugin route answers with, and the CDN tag it stores one under.
+// Responses a plugin route answers with.
 export {
   forbidden,
   jsonResponse,
   methodNotAllowed,
   notFoundResponse,
   serveRenderedAsset,
-  tagCdnEntry,
 } from "@plumix/core";
+
+// What a response read and what a write changed, so the CDN and the request
+// memo retire the right things (ADR 0042).
+export { recordRead, recordWrite } from "@plumix/core";
 
 // Dev surfaces a plugin contributes panels to.
 export {
@@ -164,6 +167,8 @@ export type {
   BlockManifestEntry,
   BlockRenderHookContext,
   BuiltManifest,
+  CacheRead,
+  CacheWrite,
   CapabilityNamespaces,
   ContextExtensionEntry,
   CoreIconName,

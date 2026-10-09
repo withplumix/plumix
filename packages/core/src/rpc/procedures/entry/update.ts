@@ -5,6 +5,7 @@ import type { JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
+import { recordWrite } from "../../../cdn/invalidation.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
@@ -473,6 +474,12 @@ export const update = base
 
     if (termsPatch !== undefined) {
       await applyTermPatch(context, updated.id, termsPatch);
+      // No lifecycle hook names a terms write, and a terms-only patch fires
+      // no `entry:updated`, yet the permalink and the term archives showed
+      // the terms.
+      recordWrite(context, [
+        { kind: "entry", id: updated.id, type: updated.type },
+      ]);
     }
 
     // `writeEntryMeta` is a no-op on an empty patch, so the null check

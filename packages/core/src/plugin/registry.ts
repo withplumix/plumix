@@ -24,6 +24,7 @@ import type {
   MarkSpec,
   ShortcodeSpec,
 } from "../blocks/index.js";
+import type { CacheRead } from "../cdn/contract/subjects.js";
 import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -534,13 +535,12 @@ export interface CustomArchiveResolution {
   readonly data: ArchiveTypeData;
   readonly title: string;
   /**
-   * CDN tags for the content this archive lists — typically `t:<type>`
-   * for each entry type it draws from (see {@link typeTag}). When the archive
-   * is `cacheable`, a publish of any listed type purges the stored page, the
-   * same coarse invalidation the built-in archives get. Ignored when the
-   * archive hasn't opted into caching.
+   * What this archive read — typically `{ kind: "entryType", type }` for each
+   * entry type it draws from. When the archive is `cacheable`, a write to any
+   * of it purges the stored page, the same coarse invalidation the built-in
+   * archives get. Ignored when the archive hasn't opted into caching.
    */
-  readonly tags?: readonly string[];
+  readonly reads?: readonly CacheRead[];
 }
 
 /**
@@ -598,7 +598,7 @@ export interface ArchiveTypeOptions {
    * so caching without a tag contribution would risk stale pages. An archive
    * that declares `entries` needs nothing further — core tags it with the
    * types its query can list. One that resolves its own payload pairs this
-   * with {@link CustomArchiveResolution.tags}.
+   * with {@link CustomArchiveResolution.reads}.
    */
   readonly cacheable?: boolean;
   /**
@@ -691,16 +691,16 @@ export type RegisteredArchiveType = ArchiveTypeDeclaration & {
 /**
  * What a view's resolver produces: the `data` its template receives under
  * `data.data`, the document title, and — for a view that opted into the CDN —
- * the tags that purge it.
+ * what it read, so a write to that purges it.
  */
 export interface ViewResolution<TData = unknown> {
   readonly data: TData;
   readonly title: string;
   /**
-   * CDN tags for what this view read (see {@link typeTag}). Only consumed when
-   * the view is `cacheable`; ignored otherwise.
+   * What this view read. Only consumed when the view is `cacheable`; ignored
+   * otherwise.
    */
-  readonly tags?: readonly string[];
+  readonly reads?: readonly CacheRead[];
 }
 
 /**
@@ -720,7 +720,7 @@ export interface ViewOptions<TData = unknown> {
   /**
    * Opt this view's anonymous GET renders into the built-in CDN. Off by
    * default: a view is usually different for every visitor. Pair it with
-   * {@link ViewResolution.tags} so a change purges the stored page.
+   * {@link ViewResolution.reads} so a change purges the stored page.
    */
   readonly cacheable?: boolean;
   /**

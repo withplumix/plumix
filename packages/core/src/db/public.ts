@@ -1,23 +1,14 @@
 // The `@plumix/core/db` (and `plumix/db`) surface: everything a plugin needs to
-// write directly to `ctx.db` and invalidate the CDN, in one import, so it
-// never takes its own `drizzle-orm` dependency. Direct writes bypass core's
-// entry-mutation service — no `entry:*`/`term:*` action fires, so no auto-purge
-// — hence the write helpers and the purge vocabulary belong together here.
+// write directly to `ctx.db`, in one import, so it never takes its own
+// `drizzle-orm` dependency. Direct writes bypass core's entry-mutation service —
+// no `entry:*`/`term:*` action fires, so nothing is purged until the writer
+// says what it changed with `recordWrite` from `plumix/plugin`.
 // The tables these run against live on `@plumix/core/schema` / `plumix/schema`
 // alone, so a table has one import path (#2493). None of it is re-exported
 // from the flat `@plumix/core` / `plumix` root barrel anymore (#1766).
 
 // Query operators, table-introspection helpers, unique-constraint guards, types.
 export * from "./index.js";
-// CDN tag vocabulary (PRD #1080): build the coarse `t:<type>`/`e:<id>`
-// tags core would and enqueue them for the post-request / scheduled flush.
-export {
-  entryPurgeTags,
-  entryTag,
-  termPurgeTags,
-  typeTag,
-} from "../cdn/contract/tags.js";
-export { enqueuePurgeTags } from "../cdn/purge.js";
 // What core's own entry search means — how a query parses, and what matching
 // title and excerpt with `LIKE` involves — so a plugin that replaces the search
 // page can degrade to core's own query rather than restate it and disagree

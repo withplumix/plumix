@@ -224,7 +224,7 @@ export interface PluginSetupContextBase {
    * `/compare/:id` — rendered through the theme with the same template,
    * document and access pipeline as any page, but listing nothing.
    *
-   * `resolve(ctx, params)` returns `{ data, title, tags? }` or `null` (404),
+   * `resolve(ctx, params)` returns `{ data, title, reads? }` or `null` (404),
    * or throws `pageNotFound()` / `redirectTo()` from `plumix/support`. The
    * theme targets it with `forView(name)`, else its `fallback` renders it. A
    * view is never stored by the CDN unless `cacheable: true`, and has no
@@ -266,7 +266,7 @@ export interface PluginSetupContextBase {
    *
    *  Freshness is the handler's: it keeps a `cache-control` it set, and a
    *  response that set none takes the site's page TTL. So are the tags: the
-   *  entry stores under what the handler names with `tagCdnEntry` while it
+   *  entry stores under what the handler records with `recordRead` while it
    *  runs, plus the settings groups core saw it read, and `immutable` belongs only on a content-addressed URL, since a
    *  purge reaches Cloudflare but never a browser or a scraper. A response
    *  answering a request that carried a session, an `Authorization` header or

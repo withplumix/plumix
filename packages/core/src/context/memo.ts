@@ -6,9 +6,9 @@ import { normalizeTag } from "../cdn/contract/tags.js";
  * all consumers share one map per context.
  *
  * An entry may carry cache tags, in the vocabulary the CDN purges by. A write
- * announces itself through the lifecycle action it already fires, core's
- * roster turns that action into tags, and `enqueuePurgeTags` drops every entry
- * carrying one of them — before the action's caller continues, whether or not
+ * announces itself through the lifecycle action it already fires (or through
+ * `recordWrite`), the one rule in `plugin/cache-tags.ts` turns it into tags,
+ * and every entry carrying one of them is dropped — before the action's caller continues, whether or not
  * the site has a CDN (#2517). So a request that hydrates an entry, publishes
  * it, and hydrates it again reads the published row, and a miss tagged by id
  * re-queries once the id becomes visible. Cron runs share one memo across

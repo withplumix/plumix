@@ -49,7 +49,7 @@ import {
   coreShortcodes,
   createBlockRegistry,
 } from "../blocks/index.js";
-import { registerCorePurgeInvalidator } from "../cdn/purge.js";
+import { registerCoreInvalidation } from "../cdn/invalidation.js";
 import * as coreSchema from "../db/schema/index.js";
 import { debugBarChrome } from "../dev/debug-bar/component.js";
 import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
@@ -281,7 +281,7 @@ export async function buildApp(
   // Unconditional: the request memo drops what a write announced whether or
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
-  registerCorePurgeInvalidator(hooks);
+  registerCoreInvalidation(hooks);
   const seededRegistry = createPluginRegistry(config.routes);
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);

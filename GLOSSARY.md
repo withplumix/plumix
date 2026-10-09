@@ -399,7 +399,13 @@ A public render that read the principal during the render phase (`ctx.user`, `ct
 _Avoid_: personalized render, per-user render
 
 **Cache tag**:
-A coarse label a stored response carries for invalidation — a type tag (`t:<type>`), an entry tag (`e:<id>`), or a settings tag (`s:<group>`). A page is stored under its resolved intent's tags plus the tags its render declared: the entities it embedded (`embeddedCacheTags`), the settings groups it read (`s:<group>`), and whatever a plugin named with `tagCdnEntry` from a loader, a component or a hook. A plugin route that opted into the CDN is stored under the tags declared while its handler ran, with no intent tags: what it named with `tagCdnEntry`, plus whatever core declared for what it read. A plugin tags in the same vocabulary or in a namespace of its own that nothing purges.
+A coarse label a stored response carries for invalidation. Nobody spells one: a response records the **cache reads** it made and a write records the **cache writes** it made, and one rule in core turns both into tags, a write's tags being those of every read it changes. A page is stored under what its resolved intent reads plus everything its render recorded: the entities it embedded, the settings groups it read, and whatever a plugin recorded with `recordRead`. A plugin route that opted into the CDN is stored under what was recorded while its handler ran, with no intent reads. See ADR 0042.
+
+**Cache read**:
+What a response says it read, in the domain's terms: an entry, an entry type, a taxonomy, a term, a user, a settings group, or a plugin's own record under a namespace of its own (`CacheRead`).
+
+**Cache write**:
+What a write says it changed, in the same terms (`CacheWrite`). Core's own writes record theirs through their lifecycle hooks; a plugin writing `ctx.db` directly calls `recordWrite`.
 
 **Purge**:
 Invalidation of stored responses by tag, or of a source's variants by its URL.

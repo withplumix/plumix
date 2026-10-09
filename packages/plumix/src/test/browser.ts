@@ -37,6 +37,7 @@ export {
   buildRequest,
   createDeferQueue,
   DEV_ORIGIN,
+  memoryCdn,
   plumixRequest,
   TestResponse,
   toRegisteredEntryType,

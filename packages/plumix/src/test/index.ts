@@ -41,6 +41,7 @@ export {
   createTracedContext,
   DEV_ORIGIN,
   generateSchemaSource,
+  memoryCdn,
   plumixRequest,
   TestResponse,
   toRegisteredEntryType,

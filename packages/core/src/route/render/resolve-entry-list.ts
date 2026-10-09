@@ -12,7 +12,6 @@ import type {
   ResolvedTerm,
 } from "../contract/resolved-entry.js";
 import { expandShortcodes, isEntryContent } from "../../blocks/index.js";
-import { userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
@@ -23,6 +22,7 @@ import {
 } from "../../images/role-images.js";
 import { resolveEntriesMeta } from "../../meta/entry.js";
 import { resolveTermsMeta } from "../../meta/term.js";
+import { readTags } from "../../plugin/cache-tags.js";
 import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   buildEntryPermalinkSync,
@@ -67,17 +67,19 @@ export async function resolveAuthorRow(
     authorMemoKey,
     async () =>
       new Map((await resolveAuthors(ctx, [row])).map((a) => [a.id, a])),
-    authorMemoTags,
+    authorMemoTags(ctx),
   );
   // memoBatch answers one entry per id, and the loader has the row in hand.
   return author ?? publicAuthor(row, {});
 }
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
-// The author's own tag rather than the public types' tags every user change
-// also purges: an entry publish announces those, and must not drop an author
-// it did not touch.
-const authorMemoTags = (id: number): readonly string[] => [userTag(id)];
+// The author alone rather than the public types every user write also
+// reaches: an entry publish reaches those, and must not drop an author it did
+// not touch.
+function authorMemoTags(ctx: AppContext): (id: number) => readonly string[] {
+  return (id) => readTags(ctx.plugins, [{ kind: "user", id }]);
+}
 
 // The projection itself — never spread the user row, which carries email and
 // the auth columns.
@@ -178,7 +180,7 @@ export async function resolveEntryList(
         const authors = await resolveAuthors(ctx, rows);
         return new Map(authors.map((a) => [a.id, a]));
       },
-      authorMemoTags,
+      authorMemoTags(ctx),
     ),
     ctx.db
       .select({

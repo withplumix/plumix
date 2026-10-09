@@ -1,8 +1,12 @@
 /**
- * The CDN tag a page rendering this menu is stored under, and that a write
- * to the menu purges. Keyed by term id rather than slug, so a save after a
- * rename still reaches the pages that rendered the old slug.
+ * What a page rendering this menu read, and what a write to the menu changes.
+ * Keyed by term id rather than slug, so a save after a rename still reaches the
+ * pages that rendered the old slug.
  */
-export function menuTag(termId: number): string {
-  return `menu:${String(termId)}`;
+export function menuRead(termId: number): {
+  readonly kind: "own";
+  readonly namespace: "menu";
+  readonly id: number;
+} {
+  return { kind: "own", namespace: "menu", id: termId };
 }

@@ -86,6 +86,11 @@ export const termLookupAdapter = {
     const urls = await buildTermArchiveUrls(ctx, rows);
     return rows.map((row, i) => toTermSummary(row, urls[i] ?? null));
   },
+
+  embeddedRead(id) {
+    const numericId = parseTermId(id);
+    return numericId === null ? null : { kind: "term", id: numericId };
+  },
 } satisfies LookupAdapter<TermFieldScope>;
 
 function parseTermId(id: string): number | null {

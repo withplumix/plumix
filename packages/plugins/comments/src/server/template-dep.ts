@@ -1,9 +1,21 @@
 import type { TemplateDepLoader } from "plumix";
-import { readEntryType } from "plumix/plugin";
+import { readEntryType, recordRead } from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { loadThread } from "./load-thread.js";
+
+/**
+ * What a page that rendered an entry's comment thread read, and what a write
+ * to the thread changes.
+ */
+export function threadRead(entryId: number): {
+  readonly kind: "own";
+  readonly namespace: "comments";
+  readonly id: number;
+} {
+  return { kind: "own", namespace: "comments", id: entryId };
+}
 
 /**
  * Build the `comments` template-dep loader for a given plugin config.
@@ -26,6 +38,7 @@ export function createCommentsThreadLoader(
     const supports = ctx.plugins.entryTypes.get(type)?.supports;
     if (!isCommentingEnabled(type, supports, config)) return {};
 
+    recordRead(ctx, [threadRead(resolved.id)]);
     // First (newest) page; older roots load via GET /_plumix/comments/list.
     const thread = await loadThread(ctx, resolved.id, {
       maxDepth: config.maxDepth,

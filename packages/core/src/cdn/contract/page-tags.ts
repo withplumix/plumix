@@ -2,9 +2,9 @@ import { normalizeTag } from "./tags.js";
 
 // Per-request accumulator of the cache tags the response is stored under,
 // beyond what its route intent names. Everything that learns mid-request what
-// the response read writes here: a plugin's `tagCdnEntry`, core's
-// embedded-reference fold (#1508), a custom archive's `result.tags`, and the
-// settings loader. The read-through reads it once the render has returned —
+// the response read writes here, through `recordRead` in
+// `cdn/invalidation.ts`: a plugin, core's embedded-reference fold (#1508), a
+// custom archive's or a view's recorded reads, and the settings loader. The read-through reads it once the render has returned —
 // a public page unions it with its intent's tags, a `cacheable` plugin route
 // stores under it alone.
 //

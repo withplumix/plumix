@@ -1,8 +1,8 @@
+import type { CacheRead } from "../../cdn/contract/subjects.js";
 import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { EntryListing } from "../contract/entry-listing.js";
-import { typeTag } from "../../cdn/contract/tags.js";
 import { sql } from "../../db/index.js";
 import {
   compileEntryQuery,
@@ -26,17 +26,17 @@ export function publicEntriesQuery(plugins: PluginRegistry): EntryQuery {
 }
 
 /**
- * The CDN tags an archive's page is stored under: the types its query can
- * list, or every public type where it names none. A publish of any of them can
- * change the page, so a publish of any of them purges it — the same coarse
- * invalidation the built-in archives get.
+ * What an archive's page reads: the types its query can list, or every public
+ * type where it names none. A publish of any of them can change the page, so a
+ * publish of any of them purges it — the same coarse invalidation the built-in
+ * archives get.
  */
-export function listingCdnTags(
+export function listingReads(
   plugins: PluginRegistry,
   query: EntryQuery,
-): readonly string[] {
+): CacheRead[] {
   const types = entryQueryTypeNames(query) ?? publicEntryTypeNames(plugins);
-  return types.map(typeTag);
+  return types.map((type) => ({ kind: "entryType", type }));
 }
 
 /** A listing, plus the one thing only the reader can say about the page asked for. */

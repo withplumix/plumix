@@ -1,7 +1,7 @@
 import type { AnyPluginDescriptor, ConnectedCdn } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness, plumixRequest } from "plumix/test";
+import { createDispatcherHarness, memoryCdn, plumixRequest } from "plumix/test";
 import { defineTemplate, defineTheme, entry } from "plumix/theme";
 import { describe, expect, test, vi } from "vitest";
 
@@ -259,5 +259,59 @@ describe("@plumix/plugin-menu — CDN tags", () => {
     await bind(s, "primary", "main-nav");
 
     expect(await storedTags(s)).toContain(`e:${String(linked.id)}`);
+  });
+
+  // A term rename reaches the term's own archive through its taxonomy's
+  // types; a page of another type that printed the term's label in its nav
+  // is reached only through the term itself.
+  test("renaming a term the menu links retires the pages that showed it", async () => {
+    const topics = definePlugin("topics", (ctx) => {
+      ctx.registerEntryType("guide", { label: "Guides", isPublic: true });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        entryTypes: ["guide"],
+      });
+    });
+    const { cdn, stored } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: {
+        plugins: [
+          blog,
+          topics,
+          menu({ locations: { primary: { label: "Primary" } } }),
+        ],
+        theme,
+      },
+    });
+    const admin = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: admin.id,
+      publishedAt: new Date(),
+    });
+    const topic = await h.factory.term.create({
+      taxonomy: "topic",
+      slug: "news",
+      name: "News",
+    });
+    const s: Site = { h, put: vi.fn(), purgeTags: vi.fn(), authorId: admin.id };
+    await seedMenu(s, "main-nav", [{ kind: "term", termId: topic.id }]);
+    await bind(s, "primary", "main-nav");
+    await h.dispatch(new Request("https://cms.example/post/hello"));
+    await h.drainDeferred();
+    expect(stored("/post/hello")).toBeDefined();
+
+    const renamed = await h.fetch("/_plumix/rpc/term/update", {
+      as: admin,
+      json: { json: { id: topic.id, name: "Headlines" }, meta: [] },
+    });
+    renamed.assertStatus(200);
+    await h.drainDeferred();
+
+    expect(stored("/post/hello")).toBeUndefined();
   });
 });

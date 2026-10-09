@@ -1,49 +1,52 @@
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
-import { entryTag, typeTag } from "./contract/tags.js";
+import type { CacheRead } from "./contract/subjects.js";
 
-interface PageTagSources {
+interface PageReadSources {
   readonly intent: RouteIntent;
   readonly resolvedEntity: ResolvedEntity | null;
   /** Entry types the front page lists (public, non-hierarchical). */
   readonly frontPageEntryTypes: () => readonly string[];
-  /** Entry types the named taxonomy's term pages depend on. */
-  readonly taxonomyEntryTypes: (taxonomy: string) => readonly string[];
 }
 
 /**
- * The cache tags a rendered public page is stored under. Every page that lists
- * or embeds type-`X` content — its archives, the front page, term archives,
- * and an entry permalink (which can render sibling content like related posts)
- * — carries `t:X`, so any publish of that type purges it. A permalink also
- * carries its own `e:<id>` so an edit to just that entry purges it precisely.
+ * What a rendered public page read by being the route it is. Every page that
+ * lists or embeds type-`X` content — its archives, the front page, term
+ * archives, and an entry permalink (which can render sibling content like
+ * related posts) — reads type `X`, so any publish of that type reaches it. A
+ * permalink also reads its own entry, so an edit to just that entry reaches
+ * it precisely.
  */
-export function pageTags(sources: PageTagSources): string[] {
+export function pageReads(sources: PageReadSources): CacheRead[] {
   const { intent, resolvedEntity } = sources;
   switch (intent.kind) {
     case "entry":
       return resolvedEntity?.kind === "entry"
-        ? [typeTag(intent.entryType), entryTag(resolvedEntity.id)]
+        ? [
+            { kind: "entryType", type: intent.entryType },
+            { kind: "entry", id: resolvedEntity.id },
+          ]
         : [];
     case "entryType":
-      return [typeTag(intent.entryType)];
+      return [{ kind: "entryType", type: intent.entryType }];
     case "frontPage":
-      return sources.frontPageEntryTypes().map(typeTag);
-    case "term":
-      return sources.taxonomyEntryTypes(intent.taxonomy).map(typeTag);
     case "author":
     case "date":
       // Author and date archives list the same public, non-hierarchical type
       // set as the front page, so any publish of those types can change them.
-      return sources.frontPageEntryTypes().map(typeTag);
+      return sources
+        .frontPageEntryTypes()
+        .map((type): CacheRead => ({ kind: "entryType", type }));
+    case "term":
+      return [{ kind: "taxonomy", taxonomy: intent.taxonomy }];
     case "archiveType":
     case "view":
     case "search":
       // Neither is derivable from the intent alone: search results depend on a
       // query, and a plugin archive's content on what it registered. Both
-      // contribute their tags per request instead — a listed archive's from
-      // the types its entry query can list, an unlisted one's from whatever
-      // its resolver returns. A view is an unlisted resolver's page too.
+      // record their reads per request instead — a listed archive's from the
+      // types its entry query can list, an unlisted one's from whatever its
+      // resolver returns. A view is an unlisted resolver's page too.
       return [];
   }
 }

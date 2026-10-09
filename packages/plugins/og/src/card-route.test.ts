@@ -1,7 +1,7 @@
 import type { CdnStore, ConnectedCdn, Logger, TelemetrySpan } from "plumix";
 import type { TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
-import { entryPurgeTags, entryTag, eq } from "plumix/db";
+import { eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { describe, expect, test, vi } from "vitest";
@@ -521,18 +521,13 @@ describe("a card at the edge", () => {
     await fetchCard(harness, id);
     await harness.drainDeferred();
 
-    // The card key emits the URL hash and this tag from one call, so a card
-    // keyed on an entry lands under the entry tag. Asserted against core's own
-    // purge vocabulary rather than a spelled-out string: what makes this one
-    // caching story is that the set an `entry:published` sweeps covers the
-    // entry tag the card stored under, and either side moving has to break
-    // this. The card also prints the site's name, so it carries the `site`
-    // settings group's tag core declared when the card read it.
+    // The card key emits the URL hash and this read from one call, so a card
+    // keyed on an entry lands under the entry's tag, the one an
+    // `entry:published` sweeps. The card also prints the site's name, so it
+    // carries the `site` settings group's tag core declared when the card
+    // read it.
     const stored = [...(put.mock.calls[0]?.[2] ?? [])];
-    expect(stored).toEqual(["s:site", entryTag(id)]);
-    expect(entryPurgeTags("post", id)).toEqual(
-      expect.arrayContaining(stored.filter((tag) => !tag.startsWith("s:"))),
-    );
+    expect(stored).toEqual(["s:site", `e:${String(id)}`]);
   });
 
   test("renders once, then answers the next request from the edge", async () => {

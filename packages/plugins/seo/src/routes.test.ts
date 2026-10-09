@@ -11,17 +11,16 @@ import type {
   DispatcherHarness,
 } from "plumix/test";
 import { challenge, definePolicy, grant } from "plumix/auth";
-import { entryPurgeTags, eq, typeTag } from "plumix/db";
+import { eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, memoryCdn } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
 import type * as SeoPackage from "./index.js";
 import { seo } from "./index.js";
-import { SITEMAP_TAG } from "./routes.js";
 
 // The sitemap lists every role an entry carries, not a pair core happens to
 // ship — so this suite declares one of its own.
@@ -88,7 +87,7 @@ const eventsPlugin = definePlugin("events", (ctx) => {
         lastmod: "2026-08-01T00:00:00.000Z",
       },
     ],
-    tags: ["events"],
+    reads: [{ kind: "own", namespace: "events" }],
   });
 });
 
@@ -1244,22 +1243,14 @@ describe("a sitemap at the edge", () => {
     await h.drainDeferred();
 
     // `t:post` is what an `entry:published` of a post purges, so publishing one
-    // clears the post scope. The category scope rides its taxonomy's entry
-    // types, which is what a term change purges.
-    // Asserted against core's own purge vocabulary rather than a spelled-out
-    // string: what makes this one caching story is that the set an
-    // `entry:published` sweeps covers what the scope stored under.
+    // clears the post scope. The category scope reads its taxonomy, which is
+    // what a term change purges.
+    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain("t:post");
+    expect(tagsFor(put, "/sitemap-terms-category-1.xml")).toContain("t:post");
+    // And both read the set as a whole, which a contributing plugin retires.
     expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(
-      typeTag("post"),
+      "seo:sitemap",
     );
-    expect(entryPurgeTags("post", 1)).toEqual(
-      expect.arrayContaining([typeTag("post")]),
-    );
-    expect(tagsFor(put, "/sitemap-terms-category-1.xml")).toEqual(
-      expect.arrayContaining([typeTag("post")]),
-    );
-    // And both carry the set-wide tag the indexing toggle purges by.
-    expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toContain(SITEMAP_TAG);
   });
 
   test("names only its own tags, not one per picture it lists", async () => {
@@ -1277,8 +1268,8 @@ describe("a sitemap at the edge", () => {
     await h.drainDeferred();
 
     expect(tagsFor(put, "/sitemap-entries-post-1.xml")).toEqual([
-      SITEMAP_TAG,
-      typeTag("post"),
+      "seo:sitemap",
+      "t:post",
       "s:seo",
       "s:site",
     ]);
@@ -1306,32 +1297,64 @@ describe("a sitemap at the edge", () => {
     expect(match).toHaveBeenCalledTimes(2);
   });
 
-  // Every SEO group rewrites something a cached response already says, so a
-  // save retires the sitemap set and the content pages of every registered
-  // type — the latter by type tag, since the cdn has no site-wide one. Core
-  // purges the group's own tag on every save, whichever group it was.
+  // The sitemap read the groups the indexing toggle lives in, so core's purge
+  // of a saved group retires it, and a save to a group it never read leaves
+  // it standing.
   test.each([
-    ["the plugin's own group", "seo", true],
-    ["the verification group", "seo_verification", true],
-    ["the robots.txt group", "seo_robots", true],
-    ["the legacy site group", "site", true],
-    ["an unrelated group", "mail", false],
+    ["the plugin's own group", "seo", false],
+    ["the legacy site group", "site", false],
+    ["an unrelated group", "mail", true],
   ])(
-    "a settings save on %s %s the cached set",
-    async (_label, group, purged) => {
-      const { cdn, purgeTags } = cdnStub();
+    "a settings save on %s retires the cached sitemap: kept %s",
+    async (_label, group, kept) => {
+      const { cdn, stored } = memoryCdn();
       const h = await createHarness([blogPlugin, settingsSaver(group)], {
         cdn,
       });
+      await seedPost(h);
+      await bodyOf(h, "/sitemap-entries-post-1.xml");
+      await h.drainDeferred();
+      expect(stored("/sitemap-entries-post-1.xml")).toBeDefined();
 
       await h.dispatch(new Request("https://cms.example/fire-settings-change"));
       await h.drainDeferred();
 
-      expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
-        purged ? [`s:${group}`, SITEMAP_TAG, typeTag("post")] : [`s:${group}`],
-      );
+      expect(stored("/sitemap-entries-post-1.xml") !== undefined).toBe(kept);
     },
   );
+
+  // A taxonomy that lists no entry types has term archives over every public
+  // type, and a term change purges those; the list of its archives has to
+  // read the same set, or it outlives the term it lists.
+  test("a term change retires the cached scope of a taxonomy that lists no types", async () => {
+    const tagged = definePlugin("tagged", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    });
+    const { cdn, stored } = memoryCdn();
+    const h = await createHarness([tagged], { cdn });
+    const admin = await h.seedUser("admin");
+    await h.factory.term.create({
+      taxonomy: "tag",
+      slug: "news",
+      name: "News",
+    });
+    await bodyOf(h, "/sitemap-terms-tag-1.xml");
+    await h.drainDeferred();
+    expect(stored("/sitemap-terms-tag-1.xml")).toBeDefined();
+
+    const created = await h.fetch("/_plumix/rpc/term/create", {
+      as: admin,
+      json: {
+        json: { taxonomy: "tag", name: "Sport", slug: "sport" },
+        meta: [],
+      },
+    });
+    created.assertStatus(200);
+    await h.drainDeferred();
+
+    expect(stored("/sitemap-terms-tag-1.xml")).toBeUndefined();
+  });
 
   test("with no cdn configured the sitemap still serves, generated per request", async () => {
     const h = await createHarness();

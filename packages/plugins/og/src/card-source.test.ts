@@ -2,11 +2,12 @@ import type { TemplateData } from "plumix";
 import { describe, expect, test } from "vitest";
 
 import type { CardDefinition } from "./card.js";
+import { cardKey } from "./card-key.js";
 import { cardSourceHash } from "./card-source.js";
 
 function design(): CardDefinition<TemplateData> {
   return {
-    key: () => ({ id: "fixed", tag: "og:fixed" }),
+    key: () => cardKey.of("fixed"),
     render: () => ({ type: "text", text: "Read this" }),
   };
 }
@@ -22,7 +23,7 @@ describe("the card-source hash", () => {
   test("ignores an edit to the key callback", async () => {
     const edited: CardDefinition<TemplateData> = {
       ...design(),
-      key: () => ({ id: "fixed", tag: "og:fixed" }),
+      key: () => cardKey.of("fixed"),
     };
 
     expect(await cardSourceHash(edited)).toBe(await cardSourceHash(design()));

@@ -31,16 +31,14 @@ import {
 } from "../cdn/decision.js";
 import { flushPurgeTags } from "../cdn/purge.js";
 import { readThrough, readThroughRoute } from "../cdn/read-through.js";
-import { pageTags } from "../cdn/tags.js";
+import { pageReads } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import {
-  listedEntryTypeNames,
-  termPageEntryTypeNames,
-} from "../plugin/registry.js";
+import { readTags } from "../plugin/cache-tags.js";
+import { listedEntryTypeNames } from "../plugin/registry.js";
 import {
   cacheableAssetNotFound,
   renderErrorThroughTheme,
@@ -601,15 +599,16 @@ async function dispatchPublicRoute(
         const routeTags =
           intent === null
             ? []
-            : pageTags({
-                intent,
-                resolvedEntity: ctx.resolvedEntity,
-                frontPageEntryTypes: () => listedEntryTypeNames(ctx.plugins),
-                taxonomyEntryTypes: (taxonomy) =>
-                  termPageEntryTypeNames(ctx.plugins, taxonomy),
-              });
-        // What the render declared it read: embedded references, a custom
-        // archive's types, settings groups, a plugin's `tagCdnEntry`.
+            : readTags(
+                ctx.plugins,
+                pageReads({
+                  intent,
+                  resolvedEntity: ctx.resolvedEntity,
+                  frontPageEntryTypes: () => listedEntryTypeNames(ctx.plugins),
+                }),
+              );
+        // What the render recorded it read: embedded references, a custom
+        // archive's types, settings groups, a plugin's `recordRead`.
         const declared = declaredPageTags(ctx);
         return declared.length === 0
           ? routeTags
@@ -929,7 +928,7 @@ function serveRawRoute(
     telemetry: ctx.telemetry,
     render: () => runPluginRawRoute(route, ctx),
     // Read after the handler ran: a route resolves the entity it answers for
-    // mid-request, and `tagCdnEntry` is where it names what that was.
+    // mid-request, and `recordRead` is where it names what that was.
     tags: () => declaredPageTags(ctx),
   });
 }

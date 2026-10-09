@@ -6,6 +6,7 @@ import {
   authenticated,
   base,
   listEntryMetaFields,
+  recordWrite,
   requireCapability,
   resolveCapability,
   startingMeta,
@@ -378,6 +379,10 @@ export function createMediaRouter(options: MediaRpcOptions) {
         .where(eq(entries.id, input.id))
         .returning();
       if (!updated) throw notFound();
+      // A direct write fires no `entry:updated`, so it says what it changed.
+      recordWrite(context, [
+        { kind: "entry", id: updated.id, type: updated.type },
+      ]);
 
       return {
         id: updated.id,
@@ -405,6 +410,9 @@ export function createMediaRouter(options: MediaRpcOptions) {
         .where(eq(entries.id, input.id))
         .returning();
       if (!deleted) throw notFound();
+      recordWrite(context, [
+        { kind: "entry", id: deleted.id, type: deleted.type },
+      ]);
 
       await purgeVariants(context, row);
       const meta = parseMediaMeta(row.meta);

@@ -86,6 +86,11 @@ export const userLookupAdapter = {
       avatarUrl: row.avatarUrl,
     }));
   },
+
+  embeddedRead(id) {
+    const numericId = parseUserId(id);
+    return numericId === null ? null : { kind: "user", id: numericId };
+  },
 } satisfies LookupAdapter<UserFieldScope>;
 
 function parseUserId(id: string): number | null {

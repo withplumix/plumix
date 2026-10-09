@@ -10,8 +10,7 @@ import {
   grant,
   rolePolicy,
 } from "../access/policy.js";
-import { entryPurgeTags } from "../cdn/contract/tags.js";
-import { tagCdnEntry } from "../cdn/route-tags.js";
+import { recordRead } from "../cdn/invalidation.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
@@ -173,7 +172,10 @@ describe("public route dispatch — CDN", () => {
       path: "/sitemap.xml",
       cacheable: true,
       handler: (_request, appCtx) => {
-        tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+        recordRead(appCtx, [
+          { kind: "entryType", type: "post" },
+          { kind: "entry", id: 7 },
+        ]);
         return new Response("<urlset/>", { status: 200 });
       },
     });

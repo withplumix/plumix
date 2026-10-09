@@ -7,14 +7,11 @@
 import type { AppContext } from "../context/app-context.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
-import { termPurgeTags, usersPurgeTags } from "../cdn/contract/tags.js";
 import { and, eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
-import {
-  publicEntryTypeNames,
-  termPageEntryTypeNames,
-} from "../plugin/registry.js";
+import { readTags } from "../plugin/cache-tags.js";
+import { publicEntryTypeNames } from "../plugin/registry.js";
 
 /**
  * The term a slug names in a taxonomy. `(taxonomy, slug)` is unique, so the
@@ -55,13 +52,13 @@ function termKey(taxonomy: string, slug: string): string {
   return `core:term-at:${JSON.stringify([taxonomy, slug])}`;
 }
 
-// Keyed by slug, so a miss has no term id to carry: the entry is tagged with
-// what any write to a term of the taxonomy announces. A term created or
+// Keyed by slug, so a miss has no term id to carry: the entry reads the whole
+// taxonomy, which any write to a term of it reaches. A term created or
 // renamed later in the same request (a cron invocation shares one
 // memo) is found by the next lookup; so is every unrelated term write, which
 // costs one re-read.
 function termAtTags(ctx: AppContext, taxonomy: string): readonly string[] {
-  return termPurgeTags(termPageEntryTypeNames(ctx.plugins, taxonomy));
+  return readTags(ctx.plugins, [{ kind: "taxonomy", taxonomy }]);
 }
 
 /**
@@ -100,7 +97,14 @@ function authorKey(slug: string): string {
 }
 
 // Keyed by slug for the reason the term lookup is: a miss has
-// no user id, so the entry carries what any user write announces.
+// no user id, so the entry reads every public type, which any user write
+// reaches.
 function authorAtTags(ctx: AppContext): readonly string[] {
-  return usersPurgeTags(publicEntryTypeNames(ctx.plugins));
+  return readTags(
+    ctx.plugins,
+    publicEntryTypeNames(ctx.plugins).map((type) => ({
+      kind: "entryType",
+      type,
+    })),
+  );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { RegisteredScheduledTask } from "../plugin/registry.js";
-import { registerCorePurgeInvalidator } from "../cdn/purge.js";
+import { registerCoreInvalidation } from "../cdn/invalidation.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveReferences } from "../meta/core.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -28,7 +28,7 @@ describe("scheduled publish purges the CDN", () => {
     });
 
     const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    registerCoreInvalidation(hooks);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
     const app = { scheduledTasks: registry.scheduledTasks };
@@ -61,7 +61,7 @@ describe("scheduled publish purges the CDN", () => {
     });
 
     const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    registerCoreInvalidation(hooks);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
     const app = { scheduledTasks: registry.scheduledTasks };

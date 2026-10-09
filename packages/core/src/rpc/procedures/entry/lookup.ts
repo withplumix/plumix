@@ -7,7 +7,6 @@ import type {
   LookupAdapter,
   LookupResult,
 } from "../../../plugin/lookup.js";
-import { entryTag } from "../../../cdn/contract/tags.js";
 import { and, eq, inArray, like, ne, or, sql } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
@@ -114,15 +113,11 @@ export const entryLookupAdapter = {
     return rows.map((row, i) => toEntrySummary(row, urls[i] ?? null));
   },
 
-  // A page embedding entry B carries B's precise entry tag, so B's
-  // lifecycle (`entryPurgeTags` enqueues `e:<id>` on publish/edit/
-  // meta-change/trash/restore/delete) purges the embedding page. The
-  // coarse `t:<type>` tag is deliberately omitted — it would purge the
-  // page on any publish of that type, and `e:<id>` alone already covers
-  // every change to this specific entry.
-  embeddedCacheTags(id) {
+  // A page embedding entry B reads B alone: B's own write purges the page,
+  // and a publish of another entry of B's type does not.
+  embeddedRead(id) {
     const numericId = parseEntryId(id);
-    return numericId === null ? [] : [entryTag(numericId)];
+    return numericId === null ? null : { kind: "entry", id: numericId };
   },
 } satisfies LookupAdapter<EntryFieldScope>;
 

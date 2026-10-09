@@ -17,7 +17,7 @@ import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
-import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { recordRead } from "../cdn/invalidation.js";
 import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entrySearchCondition } from "../db/search-conditions.js";
@@ -34,7 +34,7 @@ import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
-import { listEntryPage, listingCdnTags } from "./render/entry-listing.js";
+import { listEntryPage, listingReads } from "./render/entry-listing.js";
 import {
   archiveData,
   authorData,
@@ -308,12 +308,10 @@ async function resolveCustom(
   const result = await archive.resolve(ctx, params);
   if (result === null) return notFound("public-custom-archive-not-found");
 
-  // Contribute the archive's cache tags through the same per-request
-  // accumulator the public read-through folds into the stored response's
-  // tags (#1508). A publish of any listed type then purges this page — the
-  // coarse invalidation the built-in archives get. Only consumed when the
-  // archive opted into caching (`cacheable`); harmless otherwise.
-  if (result.tags) declarePageTags(ctx, result.tags);
+  // What the archive read joins what the render records, so a write to any
+  // of it purges this page. Only consumed when the archive opted into caching
+  // (`cacheable`); harmless otherwise.
+  if (result.reads) recordRead(ctx, result.reads);
 
   const html = await renderThroughTheme({
     ctx,
@@ -342,7 +340,7 @@ async function resolveView(
   if (result === null) return notFound("public-view-not-found");
 
   // Only stored when the view opted into the CDN (`cacheable`).
-  if (result.tags) declarePageTags(ctx, result.tags);
+  if (result.reads) recordRead(ctx, result.reads);
 
   const data: ViewData = {
     kind: "view",
@@ -401,7 +399,7 @@ async function resolveListingArchive(
   const resolution = await nameListingPage(ctx, archive, params, listing);
   if (resolution === null) return notFound("public-custom-archive-not-found");
 
-  declarePageTags(ctx, listingCdnTags(ctx.plugins, query));
+  recordRead(ctx, listingReads(ctx.plugins, query));
 
   // Core's half last: the archive's name and page are facts about the request,
   // not fields a resolver gets to restate differently.

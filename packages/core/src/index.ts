@@ -223,22 +223,14 @@ export type { EntryChange } from "./entries/change-feed.js";
 export type { EntryChangeKind } from "./db/schema/entry_changes.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
-// CDN tag vocabulary (PRD #1080). Exposed so a plugin that writes
-// directly to `ctx.db` — bypassing the entry-mutation service, so no
-// `entry:*`/`term:*` action fires — can enqueue the same coarse purge core
-// would, instead of hand-restating the `t:<type>`/`e:<id>` scheme (#1700).
-export {
-  entryPurgeTags,
-  entryTag,
-  termPurgeTags,
-  typeTag,
-} from "./cdn/contract/tags.js";
-export { enqueuePurgeTags } from "./cdn/purge.js";
-// Exposed for a `cacheable: true` plugin route, which is the only party that
-// knows what its own response read. Core tags a page from its resolved intent;
-// a raw route has none, so it names its own tags in the same vocabulary and the
-// publish purge that clears the page clears the route's entry with it.
-export { tagCdnEntry } from "./cdn/route-tags.js";
+// Cache invalidation in the domain's terms (ADR 0042): a plugin says what a
+// response read and what a write changed, and core spells the tags — so a
+// plugin's stored response and the write that should purge it cannot drift.
+// `recordWrite` is how a plugin that writes `ctx.db` directly, bypassing the
+// lifecycle hooks, announces it; `recordRead` is how a `cacheable: true`
+// route, which core cannot see into, says what it showed.
+export { recordRead, recordWrite } from "./cdn/invalidation.js";
+export type { CacheRead, CacheWrite } from "./cdn/contract/subjects.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).

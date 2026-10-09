@@ -1,6 +1,6 @@
 import type { PluginRegistry } from "plumix";
-import type { AppContext } from "plumix/plugin";
-import { and, eq, publicEntryRows, sql, typeTag } from "plumix/db";
+import type { AppContext, CacheRead } from "plumix/plugin";
+import { and, eq, publicEntryRows, sql } from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
 import { withBasePath, xmlEscape } from "plumix/support";
@@ -183,8 +183,8 @@ export interface SeoSitemapsOptions {
 
 /**
  * One sub-sitemap's URL space: an entry type, a taxonomy, or a source a
- * plugin contributed. `tags` is what the scope's cached pages are stored under,
- * so a publish retires that scope and leaves the rest of the set alone.
+ * plugin contributed. `reads` is what the scope's cached pages read, so a
+ * publish retires that scope and leaves the rest of the set alone.
  */
 export interface SitemapScope {
   readonly ref: SitemapScopeRef;
@@ -192,7 +192,7 @@ export interface SitemapScope {
   readonly policy: SitemapScopePolicy;
   /** Whether the site's `sitemaps` option set this scope to `false`. */
   readonly dropped: boolean;
-  readonly tags: readonly string[];
+  readonly reads: readonly CacheRead[];
   /**
    * One element per page the index lists, each with the newest `lastmod`
    * among that page's URLs where the scope knows it. Empty for a scope with
@@ -425,7 +425,7 @@ export function sitemapScopes(
     if (!isCrawlableType(type)) continue;
     add({
       ref: { kind: "entries", name: type.name },
-      tags: [typeTag(type.name)],
+      reads: [{ kind: "entryType", type: type.name }],
       pages: (ctx) => entryPages(ctx, type.name),
       urls: (ctx, page) => entryUrls(ctx, type.name, page),
     });
@@ -433,10 +433,9 @@ export function sitemapScopes(
   for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
     add({
       ref: { kind: "terms", name: taxonomy.name },
-      // A term archive is stored under the `t:<type>` tags of its taxonomy's
-      // entry types, and a term change purges exactly those — so the list of
-      // those archives rides the same signal.
-      tags: (taxonomy.entryTypes ?? []).map(typeTag),
+      // The list of a taxonomy's term archives reads what those archives
+      // read, so a term change retires it the way it retires them.
+      reads: [{ kind: "taxonomy", taxonomy: taxonomy.name }],
       // A term stores no modification time, so its pages carry no lastmod.
       pages: async (ctx) => undatedPages(await termCount(ctx, taxonomy.name)),
       urls: (ctx, page) => termUrls(ctx, taxonomy.name, page),
@@ -445,7 +444,7 @@ export function sitemapScopes(
   for (const { name, source } of contributed) {
     add({
       ref: { kind: "contributed", name },
-      tags: source.tags ?? [],
+      reads: source.reads ?? [],
       pages: (ctx) => contributedPages(ctx, source),
       urls: source.urls,
     });

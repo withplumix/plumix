@@ -37,6 +37,8 @@ export {
 
 export { createDeferQueue } from "./defer.js";
 
+export { memoryCdn } from "./memory-cdn.js";
+
 export { DEV_ORIGIN, plumixRequest } from "./plumix-request.js";
 
 export { RpcReplyError, stubRpcEndpoint } from "./rpc-stub.js";

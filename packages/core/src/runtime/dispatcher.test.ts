@@ -21,9 +21,9 @@ import { readSessionCookie } from "../auth/cookies.js";
 import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
 import { useAuthMethods } from "../blocks/renderer/index.js";
-import { entryPurgeTags } from "../cdn/contract/tags.js";
-import { tagCdnEntry } from "../cdn/route-tags.js";
+import { recordRead } from "../cdn/invalidation.js";
 import { getContext } from "../context/stores.js";
+import { writeTags } from "../plugin/cache-tags.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -1879,13 +1879,15 @@ describe("dispatcher — public read-through CDN", () => {
   // one that knows it read them. It is usually handed a derived context — a
   // sessioned render runs through `withUser` — so the tag has to reach the
   // stored page from there too.
-  test("a page render's tagCdnEntry from a derived context tags the stored page", async () => {
+  test("a page render's recordRead from a derived context tags the stored page", async () => {
     const { cdn, put } = cdnStub();
     const author = { id: 1, email: "a@example.com", role: "admin" } as const;
     const tagging = definePlugin("tagging", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.addFilter("render:document", (document, _data, appCtx) => {
-        tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
+        recordRead(withUser(appCtx, { ...author, meta: {} }), [
+          { kind: "own", namespace: "x", id: 1 },
+        ]);
         return document;
       });
     });
@@ -2272,7 +2274,10 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
           location: params.location,
         },
         title: `Schools in ${params.location}`,
-        tags: ["t:school", "t:location"],
+        reads: [
+          { kind: "entryType", type: "school" },
+          { kind: "entryType", type: "location" },
+        ],
       }),
     });
   });
@@ -2382,9 +2387,10 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
     // The two halves meet on one string: the tag the page was stored under
     // has to be one `entry:published` enqueues, or the page goes stale.
     const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
-    expect(entryPurgeTags("talk", 42).some((tag) => tags.includes(tag))).toBe(
-      true,
-    );
+    const purged = writeTags(h.app.plugins, [
+      { kind: "entry", id: 42, type: "talk" },
+    ]);
+    expect(purged.some((tag) => tags.includes(tag))).toBe(true);
   });
 });
 
@@ -2514,7 +2520,10 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
         auth: "public",
         cacheable: true,
         handler: (_request, appCtx) => {
-          tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+          recordRead(appCtx, [
+            { kind: "entryType", type: "post" },
+            { kind: "entry", id: 7 },
+          ]);
           return new Response("PNG", { status: 200 });
         },
       });

@@ -438,14 +438,14 @@ ctx.addFilter("seo:sitemap:urls", (urls, scope) =>
 
 ### Contributing a sitemap
 
-A plugin adds a URL space of its own to the index with `ctx.registerSitemap(name, source)`, called during `setup`. The URLs need no archive behind them, so a plugin that serves pages from routes of its own lists them here. `count` drives the index's pagination without a URL scan, `urls` answers one 1-based page, `tags` names the cache tags its pages are stored under, and `lastmod`, if given, answers the ISO-8601 time of the newest URL on a page for that page's index entry:
+A plugin adds a URL space of its own to the index with `ctx.registerSitemap(name, source)`, called during `setup`. The URLs need no archive behind them, so a plugin that serves pages from routes of its own lists them here. `count` drives the index's pagination without a URL scan, `urls` answers one 1-based page, `reads` says what its pages read so a write to it retires them, and `lastmod`, if given, answers the ISO-8601 time of the newest URL on a page for that page's index entry:
 
 ```ts no-typecheck
 ctx.registerSitemap("locations", {
   count: (appCtx) => countLocations(appCtx),
   urls: (appCtx, page) => locationUrls(appCtx, page),
   lastmod: (appCtx, page) => newestLocationUpdate(appCtx, page),
-  tags: ["locations"],
+  reads: [{ kind: "own", namespace: "locations" }],
 });
 ```
 
@@ -453,9 +453,9 @@ Its sub-sitemap answers at `/sitemap-locations-<page>.xml`. `registerSitemap` ex
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all.
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope reads what it lists — an entry type's scope reads that type, a taxonomy's scope reads the taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone, and a term change retires its taxonomy's scope. Every sitemap reads the plugin's settings and the `site` group, so saving either retires the whole set, which is what the indexing toggle needs.
 
-A scope with no tags to contribute rides the one-hour window instead of a purge: a taxonomy registered with no `entryTypes` has none to name, and so does a contributed source that omits `tags`. Declare `tags` on a source whose content changes more often than that.
+A contributed source that omits `reads` rides the one-hour window instead of a purge. Declare `reads` on a source whose content changes more often than that. A plugin whose `seo:sitemap:urls` rows come from data of its own retires the whole set when that data changes, with `recordWrite(ctx, [SITEMAP_SET])` and `SITEMAP_SET` from `@plumix/plugin-seo`.
 
 With no CDN configured, every sitemap is generated per request.
 
@@ -519,7 +519,7 @@ The plugin owns one settings page, **SEO**, composed of three groups. Each is it
 
 **robots.txt** holds hand-written content replacing the _generated rules_ — the `User-agent: *` group, not the two site-wide answers composed around them. A site with indexing turned off still disallows everything, whatever the box holds; the AI-crawler group is still added while that toggle is on; and the `Sitemap:` line is still appended unless the author wrote one of their own, so an edit cannot drop the reference by forgetting it. It can still point the line elsewhere or disallow the path — what is preserved is the declaration, not the crawl.
 
-Saving any of the three purges the cached sitemap set and the cached content pages of every registered entry type, since between them they rewrite a page's robots directive, title and verification tags.
+Saving any of the three purges every cached response that read it: the sitemap set and the content pages for the first, the pages' heads for the verification tags. Core purges a saved group from every page that read it, so nothing here has to name the pages.
 
 The first two fields lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
 

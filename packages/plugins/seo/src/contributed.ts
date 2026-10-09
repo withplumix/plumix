@@ -1,5 +1,5 @@
 import type { PluginContextExtensions } from "plumix";
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, CacheRead } from "plumix/plugin";
 
 import type { SitemapUrl } from "./sitemap.js";
 import { SeoError } from "./errors.js";
@@ -18,11 +18,12 @@ export interface SitemapSource {
     page: number,
   ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
   /**
-   * Cache tags this scope's pages are stored under. Core's own scopes carry
-   * the `t:<type>` tags a publish already purges; a source drawn from other
-   * tables names its own, or names none and rides its cache-control window.
+   * What this scope's pages read, so a write to it retires them. A source
+   * drawn from entries reads their type; one drawn from its own tables reads a
+   * namespace of its own and records a write to it, or reads nothing and
+   * rides its cache-control window.
    */
-  readonly tags?: readonly string[];
+  readonly reads?: readonly CacheRead[];
   /**
    * The ISO-8601 time the newest URL on one 1-based page changed, written as
    * that page's `<lastmod>` in the index. Absent, or `undefined` for a page,

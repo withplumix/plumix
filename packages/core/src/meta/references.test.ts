@@ -1398,7 +1398,9 @@ describe("embedded cache tags (resolution tag accounting)", () => {
     );
   });
 
-  test("a user reference contributes no cache tag (no per-entity purge identity)", async () => {
+  // A user write purges the user's own tag, so a page that showed the user
+  // through a reference is stored under it.
+  test("resolving a user reference accumulates the user's tag", async () => {
     const { registry, findField } = registryWithUserRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const owner = await adminUser.transient({ db: h.context.db }).create();
@@ -1407,7 +1409,25 @@ describe("embedded cache tags (resolution tag accounting)", () => {
       owner: String(owner.id),
     });
 
-    expect(declaredPageTags(h.context)).toEqual([]);
+    expect(declaredPageTags(h.context)).toEqual([`u:${String(owner.id)}`]);
+  });
+
+  // A term rename reaches the term's archive through its taxonomy's types,
+  // but a page of another type that showed the term only through a reference
+  // is reached by the term's own tag.
+  test("resolving a term reference accumulates each term's tag", async () => {
+    const { registry, findField } = registryWithTermListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await categoryTerm.transient({ db: h.context.db }).create();
+    const b = await categoryTerm.transient({ db: h.context.db }).create();
+
+    await resolveMetaReferences(h.context, findField, {
+      tags: [String(a.id), String(b.id)],
+    });
+
+    expect([...declaredPageTags(h.context)].sort()).toEqual(
+      [`tm:${String(a.id)}`, `tm:${String(b.id)}`].sort(),
+    );
   });
 
   test("a page that resolves nothing accumulates no tags", async () => {
@@ -1606,7 +1626,7 @@ describe("reference hydration memo (request-scoped)", () => {
   });
 
   // An entry reference, not the photo kind the rest of this block uses:
-  // only the entry adapter declares `embeddedCacheTags`.
+  // the photo fixture declares no `embeddedRead`.
   test("a batch answered from the memo tags its page as the first one did", async () => {
     const { registry, findField } = registryWithEntryRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });

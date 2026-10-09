@@ -1,18 +1,18 @@
 import type { JsonObject } from "plumix";
-import type { AppContext, LookupResult } from "plumix/plugin";
+import type { AppContext, CacheRead, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "plumix/db";
 import {
   isCurrentSource,
   memoBatch,
+  recordRead,
   resolveEntryList,
-  tagCdnEntry,
 } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
-import { menuTag } from "./cache-tags.js";
+import { menuRead } from "./cache-tags.js";
 import { isMenuEligible } from "./eligibility.js";
 import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
@@ -114,7 +114,7 @@ export async function resolveMenus(
     requests.map(async ({ location }, i) => {
       const data = clusters[i];
       if (!data) return null;
-      tagCdnEntry(ctx, [menuTag(data.term.id), ...linkedEntryTags(ctx, data)]);
+      recordRead(ctx, [menuRead(data.term.id), ...linkedReads(data)]);
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(
         tree.map((node) => toResolvedItem(ctx, node, data.refs)),
@@ -138,19 +138,17 @@ export async function resolveMenus(
   );
 }
 
-// Every entry the menu links, resolved or not: the label and href are the
-// entry's, and a draft that gets published has to appear in the cached nav.
-function linkedEntryTags(ctx: AppContext, data: MenuData): string[] {
-  const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
-  if (adapter?.embeddedCacheTags === undefined) return [];
-  const tags: string[] = [];
+// Every entry and term the menu links, resolved or not: the label and href
+// are theirs, and a draft that gets published has to appear in the cached
+// nav.
+function linkedReads(data: MenuData): CacheRead[] {
+  const reads: CacheRead[] = [];
   for (const row of data.rows) {
     const meta = parseMenuItemMeta(row.meta);
-    if (meta?.kind === "entry") {
-      tags.push(...adapter.embeddedCacheTags(String(meta.entryId)));
-    }
+    if (meta?.kind === "entry") reads.push({ kind: "entry", id: meta.entryId });
+    if (meta?.kind === "term") reads.push({ kind: "term", id: meta.termId });
   }
-  return tags;
+  return reads;
 }
 
 interface MenuData {

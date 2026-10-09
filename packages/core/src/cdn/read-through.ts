@@ -135,7 +135,7 @@ interface ReadThroughRouteArgs {
  * `cache-control` it set and falls back to the site's page TTL only when it set
  * none. Tags are the handler's too — core can't name what a raw route's
  * response depends on beyond the settings it reads, but the handler can,
- * through `tagCdnEntry` — and a handler that names none stores an entry only a
+ * through `recordRead` — and a handler that names none stores an entry only a
  * settings write reaches.
  */
 export async function readThroughRoute(

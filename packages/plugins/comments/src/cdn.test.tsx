@@ -114,18 +114,18 @@ function expectNoTypeTag(s: Site): void {
 }
 
 describe("@plumix/plugin-comments — CDN tags", () => {
-  test("rendering an entry permalink stores it under the entry's tag", async () => {
+  test("rendering an entry permalink stores it under its thread's tag", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
 
     await s.h.dispatch(new Request("https://cms.example/posts/hello"));
     await s.h.drainDeferred();
 
-    expect(s.put.mock.calls[0]?.[2]).toContain(`e:${String(post.id)}`);
+    expect(s.put.mock.calls[0]?.[2]).toContain(`comments:${String(post.id)}`);
   });
 
   test.each(["approve", "restore", "spam", "trash"])(
-    "%s on a comment purges its entry's tag",
+    "%s on a comment purges its thread's tag",
     async (procedure) => {
       const s = await site();
       const post = await seedPost(s, "hello");
@@ -133,7 +133,7 @@ describe("@plumix/plugin-comments — CDN tags", () => {
 
       await rpc(s, procedure, { id: comment.id });
 
-      expect(purged(s)).toContain(`e:${String(post.id)}`);
+      expect(purged(s)).toContain(`comments:${String(post.id)}`);
       expectNoTypeTag(s);
     },
   );
@@ -153,14 +153,14 @@ describe("@plumix/plugin-comments — CDN tags", () => {
     expect(s.purgeTags).toHaveBeenCalledOnce();
     expect(purged(s)).toEqual(
       expect.arrayContaining([
-        `e:${String(first.id)}`,
-        `e:${String(second.id)}`,
+        `comments:${String(first.id)}`,
+        `comments:${String(second.id)}`,
       ]),
     );
     expectNoTypeTag(s);
   });
 
-  test("purge on a leaf deletes it, fires comment:deleted and purges its entry's tag", async () => {
+  test("purge on a leaf deletes it, fires comment:deleted and purges its thread's tag", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const leaf = await seedComment(s, { entryId: post.id, status: "approved" });
@@ -170,11 +170,11 @@ describe("@plumix/plugin-comments — CDN tags", () => {
 
     deleted.assertCalledOnce();
     expect(deleted.lastArgs?.[0]).toEqual(leaf);
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
+    expect(purged(s)).toContain(`comments:${String(post.id)}`);
     expectNoTypeTag(s);
   });
 
-  test("purge on a comment with replies tombstones it, fires comment:deleted and purges its entry's tag", async () => {
+  test("purge on a comment with replies tombstones it, fires comment:deleted and purges its thread's tag", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const parent = await seedComment(s, {
@@ -192,7 +192,7 @@ describe("@plumix/plugin-comments — CDN tags", () => {
 
     deleted.assertCalledOnce();
     expect(deleted.lastArgs?.[0]).toEqual(parent);
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
+    expect(purged(s)).toContain(`comments:${String(post.id)}`);
     expectNoTypeTag(s);
   });
 
@@ -206,13 +206,13 @@ describe("@plumix/plugin-comments — CDN tags", () => {
     expect(s.purgeTags).not.toHaveBeenCalled();
   });
 
-  test("submitting an auto-approved comment purges its entry's tag", async () => {
+  test("submitting an auto-approved comment purges its thread's tag", async () => {
     const s = await site({ mode: "none" });
     const post = await seedPost(s, "hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "approved" });
 
-    expect(purged(s)).toContain(`e:${String(post.id)}`);
+    expect(purged(s)).toContain(`comments:${String(post.id)}`);
     expectNoTypeTag(s);
   });
 

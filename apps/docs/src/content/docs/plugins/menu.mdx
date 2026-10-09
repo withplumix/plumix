@@ -223,7 +223,7 @@ The plugin resolves links to entries and terms when the page renders, not when y
 
 The plugin batches resolution. It reads every location a request asks for, from templates and from the functions below, in one settings query and one pass over the menus' items. Repeat calls within the request reuse that result.
 
-With a [CDN](/deployment/cdn/) configured, a cached page that renders a menu is purged when that menu is saved or deleted, when a location it renders is assigned or cleared, and when an entry the menu links to changes. A page that rendered an empty location is purged too once a menu is assigned there. A rename of a term the menu links to, such as a category, reaches a cached page only when its `ttl` runs out.
+With a [CDN](/deployment/cdn/) configured, a cached page that renders a menu is purged when that menu is saved or deleted, when a location it renders is assigned or cleared, and when an entry or a term the menu links to changes, so renaming a linked category reaches every page that shows it in a nav. A page that rendered an empty location is purged too once a menu is assigned there.
 
 ## Resolving a menu in server code
 

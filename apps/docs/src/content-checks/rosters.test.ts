@@ -7,7 +7,6 @@ import {
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
 } from "plumix/auth";
 import { coreBlocks, coreMarks, coreShortcodes } from "plumix/blocks";
-import { entryTag, typeTag } from "plumix/db";
 import { describe, expect, it } from "vitest";
 
 import type { SourceHookName } from "./rosters";
@@ -126,16 +125,6 @@ describe("the rosters bound to their source at runtime", () => {
         subpath === "." ? "plumix" : `plumix/${subpath.slice("./".length)}`,
       ),
     );
-  });
-
-  // Each minter is asked for the tag the page documents. `typeTag` takes the
-  // type name, so the `*` goes straight through it; `entryTag` takes a number,
-  // so it goes back afterwards.
-  it("binds the cache-tag roster to the two minters the façade exports", () => {
-    expect(itemsOf("deployment/cdn.mdx")).toEqual([
-      typeTag("*"),
-      entryTag(7).replace("7", "*"),
-    ]);
   });
 
   // Sorted on both sides — `PLUGIN_PACKAGES` says why order is the page's here.
