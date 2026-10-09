@@ -11,6 +11,7 @@ Plumix is a CMS with pluggable runtime adapters. It is pre-1.0, so every `0.x` m
 - **Read the package's notes first.** Before editing a package, read its section under "Working on a package" in `CONTRIBUTING.md`, and every `README.md` from the repo root to the file's folder. Apps and tooling keep their local procedures in their READMEs.
 - **No safety nets unasked.** No dev warnings, extra validation layers or override APIs the ticket did not ask for.
 - **Stop rather than work around.** When a test passes only with another flag, counter or copy of state, stop and consolidate who owns that state. Never get past a blocker by deleting a lockfile, `--force`, `--ignore-scripts` or disabling a check; stop and say what blocks you.
+- **Output stays clean.** A warning, deprecation notice or stray log line in a build, test, lint or CI step is a failure, and a site's `plumix build` prints whatever ours does. Fix its cause. Silence only a known false positive, at its source, with a comment naming the upstream tool that drops it too.
 - **A failing check is yours until shown otherwise.** Call a failure pre-existing only after reproducing it on `main`, and give that evidence.
 - **Leave changes you did not make.** Never revert or rewrite someone else's edits in a shared worktree, stash or branch.
 - **Regenerate, don't hand-edit.** Change a generated file only by running the script that owns it, and commit the result. Hand-authored catalogs are the exception, and they say so.

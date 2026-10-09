@@ -13,7 +13,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
-import type { Plugin, UserConfig } from "vite";
+import type { BuildEnvironmentOptions, Plugin, UserConfig } from "vite";
 import * as v from "valibot";
 import { mergeConfig } from "vite";
 
@@ -275,12 +275,17 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // watcher in `configureServer` forces a fresh eval on edits, so config
       // hot-reload still works.
       const { config } = await loadConfig(scanRoot, options.configFile);
-      return config.vite
+      const merged = config.vite
         ? (mergeConfig(
             base,
             config.vite as Partial<UserConfig>,
           ) as Partial<UserConfig>)
         : base;
+      const onLog = withoutUseClientWarning(
+        merged.build?.rolldownOptions?.onLog ??
+          userConfig.build?.rolldownOptions?.onLog,
+      );
+      return mergeConfig(merged, { build: { rolldownOptions: { onLog } } });
     },
     configResolved(config) {
       root = config.root;
@@ -856,6 +861,28 @@ function escapeAttribute(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
+}
+
+type OnLog = NonNullable<
+  NonNullable<BuildEnvironmentOptions["rolldownOptions"]>["onLog"]
+>;
+
+// Plumix gives `"use client"` its meaning itself: the SSR transform wraps each
+// one as an island and the client build emits it as its own chunk. Rolldown's
+// warning that bundling may not preserve the directive is noise, repeated for
+// every React library in the admin's graph; @vitejs/plugin-react drops it too.
+function withoutUseClientWarning(next: OnLog | undefined): OnLog {
+  return (level, log, defaultHandler) => {
+    if (
+      level === "warn" &&
+      log.code === "MODULE_LEVEL_DIRECTIVE" &&
+      log.message.includes('"use client"')
+    ) {
+      return;
+    }
+    if (next) next(level, log, defaultHandler);
+    else defaultHandler(level, log);
+  };
 }
 
 // Per-island synthesized entry name. Used as the `rollupOptions.input`
