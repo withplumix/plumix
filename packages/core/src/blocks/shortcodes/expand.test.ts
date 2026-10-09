@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { ShortcodeContext, ShortcodeSpec } from "./types.js";
 import { expandShortcodes } from "./expand.js";
@@ -68,6 +68,8 @@ describe("expandShortcodes", () => {
   });
 
   test("renders empty when a registered shortcode throws", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
     const reg = registry({
       name: "boom",
       render: () => {
@@ -75,14 +77,23 @@ describe("expandShortcodes", () => {
       },
     });
     expect(expandShortcodes("x[boom]y", reg, ctx)).toBe("xy");
+    expect(warn).toHaveBeenCalledWith(
+      "[plumix:blocks] Shortcode [boom] threw; rendered empty.",
+      expect.objectContaining({ message: "nope" }),
+    );
   });
 
   test("renders empty when a registered shortcode returns a non-string", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
     const reg = registry({
       name: "bad",
       render: () => 42 as unknown as string,
     });
     expect(expandShortcodes("x[bad]y", reg, ctx)).toBe("xy");
+    expect(warn).toHaveBeenCalledWith(
+      "[plumix:blocks] Shortcode [bad] returned a non-string; rendered empty.",
+    );
   });
 
   test("warns in dev when a registered shortcode throws", () => {

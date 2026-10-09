@@ -1,5 +1,4 @@
-import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
@@ -23,34 +22,21 @@ const announcements: SortableAnnouncements = {
     `cancelled ${position}/${total}`,
 };
 
-let unmount: (() => void) | undefined;
-
-afterEach(() => {
-  unmount?.();
-  unmount = undefined;
-});
+afterEach(cleanup);
 
 function renderList(onReorder = vi.fn()): void {
-  const root = createRoot(
-    document.body.appendChild(document.createElement("div")),
+  render(
+    <SortableList<Item>
+      items={[{ id: "a" }, { id: "b" }]}
+      onReorder={onReorder}
+      onRemove={vi.fn()}
+      renderItem={(item) => item.id}
+      testId="list"
+      reorderLabel="reorder-label"
+      removeLabel="remove-label"
+      announcements={announcements}
+    />,
   );
-  unmount = () => {
-    act(() => root.unmount());
-  };
-  act(() => {
-    root.render(
-      <SortableList<Item>
-        items={[{ id: "a" }, { id: "b" }]}
-        onReorder={onReorder}
-        onRemove={vi.fn()}
-        renderItem={(item) => item.id}
-        testId="list"
-        reorderLabel="reorder-label"
-        removeLabel="remove-label"
-        announcements={announcements}
-      />,
-    );
-  });
 }
 
 describe("SortableList", () => {

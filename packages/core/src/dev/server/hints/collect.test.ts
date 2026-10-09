@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { AppContext } from "../../../context/app-context.js";
 import type { DevErrorHint } from "../../ui/index.js";
@@ -40,6 +40,10 @@ describe("collectDevErrorHints", () => {
   });
 
   test("isolates a throwing handler so one bad subscriber can't sink the rest", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const hooks = new HookRegistry();
     hooks.addFilter("error_page:hints", () => {
       throw new Error("subscriber blew up");
@@ -52,5 +56,9 @@ describe("collectDevErrorHints", () => {
     expect(
       collectDevErrorHints(hooks, new Error("boom"), ctx).map((h) => h.title),
     ).toEqual(["survives"]);
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] error_page:hints handler failed plugin=core",
+      expect.objectContaining({ message: "subscriber blew up" }),
+    );
   });
 });

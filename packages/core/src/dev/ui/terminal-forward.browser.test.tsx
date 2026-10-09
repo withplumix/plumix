@@ -47,6 +47,19 @@ function exceptions(): ForwardedLog[] {
   return forwarded().filter((log) => log.kind === "exception");
 }
 
+// Vitest's browser runner listens for window `error` and `unhandledrejection`
+// events, and once the page listens too it re-logs each one through
+// `console.error`. That line is the runner's, not the code under test's, so a
+// test dispatching one keeps it out of the output for the dispatch alone.
+function dispatchUncaught(event: Event): void {
+  const relog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  try {
+    window.dispatchEvent(event);
+  } finally {
+    relog.mockRestore();
+  }
+}
+
 function island(componentExport: string): HTMLElement {
   const el = document.createElement("plumix-island");
   el.setAttribute("component-export", componentExport);
@@ -201,14 +214,14 @@ describe("installTerminalForwarding", () => {
   test("forwards uncaught window errors and unhandled rejections", () => {
     install();
 
-    window.dispatchEvent(
+    dispatchUncaught(
       new ErrorEvent("error", { error: new Error("async boom") }),
     );
     const rejection = new Event("unhandledrejection") as Event & {
       reason: unknown;
     };
     rejection.reason = new Error("rejected boom");
-    window.dispatchEvent(rejection);
+    dispatchUncaught(rejection);
     flush();
 
     const messages = forwarded().map((l) => l.message);
@@ -218,7 +231,7 @@ describe("installTerminalForwarding", () => {
 
   test("ignores error events that carry no error object", () => {
     install();
-    window.dispatchEvent(new ErrorEvent("error", { message: "404 img" }));
+    dispatchUncaught(new ErrorEvent("error", { message: "404 img" }));
     flush();
     expect(exceptions()).toEqual([]);
   });
@@ -231,7 +244,7 @@ describe("installTerminalForwarding", () => {
       new CustomEvent("plumix:hydration-error", { detail: { error } }),
     );
     // The window `error` handler sees the same object — must not re-forward it.
-    window.dispatchEvent(new ErrorEvent("error", { error }));
+    dispatchUncaught(new ErrorEvent("error", { error }));
     flush();
 
     expect(exceptions()).toHaveLength(1);
@@ -241,8 +254,8 @@ describe("installTerminalForwarding", () => {
     install();
     // Primitives have no identity; the client must not swallow repeats — the
     // server is what collapses genuine consecutive duplicates into a count.
-    window.dispatchEvent(new ErrorEvent("error", { error: "boom" }));
-    window.dispatchEvent(new ErrorEvent("error", { error: "boom" }));
+    dispatchUncaught(new ErrorEvent("error", { error: "boom" }));
+    dispatchUncaught(new ErrorEvent("error", { error: "boom" }));
     flush();
 
     expect(exceptions()).toHaveLength(2);

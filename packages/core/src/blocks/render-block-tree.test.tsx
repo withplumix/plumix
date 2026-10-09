@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
@@ -396,6 +396,8 @@ describe("renderBlockTree", () => {
   });
 
   test("never walks into an unregistered block's children", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
     const visited: string[] = [];
     const tree: readonly BlockNode[] = [
       {
@@ -414,6 +416,9 @@ describe("renderBlockTree", () => {
     expect(visited).toEqual(["u1"]);
     expect(html).toBe(
       '<template data-plumix-unknown-block="acme/missing"></template>',
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "[plumix:blocks] Unregistered block name: acme/missing",
     );
   });
 

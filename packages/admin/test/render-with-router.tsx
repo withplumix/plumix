@@ -1,5 +1,6 @@
 import type { AnyRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Route as AdminRoot } from "@/routes/__root.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -69,9 +70,11 @@ export async function renderRoute(
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  // The root's context, as the admin's own router hands it to a loader.
+  // The root's context, as the admin's own router hands it to a loader, and
+  // the admin's own not-found page for a route that throws `notFound()`.
   const rootRoute = createRootRoute({
     beforeLoad: () => ({ user: { id: 1, capabilities }, queryClient }),
+    notFoundComponent: AdminRoot.options.notFoundComponent,
   });
   // The file route was built against the generated tree's parent; re-parenting
   // it is what `update` is for, but its options type is pinned to that tree.

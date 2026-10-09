@@ -1,4 +1,11 @@
-import { describe, expect, expectTypeOf, test, vi } from "vitest";
+import {
+  describe,
+  expect,
+  expectTypeOf,
+  onTestFinished,
+  test,
+  vi,
+} from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import type {
@@ -113,6 +120,10 @@ describe("createPlumixHandler — fetch", () => {
   });
 
   test("a missing required binding is a readable 500 naming every missing key", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const handler = await handlerFor({
       database: {
         kind: "bound",
@@ -126,6 +137,10 @@ describe("createPlumixHandler — fetch", () => {
       error: "bindings_missing",
       missing: ["DB", "CACHE"],
     });
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ code: "bindings_missing" }),
+    );
   });
 
   test("binding validation is memoised per handler: the first env's verdict holds", async () => {
@@ -686,6 +701,10 @@ const scopedDatabase = (
 
 describe("createPlumixHandler — scheduled reporting", () => {
   test("returns what the run did, so a caller outside can act on it", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     // The report survives the handler's own path — cron routing, the commit,
     // the return — not just `runScheduledTasks`, which is covered on its own.
     const oneTaskOneFailure = definePlugin("reports", (ctx) => {
@@ -705,6 +724,10 @@ describe("createPlumixHandler — scheduled reporting", () => {
     );
 
     expect(report).toStrictEqual({ ran: 1, failed: ["reports:boom"] });
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] scheduled task "reports:boom" failed: nope`,
+      expect.objectContaining({ taskId: "boom", plugin: "reports" }),
+    );
   });
 
   test("keeps the tasks it ran when the commit after them throws", async () => {

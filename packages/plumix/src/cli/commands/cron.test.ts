@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import type { CommandContext, PlumixApp, PlumixHandler } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
@@ -25,6 +33,16 @@ const withHandlers = (tasks: readonly TaskFields[]) =>
 let base: PlumixApp;
 beforeAll(async () => {
   ({ app: base } = await createDispatcherHarness());
+});
+
+// What a run fired is the command's own output; a test that reads it collects
+// the lines through `captureInfo`.
+beforeEach(() => {
+  vi.spyOn(report, "info").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 async function context(

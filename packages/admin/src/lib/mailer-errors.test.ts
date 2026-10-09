@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import { testSendErrorMessage } from "./mailer-errors.js";
 
@@ -27,16 +27,26 @@ describe("testSendErrorMessage", () => {
   });
 
   test("unrecognized shape falls back to the translatable retry message", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const result = testSendErrorMessage({ random: "shape" });
     expect(result).toMatchObject({ id: "mailer.test.error.fallback" });
+    expect(error).toHaveBeenCalledWith({ random: "shape" });
   });
 
   test("undefined / null fall back to the translatable retry message", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     expect(testSendErrorMessage(undefined)).toMatchObject({
       id: "mailer.test.error.fallback",
     });
     expect(testSendErrorMessage(null)).toMatchObject({
       id: "mailer.test.error.fallback",
     });
+    expect(error.mock.calls).toEqual([[undefined], [null]]);
   });
 });

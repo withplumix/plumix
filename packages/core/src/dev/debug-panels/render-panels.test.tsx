@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { DebugPanel } from "./types.js";
 import { makeSnapshot } from "../request-history/snapshot-fixture.js";
@@ -32,9 +32,17 @@ describe("renderDebugPanels", () => {
   });
 
   test("isolates a throwing panel behind a fallback so siblings survive", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const rendered = renderDebugPanels([boomPanel, okPanel], makeSnapshot());
 
     expect(rendered[0]?.html).toContain("failed to render");
     expect(rendered[1]?.html).toContain("path is");
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] debug panel "boom" failed to render`,
+      expect.objectContaining({ message: "kaboom" }),
+    );
   });
 });

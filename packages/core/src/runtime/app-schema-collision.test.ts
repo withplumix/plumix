@@ -22,6 +22,7 @@ describe("buildApp — plugin schema collisions", () => {
   test("rejects a plugin that redefines a core table", async () => {
     const misbehaving = definePlugin("collides", () => undefined, {
       schema: { users: { fake: true } },
+      schemaModule: "@example/collides/schema",
     });
 
     await expect(
@@ -40,9 +41,11 @@ describe("buildApp — plugin schema collisions", () => {
   test("rejects two plugins that export the same table name", async () => {
     const a = definePlugin("a", () => undefined, {
       schema: { landing_pages: { fake: "a" } },
+      schemaModule: "@example/a/schema",
     });
     const b = definePlugin("b", () => undefined, {
       schema: { landing_pages: { fake: "b" } },
+      schemaModule: "@example/b/schema",
     });
 
     await expect(

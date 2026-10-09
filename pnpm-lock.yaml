@@ -942,6 +942,9 @@ importers:
       '@plumix/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest
+      '@testing-library/react':
+        specifier: catalog:testing-library
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0

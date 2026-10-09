@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { DevInput } from "../../config.js";
 import type { AppContext, Db } from "../../context/app-context.js";
@@ -32,6 +32,10 @@ function ctxWith(
 
 describe("PlumixDebugBar", () => {
   test("isolates a panel that throws in render — bar and other panels survive", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const hooks = new HookRegistry();
     registerCoreDebugPanels(hooks);
     hooks.addFilter("debug:panels", (panels) => [
@@ -60,6 +64,10 @@ describe("PlumixDebugBar", () => {
     expect(html).toContain("failed to render");
     // A healthy sibling panel still renders.
     expect(html).toContain('data-testid="plumix-debug-panel-request"');
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] debug panel "boom" failed to render`,
+      expect.objectContaining({ message: "kaboom" }),
+    );
   });
 
   test("renders the bar shell with the Request panel when enabled in dev", () => {

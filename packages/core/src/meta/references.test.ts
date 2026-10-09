@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
@@ -1032,6 +1032,10 @@ describe("validateMetaReferences (repeater subFields)", () => {
   }
 
   test("rejects with meta_invalid_value when a nested ref id is dead", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const { findField, registry } = repeaterWithUserSubField();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
 
@@ -1043,6 +1047,9 @@ describe("validateMetaReferences (repeater subFields)", () => {
     await expect(
       validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toMatchObject({ reason: "invalid_value", key: "rows" });
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] meta composite "rows" at "rows.0.owner" references missing id "999999"`,
+    );
   });
 
   test("logs the nested cell path on rejection so debug logs aren't blind", async () => {
@@ -1318,6 +1325,10 @@ describe("references nested in groups + deep repeaters", () => {
   };
 
   test("validate rejects a dead ref inside a group", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const { findField, registry } = registryWith(groupField);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = {
@@ -1327,6 +1338,9 @@ describe("references nested in groups + deep repeaters", () => {
     await expect(
       validateMetaReferences(authedCtx(h), findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
+    expect(error).toHaveBeenCalledWith(
+      `[plumix] meta composite "meta" at "meta.owner" references missing id "999999"`,
+    );
   });
 
   test("resolves a ref inside a group", async () => {

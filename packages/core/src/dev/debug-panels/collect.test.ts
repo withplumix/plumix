@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
 import type { DebugPanel } from "./types.js";
@@ -68,6 +68,10 @@ describe("collectDebugPanels", () => {
   });
 
   test("isolates a handler that throws so other panels survive", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const hooks = new HookRegistry();
     hooks.addFilter("debug:panels", (panels) => [...panels, panel("a", 10)]);
     hooks.addFilter("debug:panels", () => {
@@ -79,6 +83,10 @@ describe("collectDebugPanels", () => {
       "a",
       "b",
     ]);
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] debug:panels handler failed plugin=core",
+      expect.objectContaining({ message: "boom" }),
+    );
   });
 
   test("dedupes by id — last contributor wins", () => {

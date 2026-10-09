@@ -14,7 +14,7 @@ import { definePlugin, requestStore } from "plumix/plugin";
 import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { describeAssetsContract } from "plumix/test/conformance";
 import { defineTheme } from "plumix/theme";
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 
 import { cloudflare } from "./adapter.js";
 import { d1 } from "./d1.js";
@@ -113,6 +113,10 @@ describe("cloudflare adapter — createRuntimeHandler().fetch", () => {
   });
 
   test("database.connect errors are caught by the handler and surface as 500", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const failingDatabase: DatabaseAdapter = {
       kind: "failing",
       connect: () => {
@@ -127,6 +131,10 @@ describe("cloudflare adapter — createRuntimeHandler().fetch", () => {
     expect(response.status).toBe(500);
     const body: unknown = await response.json();
     expect(body).toMatchObject({ error: "internal_error" });
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ message: "D1 binding missing" }),
+    );
   });
 
   test("serves a request whose invocation carries no waitUntil", async () => {
@@ -427,6 +435,10 @@ describe("cloudflare adapter — connectRequest", () => {
   });
 
   test("connectRequest throwing surfaces as 500 like connect", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const adapter: DatabaseAdapter = {
       kind: "throwing",
       connect: () => ({ db: {} }),
@@ -440,6 +452,10 @@ describe("cloudflare adapter — connectRequest", () => {
       adapter,
     );
     expect(response.status).toBe(500);
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ message: "scoped init failed" }),
+    );
   });
 
   // Type-level sanity: the imported types are usable at runtime.
@@ -465,6 +481,10 @@ describe("cloudflare adapter — d1() slot", () => {
 
 describe("cloudflare adapter — binding validation", () => {
   test("surfaces a boot-time error listing every missing binding", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const adapterWithBindings: DatabaseAdapter = {
       kind: "stub-with-bindings",
       requiredBindings: ["DB", "CACHE"],
@@ -481,9 +501,17 @@ describe("cloudflare adapter — binding validation", () => {
       error: "bindings_missing",
       missing: ["DB", "CACHE"],
     });
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ code: "bindings_missing" }),
+    );
   });
 
   test("treats a null-valued binding as missing", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const adapterWithBindings: DatabaseAdapter = {
       kind: "stub-with-bindings",
       requiredBindings: ["DB"],
@@ -500,9 +528,17 @@ describe("cloudflare adapter — binding validation", () => {
       error: "bindings_missing",
       missing: ["DB"],
     });
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ code: "bindings_missing" }),
+    );
   });
 
   test("handles a non-object env without crashing with a TypeError", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     const adapterWithBindings: DatabaseAdapter = {
       kind: "stub-with-bindings",
       requiredBindings: ["DB"],
@@ -519,6 +555,10 @@ describe("cloudflare adapter — binding validation", () => {
       error: "bindings_missing",
       missing: ["DB"],
     });
+    expect(error).toHaveBeenCalledWith(
+      "[plumix] handler_failure",
+      expect.objectContaining({ code: "bindings_missing" }),
+    );
   });
 
   test("satisfied requiredBindings permit the request to dispatch", async () => {

@@ -124,6 +124,10 @@ describe("island renderer mount()", () => {
       event.preventDefault();
     };
     window.addEventListener("error", swallow);
+    // The same default handler then warns, naming the component.
+    const warnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
 
     const Boom = (): never => {
       throw new Error("render boom");
@@ -136,10 +140,16 @@ describe("island renderer mount()", () => {
 
     await vi.waitFor(() => expect(uncaught).toBe(1));
     expect(events).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "%s\n\n%s\n",
+      "An error occurred in the <Boom> component.",
+      expect.stringContaining("error boundary"),
+    );
 
     window.removeEventListener("plumix:island-error", listener);
     window.removeEventListener("error", swallow);
     errorSpy.mockRestore();
+    warnSpy.mockRestore();
     process.env.PLUMIX_DEV = prev;
   });
 

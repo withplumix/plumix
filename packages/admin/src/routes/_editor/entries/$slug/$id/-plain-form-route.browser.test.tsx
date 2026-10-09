@@ -10,7 +10,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from "vitest";
 
 import type { AppRouterClient } from "@plumix/core";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
@@ -105,6 +113,10 @@ async function renderRoute(): Promise<void> {
 
 describe("PlainFormRouteInner", () => {
   test("a meta rejection marks the offending input", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     stubRpc({
       "entry/get": () => entry,
       "entry/update": () => {
@@ -121,9 +133,16 @@ describe("PlainFormRouteInner", () => {
     expect(screen.getByTestId("plain-form-status-pill").dataset.status).toBe(
       "error",
     );
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "meta_invalid_value" }),
+    );
   });
 
   test("a later successful save removes the pinned error", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     let rejectNext = true;
     stubRpc({
       "entry/get": () => entry,
@@ -151,9 +170,16 @@ describe("PlainFormRouteInner", () => {
     expect(
       screen.queryByTestId("meta-box-field-headline-error"),
     ).not.toBeInTheDocument();
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "meta_invalid_value" }),
+    );
   });
 
   test("an error without field paths only flags the save status", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => error.mockRestore());
     stubRpc({
       "entry/get": () => entry,
       "entry/update": () => {
@@ -172,6 +198,9 @@ describe("PlainFormRouteInner", () => {
     expect(
       screen.queryByTestId("meta-box-field-headline-error"),
     ).not.toBeInTheDocument();
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Internal server error" }),
+    );
   });
 
   test("an edit is sent once the autosave debounce is quiet, not before", async () => {
