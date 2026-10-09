@@ -29,6 +29,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          turbo-cache: "false"
       - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
   changesets:
@@ -41,6 +43,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          turbo-cache: "false"
       # We're deliberately in 0.x. A `major` changeset resolves straight to
       # 1.0.0 (changesets does no 0.x demotion), so block it from shipping as a
       # side effect of merging a feature PR — crossing 1.0 is a decision.
@@ -82,7 +86,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The one job that saves the pnpm store, so the others restore it rather
+      # than race to reserve the same key.
       - uses: ./.github/actions/setup
+        with:
+          save-pnpm-store: "true"
       - run: pnpm lint
 
   format:
@@ -158,7 +166,8 @@ jobs:
 
       # `*.browser.test.ts(x)` suites run in headless Chromium (ADR 0021).
       # Cached and installed exactly as the e2e job does, keyed on the same
-      # resolved Playwright version, so the two jobs share one cache entry.
+      # resolved Playwright version, so the two jobs share one cache entry. Only
+      # the e2e job saves it; two jobs saving one key race to reserve it.
       - name: Resolve Playwright version
         id: playwright-version
         shell: bash
@@ -166,9 +175,9 @@ jobs:
           version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $NF}')
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
+      - name: Restore Playwright browsers
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}

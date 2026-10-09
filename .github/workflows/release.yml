@@ -71,7 +71,9 @@ jobs:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          app-id: ${{ secrets.APP_ID }}
+          # The plumix-release App's client ID, which is public
+          # (`gh api /apps/plumix-release`).
+          client-id: Iv23liZT4UPmjKqKEpXQ
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
@@ -83,7 +85,14 @@ jobs:
 
       # no npm auth on purpose: a token .npmrc resolves to an empty token and
       # shadows OIDC trusted publishing
+      #
+      # A push to main is the only run whose cache every pull request can
+      # restore, so this job saves the pnpm store. A publish builds without a
+      # turbo cache, and an ordinary merge runs no turbo at all.
       - uses: ./.github/actions/setup
+        with:
+          save-pnpm-store: "true"
+          turbo-cache: "false"
 
       # Ordinary merges have nothing to publish; skip the step below so they
       # don't run a full cold build for a no-op `changeset publish`.
