@@ -487,7 +487,7 @@ describe("collectPluginCatalogFiles — real FS", () => {
     await rm(projectRoot, { recursive: true, force: true });
   });
 
-  test("lists every declared locale's compiled catalog by locale, skipping any not on disk", async () => {
+  test("lists every declared locale's compiled catalog by locale, marking the source locale and skipping any not on disk", async () => {
     const vendor = definePlugin("vendor", () => undefined, {
       i18n: {
         sourceLocale: "en",
@@ -504,8 +504,8 @@ describe("collectPluginCatalogFiles — real FS", () => {
       "node_modules/@plumix/plugin-vendor/locales",
     );
     expect(Object.fromEntries(files)).toEqual({
-      en: [join(locales, "en.mjs")],
-      de: [join(locales, "de.mjs")],
+      en: [{ path: join(locales, "en.mjs"), source: true }],
+      de: [{ path: join(locales, "de.mjs"), source: false }],
     });
   });
 });

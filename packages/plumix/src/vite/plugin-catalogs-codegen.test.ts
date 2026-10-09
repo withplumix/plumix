@@ -9,16 +9,52 @@ describe("generatePluginCatalogsSource", () => {
     );
   });
 
-  test("lazy-imports every catalog under its locale, escaped", () => {
+  test("lazy-imports every translated catalog under its locale, escaped", () => {
     const source = generatePluginCatalogsSource(
       new Map([
-        ["de", ["/site/a/locales/de.mjs", '/site/b "q"/de.mjs']],
-        ["uk", ["/site/a/locales/uk.mjs"]],
+        [
+          "de",
+          [
+            { path: "/site/a/locales/de.mjs", source: false },
+            { path: '/site/b "q"/de.mjs', source: false },
+          ],
+        ],
+        ["uk", [{ path: "/site/a/locales/uk.mjs", source: false }]],
       ]),
     );
     expect(source).toContain(
       '"de": [() => import("/site/a/locales/de.mjs"), () => import("/site/b \\"q\\"/de.mjs")],',
     );
     expect(source).toContain('"uk": [() => import("/site/a/locales/uk.mjs")],');
+  });
+
+  // A plugin may import its own source catalog to format strings with no
+  // request in hand (forms does), and a lazy import of a module the graph
+  // already holds statically splits nothing: rolldown reports it as
+  // INEFFECTIVE_DYNAMIC_IMPORT on every build.
+  test("imports a plugin's source-locale catalog statically, never lazily", () => {
+    const source = generatePluginCatalogsSource(
+      new Map([
+        [
+          "en",
+          [
+            { path: "/site/a/locales/en.mjs", source: true },
+            { path: '/site/b "q"/en.mjs', source: true },
+          ],
+        ],
+        ["de", [{ path: "/site/a/locales/de.mjs", source: false }]],
+      ]),
+    );
+    expect(source).toContain(
+      'import * as catalog0 from "/site/a/locales/en.mjs";',
+    );
+    expect(source).toContain(
+      'import * as catalog1 from "/site/b \\"q\\"/en.mjs";',
+    );
+    expect(source).toContain(
+      '"en": [() => Promise.resolve(catalog0), () => Promise.resolve(catalog1)],',
+    );
+    expect(source).not.toContain('import("/site/a/locales/en.mjs")');
+    expect(source).toContain('"de": [() => import("/site/a/locales/de.mjs")],');
   });
 });

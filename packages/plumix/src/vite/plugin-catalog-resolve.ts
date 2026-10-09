@@ -6,6 +6,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import type { AnyPluginDescriptor, PlumixManifest } from "@plumix/core";
 import { pluginCatalogStagedPath } from "@plumix/core";
 
+import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import { VitePluginError } from "./errors.js";
 
 /**
@@ -190,8 +191,8 @@ export async function stagePluginCatalogs(
 export async function collectPluginCatalogFiles(
   plugins: readonly AnyPluginDescriptor[],
   projectRoot: string,
-): Promise<Map<string, string[]>> {
-  const files = new Map<string, string[]>();
+): Promise<Map<string, PluginCatalogFile[]>> {
+  const files = new Map<string, PluginCatalogFile[]>();
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
     const dir = await resolveCatalogDir(
@@ -207,7 +208,8 @@ export async function collectPluginCatalogFiles(
       } catch {
         continue;
       }
-      files.set(locale, [...(files.get(locale) ?? []), file]);
+      const source = locale === plugin.i18n.sourceLocale;
+      files.set(locale, [...(files.get(locale) ?? []), { path: file, source }]);
     }
   }
   return files;
