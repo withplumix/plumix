@@ -21,6 +21,14 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - handlebars # 4.7.10 closes GHSA-p8wg-vrv2-v86f, GHSA-8r5x-fm3f-whwj, GHSA-xw65-4hp5-5hc7
 
+# Every dependency build script needs a decision, or pnpm prints a warning on
+# each install. These only fetch or check a platform binary, which already
+# arrives as an optional dependency.
+allowBuilds:
+  esbuild: false
+  unrs-resolver: false
+  workerd: false
+
 # Default catalog: version-coordinated deps that aren't part of a multi-package
 # family. Multi-package families live in the named catalogs below. Single-consumer
 # deps (incl. the @oslojs/* auth stack, @hookform/resolvers, the prettier plugins)

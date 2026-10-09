@@ -447,3 +447,45 @@ describe("scaffold — every runtime's env file", () => {
     }
   });
 });
+
+// pnpm 10 warns about every dependency build script nobody decided on, and
+// pnpm 11 refuses to install until each is decided. The platform binaries
+// these scripts would fetch already arrive as optional dependencies.
+describe("scaffold — install-script decisions for pnpm", () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "plumix-scaffold-builds-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test.each([
+    {
+      runtimeId: "cloudflare",
+      allowBuilds: "  esbuild: false\n  workerd: false\n",
+    },
+    { runtimeId: "node", allowBuilds: "  esbuild: false\n" },
+  ])(
+    "$runtimeId declines its dependencies' build scripts",
+    async ({ runtimeId, allowBuilds }) => {
+      const target = join(tmp, runtimeId);
+
+      await scaffold({ targetDir: target, runtimeId });
+
+      expect(
+        readFileSync(join(target, "pnpm-workspace.yaml"), "utf8"),
+      ).toContain(`allowBuilds:\n${allowBuilds}`);
+    },
+  );
+
+  test("bun writes no pnpm settings", async () => {
+    const target = join(tmp, "bun");
+
+    await scaffold({ targetDir: target, runtimeId: "bun" });
+
+    expect(existsSync(join(target, "pnpm-workspace.yaml"))).toBe(false);
+  });
+});

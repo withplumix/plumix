@@ -1,0 +1,5 @@
+# pnpm asks for a decision on every dependency that runs a build script, and
+# pnpm 11 refuses to install until each one has it. This script only fetches
+# a platform binary that already arrives as an optional dependency.
+allowBuilds:
+  esbuild: false
