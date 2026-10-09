@@ -8,19 +8,20 @@ import {
 } from "plumix/auth";
 import { coreBlocks, coreMarks, coreShortcodes } from "plumix/blocks";
 import { entryTag, typeTag } from "plumix/db";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import type { SourceHookName } from "./rosters";
-import type { Assert, Equals } from "./type-assert";
+import type { Equals } from "./type-assert";
 import { ROSTERS } from "./rosters";
 
 // The other half of the guard, and it belongs to `pnpm typecheck` rather than
-// to vitest: this is the shape every type-level binding in `rosters.ts` has,
-// applied to a list one value short of its source. `@ts-expect-error` is the
-// proof — the day the shape stops catching a short list is the day this
-// directive goes unused and typecheck fails on it.
-// @ts-expect-error -- a list short of a source value must not satisfy Equals.
-type _ShortListIsCaught = Assert<Equals<"draft" | "published", EntryStatus>>;
+// to vitest: this is the comparison every type-level binding in `rosters.ts`
+// asserts, applied to a list one value short of its source. It must come out
+// `false`, which is what fails the binding's `Assert` — the day the shape stops
+// catching a short list is the day this fails typecheck.
+expectTypeOf<
+  Equals<"draft" | "published", EntryStatus>
+>().toEqualTypeOf<false>();
 
 // The same proof for the hook registries, whose lists reach the shape only
 // through the placeholder substitution: a list holding two of the actions must
@@ -28,8 +29,7 @@ type _ShortListIsCaught = Assert<Equals<"draft" | "published", EntryStatus>>;
 // cannot be what makes a short list pass.
 type ShortActionList = SourceHookName<"entry:*:published" | "entry:published">;
 
-// @ts-expect-error -- an action list short of a source name must not satisfy Equals.
-type _ShortHookListIsCaught = Assert<Equals<ShortActionList, ActionName>>;
+expectTypeOf<Equals<ShortActionList, ActionName>>().toEqualTypeOf<false>();
 
 /** A manifest no import reaches, because it is not one of its own subpaths. */
 function manifestOf<T>(url: URL): T {
@@ -52,8 +52,8 @@ describe("the roster inventory", () => {
   });
 
   // And the tally stops a roster losing the binding it already had. Deleting
-  // an `Assert` changes no count and reads as a tidy-up in review; moving an
-  // entry to `page-only` to match fails here instead.
+  // a `TypeLevelBindings` member fails to compile at the entry that cites it;
+  // moving that entry to `page-only` to match fails here instead.
   it("leaves exactly the two rosters whose source no package exports unbound", () => {
     const unbound = ROSTERS.filter((roster) => roster.binding === "page-only");
 
