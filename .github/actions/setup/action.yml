@@ -8,6 +8,17 @@ inputs:
       install in parallel would all race to reserve the same key, so one job
       per workflow saves and the rest only restore.
     default: "false"
+  turbo-cache:
+    description: >-
+      Restore and save this job's local turbo cache. Off in a job that never
+      runs turbo, which would otherwise have no cache directory to save.
+    default: "true"
+  build-artifact:
+    description: >-
+      Download the turbo cache the `build` job uploaded, so this job's build
+      tasks hit locally instead of rebuilding the package graph. The job must
+      declare `needs: build`.
+    default: "false"
 
 runs:
   using: composite
@@ -52,3 +63,31 @@ runs:
     - if: inputs.save-pnpm-store == 'true'
       shell: bash
       run: pnpm store prune
+
+    # Turbo checks its local cache before the remote one and never opens a
+    # connection when the local copy answers. Without this every job starts
+    # empty, so all ~40 of its tasks go to the remote at once — seventeen jobs
+    # doing that concurrently is what the remote answers with 429s, which is
+    # why a docs-only pull request still re-ran 26 of 39 lint tasks.
+    #
+    # The whole build/lint/typecheck/publint/attw cache measures ~24 MB, so
+    # this is small against the repository's Actions cache budget.
+    #
+    # Keyed per job: each one caches only the tasks it runs, and restores its
+    # own previous state rather than racing the other sixteen for one key.
+    - if: inputs.turbo-cache == 'true'
+      shell: bash
+      run: echo "TURBO_CACHE_DIR=.turbo/cache" >> "$GITHUB_ENV"
+
+    - if: inputs.turbo-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .turbo/cache
+        key: turbo-${{ github.job }}-${{ github.sha }}
+        restore-keys: turbo-${{ github.job }}-
+
+    - if: inputs.build-artifact == 'true'
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: turbo-build
+        path: .turbo/cache
