@@ -21,9 +21,8 @@
       ]
     },
     "i18n:compile": {
-      // Plugins compile through the `plumix` bin, which runs its built CLI;
-      // at the root so a plugin added later gets the ordering too.
-      "dependsOn": ["^build"],
+      // Nothing upstream: every package compiles through core's hand-written
+      // `i18n-compile`, which needs no build.
       "inputs": ["locales/*.po"],
       "outputs": ["locales/*.mjs", "locales/*.d.mts"],
       "outputLogs": "new-only"
@@ -59,7 +58,8 @@
       ]
     },
     "dev": {
-      "dependsOn": ["i18n:compile"],
+      // `plumix dev` runs the built CLI against built packages.
+      "dependsOn": ["^build", "i18n:compile"],
       "cache": false,
       "persistent": true
     },

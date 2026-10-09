@@ -19,3 +19,13 @@ export type CompileCatalogsResult =
 export declare function compileCatalogs(
   options: CompileCatalogsOptions,
 ): Promise<CompileCatalogsResult>;
+
+/** The calling package's own `@lingui/cli` first, then core's. */
+export declare function resolveLinguiBin(cwd: string): string | null;
+
+/** Compiles the catalogs of the package at `cwd` as a process would: sets
+ *  `process.exitCode` on failure rather than throwing. */
+export declare function runCompileCatalogs(
+  cwd: string,
+  argv: readonly string[],
+): Promise<void>;
