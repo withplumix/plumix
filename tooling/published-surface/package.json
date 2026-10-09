@@ -30,7 +30,6 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
-    "create-plumix-app": "workspace:*",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "typescript": "catalog:",

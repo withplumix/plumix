@@ -3025,9 +3025,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0
-      create-plumix-app:
-        specifier: workspace:*
-        version: link:../../packages/create-plumix-app
       plumix:
         specifier: workspace:*
         version: link:../../packages/plumix
