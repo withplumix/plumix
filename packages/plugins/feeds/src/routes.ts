@@ -20,13 +20,8 @@ export function feedUnder(path: string): string {
   return `${path.replace(/\/$/, "")}/feed`;
 }
 
-/**
- * Whether this archive's feed is one we can serve. A type whose entries no
- * feed may carry has none. Nor does a plugin archive that did not opt in, or
- * one behind an `access` policy: core matches a registered public route ahead
- * of the access gate and ahead of loading a principal, so a feed served there
- * has no reader to check the policy against (#2520).
- */
+// An `access`-policied archive gets no feed: core matches public routes ahead
+// of the access gate and principal loading, so there is no reader to check.
 function hasFeed(plugins: PluginRegistry, archive: EntryArchive): boolean {
   switch (archive.kind) {
     case "entryType":
@@ -74,10 +69,8 @@ export interface FeedRoute {
 }
 
 /**
- * A feed beside every route an archive is listed at, read from core's own
- * list of them in the order the router matches them — so a feed follows its
- * archive wherever the permalink configuration moved it, and an archive with
- * no page has no feed.
+ * Read from core's archive routes in match order, so a feed follows its
+ * archive's permalink and an archive with no page has none.
  */
 export function feedRoutes(plugins: PluginRegistry): readonly FeedRoute[] {
   return feedRoutesOver(plugins, archiveBaseRoutes(plugins));
@@ -88,9 +81,8 @@ function feedRoutesOver(
   baseRoutes: readonly ArchiveBaseRoute[],
 ): readonly FeedRoute[] {
   const routes: FeedRoute[] = [];
-  // Two archives can share a route. The router answers the first; keeping the
-  // first claim does the same, where handing both to `registerPublicRoute`
-  // would fail the boot with an error naming this plugin as its own rival.
+  // Two archives can share a route; the router answers the first, and
+  // registering both would fail the boot as a duplicate claim.
   const claimed = new Set<string>();
   for (const { archive, pattern } of baseRoutes) {
     if (!hasFeed(plugins, archive)) continue;
@@ -109,11 +101,8 @@ function feedRoutesOver(
 }
 
 interface CompiledFeedRoutes {
-  /**
-   * The archive each feed path this plugin registered belongs to, RSS and
-   * Atom. Built from the feed routes, so it names only archives that have a
-   * feed: matching an owner here is also the `hasFeed` check.
-   */
+  // Built from the feed routes, so matching an owner here is also the `hasFeed`
+  // check.
   readonly owners: ReadonlyMap<string, string>;
   // The `/page/:page` form of each archive route, which a listing path can
   // match without being a listing of its own.
@@ -153,9 +142,6 @@ function compiledFor(plugins: PluginRegistry): CompiledFeedRoutes {
   return routes;
 }
 
-// Whether a feed can hang off this listing of the archive keyed `key`: not
-// where the site routes no public type, nor where the listing is a later page
-// of that archive.
 function servesListing(
   plugins: PluginRegistry,
   key: string,
@@ -169,14 +155,8 @@ function servesListing(
 }
 
 /**
- * Whether a concrete RSS or Atom path serves this archive's feed. Not where
- * the archive has no feed, where the site routes no public type, where the
- * path's listing is a later page of the archive, or where the public route
- * core's dispatcher answers the path with is not this archive's feed — that
- * route's handler is the one that runs, and it cannot serve one archive's
- * entries under another's caching, or be another plugin's response.
- *
- * Runs no query, so a page can ask it to decide what to advertise.
+ * False when the dispatcher would answer `feedPath` with another route, since
+ * that route's handler is the one that runs. Runs no query.
  */
 export function servesFeed(
   plugins: PluginRegistry,
@@ -198,14 +178,8 @@ function listingOf(feedPath: string): string {
 }
 
 /**
- * The archive a request to one of `route`'s feed paths serves, as core's
- * archive lookup answers for the listing the feed hangs off, or `null` — a 404
- * — where that is not the route's own archive, or where the archive serves no
- * feed there ({@link servesFeed}). The dispatcher ran this route for the path,
- * so its archive is the one the path's feed belongs to.
- *
- * Building the answer runs no query: a term or author the archive's query
- * names is looked up when the feed is served.
+ * `null` (a 404) when the listing isn't `route`'s own archive or serves no feed
+ * there. Runs no query.
  */
 export function feedAt(
   reader: ArchiveReader,

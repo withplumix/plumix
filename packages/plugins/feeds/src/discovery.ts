@@ -5,14 +5,8 @@ import { withBasePath } from "plumix/support";
 
 import { feedUnder, servesFeed } from "./routes.js";
 
-/**
- * The path of the RSS feed a page advertises, base prefix included, or null
- * when it has none: the feed of the archive that owns the page, as the
- * dispatcher resolved it. A later page advertises the feed
- * of the route it paginates. A single entry, the search page and a view belong
- * to no archive, so they advertise nothing — and neither does an error page, which
- * can sit at an archive's URL without being its page.
- */
+// An error page can sit at an archive's URL without being its page, so it
+// advertises no feed.
 function feedBase(data: TemplateData, ctx: AppContext): string | null {
   const route = ctx.resolvedRoute;
   if (data.kind === "error" || route === null) return null;
