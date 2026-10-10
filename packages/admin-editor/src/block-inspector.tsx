@@ -15,19 +15,12 @@ import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
 interface BlockInspectorProps {
-  /** Re-run the active block's loader(s) server-side (the host's orpc call).
-   *  When set, a loader-backed block gets a "Refresh data" control. */
+  // When set, a loader-backed block gets a "Refresh data" control.
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
 }
 
-/**
- * Right-rail panel for the active block's custom attributes. Reads the
- * selected block from the canonical tree, renders its registered inputs as
- * admin-ui controls, and patches the store on edit — which the canvas bridge
- * pushes to the iframe for a live, reload-free re-render.
- */
 export function BlockInspector({
   onRefreshBlockLoader,
 }: BlockInspectorProps): ReactElement {
@@ -47,7 +40,8 @@ export function BlockInspector({
   const bucket = deviceBucket(device);
   const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   // The table the selection sits in (the table itself, or the one owning the
-  // selected row/cell), so the table controls stay in reach while editing cells.
+  // selected row/cell), so the table controls stay in reach while editing
+  // cells.
   const tableId = block ? enclosingTableId(tree, block.id, registry) : null;
   const handleChange = useCallback(
     (key: string, value: JsonValue): void => {
@@ -105,9 +99,7 @@ export function BlockInspector({
     );
   }
 
-  // Slot inputs hold child block arrays, not scalar attributes — editing
-  // them as a control would overwrite the children with a string. Nested
-  // editing is a separate concern (canvas selection of the child block).
+  // A slot input as a control would overwrite the children with a string.
   const spec = registry.get(block.name);
   const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
   const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
@@ -131,10 +123,8 @@ export function BlockInspector({
         </p>
       ) : null}
       {inputs.map((input) => {
-        // A `styleProperty` input edits `node.style` for the active device
-        // instead of an attr, so it's two-way synced with the Styles tab. A
-        // cleared Custom-CSS declaration can leave "" in the bucket; read it as
-        // unset so a raw-passthrough control doesn't surface an empty value.
+        // A cleared Custom-CSS declaration can leave "" in the bucket; read it
+        // as unset.
         const styleProp = input.styleProperty;
         const stored = styleProp
           ? block.style?.[bucket]?.[styleProp]

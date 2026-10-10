@@ -8,9 +8,6 @@ import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
 import { overlayBox } from "./overlay.js";
 
-/** The pointer hit-test inputs shared by the slot resolvers. Pure — the caller
- *  supplies the live frame offset (from the iframe's `getBoundingClientRect`)
- *  and zoom. */
 interface SlotHitTest {
   readonly slots: readonly SlotRect[];
   readonly tree: readonly BlockNode[];
@@ -22,8 +19,6 @@ interface SlotHitTest {
   readonly clientY: number;
 }
 
-/** A slot under the pointer, mapped into screen space, with whether its
- *  `allowedBlocks` admits the dragged block. */
 interface SlotHit extends SlotDrop {
   readonly accepts: boolean;
 }
@@ -62,7 +57,6 @@ function slotsUnderPointer({
   return hits;
 }
 
-/** The smallest-area hit, or null when there are none. */
 function innermost(hits: readonly SlotHit[]): SlotDrop | null {
   let best: SlotDrop | null = null;
   let bestArea = Infinity;
@@ -77,22 +71,15 @@ function innermost(hits: readonly SlotHit[]): SlotDrop | null {
 }
 
 /**
- * The innermost slot under the pointer that accepts `draggingName`, mapped from
- * iframe-local slot geometry into screen space. Innermost (smallest box) wins so
- * a slot nested inside a slot is reachable; a slot's `allowedBlocks` gates
- * whether it lights up at all.
+ * Innermost (smallest box) wins, so a slot nested inside a slot is reachable.
  */
 export function resolveSlotTarget(args: SlotHitTest): SlotDrop | null {
   return innermost(slotsUnderPointer(args).filter((hit) => hit.accepts));
 }
 
 /**
- * The innermost slot under the pointer whose `allowedBlocks` refuses
- * `draggingName`: the slot the drop skipped, so the canvas can mark it. It is
- * reported only when it sits inside the accepting target `resolveSlotTarget`
- * resolves to (a smaller box), or when there is no accepting target. A
- * refusing container around the accepting target is not what the drop
- * skipped. Never changes where the drop resolves.
+ * The refusing slot the drop skipped: only one inside the accepting target, or
+ * any when none accepts. A refusing container around the target doesn't count.
  */
 export function resolveRefusedSlot(args: SlotHitTest): SlotDrop | null {
   const hits = slotsUnderPointer(args);
@@ -105,10 +92,8 @@ export function resolveRefusedSlot(args: SlotHitTest): SlotDrop | null {
 }
 
 /**
- * The top-level drop index adjusted for a move. `dropPlacement` counts the
- * pre-removal top level, but `moveBlock` removes the source first — so a
- * downward reorder (source currently sits before the drop point) shifts the
- * target down by one. Pure.
+ * `dropPlacement` counts the pre-removal top level but `moveBlock` removes the
+ * source first, so a downward reorder shifts the target by one.
  */
 export function reorderIndex(
   tree: readonly BlockNode[],
@@ -133,11 +118,8 @@ export type DropOutcome =
   | { readonly kind: "none" };
 
 /**
- * The drop dispatch decision: from the drag source, the resolved slot target
- * (or none), and the top-level placement (or none), decide which store action
- * fires. Pure, so the `requiresParent` gate — refused at the top level, and into
- * a slot only when the slot's parent (`parentName`) is in the list — is testable
- * without a live canvas.
+ * A `requiresParent` block is refused at the top level, and into a slot unless
+ * the slot's `parentName` is listed.
  */
 export function resolveDrop({
   source,
@@ -148,7 +130,9 @@ export function resolveDrop({
 }: {
   /** Where the drag came from: a catalog insert or an existing-block move. */
   readonly source: "insert" | "move";
-  /** The resolved nested-slot target, or null when none is under the pointer. */
+  /**
+   * The resolved nested-slot target, or null when none is under the pointer.
+   */
   readonly slot: {
     readonly parentId: string;
     readonly slotKey: string;

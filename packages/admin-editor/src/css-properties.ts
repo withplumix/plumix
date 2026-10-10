@@ -1,7 +1,4 @@
-// Curated set of common CSS properties (camelCase, as stored in a style
-// bucket) offered as autocomplete suggestions for the "All styles" key field.
-// Not exhaustive — it covers the properties an author reaches for, and the
-// field still accepts any valid name typed by hand. Keep sorted for the picker.
+// Not exhaustive: the field accepts any valid name typed by hand. Keep sorted.
 export const CSS_PROPERTIES: readonly string[] = [
   "alignContent",
   "alignItems",

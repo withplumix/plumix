@@ -44,25 +44,18 @@ export interface RuntimeConnection {
 }
 
 interface ConnectRuntimeOptions {
-  /** The host (admin shell) window — usually `window.parent`. */
   readonly parentWindow: Window;
-  /** Expected origin of the host; messages from elsewhere are dropped. */
+  // Messages from any other origin are dropped.
   readonly origin: string;
-  /** Called with each tree the host pushes. */
   readonly onTree: (tree: readonly BlockNode[]) => void;
-  /** Called with a scoped refresh's re-resolved loader data (node-keyed). */
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
-  /** Called with the host's active locale and compiled catalog. */
   readonly onConfig?: (config: CanvasConfig) => void;
-  /** Called when the host toggles the X-ray (outline-all-blocks) view. */
   readonly onXray?: (enabled: boolean) => void;
 }
 
 /**
- * Canvas (iframe) half of the editor bridge. Acks the host's handshake,
- * applies the trees it pushes, and exposes report* helpers the canvas calls
- * when the author interacts. It never owns the tree — it only renders what
- * the host sends and reports intent back.
+ * The canvas half of the bridge never owns the tree; it renders what the host
+ * sends.
  */
 export function connectRuntime({
   parentWindow,

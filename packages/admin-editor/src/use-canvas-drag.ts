@@ -23,15 +23,16 @@ import {
 } from "./provider.js";
 import { matchesShortcut } from "./shortcuts.js";
 
-/** The in-canvas "Add a block" popover target: a slot carries both ids; the
- *  root document carries neither (every block offered). */
+// The root document carries neither id.
 interface PendingAdd {
   readonly parentId?: string;
   readonly slotKey?: string;
 }
 
 export interface CanvasDrag {
-  /** Top-level insert indicator Y (host space); null when a slot target wins. */
+  /**
+   * Top-level insert indicator Y (host space); null when a slot target wins.
+   */
   readonly dropY: number | null;
   /** Resolved nested-slot drop target, or null. */
   readonly dropSlot: SlotDrop | null;
@@ -41,18 +42,16 @@ export interface CanvasDrag {
   /** Open inserter-popover target; null when closed. */
   readonly pendingAdd: PendingAdd | null;
   readonly setPendingAdd: (next: PendingAdd | null) => void;
-  /** Open the slot-scoped inserter for a target (root when both ids omitted). */
+  /**
+   * Open the slot-scoped inserter for a target (root when both ids omitted).
+   */
   readonly requestAdd: (parentId?: string, slotKey?: string) => void;
-  /** Transient "can't place here" notice for a refused `requiresParent` drop. */
+  /**
+   * Transient "can't place here" notice for a refused `requiresParent` drop.
+   */
   readonly rejection: string | null;
 }
 
-/**
- * Canvas drag-to-insert/move: resolves a catalog drag (`dragSpec`) or a block
- * move (`movingId`) into a top-level placement or a nested-slot target from the
- * reported block + slot geometry, and commits the insert/move on drop. Also owns
- * the in-canvas inserter popover state and the transient rejection notice.
- */
 export function useCanvasDrag({
   iframeRef,
   geometryRef,
@@ -84,11 +83,8 @@ export function useCanvasDrag({
     [],
   );
 
-  // Radix dismisses the inserter on an outside pointerdown, but those events
-  // fire on the host document — a click *inside* the cross-frame canvas never
-  // reaches it, so the popover would stay open. Opening the inserter moves focus
-  // into its content (host document); a later click into the iframe blurs the
-  // host window, which we treat as an outside interaction and close on.
+  // Radix's outside-pointerdown never sees clicks inside the cross-frame
+  // canvas; those blur the host window instead.
   useEffect(() => {
     if (!pendingAdd) return;
     const close = (): void => setPendingAdd(null);
@@ -96,11 +92,8 @@ export function useCanvasDrag({
     return () => window.removeEventListener("blur", close);
   }, [pendingAdd]);
 
-  // Canvas drag, shared by two sources: a catalog block being inserted
-  // (dragSpec) and an existing block being moved (movingId). The iframe is
-  // click-through while dragging (owned by the render) so the host receives the
-  // pointer events; the target is computed from the reported block + slot
-  // geometry mapped into screen space.
+  // The iframe is click-through while dragging so the host receives the pointer
+  // events.
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;

@@ -58,9 +58,6 @@ export function deviceLabel(i18n: I18n, value: EditorDevice): string {
   }
 }
 
-/** Canvas toolbar above the iframe: the rails toggle on the left, and the
- *  device/zoom controls centered over the canvas. Title, undo/redo, preview and
- *  publish live in the full-width header; blocks are added from the left rail. */
 export function EditorToolbar({
   hasStarters = false,
 }: {
@@ -72,7 +69,8 @@ export function EditorToolbar({
   return (
     <header
       // Horizontal inset (px-3) matches the editor header above, so the rails
-      // toggle lines up with the header's back button when the rails are hidden.
+      // toggle lines up with the header's back button when the rails are
+      // hidden.
       className="bg-background flex items-center gap-2 border-b px-3 py-2"
       data-testid="plumix-editor-toolbar"
     >
@@ -108,8 +106,7 @@ export function EditorToolbar({
   );
 }
 
-/** Opens the keyboard cheatsheet. Without a visible affordance the bindings are
- *  only findable by already knowing the one that lists them. */
+// Without it the bindings are only findable by knowing the one that lists them.
 function ShortcutsButton(): ReactElement {
   const { i18n } = useLingui();
   const setShortcutsOpen = useEditorStore((s) => s.setShortcutsOpen);
@@ -138,9 +135,7 @@ function ShortcutsButton(): ReactElement {
   );
 }
 
-/** Re-summons the starter picker after a dismissal. Scoped to the empty canvas:
- *  starters are blank-entry onboarding, so once the author has placed a block
- *  the affordance retires rather than offer to prepend a layout to real work. */
+// Empty canvas only: starters must never prepend a layout to real work.
 function PickStarterButton(): ReactElement | null {
   const isEmpty = useEditorStore((s) => s.tree.length === 0);
   const setStarterOpen = useEditorStore((s) => s.setStarterOpen);
@@ -159,7 +154,6 @@ function PickStarterButton(): ReactElement | null {
   );
 }
 
-/** Toggles the X-ray view that outlines every block in the canvas. */
 function XrayToggle(): ReactElement {
   const { i18n } = useLingui();
   const xray = useEditorStore((s) => s.xray);
@@ -194,8 +188,6 @@ function XrayToggle(): ReactElement {
   );
 }
 
-/** Device switch (sizing the canvas to the theme's breakpoint widths) plus zoom
- *  out/in and a percent readout that doubles as the fit-to-width action. */
 function DeviceZoomControls(): ReactElement {
   const { i18n } = useLingui();
   const device = useEditorStore((s) => s.device);

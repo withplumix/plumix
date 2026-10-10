@@ -30,9 +30,7 @@ import {
   shortcutsInGroup,
 } from "./shortcuts.js";
 
-// One label per declared binding. The Record's key type is the id union, so a
-// binding added to the roster is a compile error here until it's described —
-// the omission the issue asks for, caught before it can ship.
+// Keyed by the id union, so an undescribed new binding is a compile error.
 const SHORTCUT_LABELS: Record<EditorShortcutId, ReactNode> = {
   "help.open": (
     <Trans id="editor.shortcut.help.open" message="Show keyboard shortcuts" />
@@ -107,9 +105,7 @@ const SHORTCUT_LABELS: Record<EditorShortcutId, ReactNode> = {
   "history.redo": <Trans id="editor.shortcut.history.redo" message="Redo" />,
 };
 
-/** Descriptions for the marks that declare a shortcut. A mark without one falls
- *  back to its untranslated spec title, so a new mark shows up rather than
- *  vanishing from the list. */
+/** A mark missing here falls back to its untranslated spec title. */
 export const MARK_LABELS: Readonly<Record<string, ReactNode>> = {
   bold: <Trans id="editor.shortcut.mark.bold" message="Bold" />,
   italic: <Trans id="editor.shortcut.mark.italic" message="Italic" />,
@@ -140,11 +136,6 @@ const GESTURE_LABELS: Record<Gesture, ReactNode> = {
   scroll: <Trans id="editor.shortcuts.gesture.scroll" message="Scroll" />,
 };
 
-/**
- * The keyboard cheatsheet, opened with `?` / Cmd+/ or the toolbar's help
- * button. Every row is read off the shortcut roster the handlers match
- * against, so the list is what the editor actually does.
- */
 export function ShortcutsDialog(): ReactElement {
   const open = useEditorStore((s) => s.shortcutsOpen);
   const setShortcutsOpen = useEditorStore((s) => s.setShortcutsOpen);
@@ -234,7 +225,8 @@ function Row({
       <dt className="min-w-0">{label}</dt>
       <dd className="flex shrink-0 items-center gap-1">
         {chords.map((chord, index) => (
-          // Chords are a fixed, order-stable declaration — the index is the key.
+          // Chords are a fixed, order-stable declaration — the index is the
+          // key.
           <span key={index} className="flex items-center gap-1">
             {index > 0 ? (
               <span className="text-muted-foreground text-xs">

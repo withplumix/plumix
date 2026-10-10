@@ -37,9 +37,7 @@ const GROUP_LABELS: Record<EditorCommandGroupId, ReactNode> = {
 };
 
 interface EditorCommandPaletteProps {
-  /** The entry type being authored, scoping which blocks can be inserted. */
   readonly entryType?: string;
-  /** Opens the host's revision history. */
   readonly onOpenRevisions?: () => void;
 }
 
@@ -58,9 +56,8 @@ export function EditorCommandPalette({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      // No typing guard, unlike the cheatsheet's printable `?`: Cmd+K types
-      // nothing, so it must still reach the palette from the title field or a
-      // rich-text body. Toggling matches the admin shell's palette.
+      // No typing guard: Cmd+K types nothing, so it must reach the palette from
+      // any field.
       if (event.repeat || !matchesShortcut("palette.open", event)) return;
       // Cmd+K is the browser's own search-bar shortcut.
       event.preventDefault();

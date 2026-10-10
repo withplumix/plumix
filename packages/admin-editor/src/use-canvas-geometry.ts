@@ -25,12 +25,6 @@ export interface CanvasGeometry {
   ) => void;
 }
 
-/**
- * Owns the canvas iframe geometry: the reported block/slot rects plus the
- * iframe's live on-screen offset and the viewport box, kept fresh across scroll,
- * resize, rail-collapse, fit mode, and post-pan re-measures. The pure clamp/fit
- * math lives in `canvas-view.ts`; this wires it to the DOM and the store.
- */
 export function useCanvasGeometry({
   iframeRef,
   containerRef,
@@ -60,10 +54,8 @@ export function useCanvasGeometry({
     if (doc) setContentHeight(doc.documentElement.scrollHeight);
   }, [iframeRef]);
 
-  // The iframe's on-screen offset and the canvas viewport box, read live from
-  // the DOM. These move on scroll, window resize, and rail collapse — none of
-  // which re-fire the iframe's tree-keyed geometry report — so they're measured
-  // here and refreshed by the observer effect below, not just on block reports.
+  // Scroll, resize and rail collapse move these without re-firing the iframe's
+  // tree-keyed geometry report.
   const measureHost = useCallback((): Pick<Geometry, "frame" | "container"> => {
     const rect = iframeRef.current?.getBoundingClientRect();
     const box = containerRef.current?.getBoundingClientRect();
@@ -115,11 +107,6 @@ export function useCanvasGeometry({
     };
   }, [measureHost, containerRef]);
 
-  // Fit-and-center: while in fit mode, scale the frame to the viewport width
-  // (never past 100%) AND center it. This is what a device switch lands on
-  // (the provider re-enters fit on device change), so the frame is always
-  // on-screen and centered instead of pinned to the top-left. A manual
-  // pan/zoom leaves fit mode.
   const containerWidth = geometry.container?.width;
   const containerHeight = geometry.container?.height;
   useEffect(() => {
@@ -150,9 +137,8 @@ export function useCanvasGeometry({
       const next = { ...geometryRef.current, ...measureHost() };
       geometryRef.current = next;
       setGeometry(next);
-      // Keep the frame reachable after a manual zoom (e.g. the toolbar +/-,
-      // which zoom from the center and could otherwise drift it off-stage). The
-      // fit effect owns pan while in fit mode, so only clamp manual views.
+      // A center zoom can drift the frame off-stage. The fit effect owns pan in
+      // fit mode.
       const iframe = iframeRef.current;
       const s = camera.getState();
       if (next.container && iframe && !s.fit) {

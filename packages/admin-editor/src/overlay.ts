@@ -11,7 +11,6 @@ export interface OverlayBox {
   readonly height: number;
 }
 
-/** The positional fields shared by a block rect and a slot rect. */
 interface PositionedRect {
   readonly x: number;
   readonly y: number;
@@ -20,10 +19,8 @@ interface PositionedRect {
 }
 
 /**
- * Map an iframe-space rect (a block or a slot, unscaled) to a screen-space
- * overlay box, accounting for the iframe's on-screen offset and CSS zoom.
- * Computing in the iframe's own space and scaling here is what keeps the
- * overlay aligned at <100% zoom (the Puck overlay bug computed it scaled).
+ * Takes the unscaled iframe-space rect; scaling here keeps the overlay aligned
+ * below 100% zoom.
  */
 export function overlayBox(
   rect: PositionedRect,

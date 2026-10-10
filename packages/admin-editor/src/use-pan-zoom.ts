@@ -25,7 +25,9 @@ import {
 export interface PanZoom {
   /** Attach to the pannable stage node the transform is written to. */
   readonly stageRef: RefObject<HTMLDivElement | null>;
-  /** True during a live pan/zoom gesture — overlays hide, the ref drives paint. */
+  /**
+   * True during a live pan/zoom gesture — overlays hide, the ref drives paint.
+   */
   readonly gesturing: boolean;
   /** Live view during a gesture; seeds the next gesture's pan start. */
   readonly liveViewRef: RefObject<View>;
@@ -38,9 +40,13 @@ export interface PanZoom {
   ) => void;
   /** Commit the live gesture view to the store and end the gesture. */
   readonly commitLive: () => void;
-  /** Pointer-down on the canvas handle strip → pan-drag with pointer capture. */
+  /**
+   * Pointer-down on the canvas handle strip → pan-drag with pointer capture.
+   */
   readonly onHandlePointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
-  /** Free-canvas wheel (host margin + iframe-forwarded): pan, or zoom-to-cursor. */
+  /**
+   * Free-canvas wheel (host margin + iframe-forwarded): pan, or zoom-to-cursor.
+   */
   readonly handleWheel: (
     deltaX: number,
     deltaY: number,
@@ -55,11 +61,8 @@ export interface PanZoom {
 }
 
 /**
- * The Figma-style pannable/zoomable stage. During a continuous gesture the
- * transform is written straight to the stage DOM node and the live view kept in
- * a ref (zero renders per frame); the store is committed once when the gesture
- * settles. Reads container geometry (via `geometryRef`) to clamp the frame on
- * screen. Geometry itself is owned by the caller — this hook never writes it.
+ * Writes the transform straight to the stage node mid-gesture (no renders per
+ * frame) and commits to the store once it settles.
  */
 export function usePanZoom({
   iframeRef,
@@ -184,10 +187,8 @@ export function usePanZoom({
     [],
   );
 
-  // While a gesture is live, re-assert the imperative transform after every
-  // render (before paint) so an incidental re-render can't flash the stale
-  // committed value. The per-frame writes happen in applyLive; this covers
-  // renders.
+  // An incidental re-render mid-gesture would otherwise flash the stale
+  // committed transform.
   useLayoutEffect(() => {
     if (gesturingRef.current && stageRef.current) {
       stageRef.current.style.setProperty(
@@ -197,10 +198,8 @@ export function usePanZoom({
     }
   });
 
-  // The free-canvas wheel gesture, shared by the host's own wheel (over the
-  // margins) and the iframe-forwarded wheel (over the canvas). `cx/cy` are the
-  // cursor in container space; the base view is the live ref so consecutive
-  // events accumulate, and the iframe rect reflects the live transform.
+  // Based on the live ref so consecutive events accumulate. `cx/cy` are in
+  // container space.
   const handleWheel = useCallback(
     (
       deltaX: number,
@@ -249,9 +248,7 @@ export function usePanZoom({
       .applyView(centerOnRect(rect, view, box.width, box.height));
   }, [editor, camera, geometryRef]);
 
-  // Host-side wheel: pan/zoom when the cursor is over the margin around the
-  // frame. Over the iframe the gesture is forwarded via the bridge. Native +
-  // non-passive so we can preventDefault the page scroll.
+  // Non-passive so the page scroll can be prevented.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;

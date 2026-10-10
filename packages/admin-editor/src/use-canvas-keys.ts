@@ -36,13 +36,8 @@ export interface CanvasKeys {
 }
 
 /**
- * Space-to-pan + view shortcuts (fit / frame-selection / reset / x-ray). Keys
- * arrive natively (shell focus) and forwarded from the iframe (canvas focus) —
- * both routed through one handler exposed via `keyHandlerRef` for the bridge.
- * The pan drag reads pan/zoom's live view and commits through its handlers.
- *
- * The cheatsheet rides the same seam: a canvas with focus is the common case
- * for wanting it, and the bridge is the only way that keypress reaches the host.
+ * Keys arrive natively and forwarded from the iframe; `keyHandlerRef` is the
+ * one handler the bridge calls.
  */
 export function useCanvasKeys({
   panByClientDelta,
@@ -72,9 +67,8 @@ export function useCanvasKeys({
     let startY = 0;
     let startPanX = 0;
     let startPanY = 0;
-    // The iframe's click-through is owned declaratively by the render (none
-    // while a block drag OR a space-pan is active), so this just tracks the
-    // space state — no imperative pointerEvents toggling to desync.
+    // The render owns the iframe's click-through; toggling pointerEvents here
+    // would desync.
     const exitPan = (): void => {
       spaceHeld = false;
       dragging = false;
@@ -117,10 +111,8 @@ export function useCanvasKeys({
       // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
-      // These have their own listeners in the host — the cheatsheet and the
-      // palette beside the dialog they open, undo/redo in EditorShortcuts, the
-      // panels in the sidebar, delete on a focused layer — so here they only
-      // arrive forwarded, from a canvas that holds focus.
+      // These have their own host listeners, so here they only arrive
+      // forwarded.
       if (!claimed || HOST_HANDLED.has(claimed.id)) return;
       if (claimed.id === "canvas.pan") e.preventDefault();
       run(claimed.id, true);

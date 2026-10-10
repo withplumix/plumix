@@ -62,10 +62,8 @@ type TreeHistory = History<readonly BlockNode[]>;
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
-// Desktop has no breakpoint (the large bucket has no @media), so its canvas
-// width is a fixed comfortable default; tablet/mobile track the theme
-// breakpoints so the canvas width equals the viewport where that bucket applies
-// (preview equals shipped).
+// Desktop's bucket has no @media, so its canvas width is a fixed default;
+// tablet/mobile track the theme breakpoints so the preview matches what ships.
 export const DESKTOP_CANVAS_WIDTH = 1280;
 
 /** The canvas width for a device: desktop is fixed; tablet/mobile use the
@@ -90,7 +88,9 @@ export interface EditorState {
   /** Canonical block tree — the single source of truth pushed to the canvas. */
   readonly tree: readonly BlockNode[];
   readonly selectedIds: ReadonlySet<string>;
-  /** Last-clicked block; the inspector edits this one when several are selected. */
+  /**
+   * Last-clicked block; the inspector edits this one when several are selected.
+   */
   readonly activeId: string | null;
   readonly hoverId: string | null;
   readonly device: EditorDevice;
@@ -101,7 +101,9 @@ export interface EditorState {
   readonly breakpoints: ThemeBreakpoints;
   /** The catalog entry (block or variation) being dragged toward the canvas. */
   readonly dragSpec: InsertableBlockEntry | null;
-  /** The existing block being dragged to a new position on the canvas, if any. */
+  /**
+   * The existing block being dragged to a new position on the canvas, if any.
+   */
   readonly movingId: string | null;
   /** Whether there is an edit to undo. */
   readonly canUndo: boolean;
@@ -120,127 +122,87 @@ export interface EditorState {
   readonly shortcutsOpen: boolean;
   /** Whether the editor command palette is open (Cmd/Ctrl+K). */
   readonly paletteOpen: boolean;
-  /** Bumped whenever something asks the canvas to bring the active block into
-   *  view. The canvas watches it and frames the selection — the same one-way
-   *  notification shape as the device switch re-entering fit mode. */
+  /** Bumped to ask the canvas to frame the active block. */
   readonly frameRequest: number;
 }
 
 interface EditorActions {
-  /** Insert a block at a top-level index (clamped) and select it. */
   insertBlock: (node: BlockNode, index: number) => void;
-  /** Insert several blocks at a top-level index as one step (a pattern's
-   *  composition); selects the first. No-op for an empty list. */
+  // One undo step; selects the first. No-op for an empty list.
   insertBlocks: (nodes: readonly BlockNode[], index: number) => void;
-  /** Insert a block into a parent's slot (nested), gated by `allowed`, and
-   *  select it. A no-op when the slot is absent or the block isn't allowed. */
+  // No-op when the slot is absent or the block isn't allowed.
   insertBlockInto: (
     node: BlockNode,
     target: MoveTarget,
     allowed?: readonly string[],
   ) => void;
-  /** Move a block to a new parent + slot + index (reorder / nest / un-nest),
-   *  gated by an optional `allowed` (the target slot's allowedBlocks). */
   moveBlock: (
     sourceId: string,
     target: MoveTarget,
     allowed?: readonly string[],
   ) => void;
-  /** Append a column to a table — a cell to the end of every row — as one undo
-   *  step. No-op when the id isn't a table or the table has no rows. */
+  // Table edits are one undo step each, and no-ops when the id isn't a table
+  // or the edit would leave no rows/columns.
   addTableColumn: (tableId: string) => void;
-  /** Append a body row to a table, sized to its current column count, as one
-   *  undo step. No-op when the id isn't a table. */
   addTableRow: (tableId: string) => void;
-  /** Remove a table's last column (the trailing cell of every row) as one undo
-   *  step. No-op when the id isn't a table or only one column remains. */
   removeTableColumn: (tableId: string) => void;
-  /** Remove a table's last row as one undo step. No-op when the id isn't a table
-   *  or only one row remains. */
   removeTableRow: (tableId: string) => void;
-  /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (id: string, patch: JsonObject) => void;
-  /** Set (or clear, with `null`) one style property in a block's responsive
-   *  bucket, anywhere in the tree. Empty buckets / style are pruned. */
+  // `null` clears; emptied buckets and style are pruned.
   updateBlockStyle: (
     id: string,
     bucket: StyleBucket,
     property: string,
     value: string | null,
   ) => void;
-  /** Set or clear one device's visibility flag on a block. Stored off the style
-   *  slot (in `hidden`) so hiding never overwrites a bucket's layout `display`;
-   *  clearing restores it. Empty `hidden` is pruned. */
+  // Stored in `hidden`, not the style slot, so hiding never overwrites a
+  // bucket's layout `display`.
   updateBlockHidden: (id: string, bucket: StyleBucket, hidden: boolean) => void;
-  /** Rename one style property in a block's bucket, keeping its value and
-   *  position. No-op when the source is missing or the target name is taken. */
+  // No-op when the source is missing or the target name is taken.
   renameBlockStyleProperty: (
     id: string,
     bucket: StyleBucket,
     from: string,
     to: string,
   ) => void;
-  /** Set (or clear, with an empty string) a block's root-element override
-   *  (Builder's tag-name). Allowlisted at render (`resolveRootTag`). */
+  // Stored unchecked; allowlisted at render.
   setBlockTagName: (id: string, tagName: string) => void;
-  /** Set (or clear, with a blank string) a block's author CSS class names
-   *  (space-separated). Merged onto the block root at render. */
   setBlockClassName: (id: string, className: string) => void;
-  /** Set (or clear, with `null`) one HTML attribute on a block. Flat (not
-   *  responsive); empty `htmlAttrs` is pruned. Allowlisted at render. */
+  // Stored unchecked; allowlisted at render.
   updateBlockHtmlAttr: (id: string, key: string, value: string | null) => void;
-  /** Rename one HTML attribute in place, keeping its value and position.
-   *  No-op when the source is missing or the target name is taken. */
+  // No-op when the source is missing or the target name is taken.
   renameBlockHtmlAttr: (id: string, from: string, to: string) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
-  /** Delete every selected block (bulk) and clear the selection. */
   removeSelected: () => void;
-  /** Clone every selected block after itself and select the clones (bulk). */
   duplicateSelected: () => void;
-  /** Insert fresh-id clones of `nodes` after the active block (or appended to
-   *  the root), then select them. Used by clipboard paste. */
+  // Clones get fresh ids.
   pasteBlocks: (nodes: readonly BlockNode[]) => void;
-  /** Wrap the selected sibling blocks in a new `core/group` and select it.
-   *  No-op when the selection is empty or spans different parents. */
+  // No-op when the selection is empty or spans different parents.
   groupSelected: () => void;
-  /** Replace the active block with its children (ungroup) and select them.
-   *  No-op when the active block has no children. */
   ungroupSelected: () => void;
-  /** Select a block and ask the canvas to frame it (the palette's go-to
-   *  commands). Selecting alone leaves an off-screen block off-screen. */
+  // Selecting alone leaves an off-screen block off-screen.
   revealBlock: (id: string) => void;
-  /** Select the active block's container, walking one level up. */
   selectParent: () => void;
-  /** Move the active block by `delta` positions among its siblings. */
   moveSelectedBy: (delta: number) => void;
   setHover: (id: string | null) => void;
-  /** Switch device. The camera re-enters fit mode (a one-way notification wired
-   *  in the provider) so the new frame width re-fits the viewport. */
   setDevice: (device: EditorDevice) => void;
-  /** Flip the X-ray (outline-all-blocks) view. */
   toggleXray: () => void;
   setRightPanel: (panel: RightPanel) => void;
   setJsonOpen: (open: boolean) => void;
   setStarterOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
-  /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
-  /** Begin / end dragging an existing block to a new canvas position. */
   startMove: (id: string) => void;
   endMove: () => void;
-  /** Restore the previous / next tree snapshot. */
   undo: () => void;
   redo: () => void;
 }
 
-// Rebuild the tree with `transform` applied to the node carrying `id`,
-// descending into the slots `blocks` declares so a nested target is reachable.
-// Untouched branches — and the whole tree when nothing changed — keep their
-// reference, so React skips them.
+// Untouched branches keep their reference, so React skips them.
 function mapNodeById(
   nodes: readonly BlockNode[],
   id: string,
@@ -251,9 +213,8 @@ function mapNodeById(
   return next.some((node, i) => node !== nodes[i]) ? next : nodes;
 }
 
-// Whether `node` already holds every value in `patch`, so writing it changes
-// nothing — a control echoing its value back (a rich-text field mounting, say)
-// must not leave an undo step. Attrs are JSON, so serialization compares them.
+// A control echoing its value back (a rich-text field mounting) must not leave
+// an undo step.
 function holdsPatch(node: BlockNode, patch: JsonObject): boolean {
   return Object.entries(patch).every(
     ([key, value]) =>
@@ -280,9 +241,7 @@ function mapNode(
   return nextAttrs ? { ...node, attrs: nextAttrs } : node;
 }
 
-// Set/clear one style property on a single node, pruning an emptied bucket and
-// an emptied style slot. Returns the same reference when nothing changed. Raw
-// values are sanitized at emit time (the SSR emitter), not here.
+// Raw values are sanitized by the SSR emitter, not here.
 function setNodeStyle(
   node: BlockNode,
   bucket: StyleBucket,
@@ -327,9 +286,8 @@ function setNodeHidden(
   return { ...node, hidden: nextHidden };
 }
 
-// Rename one property in a bucket, rebuilding it so the renamed key holds its
-// old position (a fresh `{ ...bucket, [to]: ... }` would move it to the end).
-// Returns the same reference when the source is missing or the target is taken.
+// Rebuilt so the renamed key keeps its position; a spread would move it to the
+// end.
 function renameNodeStyleProperty(
   node: BlockNode,
   bucket: StyleBucket,
@@ -403,10 +361,8 @@ function historyState(
   return { history, canUndo: canUndo(history), canRedo: canRedo(history) };
 }
 
-// The store's single definition of "how a tree edit is committed": an unchanged
-// tree reference is a no-op; otherwise the new tree is recorded in history
-// (coalesced under `coalesceKey` when given, so a keystroke burst folds into one
-// undo step). Internal to the store — not part of its interface.
+// An unchanged tree reference is a no-op; `coalesceKey` folds a keystroke burst
+// into one undo step.
 function commitTree(
   state: InternalState,
   tree: readonly BlockNode[],
@@ -419,9 +375,8 @@ function commitTree(
   };
 }
 
-// Step through history. History snapshots only the tree, so a restored tree
-// can lack blocks the selection still names; drop those ids, and keep the
-// selection's identity when nothing was dropped.
+// History snapshots only the tree, so a restored tree can lack blocks the
+// selection still names.
 function restoreTree(
   state: InternalState,
   history: TreeHistory,
@@ -442,9 +397,7 @@ function restoreTree(
   return { tree, ...historyState(history), ...selection, ...activeId };
 }
 
-// Commit a tree edit that also moves the selection (insert/remove/duplicate/…).
-// The selection only shifts when the commit is non-empty, so an unchanged tree
-// leaves the selection untouched — same no-op rule as commitTree.
+// An unchanged tree leaves the selection untouched too.
 function commitTreeWithSelection(
   state: InternalState,
   tree: readonly BlockNode[],
@@ -522,8 +475,9 @@ export function createEditorStore(
           moveBlockOp(state.tree, sourceId, target, blocks, allowed),
         ),
       ),
-    // Keep the table selected (activeId unchanged) so its inspector buttons stay
-    // put for repeated clicks, unlike a single-block insert that selects itself.
+    // Keep the table selected (activeId unchanged) so its inspector buttons
+    // stay put for repeated clicks, unlike a single-block insert that selects
+    // itself.
     addTableColumn: (tableId) =>
       set((state) =>
         commitTree(state, appendTableColumn(state.tree, tableId, blocks)),

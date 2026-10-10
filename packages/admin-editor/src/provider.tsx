@@ -18,19 +18,14 @@ import { createEditorStore } from "./store.js";
 const EditorStoreContext = createContext<EditorStoreApi | null>(null);
 const CameraStoreContext = createContext<CameraStoreApi | null>(null);
 
-/** Pushes a scoped refresh's loader data to the canvas. Held in a ref so the
- *  CanvasFrame (which owns the bridge) can populate it once connected, and the
- *  inspector's refresh control can read it without re-rendering on connect. */
+// Held in a ref so the inspector can read it without re-rendering when the
+// bridge connects.
 type LoaderDataPush = (data: SerializedLoaderData) => void;
 
 const LoaderPushContext =
   createContext<RefObject<LoaderDataPush | null> | null>(null);
 
-/**
- * Creates one store per editor instance (kept stable across renders) and
- * shares it via context. Uncontrolled: `initialTree` seeds once — the host
- * persists via callbacks and never feeds the tree back mid-session.
- */
+/** Uncontrolled: `initialTree` seeds once and is never fed back mid-session. */
 export function EditorProvider({
   registry,
   initialTree,
@@ -62,9 +57,7 @@ export function EditorProvider({
   const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));
   const loaderPushRef = useRef<LoaderDataPush | null>(null);
 
-  // The one document→camera coupling, as a one-way notification: switching
-  // device re-enters fit mode so the new frame width re-fits the viewport. The
-  // camera stays ignorant of the document; only this edge crosses the seam.
+  // The only document→camera coupling: a device switch re-enters fit mode.
   useEffect(
     () =>
       store.subscribe((state, prev) => {
@@ -112,7 +105,9 @@ export function useCameraStore<T>(selector: (state: CameraStore) => T): T {
   return useStore(camera, selector);
 }
 
-/** The raw camera handle, for gesture/geometry hooks that read it imperatively. */
+/**
+ * The raw camera handle, for gesture/geometry hooks that read it imperatively.
+ */
 export function useCameraStoreApi(): CameraStoreApi {
   const camera = useContext(CameraStoreContext);
   if (!camera) throw EditorError.missingProvider();

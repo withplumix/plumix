@@ -1,9 +1,7 @@
 import type { BlockNode } from "@plumix/core/blocks";
 import { isBlockNodeArray } from "@plumix/core/blocks";
 
-// Envelope written to the system clipboard for block copy/paste. The `kind`
-// discriminator lets paste tell our payload apart from arbitrary clipboard
-// text (and `version` leaves room to migrate the shape later).
+// `kind` tells our payload apart from arbitrary clipboard text.
 interface ClipboardEnvelope {
   readonly kind: "plumix/blocks";
   readonly version: 1;

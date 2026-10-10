@@ -14,9 +14,10 @@ export interface UseStyleFieldOptions {
    *  or keeps an empty declaration. The declarations repeater keeps it so the
    *  focused row doesn't unmount. */
   readonly emptyLiteralClears?: boolean;
-  /** Suppress the token scale entirely — a custom-only control that never
-   *  offers tokens, even for a property the model could derive a scale for
-   *  (e.g. max-width). A stored `var()` then shows as its raw literal text. */
+  /**
+   * Suppresses tokens even where a scale exists; a stored `var()` shows as raw
+   * text.
+   */
   readonly literalOnly?: boolean;
   /** The value a wider device sets, which this one renders while it has none
    *  of its own (styles cascade desktop-first). */
@@ -46,12 +47,6 @@ export interface StyleFieldState {
   tokenOption(id: string): StyleTokenOption;
 }
 
-/**
- * The state and writers for one style property, over the theme-scoped
- * {@link StyleFields} from context. Hides the token/literal encoding and the
- * Token/Custom mode machine — a control renders `mode`/`tokenId`/`options` and
- * calls the writers, never touching a `var()` string.
- */
 export function useStyleField(
   property: string,
   value: string | undefined,

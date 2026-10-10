@@ -8,11 +8,6 @@ import { EditorError } from "./errors.js";
 
 const StyleFieldsContext = createContext<StyleFields | null>(null);
 
-/**
- * Binds the active theme's tokens once and shares the resulting
- * {@link StyleFields} builder with every style control below, so a control asks
- * for a property's field instead of receiving `tokens` drilled through the tab.
- */
 export function StyleFieldsProvider({
   tokens,
   children,

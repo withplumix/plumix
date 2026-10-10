@@ -2,16 +2,9 @@
 export type Gesture = "click" | "drag" | "scroll";
 
 /**
- * One key combination. `mod` is ⌘ on Apple platforms and Ctrl elsewhere;
- * leaving a modifier undefined means "don't care" — the binding fires with or
- * without it, and the cheatsheet prints the chord without it. Pin the modifier
- * to `false` wherever that under-description would matter, i.e. wherever the
- * chord-with-modifier belongs to some other binding.
- *
- * A chord identifies its key either by `key` (the layout-dependent value, so
- * `?` is `?` on every keyboard) or by `code` (the physical key, for the
- * positional bindings like Space and Shift+1). Forwarded chords carry both:
- * the iframe matches on `key`, then sends `code` as the wire token.
+ * An undefined modifier means "don't care"; pin it to `false` where the chord
+ * with it belongs to another binding. Forwarded chords need both `key` and
+ * `code`.
  */
 export interface Chord {
   readonly mod?: boolean;
@@ -45,24 +38,13 @@ export type ShortcutGroupId = (typeof SHORTCUT_GROUP_IDS)[number];
 interface ShortcutSpec {
   readonly id: string;
   readonly group: ShortcutGroupId;
-  /** Alternatives — any one of them fires the binding. */
   readonly chords: readonly Chord[];
-  /** Claimed by the canvas iframe and forwarded to the host over the bridge.
-   *  Every chord of a forwarded shortcut must declare a `code` to travel as. */
+  // Every chord of a forwarded shortcut must declare a `code` to travel as.
   readonly forwarded?: boolean;
 }
 
-/**
- * Every keyboard binding the editor claims, declared once, so the cheatsheet
- * can't drift from what the editor actually does. Every key handler matches
- * against this roster rather than spelling its own key test.
- *
- * The two pointer gestures are described here but matched elsewhere, because
- * `matchesShortcut` takes a key event, so a gesture chord can never fire one.
- *
- * Inline formatting is the exception — those bindings belong to the marks, so
- * `shortcut-display.ts` derives them from the mark catalogue instead.
- */
+// Pointer gestures are listed for the cheatsheet but matched elsewhere; inline
+// formatting bindings belong to the marks.
 const ROSTER = [
   {
     id: "help.open",
@@ -81,10 +63,8 @@ const ROSTER = [
     chords: [{ mod: true, shift: false, key: "k", code: "KeyK" }],
     forwarded: true,
   },
-  // Cmd+B is the vendored shadcn sidebar's own listener in the host; the
-  // canvas forwards it so it also fires while the iframe holds focus. It shares
-  // the chord with the bold mark and breaks the tie by standing aside while
-  // the author is typing.
+  // Shares the chord with the bold mark and stands aside while the author is
+  // typing.
   {
     id: "panels.toggle",
     group: "general",
@@ -216,11 +196,7 @@ export function matchesShortcut(id: EditorShortcutId, event: KeyLike): boolean {
   );
 }
 
-/**
- * Resolve a key event the canvas iframe saw into the binding it fires and the
- * code it travels to the host as. The iframe matches on the layout key, so a
- * keyboard that puts `?` somewhere other than the Slash cap still works.
- */
+/** Matches on the layout key, so `?` works wherever a keyboard puts it. */
 export function forwardedShortcut(
   event: KeyLike,
 ): { readonly id: EditorShortcutId; readonly code: string } | null {
@@ -252,10 +228,8 @@ export function forwardedShortcutId(
 }
 
 /**
- * Whether the author is typing into `target`, so a shortcut must stand aside.
- * The `instanceof` holds because the canvas iframe loads its own copy of this
- * module (own realm, own `HTMLElement`) — a bundling change that made host and
- * iframe share one instance would need a duck-typed check instead.
+ * `instanceof` holds only because the iframe loads its own copy of this module;
+ * sharing one across realms would need a duck-typed check.
  */
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (

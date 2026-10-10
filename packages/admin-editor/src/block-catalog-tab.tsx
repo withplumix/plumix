@@ -25,25 +25,18 @@ import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
-  /** Theme + plugin patterns offered alongside the blocks (click-insert). */
   readonly patterns?: readonly InserterPattern[];
-  /** Called after any click-insert, so a host popover can close itself. */
+  // Lets a host popover close itself after a click-insert.
   readonly onInsert?: () => void;
-  /** Restrict the listed blocks to a slot's `allowedBlocks`; omit for all. */
   readonly allowed?: readonly string[];
-  /** Insert picks into this slot instead of appending at the top level. */
+  // Omitted appends at the top level.
   readonly target?: { readonly parentId: string; readonly slotKey: string };
-  /** The target slot's parent block name, for enforcing `requiresParent`. */
   readonly parentName?: string;
-  /** The entry type being authored, for enforcing each block's `entryTypes`. */
   readonly entryType?: string;
 }
 
 /**
- * Left-rail inserter: a searchable grid of square icon cards grouped by
- * category, plus a patterns group. Clicking a card appends the block; pressing
- * on one starts a drag the canvas resolves to a positional drop. Patterns are
- * click-insert only (their whole composition appends).
+ * Patterns are click-insert only; blocks can also be dragged onto the canvas.
  */
 export function BlockCatalog({
   patterns,
@@ -192,7 +185,6 @@ function CatalogGroup({
   );
 }
 
-/** A square icon card: glyph on top, label below. */
 function CatalogCard({
   testId,
   icon,

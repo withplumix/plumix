@@ -13,26 +13,14 @@ import {
 } from "@plumix/core/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
-/** The conventional slot a block variation seeds its `innerBlocks` into. */
 const CONTENT_SLOT = "content";
 
-/**
- * A pattern as the inserter consumes it. Identical to `BlockPattern` but with a
- * plain-string `category`, so both authored patterns and the manifest's wire
- * form (`PatternManifestEntry`, whose category is an open string) flow in. The
- * inserter never groups by pattern category, so the narrow key buys nothing
- * here.
- */
+/** A plain-string `category` so the manifest's wire form flows in too. */
 export type InserterPattern = Omit<BlockPattern, "category"> & {
   readonly category?: string;
 };
 
-/**
- * A slot's `allowedBlocks` list (the block names it accepts), or undefined when
- * the slot is unrestricted or the parent/slot is unknown. Resolved from the
- * parent block's slot input in the registry — the policy the canvas drop and
- * the inserter enforce.
- */
+/** Undefined when the slot is unrestricted or the parent/slot is unknown. */
 export function slotAllowedBlocks(
   registry: BlockRegistry,
   parentName: string,
@@ -48,16 +36,12 @@ const UNCATEGORIZED = "uncategorized";
 
 interface GroupOptions {
   readonly capabilities: ReadonlySet<string>;
-  /** Case-insensitive filter over name, title and keywords. */
+  // Case-insensitive over name, title and keywords.
   readonly query?: string;
-  /** Restrict to these block names (a slot's `allowedBlocks`); `undefined`
-   *  permits every eligible block. */
   readonly allowed?: readonly string[];
-  /** The block the inserter targets, for enforcing each candidate's
-   *  `requiresParent`. `undefined` = the top level (parent-bound blocks hidden). */
+  // Undefined is the top level, which hides parent-bound blocks.
   readonly parentName?: string;
-  /** The entry type being authored, for enforcing each candidate's `entryTypes`
-   *  allow-list. `undefined` = unknown type, so entry-type-scoped blocks hide. */
+  // Undefined hides entry-type-scoped blocks.
   readonly entryType?: string;
 }
 
@@ -66,12 +50,7 @@ interface InsertableGroup {
   readonly entries: readonly InsertableBlockEntry[];
 }
 
-/**
- * The inserter's block list: every eligible block plus its inserter-scoped
- * variations (a block with inserter variations surfaces those instead of its
- * bare self), capability-gated, query-filtered, grouped by category in
- * registry order with empty groups dropped.
- */
+/** A block with inserter variations surfaces those instead of its bare self. */
 export function groupInsertables(
   registry: BlockRegistry,
   { capabilities, query, allowed, parentName, entryType }: GroupOptions,
@@ -101,10 +80,8 @@ export function groupInsertables(
 }
 
 /**
- * A stable, collision-free identity for an inserter entry. Variation slugs are
- * only unique per parent block (two blocks can both declare `default`), so a
- * variation is qualified by its parent name; a bare block (slug === name) keeps
- * its name as-is.
+ * Variation slugs are only unique per parent block, so they're qualified by its
+ * name.
  */
 export function entryKey(entry: InsertableBlockEntry): string {
   return entry.slug === entry.name ? entry.slug : `${entry.name}/${entry.slug}`;
@@ -140,9 +117,8 @@ export function createNodeFromEntry(
     ...entry.attrs,
   };
   if (entry.innerBlocks) attrs[CONTENT_SLOT] = entry.innerBlocks;
-  // Seed each declared slot's defaultChildren unless that slot was already
-  // provided (by defaults, the variation's attrs, or innerBlocks). Ids are
-  // minted fresh below, so the spec's template ids never leak into the tree.
+  // Ids are minted fresh below, so the spec's template ids never leak into the
+  // tree.
   for (const input of spec?.inputs ?? []) {
     if (
       input.type === "slot" &&
@@ -152,10 +128,7 @@ export function createNodeFromEntry(
       attrs[input.name] = input.defaultChildren;
     }
   }
-  // Seed each seeded slot child with its own spec defaults + defaultStyles, so a
-  // container's descendants (e.g. the equal-split columns and their paragraphs)
-  // are treated like a directly-inserted child. The top node's own defaults are
-  // already merged above; only descendants recurse.
+  // Descendants get their own spec defaults like a directly-inserted child.
   const seed: BlockNode = {
     id: "seed",
     name: entry.name,
@@ -172,11 +145,8 @@ export function createNodeFromEntry(
   return node;
 }
 
-// Apply a node's own spec `defaults` (attrs) + `defaultStyles` (style) where it
-// carries none, recursing through its slots (an existing attr/style wins). This
-// seeds a descendant's own defaults, but NOT a nested container's empty slot
-// `defaultChildren` — a container placed in `defaultChildren` must spell out its
-// own children, as core/columns' DEFAULT_COLUMNS does.
+// Doesn't seed a nested container's `defaultChildren`: a container placed in
+// `defaultChildren` must spell out its own children.
 function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   const spec = registry.get(node.name);
   const attrs: Record<string, JsonValue> = { ...spec?.defaults, ...node.attrs };

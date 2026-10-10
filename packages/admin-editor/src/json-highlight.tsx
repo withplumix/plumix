@@ -1,8 +1,6 @@
 import type { ReactElement } from "react";
 
-// One capturing group around the whole token so `split` keeps the tokens in the
-// result (odd indices). Strings (a key when a colon trails), the literals, then
-// numbers; everything else — punctuation, whitespace — lands on even indices.
+// One capturing group so `split` keeps tokens at odd indices.
 const TOKEN =
   /((?:"(?:\\.|[^"\\])*"(?:\s*:)?)|(?:\b(?:true|false|null)\b)|(?:-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?))/g;
 
@@ -18,11 +16,7 @@ function tokenClass(token: string): string {
   return "text-amber-600 dark:text-amber-400";
 }
 
-/**
- * Minimal JSON syntax colouriser. Lazy-loaded (its only consumer code-splits
- * the import) so the highlighter never weighs on the editor's main bundle —
- * the debug source dialog is the sole place it renders.
- */
+/** Import lazily so it stays out of the editor's main bundle. */
 export default function JsonHighlight({
   json,
   testId,

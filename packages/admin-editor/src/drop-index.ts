@@ -1,14 +1,10 @@
-/** A block's vertical extent in the coordinate space the pointer is measured in. */
 interface VerticalSpan {
   readonly y: number;
   readonly height: number;
 }
 
 /**
- * The top-level insertion index for a pointer at `pointerY`: drop before the
- * first block whose vertical midpoint the pointer hasn't passed, or at the end
- * if it's below them all. `spans` must be in tree order and the same
- * coordinate space as `pointerY`.
+ * `spans` must be in tree order and in the same coordinate space as `pointerY`.
  */
 export function dropIndexFromPointer(
   spans: readonly VerticalSpan[],
@@ -22,9 +18,8 @@ export function dropIndexFromPointer(
 }
 
 interface DropPlacement {
-  /** Top-level insertion index. */
   readonly index: number;
-  /** Y of the drop-indicator line, or null when the canvas has no blocks. */
+  // Null when the canvas has no blocks.
   readonly indicatorY: number | null;
 }
 
