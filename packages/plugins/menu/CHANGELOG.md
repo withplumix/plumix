@@ -1,5 +1,19 @@
 # @plumix/plugin-menu
 
+## 0.5.0
+
+### Minor Changes
+
+- [#2965](https://github.com/withplumix/plumix/pull/2965) [`884d96b`](https://github.com/withplumix/plumix/commit/884d96ba06e8405fd10106547a49d83fe4dca0ec) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds searchable entry and term pickers to the menu editor, so pages, posts and terms can be added to a menu, or used to re-link a broken item, without pasting URLs.
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
+- [#2900](https://github.com/withplumix/plumix/pull/2900) [`adb4e6e`](https://github.com/withplumix/plumix/commit/adb4e6e60a679382656608dd3ddf854b7d9a078f) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the public menu ignoring an entry or term item's own label. An item renamed in the menu editor now renders that label, still linking to the entry's or term's current address.
+
 ## 0.4.0
 
 ### Minor Changes

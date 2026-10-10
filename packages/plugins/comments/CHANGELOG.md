@@ -1,5 +1,21 @@
 # @plumix/plugin-comments
 
+## 0.6.0
+
+### Minor Changes
+
+- [#2967](https://github.com/withplumix/plumix/pull/2967) [`72ca32e`](https://github.com/withplumix/plumix/commit/72ca32e9ea43671f1bbd2d857c3ca267e0bdbf2f) Thanks [@nasyrov](https://github.com/nasyrov)! - Sends the moderator notification as the declared mail `commentAwaitingModeration`: a localized subject and text naming the comment's author and entry, the comment itself, a link to the moderation queue, and an HTML body. A site or theme can override it by name. It still sends nothing on a site with no mailer.
+
+- [#2962](https://github.com/withplumix/plumix/pull/2962) [`701f65b`](https://github.com/withplumix/plumix/commit/701f65b3500c859a871ecbf0e60b41d1d7328cc2) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes approved, spammed, trashed and deleted comments staying stale on CDN-cached entry pages: every moderation write, and every comment that arrives approved, now purges the entry's cached page. Adds a `comment:deleted` action, fired with the comment as it stood before a moderator removed it.
+
+- [#2901](https://github.com/withplumix/plumix/pull/2901) [`1df6458`](https://github.com/withplumix/plumix/commit/1df6458c210daa8ff69ccaa76e7f2ac26e769561) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships the plugin's migration history
+
+- [#2887](https://github.com/withplumix/plumix/pull/2887) [`33a6a22`](https://github.com/withplumix/plumix/commit/33a6a22c964f78ac881e6bb73b0ddeb7bfb18275) Thanks [@nasyrov](https://github.com/nasyrov)! - Requires React 19.3. Move `react`, `react-dom`, `@types/react` and `@types/react-dom` in your site to `^19.3.0`; new projects from `create-plumix-app` start on it.
+
+### Patch Changes
+
+- [#2969](https://github.com/withplumix/plumix/pull/2969) [`6e44a7d`](https://github.com/withplumix/plumix/commit/6e44a7dddb710bf3f65ad47066e31475c7d4ade8) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `valibot` to 1.5.0 in the framework and the first-party plugins, `@valibot/to-json-schema` to 1.8.0, `@sindresorhus/slugify` to 3.0.1, `lucide-react` to 1.49.0 and `react-colorful` to 5.8.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62.4, `wrangler` 4.146, `@cloudflare/workers-types` 5.20261001.1) in `@plumix/runtime-cloudflare`.
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@plumix/runtime-cloudflare",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "type": "module",
   "description": "Run a Plumix site on Cloudflare Workers.",
   "license": "MIT",

@@ -1,5 +1,15 @@
 # @plumix/plugin-search
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2901](https://github.com/withplumix/plumix/pull/2901) [`1df6458`](https://github.com/withplumix/plumix/commit/1df6458c210daa8ff69ccaa76e7f2ac26e769561) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships the plugin's migration history
+
+### Patch Changes
+
+- [#2964](https://github.com/withplumix/plumix/pull/2964) [`6da3d02`](https://github.com/withplumix/plumix/commit/6da3d02debc948f228187db31a87142f75ae1bb0) Thanks [@nasyrov](https://github.com/nasyrov)! - Drops its `sqlMigrations` declaration. The FTS5 index and its triggers come from the migration history the package ships, which `plumix migrate` applies.
+
 ## 0.1.2
 
 ### Patch Changes

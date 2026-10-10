@@ -1,5 +1,15 @@
 # @plumix/runtime-node
 
+## 0.4.0
+
+### Minor Changes
+
+- [#2959](https://github.com/withplumix/plumix/pull/2959) [`46ce5f4`](https://github.com/withplumix/plumix/commit/46ce5f4246df6180e22005928cdb9a6e0915f9ce) Thanks [@nasyrov](https://github.com/nasyrov)! - Supports the new `plumix migrate`, which applies core's and each plugin's shipped migrations, and removes `plumix migrate apply`. On Cloudflare it opens the site's D1 binding through wrangler's `getPlatformProxy`: the local database `plumix dev` uses, or the deployed one with `--remote`. Pass `--binding <name>` when the wrangler config declares several D1 databases. It no longer runs `wrangler d1 migrations apply`, so `migrations_dir` is no longer needed. On Node and Bun it opens the configured SQLite file, and `--remote` is an error. The Bun scaffold's `migrate:apply` script is now `migrate`.
+
+### Patch Changes
+
+- [#2912](https://github.com/withplumix/plumix/pull/2912) [`3f338ee`](https://github.com/withplumix/plumix/commit/3f338ee01f03ad50f98c90faddd89e9c517ab814) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@modelcontextprotocol/sdk` to 1.31.0 and `@lingui/*` to 6.8.0 in the framework, `smol-toml` to 1.9.0 and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.62, `wrangler` 4.143) in `@plumix/runtime-cloudflare`, and the optional `sharp` peer to 0.35.5 in `@plumix/runtime-node`.
+
 ## 0.3.0
 
 ### Minor Changes

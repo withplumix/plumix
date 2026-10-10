@@ -1,5 +1,33 @@
 # @plumix/core
 
+## 0.25.0
+
+### Minor Changes
+
+- [#2958](https://github.com/withplumix/plumix/pull/2958) [`f6629aa`](https://github.com/withplumix/plumix/commit/f6629aa52a77256533ea7314cbd0cfaed18f7931) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `canonical: false` to a theme's or template's `document`, so a page such as an account view or a per-user shortlist renders without the automatic `<link rel="canonical">`. A canonical the page declares in `link` still renders.
+
+- [#2901](https://github.com/withplumix/plumix/pull/2901) [`1df6458`](https://github.com/withplumix/plumix/commit/1df6458c210daa8ff69ccaa76e7f2ac26e769561) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships core's migration history in `@plumix/core`
+
+- [#2896](https://github.com/withplumix/plumix/pull/2896) [`8886e95`](https://github.com/withplumix/plumix/commit/8886e95d1690e618f6d28e70865f246a646a15a3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a `routes` config to turn off core's author, date and search routes, and answers 404 for a date archive with no entries. A route family set to `false` is never compiled, so its URLs fall through to whatever else matches or to 404, and the admin's user screen drops its `/authors/` hint when author routes are off.
+
+- [#2898](https://github.com/withplumix/plumix/pull/2898) [`99cd7da`](https://github.com/withplumix/plumix/commit/99cd7da00b393260327a7f4911790229b61e1974) Thanks [@nasyrov](https://github.com/nasyrov)! - Allows multi-segment `rewrite.slug` and `hasArchive` bases, so a taxonomy registered with `rewrite: { slug: "insights/category" }` serves its terms, later pages and feeds at `/insights/category/<term>`, and an entry type can live at `learn/courses`. A near-miss base now fails at boot with a message that names the segment at fault, and for a stray leading or trailing slash shows the value to write instead.
+
+- [#2904](https://github.com/withplumix/plumix/pull/2904) [`da3d369`](https://github.com/withplumix/plumix/commit/da3d36944843adf3d34f71b7ed423d3b21bcfb04) Thanks [@nasyrov](https://github.com/nasyrov)! - Passes the sign-out request to `RequestAuthenticator.signOutUrl(request)`, and `chainAuthenticators` forwards it to each member, so an authenticator can return its logout URL only for a request that carries its own credential. Implementations that take no argument keep working.
+
+### Patch Changes
+
+- [#2892](https://github.com/withplumix/plumix/pull/2892) [`47209d6`](https://github.com/withplumix/plumix/commit/47209d69800ca681b36afc6a4ae951b405ac7582) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin bar rendering for subscribers, offering create links the viewer can't use, and leaving its offset behind when a filter empties it.
+
+- [#2963](https://github.com/withplumix/plumix/pull/2963) [`9c27a55`](https://github.com/withplumix/plumix/commit/9c27a55c2ba0375f8ef8fb72a94dfc4cd3abc87b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a signed-in visit to a page whose type has an access policy granting `anonymous` being cached for anonymous visitors. Such a visit now renders privately, as it does on a page with no policy, and a public route with such a policy answers it with `cache-control: private, no-store`.
+
+- [#2986](https://github.com/withplumix/plumix/pull/2986) [`0ea8784`](https://github.com/withplumix/plumix/commit/0ea878415352fc5dd02ef2aedcf42950192352d8) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes island props that are `undefined` on the server arriving as `null` in the browser. The comments plugin's form island no longer logs React's "`value` prop on `input` should not be null" error.
+
+- [#2988](https://github.com/withplumix/plumix/pull/2988) [`aa47163`](https://github.com/withplumix/plumix/commit/aa47163dbdd2433a15d62ec09919d315aec8673b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes React's "Attempted to synchronously unmount a root while React was already rendering" warning when a parent island's render removes a hydrated nested island. The nested island now unmounts once the parent's render has committed.
+
+- [#2968](https://github.com/withplumix/plumix/pull/2968) [`c6f3e36`](https://github.com/withplumix/plumix/commit/c6f3e366019f37a969e299292a96dbfa954397a0) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a member's page being served to every other member of a shared audience segment when its render read the principal. A render that reads `ctx.user`, `ctx.tokenScopes` or `ctx.auth.can()`, calls `useUser()`, shows the admin bar, or resolves to the member's own locale is personal: it is no longer stored in the segment's CDN entry, leaves as `private, no-store`, and the `cdn` telemetry record carries `personal: true`.
+
+- [#2981](https://github.com/withplumix/plumix/pull/2981) [`7c1054e`](https://github.com/withplumix/plumix/commit/7c1054ef009e967cfee64977a3212802a09adb89) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the "dynamic import cannot be analyzed by Vite" warning `plumix dev` printed the first time an island loaded.
+
 ## 0.24.1
 
 No changes in this release.
