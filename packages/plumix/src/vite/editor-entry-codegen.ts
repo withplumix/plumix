@@ -7,22 +7,9 @@ import {
 } from "./block-module-resolver.js";
 
 /**
- * Generates `.plumix/editor-entry.ts` — the `plumix-editor` client chunk whose
- * `bootEditor()` mounts the iframe canvas. `blocks` are the browser-safe block
- * modules a theme (via its `blocks` field) and its plugins (via `registerBlock`
- * calls) declare, recovered from config source with the exact export each was
- * imported from; `shortcodes` are the modules behind theme and plugin
- * `shortcodes` fields, plugin before theme. Both are imported here and handed
- * to `bootEditor` so the canvas holds core + plugin + theme blocks and
- * shortcodes. Without them the canvas is core-only: it warns "Unregistered
- * block name" on any custom block and shows a custom shortcode's raw `[tag]`.
- *
- * A module resolved to a file is imported relative to `entryDir`, the folder
- * the entry is written to. Vite's dependency scan does not crawl an import
- * whose specifier is already its resolved path, so an absolute one hides what a
- * plugin's block module in node_modules imports. Vite never discovers those at
- * request time either, and a CommonJS one like `react/jsx-runtime` then fails
- * to load in the browser, taking the whole canvas down.
+ * Imports resolved files relative to `entryDir`: Vite's dependency scan skips
+ * an already-resolved absolute specifier, so a CommonJS dependency would then
+ * fail in the browser.
  */
 export function generateEditorEntrySource(
   entryDir: string,

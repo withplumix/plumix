@@ -1,8 +1,5 @@
-// No `declare global { interface Window }` here — admin owns the
-// Window.plumix shape (it carries the `register*` helpers in addition
-// to `runtime`). This module is just the slice plugin chunks see — the
-// runtime and the deployment facts the shell publishes — plus the throw
-// if the shell hasn't booted.
+// No `declare global { interface Window }` here: admin owns the full
+// `Window.plumix` shape.
 
 import type * as LinguiCoreNs from "@lingui/core";
 import type * as LinguiReactNs from "@lingui/react";
@@ -69,10 +66,8 @@ export function getRuntime(): PlumixAdminRuntime {
 }
 
 /**
- * Whether the site's `plumix()` config fills `slot`. A surface backed by an
- * infrastructure slot hides itself when this is `false`. A plain function,
- * not a hook: the roster is fixed at build time, so it can't change during a
- * session.
+ * Whether the site's `plumix()` config fills `slot`. Not a hook: the roster is
+ * fixed at build time, so it can't change during a session.
  */
 export function isSlotConfigured(slot: InfrastructureSlot): boolean {
   const slots = plumixGlobal()?.configuredSlots;

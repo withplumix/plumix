@@ -7,17 +7,8 @@ import type {
 } from "./client-error-ring.js";
 import { createClientErrorRing } from "./client-error-ring.js";
 
-// Browser-errors-to-terminal (#1604, decisions #1573/#1579). The dev-only island
-// catch net POSTs client failures — uncaught exceptions plus `console.error` /
-// `console.warn` — here, and this prints them into the `plumix dev` terminal
-// tagged `[browser]`, with each frame sourcemapped back to original `file:line`
-// through the same Node resolver the overlay's frame view uses. All logic is pure
-// over injected deps (`resolveStack` / `print`), so it tests without a live
-// server; the collapse state lives on the forwarder instance the middleware keeps
-// for the dev session. Nothing here ships to production — the whole path is gated
-// on `process.env.PLUMIX_DEV` at the call site and tree-shakes out. The wire
-// contract (`ForwardedLog`) is shared from `@plumix/core` so client and server
-// agree on the shape.
+// Gated on `process.env.PLUMIX_DEV` at the call site, so none of this ships to
+// production.
 
 export interface TerminalForwardDeps {
   /** Map a raw browser stack to original-source frames (the dev sourcemaps). */
@@ -60,14 +51,8 @@ function headerOf(log: ForwardedLog): string {
 }
 
 /**
- * Create the stateful forwarder the Vite middleware holds for the dev session.
- * `handle` parses a POSTed `{ logs }` batch, resolves each stack, prints —
- * collapsing consecutive identical logs into a running `(×N)` count so a tight
- * loop doesn't re-dump the same block — and retains each resolved entry in a
- * bounded ring. `read` returns those retained entries newest-first, so the
- * dev-only MCP `error_list` tool (#1653/#1656) can read client failures back
- * without re-running the browser. Retention rides alongside the print and never
- * changes it.
+ * Collapses consecutive identical logs into a running `(×N)` count. `read`
+ * returns retained entries newest-first.
  */
 export function createTerminalForwarder(deps: TerminalForwardDeps): {
   handle: (body: string) => Promise<{ readonly status: number }>;
@@ -78,10 +63,8 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
   const ring: ClientErrorRing = createClientErrorRing();
 
   async function emit(log: ForwardedLog): Promise<void> {
-    // Resolve frames BEFORE touching the collapse state, so the compare-and-print
-    // below is one synchronous critical section with no `await` inside it. Two
-    // overlapping POSTs (separate client flushes) then can't interleave
-    // `lastSignature`/`repeat` across a suspension point.
+    // Resolve before touching collapse state, so the compare-and-print below
+    // has no `await` and overlapping POSTs can't interleave.
     const frames = log.stack ? await deps.resolveStack(log.stack) : [];
     // Retain every forwarded entry (the terminal's `(×N)` collapse is a display
     // concern; each failure is still a distinct entry the reader wants to see).
@@ -120,10 +103,6 @@ function signatureOf(log: ForwardedLog): string {
   return `${log.kind}|${log.level}|${log.label ?? ""}|${log.message}`;
 }
 
-// Project a forwarded log plus its resolved frames into the flat entry the
-// reader observes: `source=client`, the level/message/label as forwarded, and
-// the sourcemapped frames as the stack. `kind` is a terminal-formatting concern
-// only, so it doesn't survive here.
 function retain(
   log: ForwardedLog,
   frames: readonly DevErrorFrame[],
@@ -137,8 +116,8 @@ function retain(
   };
 }
 
-// The first application frame, falling back to the first frame of any kind, so a
-// console log that only ran through framework code still shows a location.
+// The first application frame, falling back to the first frame of any kind, so
+// a console log that only ran through framework code still shows a location.
 function pickFrame(
   frames: readonly DevErrorFrame[],
 ): DevErrorFrame | undefined {
@@ -179,10 +158,8 @@ function asForwardedLog(value: unknown): ForwardedLog | null {
   return {
     kind,
     level,
-    // `message`/`label` are client-controlled (an island's thrown message or a
-    // `console.error` arg — possibly content-authored in a CMS), so strip control
-    // bytes before they reach the terminal: an ESC survives the JSON round-trip
-    // and would otherwise inject ANSI/OSC escapes into the developer's console.
+    // Client-controlled, possibly CMS-authored: an ESC would inject ANSI/OSC
+    // escapes into the developer's terminal.
     message: stripControl(message),
     ...(typeof record.stack === "string" ? { stack: record.stack } : {}),
     ...(typeof record.label === "string"
@@ -191,9 +168,8 @@ function asForwardedLog(value: unknown): ForwardedLog | null {
   };
 }
 
-// C0 control bytes + DEL are replaced with a space; a raw ESC survives the JSON
-// round-trip and would otherwise inject ANSI/OSC escapes into the dev terminal.
-// Frame paths are server-derived, so only `message`/`label` need this.
+// A raw ESC survives the JSON round-trip. Frame paths are server-derived, so
+// only `message`/`label` need this.
 function stripControl(value: string): string {
   let out = "";
   for (const ch of value) {

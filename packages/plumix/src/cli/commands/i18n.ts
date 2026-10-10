@@ -50,17 +50,8 @@ export const i18nCommand: CommandDefinition = {
       });
     }
     const rest = ctx.argv.slice(1);
-    // `--check` is plumix's own flag (slice 7 CI gate). Snapshot the
-    // `.po` files, run extract, compare active msgid sets, restore — so
-    // a failed gate exits non-zero with a clean working tree regardless
-    // of what extract does to it. That safety net is why the
-    // hand-authored guard below only covers the bare, destructive form:
-    // admin's catalog carries the same marker as a historical leftover
-    // (its strings are real macro-extractable JSX/defineMessage now, so
-    // `admin`/`admin-editor`'s own `i18n:extract` calls `lingui extract`
-    // directly and never reaches this guard) — only its `i18n:check`
-    // goes through `plumix i18n extract --check`, and `--check` restores
-    // the file no matter what extract did to it.
+    // `--check` snapshots and restores the `.po` files, so only the bare,
+    // destructive form needs the hand-authored guard below.
     if (
       sub === "extract" &&
       !rest.includes("--check") &&
@@ -99,12 +90,8 @@ export const i18nCommand: CommandDefinition = {
   },
 };
 
-/** Scaffold the i18n config + scripts at the package root. Each target
- *  is idempotent (skip-if-exists); package.json gets a non-destructive
- *  merge so pre-existing scripts/devDeps survive. Errors loudly if
- *  package.json is missing or malformed rather than silently creating
- *  one — `init` is a "set up i18n in this package" command, not "make
- *  a package." */
+// Errors when package.json is missing or malformed rather than creating one:
+// `init` sets up i18n in a package, it doesn't make one.
 function runInit(ctx: CommandContext): void {
   report.info("Plumix i18n init");
 
@@ -142,17 +129,14 @@ export default defineConfig({
 });
 `;
 
-/** A parsed `package.json`. The two named slots are what this command edits;
- *  the `JsonObject` half is the rest of the file, which round-trips untouched. */
 type PackageJsonShape = Readonly<{
   scripts?: Record<string, string>;
   devDependencies?: Record<string, string>;
 }> &
   JsonObject;
 
-/** Read package.json, raising a CliError on missing or malformed input.
- *  Silent fallback would clobber a user's broken file with a synthetic
- *  one or scaffold into a directory that isn't actually a package. */
+// Raises rather than falling back, which would clobber a broken file or
+// scaffold into a non-package.
 function readRequiredPackageJson(
   pkgPath: string,
   cwd: string,
@@ -173,11 +157,8 @@ function readRequiredPackageJson(
   }
 }
 
-/** Non-destructive merge: only the new keys we'd add are introduced,
- *  pre-existing user values win on collision, and `changed` is true
- *  iff at least one key would actually be inserted. Comparing inserted
- *  keys directly avoids the JSON-stringify reorder trap that would
- *  rewrite the file for cosmetic key-order changes. */
+// Compares inserted keys rather than stringified JSON, so key order alone never
+// rewrites the file.
 function mergePackageJson(pkg: PackageJsonShape): {
   merged: PackageJsonShape;
   changed: boolean;
@@ -187,10 +168,6 @@ function mergePackageJson(pkg: PackageJsonShape): {
     // `compile` emits ESM and fails on a catalog parse error.
     "i18n:extract": "plumix i18n extract",
     "i18n:compile": "plumix i18n compile",
-    // `verify` is the source↔catalog drift gate — works for both
-    // lingui-extracted catalogs and the hand-authored manifest pattern
-    // plumix's own plugins use. Catches JSX `<Trans id="..." message="...">`
-    // and object-literal `{ id, message }` descriptors uniformly.
     "i18n:check": "plumix i18n verify",
     // So a published tarball never ships stale or missing `locales/*.mjs`.
     prepack: "plumix i18n compile",
@@ -224,14 +201,8 @@ async function runExtractCheck(
   for (const content of snapshot.values()) {
     for (const id of activeMsgids(content)) knownIds.add(id);
   }
-  // Forward `--clean` so source-side deletions also count as drift: a
-  // msgid removed from source becomes `#~ obsolete` in .po, which
-  // `activeMsgids` filters out — the resulting "missing from active
-  // set" surfaces in the drift list. INVARIANT: every msgid in the
-  // committed catalog must be reachable from extractor-visible source
-  // (a Lingui macro call or `<Trans>` JSX). Hand-authoring a msgid
-  // that isn't reachable from extractor input would cause `--clean`
-  // to demote it on every gate run.
+  // INVARIANT: every committed msgid must be reachable from extractor-visible
+  // source, or `--clean` demotes it to obsolete on every gate run.
   const forwarded = ["--clean", ...rest.filter((a) => a !== "--check")];
   try {
     await i18nDeps.spawnInherit(
@@ -267,17 +238,9 @@ async function runExtractCheck(
   }
 }
 
-/** Drift gate for hand-authored plugin catalogs. Unlike `extract --check`
- *  (which assumes the Lingui extractor sees every descriptor), `verify`
- *  scans source for any `{ id, message }`-shape literal — so descriptors
- *  wrapped in `withContext(...)` or declared as plain manifest fields
- *  count too. Exits non-zero with a sorted drift report when source and
- *  `locales/en.po` disagree.
- *
- *  `--src <dir>` (repeatable) narrows the scan to specific directories
- *  for packages whose catalogs own only part of their source tree —
- *  core's po carries the SSR admin-bar strings, while its adminNav
- *  descriptors are translated by admin's catalogs. */
+// Scans for any `{ id, message }` literal, unlike `extract --check`, so
+// descriptors the Lingui extractor never sees (`withContext(...)`, manifest
+// fields) count too.
 function runVerify(ctx: CommandContext): void {
   const localesDir = resolve(ctx.cwd, "locales");
   const srcDirs = verifySrcDirs(ctx);
@@ -365,28 +328,20 @@ export function computeIdDrift(
   };
 }
 
-/** Finds `{ id: "...", message: "..." }`-shaped descriptor literals
- *  (covers `defineMessage`, `withContext`, manifest objects) and
- *  `<Trans id="..." message="..." />` JSX. `id` and `message` must be
- *  siblings at the same nesting depth — a nav-group descriptor like
- *  `{ id: "x", label: { id, message } }` doesn't count. Dynamic ids
- *  (`id: prefix + ".x"`) are ignored — neither the extractor nor the
- *  catalog can represent them. */
+/**
+ * `id` and `message` must be siblings at the same depth, so a nav-group's
+ * `{ id, label: { id, message } }` doesn't count. Dynamic ids are ignored.
+ */
 export function sourceDescriptorIds(text: string): ReadonlySet<string> {
   const ids = new Set<string>();
-  // Object-literal form: `id: "X"` — accept only when the enclosing
-  // `{...}` has `message:` at the SAME nesting depth (a sibling `id:`
-  // next to a nested `label: { id, message }` is a nav-group descriptor,
-  // not a translation descriptor).
+  // Only when `message:` sits at the same depth: a sibling `id:` beside a
+  // nested `label: { id, message }` is a nav-group descriptor.
   const objRe = /\bid:\s*["']([^"'\n]+)["']/g;
   let m: RegExpExecArray | null;
   while ((m = objRe.exec(text)) !== null) {
     if (hasSiblingMessageKey(text, m.index)) ids.add(m[1] ?? "");
   }
-  // JSX-attribute form: `id="X"` inside a `<Trans ... message="..." />`
-  // (or `<Trans ... message={...} />`) tag, possibly across multiple
-  // lines. The tag begins with the most recent `<` to the left and ends
-  // at the next `>` (no nested elements inside an opening tag).
+  // `id="X"` inside a `<Trans … message=… />` opening tag, possibly multi-line.
   const jsxRe = /\bid=["']([^"'\n]+)["']/g;
   while ((m = jsxRe.exec(text)) !== null) {
     const tag = enclosingJsxTag(text, m.index);
@@ -432,7 +387,7 @@ function hasSiblingMessageKey(text: string, pos: number): boolean {
   return false;
 }
 
-/** Opening JSX tags don't nest, so a simple `<...>` window is enough. */
+// Opening JSX tags don't nest, so a simple `<...>` window is enough.
 function enclosingJsxTag(text: string, pos: number): string | null {
   const lt = text.lastIndexOf("<", pos);
   if (lt === -1) return null;
@@ -443,11 +398,8 @@ function enclosingJsxTag(text: string, pos: number): string | null {
   return text.slice(lt, gt + 1);
 }
 
-/** Extract active (non-obsolete) msgid values from a .po file. Handles
- *  the multi-line / continuation form that `pofile-ts` folds long
- *  strings into (msgid "" followed by "..." continuation lines) so the
- *  gate doesn't silently miss folded entries on Windows (CRLF) or for
- *  long explicit-ids past the 80-char default fold threshold. */
+// Handles `pofile-ts`'s folded continuation form (`msgid ""` then `"..."`
+// lines), which CRLF files and long ids produce.
 function activeMsgids(content: string): readonly string[] {
   const ids: string[] = [];
   const lines = content.replace(/\r\n/g, "\n").split("\n");
@@ -472,19 +424,14 @@ function activeMsgids(content: string): readonly string[] {
   return ids;
 }
 
-/** Decode one or more concatenated `"..."` segments from a .po line.
- *  `pofile-ts` writes plain double-quoted strings with backslash
- *  escapes for `\n`, `\t`, `\\`, `\"`. */
 function decodeQuoted(buf: string): string {
   const segments = buf.match(/"((?:\\.|[^"\\])*)"/g);
   if (!segments) return "";
   return segments.map((s) => s.slice(1, -1).replace(/\\(.)/g, "$1")).join("");
 }
 
-/** A catalog marked `X-Generator: hand-authored` (the convention plumix's
- *  own plugins use for descriptors a Babel macro pass never sees) has no
- *  extractor-visible source to regenerate from — running `lingui extract`
- *  against it doesn't refresh translations, it wipes them. */
+// A hand-authored catalog has no extractor-visible source, so `lingui extract`
+// wipes it.
 function hasHandAuthoredCatalog(localesDir: string): boolean {
   return listPoFiles(localesDir).some((path) =>
     /X-Generator:\s*hand-authored/.test(readFileSync(path, "utf8")),

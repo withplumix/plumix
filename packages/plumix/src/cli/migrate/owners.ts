@@ -19,7 +19,6 @@ const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
 // site's `schemaModule`s, so a spec resolves from here the way it imports them.
 export const SITE_SCHEMA_OUT = ".plumix/site-schema.ts";
 
-/** `@plumix/plugin-comments` → `plumix_plugin_comments`. */
 function trackingSuffix(packageName: string): string {
   return packageName
     .toLowerCase()
@@ -61,7 +60,7 @@ export function siteRootOf(configPath: string): string {
   return nearestPackageRoot(configPath) ?? dirname(configPath);
 }
 
-/** The package a plugin's `schemaModule` resolves into, or `null` for the site. */
+// `null` for the site itself.
 function schemaOwnerRoot(
   cwd: string,
   siteRoot: string,
@@ -89,9 +88,8 @@ export function sitePlugins(
 }
 
 /**
- * Every owner whose history applies, in the order it applies: core, then each
- * package a plugin's `schemaModule` resolves into, in config order and each
- * once, then the site's own `migrations/` when it has one.
+ * In application order: core, each plugin schema package in config order and
+ * once, then the site's own `migrations/`.
  */
 export function resolveOwners(
   cwd: string,

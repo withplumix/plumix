@@ -32,10 +32,9 @@ export function serverExternals(options: ServerEnvironmentOptions): string[] {
 }
 
 /**
- * The environment a self-hosted runtime bundles its entry in. Everything is
- * inlined: the SSR island transform only wraps modules Vite processes, and
- * under pnpm an externalized transitive dependency of `plumix` is unresolvable
- * from an app root.
+ * Everything is inlined: the island transform only wraps modules Vite
+ * processes, and under pnpm a transitive dependency of `plumix` is
+ * unresolvable from an app root.
  */
 export function serverEnvironment(
   options: ServerEnvironmentOptions,

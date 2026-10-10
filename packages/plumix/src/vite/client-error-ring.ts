@@ -1,15 +1,6 @@
 import type { DevErrorFrame, ForwardedLog } from "@plumix/core/dev-client";
 
-/**
- * One forwarded client failure retained for read-back (#1656). The forwarder
- * already sourcemaps each stack to original-source {@link DevErrorFrame}s before
- * printing it to the terminal; this keeps that resolved entry so a later reader —
- * the dev-only MCP `error_list` tool (#1653) — can pull it without re-running the
- * browser. It carries only what an agent reads: `source` (always `client`, the
- * merge discriminator against server errors), `level`, `message`, the resolved
- * `stack`, and the island/component `label` when the failure named one. It has no
- * request id — a client error has no server request behind it.
- */
+/** Has no request id: a client error has no server request behind it. */
 export interface RetainedClientError {
   readonly source: "client";
   readonly level: ForwardedLog["level"];
@@ -18,13 +9,7 @@ export interface RetainedClientError {
   readonly label?: string;
 }
 
-/**
- * A bounded ring of the most recent forwarded client errors, mirroring the
- * server-side request-history store's bounding contract (fixed capacity,
- * drop-oldest, total-byte budget, per-string truncation). Dev-only and held on
- * the forwarder for the dev session; it tree-shakes out of production with the
- * rest of the forwarder.
- */
+/** Fixed capacity, drop-oldest, total-byte budget and per-string truncation. */
 export interface ClientErrorRing {
   /** Retain one resolved entry; strings are truncated and the ring bounded. */
   add(entry: RetainedClientError): void;
@@ -41,9 +26,8 @@ export interface ClientErrorRingOptions {
   readonly maxStringLength?: number;
 }
 
-// Client failures are small and can burst (a render loop, a chatty warning), so
-// the entry cap is generous while the byte budget guards a pathological single
-// entry from pinning memory. Dev-only, so the numbers favour usefulness.
+// Client failures burst, so the entry cap is generous; the byte budget stops
+// one huge entry pinning memory.
 const DEFAULT_MAX_ENTRIES = 50;
 const DEFAULT_MAX_TOTAL_BYTES = 500_000;
 const DEFAULT_MAX_STRING_LENGTH = 8_192;
@@ -55,9 +39,7 @@ export function createClientErrorRing(
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   const maxStringLength = options.maxStringLength ?? DEFAULT_MAX_STRING_LENGTH;
 
-  // Oldest-first internally (push appends); `get` reverses to newest-first.
-  // `bytes` is the entry's approximate serialized size, tracked so the byte
-  // budget is an O(1) running total rather than a re-measure per add.
+  // Oldest-first; `bytes` keeps the budget an O(1) running total.
   const ring: { entry: RetainedClientError; bytes: number }[] = [];
   let totalBytes = 0;
 
@@ -84,9 +66,7 @@ export function createClientErrorRing(
   };
 }
 
-// Truncate every string on the entry — the client-controlled `message`/`label`
-// and the server-derived frame paths — so one giant value can't blow the byte
-// budget on its own. Mirrors the request-history store's per-string cap.
+// Per-string cap so one giant value can't exhaust the byte budget alone.
 function boundStrings(
   entry: RetainedClientError,
   maxString: number,

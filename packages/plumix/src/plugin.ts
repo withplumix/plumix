@@ -3,14 +3,8 @@
 // emitter (see `./index.ts`).
 export * as v from "valibot";
 
-// Definition, RPC, hooks, the registries a plugin reads, and the harness its
-// own tests assemble an app from. `applyOverride` is how a content-type plugin
-// lets a site reshape the types it registers. A capability is named by what it
-// guards — `entryCapability(type, action)`, `termCapability(taxonomy, action)`
-// — and never spelled, since a spelled `entry:<type>:*` misses the namespace a
-// pooled type gates under; `resolveCapability` spells one only for a denial
-// payload. `canEditEntry` / `canDeleteEntry` answer the row-dependent
-// questions.
+// A capability is named through `entryCapability`/`termCapability`, never
+// spelled: a spelled `entry:<type>:*` misses a pooled type's namespace.
 export {
   applyOverride,
   assertCanDeleteEntry,

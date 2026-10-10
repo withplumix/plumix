@@ -6,13 +6,9 @@ export interface PluginCatalogFile {
 }
 
 /**
- * Synthesize the body of the `virtual:plumix/plugin-catalogs` module: locale →
- * one loader per plugin catalog, which the generated entry hands to
- * `buildApp` so SSR block renders resolve plugin strings on a Worker with no
- * fs. Translations load lazily, so a locale the request never asks for is
- * never loaded. A source-locale catalog is imported up front: a plugin may
- * import it itself to format strings with no request in hand (forms does),
- * and a lazy import of a module the graph already holds splits nothing off.
+ * Translations load lazily. The source-locale catalog is imported eagerly: a
+ * plugin may import it itself, and a lazy import of an already-held module
+ * splits nothing off.
  */
 export function generatePluginCatalogsSource(
   files: ReadonlyMap<string, readonly PluginCatalogFile[]>,

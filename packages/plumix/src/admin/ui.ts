@@ -1,21 +1,3 @@
-/**
- * Public `plumix/admin/ui` surface.
- *
- * Re-exports the shared shadcn/ui primitives from the workspace-internal
- * `@plumix/admin-ui` package — the same components the admin shell renders.
- * Plugin admin chunks import from here; `@plumix/admin-ui` is never a direct
- * dependency in their `package.json`.
- *
- * Unlike the sibling `plumix/admin/*` runtime shims (react, radix-ui, …),
- * this surface ships real component source: the plugin-bundle Vite step
- * bundles it into the plugin chunk, where the components' own `react` /
- * `radix-ui` / `sonner` / `tailwind-merge` imports are aliased to the shared
- * runtime shims — so the chunk carries only the thin wrappers (~1KB each),
- * not radix.
- *
- * Stability: these are components taken from shadcn that we own and edit
- * (ADR 0023). This surface carries no guarantee beyond plumix's repo-wide
- * pre-1.0 policy — minor versions may break it; pin `plumix`. CONTRIBUTING.md
- * ("UI primitives") covers how they change.
- */
+// Ships real component source, unlike the runtime shims, and carries no
+// stability guarantee beyond plumix's pre-1.0 policy.
 export * from "@plumix/admin-ui";

@@ -50,10 +50,8 @@ export function createSiteReloader(): SiteReloader {
     await live?.scheduler?.stop();
     const replaced = live;
     live = undefined;
-    // The replaced site's handler holds a connection nothing else closes.
-    // Released in the background so a reload never waits on its deferred
-    // work; a request still running on it can lose that connection mid-query,
-    // which in dev the next request recovers from.
+    // Released in the background so a reload never waits on deferred work; dev
+    // recovers from a request losing its connection.
     void replaced?.dispose?.();
     try {
       const site = await build();

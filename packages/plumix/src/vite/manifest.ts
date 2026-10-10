@@ -31,13 +31,13 @@ export interface ManifestBuildOptions {
   readonly blocks?: readonly BlockSpec[];
   readonly i18n?: ResolvedI18n;
   readonly configuredSlots?: ConfiguredSlots;
-  /** What the runtime adapter refuses; see `RuntimeAdapter.refusedAdminAreas`. */
+  /**
+   * What the runtime adapter refuses; see `RuntimeAdapter.refusedAdminAreas`.
+   */
   readonly refusedAdminAreas?: readonly AdminArea[];
   /**
-   * The site's theme, handed to plugins the way the runtime hands it over.
-   * Required, because every registration a plugin makes from `theme:ready` is
-   * missing from the manifest without it, which is the drift this function
-   * exists to prevent.
+   * Required: registrations a plugin makes from `theme:ready` are missing from
+   * the manifest without it.
    */
   readonly theme: ThemeDescriptor;
   /**
@@ -46,21 +46,16 @@ export interface ManifestBuildOptions {
    */
   readonly routes: PlumixConfig["routes"];
   readonly projectRoot: string;
-  /** Where `@plumix/admin` keeps the plugin catalogs it baked in, if anywhere. */
+  /**
+   * Where `@plumix/admin` keeps the plugin catalogs it baked in, if anywhere.
+   */
   readonly bundledPluginsDir: string | null;
 }
 
 /**
- * Run plugin `setup()` callbacks into a throwaway hook registry just to capture
- * what's been registered.
- *
- * Hooks wired up here are discarded — the manifest plus the populated registry
- * are everything downstream needs (manifest → wire payload, registry →
- * admin-plugin-bundle's auto-register synthesis). If a plugin throws on setup
- * we surface it as-is: a broken config should fail the build, not silently ship
- * an empty manifest. Note: this runs on every dev config-file change, so
- * plugins should keep `setup()`, `afterSetup()` and the `theme:ready` handler
- * below free of IO and of anything a repeat call would compound.
+ * A plugin that throws on setup fails the build. Runs on every dev config
+ * change, so `setup()`, `afterSetup()` and `theme:ready` handlers must stay
+ * free of IO and safe to repeat.
  */
 export async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
@@ -72,18 +67,12 @@ export async function computeManifestAndRegistry(
     plugins,
     registry: createPluginRegistry(options.routes),
   });
-  // The same handover `buildApp` makes before it reads any registry.
-  // `installPlugins` has already run every `setup` and `afterSetup`, but a
-  // plugin can still register from the theme it is handed, and a manifest built
-  // without firing it would ship the admin a shorter list than the running
-  // worker has, which is exactly the drift `buildManifest` exists to prevent.
+  // Plugins can still register from the theme they're handed; skipping this
+  // would ship the admin a shorter list than the running worker has.
   await hooks.doAction("theme:ready", options.theme);
-  // Caveat on the skip below: the glob that bakes catalogs in runs when
-  // @plumix/admin is built, this predicate runs when a site is configured.
-  // If `@plumix/admin`'s dist is stale — a workspace plugin added since it
-  // was last built — the link resolves but the glob never saw it, and the
-  // plugin's strings fall back to `descriptor.message` silently. Rebuild
-  // @plumix/admin to refresh.
+  // A stale `@plumix/admin` dist misses a workspace plugin added since, whose
+  // strings then silently fall back to English. Rebuild @plumix/admin to
+  // refresh.
   const adminBundledPluginIds = new Set(
     plugins
       .filter(

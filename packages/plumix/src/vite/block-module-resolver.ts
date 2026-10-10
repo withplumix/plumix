@@ -10,12 +10,8 @@ import {
 } from "./estree.js";
 
 /**
- * A block (or shortcode) module the editor entry must import, and the export to
- * take from it.
- * `module` is an import specifier (from the extractors) or a resolved absolute
- * path (from {@link resolveBlockModulePaths}); `exportName` is `"default"`, a
- * named export, or `"*"` — so the codegen imports the exact binding the author
- * declared rather than assuming a default export.
+ * `module` is an import specifier or a resolved absolute path; `exportName` is
+ * `"default"`, a named export, or `"*"`.
  */
 export interface BlockModuleRef {
   readonly module: string;
@@ -23,17 +19,8 @@ export interface BlockModuleRef {
 }
 
 /**
- * Result of recovering a theme's `blocks`-field block modules statically from
- * config source (so the editor bundle can import them while the author writes
- * the plain `import blocks from "./blocks"; { blocks }` form). Plugin blocks take
- * the imperative path instead — see {@link extractRegisteredBlockModules}.
- *
- * Only whole-module imports are resolvable, and the factory (`defineTheme` /
- * `definePlugin`) must be imported from `plumix` — that provenance is what keeps
- * a local look-alike from being mistaken for a config. Two static-analysis
- * limits are accepted rather than papered over: a local binding that *shadows*
- * an import is read as the import, and a `blocks` reachable only through an
- * object spread (`{ ...base }`) is not followed.
+ * Only whole-module imports from a `plumix` factory resolve. A local binding
+ * shadowing an import reads as the import; object spreads aren't followed.
  */
 export type BlockModuleResult =
   | { readonly ok: true; readonly modules: readonly BlockModuleRef[] }
@@ -48,11 +35,6 @@ const NOT_IMPORTED = {
   reason: "`blocks` is not a resolvable import binding",
 } as const;
 
-/**
- * A generated `import` statement binding `ref`'s export to the local name
- * `local` — default or named — so codegen imports the exact binding the author
- * declared. Shared by the canvas editor entry and the admin bundle.
- */
 export function blockImportStatement(
   ref: BlockModuleRef,
   local: string,
@@ -63,10 +45,8 @@ export function blockImportStatement(
 }
 
 /**
- * A generated expression that normalizes `local` to a `BlockSpec[]` — a single
- * spec (`ctx.registerBlock(x)`) becomes `[x]`, an array (`registerBlocks` / a
- * theme's `blocks` field) passes through, and a missing export becomes `[]`.
- * Lets both codegens spread/iterate the result without a "not iterable" crash.
+ * Normalizes `local` to a `BlockSpec[]`: a single spec becomes `[x]`, an array
+ * passes through, a missing export becomes `[]`.
  */
 export function blockSpecsArrayExpr(local: string): string {
   return `(Array.isArray(${local}) ? ${local} : ${local} ? [${local}] : [])`;
@@ -76,7 +56,9 @@ function refKey(ref: BlockModuleRef): string {
   return `${ref.module}\0${ref.exportName}`;
 }
 
-/** Dedupe block refs by `module`+`exportName`, keeping first-insertion order. */
+/**
+ * Dedupe block refs by `module`+`exportName`, keeping first-insertion order.
+ */
 export function dedupe(
   refs: readonly BlockModuleRef[],
 ): readonly BlockModuleRef[] {
@@ -84,11 +66,8 @@ export function dedupe(
 }
 
 /**
- * Block modules a theme/plugin config declares, with each `module` resolved to
- * an absolute filesystem path (bare package specifiers pass through untouched).
- * `moduleFsPath` is the config module the source came from; relative specifiers
- * resolve against its directory. Throws (naming the module) when a `blocks`
- * field binding can't be resolved statically.
+ * Relative specifiers resolve against `moduleFsPath`'s directory; bare ones
+ * pass through. Throws when a `blocks` binding can't be resolved statically.
  */
 export function resolveBlockModulePaths(
   source: string,
@@ -128,11 +107,8 @@ function resolveRelative(
 }
 
 /**
- * Block modules behind every `ctx.registerBlock(x)` / `ctx.registerBlocks([…])`
- * call nested inside a plumix `definePlugin(...)` in a plugin's source, traced to
- * their imports. Best-effort: an argument that isn't a plain imported binding (a
- * computed value, an inline `defineBlock`) is skipped, so those blocks won't
- * appear in the editor canvas.
+ * Best-effort: an argument that isn't a plain imported binding is skipped, so
+ * those blocks won't appear in the editor canvas.
  */
 export function extractRegisteredBlockModules(
   source: string,
@@ -142,8 +118,8 @@ export function extractRegisteredBlockModules(
   const { importOf, factoryLocals } = buildImportMaps(program);
   const isFactory = factoryCall(factoryLocals);
   const refs: BlockModuleRef[] = [];
-  // Only `registerBlock(s)` calls nested inside a plumix `definePlugin(...)` are
-  // trusted — matching purely on the method name would fire on an unrelated
+  // Only `registerBlock(s)` calls nested inside a plumix `definePlugin(...)`
+  // are trusted — matching purely on the method name would fire on an unrelated
   // `someLib.registerBlock(x)` and pull the wrong module into the editor.
   for (const { call, enclosing } of callSites(program)) {
     const { callee } = call;
@@ -191,8 +167,8 @@ const factoryCall =
     call.callee.type === "Identifier" && factoryLocals.has(call.callee.name);
 
 // Value-binding local name -> import ref (module + export), and the local names
-// a `plumix` factory export was imported under (canonical or aliased). Shared by
-// the `blocks`-field and `registerBlock`-call extractors.
+// a `plumix` factory export was imported under (canonical or aliased). Shared
+// by the `blocks`-field and `registerBlock`-call extractors.
 function buildImportMaps(program: ESTree.Program): {
   importOf: Map<string, BlockModuleRef>;
   factoryLocals: Set<string>;
@@ -220,12 +196,8 @@ export function extractBlockModules(
 }
 
 /**
- * Shortcode modules behind the `shortcodes` field of a module's plumix
- * `defineTheme` / `definePlugin` config, with each relative `module` resolved
- * against `moduleFsPath`'s directory. Best-effort, unlike a theme's `blocks`:
- * the server registers an inline or computed shortcode either way, so one the
- * editor bundle can't import is skipped — the canvas shows its raw `[tag]` —
- * rather than failing the build.
+ * Best-effort, unlike a theme's `blocks`: a shortcode the editor can't import
+ * is skipped, and the canvas shows its raw `[tag]`.
  */
 export function resolveShortcodeModulePaths(
   source: string,
@@ -286,9 +258,8 @@ function collectImport(
       });
       continue;
     }
-    // A namespace import (`import * as x`) binds a module object, never a
-    // `BlockSpec[]`, so it's intentionally not recorded — a `blocks` field using
-    // one is then rejected rather than emitted as a crashing import.
+    // A namespace import binds a module object, never a `BlockSpec[]`, so it is
+    // not recorded and a `blocks` field using one is rejected.
     if (
       specifier.type !== "ImportSpecifier" ||
       specifier.importKind === "type"
@@ -329,7 +300,8 @@ function resolveValue(
     return ref ? { ok: true, modules: [ref] } : NOT_IMPORTED;
   }
 
-  // `blocks: [...a, ...b]` or `blocks: [a, b]` — each element an imported binding.
+  // `blocks: [...a, ...b]` or `blocks: [a, b]` — each element an imported
+  // binding.
   if (value.type === "ArrayExpression") {
     const modules: BlockModuleRef[] = [];
     for (const element of value.elements) {

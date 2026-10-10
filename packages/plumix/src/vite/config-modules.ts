@@ -8,12 +8,8 @@ import {
 } from "./estree.js";
 
 /**
- * The module specifiers a plumix config imports its theme and plugins from,
- * recovered statically from the config source so the editor codegen knows which
- * files to scan for block declarations. `theme` is the specifier behind the
- * `theme:` binding (or `undefined`); `plugins` are the specifiers behind each
- * traceable `plugins:` entry (factory call or bare descriptor). Entries that
- * aren't a resolvable import binding are dropped rather than guessed.
+ * Entries that aren't a resolvable import binding are dropped rather than
+ * guessed.
  */
 export interface ConfigModules {
   readonly theme: string | undefined;

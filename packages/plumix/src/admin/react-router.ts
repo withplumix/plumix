@@ -2,10 +2,8 @@ import type * as ReactRouter from "@tanstack/react-router";
 
 import { getRuntime } from "./runtime.js";
 
-// Each binding is annotated with the upstream type it re-exports. Inferred,
-// the compiler prints the module that declares a symbol, which for some is
-// `@tanstack/router-core` or `@tanstack/history`, packages plumix does not
-// declare (#2648).
+// Annotated so declaration emit names this type rather than
+// `@tanstack/router-core`, which plumix does not declare as a dependency.
 const ns: typeof ReactRouter = getRuntime().reactRouter;
 
 export default ns;
@@ -16,9 +14,8 @@ export const Navigate: typeof ReactRouter.Navigate = ns.Navigate;
 export const RouterProvider: typeof ReactRouter.RouterProvider =
   ns.RouterProvider;
 export const Route: typeof ReactRouter.Route = ns.Route;
-// Deprecated upstream in favour of the router's `scrollRestoration` option.
-// Kept because dropping a binding from this shim is a breaking change to the
-// published surface, which is not this lint slice's to make.
+// Deprecated upstream; dropping a binding from this shim would break the
+// published surface.
 /* eslint-disable @typescript-eslint/no-deprecated -- the rule flags both the type and the value, which sit on two lines */
 export const ScrollRestoration: typeof ReactRouter.ScrollRestoration =
   ns.ScrollRestoration;

@@ -1,20 +1,8 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
-// Resolve a `"use client"` module's chunk URL for the shim's
-// `<plumix-island chunk-url="…">` attribute.
-//
-// Dev (`serve`): `/@fs<absolute-id>` — Vite serves the original
-// module via its dev-server middleware. The custom element's dynamic
-// `import()` loads it through Vite's module graph so HMR plumbing
-// works (full-page reload on edit; live patch isn't supported across
-// the island boundary).
-//
-// Build: look up the per-island Rollup input by its
-// `islandEntryName` and emit the hashed `file:` from Vite's
-// `.vite/manifest.json`. Falls back to `/@fs<id>` if the manifest
-// entry is missing (cold-build edge case the asset-manifest virtual
-// module already documents).
+// Dev serves the original module through Vite's graph. A build falls back to
+// `/@fs<id>` when the manifest entry is missing, the cold-build case.
 export function resolveIslandChunkUrl(
   id: string,
   command: "serve" | "build",
@@ -31,11 +19,7 @@ export function resolveIslandChunkUrl(
   return "/@fs" + id;
 }
 
-/**
- * The slice of Vite's `manifest.json` the island chunk lookup reads: source
- * path → the chunk it built into. A missing file reads as an empty manifest,
- * which is the cold-build case the virtual module already documents.
- */
+// A missing file reads as an empty manifest, the cold-build case.
 type AssetManifest = Readonly<Record<string, { readonly file?: string }>>;
 
 export function loadAssetManifest(rootDir: string): AssetManifest {

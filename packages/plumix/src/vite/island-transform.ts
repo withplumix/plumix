@@ -4,13 +4,9 @@ import { extname, join } from "node:path";
 import { VitePluginError } from "./errors.js";
 import { moduleExportName, parseModule } from "./estree.js";
 
-// Prototype-pollution defense. The client-side runtime does
-// `mod[exportName]` to look up the component; a malicious or
-// accidentally-named `__proto__` / `constructor` / `prototype` export
-// would resolve to `Object.prototype` or the module's constructor and
-// `createRoot(...).render(<Component />)` would throw or worse —
-// emit DOM in a confused state. Matches Astro's
-// `FORBIDDEN_COMPONENT_EXPORT_KEYS` set.
+// The client runtime does `mod[exportName]`; these would resolve to
+// `Object.prototype` or the constructor. Matches Astro's
+// `FORBIDDEN_COMPONENT_EXPORT_KEYS`.
 const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
@@ -90,21 +86,12 @@ export function findUseClientIslands(
   return out;
 }
 
-// Vite virtual-module suffix the SSR shim uses to read the original
-// `"use client"` source — the plugin's `resolveId`/`load` serve the
-// unmodified file at this query and `transform` short-circuits, so the
-// shim's `import * as __orig from "<file>?plumix-orig"` doesn't
-// recursively re-trigger this transform.
+// `transform` short-circuits on this query so the shim's import of the original
+// source doesn't re-trigger it.
 export const ORIG_QUERY = "?plumix-orig";
 
-// Virtual module the SSR shim pulls `IslandShim` from. A `"use client"`
-// island in core's `blocks/` itself can't import the public `plumix/blocks`
-// specifier — that package re-exports `@plumix/core/blocks`, so a dependency on it
-// would be a cycle, and pnpm's strict layout makes `plumix/blocks`
-// unresolvable from the island's own location. The plugin's `load` re-exports
-// `IslandShim` from `plumix/blocks` resolved at the project root (where
-// `plumix` is always a dependency), so islands in core, plugins, and userland
-// all resolve it identically.
+// Islands in core's own `blocks/` can't import `plumix/blocks` (a cycle, and
+// unresolvable under pnpm), so this resolves it from the project root instead.
 export const SERIALIZE_VIRTUAL_ID = "virtual:plumix/island-serialize";
 
 interface TransformUseClientOptions {
@@ -122,10 +109,8 @@ export function transformUseClientModule(
 ): TransformUseClientResult | null {
   const findings = findUseClientIslands(source, filePath);
   if (findings.length === 0) return null;
-  // First-party source only. A published package is entitled to export a
-  // client-only hook beside its components (`@lingui/react` and half of Radix
-  // do), and its shimmed hook is a pre-existing hazard the site author cannot
-  // fix by editing the file we would name.
+  // First-party only: published packages legitimately export client-only hooks
+  // beside components, and the site author can't fix their files.
   if (!filePath.includes("/node_modules/")) {
     const hook = findings.find((f) => HOOK_EXPORT.test(f.exportName));
     if (hook) {
@@ -140,12 +125,8 @@ export function transformUseClientModule(
   const chunkUrl = JSON.stringify(options.chunkUrl);
   const lines: string[] = [
     `import { createElement as __c } from "react";`,
-    // `IslandShim` owns the island boundary decision, prop split,
-    // serialization, and the `<plumix-island>` shape — real, tested code
-    // rather than a generated string (see @plumix/core/blocks/island-shim).
-    // Sourced from the virtual module (not `plumix/blocks` directly) so a
-    // core island in `@plumix/core/blocks` resolves it too — see
-    // SERIALIZE_VIRTUAL_ID.
+    // From the virtual module so a core island in `@plumix/core/blocks`
+    // resolves it too.
     `import { IslandShim as __IslandShim } from ${JSON.stringify(SERIALIZE_VIRTUAL_ID)};`,
     `import * as __orig from ${origUrl};`,
   ];
@@ -173,14 +154,7 @@ export function transformUseClientModule(
   return { code: lines.join("\n") };
 }
 
-/**
- * Discovered island after `scanUserSources` walks the user's source
- * tree. `sourcePath` is the absolute path to the `"use client"` module;
- * the Vite plugin uses it to (a) extend `rollupOptions.input` with a
- * per-island client entry and (b) emit `import { Component } from
- * "<sourcePath>"` in the `virtual:plumix/island-manifest` virtual
- * module.
- */
+/** `sourcePath` is the absolute path to the `"use client"` module. */
 export interface DiscoveredIsland {
   readonly sourcePath: string;
   readonly exportName: string;
@@ -210,10 +184,8 @@ const SKIP_DIRS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Walks `cwd` and any workspace-symlinked packages under `node_modules`
- * so a theme or plugin can ship `"use client"` files in its own `src/`
- * without explicit registration. The `walkSymlinkedDeps` realpath gate
- * keeps the scan out of the pnpm store.
+ * Also walks workspace-symlinked packages under `node_modules`, so a theme or
+ * plugin's `"use client"` files need no registration; never the pnpm store.
  */
 export function scanUserSources(
   cwd: string,
@@ -292,10 +264,8 @@ function walkSymlinkedDeps(
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
     const full = join(nodeModulesPath, entry.name);
-    // A real `@scope` folder is a directory holding symlinked packages —
-    // recurse into it. A package symlink itself reports `isDirectory:
-    // false` (the link, not its target), so it must NOT be filtered out
-    // by a directory check before reaching the symlink branch below.
+    // A package symlink reports `isDirectory: false`, so it must not be
+    // filtered out before the symlink branch below.
     if (entry.isDirectory && entry.name.startsWith("@")) {
       walkSymlinkedDeps(full, fs, visit);
       continue;

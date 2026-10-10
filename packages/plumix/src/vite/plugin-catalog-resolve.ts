@@ -9,17 +9,8 @@ import { pluginCatalogStagedPath } from "@plumix/core";
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import { VitePluginError } from "./errors.js";
 
-/**
- * Package-name candidates for a plugin id, most specific first: the first-party
- * `@plumix/plugin-<id>` scope, then the unscoped `plumix-plugin-<id>` community
- * convention.
- *
- * `PLUGIN_ID_RE` admits `_`, npm names conventionally use `-`, and nothing makes
- * a plugin reconcile the two — `audit_log` ships as `@plumix/plugin-audit-log`.
- * So an id carrying `_` gets a hyphenated candidate for each convention, tried
- * after the literal one: a plugin whose package really does contain `_` still
- * resolves on the literal, and the fallback only runs when that missed.
- */
+// An id with `_` also gets hyphenated candidates (`audit_log` ships as
+// `@plumix/plugin-audit-log`), tried after the literal.
 function packageNameCandidates(pluginId: string): string[] {
   const ids = pluginId.includes("_")
     ? [pluginId, pluginId.replaceAll("_", "-")]
@@ -28,14 +19,8 @@ function packageNameCandidates(pluginId: string): string[] {
 }
 
 /**
- * Find the absolute path of a plugin's installed package root, used by
- * the bundler to resolve `i18n.catalogPath` against the plugin's own
- * directory (not the consumer's `projectRoot`).
- *
- * Tries known npm-name conventions in order — `@plumix/plugin-<id>`
- * for first-party plugins, `plumix-plugin-<id>` for community plugins.
- * Returns `null` if no convention resolves. `requireFrom` is a test
- * seam; production passes `createRequire` from `node:module`.
+ * Returns `null` if no npm-name convention resolves. `requireFrom` is a test
+ * seam.
  */
 export function findPluginPackageRoot(input: {
   readonly pluginId: string;
@@ -58,15 +43,8 @@ export function findPluginPackageRoot(input: {
 }
 
 /**
- * The directory admin's `import.meta.glob("../../../plugins/*"/locales/*.mjs")`
- * scans. That glob is written from `packages/admin/src/lib`, so the directory
- * is the admin package's own sibling — which makes the installed
- * `@plumix/admin` the anchor, rather than the shape of any path.
- *
- * Canonicalized once here so `isAdminBundledPlugin` can compare it against a
- * resolved link without paying a throwing syscall per plugin, and `null`
- * anywhere but the plumix monorepo: a consumer's installed admin has no such
- * sibling, so nothing is baked in and every plugin needs a URL.
+ * The directory admin's `import.meta.glob` bakes plugin catalogs from. `null`
+ * anywhere but the plumix monorepo, where nothing is baked in.
  */
 export function findAdminBundledPluginsDir(
   adminPackageRoot: string,
@@ -79,22 +57,9 @@ export function findAdminBundledPluginsDir(
 }
 
 /**
- * Detect whether a plugin's admin catalogs are already baked into the admin
- * bundle by that glob, so the manifest layer can skip `pluginI18n` URL
- * emission and spare admin a double-load at boot.
- *
- * Under pnpm every `node_modules` entry is a symlink — registry tarballs
- * included — so symlink-ness says nothing about a plugin's provenance. What
- * settles it is where the entry resolves to: only a target sitting in
- * `bundledPluginsDir` is in the bundle.
- *
- * Scoped to the `@plumix/plugin-<id>` convention only — `packages/plugins/*`
- * houses `@plumix/`-scoped plugins by convention, so a workspace plugin under
- * another name isn't covered by admin's glob either and does need a URL.
- *
- * Every unanticipated failure lands on `false`, which is the safe direction:
- * a wrong `false` costs a redundant catalog fetch, a wrong `true` costs
- * silently-English admin strings.
+ * Decided by where the entry resolves to: under pnpm every entry is a symlink.
+ * Any failure returns `false`, the safe direction: a redundant catalog fetch
+ * beats silently-English admin strings.
  */
 export function isAdminBundledPlugin(input: {
   readonly pluginId: string;
@@ -118,11 +83,8 @@ export function isAdminBundledPlugin(input: {
     });
 }
 
-// admin-served path `buildManifest` published in `pluginI18n[id].catalogs[locale]`
-// — admin's runtime loader (#697) does `import(url)` against same-origin paths
-// under the default CSP. A missing `.mjs` for a manifest-declared locale is a
-// build-time error; the runtime's `descriptor.message` fallback only catches
-// post-fetch failures.
+// Admin's runtime loader `import(url)`s same-origin paths under the default
+// CSP. A missing `.mjs` for a declared locale fails the build.
 export async function stagePluginCatalogs(
   adminDest: string,
   plugins: readonly AnyPluginDescriptor[],
@@ -144,11 +106,8 @@ export async function stagePluginCatalogs(
         projectRoot,
       );
       if (candidate === null) {
-        // `buildManifest` already committed to emitting catalog URLs
-        // for this plugin — if the resolver can't reach the source
-        // directory, admin's runtime fetch will 404 in production.
-        // Fail the build with the same error shape `adminChunk` /
-        // `adminCss` use so plugin authors see it during `plumix build`.
+        // `buildManifest` already committed to a catalog URL, so admin's fetch
+        // would 404 in production.
         throw VitePluginError.adminAssetNotFound({
           pluginId: plugin.id,
           field: "i18n.catalogPath",
@@ -182,11 +141,8 @@ export async function stagePluginCatalogs(
 }
 
 /**
- * Every installed plugin's compiled catalog on disk, by locale — the source of
- * `virtual:plumix/plugin-catalogs`, which SSR resolves block render strings
- * from. Read off the same `i18n` slot admin staging reads, so a plugin declares
- * nothing new. A declared locale with no compiled file is skipped rather than
- * fatal: SSR falls back to each descriptor's English source.
+ * A declared locale with no compiled file is skipped: SSR falls back to each
+ * descriptor's English source.
  */
 export async function collectPluginCatalogFiles(
   plugins: readonly AnyPluginDescriptor[],
@@ -215,12 +171,8 @@ export async function collectPluginCatalogFiles(
   return files;
 }
 
-// Resolve the per-plugin catalog source directory. The npm-name
-// convention (workspace + npm-installed plugins) is the only supported
-// path; absolute `catalogPath` values are honored verbatim. Returns
-// `null` when nothing resolves to an existing directory —
-// `stagePluginCatalogs` then throws `adminAssetNotFound` because the
-// manifest already committed to a URL admin will fetch.
+// Absolute `catalogPath` values are honored verbatim; otherwise only the
+// npm-name convention.
 async function resolveCatalogDir(
   pluginId: string,
   catalogPath: string,

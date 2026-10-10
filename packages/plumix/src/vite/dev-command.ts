@@ -28,7 +28,6 @@ import { createSiteReloader } from "./site-reloader.js";
 
 interface DevArgs {
   readonly port?: number;
-  /** A name or address to bind, or `true` for every interface. */
   readonly host?: string | true;
 }
 
@@ -66,12 +65,9 @@ export function parseDevArgs(argv: readonly string[]): DevArgs {
 }
 
 /**
- * Drop a changed file and everything that imports it from the runner's cache,
- * so the next import through the runner re-evaluates that chain up to the
- * entry. The module graph Vite invalidates on its own only governs what the
- * server *transforms*; what the runner has already *evaluated* is this cache,
- * and a module left in it keeps serving the old code. Returns whether the
- * runner had evaluated the file at all.
+ * Vite's module graph governs only what the server transforms; a module left
+ * in the runner's evaluated cache keeps serving old code. Returns whether the
+ * runner had evaluated the file.
  */
 export function invalidateFile(
   modules: EvaluatedModules,
@@ -92,7 +88,9 @@ export function invalidateFile(
   return true;
 }
 
-/** The module the dev server imports through the runner: the entry's exports. */
+/**
+ * The module the dev server imports through the runner: the entry's exports.
+ */
 export interface DevEntry {
   readonly default: PlumixHandler;
 }
@@ -104,13 +102,8 @@ export interface DevCommandOptions<Entry extends DevEntry> {
    */
   readonly environment: (runtime: RuntimeAdapter) => ServerEnvironmentOptions;
   /**
-   * Serves the staged public tree from disk, ahead of Vite's own middlewares.
-   * Vite answers `publicDir` from a listing taken once at `createServer` and
-   * repaired by watcher events, and the admin shell is staged after that
-   * listing, so under load a chunk can be missing from the set for the life
-   * of the server; Vite then calls `next()`, and the dispatcher, seeing an
-   * asset-shaped path at the root base, 404s it without reading the disk
-   * (#2225).
+   * Runs ahead of Vite's middlewares: Vite's `publicDir` listing predates the
+   * admin staging, so a chunk can stay missing for the server's life.
    */
   readonly stagedFiles: (publicDir: string) => Connect.NextHandleFunction;
   /**
@@ -135,10 +128,8 @@ async function respond(res: ServerResponse, response: Response): Promise<void> {
 }
 
 /**
- * The body of a self-hosted runtime's `plumix dev`: one Vite server whose
- * server environment is runnable, a loopback gate ahead of everything it
- * serves, and a last middleware into the entry's `fetch`, rebuilt on the first
- * request after an edit. Accepts `--port` and `--host`.
+ * Rebuilds the entry on the first request after an edit. Accepts `--port` and
+ * `--host`.
  */
 export async function runDevCommand<Entry extends DevEntry>(
   ctx: CommandContext,
@@ -175,11 +166,7 @@ export async function runDevCommand<Entry extends DevEntry>(
 
   const dev: Plugin = {
     name: "plumix:dev-command",
-    // Runs at start and again on each restart Vite makes for a `.env` or
-    // config edit, so everything the dev server derives from the project
-    // sees the same environment: the file first, then a fresh config
-    // evaluation for the emitted sources and the staged admin manifest —
-    // the CLI's own evaluation, which the plugin would otherwise reuse,
+    // Reruns on each `.env` or config restart; the CLI's own config evaluation
     // predates the file.
     async config() {
       loadDotenv(join(ctx.cwd, ".env"));
@@ -192,12 +179,8 @@ export async function runDevCommand<Entry extends DevEntry>(
         environments: {
           [SERVER_ENVIRONMENT]: {
             ...serverEnvironment(server),
-            // The runner evaluates ESM only, and `react` and friends ship
-            // CommonJS; with everything inlined they have to be pre-bundled,
-            // discovered from the entry as the Cloudflare plugin does for
-            // its worker. A dependency first seen after start re-bundles
-            // without failing the request that found it — the runner has no
-            // page to reload. What the build leaves external stays out.
+            // The runner evaluates ESM only and `react` ships CommonJS, so
+            // inlined deps must be pre-bundled, discovered from the entry.
             optimizeDeps: {
               noDiscovery: false,
               ignoreOutdatedRequests: true,

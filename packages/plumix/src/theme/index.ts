@@ -1,8 +1,5 @@
-// What a theme file writes: the descriptor, its templates, the rules that
-// place them in the hierarchy, and the data each template receives. The
-// render components (`<Link>`, `<Image>`, `BlockRenderer`) are on
-// `plumix/blocks/renderer`; `ThemeDescriptor` is on the root, the one module a
-// theme's `declare module "plumix"` augmentation reaches.
+// `ThemeDescriptor` lives on the root, the one module a theme's `declare module
+// "plumix"` reaches.
 export {
   author,
   date,

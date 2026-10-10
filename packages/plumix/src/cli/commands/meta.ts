@@ -26,11 +26,8 @@ export const metaCommand: CommandDefinition<PlumixApp> = {
   },
 };
 
-/**
- * Runs the same sweep the admin's Field values page runs, through the site's
- * own handler — so the database, the plugins declaring each field, and the CDN
- * purges a settle enqueues are the site's, not a reimplementation of them.
- */
+// Runs through the site's own handler so the database, field declarations and
+// CDN purges are the site's, not a reimplementation.
 async function sweep(
   ctx: CommandContext<PlumixApp>,
   write: boolean,
@@ -51,9 +48,8 @@ async function sweep(
       cause: undefined,
     });
   }
-  // Only a failure before the sweep starts means the database couldn't be
-  // reached — a D1 binding that exists only inside the Worker fails there. A
-  // failure inside the sweep is the sweep's own, and surfaces as itself.
+  // Only a failure before the sweep starts means the database was unreachable
+  // (a D1 binding exists only inside the Worker).
   const phase = { started: false };
   try {
     return await handler.run(

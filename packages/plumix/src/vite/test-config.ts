@@ -1,10 +1,6 @@
 import type { ViteUserConfig } from "vitest/config";
 
-// The two test tiers (ADR 0021), as a plugin's vitest config gets them. A test
-// file picks its tier by name: `*.test.ts(x)` runs in Node, and
-// `*.browser.test.ts(x)` runs in headless Chromium. The table mirrors the one
-// this repo's own suites run on (`tooling/vitest/tiers.ts`), and
-// `test-config.test.ts` holds the two equal.
+// Mirrors `tooling/vitest/tiers.ts`; `test-config.test.ts` holds the two equal.
 
 // The globs reach the whole package: vitest concatenates a config's own
 // `include` onto each project's, so one added there would feed its files to
@@ -38,15 +34,8 @@ const TEST_TIER_DEFINES = {
 } as const;
 
 /**
- * A plugin's whole vitest config: `export default defineTestConfig()`. It sets
- * up the Node and browser tiers, and `overrides` merge over them — a setup
- * file, an alias, an `exclude` — reaching both, since each tier extends the
- * config around it.
- *
- * Needs `vitest`, `@vitest/browser-playwright` and `playwright` installed.
- * They are loaded when vitest reads the config, not when this module is
- * imported, so a site's `vite.config.ts` that imports `plumix/vite` does not
- * need them.
+ * Needs `vitest`, `@vitest/browser-playwright` and `playwright` installed, but
+ * only when vitest reads the config, not when `plumix/vite` is imported.
  */
 export function defineTestConfig(
   overrides: ViteUserConfig = {},
@@ -68,10 +57,8 @@ export function defineTestConfig(
           },
           {
             extends: true,
-            // A request the page makes for a file that does not exist would
-            // otherwise get the package's own index.html, and Vite follows its
-            // entry script into the whole app. Deps it finds there are
-            // optimized mid-run, and the reload hangs the run.
+            // Otherwise a missing file gets the package's index.html, Vite
+            // optimizes deps found through it mid-run, and the reload hangs.
             appType: "custom",
             define: { ...TEST_TIER_DEFINES },
             // Scan the browser tests up front: a dependency Vite first meets

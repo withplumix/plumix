@@ -159,7 +159,6 @@ function adoptAndApply(
   };
 }
 
-/** The tables the site's own schema modules declare. */
 function siteTables(ctx: CommandContext): readonly string[] {
   return sitePlugins(ctx.cwd, ctx.configPath, ctx.app.config).flatMap(
     (plugin) =>
@@ -233,10 +232,8 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
       "generate",
       "--dialect",
       "sqlite",
-      // Match the runtime drizzle config, which sets `casing: "snake_case"`
-      // for D1. Without this, generated SQL keeps schema-side camelCase
-      // (`emailVerifiedAt`) but runtime queries snake_case (`email_verified_at`)
-      // — every INSERT/SELECT then fails with `no such column`.
+      // Matches the runtime drizzle config; without it every query fails with
+      // `no such column`.
       "--casing",
       "snake_case",
       "--schema",
@@ -244,10 +241,8 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
       "--out",
       out,
     ],
-    // Failure is read off this child's stderr, so nothing inherited may
-    // write there: `NODE_OPTIONS=--inspect` prints a debugger banner and
-    // `NODE_DEBUG` a running log, either of which would read as a failed
-    // generate.
+    // Failure is read off stderr, so inherited `NODE_OPTIONS`/`NODE_DEBUG`
+    // output would read as a failed generate.
     { cwd, env: { NODE_OPTIONS: undefined, NODE_DEBUG: undefined } },
   );
   // A successful generate — including one that finds nothing to do —
@@ -272,11 +267,8 @@ function writeSiteSchema(cwd: string, modules: readonly string[]): void {
 }
 
 function resolveDrizzleKitBin(cwd: string): string | null {
-  // Consumer's own drizzle-kit takes precedence so they can pin a
-  // specific version; falls back to the one bundled with plumix.
-  // drizzle-kit's `exports` field doesn't expose `./bin.cjs` as a
-  // subpath, so we resolve the package's main entry and walk to the
-  // bin file (which sits next to it per `package.json#bin`).
+  // The consumer's drizzle-kit wins so they can pin a version. Its `exports`
+  // hide `./bin.cjs`, so walk from the main entry.
   const bases = [
     pathToFileURL(resolve(cwd, "package.json")).href,
     import.meta.url,

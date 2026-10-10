@@ -4,18 +4,11 @@ import { originalPositionFor, TraceMap } from "@jridgewell/trace-mapping";
 
 import type { DevErrorFrame } from "@plumix/core/dev-client";
 
-// The client-stack resolver (#1572, #1583): the Node-side half of the island
-// overlay's frame view. A browser stack carries transformed positions pointing
-// at Vite's served module URLs (e.g. `http://localhost:5173/src/Counter.tsx?t=1
-// :14:20`), so this maps each frame back to its original `file:line` through the
-// dev server's per-module sourcemaps before the shared renderer shows it — the
-// same `DevErrorFrame[]` shape the already-sourcemapped server page produces.
-// All logic is pure over an injected `lookup`, so it tests without a live server.
+// Maps browser stack frames, which point at Vite's served module URLs, back to
+// original `file:line` through the dev server's sourcemaps.
 
-/** One frame parsed out of a raw browser stack, before sourcemap resolution. */
 interface RawFrame {
   readonly functionName?: string;
-  /** The module URL as it appeared in the stack (origin stripped). */
   readonly url: string;
   readonly line: number;
   readonly column: number;
@@ -23,10 +16,8 @@ interface RawFrame {
 
 export interface ResolveStackDeps {
   /**
-   * Map a browser module URL to its dev transform sourcemap and absolute file
-   * path, or `null` when the module isn't in the graph (a pre-bundled dep served
-   * from cache, an external script). The map drives position resolution; the
-   * file is the fallback location and the base for relative sourcemap sources.
+   * Returns `null` when the module isn't in the graph, such as a pre-bundled
+   * dep or external script.
    */
   readonly lookup: (
     url: string,
@@ -34,14 +25,13 @@ export interface ResolveStackDeps {
 }
 
 // The trailing `:line:column` (with an optional closing paren) common to Chrome
-// and Firefox frames. Anchored with bounded `\d+` runs — no catch-all that could
-// backtrack on a hostile stack.
+// and Firefox frames. Anchored with bounded `\d+` runs — no catch-all that
+// could backtrack on a hostile stack.
 const LOCATION = /:(\d+):(\d+)\)?$/;
 
 /**
- * Parse a raw browser stack into frames. Handles the Chrome (`at fn (url:l:c)`,
- * `at url:l:c`) and Firefox (`fn@url:l:c`, `@url:l:c`) shapes; the leading
- * message line and any line without a trailing location are dropped.
+ * Handles Chrome and Firefox stack shapes; lines without a trailing location
+ * are dropped.
  */
 export function parseBrowserStack(stack: string): RawFrame[] {
   const frames: RawFrame[] = [];
@@ -74,8 +64,8 @@ function parseBrowserStackLine(raw: string): RawFrame | null {
       url = rest;
     }
   } else {
-    // Firefox: "fn@url", "@url", or a bare "url". URLs don't contain `@`, so the
-    // last `@` separates an (optional) name from the URL.
+    // Firefox: "fn@url", "@url", or a bare "url". URLs don't contain `@`, so
+    // the last `@` separates an (optional) name from the URL.
     const at = head.lastIndexOf("@");
     if (at >= 0) {
       functionName = head.slice(0, at) || undefined;
@@ -87,7 +77,8 @@ function parseBrowserStackLine(raw: string): RawFrame | null {
 
   url = url.trim();
   // Drop non-locatable frames (eval wrappers, `<anonymous>`): a real frame URL
-  // is either an absolute path or a `scheme:` URL, never a bare word or `eval …`.
+  // is either an absolute path or a `scheme:` URL, never a bare word or `eval
+  // …`.
   if (!/^(\/|[a-z][a-z0-9+.-]*:)/i.test(url)) return null;
   return {
     ...(functionName ? { functionName } : {}),
@@ -122,10 +113,8 @@ async function resolveFrame(
   let column = raw.column;
   let functionName = raw.functionName;
 
-  // A sourcemapped module resolves to its original file:line. If the map is
-  // present but misses (or is Vite's empty-`mappings` sentinel for an
-  // untransformed dep), the served file with the transformed line is kept —
-  // esbuild preserves line numbers, so that's a close best-effort, not a jump.
+  // On a map miss the transformed line is kept: esbuild preserves line numbers,
+  // so it is close.
   if (looked?.map) {
     const original = mapPosition(looked.map, raw, looked.file);
     if (original) {
@@ -165,9 +154,7 @@ function mapPosition(
       // Browser stack columns are 1-based; trace-mapping wants 0-based.
       column: Math.max(0, raw.column - 1),
     });
-    // A miss (or Vite's empty-`mappings` sentinel) yields a null source; fall
-    // back to the transformed location. `line`/`column` come as a set with a
-    // non-null source, so no separate guard is needed.
+    // A miss, or Vite's empty-`mappings` sentinel, yields a null source.
     if (found.source === null) return null;
     return {
       file: resolveSource(found.source, moduleFile),
@@ -181,9 +168,7 @@ function mapPosition(
   }
 }
 
-// A sourcemap `source` is usually an absolute path, but can be relative to the
-// module (or carry Vite's `/@fs/` prefix). Resolve it to a real fs path so the
-// excerpt resolver can read it.
+// A sourcemap `source` can be module-relative or carry Vite's `/@fs/` prefix.
 function resolveSource(source: string, moduleFile: string | null): string {
   const path = stripFsPrefix(source);
   if (isAbsolute(path)) return path;
@@ -191,14 +176,14 @@ function resolveSource(source: string, moduleFile: string | null): string {
   return path;
 }
 
-// Vite serves out-of-root files under `/@fs/<abs>`; strip that back to the path.
+// Vite serves out-of-root files under `/@fs/<abs>`; strip that back to the
+// path.
 function stripFsPrefix(path: string): string {
   return path.startsWith("/@fs/") ? path.slice("/@fs".length) : path;
 }
 
-// Reduce a browser stack URL to the module path the graph keys on: drop the
-// `scheme://host[:port]` origin and any `?v=`/`?t=` cache-bust query (the graph
-// stores modules without it, so a query makes `getModuleByUrl` miss).
+// The graph keys modules without the `?v=`/`?t=` cache-bust query, so a query
+// makes `getModuleByUrl` miss.
 function cleanModuleUrl(url: string): string {
   const path = url.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, "");
   const query = path.indexOf("?");
@@ -220,9 +205,7 @@ function isVendorPath(file: string): boolean {
 }
 
 /**
- * Adapt a raw request body (`{"stack":"…"}`) into a status + JSON body, so the
- * Vite middleware is a thin adapter over this. Returns `400` on a malformed
- * body and `{ frames: [] }` when nothing resolved.
+ * Returns `400` on a malformed body and `{ frames: [] }` when nothing resolved.
  */
 export async function handleDevErrorStackRequest(
   body: string,

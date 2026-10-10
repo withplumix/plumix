@@ -14,9 +14,7 @@ export interface StageIntoPlaceOptions {
 }
 
 /**
- * Builds a complete copy in a private directory under `stagingRoot`, then
- * swaps it into `dest` unless `dest` already holds the same files. Skipping
- * an identical swap is what keeps a dev server's file watcher quiet when
+ * Skips an identical swap, which keeps a dev server's file watcher quiet when
  * nothing changed.
  */
 export async function stageIntoPlace({
@@ -50,7 +48,6 @@ async function holdSameFiles(a: string, b: string): Promise<boolean> {
   return true;
 }
 
-/** Every file under `dir`, relative and sorted; `undefined` when `dir` is missing. */
 async function listFiles(dir: string): Promise<string[] | undefined> {
   try {
     const entries = await readdir(dir, {

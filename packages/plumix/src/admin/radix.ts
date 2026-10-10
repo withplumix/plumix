@@ -1,12 +1,6 @@
-// Shim for `radix-ui`: re-exports the host admin shell's instance from
-// `window.plumix.runtime.radix` so plugin chunks share it instead of
-// bundling their own copy. The plugin-bundle Vite step aliases bare
-// `radix-ui` imports here (see SHARED_ADMIN_RUNTIME_SPECIFIERS in
-// @plumix/core). A curated surface, not a full mirror — shim-drift.test.ts
-// fails CI only if a binding re-exported here disappears upstream (#1177); add
-// new upstream bindings when a plugin needs them. Each export is annotated with
-// its upstream type so declaration emit references `radix-ui` rather than the
-// non-portable per-primitive sub-package paths (TS2883).
+// Shares the host admin shell's `radix-ui` instance with plugin chunks. Each
+// export is annotated with its upstream type so declaration emit names
+// `radix-ui`, not per-primitive paths (TS2883).
 import type * as RadixNs from "radix-ui";
 
 import { getRuntime } from "./runtime.js";
