@@ -7,7 +7,7 @@ type Comment = ReturnType<
 const MAX_WORDS = 30;
 const WORD = /[A-Za-z]/;
 const DIRECTIVE =
-  /^\s*(eslint[\s-]|@ts-|prettier-ignore|global\s|[cv]8\s|istanbul\s|[#@]__PURE__|@vite-ignore|\/\s*<reference)/;
+  /^\s*([a-z]{3,}-(ignore|disable|enable)(-next-line|-line|-file)?(\s|$)|eslint[\s-]|@ts-|prettier-ignore|global\s|[cv]8\s|istanbul\s|[#@]__PURE__|@vite-ignore|\/\s*<reference)/;
 
 const FENCED_CODE = /```[\s\S]*?```/g;
 const EXAMPLE_TAG = /@example[\s\S]*?(?=\n[\s*]*@\w|$)/g;

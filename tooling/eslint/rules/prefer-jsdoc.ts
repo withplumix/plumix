@@ -25,7 +25,7 @@ const MEMBERS = [
 const EXPORTS = new Set(["ExportNamedDeclaration", "ExportDefaultDeclaration"]);
 const BODIES = new Set(["BlockStatement", "StaticBlock"]);
 const DIRECTIVE =
-  /^\s*(eslint[\s-]|@ts-|prettier-ignore|[cv]8\s|istanbul\s|@vite-ignore)/;
+  /^\s*([a-z]{3,}-(ignore|disable|enable)(-next-line|-line|-file)?(\s|$)|eslint[\s-]|@ts-|prettier-ignore|[cv]8\s|istanbul\s|@vite-ignore)/;
 
 function isInBody(node: Rule.Node): boolean {
   for (
