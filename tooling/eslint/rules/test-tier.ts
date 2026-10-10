@@ -1,7 +1,9 @@
 import type { Rule, Scope } from "eslint";
 
-// What a test can only do with a DOM in front of it. A Node-tier test that
-// reaches for one of these belongs in the browser tier.
+/**
+ * What a test can only do with a DOM in front of it. A Node-tier test that
+ * reaches for one of these belongs in the browser tier.
+ */
 const DOM_MODULES = new Set([
   "@testing-library/react",
   "@testing-library/user-event",
@@ -47,11 +49,8 @@ function propertyName(node: PropertyNode): string | null {
 }
 
 /**
- * The unit tier is two runs picked by filename, not by an environment
- * setting: a docblock or a config's `test.environment` would bring a
- * simulated DOM back, and a Node-tier test that reads one fails at runtime
- * with nothing pointing at the fix. A `typeof` probe on a DOM global stays
- * allowed — that is how server-rendering code asserts the DOM is absent.
+ * An environment setting would bring a simulated DOM back. A `typeof` probe on
+ * a DOM global stays allowed: server code uses it to assert the DOM is absent.
  */
 export const testTier: Rule.RuleModule = {
   meta: {

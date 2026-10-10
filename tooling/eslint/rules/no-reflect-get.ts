@@ -1,9 +1,8 @@
 import type { Rule } from "eslint";
 
 /**
- * `Reflect.get` reads a property without the compiler checking that it
- * exists, erasing the result to `any`. On a value we have a type for the read
- * is a plain member access; on a value we don't, it is a parse.
+ * On a typed value the read is a plain member access; on an untyped one it is
+ * a parse.
  */
 export const noReflectGet: Rule.RuleModule = {
   meta: {

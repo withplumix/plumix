@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
-// The umbrella's README is the repo's front page, not a card.
+/** The umbrella's README is the repo's front page, not a card. */
 const UMBRELLA = "plumix";
 
 const INTERNAL = new Set([

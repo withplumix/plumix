@@ -3,12 +3,9 @@ import type { Rule } from "eslint";
 type SourceCode = Rule.RuleContext["sourceCode"];
 
 /**
- * The comments forming an unbroken block directly above `line`, joined into
- * one string. A comment trailing code (`foo(); // …`) ends on the line without
- * owning it and never joins the block — otherwise any line-end remark would
- * launder the declaration below it. Block comments arrive with their `*`
- * gutter attached; strip it so a word count measures prose rather than
- * decoration.
+ * A comment trailing code never joins the block, or any line-end remark would
+ * launder the declaration below it. The `*` gutter is stripped so words count
+ * prose.
  */
 export function commentBlockAbove(
   sourceCode: SourceCode,
@@ -40,9 +37,8 @@ export function commentBlockAbove(
 const WORD = /[A-Za-z]/;
 
 /**
- * How many words follow `marker` in `block`, or `null` when the marker is
- * absent. A rule can only check that a sentence was written, never that it is
- * true; counting words is the most a linter can insist on.
+ * A rule can check only that a sentence was written, never that it is true, so
+ * counting words is the most it can insist on.
  */
 export function wordsAfterMarker(block: string, marker: RegExp): number | null {
   const found = marker.exec(block);

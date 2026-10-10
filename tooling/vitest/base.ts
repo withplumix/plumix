@@ -1,10 +1,8 @@
 import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
 
-// Imported by package name, not a relative `./source-resolver.ts` path: every
-// package's vitest.config pulls this file in, and a `.ts` import specifier
-// needs `allowImportingTsExtensions` in each consumer's tsconfig. The exports
-// map hides the extension, so the plain subpath typechecks everywhere.
+// By name: a relative `.ts` specifier would need `allowImportingTsExtensions`
+// in every consumer's tsconfig.
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 import {
   BROWSER_TIER,
@@ -12,10 +10,10 @@ import {
   TEST_TIER_DEFINES,
 } from "@plumix/vitest-config/tiers";
 
-// The two test tiers (ADR 0021). `plumix/vite`'s `defineTestConfig` builds
-// the same projects for a plugin from its own copy of `./tiers.ts` — this
-// package sits below `plumix` and cannot import it — and a test in `plumix`
-// holds the two equal.
+/**
+ * `plumix/vite`'s `defineTestConfig` keeps its own copy of `./tiers.ts`, since
+ * this package sits below `plumix`; a test in `plumix` holds them equal.
+ */
 export const baseConfig = defineConfig({
   plugins: [plumixSourceResolver()],
   test: {
@@ -30,10 +28,8 @@ export const baseConfig = defineConfig({
       },
       {
         extends: true,
-        // A request the page makes for a file that does not exist (a stylesheet
-        // a test appends) would otherwise get the package's own index.html,
-        // and Vite follows its entry script into the whole app. Deps it finds
-        // there are optimized mid-run, and the reload hangs the run.
+        // Otherwise a missing file gets the package's index.html, Vite follows
+        // it into the app, optimizes deps mid-run, and the reload hangs.
         appType: "custom",
         define: { ...TEST_TIER_DEFINES },
         // Scan the browser tests up front: a dependency Vite first meets

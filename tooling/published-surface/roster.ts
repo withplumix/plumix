@@ -1,11 +1,5 @@
-// Every export a consumer can import from a published package, recorded as a
-// decision: who imports these names, and why. `test/roster.build.test.ts`
-// fails on an export no row records and on a row naming one that is gone, so
-// a PR that publishes a name adds its row here.
-//
-// Coverage is read from the workspace (`surface.ts`): every non-private
-// package outside the internal fixed group, and within `plumix` only the
-// subpaths no façade guard already owns.
+// Each published export is recorded as a decision; a build test fails on an
+// export without a row or a row without an export.
 
 export interface Row {
   /** Who imports these names, and why. */
@@ -13,9 +7,11 @@ export interface Row {
   readonly names: readonly string[];
 }
 
-// A plugin's `./schema` subpath is its `schemaModule`: the site's generated
-// schema module re-exports it whole, which is how drizzle-kit migrates the
-// tables and `ctx.db` is typed over them.
+/**
+ * A plugin's `./schema` subpath is its `schemaModule`: the site's generated
+ * schema module re-exports it whole, which is how drizzle-kit migrates the
+ * tables and `ctx.db` is typed over them.
+ */
 const SCHEMA_MODULE =
   "the plugin's `schemaModule`, which the site's generated schema module " +
   "re-exports whole for drizzle-kit and `ctx.db`, with the row types a " +

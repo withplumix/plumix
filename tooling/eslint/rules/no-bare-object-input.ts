@@ -1,7 +1,9 @@
 import type { Rule } from "eslint";
 
-// Every node that can carry parameters, and every pattern a parameter can be
-// spelled as.
+/**
+ * Every node that can carry parameters, and every pattern a parameter can be
+ * spelled as.
+ */
 const FUNCTION_LIKE = [
   "ArrowFunctionExpression",
   "FunctionDeclaration",
@@ -15,9 +17,10 @@ const FUNCTION_LIKE = [
   "TSMethodSignature",
 ].join(", ");
 const PARAMETER = "ArrayPattern, Identifier, ObjectPattern, RestElement";
-// What the parameter list can wrap a pattern in before the annotation is
-// reached: `private x: object` nests it in a TSParameterProperty, `x: object =
-// {}` in an AssignmentPattern, and a constructor can do both at once.
+/**
+ * `private x: object` wraps the pattern in a TSParameterProperty, `x: object =
+ * {}` in an AssignmentPattern; a constructor can do both.
+ */
 const PARAMETER_WRAPPERS = [
   "",
   "AssignmentPattern > ",
@@ -33,16 +36,8 @@ const PROPERTY_SELECTOR =
   ":matches(PropertyDefinition, TSPropertySignature) > TSTypeAnnotation > TSObjectKeyword";
 
 /**
- * `object` accepts every non-primitive and constrains none of them, so a
- * signature that takes one has described nothing it will do with the value.
- * The editor-to-canvas message protocol was typed this way at every endpoint
- * until #1814 gave it a union.
- *
- * Only the bare keyword reports. `object` nested in a wider type says
- * something: `WeakSet<object>` is the constraint weak collections impose, and
- * a dictionary of `object` is a different rule's business (issue #1807).
- * Return positions are out of scope too: a value handed back undescribed is
- * what the `unknown`-returns rule is for.
+ * Only the bare keyword reports: nested in a wider type like `WeakSet<object>`
+ * it is a real constraint.
  */
 export const noBareObjectInput: Rule.RuleModule = {
   meta: {

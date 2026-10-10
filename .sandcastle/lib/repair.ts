@@ -167,8 +167,10 @@ export const aRerunCannotTurnItGreen = (
 ): boolean =>
   failedStepsOfEachJob.some((steps) => steps.includes(SCREENSHOT_DIFF_STEP));
 
-// `gh run download` will not extract over a file that exists, and every image it brings back is
-// one the branch has committed, so it downloads somewhere empty and the images are copied over.
+/**
+ * `gh run download` will not extract over an existing file, and every image is
+ * one the branch committed, so it downloads somewhere empty and copies over.
+ */
 export const recaptureScreenshots = (
   downloadInto: (directory: string) => void,
   worktreePath: string,

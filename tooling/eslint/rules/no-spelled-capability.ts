@@ -1,10 +1,10 @@
 import * as path from "node:path";
 import type { Rule } from "eslint";
 
-// Core's capability actions (`POST_TYPE_CAPABILITY_ACTIONS`,
-// `TERM_TAXONOMY_CAPABILITY_ACTIONS`). Restated rather than imported: the lint
-// config is tooling and builds before core. An action added there and missed
-// here only lets that one spelling through.
+/**
+ * Restated from core, which builds after the lint config. An action missed
+ * here only lets that one spelling through.
+ */
 const ENTRY_ACTIONS = [
   "read",
   "create",
@@ -17,9 +17,10 @@ const ENTRY_ACTIONS = [
 ];
 const TERM_ACTIONS = ["read", "assign", "edit", "delete", "manage"];
 
-// The whole literal, so a hook name (`entry:media:trashed`) or an example list
-// of several capabilities in one string does not match. An interpolation
-// stands in as one segment character, so `entry:${type}:read` still does.
+/**
+ * Anchored to the whole literal so a hook name (`entry:media:trashed`) does
+ * not match.
+ */
 const SPELLED = new RegExp(
   `^(?:entry:[^:\\s]+:(?:${ENTRY_ACTIONS.join("|")})|term:[^:\\s]+:(?:${TERM_ACTIONS.join("|")}))$`,
 );
@@ -43,11 +44,8 @@ interface Options {
 }
 
 /**
- * An entry or term capability is named by what it guards —
- * `entryCapability(type, action)` / `termCapability(taxonomy, action)` — and
- * the registry spells the string, under the namespace a pooled type gates in.
- * A literal skips that and misses the pool (#2436). The few modules that
- * define the shape are named per package through `definers`.
+ * The registry spells the string under the namespace a pooled type gates in;
+ * a literal skips that and misses the pool.
  */
 export const noSpelledCapability: Rule.RuleModule = {
   meta: {

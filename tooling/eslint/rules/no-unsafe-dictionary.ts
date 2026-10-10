@@ -2,11 +2,10 @@ import type { Rule } from "eslint";
 
 import { commentBlockAbove, wordsAfterMarker } from "./comment-block.js";
 
-// The convention #1819 settled on for a dictionary that is deliberately not
-// serialized data. Sentence-initial, greppable, one clause. `Not JsonObject`
-// is the second half of the same token: a bag that really is serialized data
-// but has no proof of it yet says so in the same breath, rather than borrowing
-// a claim ("not JSON") that would be false.
+/**
+ * `Not JsonObject` lets a bag that is serialized data without proof yet say so,
+ * rather than borrow a false "not JSON".
+ */
 const NOT_JSON_MARKER = /(^|\s)not\s+`?json(object)?\b/i;
 const MIN_REASON_WORDS = 6;
 
@@ -20,9 +19,10 @@ interface TypeNode {
   readonly typeAnnotation?: TypeNode;
 }
 
-// Safety: ESLint's node types stop at ESTree, so the TypeScript-only fields
-// this rule reads have no declaration to narrow to. Every field on `TypeNode`
-// is optional, so a shape that does not match reads as absent.
+/**
+ * Safety: ESLint's node types stop at ESTree, and every `TypeNode` field is
+ * optional, so a shape that does not match reads as absent.
+ */
 const asTypeNode = (node: Rule.Node): TypeNode => node as unknown as TypeNode;
 
 /** The value spelling this dictionary is over, or null when the value names a type. */
@@ -43,10 +43,10 @@ function dictionaryValue(
   }
 }
 
-// Nothing here declares a bag. A constraint or default bounds a type the
-// *caller* supplies; a guard's whole job is to establish "an object with string
-// keys"; an assertion target is `no-chained-type-assertion`'s business; and a
-// local's contract is the initializer beside it.
+/**
+ * A constraint bounds a type the caller supplies, a guard establishes string
+ * keys, and a local's contract is its initializer.
+ */
 const DECLARES_NOTHING = new Set([
   "TSTypeParameter",
   "TSTypePredicate",
@@ -56,11 +56,10 @@ const DECLARES_NOTHING = new Set([
   "VariableDeclarator",
 ]);
 
-// A signature or a member is a contract in its own right, whatever encloses it.
-// Reaching one first is what stops an alias from covering the bags nested
-// inside it — `type T = { meta: Record<string, unknown> }` gets no more slack
-// than the `interface` spelling of the same thing, and a function assigned to a
-// const gets none from the declarator further out.
+/**
+ * Stopping at these keeps an alias from covering bags nested inside it, so
+ * `type T = { meta: … }` gets no more slack than an `interface`.
+ */
 const DECLARES_A_CONTRACT = new Set([
   "ArrowFunctionExpression",
   "FunctionDeclaration",
@@ -82,10 +81,8 @@ type Position =
   | { readonly kind: "named"; readonly declaration: TypeNode };
 
 /**
- * Where this dictionary sits, walking outward to the first ancestor that
- * decides the question. Everything the walk passes through on the way —
- * `Readonly<…>`, a union, an array, a type argument — leaves the answer
- * unchanged, which is why it continues rather than reporting at depth 1.
+ * `Readonly<…>`, a union, an array or a type argument leaves the answer
+ * unchanged, so the walk continues past them.
  */
 function positionOf(node: TypeNode): Position {
   let parent = node.parent;
@@ -101,11 +98,8 @@ function positionOf(node: TypeNode): Position {
 }
 
 /**
- * `Record<string, unknown>` is how both "JSON I have not parsed yet" and "an
- * open bag of anything" get spelled, and a linter cannot tell them apart. What
- * it can insist on is that the two stop sharing a spelling: JSON is
- * `JsonObject`, and an open bag is a *named* type whose declaration says what
- * fills it and why it is not serialized data (issue #1820).
+ * `Record<string, unknown>` spells both unparsed JSON and an open bag, which a
+ * linter can't tell apart, so each gets its own spelling.
  */
 export const noUnsafeDictionary: Rule.RuleModule = {
   meta: {

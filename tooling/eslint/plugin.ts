@@ -9,15 +9,11 @@ import {
 import { i18nConfig } from "./i18n.js";
 import { reactConfig } from "./react.js";
 
-// A plugin's admin entry must NOT register its page imperatively. The
-// admin plugin bundler synthesises `registerPluginPage(path, Component)`
-// from each `ctx.registerAdminPage({ component })` declaration AND runs
-// the entry's module body — so an imperative call registers the page a
-// second time, throwing AdminPluginRegistryError at admin boot. This only
-// surfaces in `plumix build` output (never `plumix dev`), so no e2e
-// catches it; the lint guard does. The entry should only re-export its
-// component by name (see the media plugin). Field types / blocks / marks
-// have their own imperative paths and are deliberately not covered here.
+/**
+ * The bundler already registers each declared page, so an imperative call
+ * throws at admin boot, and only in `plumix build` output, where no e2e
+ * looks.
+ */
 export const NO_IMPERATIVE_REGISTER_PLUGIN_PAGE_SELECTOR = {
   selector: "CallExpression[callee.property.name='registerPluginPage']",
   message:
@@ -48,10 +44,8 @@ export function pluginConfig(): readonly Linter.Config[] {
         ],
       },
     },
-    // The modules a plugin's `adminEntry` reaches live under `src/admin/` by
-    // convention, and they render into the admin shell, so the admin's rule on
-    // a caught error's `message` (ADR 0018) holds there too. The rest of the
-    // plugin runs on the server, where nothing it reads reaches a screen.
+    // Only `src/admin/` renders into the admin shell; the rest of a plugin
+    // runs on the server, where nothing reaches a screen.
     {
       files: ["src/admin/**/*.ts", "src/admin/**/*.tsx"],
       ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],

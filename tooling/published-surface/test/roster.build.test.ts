@@ -5,8 +5,10 @@ import { coveredPackages, exportsOf, ownDevDependencies } from "../surface.js";
 
 const covered = coveredPackages();
 
-// Every name a covered subpath exports, read from its built `.d.ts`. Parsing
-// the declarations is CPU-bound, so it is paid once, from the hook.
+/**
+ * Every name a covered subpath exports, read from its built `.d.ts`. Parsing
+ * the declarations is CPU-bound, so it is paid once, from the hook.
+ */
 let published: Map<string, string[]>;
 beforeAll(() => {
   published = exportsOf(covered.flatMap((pkg) => [...pkg.subpaths.values()]));
@@ -17,9 +19,8 @@ function exportsFor(pkg: string, subpath: string): string[] {
   return file === undefined ? [] : (published.get(file) ?? []);
 }
 
-// Only a package with a covered subpath has declarations to read. Depending
-// on one without (create-plumix-app exports only `./package.json`) orders
-// nothing, and its `bin` would point at a `dist/` a fresh install lacks.
+// Depending on a package without declarations orders nothing, and its `bin`
+// would point at a `dist/` a fresh install lacks.
 test("every covered package with declarations is a devDependency, so turbo builds it first", () => {
   const dependencies = ownDevDependencies();
   expect(

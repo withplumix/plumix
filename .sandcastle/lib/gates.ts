@@ -39,9 +39,10 @@ const RENDER_AND_ADMIN_PATHS = [
   "apps/",
 ];
 
-// Every package builds `src` and ships `locales`, so those and the manifest are
-// what a consumer installs. Naming them is shorter and safer than naming the
-// scripts, fixtures, harnesses and configs that sit beside them and do not ship.
+/**
+ * Every package builds `src` and ships `locales`; naming what ships is safer
+ * than listing the scripts, fixtures and configs beside it that do not.
+ */
 const WHAT_A_CONSUMER_INSTALLS =
   /^packages\/(?:plugins\/|runtimes\/)?[^/]+\/(?:src\/.+|locales\/.+|package\.json)$/;
 const A_TEST_RATHER_THAN_THE_THING_TESTED = /\.(test|spec)\.[cm]?[jt]sx?$/;
@@ -79,8 +80,10 @@ export const GATES: readonly Gate[] = [
   },
 ];
 
-// None of these failed in 67 local runs, and CI runs them in parallel in minutes, so locally they
-// only delayed the pull request. A repair still runs the ones CI failed.
+/**
+ * None failed in 67 local runs and CI runs them in parallel, so locally they
+ * only delayed the PR. A repair still runs the ones CI failed.
+ */
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "publint",
@@ -110,9 +113,10 @@ export const CHANGESET_GATE: Gate = {
 
 export type Executor = Pick<sandcastle.Sandbox, "exec">;
 
-// Sandcastle starts the container as `sleep infinity`, which never reaps the children a gate
-// orphans. A zombie still answers `kill -0`, so a test that waits for a process to go away waits
-// out its timeout instead. tini as a subreaper adopts and reaps them.
+/**
+ * The container's PID 1 is `sleep infinity`, which never reaps a gate's
+ * orphans; a zombie still answers `kill -0`. tini as a subreaper reaps them.
+ */
 export const underAnOrphanReaper = (command: string): string =>
   `tini -s -- sh -c '${command.replace(/'/g, "'\\''")}'`;
 

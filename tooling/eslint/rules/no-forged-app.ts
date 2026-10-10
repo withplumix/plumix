@@ -14,13 +14,11 @@ function isRecordName(name: string): name is RecordName {
   return Object.hasOwn(BUILDER_FOR_RECORD, name);
 }
 
-// An alias of an alias names the outer one — `type Ctx = AppContext` resolves
-// to a type whose alias symbol is `Ctx` — so walk the declarations back to the
-// record they point at. The record is recognised by its own symbol's name, not
-// its declaring file: this package cannot import core's declarations, and a test
-// helper that declares its own `AppContext` is forging the same thing. `seen`
-// is there because lint runs on code that does not compile, where an alias can
-// refer to itself.
+/**
+ * Matched by symbol name, not file: core's declarations can't be imported
+ * here. `seen` guards an alias referring to itself in code that doesn't
+ * compile.
+ */
 function aliasedRecord(
   checker: ts.TypeChecker,
   symbol: ts.Symbol | undefined,
@@ -37,9 +35,10 @@ function aliasedRecord(
   return undefined;
 }
 
-// The record as written, before TypeScript flattens it: `AppContext` is itself
-// an intersection, so `AppContext & X` resolves to parts that no longer carry
-// the name, while each constituent of the written type still does.
+/**
+ * `AppContext` is itself an intersection, so `AppContext & X` resolves to
+ * parts that lost the name; only the written type keeps it.
+ */
 function recordInNode(
   checker: ts.TypeChecker,
   node: ts.TypeNode,
@@ -67,10 +66,10 @@ function recordInNode(
   return aliasedRecord(checker, target, seen);
 }
 
-// `Readonly<…>`, an intersection and a union such as `PlumixApp | undefined`
-// still hand the caller every field of the record inside them, so asserting
-// into any of them forges that record too. Read off the resolved type, for an
-// `as never` slot that has no written type to walk.
+/**
+ * Read off the resolved type for an `as never` slot, which has no written
+ * type to walk.
+ */
 function recordIn(
   checker: ts.TypeChecker,
   type: ts.Type,
@@ -93,9 +92,8 @@ function recordIn(
 }
 
 /**
- * A test forging a whole app record is exercising a module that should have
- * declared the slice it reads (issues #2307, #2338). Scoped to test files, where
- * the general chained-assertion rule steps back, and held at zero there.
+ * A test forging a whole app record exercises a module that should have
+ * declared the slice it reads.
  */
 export const noForgedApp: Rule.RuleModule = {
   meta: {
@@ -111,11 +109,8 @@ export const noForgedApp: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
-    // `as` only asks that the two types overlap, so `as unknown as`, one `as`
-    // off an untyped value and a partial literal all compile. A forgery is any
-    // operand that would not pass for the record without the assertion, and
-    // only the checker can tell that apart from a value already shaped like it —
-    // or see the record behind an alias the source spells differently (#2339).
+    // `as` only asks that the types overlap; only the checker can tell a
+    // forgery from a value already shaped like the record.
     const services = readTypeAwareServices(context);
     if (!services) return {};
     const checker = services.program.getTypeChecker();

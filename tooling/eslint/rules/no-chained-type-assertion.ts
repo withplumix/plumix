@@ -2,30 +2,22 @@ import type { Rule } from "eslint";
 
 import { commentBlockAbove, wordsAfterMarker } from "./comment-block.js";
 
-// Rust's `// SAFETY:` convention, borrowed for the same job: mark the point
-// where the compiler stopped checking and the author started promising.
+/**
+ * Rust's `// SAFETY:` convention, borrowed for the same job: mark the point
+ * where the compiler stopped checking and the author started promising.
+ */
 const SAFETY_MARKER = /(^|\s)safety:/i;
 
-// A justification demanded everywhere decays into ritual, so the escape hatch
-// has to cost something. Requiring a sentence is the most a linter can check —
-// it cannot read the invariant, only insist that one was written.
+/**
+ * A justification demanded everywhere decays into ritual, so the hatch costs
+ * a sentence.
+ */
 const MIN_INVARIANT_WORDS = 6;
 
 /**
- * `x as unknown as Y` launders a value through the one type that erases every
- * constraint the compiler could have checked, so the conversion arrives with
- * its evidence deliberately removed.
- *
- * The escape hatch is a `// Safety:` comment on the preceding line stating the
- * invariant that makes the assertion sound — the honest case being a fluent
- * builder that erases a phantom type parameter it recovers on the way out.
- * "Preceding" is measured from where the converted expression starts, not from
- * the statement around it, so an assertion buried inside a multi-line call has
- * to be hoisted to its own binding before it can be justified. That is the
- * intended pressure: a conversion worth a written invariant is worth a name.
- * The rule can only check that a sentence was written, never that it is true;
- * what keeps the hatch meaningful is being rare enough that a reviewer reads
- * every one of them.
+ * The `// Safety:` note is read above the converted expression, not the
+ * statement, so a buried assertion must be hoisted: a conversion worth an
+ * invariant is worth a name.
  */
 export const noChainedTypeAssertion: Rule.RuleModule = {
   meta: {
