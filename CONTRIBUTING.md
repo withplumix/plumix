@@ -198,15 +198,9 @@ To see a task run that turbo wants to skip, pass `--force`. The scaffolder smoke
 
 ### Link validation
 
-Links mean two different things in this repo, so two gates check them; every file belongs to one or the other.
+The `Links` CI job checks every local link offline with [lychee](https://lychee.cli.rs), `#anchor` fragments included. Repository prose links are ordinary relative paths. Docs pages under `apps/docs/src/content/docs` link to Starlight routes (`/fields/text/#reserved-names`), which the job reads as the `.mdx` file at that path, so a page must not set its own `slug`. For the form a docs link takes, see [`apps/docs/README.md`](apps/docs/README.md).
 
-**Repository prose** is everything outside `apps/docs/src/content/docs`: the READMEs, this guide, `AGENTS.md`, `docs/**`, the changelogs. Links here resolve against the file tree, the way GitHub renders them, so they are ordinary relative paths. The `Links` CI job checks them offline with [lychee](https://lychee.cli.rs), `#anchor` fragments included.
-
-**Published docs pages** are the content collection under `apps/docs/src/content/docs`. Links here resolve against Starlight's routing table, not the file tree: `/fields/` is a route built from collection slugs and `_meta.yml`, and no such directory exists on disk. `starlight-links-validator` runs inside `astro build` and checks them, anchors included; the `Docs (build)` CI job is where that fails. For the form a link in a docs page takes, see [`apps/docs/README.md`](apps/docs/README.md).
-
-Pointed at the docs tree, lychee would report every correct cross-reference as broken, so the two never overlap. `lychee.toml` excludes that tree by path, and it is the only exclude list. The weekly `Link Check` workflow is the one job that spans both. A remote URL is remote wherever it appears, so that job reads `.md` and `.mdx` alike and checks only `http(s)` links.
-
-Two things sit outside both gates on purpose. The docs validator skips a page marked `draft: true`, so its links go unchecked until the page goes live. And lychee treats a link from repository prose to a `https://docs.plumix.dev/...` route as remote, so the weekly job checks it, not the pull request that writes it.
+The weekly `Link Check` workflow checks remote URLs, including prose links to `https://docs.plumix.dev/...`.
 
 ## License
 
