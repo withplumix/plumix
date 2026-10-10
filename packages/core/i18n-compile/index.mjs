@@ -5,7 +5,9 @@
 // because core compiles its own catalogs before it builds.
 import { spawn } from "node:child_process";
 import { readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const CATALOG_DTS =
   "export declare const messages: Record<string, string | readonly string[]>;\n";
@@ -73,5 +75,44 @@ function writeDeclarations(localesDir) {
       join(localesDir, file.replace(/\.mjs$/, ".d.mts")),
       CATALOG_DTS,
     );
+  }
+}
+
+/** The calling package's own `@lingui/cli` first, so it can pin a version;
+ *  core's second. `null` when neither resolves. */
+export function resolveLinguiBin(cwd) {
+  for (const base of [
+    pathToFileURL(resolve(cwd, "package.json")).href,
+    import.meta.url,
+  ]) {
+    try {
+      const require = createRequire(base);
+      return join(dirname(require.resolve("@lingui/cli")), "lingui.js");
+    } catch {
+      // try the next base
+    }
+  }
+  return null;
+}
+
+/** `plumix i18n compile [--dts] [...lingui args]` as a process: the bin
+ *  entry for every package that compiles catalogs, none of which needs
+ *  anything built first. Sets `process.exitCode` on failure. */
+export async function runCompileCatalogs(cwd, argv) {
+  const linguiBin = resolveLinguiBin(cwd);
+  if (linguiBin === null) {
+    process.stderr.write("i18n compile: @lingui/cli not found\n");
+    process.exitCode = 1;
+    return;
+  }
+  const result = await compileCatalogs({
+    cwd,
+    linguiBin,
+    args: argv.filter((arg) => arg !== "--dts"),
+    dts: argv.includes("--dts"),
+  });
+  if (!result.ok) {
+    process.stderr.write(`\ni18n compile: ${result.reason} — failing.\n`);
+    process.exitCode = 1;
   }
 }
