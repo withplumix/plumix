@@ -1,9 +1,7 @@
 import type { MessageDescriptor } from "plumix/i18n";
 
-// Shared message descriptors for the media `media` field surfaces (picker
-// button, empty state, modal). Kept in their own zero-runtime-dependency module
-// so lightweight controls (the focal-point picker) can reuse a string without
-// importing the whole MediaLibrary graph that MediaPickerField pulls in.
+// Zero-dependency module so lightweight controls (the focal-point picker) can
+// reuse a string without importing the MediaLibrary graph.
 export const M = {
   empty: {
     id: "plugin.media.pickerField.empty",

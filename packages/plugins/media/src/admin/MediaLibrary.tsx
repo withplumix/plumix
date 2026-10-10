@@ -108,12 +108,8 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
-// Resolve a media URL to absolute form for copy/display. The plugin
-// emits relative `/_plumix/media/serve/<id>` URLs in binding-only
-// mode (no `publicUrlBase`); they work for `<img src=...>` on the
-// admin page itself but break the moment a user copies the URL into
-// an email, an external editor, or a different origin's post body.
-// `Copy URL` MUST hand back something pasteable.
+// Without `publicUrlBase` the plugin emits relative serve URLs, which break
+// once pasted elsewhere; `Copy URL` must hand back something pasteable.
 function toAbsoluteUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   if (typeof window === "undefined") return url;
@@ -145,9 +141,8 @@ async function runWithConcurrency<T>(
 type MediaItem = PluginRpcOutputs<MediaRouter>["list"]["items"][number];
 
 /**
- * What the picker hands back on confirm. Carries the resolved url/alt (not just
- * the id) so a consumer can snapshot them without a second round-trip — the
- * block editor stores these directly on the image block.
+ * Carries the resolved url/alt, not just the id, so a consumer can snapshot
+ * them without a second round-trip.
  */
 export type MediaSelection = Readonly<{
   id: string;
@@ -171,11 +166,8 @@ function toSelection(item: MediaItem): MediaSelection {
   };
 }
 
-/**
- * The upload PUT's failure. It never reaches oRPC, so there is no `reason` to
- * read — the HTTP status is what tells the banner what went wrong. `status` is
- * null when the request never got an answer.
- */
+// The PUT never reaches oRPC, so the HTTP status stands in for a `reason`;
+// null when the request never got an answer.
 class UploadPutError extends Error {
   static {
     UploadPutError.prototype.name = "UploadPutError";
@@ -330,13 +322,8 @@ function useInfiniteScrollSentinel(
 }
 
 /**
- * `MediaLibrary` is dual-mode: a full-page browser + uploader at
- * `/media`, or an in-modal picker that emits a selection back to a
- * meta-box field renderer. Page mode (default) preserves every
- * existing behavior — the picker mode swaps the detail drawer for
- * a footer "Use selection" CTA, accepts a hybrid card click (single
- * = select, double = confirm + close), and applies a server-side
- * `accept` MIME filter to the grid.
+ * Picker mode swaps the detail drawer for a "Use selection" footer; a card
+ * click selects, a double click confirms.
  */
 export interface MediaLibraryProps {
   readonly mode?: "page" | "picker";
@@ -346,11 +333,7 @@ export interface MediaLibraryProps {
    * an exact whitelist. Picker-mode only — page mode ignores it.
    */
   readonly accept?: string | readonly string[];
-  /**
-   * Picker-mode only: called with the bare media id (`"42"`) when the
-   * user confirms a selection. Single-pick semantics — caller is
-   * responsible for closing the modal.
-   */
+  /** Picker-mode only. Single-pick; the caller closes the modal. */
   readonly onSelect?: (selection: MediaSelection) => void;
   /** Picker-mode only: called when the user clicks Cancel. */
   readonly onCancel?: () => void;
@@ -404,10 +387,8 @@ export function MediaLibrary({
     void queryClient.invalidateQueries({ queryKey });
   }, [queryClient, queryKey]);
 
-  // `list.fetchNextPage` is a stable React Query callback. Passing it
-  // directly (rather than wrapping it in a fresh arrow each render)
-  // keeps the IntersectionObserver from being torn down + rebuilt on
-  // every parent re-render.
+  // Pass the stable callback unwrapped, or the observer is rebuilt every
+  // render.
   useInfiniteScrollSentinel(
     sentinelRef,
     list.hasNextPage,
@@ -431,10 +412,8 @@ export function MediaLibrary({
     onError: (failure) => setError(uploadErrorLabel(failure)),
   });
 
-  // Drop anywhere on the page — including the empty state, the loading
-  // state, and the gaps between cards. The grid div used to own these
-  // handlers, but it only renders when items exist; on a fresh install
-  // the user lands on the empty state and dropping a file did nothing.
+  // On the root, not the grid: the grid only renders when items exist, so the
+  // empty state would reject drops.
   const dropProps = {
     onDragOver: (e: DragEvent) => {
       if (!hasFiles(e)) return;
@@ -455,15 +434,9 @@ export function MediaLibrary({
     },
   };
 
-  // Keep `selectedItem` in state, not derived from `items`. The list
-  // refetches on every mutation; deriving would make the drawer
-  // disappear silently when the row briefly drops out of the page
-  // window or while a refetch is in flight. We refresh from the list
-  // by id when a fresh copy is available, never null it from absence.
-  //
-  // setState-in-effect is the intentional pattern here: we DO want the
-  // mirrored copy so the drawer survives a refetch window. The settled-
-  // and-gone branch is the only path that nulls.
+  // Mirrored in state, not derived from `items`, so the drawer survives a row
+  // briefly leaving the list during a refetch. Only a settled list without the
+  // row closes it.
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   useEffect(() => {
     if (selectedItem === null) return;
@@ -476,12 +449,8 @@ export function MediaLibrary({
     }
   }, [items, list.status, list.isFetching, selectedItem]);
 
-  // Picker-mode selection (single-pick). Hybrid click model:
-  //   - single click → set this id as the picked one (footer enables)
-  //   - double click → confirm + close (auto-close)
-  // Footer "Use selection" is the keyboard-friendly confirmation.
-  // Hold the whole item, not just its id: the footer confirm must resolve a
-  // full selection even after a search/scroll evicts it from the loaded page.
+  // The whole item, not its id: the footer confirm must resolve a selection
+  // even after a search or scroll evicts it from the loaded page.
   const [pickerSelected, setPickerSelected] = useState<MediaItem | null>(null);
   const handleCardActivate = useCallback(
     (item: MediaItem): void => {
@@ -727,11 +696,8 @@ function hasFiles(e: DragEvent): boolean {
   return Array.from(e.dataTransfer.types).includes("Files");
 }
 
-// Map opaque RPC `reason` codes and PUT statuses to actionable, translatable
-// text. The error banner is the only surface a user sees when an upload fails
-// — raw reasons like `mime_mismatch` read like 404s. Several codes share a
-// descriptor — the translator translates one message, the lookup serves it for
-// every aliased code.
+// The banner is the only surface a failed upload shows, and raw reasons like
+// `mime_mismatch` read like 404s. Aliased codes share one descriptor.
 const ERROR_DESCRIPTORS = {
   storageNotConfigured: {
     id: "plugin.media.error.storageNotConfigured",
@@ -844,12 +810,8 @@ async function tryCleanupDraft(mediaId: number): Promise<void> {
   }
 }
 
-// First-impression empty state. Mirrors the shape of CF R2's bucket
-// dashboard: a dashed-border drop target with cloud-up glyph and an
-// inline "select from computer" picker. The page-wide drop handlers
-// already cover the entire library, but a visible target on the empty
-// state tells the user the library accepts files at all — without it
-// the page reads as "nothing to do here".
+// The page-wide drop handlers already accept files; a visible target tells the
+// user the empty library accepts them at all.
 function Dropzone({
   onSelect,
   highlight,
@@ -1104,10 +1066,8 @@ function badgeLabel(mime: string): string | null {
 }
 
 function formatShortDate(locale: string, iso: string): string {
-  // Locale comes from `i18n.locale`, NOT browser default — a German user
-  // on a Spanish-default browser sees German chrome but otherwise would
-  // see Spanish dates. `.toUpperCase()` is skipped — Turkish dotless-i
-  // breaks; the card grid is already small-caps via CSS.
+  // The UI locale, not the browser's, so dates match the chrome. No
+  // `.toUpperCase()`: it breaks Turkish dotless-i; CSS sets small-caps.
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat(locale, {
@@ -1266,12 +1226,8 @@ function MediaDetailDrawer({
         <div className="border-border flex gap-2 border-t pt-2">
           <Button asChild variant="outline" size="sm" className="flex-1">
             <a
-              // Always go through the worker serve route with
-              // ?attachment=1 — the HTML `download` attribute is ignored
-              // cross-origin (e.g. when `publicUrlBase` is configured),
-              // but the route always sends `Content-Disposition:
-              // attachment` for this query param, so downloads work
-              // regardless of which mode `item.url` is in.
+              // Via the serve route: `download` is ignored cross-origin (with
+              // `publicUrlBase`), but `?attachment=1` forces the disposition.
               href={`${basePath()}/_plumix/media/serve/${String(item.id)}?attachment=1`}
               download={item.title}
               data-testid="media-detail-download"
@@ -1334,10 +1290,8 @@ function ConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }): ReactNode {
-  // Mounted only while confirming (parent renders conditionally), so the
-  // dialog is always open while present; closing via ESC, the overlay, or
-  // Cancel routes through `onOpenChange` → `onCancel`. Radix handles the
-  // focus trap + ESC that this component used to wire by hand.
+  // Mounted only while confirming, so it is always open; every close routes
+  // through `onOpenChange` → `onCancel`.
   return (
     <AlertDialog
       open
@@ -1410,12 +1364,8 @@ function AltEditor({
   const [draft, setDraft] = useState(value);
   const [savedFlash, setSavedFlash] = useState(false);
   const dirtyRef = useRef(false);
-  // Track the last value WE saved so we can recognise it when it
-  // round-trips back via list refetch and not stomp the user's draft.
-  // The naive "if not dirty, sync" approach raced: between commit
-  // (which clears dirty) and the refetch arriving with the new value,
-  // a re-render would set draft back to the OLD value because the
-  // effect ran before the refetch updated `value`.
+  // Syncing whenever not dirty races: after commit clears dirty, a render
+  // before the refetch lands would restore the old value over the draft.
   const lastSavedRef = useRef(value);
   useEffect(() => {
     if (value === lastSavedRef.current) return; // our own save came back
@@ -1479,10 +1429,7 @@ function FileGlyph({ mime }: { mime: string }): ReactNode {
   );
 }
 
-// Image with avatar-style fallback. Shows a shimmer skeleton while
-// loading, fades the image in once `onLoad` fires, falls back to the
-// file glyph if the image errors. Container has a fixed aspect ratio
-// so there's no layout shift between skeleton → image.
+// Fixed aspect ratio so the skeleton-to-image swap causes no layout shift.
 function ImageWithFallback({
   src,
   alt,

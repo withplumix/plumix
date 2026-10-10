@@ -13,18 +13,8 @@ const MEDIA_ENTRY_TYPE = "media";
 const ID_RE = /^[1-9]\d{0,15}$/;
 
 /**
- * Worker-routed upload handler. Mounted at `PUT /_plumix/media/upload/<id>`
- * via `ctx.registerRoute({ path: "/upload/*", auth: "authenticated" })`.
- *
- * Defends against:
- * - **Unbounded body**: a request with no Content-Length (chunked) or
- *   one above `meta.size`, the size declared at draft creation, is
- *   refused; HTTP framing holds the stream to the declared length.
- * - **Path confusion**: only `/upload/<digits>` matches; trailing
- *   segments or non-numeric ids are rejected before any DB hit.
- *
- * CSRF is enforced at the `/_plumix/*` dispatcher boundary (X-Plumix-
- * Request header + Origin check); we don't re-check here.
+ * Refuses a body without `Content-Length` or above the size declared at draft
+ * creation. CSRF is checked by the `/_plumix/*` dispatcher, not here.
  */
 export async function handleWorkerUpload(
   request: Request,

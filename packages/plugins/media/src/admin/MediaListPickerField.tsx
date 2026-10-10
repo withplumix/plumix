@@ -50,18 +50,8 @@ const M = {
   },
 } satisfies Record<string, MessageDescriptor>;
 
-// `mediaList` field admin renderer. Storage is a dense array of
-// plain media ids; row labels resolve in one batched lookup call.
-// Renders each entry as a row in a vertical strip with Up / Down /
-// Remove buttons; "Add more" opens MediaLibrary in modal/picker mode.
-//
-// Picker stays open across selections (the modal doesn't close on
-// pick — only on Cancel or when the array hits `max`).
-//
-// Drag-reorder is deferred to a follow-up — exposing dnd-kit as a
-// shared runtime module to plugin chunks needs separate work, and
-// up/down buttons satisfy the keyboard-reorder acceptance criterion
-// for v0.1.
+// Up/down buttons instead of drag-reorder: dnd-kit is not yet a shared runtime
+// module plugin chunks can import.
 
 // Legacy bags stored `{ id, ... }` snapshots; reads heal to plain ids
 // server-side, but the form value can still carry the old shape until
@@ -128,21 +118,14 @@ export function MediaListPickerField({
   const updateAt = (next: readonly string[]): void => {
     rhf.onChange(next);
     rhf.onBlur();
-    // Auto-close when the array hits `max` — picker shouldn't stay
-    // open if there's nowhere to put the next pick. Driven from the
-    // commit path so async server-side accept-revalidation (if ever
-    // added) closes the modal AFTER the pick lands, not before.
+    // Closed from the commit path so the modal closes after the pick lands.
     if (max !== undefined && next.length >= max) setOpen(false);
   };
 
   const handlePick = ({ id }: MediaSelection): void => {
     if (atMax) return;
-    // Admin-side dedup: the picker rejects re-adding an id that's
-    // already in the array. The server-side meta pipeline does NOT
-    // dedup — an API caller submitting `[id1, id1]` over the wire
-    // gets `[id1, id1]` stored. The contract: the picker enforces
-    // the common case, the API stays minimal. Re-saving an
-    // API-supplied duplicate through the admin will collapse it.
+    // Only the picker dedups; the server stores API-supplied duplicates as
+    // sent. Row keys rely on ids being unique here.
     if (value.includes(id)) return;
     updateAt([...value, id]);
   };
@@ -177,11 +160,8 @@ export function MediaListPickerField({
       ) : (
         <ul className="flex flex-col gap-1" data-testid={`${testId}-list`}>
           {value.map((id, idx) => (
-            // `key` is the bare id, NOT id+idx. `handlePick` rejects
-            // duplicate ids (admin-side dedup) so id is unique per
-            // array. Reordering then preserves React identity for
-            // each row — Tab focus stays on the button the user just
-            // clicked instead of resetting on every move.
+            // Keyed by the bare id (unique, see `handlePick`) so focus stays on
+            // the clicked button across a reorder.
             <MediaListItem
               key={id}
               id={id}
@@ -317,11 +297,8 @@ function MediaListItem({
   );
 }
 
-// Modal that hosts MediaLibrary in picker mode, on the shared `Dialog`
-// from `plumix/admin/ui`. Doesn't close on `onSelect` — multi-select
-// stays open until the user clicks Cancel or the parent closes it on
-// reaching `max`. Radix handles the focus trap, Escape, and backdrop
-// dismiss (routed through `onOpenChange` → `onCancel`).
+// Stays open across selections, until Cancel or the parent closes it on
+// reaching `max`.
 function MediaListPickerModal({
   accept,
   onSelect,

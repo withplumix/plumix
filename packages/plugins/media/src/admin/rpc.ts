@@ -18,11 +18,8 @@ export type MediaLookupItem =
   PluginRpcOutputs<LookupRouter>["list"]["items"][number];
 
 /**
- * Resolve display labels for picked media ids in one batched
- * `lookup/list({ ids })` call — meta storage is plain ids, so the
- * pickers look labels up at render time. Ids absent from the result
- * are unresolved (deleted, unpublished, or still loading); callers
- * fall back to an id placeholder.
+ * Ids absent from the result are unresolved (deleted, unpublished, or still
+ * loading); callers fall back to an id placeholder.
  */
 export function useMediaLabels(
   ids: readonly string[],

@@ -12,16 +12,9 @@ import { useMediaLabels } from "./rpc.js";
 
 export { M } from "./messages.js";
 
-// `media` field admin renderer. The bundler registers it with the host
-// admin from the `ctx.registerFieldType` declaration in `field-types.ts`,
-// dispatched from the meta-box-field renderer's plugin path.
-//
-// Meta storage is the plain media id — the preview resolves its label
-// through the lookup path. Block attrs keep the full `MediaSelection`
-// snapshot (`{ id, url, alt, ... }`) for render, so object values
-// display straight from the snapshot. The "Select" / "Change" button
-// opens a fixed-position modal containing
-// `<MediaLibrary mode="picker" accept={accept} />`.
+// Meta storage is the plain media id, so the preview looks its label up. Block
+// attrs keep the full `MediaSelection` snapshot for render, so object values
+// display straight from it.
 
 interface MediaValue {
   readonly id: string;
@@ -56,9 +49,8 @@ export function selectionWriteValue(
   return inBlockEditor ? selection : selection.id;
 }
 
-// Clear is offered only for standalone metabox fields. In the block editor
-// (signalled by the sibling `attrs` the block passes down) the block itself is
-// the unit an author removes, so a per-field Clear is redundant clutter.
+// In the block editor the block itself is the unit an author removes, so a
+// per-field Clear would be redundant.
 export function offersClear(
   hasValue: boolean,
   required: boolean,
@@ -234,11 +226,8 @@ function ResolvedPreview({
   );
 }
 
-// Modal hosting the MediaLibrary in picker mode, built on the shared
-// `Dialog` from `plumix/admin/ui` — radix handles the focus trap, Escape,
-// and backdrop dismiss that this used to wire by hand. Mounted only while
-// open (parent renders conditionally), so closing routes through
-// `onOpenChange` → `onCancel`.
+// Mounted only while open (the parent renders it conditionally), so closing
+// routes through `onOpenChange` → `onCancel`.
 export function MediaPickerModal({
   accept,
   onSelect,

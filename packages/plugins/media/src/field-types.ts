@@ -1,9 +1,8 @@
 import type { FieldTypeOptions } from "plumix/plugin";
 
 /**
- * The admin field types this plugin contributes. The server declares them from
- * here and the admin entry exports each component by the name given, so the
- * plumix bundler can join the two.
+ * The admin entry must export each component by the name given, so the plumix
+ * bundler can join it to the server declaration.
  */
 export const MEDIA_FIELD_TYPES: readonly FieldTypeOptions[] = [
   { type: "media", component: "MediaPickerField" },

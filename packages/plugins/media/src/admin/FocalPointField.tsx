@@ -12,18 +12,16 @@ import * as v from "valibot";
 // inert until an image is chosen — rather than adding a near-duplicate.
 import { M } from "./messages.js";
 
-// The focal point is a normalized crop anchor { x, y } in [0, 1], applied by the
-// image block as CSS object-position. This control lets an author set it by
-// clicking/dragging on the image preview instead of typing coordinates.
+// The focal point is a normalized crop anchor in [0, 1], applied by the image
+// block as CSS object-position.
 
 type FocalPoint = Readonly<{ x: number; y: number }>;
 
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
-// Centre is the anchor an unset image already renders at, so every way the
-// stored value can disappoint — absent, the wrong type, not an object at all —
-// falls back to it rather than failing the field. Each axis falls back on its
-// own, so one bad coordinate does not discard a good one.
+// Centre is where an unset image already renders, so any bad stored value falls
+// back to it. Each axis falls back alone, so one bad coordinate keeps the
+// other.
 const CENTRE: FocalPoint = { x: 0.5, y: 0.5 };
 const axisSchema = v.fallback(v.pipe(v.number(), v.transform(clamp01)), 0.5);
 const focalPointSchema = v.fallback(
@@ -31,7 +29,8 @@ const focalPointSchema = v.fallback(
   CENTRE,
 );
 
-// The block's image url — the picked media's url, else the raw src escape hatch.
+// The block's image url — the picked media's url, else the raw src escape
+// hatch.
 function imageUrl(attrs: JsonObject): string {
   const media = attrs.media;
   if (media && typeof media === "object") {

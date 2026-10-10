@@ -56,7 +56,8 @@ export interface MediaListResult {
 
 /**
  * Domain error the media read path throws. Each transport maps it to its own
- * shape (oRPC typed error / MCP envelope), keeping the service transport-neutral.
+ * shape (oRPC typed error / MCP envelope), keeping the service
+ * transport-neutral.
  */
 export class MediaReadError extends Error {
   static {
@@ -128,9 +129,8 @@ interface MediaRowQuery {
 }
 
 /**
- * The one media list query — every surface that lists media (library, picker,
- * REST, MCP, the lookup browse path) runs it, so they agree on which rows
- * match and in what order. Callers own the capability gate and the row shape.
+ * Every surface that lists media runs this, so they agree on rows and order.
+ * Callers own the capability gate and the row shape.
  */
 export async function queryMediaRows(
   ctx: AppContext,
@@ -221,18 +221,16 @@ export function thumbnailFor(
 ): string {
   const delivery = ctx.imageDelivery;
   if (!mime.startsWith("image/") || !delivery) return url;
-  // A transform CDN fetches the source itself, so it needs an absolute URL;
-  // the worker-proxied serve fallback is relative and only a slot that
-  // resolves same-origin sources in-process can take it.
+  // A transform CDN fetches the source itself, so a relative serve URL works
+  // only with a slot that resolves same-origin sources in-process.
   const absolute = url.startsWith("http://") || url.startsWith("https://");
   if (!absolute && !delivery.acceptsRelativeSources) return url;
   return delivery.url(url, THUMBNAIL_OPTS);
 }
 
 /**
- * Resolve a publicly-fetchable URL for a media row. Prefers the storage
- * adapter's native URL; falls back to the worker-proxied serve route keyed on
- * the entry id (not the storageKey — the serve route enforces `published`).
+ * The serve-route fallback is keyed on the entry id, not the storage key, so
+ * the route can enforce `published`.
  */
 export async function resolveMediaUrl(
   storage: NonNullable<AppContext["storage"]>,

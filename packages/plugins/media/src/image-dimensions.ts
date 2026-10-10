@@ -1,18 +1,13 @@
-// Intrinsic pixel-dimension probe for the raster image formats the media
-// plugin accepts. Runs at confirm time on the same leading bytes we read for
-// the magic-byte sniff, so uploaded images carry width/height without a
-// separate decode pass. Returns null whenever dimensions can't be determined
-// — a vector format (SVG), an unknown mime, or a sample too short to reach the
-// header — and callers treat that as "no dimensions" rather than an error.
+// Reads header bytes only, so uploads get width/height without a decode pass.
+// Null (SVG, unknown mime, short sample) means "no dimensions", not an error.
 
 export interface ImageDimensions {
   readonly width: number;
   readonly height: number;
 }
 
-// Bytes to read for the dimension probe. Larger than the magic-byte sample
-// because a JPEG's SOF marker can sit past a big APP1/EXIF block; 64 KiB
-// covers the header region of the formats we probe without reading whole files.
+// Larger than the magic-byte sample because a JPEG's SOF marker can sit past a
+// big APP1/EXIF block.
 export const DIMENSION_SAMPLE_SIZE = 65536;
 
 function readPng(v: DataView): ImageDimensions | null {
@@ -22,7 +17,8 @@ function readPng(v: DataView): ImageDimensions | null {
 }
 
 function readGif(v: DataView): ImageDimensions | null {
-  // "GIF87a"/"GIF89a" (6), then width/height as LE u16 in the screen descriptor.
+  // "GIF87a"/"GIF89a" (6), then width/height as LE u16 in the screen
+  // descriptor.
   if (v.byteLength < 10) return null;
   return { width: v.getUint16(6, true), height: v.getUint16(8, true) };
 }
@@ -88,9 +84,9 @@ function readWebp(v: DataView): ImageDimensions | null {
     return { width: w + 1, height: h + 1 };
   }
   if (fourcc === "VP8 ") {
-    // frame tag(3) + start code 0x9d012a(3), then 14-bit width/height as LE u16.
-    // Require the start code so a non-key-frame or corrupt chunk yields null
-    // rather than a masked-but-meaningless number.
+    // frame tag(3) + start code 0x9d012a(3), then 14-bit width/height as LE
+    // u16. Require the start code so a non-key-frame or corrupt chunk yields
+    // null rather than a masked-but-meaningless number.
     if (
       v.byteLength < 30 ||
       v.getUint8(23) !== 0x9d ||
@@ -117,12 +113,8 @@ function readWebp(v: DataView): ImageDimensions | null {
 }
 
 function readAvif(v: DataView): ImageDimensions | null {
-  // ISOBMFF nests the ImageSpatialExtents box (`ispe`) several boxes deep;
-  // scan for its fourcc rather than walking the box tree, then read the BE
-  // u32 width/height that follow the 4-byte version/flags field. Require the
-  // preceding u32 to be the fixed 20-byte box size (size(4) + type(4) +
-  // version/flags(4) + w(4) + h(4)) so a stray `ispe` in some other box's
-  // payload can't be mistaken for a real spatial-extents box.
+  // Scans for `ispe` instead of walking the box tree; requiring its fixed
+  // 20-byte size before it rejects a stray `ispe` in another box's payload.
   for (let i = 4; i + 16 <= v.byteLength; i++) {
     if (fourccAt(v, i) === "ispe" && v.getUint32(i - 4) === 0x14) {
       const width = v.getUint32(i + 8);
