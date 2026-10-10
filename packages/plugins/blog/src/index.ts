@@ -19,28 +19,12 @@ export type {
 } from "./options.js";
 export type { RelatedPosts } from "./related.js";
 
-// Plain descriptor literals — server-side plugin code can't run the
-// Babel macro pipeline, so we author the `{ id, message }` shape
-// directly. The manifest payload is identical to a `defineMessage(...)`
-// call (admin's chrome uses the macro freely). Per-entity tables let
-// the registration sites collapse to `labels: POST_LABELS` instead of
-// hand-forwarding every key — and `satisfies EntryTypeLabels` /
-// `TermTaxonomyLabels` enforces compile-time coverage of the cascade
-// schema so typo-renames silently falling through to the generic
-// fallback aren't possible.
+// Plain `{ id, message }` literals: server-side plugin code can't run the
+// Babel macro pipeline.
 
-// Singular/plural carry WP `_x()` contexts so verb-shaped reuses
-// (`Post a comment`, `Draft this`) can diverge in translation.
-// The matching `msgctxt` lines in `locales/en.po` are hand-authored —
-// see the `X-Generator: hand-authored` header. `withContext` is not
-// macro-visible, so `pnpm i18n:extract` here refuses to run rather than
-// silently rewriting the catalog (see `plumix i18n extract` in
-// packages/plumix/src/cli/commands/i18n.ts).
-//
-// Action-phrase labels (`Add Post`, `Edit Tag`) intentionally OMIT
-// context — the leading English verb fixes the polyseme as a noun in
-// every target locale, matching WP gettext convention (only the
-// standalone singular/plural carry `_x()`).
+// `withContext` isn't macro-visible, so the `msgctxt` lines in `locales/en.po`
+// are hand-authored. Action phrases omit context: the leading verb already
+// fixes the noun sense, per WP gettext convention.
 const POST_LABELS = {
   singular: withContext(
     { id: "plugin.blog.post.singular", message: "Post" },
