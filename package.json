@@ -44,7 +44,7 @@
     "@commitlint/types": "^21.2.3",
     "@plumix/prettier-config": "workspace:*",
     "@types/node": "catalog:",
-    "knip": "^6.32.2",
+    "knip": "^6.39.0",
     "pkg-pr-new": "^0.0.88",
     "prettier": "catalog:",
     "sherif": "^1.13.0",
