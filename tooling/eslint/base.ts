@@ -142,12 +142,12 @@ export const baseConfig = defineConfig(
     },
   },
   {
-    files: PRODUCTION_SOURCE,
-    ignores: TEST_SOURCE,
+    files: ["**/*.ts", "**/*.tsx"],
     plugins: { sonarjs: sonarjsPlugin },
     rules: {
       "plumix/max-comment-length": "error",
       "plumix/no-jsdoc-in-function-body": "error",
+      "plumix/prefer-jsdoc": "error",
       "sonarjs/no-commented-code": "error",
     },
   },
