@@ -1,8 +1,9 @@
 import type { LookupUserCodeResult } from "../../../../auth/device-flow.js";
 import type { DeviceCodeLookupErrors } from "../../../../rpc-errors.js";
 
-// Shared by lookup, approve and deny so they report identical error reasons.
-
+/**
+ * Shared by lookup, approve and deny so they report identical error reasons.
+ */
 export function assertLookupOk(
   result: LookupUserCodeResult,
   userCode: string,

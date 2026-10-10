@@ -100,12 +100,13 @@ function loadSharp(): typeof SharpModule {
  * A same-origin source resolves through the site's handler, so media gating
  * applies; a remote one must match `remotePatterns`.
  *
- *
  * @example
- * ```ts plumix({
+ * ```ts
+ * plumix({
  *   storage: diskStorage({ dir: "data/media" }),
  *   imageDelivery: images({ remotePatterns: [{ hostname: "images.example.com" }] }),
- * }); ```
+ * });
+ * ```
  */
 export function images(config: ImagesConfig = {}): NodeImageDelivery {
   const resolved = resolveConfig(config);

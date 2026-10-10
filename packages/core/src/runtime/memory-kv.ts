@@ -9,7 +9,7 @@ import type {
 
 interface MemoryEntry {
   readonly value: string;
-  // Unix ms.
+  /** Unix ms. */
   readonly expiresAt?: number;
 }
 

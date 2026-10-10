@@ -4,7 +4,7 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { credentialsListInputSchema } from "./schemas.js";
 
-// Drops `publicKey`: a binary blob the admin UI never uses.
+/** Drops `publicKey`: a binary blob the admin UI never uses. */
 export const list = base
   .use(authenticated)
   .input(credentialsListInputSchema)

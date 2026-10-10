@@ -16,8 +16,10 @@ interface RendererModule {
   mount(element: HTMLElement, options?: MountOptions): IslandRoot;
 }
 
-// The returned teardown runs on disconnect, so an island removed before its
-// trigger fires doesn't leak the strategy's observer or listener.
+/**
+ * The returned teardown runs on disconnect, so an island removed before its
+ * trigger fires doesn't leak the strategy's observer or listener.
+ */
 export type IslandStrategy = (
   loadFn: () => Promise<void>,
   opts: JsonObject,
@@ -179,8 +181,10 @@ export class PlumixIslandElement extends HTMLElement {
     if (typeof cleanup === "function") this.strategyCleanups.push(cleanup);
   }
 
-  // Best-effort: a failed prefetch is swallowed; `hydrate()` owns the retry and
-  // error event.
+  /**
+   * Best-effort: a failed prefetch is swallowed; `hydrate()` owns the retry and
+   * error event.
+   */
   private prefetch(): void {
     if (this.hydrated || this.prefetched) return;
     this.prefetched = true;
@@ -264,8 +268,10 @@ export class PlumixIslandElement extends HTMLElement {
     }
   }
 
-  // An empty client-only shell would be an invisible, unselectable box in the
-  // editor canvas.
+  /**
+   * An empty client-only shell would be an invisible, unselectable box in the
+   * editor canvas.
+   */
   private renderEditPlaceholder(): void {
     if (this.childElementCount > 0 || this.textContent.trim()) return;
     this.textContent = clientOnlyPlaceholderLabel(

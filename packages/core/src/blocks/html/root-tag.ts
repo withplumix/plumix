@@ -1,5 +1,7 @@
-// Only generic/sectioning containers, so an author's tag override can't break
-// layout or smuggle behavior.
+/**
+ * Only generic/sectioning containers, so an author's tag override can't break
+ * layout or smuggle behavior.
+ */
 export const ROOT_TAGS = [
   "div",
   "section",

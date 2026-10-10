@@ -2,9 +2,10 @@ import type { ReactElement, ReactNode } from "react";
 
 import type { DevErrorFact } from "./contract.js";
 
-// No section wrapper on purpose: the page renders each panel's `<section>` and
-// heading around what the panel returns.
-
+/**
+ * No section wrapper on purpose: the page renders each panel's `<section>` and
+ * heading around what the panel returns.
+ */
 export function DevErrorFacts({
   facts,
 }: {

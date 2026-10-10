@@ -32,8 +32,10 @@ export function assertValidLookupAdapterKind(
   }
 }
 
-// No hyphens or dots, so names work unquoted as testids, URL params and storage
-// keys. The length cap matches the RPC `settingsIdentifierSchema`.
+/**
+ * No hyphens or dots, so names work unquoted as testids, URL params and storage
+ * keys. The length cap matches the RPC `settingsIdentifierSchema`.
+ */
 export const SETTINGS_NAME_RE = /^[a-z][a-z0-9_]*$/;
 const MAX_SETTINGS_IDENTIFIER_LENGTH = 64;
 

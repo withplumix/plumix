@@ -2,8 +2,10 @@ import type { JSX } from "react";
 
 import type { SimpleMarkExtensionOptions } from "./simple.js";
 
-// One source for the mark catalogue, the editor extensions and the walker's
-// tag lookup, so the three can't drift.
+/**
+ * One source for the mark catalogue, the editor extensions and the walker's
+ * tag lookup, so the three can't drift.
+ */
 export const SIMPLE_MARK_CONFIGS: readonly SimpleMarkExtensionOptions[] = [
   { name: "bold", tag: "strong", parseTags: ["strong", "b"] },
   { name: "italic", tag: "em", parseTags: ["em", "i"] },

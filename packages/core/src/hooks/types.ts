@@ -23,9 +23,11 @@ export type FilterFn<TName extends FilterName> = FilterRegistry[TName] extends (
   ? (...args: A) => R
   : never;
 
-// Filter input type = first parameter type. Rest params = everything else.
-// Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input,
-// ...rest)` is type-safe at the call site.
+/**
+ * Filter input type = first parameter type. Rest params = everything else.
+ * Extracted via Parameters<T> + tuple slicing so `applyFilter(name, input,
+ * ...rest)` is type-safe at the call site.
+ */
 export type FilterInput<TName extends FilterName> = Parameters<
   FilterRegistry[TName]
 >[0];

@@ -9,6 +9,14 @@ import type {
  * Augment alongside `registerEntryType` so `forEntryType` checks the name and
  * types `data.entry`. A name without an `entry` projection gets
  * `ResolvedEntry`.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface EntryTypeRegistry {
+ *     product: { entry: Product };
+ *   }
+ * }
+ * ```
  */
 export interface EntryTypeRegistry {
   post: { entry: ResolvedEntry };
@@ -18,6 +26,14 @@ export interface EntryTypeRegistry {
 /**
  * Carries the term shape only: a taxonomy can span entry types, so
  * `data.entries` stays `ResolvedEntry[]`.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface TermTaxonomyRegistry {
+ *     genre: { term: Genre };
+ *   }
+ * }
+ * ```
  */
 export interface TermTaxonomyRegistry {
   category: { term: ResolvedTerm };
@@ -27,6 +43,14 @@ export interface TermTaxonomyRegistry {
 /**
  * Augment alongside `registerArchiveType`. The projection must extend
  * {@link ArchiveTypeData}; a name without one degrades to the base.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface ArchiveTypeRegistry {
+ *     "event-series": { data: EventSeriesData };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface ArchiveTypeRegistry {}
@@ -34,6 +58,14 @@ export interface ArchiveTypeRegistry {}
 /**
  * Augment alongside `registerView` so `forView(name)` types `data.data`. A
  * name with no entry still registers, with `data` left `unknown`.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface ViewRegistry {
+ *     compareShare: { data: CompareShare };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface ViewRegistry {}

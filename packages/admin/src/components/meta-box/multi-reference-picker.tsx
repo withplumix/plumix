@@ -78,7 +78,7 @@ interface MultiReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
-  // When every selected id is covered, the batch resolve is skipped.
+  /** When every selected id is covered, the batch resolve is skipped. */
   readonly initialSelected?: readonly LookupItem[];
 }
 

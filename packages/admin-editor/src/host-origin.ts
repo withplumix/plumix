@@ -1,5 +1,7 @@
-// Cross-origin dev passes the host origin via `plumix.host`; same-origin
-// deployments use the page's own.
+/**
+ * Cross-origin dev passes the host origin via `plumix.host`; same-origin
+ * deployments use the page's own.
+ */
 export function resolveHostOrigin(
   search: string,
   currentOrigin: string,

@@ -2,9 +2,9 @@ import type { TelemetrySpan } from "../../context/telemetry.js";
 
 interface TimelineRow {
   readonly name: string;
-  // 0 for a root span.
+  /** 0 for a root span. */
   readonly depth: number;
-  // From the timeline window's start, in ms.
+  /** From the timeline window's start, in ms. */
   readonly offsetMs: number;
   readonly durationMs: number;
 }

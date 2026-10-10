@@ -129,7 +129,7 @@ interface ReadArgs {
 }
 
 interface PageArgs extends ReadArgs {
-  // The visitor's words, for the reader with no index.
+  /** The visitor's words, for the reader with no index. */
   readonly query: string;
   readonly threshold: number;
 }

@@ -1,7 +1,9 @@
 import type { MessageDescriptor } from "plumix/i18n";
 
-// Zero-dependency module so lightweight controls (the focal-point picker) can
-// reuse a string without importing the MediaLibrary graph.
+/**
+ * Zero-dependency module so lightweight controls (the focal-point picker) can
+ * reuse a string without importing the MediaLibrary graph.
+ */
 export const M = {
   empty: {
     id: "plugin.media.pickerField.empty",

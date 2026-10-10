@@ -1,8 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Exists only so `lingui extract` sees core's meta constraint message ids.
-
+/** Exists only so `lingui extract` sees core's meta constraint message ids. */
 export const META_FIELD_DESCRIPTORS = {
   required: defineMessage({
     id: "metaField.required",

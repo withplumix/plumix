@@ -1,7 +1,9 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-// Inline literals, not `defineMessage`: core builds with plain `tsc` and no
-// Lingui macro pass. Placeholders are simple `{name}` only, no ICU plurals.
+/**
+ * Inline literals, not `defineMessage`: core builds with plain `tsc` and no
+ * Lingui macro pass. Placeholders are simple `{name}` only, no ICU plurals.
+ */
 export const META_FIELD_MESSAGES = {
   required: {
     id: "metaField.required",

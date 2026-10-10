@@ -33,7 +33,7 @@ const publishInput = v.object({
   expectedLiveUpdatedAt: v.date(),
 });
 
-// Skips the pre-save filter: the autosave was filtered when written.
+/** Skips the pre-save filter: the autosave was filtered when written. */
 export const publish = base
   .use(authenticated)
   .input(publishInput)

@@ -16,19 +16,23 @@ import {
 interface ReadThroughArgs {
   readonly request: Request;
   readonly segment: Segment;
-  // `null` when no public route matched; the CDN is never consulted.
+  /** `null` when no public route matched; the CDN is never consulted. */
   readonly intentKind: RouteIntent["kind"] | null;
-  // Resolved by the dispatcher so the pure decision layer stays free of the
-  // registry lookup.
+  /**
+   * Resolved by the dispatcher so the pure decision layer stays free of the
+   * registry lookup.
+   */
   readonly registeredPageCacheable?: boolean;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
   readonly render: () => Promise<Response>;
-  // Evaluated after `render`, so it can read the route's resolved entity.
+  /** Evaluated after `render`, so it can read the route's resolved entity. */
   readonly tags: () => readonly string[];
-  // A personal render is one member's page: never stored or announced as
-  // shared.
+  /**
+   * A personal render is one member's page: never stored or announced as
+   * shared.
+   */
   readonly personal: () => boolean;
 }
 
@@ -85,8 +89,10 @@ interface ReadThroughRouteArgs {
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
   readonly render: () => Promise<Response>;
-  // Evaluated after `render`, the only moment the handler has named what it
-  // resolved.
+  /**
+   * Evaluated after `render`, the only moment the handler has named what it
+   * resolved.
+   */
   readonly tags: () => readonly string[];
 }
 
@@ -138,8 +144,10 @@ interface LookupArgs {
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
-  // A bag, not a field: the route path has no segment, and `segment: undefined`
-  // isn't a `JsonValue`.
+  /**
+   * A bag, not a field: the route path has no segment, and `segment: undefined`
+   * isn't a `JsonValue`.
+   */
   readonly fact: { readonly segment?: Segment };
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];

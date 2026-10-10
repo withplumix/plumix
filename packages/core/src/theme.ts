@@ -99,8 +99,10 @@ export function isError(data: TemplateData): data is ErrorData {
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 
-// `normalizeTemplate` rejects hand-written `{ render }` literals that didn't go
-// through `defineTemplate`.
+/**
+ * `normalizeTemplate` rejects hand-written `{ render }` literals that didn't go
+ * through `defineTemplate`.
+ */
 export type TemplateEntry<Data extends TemplateData> =
   TemplateComponent<Data> | Template<Data>;
 
@@ -236,8 +238,10 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   return descriptor;
 }
 
-// Catches at boot the two cases the renderer can't recover from: a link with
-// no `rel`, and a script with neither `src` nor body.
+/**
+ * Catches at boot the two cases the renderer can't recover from: a link with
+ * no `rel`, and a script with neither `src` nor body.
+ */
 export function validateDocumentManifest(manifest: DocumentManifest): void {
   manifest.link?.forEach((entry, index) => {
     if (typeof entry.rel !== "string" || entry.rel.length === 0) {

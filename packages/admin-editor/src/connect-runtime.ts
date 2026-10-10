@@ -45,7 +45,7 @@ export interface RuntimeConnection {
 
 interface ConnectRuntimeOptions {
   readonly parentWindow: Window;
-  // Messages from any other origin are dropped.
+  /** Messages from any other origin are dropped. */
   readonly origin: string;
   readonly onTree: (tree: readonly BlockNode[]) => void;
   readonly onLoaderData?: (data: SerializedLoaderData) => void;

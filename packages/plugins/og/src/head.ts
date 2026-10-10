@@ -23,7 +23,7 @@ interface PageOgImageInput {
   readonly featured: OgImage | null;
   readonly data: TemplateData;
   readonly ctx: AppContext;
-  // Undefined when scrapers don't render the renderer's format.
+  /** Undefined when scrapers don't render the renderer's format. */
   readonly extension: string | undefined;
   readonly cards: CardRegistry;
   readonly inputs: CardInputs;
@@ -203,7 +203,7 @@ async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
 }
 
 interface NoCardInput {
-  // Cropped to the card that was refused; null when no rule matched.
+  /** Cropped to the card that was refused; null when no rule matched. */
   readonly photo: OgImage | null;
   readonly featured: OgImage | null;
   readonly rule: string | null;

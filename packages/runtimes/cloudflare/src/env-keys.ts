@@ -4,9 +4,11 @@
 // binding of its own, so it falls back to this bucket's public-URL key.
 export const DEFAULT_MEDIA_BINDING = "MEDIA";
 
-// Public custom-domain base for a bucket's objects. r2({ binding }) and
-// images() both read `<BINDING>_PUBLIC_URL_BASE`; sharing this helper keeps
-// them aligned.
+/**
+ * Public custom-domain base for a bucket's objects. r2({ binding }) and
+ * images() both read `<BINDING>_PUBLIC_URL_BASE`; sharing this helper keeps
+ * them aligned.
+ */
 export function publicUrlBaseKey(binding: string): string {
   return `${binding}_PUBLIC_URL_BASE`;
 }

@@ -1,7 +1,9 @@
 import { withBasePath } from "../base-path.js";
 
-// `Path=/_plumix/` keeps it off public-route requests, so public HTML stays
-// identical across visitors and caches don't fragment.
+/**
+ * `Path=/_plumix/` keeps it off public-route requests, so public HTML stays
+ * identical across visitors and caches don't fragment.
+ */
 export const ADMIN_LOCALE_COOKIE = "plumix_locale";
 const ADMIN_LOCALE_COOKIE_PATH = "/_plumix/";
 const ONE_YEAR_SECONDS = 31_536_000;

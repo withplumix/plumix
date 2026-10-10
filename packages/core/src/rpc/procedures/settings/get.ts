@@ -12,8 +12,10 @@ const CAPABILITY = "settings:manage";
 // uninstalled plugins while bounding the response.
 const MAX_GROUP_ROWS_PER_READ = 500;
 
-// Settings have no decode pass: a `.returns("date")` field reads back its
-// stored ISO string, and a reference its stored id.
+/**
+ * Settings have no decode pass: a `.returns("date")` field reads back its
+ * stored ISO string, and a reference its stored id.
+ */
 export const get = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

@@ -2,8 +2,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc.js";
 import { ORPCError } from "@orpc/client";
 
-// Batches typing bursts; the dedup snapshot, not this delay, prevents identical
-// revisions.
+/**
+ * Batches typing bursts; the dedup snapshot, not this delay, prevents identical
+ * revisions.
+ */
 export const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 // A stale optimistic-concurrency token: the live row moved since we read it.

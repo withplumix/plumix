@@ -3,8 +3,10 @@ import { SITE_SETTINGS_DESCRIPTORS } from "./i18n/site-settings-descriptors.js";
 
 const D = SITE_SETTINGS_DESCRIPTORS;
 
-// Seeded before plugin `setup()` so every install has a canonical home for
-// site identity that themes and the SEO plugin build on.
+/**
+ * Seeded before plugin `setup()` so every install has a canonical home for
+ * site identity that themes and the SEO plugin build on.
+ */
 export function registerCoreSettings(registry: MutablePluginRegistry): void {
   registry.settingsGroups.set("site", {
     name: "site",

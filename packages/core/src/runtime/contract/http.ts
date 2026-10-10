@@ -43,8 +43,10 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   });
 }
 
-// Per-caller and untagged, so a shared copy could never be purged. Refusals
-// too: 404 and 405 are heuristically cacheable.
+/**
+ * Per-caller and untagged, so a shared copy could never be purged. Refusals
+ * too: 404 and 405 are heuristically cacheable.
+ */
 export function withNoStore(response: Response): Response {
   return withHeaders(response, (h) => h.set("cache-control", "no-store"));
 }

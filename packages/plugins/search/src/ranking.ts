@@ -1,5 +1,7 @@
-// Named so a better algorithm can ship later without silently reordering a
-// site that pinned this one.
+/**
+ * Named so a better algorithm can ship later without silently reordering a
+ * site that pinned this one.
+ */
 export type RankingAlgorithm = "bm25-v1";
 
 export const DEFAULT_RANKING_ALGORITHM: RankingAlgorithm = "bm25-v1";

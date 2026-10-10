@@ -14,6 +14,14 @@ const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
 /**
  * Augmented per kind as `{ slug | location: string; result }`. The loader
  * receives keys under that name, so reading the wrong one does not compile.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface TemplateDepRegistry {
+ *     menus: { location: string; result: ResolvedMenu };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface TemplateDepRegistry {}

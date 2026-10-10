@@ -8,8 +8,10 @@ import { apiTokens } from "../db/schema/api_tokens.js";
 import { users } from "../db/schema/users.js";
 import { hashToken } from "./tokens.js";
 
-// A fixed prefix makes leaked tokens greppable and secret-scannable, like
-// GitHub's `ghp_`.
+/**
+ * A fixed prefix makes leaked tokens greppable and secret-scannable, like
+ * GitHub's `ghp_`.
+ */
 export const API_TOKEN_PREFIX = "pl_pat_";
 const API_TOKEN_BODY_BYTES = 32;
 // Short enough for a list cell, long enough to tell a user's tokens apart.

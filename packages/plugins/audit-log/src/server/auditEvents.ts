@@ -38,7 +38,7 @@ type SubjectStrategy =
   | {
       readonly kind: "extract";
       readonly type: string;
-      // Defaults to identity.
+      /** Defaults to identity. */
       readonly from?: (payload: never, context: never) => SubjectInput;
     }
   | {

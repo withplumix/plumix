@@ -8,8 +8,10 @@ import { userPendingEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// Never returns the token: surfacing it would defeat the
-// verify-at-new-address guarantee.
+/**
+ * Never returns the token: surfacing it would defeat the
+ * verify-at-new-address guarantee.
+ */
 export const pendingEmailChange = base
   .use(authenticated)
   .input(userPendingEmailChangeInputSchema)

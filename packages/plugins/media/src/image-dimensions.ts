@@ -6,8 +6,10 @@ export interface ImageDimensions {
   readonly height: number;
 }
 
-// Larger than the magic-byte sample because a JPEG's SOF marker can sit past a
-// big APP1/EXIF block.
+/**
+ * Larger than the magic-byte sample because a JPEG's SOF marker can sit past a
+ * big APP1/EXIF block.
+ */
 export const DIMENSION_SAMPLE_SIZE = 65536;
 
 function readPng(v: DataView): ImageDimensions | null {

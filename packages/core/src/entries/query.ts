@@ -43,7 +43,7 @@ type EntryOrder =
     }
   | {
       readonly kind: "meta";
-      // Resolved where the key was given, so a bad one is refused there.
+      /** Resolved where the key was given, so a bad one is refused there. */
       readonly path: string;
       readonly direction: EntryOrderDirection;
     };

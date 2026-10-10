@@ -11,8 +11,10 @@ export function projectTerm(
   return { id: term.id, name: term.name, slug: term.slug };
 }
 
-// Default-deny: only fields registered with `showInApi`, so adding a field
-// can't leak it.
+/**
+ * Default-deny: only fields registered with `showInApi`, so adding a field
+ * can't leak it.
+ */
 export function apiVisibleMetaKeys(
   registry: PluginRegistry,
   entryType: string,

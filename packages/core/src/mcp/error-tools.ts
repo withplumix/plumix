@@ -19,7 +19,7 @@ interface ServerErrorEntry {
   readonly stack?: string;
   readonly path: string;
   readonly timestamp: number;
-  // Resolves in `telemetry_request_get`.
+  /** Resolves in `telemetry_request_get`. */
   readonly requestId: string;
 }
 
@@ -29,7 +29,7 @@ interface ClientErrorEntry {
   readonly source: "client";
   readonly level: string;
   readonly message: string;
-  // Already sourcemapped on the Vite/Node side.
+  /** Already sourcemapped on the Vite/Node side. */
   readonly stack: readonly DevErrorFrame[];
   readonly label?: string;
 }

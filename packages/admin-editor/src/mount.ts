@@ -15,7 +15,7 @@ interface MountEditorOptions {
   readonly doc: Document;
   readonly registry: BlockRegistry;
   readonly shortcodes?: ShortcodeRegistry;
-  // Host (admin shell) origin, for bridge message pinning.
+  /** Host (admin shell) origin, for bridge message pinning. */
   readonly origin: string;
 }
 

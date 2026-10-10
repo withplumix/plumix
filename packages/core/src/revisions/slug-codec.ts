@@ -1,5 +1,7 @@
-// The `<entryId>` segment scopes queries without a JOIN; the `<nanoid>` dodges
-// the `(type, slug)` unique index.
+/**
+ * The `<entryId>` segment scopes queries without a JOIN; the `<nanoid>` dodges
+ * the `(type, slug)` unique index.
+ */
 export const REVISION_TYPE = "revision";
 
 const REVISION_SLUG_PATTERN = /^revision:(\d+):([^:]+)$/;
@@ -29,8 +31,10 @@ export function isRevisionType(type: unknown): type is typeof REVISION_TYPE {
   return type === REVISION_TYPE;
 }
 
-// The deterministic `autosave:<entryId>:<authorId>` slug lets `UNIQUE (type,
-// slug)` enforce one autosave per entry and user.
+/**
+ * The deterministic `autosave:<entryId>:<authorId>` slug lets `UNIQUE (type,
+ * slug)` enforce one autosave per entry and user.
+ */
 export const AUTOSAVE_TYPE = "autosave";
 
 const AUTOSAVE_SLUG_PATTERN = /^autosave:(\d+):(\d+)$/;

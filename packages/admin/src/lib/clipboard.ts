@@ -1,5 +1,7 @@
-// Safari only honors a write inside the user gesture, and awaiting a promise
-// consumes it, so a pending Blob registers the write synchronously.
+/**
+ * Safari only honors a write inside the user gesture, and awaiting a promise
+ * consumes it, so a pending Blob registers the write synchronously.
+ */
 export async function copyText(text: string | Promise<string>): Promise<void> {
   if (typeof text === "string") {
     await navigator.clipboard.writeText(text);

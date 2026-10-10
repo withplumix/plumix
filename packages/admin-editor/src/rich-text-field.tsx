@@ -51,9 +51,9 @@ export type { JSONContent } from "@tiptap/react";
 interface RichTextFieldCommonProps {
   readonly testId: string;
   readonly disabled?: boolean;
-  // Metabox fields have no host label.
+  /** Metabox fields have no host label. */
   readonly ariaLabel?: string;
-  // Omitted admits the full set.
+  /** Omitted admits the full set. */
   readonly allow?: RichTextExtensionOptions;
 }
 
@@ -116,7 +116,7 @@ interface ActiveState {
   readonly bulletList: boolean;
   readonly orderedList: boolean;
   readonly blockquote: boolean;
-  // Null when the block is a paragraph.
+  /** Null when the block is a paragraph. */
   readonly headingLevel: number | null;
 }
 
@@ -386,8 +386,10 @@ function setFormat(editor: Editor | null, value: string): void {
   }
 }
 
-// Focusing the URL input pulls DOM focus out of the editor, so the selection is
-// snapshotted on open and restored before mutating the link mark.
+/**
+ * Focusing the URL input pulls DOM focus out of the editor, so the selection is
+ * snapshotted on open and restored before mutating the link mark.
+ */
 export function LinkPopover({
   editor,
   active,

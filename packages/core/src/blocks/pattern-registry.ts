@@ -10,11 +10,29 @@ import { isBlockNodeArray } from "./render-block-tree.js";
  * Augment via `declare module "plumix"` to narrow `block()` attrs. Unknown
  * names fall back to `JsonObject`; an augmentation's value type must be
  * JSON-assignable.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface BlockTypeRegistry {
+ *     "acme/hero": { heading: string };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; consumers extend via `declare module`.
 export interface BlockTypeRegistry {}
 
-/** Augment via `declare module "plumix"` to add categories. */
+/**
+ * Augment via `declare module "plumix"` to add categories.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface PatternCategoryRegistry {
+ *     newsletter: true;
+ *   }
+ * }
+ * ```
+ */
 export interface PatternCategoryRegistry {
   readonly hero: true;
   readonly cta: true;

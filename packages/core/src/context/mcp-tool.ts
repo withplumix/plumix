@@ -3,8 +3,10 @@ import type { GenericSchema, InferOutput } from "valibot";
 import type { JsonObject } from "../json.js";
 import type { AppContext } from "./app-context.js";
 
-// Not under `mcp/`: a contract there naming `AppContext` would form an import
-// cycle with the plugin registry that holds tools.
+/**
+ * Not under `mcp/`: a contract there naming `AppContext` would form an import
+ * cycle with the plugin registry that holds tools.
+ */
 export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
   readonly name: string;
   readonly description: string;

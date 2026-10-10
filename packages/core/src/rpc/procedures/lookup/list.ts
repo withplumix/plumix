@@ -2,9 +2,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { lookupListInputSchema, requireAdapter } from "./schemas.js";
 
-// The admin only sends kinds from the manifest, so an unknown kind means a
-// stale payload or a malicious caller; it 404s.
-
+/**
+ * The admin only sends kinds from the manifest, so an unknown kind means a
+ * stale payload or a malicious caller; it 404s.
+ */
 export const list = base
   .use(authenticated)
   .input(lookupListInputSchema)

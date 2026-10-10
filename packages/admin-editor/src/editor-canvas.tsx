@@ -42,15 +42,15 @@ import { forwardedShortcut, isTypingTarget } from "./shortcuts.js";
 interface EditorCanvasProps {
   readonly registry: BlockRegistry;
   readonly shortcodes?: ShortcodeRegistry;
-  // Expected origin of the host (admin shell).
+  /** Expected origin of the host (admin shell). */
   readonly origin: string;
-  // Seed tree for first paint, before the host pushes.
+  /** Seed tree for first paint, before the host pushes. */
   readonly initialTree?: readonly BlockNode[];
   readonly tokens?: ThemeTokens;
   readonly breakpoints?: ThemeBreakpoints;
   readonly htmlAllowlist?: HtmlAllowlist;
   readonly locale?: string;
-  // JSON-lossy: it came through the SSR embed.
+  /** JSON-lossy: it came through the SSR embed. */
   readonly entry?: HydratedEntry | null;
   readonly siteSettings?: SiteSettings;
 }

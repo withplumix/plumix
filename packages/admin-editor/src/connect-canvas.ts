@@ -27,13 +27,13 @@ export interface CanvasConnection {
 interface ConnectCanvasOptions {
   readonly store: EditorStoreApi;
   readonly frameWindow: Window;
-  // Messages from any other origin are dropped.
+  /** Messages from any other origin are dropped. */
   readonly origin: string;
   readonly onGeometry?: (
     rects: readonly BlockRect[],
     slots: readonly SlotRect[],
   ) => void;
-  // clientX/Y are iframe-local.
+  /** clientX/Y are iframe-local. */
   readonly onWheel?: (wheel: {
     readonly deltaX: number;
     readonly deltaY: number;
@@ -51,7 +51,7 @@ interface ConnectCanvasOptions {
     readonly slotKey?: string;
   }) => void;
   readonly onClipboard?: (op: "copy" | "cut" | "paste") => void;
-  // The canvas has no i18n runtime, so the host hands it the catalog.
+  /** The canvas has no i18n runtime, so the host hands it the catalog. */
   readonly config?: CanvasConfig;
 }
 

@@ -6,7 +6,7 @@ import type { JsonObject } from "@plumix/core";
 
 import type { LookupItem } from "./types.js";
 
-// Trims only the RPC query, so the user's spaces survive in the input.
+/** Trims only the RPC query, so the user's spaces survive in the input. */
 export function useLookupSearch({
   kind,
   scope,

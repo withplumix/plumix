@@ -26,8 +26,10 @@ interface FormFieldShape {
     readonly label: string;
   }[];
   readonly multiple?: boolean;
-  // Explains a missing answer: a hidden field isn't asked, even if
-  // required.
+  /**
+   * Explains a missing answer: a hidden field isn't asked, even if
+   * required.
+   */
   readonly conditional?: true;
   readonly fields?: readonly FormFieldShape[];
 }

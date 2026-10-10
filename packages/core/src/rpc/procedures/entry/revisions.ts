@@ -316,9 +316,11 @@ const setMessageInput = v.object({
   ]),
 });
 
-// Same gate as `restore` so whoever can revert a revision can re-caption it;
-// change both together. No concurrency token: captions never touch the live
-// entry.
+/**
+ * Same gate as `restore` so whoever can revert a revision can re-caption it;
+ * change both together. No concurrency token: captions never touch the live
+ * entry.
+ */
 export const setMessage = base
   .use(authenticated)
   .input(setMessageInput)

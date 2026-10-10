@@ -49,8 +49,10 @@ export function selectionWriteValue(
   return inBlockEditor ? selection : selection.id;
 }
 
-// In the block editor the block itself is the unit an author removes, so a
-// per-field Clear would be redundant.
+/**
+ * In the block editor the block itself is the unit an author removes, so a
+ * per-field Clear would be redundant.
+ */
 export function offersClear(
   hasValue: boolean,
   required: boolean,
@@ -226,8 +228,10 @@ function ResolvedPreview({
   );
 }
 
-// Mounted only while open (the parent renders it conditionally), so closing
-// routes through `onOpenChange` → `onCancel`.
+/**
+ * Mounted only while open (the parent renders it conditionally), so closing
+ * routes through `onOpenChange` → `onCancel`.
+ */
 export function MediaPickerModal({
   accept,
   onSelect,

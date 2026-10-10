@@ -32,7 +32,7 @@ import { Input } from "@plumix/admin-ui/input";
 import { buildLocaleSwitchUrl, writeLocaleCookie } from "../-locale-param.js";
 import { langOnlySearchSchema } from "../-schemas.js";
 
-// An existing session would bind a different user to this browser.
+/** An existing session would bind a different user to this browser. */
 export const Route = createFileRoute("/_auth/accept-invite/$token")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {

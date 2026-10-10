@@ -35,7 +35,7 @@ interface FormIslandProps {
   readonly action: string;
   readonly tokenPath: string;
   readonly idBase: string;
-  // Signed by the server and posted back untouched.
+  /** Signed by the server and posted back untouched. */
   readonly bound: string | null;
 }
 

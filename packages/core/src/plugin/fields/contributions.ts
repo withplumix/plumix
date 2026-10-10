@@ -38,6 +38,35 @@ export interface SettingsContributions {}
 /**
  * Use this alias rather than a hand-written object: a misspelled property would
  * leave the contribution silently unmatched, reading its fields as absent.
+ *
+ * ```ts
+ * import { text } from "plumix/fields";
+ * import type { EntryMeta } from "plumix";
+ *
+ * // 1. Author the fields as a named const so both the declaration and
+ * //    the registration reference one source of truth.
+ * const articleFields = [text("subtitle"), text("heroCredit").required()];
+ *
+ * // 2. Declare the contribution — this is what crosses package
+ * //    boundaries so a theme in another package sees the meta shape.
+ * declare module "plumix" {
+ *   interface EntryMetaContributions {
+ *     article: EntryMeta<"post", typeof articleFields>;
+ *   }
+ * }
+ *
+ * // 3. Register the box; the call is typechecked against the declaration
+ * //    above (anti-drift), so the two can't diverge silently.
+ * ctx.registerEntryMetaBox("article", {
+ *   label: "Article",
+ *   entryTypes: ["post"],
+ *   fields: articleFields,
+ * });
+ *
+ * // 4. In the theme, a targeted template reads typed meta:
+ * //    `forEntryType("post").template(({ entry }) => entry.meta.subtitle)`
+ * //    — `subtitle` is `string | undefined`, a typo is a compile error.
+ * ```
  */
 export interface EntryMeta<
   EntryTypes extends EntryTypeName,

@@ -39,8 +39,10 @@ export const CODE_LANGUAGES: readonly CodeLanguage[] = [
   { id: "yaml", label: "YAML" },
 ];
 
-// An unlisted name falls through lowercased, so an unknown stored language is
-// preserved. Every value must be an id in CODE_LANGUAGES.
+/**
+ * An unlisted name falls through lowercased, so an unknown stored language is
+ * preserved. Every value must be an id in CODE_LANGUAGES.
+ */
 export const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   ts: "typescript",
   js: "javascript",

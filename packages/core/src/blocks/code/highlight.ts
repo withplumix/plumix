@@ -74,8 +74,10 @@ export function highlightCode(code: string, language: string): string | null {
     .value;
 }
 
-// Emitted alongside the highlighted markup so the styles reach both the editor
-// iframe and the public page with no separate stylesheet.
+/**
+ * Emitted alongside the highlighted markup so the styles reach both the editor
+ * iframe and the public page with no separate stylesheet.
+ */
 export const CODE_THEME_CSS = [
   ".hljs{color:var(--plumix-code-fg,#24292e)}",
   ".hljs-comment,.hljs-quote{color:var(--plumix-code-comment,#6a737d);font-style:italic}",

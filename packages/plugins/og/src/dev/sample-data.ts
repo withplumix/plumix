@@ -24,7 +24,7 @@ const SAMPLE_ID = 1;
 
 interface SampleTarget {
   readonly kind: TemplateData["kind"];
-  // Entry type, taxonomy, or registered archive-type or view name.
+  /** Entry type, taxonomy, or registered archive-type or view name. */
   readonly type: string;
   readonly slug: string;
   readonly year: number;

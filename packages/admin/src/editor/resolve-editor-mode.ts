@@ -40,7 +40,7 @@ interface ResolveEditorModeInput {
   readonly capabilities: ReadonlySet<string>;
 }
 
-// Must mirror the server's `entry.update` saveAs defaulting.
+/** Must mirror the server's `entry.update` saveAs defaulting. */
 export function resolveEditorMode({
   entryType,
   currentStatus,

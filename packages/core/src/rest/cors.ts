@@ -17,8 +17,10 @@ export function resolveAllowedOrigin(
   return null;
 }
 
-// An allowlist must `Vary: origin` even on a miss, or a shared cache could
-// serve a no-CORS entry to an allowed origin.
+/**
+ * An allowlist must `Vary: origin` even on a miss, or a shared cache could
+ * serve a no-CORS entry to an allowed origin.
+ */
 export function isOriginDependent(cors: ApiCorsConfig | undefined): boolean {
   return Array.isArray(cors?.origins);
 }
@@ -46,8 +48,10 @@ export function withCors(
   });
 }
 
-// Preflight carries no credentials, so it gates on origins alone; the
-// token-authed response stays CORS-free, keeping tokens server-to-server.
+/**
+ * Preflight carries no credentials, so it gates on origins alone; the
+ * token-authed response stays CORS-free, keeping tokens server-to-server.
+ */
 export function preflightResponse(
   request: Request,
   allowOrigin: string | null,

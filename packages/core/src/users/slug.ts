@@ -4,8 +4,10 @@ import type { Db } from "../context/app-context.js";
 import { users } from "../db/schema/users.js";
 import { slugify } from "../slugify.js";
 
-// Concurrent creates can pick the same derived slug and lose the unique race;
-// each retry sees the winner's row and advances the suffix.
+/**
+ * Concurrent creates can pick the same derived slug and lose the unique race;
+ * each retry sees the winner's row and advances the suffix.
+ */
 export const MAX_SLUG_ATTEMPTS = 5;
 
 /**

@@ -4,9 +4,11 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { credentialsDeleteInputSchema } from "./schemas.js";
 
-// Refuses to delete the last credential, so a passkey-only user can't lock
-// themselves out. The count check sits in the DELETE's WHERE so concurrent
-// deletes can't both pass.
+/**
+ * Refuses to delete the last credential, so a passkey-only user can't lock
+ * themselves out. The count check sits in the DELETE's WHERE so concurrent
+ * deletes can't both pass.
+ */
 export const del = base
   .use(authenticated)
   .input(credentialsDeleteInputSchema)

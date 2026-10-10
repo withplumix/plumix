@@ -103,14 +103,18 @@ function unmatchedFallback(url: URL): RouteMatch | null {
   };
 }
 
-// Extensions that only name static assets; slugs never contain dots, so no
-// entry or term URL collides. Content-plausible ones (`.txt`, `.xml`, `.json`,
-// `.html`) stay routable for plugins.
+/**
+ * Extensions that only name static assets; slugs never contain dots, so no
+ * entry or term URL collides. Content-plausible ones (`.txt`, `.xml`, `.json`,
+ * `.html`) stay routable for plugins.
+ */
 export const STATIC_ASSET_EXT =
   /\.(?:ico|css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|wasm)$/i;
 
-// Cacheable: the extension makes the path permanently unroutable, and the short
-// TTL only bounds a deploy adding the asset.
+/**
+ * Cacheable: the extension makes the path permanently unroutable, and the short
+ * TTL only bounds a deploy adding the asset.
+ */
 export function cacheableAssetNotFound(hint: string): Response {
   const response = notFound(hint);
   response.headers.set("cache-control", "public, max-age=300");

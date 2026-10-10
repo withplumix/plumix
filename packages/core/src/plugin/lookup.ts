@@ -36,11 +36,13 @@ export interface LookupHydrateOptions<TScope = unknown> {
  * Hydrated shape per reference kind, keyed by adapter `kind`. Plugins add their
  * kinds by declaration merging.
  *
- * ```ts declare module "plumix" {
+ * ```ts
+ * declare module "plumix" {
  *   interface ReferenceHydrationShapes {
  *     media: MediaReference;
  *   }
- * } ```
+ * }
+ * ```
  */
 export interface ReferenceHydrationShapes {
   readonly entry: EntryReferenceSummary;
@@ -117,8 +119,10 @@ export interface LookupAdapter<TScope = unknown> {
   image?(payload: HydratedReference): ResolvedImage | null;
 }
 
-// Extends `LookupAdapterOptions` so plugin fields added by declaration merging
-// survive into the manifest.
+/**
+ * Extends `LookupAdapterOptions` so plugin fields added by declaration merging
+ * survive into the manifest.
+ */
 export interface RegisteredLookupAdapter<
   TScope = unknown,
 > extends LookupAdapterOptions<TScope> {

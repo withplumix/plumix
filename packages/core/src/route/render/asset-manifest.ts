@@ -17,8 +17,10 @@ export type AssetManifest = Readonly<Record<string, AssetManifestEntry>>;
 // vs `build` (production).
 export type ViteCommand = "serve" | "build";
 
-// No-op in serve: a stale build manifest points at hashed URLs. Order isn't
-// author-controllable; themes needing a cascade use `document.link[]`.
+/**
+ * No-op in serve: a stale build manifest points at hashed URLs. Order isn't
+ * author-controllable; themes needing a cascade use `document.link[]`.
+ */
 export function bundledCssTags(
   manifest: AssetManifest,
   command: ViteCommand,
@@ -49,9 +51,11 @@ export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
   return `<script type="module" src="${src}"></script>`;
 }
 
-// The client entry injects `<style>` only after it runs, so a render-blocking
-// link avoids a dev FOUC. The script still owns CSS HMR: its `<style>` lands
-// later and wins.
+/**
+ * The client entry injects `<style>` only after it runs, so a render-blocking
+ * link avoids a dev FOUC. The script still owns CSS HMR: its `<style>` lands
+ * later and wins.
+ */
 export function devThemeCssLinks(
   themeCss: readonly string[],
   command: ViteCommand,
@@ -80,8 +84,10 @@ function toDevCssHref(path: string): string | null {
   return "/" + path;
 }
 
-// Falls back to the dev source path on a cold build where the entry isn't in
-// the manifest yet.
+/**
+ * Falls back to the dev source path on a cold build where the entry isn't in
+ * the manifest yet.
+ */
 export function resolveEntryUrl(
   manifest: AssetManifest,
   command: ViteCommand,

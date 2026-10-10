@@ -8,9 +8,9 @@ import { AppBootError } from "../runtime/contract/errors.js";
 import { CORE_MAILS } from "./core-mails.js";
 
 interface DeclaredMail {
-  // `core`, or the id of the plugin that declared it.
+  /** `core`, or the id of the plugin that declared it. */
   readonly owner: string;
-  // The site's and the theme's overrides are already applied.
+  /** The site's and the theme's overrides are already applied. */
   readonly mail: AnyMailDefinition;
 }
 

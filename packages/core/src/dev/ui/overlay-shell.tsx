@@ -75,8 +75,10 @@ export function DevOverlayShell({
   );
 }
 
-// The palette lives on `:host` (custom properties are exempt from `all:
-// initial`) so the island dialog's badge inherits it shadow-wide.
+/**
+ * The palette lives on `:host` (custom properties are exempt from `all:
+ * initial`) so the island dialog's badge inherits it shadow-wide.
+ */
 export const DEV_OVERLAY_CSS = `
 :host {
   all: initial;

@@ -196,7 +196,7 @@ interface ResolvedSlots {
   readonly i18n: ResolvedI18n;
   readonly redirects: readonly RedirectRule[];
   readonly routes: FrameworkRoutes;
-  // `""` for a root deployment.
+  /** `""` for a root deployment. */
   readonly basePath: string;
 }
 

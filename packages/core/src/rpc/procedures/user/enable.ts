@@ -7,7 +7,7 @@ import { userEnableInputSchema } from "./schemas.js";
 
 const CAPABILITY = "user:edit";
 
-// No last-admin guard: re-enabling can never lock admins out.
+/** No last-admin guard: re-enabling can never lock admins out. */
 export const enable = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

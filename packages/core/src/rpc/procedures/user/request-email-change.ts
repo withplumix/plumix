@@ -11,9 +11,11 @@ import { userRequestEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// The new email commits only when the link sent to it is clicked. Missing
-// mailer config is CONFLICT `mailer_not_configured`; 503 belongs to the route
-// layer.
+/**
+ * The new email commits only when the link sent to it is clicked. Missing
+ * mailer config is CONFLICT `mailer_not_configured`; 503 belongs to the route
+ * layer.
+ */
 export const requestEmailChangeProc = base
   .use(authenticated)
   .input(userRequestEmailChangeInputSchema)

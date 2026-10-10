@@ -75,7 +75,7 @@ interface DocumentParentOption {
 }
 
 interface DocumentSettingsPanelProps {
-  // Each optional section is present only when the entry type supports it.
+  /** Each optional section is present only when the entry type supports it. */
   readonly title?: {
     readonly value: string;
     readonly onChange: (next: string) => void;
@@ -112,12 +112,14 @@ interface DocumentSettingsPanelProps {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
     readonly initialMeta: ResolvedMeta;
     readonly onMetaChange: (next: ResolvedMeta) => void;
-    // Cleared when the next save succeeds.
+    /** Cleared when the next save succeeds. */
     readonly fieldErrors?: readonly MetaFieldServerError[] | null;
   };
 }
 
-// Owns the <Form> MetaBoxField expects and forwards every change to autosave.
+/**
+ * Owns the <Form> MetaBoxField expects and forwards every change to autosave.
+ */
 export function DocumentMetaBoxes({
   boxes,
   initialMeta,

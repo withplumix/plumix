@@ -16,8 +16,10 @@ export type DocumentMeta = Omit<
   "children" | "dangerouslySetInnerHTML"
 >;
 
-// Plain strings: JSX would allow `ReactNode`/`TrustedHTML`, which can't be
-// safely stringified into HTML.
+/**
+ * Plain strings: JSX would allow `ReactNode`/`TrustedHTML`, which can't be
+ * safely stringified into HTML.
+ */
 export type DocumentScript = Omit<
   DocumentTag<"script">,
   "children" | "dangerouslySetInnerHTML"

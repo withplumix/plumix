@@ -1,9 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Exists only so `lingui extract` sees core's nav descriptor ids; keep them in
-// lockstep with `CORE_NAV_GROUPS` / `CORE_NAV_ITEMS`.
-
+/**
+ * Exists only so `lingui extract` sees core's nav descriptor ids; keep them in
+ * lockstep with `CORE_NAV_GROUPS` / `CORE_NAV_ITEMS`.
+ */
 export const CORE_NAV_DESCRIPTORS = {
   groupOverview: defineMessage({
     id: "core.adminNav.overview",

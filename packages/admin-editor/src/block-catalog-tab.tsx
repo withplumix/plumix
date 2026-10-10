@@ -26,10 +26,10 @@ import { useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
   readonly patterns?: readonly InserterPattern[];
-  // Lets a host popover close itself after a click-insert.
+  /** Lets a host popover close itself after a click-insert. */
   readonly onInsert?: () => void;
   readonly allowed?: readonly string[];
-  // Omitted appends at the top level.
+  /** Omitted appends at the top level. */
   readonly target?: { readonly parentId: string; readonly slotKey: string };
   readonly parentName?: string;
   readonly entryType?: string;

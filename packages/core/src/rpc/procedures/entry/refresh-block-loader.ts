@@ -12,9 +12,11 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRefreshBlockLoaderInputSchema } from "./schemas.js";
 
-// Loaders are server functions, so the editor's scoped refresh round-trips
-// here. Isolated to the target block's subtree so siblings' loaders don't
-// re-run.
+/**
+ * Loaders are server functions, so the editor's scoped refresh round-trips
+ * here. Isolated to the target block's subtree so siblings' loaders don't
+ * re-run.
+ */
 export const refreshBlockLoader = base
   .use(authenticated)
   .input(entryRefreshBlockLoaderInputSchema)

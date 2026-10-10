@@ -38,8 +38,10 @@ export function enqueuePurgeTags(
   for (const tag of tags) set.add(normalizeTag(tag));
 }
 
-// Deferred and logged on failure: a publish never fails on a purge hiccup;
-// TTL/SWR is the backstop.
+/**
+ * Deferred and logged on failure: a publish never fails on a purge hiccup;
+ * TTL/SWR is the backstop.
+ */
 export function flushPurgeTags(ctx: AppContext): void {
   const set = pending.get(ctx.memo);
   if (set === undefined) return;

@@ -7,9 +7,10 @@ import type {
 } from "./client-error-ring.js";
 import { createClientErrorRing } from "./client-error-ring.js";
 
-// Gated on `process.env.PLUMIX_DEV` at the call site, so none of this ships to
-// production.
-
+/**
+ * Gated on `process.env.PLUMIX_DEV` at the call site, so none of this ships to
+ * production.
+ */
 export interface TerminalForwardDeps {
   /** Map a raw browser stack to original-source frames (the dev sourcemaps). */
   readonly resolveStack: (stack: string) => Promise<DevErrorFrame[]>;

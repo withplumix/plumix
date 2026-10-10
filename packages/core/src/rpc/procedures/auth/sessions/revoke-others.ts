@@ -6,8 +6,10 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
 
-// External authenticators mint no session rows; the IdP owns the session,
-// so this returns `{ revoked: 0 }` rather than erroring.
+/**
+ * External authenticators mint no session rows; the IdP owns the session,
+ * so this returns `{ revoked: 0 }` rather than erroring.
+ */
 export const revokeOthers = base
   .use(authenticated)
   .input(sessionsRevokeOthersInputSchema)

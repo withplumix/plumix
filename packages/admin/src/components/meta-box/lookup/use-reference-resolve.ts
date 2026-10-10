@@ -6,14 +6,16 @@ import type { JsonObject } from "@plumix/core";
 
 import type { LookupItem } from "./types.js";
 
-// `pending` keeps a picker from flashing "missing" before the first resolve
-// settles.
+/**
+ * `pending` keeps a picker from flashing "missing" before the first resolve
+ * settles.
+ */
 export type ResolvedReference =
   | { readonly status: "found"; readonly item: LookupItem }
   | { readonly status: "pending" }
   | { readonly status: "orphan" };
 
-// One batched call, skipping ids `initialSelected` already covers.
+/** One batched call, skipping ids `initialSelected` already covers. */
 export function useReferenceResolve({
   kind,
   scope,

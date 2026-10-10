@@ -7,21 +7,21 @@ import { clampZoom, zoomToCursor } from "./canvas-view.js";
 // editors.
 interface CameraState {
   readonly zoom: number;
-  // Host/container px of the device frame's top-left.
+  /** Host/container px of the device frame's top-left. */
   readonly panX: number;
   readonly panY: number;
   readonly viewportW: number;
   readonly viewportH: number;
-  // A manual pan/zoom clears it until a device switch or `enableFit`.
+  /** A manual pan/zoom clears it until a device switch or `enableFit`. */
   readonly fit: boolean;
 }
 
 interface CameraActions {
-  // Clears fit mode unless `{ fit: true }` (the canvas-driven re-fit).
+  /** Clears fit mode unless `{ fit: true }` (the canvas-driven re-fit). */
   applyView: (view: View, options?: { readonly fit?: boolean }) => void;
   setViewport: (width: number, height: number) => void;
   zoomToCenter: (zoom: number) => void;
-  // The canvas geometry effect then computes the fit view.
+  /** The canvas geometry effect then computes the fit view. */
   enableFit: () => void;
 }
 

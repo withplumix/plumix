@@ -64,8 +64,10 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // A Cloudflare D1 binding exists only inside the Worker, so a Node process
-  // has no database.
+  /**
+   * A Cloudflare D1 binding exists only inside the Worker, so a Node process
+   * has no database.
+   */
   static metaDatabaseUnreachable(ctx: {
     detail: string;
     cause: unknown;
@@ -127,7 +129,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  // An undeclared schedule would otherwise exit green having done nothing.
+  /** An undeclared schedule would otherwise exit green having done nothing. */
   static cronRunUnknownSchedule(ctx: {
     expression: string;
     declared: readonly string[];

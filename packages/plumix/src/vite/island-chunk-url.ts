@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
-// Dev serves the original module through Vite's graph. A build falls back to
-// `/@fs<id>` when the manifest entry is missing, the cold-build case.
+/**
+ * Dev serves the original module through Vite's graph. A build falls back to
+ * `/@fs<id>` when the manifest entry is missing, the cold-build case.
+ */
 export function resolveIslandChunkUrl(
   id: string,
   command: "serve" | "build",

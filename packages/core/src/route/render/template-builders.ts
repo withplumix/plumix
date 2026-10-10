@@ -184,7 +184,7 @@ interface EntryTypeBuilder<K extends EntryTypeName>
   extends
     EntrySelector<K>,
     EntryTypeTargets<K, EntrySelector<K>, EntryArchiveSelector<K>> {
-  // Matched from stored entry meta.
+  /** Matched from stored entry meta. */
   named(id: string, label: string): EntrySelector<K>;
 }
 
@@ -214,7 +214,7 @@ export function forEntryType<K extends EntryTypeName>(
 
 interface TermTaxonomyBuilder<K extends TermTaxonomyName>
   extends TaxonomySelector<K>, TermTaxonomyTargets<K, TaxonomySelector<K>> {
-  // Matched from stored term meta.
+  /** Matched from stored term meta. */
   named(id: string, label: string): TaxonomySelector<K>;
 }
 

@@ -86,12 +86,16 @@ export function findUseClientIslands(
   return out;
 }
 
-// `transform` short-circuits on this query so the shim's import of the original
-// source doesn't re-trigger it.
+/**
+ * `transform` short-circuits on this query so the shim's import of the original
+ * source doesn't re-trigger it.
+ */
 export const ORIG_QUERY = "?plumix-orig";
 
-// Islands in core's own `blocks/` can't import `plumix/blocks` (a cycle, and
-// unresolvable under pnpm), so this resolves it from the project root instead.
+/**
+ * Islands in core's own `blocks/` can't import `plumix/blocks` (a cycle, and
+ * unresolvable under pnpm), so this resolves it from the project root instead.
+ */
 export const SERIALIZE_VIRTUAL_ID = "virtual:plumix/island-serialize";
 
 interface TransformUseClientOptions {

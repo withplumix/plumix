@@ -1,7 +1,9 @@
 interface Debouncer<Args extends readonly unknown[]> {
   readonly call: (...args: Args) => void;
-  // Resolves once pending work settles, so callers can await it before
-  // navigating.
+  /**
+   * Resolves once pending work settles, so callers can await it before
+   * navigating.
+   */
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
   readonly pending: () => boolean;

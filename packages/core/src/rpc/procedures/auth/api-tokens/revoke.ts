@@ -3,8 +3,10 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensRevokeInputSchema } from "./schemas.js";
 
-// Pinning both `id` and `userId` makes cross-user and already-revoked
-// attempts an indistinguishable NOT_FOUND, so there is no oracle.
+/**
+ * Pinning both `id` and `userId` makes cross-user and already-revoked
+ * attempts an indistinguishable NOT_FOUND, so there is no oracle.
+ */
 export const revoke = base
   .use(authenticated)
   .input(apiTokensRevokeInputSchema)

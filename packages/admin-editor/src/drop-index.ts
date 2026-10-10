@@ -19,7 +19,7 @@ export function dropIndexFromPointer(
 
 interface DropPlacement {
   readonly index: number;
-  // Null when the canvas has no blocks.
+  /** Null when the canvas has no blocks. */
   readonly indicatorY: number | null;
 }
 

@@ -9,7 +9,7 @@ import { useLabel } from "./use-label.js";
 interface NullableRegistry<TCode extends string> {
   readonly descriptor: (code: string | undefined) => MessageDescriptor | null;
   readonly useMessage: () => (code: string | undefined) => string | null;
-  // Test-only.
+  /** Test-only. */
   readonly _messages: Record<TCode, MessageDescriptor>;
 }
 

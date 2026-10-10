@@ -1,5 +1,5 @@
 interface OAuthProviderSummary {
-  // Map key in `auth.oauth.providers`; the URL path segment.
+  /** Map key in `auth.oauth.providers`; the URL path segment. */
   readonly key: string;
   readonly label: string;
 }

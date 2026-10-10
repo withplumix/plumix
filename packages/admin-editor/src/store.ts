@@ -62,8 +62,10 @@ type TreeHistory = History<readonly BlockNode[]>;
 
 export type EditorDevice = "desktop" | "tablet" | "mobile";
 
-// Desktop's bucket has no @media, so its canvas width is a fixed default;
-// tablet/mobile track the theme breakpoints so the preview matches what ships.
+/**
+ * Desktop's bucket has no @media, so its canvas width is a fixed default;
+ * tablet/mobile track the theme breakpoints so the preview matches what ships.
+ */
 export const DESKTOP_CANVAS_WIDTH = 1280;
 
 /** The canvas width for a device: desktop is fixed; tablet/mobile use the
@@ -128,9 +130,9 @@ export interface EditorState {
 
 interface EditorActions {
   insertBlock: (node: BlockNode, index: number) => void;
-  // One undo step; selects the first. No-op for an empty list.
+  /** One undo step; selects the first. No-op for an empty list. */
   insertBlocks: (nodes: readonly BlockNode[], index: number) => void;
-  // No-op when the slot is absent or the block isn't allowed.
+  /** No-op when the slot is absent or the block isn't allowed. */
   insertBlockInto: (
     node: BlockNode,
     target: MoveTarget,
@@ -141,47 +143,51 @@ interface EditorActions {
     target: MoveTarget,
     allowed?: readonly string[],
   ) => void;
-  // Table edits are one undo step each, and no-ops when the id isn't a table
-  // or the edit would leave no rows/columns.
+  /**
+   * Table edits are one undo step each, and no-ops when the id isn't a table
+   * or the edit would leave no rows/columns.
+   */
   addTableColumn: (tableId: string) => void;
   addTableRow: (tableId: string) => void;
   removeTableColumn: (tableId: string) => void;
   removeTableRow: (tableId: string) => void;
   updateBlockAttrs: (id: string, patch: JsonObject) => void;
-  // `null` clears; emptied buckets and style are pruned.
+  /** `null` clears; emptied buckets and style are pruned. */
   updateBlockStyle: (
     id: string,
     bucket: StyleBucket,
     property: string,
     value: string | null,
   ) => void;
-  // Stored in `hidden`, not the style slot, so hiding never overwrites a
-  // bucket's layout `display`.
+  /**
+   * Stored in `hidden`, not the style slot, so hiding never overwrites a
+   * bucket's layout `display`.
+   */
   updateBlockHidden: (id: string, bucket: StyleBucket, hidden: boolean) => void;
-  // No-op when the source is missing or the target name is taken.
+  /** No-op when the source is missing or the target name is taken. */
   renameBlockStyleProperty: (
     id: string,
     bucket: StyleBucket,
     from: string,
     to: string,
   ) => void;
-  // Stored unchecked; allowlisted at render.
+  /** Stored unchecked; allowlisted at render. */
   setBlockTagName: (id: string, tagName: string) => void;
   setBlockClassName: (id: string, className: string) => void;
-  // Stored unchecked; allowlisted at render.
+  /** Stored unchecked; allowlisted at render. */
   updateBlockHtmlAttr: (id: string, key: string, value: string | null) => void;
-  // No-op when the source is missing or the target name is taken.
+  /** No-op when the source is missing or the target name is taken. */
   renameBlockHtmlAttr: (id: string, from: string, to: string) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
   removeSelected: () => void;
   duplicateSelected: () => void;
-  // Clones get fresh ids.
+  /** Clones get fresh ids. */
   pasteBlocks: (nodes: readonly BlockNode[]) => void;
-  // No-op when the selection is empty or spans different parents.
+  /** No-op when the selection is empty or spans different parents. */
   groupSelected: () => void;
   ungroupSelected: () => void;
-  // Selecting alone leaves an off-screen block off-screen.
+  /** Selecting alone leaves an off-screen block off-screen. */
   revealBlock: (id: string) => void;
   selectParent: () => void;
   moveSelectedBy: (delta: number) => void;

@@ -81,7 +81,7 @@ interface VerifiedRegistration {
   readonly publicKey: Uint8Array;
   readonly signatureCounter: number;
   readonly transports: readonly CredentialTransport[];
-  // Null for discoverable-credential flows.
+  /** Null for discoverable-credential flows. */
   readonly userId: number | null;
   readonly ceremony: RegistrationCeremony | null;
 }

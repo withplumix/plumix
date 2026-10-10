@@ -44,13 +44,15 @@ import { useCanvasKeys } from "./use-canvas-keys.js";
 import { usePanZoom } from "./use-pan-zoom.js";
 
 interface CanvasFrameProps {
-  // The entry's real route with `?plumix.edit`.
+  /** The entry's real route with `?plumix.edit`. */
   readonly previewUrl: string;
   readonly origin: string;
   readonly entryType?: string;
   readonly readOnly?: boolean;
-  // Each bump reloads the iframe: entry fields live in the server-rendered
-  // shell around the block island, which the bridge doesn't push.
+  /**
+   * Each bump reloads the iframe: entry fields live in the server-rendered
+   * shell around the block island, which the bridge doesn't push.
+   */
   readonly previewRefreshToken?: number;
 }
 

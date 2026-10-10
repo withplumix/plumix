@@ -28,8 +28,10 @@ import { VitePluginError } from "./errors.js";
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
 // — single React instance across host + plugin.
 
-// Must be absolute: index.html is served for every deep link, so a relative
-// chunk `src` resolves against the current URL and 404s.
+/**
+ * Must be absolute: index.html is served for every deep link, so a relative
+ * chunk `src` resolves against the current URL and 404s.
+ */
 export const ADMIN_URL_PREFIX = "/_plumix/admin";
 
 interface AssembledBundle {

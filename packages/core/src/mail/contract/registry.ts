@@ -3,8 +3,10 @@ import type { MessageDescriptor } from "@lingui/core";
 import type { MessageValues } from "../../blocks/index.js";
 import type { JsonObject } from "../../json.js";
 
-// Each declared mail augments this, keyed by name, with its props; only
-// `defineMail` makes the mail exist at runtime.
+/**
+ * Each declared mail augments this, keyed by name, with its props; only
+ * `defineMail` makes the mail exist at runtime.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MailRegistry {}
 

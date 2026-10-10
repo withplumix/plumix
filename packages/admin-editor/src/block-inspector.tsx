@@ -15,7 +15,7 @@ import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
 interface BlockInspectorProps {
-  // When set, a loader-backed block gets a "Refresh data" control.
+  /** When set, a loader-backed block gets a "Refresh data" control. */
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;

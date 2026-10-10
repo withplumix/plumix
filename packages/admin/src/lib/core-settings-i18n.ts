@@ -1,7 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// Exists only so `lingui extract` sees core's site-settings ids.
+/** Exists only so `lingui extract` sees core's site-settings ids. */
 export const CORE_SETTINGS_DESCRIPTORS = {
   groupLabel: defineMessage({
     id: "core.settings.site.label",

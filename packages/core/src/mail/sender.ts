@@ -19,9 +19,9 @@ interface CreateMailSenderInput {
   readonly catalogs: MailCatalogs;
   readonly mailer: Mailer | undefined;
   readonly db: Db;
-  // A recipient's stored locale counts only if it is one of these.
+  /** A recipient's stored locale counts only if it is one of these. */
   readonly i18n: LocaleRegistry;
-  // The request's resolved locale, the site default when it has none.
+  /** The request's resolved locale, the site default when it has none. */
   readonly locale: string;
   readonly siteName: string;
   readonly baseUrl: string;

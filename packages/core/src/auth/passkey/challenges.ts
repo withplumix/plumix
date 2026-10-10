@@ -23,7 +23,9 @@ interface IssuedChallenge {
 
 interface ChallengeRecord {
   readonly userId: number | null;
-  // Null for authentication challenges, which no registration route accepts.
+  /**
+   * Null for authentication challenges, which no registration route accepts.
+   */
   readonly ceremony: RegistrationCeremony | null;
   readonly expiresAt: Date;
 }

@@ -1,7 +1,9 @@
 import type { UserRole } from "../../db/schema/users.js";
 
-// `entry:`/`term:` prefixes keep an entry type and a same-named taxonomy apart.
-// `promote` is split from `edit`: role escalation outranks a profile change.
+/**
+ * `entry:`/`term:` prefixes keep an entry type and a same-named taxonomy apart.
+ * `promote` is split from `edit`: role escalation outranks a profile change.
+ */
 export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
   Object.freeze({
     "entry:post:read": "subscriber",

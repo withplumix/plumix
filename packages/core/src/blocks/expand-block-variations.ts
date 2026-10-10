@@ -61,8 +61,10 @@ export function expandBlockVariations(
   return out;
 }
 
-// Typed against the shape, not the entry type, so the block-scope picker can
-// resolve previews straight from a BlockVariation.
+/**
+ * Typed against the shape, not the entry type, so the block-scope picker can
+ * resolve previews straight from a BlockVariation.
+ */
 export interface VariationPreviewSource {
   readonly attrs?: JsonObject;
   readonly innerBlocks?: readonly BlockNode[];

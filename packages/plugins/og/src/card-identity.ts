@@ -79,11 +79,11 @@ interface CardDigestParts {
   readonly id: string;
   readonly sourceHash: string;
   readonly tokens: readonly string[];
-  // Paths, not bytes: a swapped font file lands on a new path.
+  /** Paths, not bytes: a swapped font file lands on a new path. */
   readonly fonts: readonly string[];
   readonly width: number;
   readonly height: number;
-  // Stands in for the output format, which it names one-to-one.
+  /** Stands in for the output format, which it names one-to-one. */
   readonly extension: string;
 }
 

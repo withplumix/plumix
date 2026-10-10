@@ -78,8 +78,10 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Expects an ancestor `<Form>` provider; reading `control` from context keeps
-// this agnostic of the caller's TFieldValues generic.
+/**
+ * Expects an ancestor `<Form>` provider; reading `control` from context keeps
+ * this agnostic of the caller's TFieldValues generic.
+ */
 export function MetaBoxField({
   field,
   name,

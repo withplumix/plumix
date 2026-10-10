@@ -542,8 +542,10 @@ export interface ToggleMetaBoxField extends MetaBoxFieldBase {
 }
 
 /** `url` is an internal path (starting `/`) or an external absolute URL. */
-// A `type`: interfaces lack the implicit index signature, so can't assign to
-// `JsonObject`.
+/**
+ * A `type`: interfaces lack the implicit index signature, so can't assign to
+ * `JsonObject`.
+ */
 export type LinkValue = Readonly<{
   url: string;
   label?: string;

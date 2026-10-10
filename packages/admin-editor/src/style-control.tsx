@@ -27,10 +27,10 @@ const NONE_VALUE = "__none__";
 interface StyleControlProps {
   readonly label: string;
   readonly property: string;
-  // Omit for a custom-value-only control.
+  /** Omit for a custom-value-only control. */
   readonly category?: TokenCategory;
   readonly value: string | undefined;
-  // The wider device's value this one renders while unset.
+  /** The wider device's value this one renders while unset. */
   readonly inherited?: string;
   readonly onChange: (value: string | null) => void;
 }

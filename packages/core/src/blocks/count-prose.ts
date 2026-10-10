@@ -22,8 +22,10 @@ function countSegment(text: string): ProseCount {
   };
 }
 
-// Sums per segment rather than joining, which would add a phantom character
-// per block boundary.
+/**
+ * Sums per segment rather than joining, which would add a phantom character
+ * per block boundary.
+ */
 export function countProse(
   blocks: readonly BlockNode[],
   roster: BlockTextRoster,

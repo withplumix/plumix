@@ -58,8 +58,10 @@ declare module "plumix" {
 }
 
 /** Only published media surface: a draft's bytes are not verified yet. */
-// `satisfies` keeps `hydrate`'s concrete `MediaReference` return type
-// instead of widening it to `HydratedReference`.
+/**
+ * `satisfies` keeps `hydrate`'s concrete `MediaReference` return type
+ * instead of widening it to `HydratedReference`.
+ */
 export const mediaLookupAdapter = {
   async list(ctx, options) {
     const accept = options.scope?.accept;

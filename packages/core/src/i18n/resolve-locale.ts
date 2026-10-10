@@ -17,8 +17,10 @@ interface ResolveLocaleArgs<TUser extends LocaleUser> {
   readonly i18n: ResolvedI18nFor<TUser>;
 }
 
-// The override fires on admin SSR too; operators who want admin to ignore it
-// narrow it on the request path.
+/**
+ * The override fires on admin SSR too; operators who want admin to ignore it
+ * narrow it on the request path.
+ */
 export function resolveLocale<TUser extends LocaleUser>({
   request,
   user,

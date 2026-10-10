@@ -4,7 +4,9 @@ import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import { users } from "./users.js";
 
-// Stores only the SHA-256 hash; the secret is shown once and never recoverable.
+/**
+ * Stores only the SHA-256 hash; the secret is shown once and never recoverable.
+ */
 export const apiTokens = sqliteTable(
   "api_tokens",
   (t) => ({

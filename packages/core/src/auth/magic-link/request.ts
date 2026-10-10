@@ -30,8 +30,10 @@ interface RequestMagicLinkInput {
   readonly mail: MailSender;
   readonly ttlSeconds?: number;
   readonly logger?: Pick<Logger, "warn">;
-  // Must already have passed `isSafeRedirect`; the verify route re-validates
-  // it.
+  /**
+   * Must already have passed `isSafeRedirect`; the verify route re-validates
+   * it.
+   */
   readonly redirectTo?: string;
   readonly bootstrapAllowed?: boolean;
   readonly selfSignupOpen?: boolean;

@@ -54,7 +54,9 @@ interface ControlSpec {
   readonly property: string;
   readonly label: string;
   readonly category?: TokenCategory;
-  // When set, the control is a plain keyword picker with no token/custom modes.
+  /**
+   * When set, the control is a plain keyword picker with no token/custom modes.
+   */
   readonly options?: readonly string[];
   readonly fullWidth?: boolean;
 }
@@ -353,7 +355,7 @@ function GenericSection({
 }: {
   readonly section: SectionDef;
   readonly valueOf: StyleGetter;
-  // The value a wider device sets, which an unset control renders.
+  /** The value a wider device sets, which an unset control renders. */
   readonly inheritedOf: StyleGetter;
   readonly setter: StyleSetter;
 }): ReactElement {

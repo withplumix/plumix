@@ -1,8 +1,9 @@
 import { formats } from "@lingui/core";
 
-// Lingui ships no relative-time formatter. The others are re-exported under
-// narrowed signatures to keep Lingui-internal types off the public surface.
-
+/**
+ * Lingui ships no relative-time formatter. The others are re-exported under
+ * narrowed signatures to keep Lingui-internal types off the public surface.
+ */
 export const formatDate: (
   locale: string,
   value: Date | string | number,

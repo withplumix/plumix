@@ -55,7 +55,7 @@ interface DevErrorRequestInfo {
 // Both unset when the error came before or instead of resolution: a 404, a
 // boot failure, or a theme that threw before a node matched.
 interface DevErrorRoute {
-  // e.g. `entry #12` or `archive: post`.
+  /** e.g. `entry #12` or `archive: post`. */
   readonly entity?: string;
   readonly template?: string;
 }

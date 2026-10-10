@@ -14,7 +14,9 @@ const OPT_OUT = "no-typecheck";
 
 interface Sample {
   readonly file: string;
-  // 1-based; opted-out blocks are counted so a sample's number does not shift.
+  /**
+   * 1-based; opted-out blocks are counted so a sample's number does not shift.
+   */
   readonly ordinal: number;
   readonly jsx: boolean;
   readonly code: string;

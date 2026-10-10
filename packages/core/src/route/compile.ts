@@ -75,8 +75,10 @@ export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${F
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
-  // Set on auto rules, whose URLs core emits as permalinks: raised when a
-  // framework rule answers them first.
+  /**
+   * Set on auto rules, whose URLs core emits as permalinks: raised when a
+   * framework rule answers them first.
+   */
   readonly onFrameworkCapture?: (frameworkPattern: string) => RouteCompileError;
 }
 

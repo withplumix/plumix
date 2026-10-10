@@ -8,10 +8,10 @@ import {
   META_FIELD_KEY_RE,
 } from "./meta-field-key.js";
 
-// Rejected at registration so a plugin can never shadow a future core key.
+/** Rejected at registration so a plugin can never shadow a future core key. */
 export const META_RESERVED_KEY_PREFIX = "__plumix_";
 
-// Bounds the admin payload. Matches the RPC meta/upsert input-schema cap.
+/** Bounds the admin payload. Matches the RPC meta/upsert input-schema cap. */
 export const MAX_FIELDS_PER_META_BOX = 200;
 
 export function assertMetaBoxFields(

@@ -99,7 +99,7 @@ export async function fireEntryDeleted(
   await ctx.hooks.doAction("entry:deleted", entry, ctx);
 }
 
-// Keyed on the live entry's type, not the autosave row's `type='autosave'`.
+/** Keyed on the live entry's type, not the autosave row's `type='autosave'`. */
 export async function fireEntryAutosaveSaved(
   ctx: AppContext,
   autosave: Entry,
@@ -128,8 +128,10 @@ export async function fireEntryAutosaveDiscarded(
   await ctx.hooks.doAction("entry:autosave_discarded", live, authorId, ctx);
 }
 
-// `liveType` is the public type even when the snapshot landed on an
-// autosave row, so subscribers fire under the same namespace.
+/**
+ * `liveType` is the public type even when the snapshot landed on an
+ * autosave row, so subscribers fire under the same namespace.
+ */
 export async function fireEntryRevisionRestored(
   ctx: AppContext,
   revision: Entry,

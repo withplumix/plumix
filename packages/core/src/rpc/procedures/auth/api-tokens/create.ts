@@ -5,9 +5,11 @@ import { apiTokensCreateInputSchema } from "./schemas.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// The raw secret is returned exactly once; the DB stores only its hash and
-// prefix. No capability beyond `authenticated`: tokens inherit the user's
-// role at request time.
+/**
+ * The raw secret is returned exactly once; the DB stores only its hash and
+ * prefix. No capability beyond `authenticated`: tokens inherit the user's
+ * role at request time.
+ */
 export const create = base
   .use(authenticated)
   .input(apiTokensCreateInputSchema)

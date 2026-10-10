@@ -11,7 +11,7 @@ import type { MatchedRow } from "./query-row.js";
 import { searchableEntryRows } from "./query-scope.js";
 
 interface DegradedArgs {
-  // The visitor's words, not a match expression.
+  /** The visitor's words, not a match expression. */
   readonly query: string;
   readonly types: readonly string[];
   readonly limit: number;

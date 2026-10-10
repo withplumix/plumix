@@ -91,8 +91,10 @@ const LIBRARY_GROUP_LABEL: Label = {
 
 interface MediaPluginOptions {
   readonly acceptedTypes?: readonly string[];
-  // Bytes. Caps the declared `size`; the presigned PUT is signed for exactly
-  // that `Content-Length`, so storage refuses any other body length.
+  /**
+   * Bytes. Caps the declared `size`; the presigned PUT is signed for exactly
+   * that `Content-Length`, so storage refuses any other body length.
+   */
   readonly maxUploadSize?: number;
 }
 
@@ -103,6 +105,26 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-media");
 /**
  * Browsers upload straight to storage through a presigned URL when the storage
  * adapter implements `presignPut`, and through a worker route otherwise.
+ *
+ * @example
+ * ```ts
+ * import { media } from "@plumix/plugin-media";
+ *
+ * plumix({
+ *   storage: r2({
+ *     binding: "MEDIA",
+ *     publicUrlBase: "https://media.example.com",
+ *     s3: {
+ *       bucket: "plumix-media",
+ *       accountId: env.CF_ACCOUNT_ID,
+ *       accessKeyId: env.R2_ACCESS_KEY_ID,
+ *       secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+ *     },
+ *   }),
+ *   imageDelivery: images({ zone: "media.example.com" }),
+ *   plugins: [media()],
+ * });
+ * ```
  */
 export function media(options: MediaPluginOptions = {}): PluginDescriptor {
   const acceptedTypes = options.acceptedTypes ?? DEFAULT_ACCEPTED_TYPES;

@@ -7,9 +7,11 @@ import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowApproveInputSchema } from "./schemas.js";
 
-// Looks up first to report a specific failure reason. A code that flips
-// between lookup and update makes `approveDeviceCode` return false, which
-// isn't told apart.
+/**
+ * Looks up first to report a specific failure reason. A code that flips
+ * between lookup and update makes `approveDeviceCode` return false, which
+ * isn't told apart.
+ */
 export const approve = base
   .use(authenticated)
   .input(deviceFlowApproveInputSchema)

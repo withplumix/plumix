@@ -21,10 +21,12 @@ interface PluginFieldRendererProps {
   readonly rhf: ControllerRenderProps<FieldValues, string>;
   readonly disabled: boolean;
   readonly testId: string;
-  // Block inspector only.
+  /** Block inspector only. */
   readonly attrs?: JsonObject;
-  // Metabox only. On an entry it's the whole shared `meta`, so other plugins'
-  // keys show too.
+  /**
+   * Metabox only. On an entry it's the whole shared `meta`, so other plugins'
+   * keys show too.
+   */
   readonly siblings?: MetaBoxSiblingValues;
 }
 

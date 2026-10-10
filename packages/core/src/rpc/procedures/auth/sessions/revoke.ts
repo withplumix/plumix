@@ -6,8 +6,10 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeInputSchema } from "./schemas.js";
 
-// Refuses the current session: signing out here goes through
-// `/_plumix/auth/signout`, which also handles the IdP logout redirect.
+/**
+ * Refuses the current session: signing out here goes through
+ * `/_plumix/auth/signout`, which also handles the IdP logout redirect.
+ */
 export const revoke = base
   .use(authenticated)
   .input(sessionsRevokeInputSchema)

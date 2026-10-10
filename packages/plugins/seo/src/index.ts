@@ -108,6 +108,13 @@ export interface SeoOptions {
 /**
  * Every tag is gap-filled: a theme or plugin that set the same key keeps it,
  * so installing this overrides nothing.
+ *
+ * @example
+ * ```ts
+ * import { seo } from "@plumix/plugin-seo";
+ *
+ * plumix({ plugins: [seo()] });
+ * ```
  */
 export function seo(options: SeoOptions = {}): PluginDescriptor {
   const headOptions = {

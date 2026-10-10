@@ -23,7 +23,7 @@ const HOST_TAG = "plumix-dev-error-overlay";
 
 interface CapturedError {
   readonly info: DevErrorInfo;
-  // Set when the error carried its island element.
+  /** Set when the error carried its island element. */
   readonly label?: string;
 }
 
@@ -116,8 +116,10 @@ class IslandErrorOverlay {
     void this.resolveFrames(entry);
   }
 
-  // A hydration mismatch has no thrown error and no JS stack, so it skips frame
-  // resolution; React's component stack is the signal.
+  /**
+   * A hydration mismatch has no thrown error and no JS stack, so it skips frame
+   * resolution; React's component stack is the signal.
+   */
   private captureMismatch(
     element?: HTMLElement,
     componentStack?: string,
@@ -153,8 +155,10 @@ class IslandErrorOverlay {
     return entry;
   }
 
-  // Browser stacks point at Vite's served module URLs, so the dev resolver maps
-  // them back to the original `file:line` frames.
+  /**
+   * Browser stacks point at Vite's served module URLs, so the dev resolver maps
+   * them back to the original `file:line` frames.
+   */
   private async resolveFrames(entry: CapturedError): Promise<void> {
     const { stack } = entry.info;
     if (!stack) return;

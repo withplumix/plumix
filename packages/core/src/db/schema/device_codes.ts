@@ -7,9 +7,11 @@ import { users } from "./users.js";
 export const DEVICE_CODE_STATUSES = ["pending", "approved", "denied"] as const;
 export type DeviceCodeStatus = (typeof DEVICE_CODE_STATUSES)[number];
 
-// RFC 8628 device grant. `id` is SHA-256(device_code), so a DB leak isn't a
-// secret leak. `userCode` stays plaintext: low-entropy by design, and approval
-// needs an authenticated session.
+/**
+ * RFC 8628 device grant. `id` is SHA-256(device_code), so a DB leak isn't a
+ * secret leak. `userCode` stays plaintext: low-entropy by design, and approval
+ * needs an authenticated session.
+ */
 export const deviceCodes = sqliteTable(
   "device_codes",
   (t) => ({

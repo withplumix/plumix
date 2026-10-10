@@ -339,8 +339,10 @@ export function rfc3986Encode(s: string): string {
   );
 }
 
-// A `.` or `..` segment is refused: `new URL` resolves it away, sending the
-// request to another path.
+/**
+ * A `.` or `..` segment is refused: `new URL` resolves it away, sending the
+ * request to another path.
+ */
 export function encodePath(key: string): string {
   const segments = key.split("/");
   if (segments.some((s) => s === "." || s === "..")) {

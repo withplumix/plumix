@@ -7,8 +7,10 @@ const RESERVED_META_PREFIX = "__plumix_";
 
 export const SNAPSHOT_META_KEY = "__plumix_snapshot";
 
-// A separate key so it can be patched without round-tripping the snapshot
-// envelope.
+/**
+ * A separate key so it can be patched without round-tripping the snapshot
+ * envelope.
+ */
 export const REVISION_MESSAGE_META_KEY = "__plumix_revision_message";
 
 // Soft cap on author-typed labels. Long enough for one sentence, short

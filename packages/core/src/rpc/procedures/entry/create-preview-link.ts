@@ -6,8 +6,10 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCreatePreviewLinkInputSchema } from "./schemas.js";
 
-// Gated by `canReadEntry`, so only someone who can already see the draft can
-// hand it out. 404, not 403, to avoid leaking which rows exist.
+/**
+ * Gated by `canReadEntry`, so only someone who can already see the draft can
+ * hand it out. 404, not 403, to avoid leaking which rows exist.
+ */
 export const createPreviewLink = base
   .use(authenticated)
   .input(entryCreatePreviewLinkInputSchema)

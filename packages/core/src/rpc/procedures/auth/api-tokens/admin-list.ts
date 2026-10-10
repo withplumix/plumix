@@ -8,8 +8,10 @@ import { apiTokensAdminListInputSchema } from "./schemas.js";
 
 const ADMIN_CAPABILITY = "user:manage_tokens";
 
-// Joins the owning user so the admin table needs no per-row `user.list`
-// call. `includeRevoked` is the audit view.
+/**
+ * Joins the owning user so the admin table needs no per-row `user.list`
+ * call. `includeRevoked` is the audit view.
+ */
 export const adminList = base
   .use(authenticated)
   .use(requireCapability(ADMIN_CAPABILITY))

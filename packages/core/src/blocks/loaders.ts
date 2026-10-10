@@ -4,8 +4,10 @@ import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
-// `blocks/` sits below `context/`, so `AppContext` can't be named here; the
-// `plumix/blocks` façade fills this in, and without it the type is `unknown`.
+/**
+ * `blocks/` sits below `context/`, so `AppContext` can't be named here; the
+ * `plumix/blocks` façade fills this in, and without it the type is `unknown`.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; only the `plumix/blocks` façade fills it.
 export interface BlockLoaderContextRegistry {}
 
@@ -30,8 +32,10 @@ export interface BlockLoaderArgs {
   readonly attrs: JsonObject;
 }
 
-// Type-erased storage bound only: blocks keep concrete loader types through
-// inference, and nothing calls a loader through this type.
+/**
+ * Type-erased storage bound only: blocks keep concrete loader types through
+ * inference, and nothing calls a loader through this type.
+ */
 // eslint-disable-next-line plumix/no-unknown-return
 export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
@@ -97,9 +101,11 @@ export interface LoaderErrorEvent {
   readonly error: unknown;
 }
 
-// The message embeds block, loader key and failure text so the dev error
-// page's hint matchers still match; the cause's stack is adopted so frames
-// point at the loader.
+/**
+ * The message embeds block, loader key and failure text so the dev error
+ * page's hint matchers still match; the cause's stack is adopted so frames
+ * point at the loader.
+ */
 export class BlockLoaderError extends Error {
   static {
     BlockLoaderError.prototype.name = "BlockLoaderError";
@@ -119,13 +125,17 @@ export class BlockLoaderError extends Error {
 }
 
 export interface ResolveBlockLoadersOptions {
-  // Blocks can't depend on core's hook system, so the dispatcher bridges this
-  // into `blocks:loader:error`. Fires once per rejected loader.
+  /**
+   * Blocks can't depend on core's hook system, so the dispatcher bridges this
+   * into `blocks:loader:error`. Fires once per rejected loader.
+   */
   readonly onLoaderError?: (event: LoaderErrorEvent) => void;
 }
 
-// One rejected loader doesn't fail siblings: its block gets `loaders: {}` and
-// the first rejection in declaration order.
+/**
+ * One rejected loader doesn't fail siblings: its block gets `loaders: {}` and
+ * the first rejection in declaration order.
+ */
 export async function resolveBlockLoaders(
   nodes: readonly BlockNode[],
   registry: BlockRegistry,

@@ -13,8 +13,10 @@ import {
 } from "@plumix/admin-ui/card";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 
-// An unregistered widget is skipped silently rather than breaking the
-// dashboard.
+/**
+ * An unregistered widget is skipped silently rather than breaking the
+ * dashboard.
+ */
 export function DashboardWidgets({
   widgets,
 }: {

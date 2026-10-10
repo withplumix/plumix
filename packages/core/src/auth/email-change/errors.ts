@@ -1,5 +1,7 @@
-// Codes travel in the redirect query, so they must stay stable for the admin
-// login screen's copy.
+/**
+ * Codes travel in the redirect query, so they must stay stable for the admin
+ * login screen's copy.
+ */
 export const EMAIL_CHANGE_ERROR_CODES = [
   "missing_token",
   "token_invalid",

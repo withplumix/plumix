@@ -8,8 +8,10 @@ import { userCancelEmailChangeInputSchema } from "./schemas.js";
 const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
-// No hook fires: audit can infer a cancel from two adjacent
-// `user:email_change_requested` events with no `user:email_changed` between.
+/**
+ * No hook fires: audit can infer a cancel from two adjacent
+ * `user:email_change_requested` events with no `user:email_changed` between.
+ */
 export const cancelEmailChangeProc = base
   .use(authenticated)
   .input(userCancelEmailChangeInputSchema)

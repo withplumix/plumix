@@ -4,8 +4,10 @@ import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { credentialsRenameInputSchema } from "./schemas.js";
 
-// Pinning both `id` and `userId` makes a cross-user attempt an
-// indistinguishable NOT_FOUND.
+/**
+ * Pinning both `id` and `userId` makes a cross-user attempt an
+ * indistinguishable NOT_FOUND.
+ */
 export const rename = base
   .use(authenticated)
   .input(credentialsRenameInputSchema)

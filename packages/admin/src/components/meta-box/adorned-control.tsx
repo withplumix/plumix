@@ -4,8 +4,10 @@ import { useLabel } from "@/lib/use-label.js";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { InputGroup, InputGroupAddon } from "@plumix/admin-ui/input-group";
 
-// Addons sit beside the `<FormControl>`, not inside, so its Slot keeps
-// forwarding id / aria-* onto the real input.
+/**
+ * Addons sit beside the `<FormControl>`, not inside, so its Slot keeps
+ * forwarding id / aria-* onto the real input.
+ */
 export function AdornedControl({
   field,
   testId,

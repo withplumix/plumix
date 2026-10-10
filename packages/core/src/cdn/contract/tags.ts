@@ -1,5 +1,7 @@
-// Archives carry `t:<type>`, permalinks `e:<id>`, pages that read a settings
-// group `s:<group>`; a write purges the matching tags.
+/**
+ * Archives carry `t:<type>`, permalinks `e:<id>`, pages that read a settings
+ * group `s:<group>`; a write purges the matching tags.
+ */
 export function typeTag(entryType: string): string {
   return normalizeTag(`t:${entryType}`);
 }

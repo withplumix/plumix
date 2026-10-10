@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { loadSession } from "@/lib/session.js";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
-// Bootstrap-state guards stay on the leaf routes.
+/** Bootstrap-state guards stay on the leaf routes. */
 export const Route = createFileRoute("/_auth")({
   beforeLoad: async ({ context }) => {
     const session = await loadSession(context.queryClient);

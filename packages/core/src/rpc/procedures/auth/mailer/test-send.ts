@@ -5,8 +5,10 @@ import { mailerTestSendInputSchema } from "./schemas.js";
 
 const CAPABILITY = "settings:manage";
 
-// Unlike the magic-link path, which swallows mailer failures, this reports
-// the mailer's error verbatim. Gated because the recipient is caller input.
+/**
+ * Unlike the magic-link path, which swallows mailer failures, this reports
+ * the mailer's error verbatim. Gated because the recipient is caller input.
+ */
 export const testSend = base
   .use(authenticated)
   .use(requireCapability(CAPABILITY))

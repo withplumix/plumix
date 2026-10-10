@@ -723,8 +723,10 @@ interface RestResourceBoundEntryType {
 }
 
 interface RestResourceBoundEntry {
-  // Already checked readable by the requester and, with `{collection}`, of that
-  // entry type.
+  /**
+   * Already checked readable by the requester and, with `{collection}`, of that
+   * entry type.
+   */
   readonly entry: Entry;
 }
 
@@ -892,8 +894,10 @@ export interface PluginRegistry {
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
-  // Fixed before any plugin runs, so every compile of the route map reads the
-  // same answer.
+  /**
+   * Fixed before any plugin runs, so every compile of the route map reads the
+   * same answer.
+   */
   readonly frameworkRoutes: FrameworkRoutes;
 }
 

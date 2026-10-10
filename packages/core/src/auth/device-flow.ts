@@ -18,9 +18,9 @@ export const DEVICE_FLOW_TTL_SECONDS = DEVICE_CODE_TTL_SECONDS;
 export const DEVICE_FLOW_INTERVAL_SECONDS = DEVICE_CODE_POLL_INTERVAL_SECONDS;
 
 interface DeviceCodeRequest {
-  // The client polls with this; never shown to the human.
+  /** The client polls with this; never shown to the human. */
   readonly deviceCode: string;
-  // The human types this into the admin to approve.
+  /** The human types this into the admin to approve. */
   readonly userCode: string;
   readonly expiresIn: number;
   readonly interval: number;

@@ -28,8 +28,10 @@ import { siteDefaultImage } from "./site.js";
 /** One mount for every page kind; the kind is a path segment, not a route. */
 export const CARD_ROUTE_PATH = "/card/*";
 
-// Core prefixes plugin routes with `/_plumix/<pluginId>`; the head needs the
-// full URL.
+/**
+ * Core prefixes plugin routes with `/_plumix/<pluginId>`; the head needs the
+ * full URL.
+ */
 export const OG_ROUTE_PREFIX = "/_plumix/og";
 const CARD_URL_PREFIX = `${OG_ROUTE_PREFIX}/card`;
 

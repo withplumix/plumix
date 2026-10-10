@@ -208,8 +208,10 @@ export const ADMIN_BAR_BODY_OFFSET_CSS = css`
   }
 `;
 
-// The signout endpoint needs the `X-Plumix-Request` header and answers JSON,
-// so a button plus fetch. `redirectTo` is honored for external-IdP logout.
+/**
+ * The signout endpoint needs the `X-Plumix-Request` header and answers JSON,
+ * so a button plus fetch. `redirectTo` is honored for external-IdP logout.
+ */
 export const ADMIN_BAR_SIGNOUT_SCRIPT = `
 (function () {
   var sel = "[data-plumix-signout]";

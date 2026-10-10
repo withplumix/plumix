@@ -6,10 +6,12 @@ import type { MetaFieldCondition } from "@plumix/core/manifest";
 import { isFieldVisible } from "@plumix/core/manifest";
 
 interface BagLocation {
-  // Omit when the bag sits at the form root.
+  /** Omit when the bag sits at the form root. */
   readonly name?: string;
-  // Only for a caller owning its form instance; otherwise `<Form>` context
-  // supplies it.
+  /**
+   * Only for a caller owning its form instance; otherwise `<Form>` context
+   * supplies it.
+   */
   readonly control?: Control;
 }
 

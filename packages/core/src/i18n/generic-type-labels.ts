@@ -1,8 +1,9 @@
 import type { Label } from "./label.js";
 
-// No "Search {pluralLower}…" substitution patterns: they break under case or
-// gender agreement, and translated nouns can't be safely lowercased.
-
+/**
+ * No "Search {pluralLower}…" substitution patterns: they break under case or
+ * gender agreement, and translated nouns can't be safely lowercased.
+ */
 export const GENERIC_ENTRY_TYPE_LABELS = {
   // Identity
   singular: { id: "type.generic.singular", message: "Item" },

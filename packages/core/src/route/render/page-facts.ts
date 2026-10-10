@@ -44,8 +44,10 @@ const NO_SUBJECT = {
   view: null,
 } as const;
 
-// Discriminates on `kind`, not field presence: a plugin archive's payload is
-// arbitrary.
+/**
+ * Discriminates on `kind`, not field presence: a plugin archive's payload is
+ * arbitrary.
+ */
 export function pageFacts(data: TemplateData): PageFacts {
   switch (data.kind) {
     case "entry":

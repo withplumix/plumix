@@ -1,5 +1,7 @@
-// Lets editors and stylelint highlight and lint the inline CSS of the tsc-only
-// bars, which have no bundler CSS pipeline.
+/**
+ * Lets editors and stylelint highlight and lint the inline CSS of the tsc-only
+ * bars, which have no bundler CSS pipeline.
+ */
 export function css(
   strings: TemplateStringsArray,
   ...values: readonly string[]

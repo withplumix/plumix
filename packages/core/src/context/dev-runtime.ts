@@ -105,12 +105,22 @@ export interface DebugHistoryStore {
 /**
  * Augment with `og: true` to make a plugin's panel nameable in `dev.panels`;
  * only registered ids are, so a typo is a compile error.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface DebugPanelRegistry {
+ *     og: true;
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface DebugPanelRegistry extends Record<CoreDebugPanelId, true> {}
 
-// A runtime list so a test can hold it equal to what `registerCoreDebugPanels`
-// contributes.
+/**
+ * A runtime list so a test can hold it equal to what `registerCoreDebugPanels`
+ * contributes.
+ */
 export const CORE_DEBUG_PANEL_IDS = [
   "app",
   "request",

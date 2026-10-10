@@ -84,8 +84,10 @@ function statement(
   };
 }
 
-// Bun's defaults (foreign keys off, no busy timeout, rollback journal,
-// `synchronous = FULL`) are overridden; NORMAL is crash-durable under WAL.
+/**
+ * Bun's defaults (foreign keys off, no busy timeout, rollback journal,
+ * `synchronous = FULL`) are overridden; NORMAL is crash-durable under WAL.
+ */
 export function openBunSqlite(path: string): BunSqliteClient {
   mkdirSync(dirname(path), { recursive: true });
   const { Database } = loadBunSqlite();

@@ -86,6 +86,16 @@ export interface OgPluginOptions {
 
 /**
  * With no configuration, serves the bundled default card for every page kind.
+ *
+ * @example
+ * ```ts
+ * import { og } from "@plumix/plugin-og";
+ *
+ * plumix({
+ *   storage: r2({ binding: "MEDIA" }),
+ *   plugins: [og({ fonts: ["/fonts/Inter-SemiBold.ttf"] })],
+ * });
+ * ```
  */
 export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const renderer = options.renderer ?? bundledRenderer();

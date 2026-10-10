@@ -1,4 +1,6 @@
-// Not exhaustive: the field accepts any valid name typed by hand. Keep sorted.
+/**
+ * Not exhaustive: the field accepts any valid name typed by hand. Keep sorted.
+ */
 export const CSS_PROPERTIES: readonly string[] = [
   "alignContent",
   "alignItems",

@@ -3,8 +3,10 @@ import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject, JsonValue } from "../../json.js";
 
-// Plugin authors go through the `settings.get`/`settings.upsert` RPC rather
-// than this table.
+/**
+ * Plugin authors go through the `settings.get`/`settings.upsert` RPC rather
+ * than this table.
+ */
 export const settings = sqliteTable(
   "settings",
   (t) => ({

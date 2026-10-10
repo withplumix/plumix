@@ -4,9 +4,10 @@ import type { SessionPolicy } from "../auth/contract/sessions.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { RequestAuthenticator } from "./authenticator.js";
 
-// Not under `auth/contract/`: it names the `RequestAuthenticator` declared
-// here, and `config.ts` names it, so that home would form an import cycle.
-
+/**
+ * Not under `auth/contract/`: it names the `RequestAuthenticator` declared
+ * here, and `config.ts` names it, so that home would form an import cycle.
+ */
 export interface PlumixMagicLinkConfig {
   /**
    * Shown in the email ("Sign in to {siteName}"); never falls back to

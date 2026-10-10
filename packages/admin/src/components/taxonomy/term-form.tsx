@@ -42,7 +42,7 @@ interface TermFormValues {
   readonly slug: string;
   readonly description: string;
   readonly parentId: number | null;
-  // Open shape: fields coerce on edit and the server re-sanitises on write.
+  /** Open shape: fields coerce on edit and the server re-sanitises on write. */
   readonly meta: ResolvedMeta;
 }
 

@@ -6,8 +6,10 @@
 export type MenuItemMeta =
   MenuItemCustomMeta | MenuItemEntryMeta | MenuItemTermMeta;
 
-// `Readonly<{…}>`, not interfaces: an interface gets no implicit index
-// signature, so it wouldn't be assignable to the JSON `entries.meta` column.
+/**
+ * `Readonly<{…}>`, not interfaces: an interface gets no implicit index
+ * signature, so it wouldn't be assignable to the JSON `entries.meta` column.
+ */
 export type MenuItemDisplayAttrs = Readonly<{
   target?: "_blank";
   rel?: string;

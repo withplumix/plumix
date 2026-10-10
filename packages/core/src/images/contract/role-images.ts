@@ -2,7 +2,15 @@
 // the plugin registry that declares the roles and the projection that fills
 // them. See ADR 0004.
 
-/** Augment it alongside `registerImageRole` so `.role()` accepts the name. */
+/**
+ * Augment it alongside `registerImageRole` so `.role()` accepts the name.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface ImageRoles { hero: true }
+ * }
+ * ```
+ */
 export interface ImageRoles {
   featured: true;
   ogImage: true;

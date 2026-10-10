@@ -19,7 +19,7 @@ interface DebugRequestListItem {
   readonly path: string;
   readonly status: number;
   readonly durationMs: number;
-  // Epoch ms.
+  /** Epoch ms. */
   readonly timestamp: number;
 }
 

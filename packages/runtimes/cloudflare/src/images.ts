@@ -17,10 +17,12 @@ export interface ImagesConfig {
  * it enabled.
  *
  * @example
- * ```ts plumix({
+ * ```ts
+ * plumix({
  *   storage: r2({ binding: "MEDIA", publicUrlBase: "https://media.example.com" }),
  *   imageDelivery: images({ zone: "media.example.com" }),
- * }); ```
+ * });
+ * ```
  */
 export function images(config: ImagesConfig = {}): ImageDelivery {
   const rawZone = config.zone;

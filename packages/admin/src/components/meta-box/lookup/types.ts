@@ -1,4 +1,4 @@
-// Structurally a `LookupResult`, assignable without a cast.
+/** Structurally a `LookupResult`, assignable without a cast. */
 export interface LookupItem {
   readonly id: string;
   readonly label: string | null;

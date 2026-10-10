@@ -1,7 +1,9 @@
 import type { Label } from "plumix/i18n";
 
-// Rendered as authored English whatever the locale: a plugin has no catalog at
-// render time. The hand-authored catalogs are checked by `plumix i18n verify`.
+/**
+ * Rendered as authored English whatever the locale: a plugin has no catalog at
+ * render time. The hand-authored catalogs are checked by `plumix i18n verify`.
+ */
 export const NAME_LABEL: Label = {
   id: "plugin.comments.form.name",
   message: "Name",

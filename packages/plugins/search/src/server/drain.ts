@@ -45,8 +45,10 @@ export async function drainEntryChanges(ctx: AppContext): Promise<number> {
   return handled;
 }
 
-// Bounded like the drain, so a site installing with thousands of terms
-// converges over several invocations.
+/**
+ * Bounded like the drain, so a site installing with thousands of terms
+ * converges over several invocations.
+ */
 export const TERMS_PER_RUN = 100;
 
 /**

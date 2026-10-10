@@ -23,7 +23,7 @@ export interface RevisionsTrigger {
   readonly openRevisions?: () => void;
 }
 
-// Open state lives here so the command palette can raise the sheet too.
+/** Open state lives here so the command palette can raise the sheet too. */
 export function useRevisionsTrigger({
   entryId,
   enabled,

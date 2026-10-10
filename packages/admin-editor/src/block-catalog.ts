@@ -36,12 +36,12 @@ const UNCATEGORIZED = "uncategorized";
 
 interface GroupOptions {
   readonly capabilities: ReadonlySet<string>;
-  // Case-insensitive over name, title and keywords.
+  /** Case-insensitive over name, title and keywords. */
   readonly query?: string;
   readonly allowed?: readonly string[];
-  // Undefined is the top level, which hides parent-bound blocks.
+  /** Undefined is the top level, which hides parent-bound blocks. */
   readonly parentName?: string;
-  // Undefined hides entry-type-scoped blocks.
+  /** Undefined hides entry-type-scoped blocks. */
   readonly entryType?: string;
 }
 

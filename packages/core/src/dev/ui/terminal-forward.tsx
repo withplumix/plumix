@@ -169,8 +169,10 @@ class TerminalForwarder {
     );
   }
 
-  // Dedup only by identity: the one real double is a thrown error reaching two
-  // producers. The server collapses consecutive primitive repeats into `(×N)`.
+  /**
+   * Dedup only by identity: the one real double is a thrown error reaching two
+   * producers. The server collapses consecutive primitive repeats into `(×N)`.
+   */
   private isDuplicate(error: unknown): boolean {
     if (error === null || typeof error !== "object") return false;
     if (this.seenObjects.has(error)) return true;

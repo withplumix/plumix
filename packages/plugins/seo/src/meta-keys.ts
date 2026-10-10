@@ -1,5 +1,7 @@
-// Meta keys share one flat namespace per entity, so the prefix is ours to hold.
-// A leaf module so the admin chunk doesn't pull server code.
+/**
+ * Meta keys share one flat namespace per entity, so the prefix is ours to hold.
+ * A leaf module so the admin chunk doesn't pull server code.
+ */
 export const SEO_META_KEYS = {
   title: "seo_title",
   description: "seo_description",

@@ -17,8 +17,10 @@ interface ColorPickerProps {
   // Accessible name for the icon-less swatch button; admin-ui carries no
   // catalog, so the caller passes it already localized.
   readonly triggerLabel: string;
-  // Forwarded to the hex input; otherwise <FormControl> puts its id/aria on the
-  // outer div and the input goes unlabelled.
+  /**
+   * Forwarded to the hex input; otherwise <FormControl> puts its id/aria on the
+   * outer div and the input goes unlabelled.
+   */
   readonly id?: string;
   readonly "aria-describedby"?: string;
   readonly "aria-invalid"?: React.ComponentProps<typeof Input>["aria-invalid"];

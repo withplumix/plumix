@@ -159,8 +159,7 @@ interface TokenRow {
   readonly lastUsedAt: Date | string | null;
 }
 
-// Split per mode so hook order stays stable without conditional hook calls.
-
+/** Split per mode so hook order stays stable without conditional hook calls. */
 export function SelfApiTokensCard(): ReactNode {
   const queryClient = useQueryClient();
   const list = useQuery(orpc.auth.apiTokens.list.queryOptions({ input: {} }));

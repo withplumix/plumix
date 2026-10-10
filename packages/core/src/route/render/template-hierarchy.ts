@@ -36,8 +36,10 @@ export function resolveErrorTemplate(
 
 type ResolutionStatus = "matched" | "skipped" | "never-evaluated";
 
-// `Readonly<{…}>`, not interfaces: a telemetry span attribute must satisfy
-// `JsonObject`, and interfaces lack the implicit index signature.
+/**
+ * `Readonly<{…}>`, not interfaces: a telemetry span attribute must satisfy
+ * `JsonObject`, and interfaces lack the implicit index signature.
+ */
 export type ResolutionStep = Readonly<{
   label: string;
   status: ResolutionStatus;

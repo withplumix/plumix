@@ -5,8 +5,10 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { MetaBoxField } from "./meta-box-field.js";
 import { useVisibleFields } from "./use-visible-fields.js";
 
-// The `@container` root scopes members' responsive col-span to the card's own
-// width.
+/**
+ * The `@container` root scopes members' responsive col-span to the card's own
+ * width.
+ */
 export function GroupField({
   field,
   name,

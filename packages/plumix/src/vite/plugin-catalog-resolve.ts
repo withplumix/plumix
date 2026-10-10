@@ -83,8 +83,10 @@ export function isAdminBundledPlugin(input: {
     });
 }
 
-// Admin's runtime loader `import(url)`s same-origin paths under the default
-// CSP. A missing `.mjs` for a declared locale fails the build.
+/**
+ * Admin's runtime loader `import(url)`s same-origin paths under the default
+ * CSP. A missing `.mjs` for a declared locale fails the build.
+ */
 export async function stagePluginCatalogs(
   adminDest: string,
   plugins: readonly AnyPluginDescriptor[],

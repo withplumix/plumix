@@ -83,8 +83,10 @@ export type CanvasMessage =
       readonly slots?: readonly SlotRect[];
     }
   | {
-      // Wheel events over the iframe never reach the parent. `zoomIntent` is
-      // ctrl/⌘ held, which is also how trackpad pinch arrives.
+      /**
+       * Wheel events over the iframe never reach the parent. `zoomIntent` is
+       * ctrl/⌘ held, which is also how trackpad pinch arrives.
+       */
       readonly type: "canvas:wheel";
       readonly deltaX: number;
       readonly deltaY: number;
@@ -93,8 +95,10 @@ export type CanvasMessage =
       readonly clientY: number;
     }
   | {
-      // No `kind` field: handshake frames are discriminated by `kind`, so this
-      // would be mistaken for one.
+      /**
+       * No `kind` field: handshake frames are discriminated by `kind`, so this
+       * would be mistaken for one.
+       */
       readonly type: "canvas:key";
       readonly down: boolean;
       /** Layout-independent physical key, e.g. "Space", "Digit1". */

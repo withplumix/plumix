@@ -8,13 +8,15 @@ const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 interface OAuthStatePayload {
   readonly provider: string;
   readonly codeVerifier: string;
-  // Kept server-side, not in the URL, so it can't be tampered with between
-  // start and callback.
+  /**
+   * Kept server-side, not in the URL, so it can't be tampered with between
+   * start and callback.
+   */
   readonly redirectTo?: string;
 }
 
 interface IssuedOAuthState {
-  // Never persisted; only its hash is stored.
+  /** Never persisted; only its hash is stored. */
   readonly state: string;
   readonly expiresAt: Date;
 }

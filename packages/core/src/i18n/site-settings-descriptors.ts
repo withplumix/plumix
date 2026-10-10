@@ -1,7 +1,9 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-// Exported for the lockstep test with admin's extraction mirror, since admin's
-// catalogs own the translations.
+/**
+ * Exported for the lockstep test with admin's extraction mirror, since admin's
+ * catalogs own the translations.
+ */
 export const SITE_SETTINGS_DESCRIPTORS = {
   groupLabel: {
     id: "core.settings.site.label",

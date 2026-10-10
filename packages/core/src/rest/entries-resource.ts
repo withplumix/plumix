@@ -10,8 +10,10 @@ import { listEnvelope } from "./envelope.js";
 import { apiVisibleMetaKeys, projectEntry } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
-// Every failure collapses to 404 so unreadable content stays hidden.
-// `undefined` for anything else, which the caller rethrows as a 500.
+/**
+ * Every failure collapses to 404 so unreadable content stays hidden.
+ * `undefined` for anything else, which the caller rethrows as a 500.
+ */
 export function entryNotFound(
   error: unknown,
   errors: RestErrors,

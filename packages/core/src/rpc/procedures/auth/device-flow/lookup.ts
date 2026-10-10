@@ -4,7 +4,7 @@ import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowLookupInputSchema } from "./schemas.js";
 
-// Never exposes the device_code: it is the polling client's secret.
+/** Never exposes the device_code: it is the polling client's secret. */
 export const lookup = base
   .use(authenticated)
   .input(deviceFlowLookupInputSchema)

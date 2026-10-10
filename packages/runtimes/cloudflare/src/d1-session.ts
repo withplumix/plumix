@@ -1,6 +1,6 @@
 export const DEFAULT_BOOKMARK_COOKIE = "__plumix_d1_bookmark";
 
-// Observed bookmarks are ~60 chars, but the format is opaque.
+/** Observed bookmarks are ~60 chars, but the format is opaque. */
 export const MAX_BOOKMARK_LENGTH = 1024;
 
 /**

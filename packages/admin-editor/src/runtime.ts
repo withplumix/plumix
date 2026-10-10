@@ -32,7 +32,7 @@ export function buildEditorShortcodes(
 
 interface BootEditorOptions {
   readonly blocks?: readonly BlockSpec[];
-  // Plugin specs first, then theme.
+  /** Plugin specs first, then theme. */
   readonly shortcodes?: readonly ShortcodeSpec[];
 }
 

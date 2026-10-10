@@ -11,9 +11,11 @@ import { resolveCardImages } from "./card-images.js";
 import { cardSize } from "./card.js";
 import { OgPluginError } from "./errors.js";
 
-// A renderer may return any bytes, served from the site's origin; SVG could run
-// script on direct navigation, and a card must stay viewable rather than
-// downloaded.
+/**
+ * A renderer may return any bytes, served from the site's origin; SVG could run
+ * script on direct navigation, and a card must stay viewable rather than
+ * downloaded.
+ */
 export const SANDBOX_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 

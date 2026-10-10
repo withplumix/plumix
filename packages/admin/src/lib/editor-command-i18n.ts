@@ -1,8 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
-// admin-editor builds with `tsc`, which never runs the macro, so this exists
-// only for `lingui extract`.
+/**
+ * admin-editor builds with `tsc`, which never runs the macro, so this exists
+ * only for `lingui extract`.
+ */
 export const EDITOR_COMMAND_MIRROR = {
   xray: defineMessage({
     id: "editor.command.xray",

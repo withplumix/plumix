@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
 import { documentBasePath } from "./document-base-path.js";
 
-// Restates `AuthSessionUser` because `blocks/` sits below `auth/` and can't
-// import it.
+/**
+ * Restates `AuthSessionUser` because `blocks/` sits below `auth/` and can't
+ * import it.
+ */
 export interface AuthUser {
   readonly id: number;
   readonly email: string;

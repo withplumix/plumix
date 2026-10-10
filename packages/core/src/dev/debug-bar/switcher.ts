@@ -50,8 +50,10 @@ export function switcherOptionLabel(entry: SwitcherEntry): string {
   return `${head} · ${entry.status} · ${entry.durationMs}ms`;
 }
 
-// Fail-soft: a non-OK response or a thrown fetch leaves the current panels,
-// and the host page the bar is injected into, untouched.
+/**
+ * Fail-soft: a non-OK response or a thrown fetch leaves the current panels,
+ * and the host page the bar is injected into, untouched.
+ */
 export const DEBUG_SWITCHER_SCRIPT = `
 (function () {
   var root = document.querySelector("[data-plumix-debug-switch]");

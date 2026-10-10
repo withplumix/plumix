@@ -182,6 +182,20 @@ const forDate: DateTargets<CardSelector<DateArchiveData>> = dateTargets(
 /**
  * Mirrors the template builders, except `card.archive()` is the `entryType`
  * tier and `card.taxonomy()` the `term` tier.
+ *
+ * @example
+ * ```ts
+ * defineTheme({
+ *   templates: [...],
+ *   ogCards: [
+ *     card.forEntryType("post").define({
+ *       key: ({ data }) => cardKey.entry(data.entry),
+ *       render: ({ data }) => ({ type: "text", text: data.entry.title }),
+ *     }),
+ *     card.fallback().define({ key: ..., render: ... }),
+ *   ],
+ * });
+ * ```
  */
 export const card = {
   /** Universal catch-all — matches any resolved node. */

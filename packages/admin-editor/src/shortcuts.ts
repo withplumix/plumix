@@ -39,7 +39,7 @@ interface ShortcutSpec {
   readonly id: string;
   readonly group: ShortcutGroupId;
   readonly chords: readonly Chord[];
-  // Every chord of a forwarded shortcut must declare a `code` to travel as.
+  /** Every chord of a forwarded shortcut must declare a `code` to travel as. */
   readonly forwarded?: boolean;
 }
 

@@ -1,9 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-// The thunk resolves when valibot builds the issue, after admin's
-// `bootI18n` has registered a resolver. Server bundles never register and
-// fall back to `descriptor.message`.
-
+/**
+ * The thunk resolves when valibot builds the issue, after admin's
+ * `bootI18n` has registered a resolver. Server bundles never register and
+ * fall back to `descriptor.message`.
+ */
 export type I18nResolver = (descriptor: MessageDescriptor) => string;
 
 let currentResolver: I18nResolver | null = null;

@@ -1,7 +1,9 @@
 interface Entry<T> {
   readonly value: T;
-  // Edits sharing a non-null key collapse into one step; null is always
-  // discrete.
+  /**
+   * Edits sharing a non-null key collapse into one step; null is always
+   * discrete.
+   */
   readonly coalesceKey: string | null;
 }
 

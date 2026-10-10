@@ -311,8 +311,10 @@ class Walk {
     return true;
   }
 
-  // Stopping before a row leaves `after` on the one before it, so the next
-  // call starts at the row this one never reached.
+  /**
+   * Stopping before a row leaves `after` on the one before it, so the next
+   * call starts at the row this one never reached.
+   */
   async pages<Row extends { readonly id: number; readonly meta: JsonObject }>(
     store: MetaStore,
     from: MetaSweepCursor | null,

@@ -101,8 +101,10 @@ function feedRoutesOver(
 }
 
 interface CompiledFeedRoutes {
-  // Built from the feed routes, so matching an owner here is also the `hasFeed`
-  // check.
+  /**
+   * Built from the feed routes, so matching an owner here is also the `hasFeed`
+   * check.
+   */
   readonly owners: ReadonlyMap<string, string>;
   // The `/page/:page` form of each archive route, which a listing path can
   // match without being a listing of its own.

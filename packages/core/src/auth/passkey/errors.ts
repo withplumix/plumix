@@ -1,5 +1,7 @@
-// No challenge_expired: telling stale from never-issued apart would leak timing
-// information.
+/**
+ * No challenge_expired: telling stale from never-issued apart would leak timing
+ * information.
+ */
 export const PASSKEY_ERROR_CODES = [
   "challenge_not_found",
   "invalid_client_data",

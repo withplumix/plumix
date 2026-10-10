@@ -113,10 +113,12 @@ async function probeEncodable(): Promise<readonly ImageFormat[]> {
  * applies; a remote one must match `remotePatterns`.
  *
  * @example
- * ```ts plumix({
+ * ```ts
+ * plumix({
  *   storage: diskStorage({ dir: "data/media" }),
  *   imageDelivery: images({ remotePatterns: [{ hostname: "images.example.com" }] }),
- * }); ```
+ * });
+ * ```
  */
 export function images(config: ImagesConfig = {}): BunImageDelivery {
   const resolved = resolveConfig(config);

@@ -4,8 +4,10 @@ import type {
 } from "./compose/types.js";
 import { ScaffoldError } from "./errors.js";
 
-// Passkey is mandatory and always emitted; these are the optional methods
-// layered on top.
+/**
+ * Passkey is mandatory and always emitted; these are the optional methods
+ * layered on top.
+ */
 export const CORE_AUTH_METHODS: readonly AuthMethodDescriptor[] = [
   {
     id: "oauth",

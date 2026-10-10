@@ -13,7 +13,7 @@ import {
 // ua-parser-js because hand-rolled UA detection is a tar pit.
 
 interface ParsedUserAgent {
-  // Vendor names are universal, so they're not localized.
+  /** Vendor names are universal, so they're not localized. */
   readonly browser: string | null;
   readonly os: string | null;
   readonly icon: LucideIcon;
@@ -33,8 +33,10 @@ export function parseUserAgent(ua: string | null): ParsedUserAgent {
   };
 }
 
-// `device.type` is undefined for desktop; rare types collapse into the closest
-// icon.
+/**
+ * `device.type` is undefined for desktop; rare types collapse into the closest
+ * icon.
+ */
 export function pickIcon(deviceType: string | undefined): LucideIcon {
   if (deviceType === "mobile") return Smartphone;
   if (deviceType === "tablet") return Tablet;

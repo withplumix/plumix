@@ -15,7 +15,9 @@ export const DB_PANEL_ID = "database";
 interface QueryRow {
   readonly sql: string;
   readonly params: readonly unknown[];
-  // Absent for statements inside a batch: the round-trip is timed, not each.
+  /**
+   * Absent for statements inside a batch: the round-trip is timed, not each.
+   */
   readonly durationMs?: number;
 }
 

@@ -1,5 +1,7 @@
-// Plugin chunks register at module-eval after `main.tsx`; mounting first would
-// leave a deep link on "Plugin not loaded". `error` resolves too.
+/**
+ * Plugin chunks register at module-eval after `main.tsx`; mounting first would
+ * leave a deep link on "Plugin not loaded". `error` resolves too.
+ */
 export async function waitForPluginChunks(): Promise<void> {
   const scripts = document.querySelectorAll<HTMLScriptElement>(
     "script[data-plumix-plugin]",

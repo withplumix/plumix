@@ -69,7 +69,7 @@ interface ReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
-  // Skips the resolve round-trip while the initial id is unchanged.
+  /** Skips the resolve round-trip while the initial id is unchanged. */
   readonly initialSelected?: LookupItem | null;
 }
 

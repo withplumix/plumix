@@ -14,14 +14,18 @@ const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
 
 interface CacheableRequest {
   readonly method: string;
-  // Every non-`private` segment is a shared document keyed by the segment.
+  /** Every non-`private` segment is a shared document keyed by the segment. */
   readonly segment: Segment;
   readonly intentKind: RouteIntent["kind"];
-  // Core can't know a plugin page's content dependencies, so it caches only on
-  // this opt-in.
+  /**
+   * Core can't know a plugin page's content dependencies, so it caches only on
+   * this opt-in.
+   */
   readonly registeredPageCacheable?: boolean;
-  // Named for the capability: a vendor varying on a named cookie satisfies it
-  // differently.
+  /**
+   * Named for the capability: a vendor varying on a named cookie satisfies it
+   * differently.
+   */
   readonly canKeySegments: boolean;
 }
 

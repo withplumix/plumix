@@ -449,8 +449,10 @@ export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
   });
 }
 
-// Without it the form shows registered defaults over legacy answers, and saving
-// would turn indexing back on.
+/**
+ * Without it the form shows registered defaults over legacy answers, and saving
+ * would turn indexing back on.
+ */
 export function registerSeoSettingsDefaults(ctx: PluginSetupContext): void {
   ctx.addFilter("rpc:settings.get:output", async (bag, context, appCtx) => {
     if (context.group !== SEO_SETTINGS_GROUP) return bag;

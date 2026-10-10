@@ -43,8 +43,10 @@ interface SnapshotInput {
   readonly authorId: number;
 }
 
-// Retries only on a unique-index collision (a nanoid coincidence), so schema
-// or FK bugs aren't masked as retry candidates.
+/**
+ * Retries only on a unique-index collision (a nanoid coincidence), so schema
+ * or FK bugs aren't masked as retry candidates.
+ */
 export async function snapshotAsRevision(
   db: Db,
   input: SnapshotInput,
@@ -148,8 +150,10 @@ export async function getRevision(
 }
 
 interface UpsertAutosaveInput {
-  // Its slug and parentId are snapshotted so `entry.publish` can restore them
-  // without a round trip.
+  /**
+   * Its slug and parentId are snapshotted so `entry.publish` can restore them
+   * without a round trip.
+   */
   readonly entry: Entry;
   // The user editing. Combined with `entry.id` to produce the
   // deterministic slug — UNIQUE (type, slug) enforces "one autosave
@@ -166,8 +170,10 @@ interface UpsertAutosaveInput {
   };
 }
 
-// Returns the row so callers can read `updatedAt`, the optimistic-concurrency
-// token for the next save.
+/**
+ * Returns the row so callers can read `updatedAt`, the optimistic-concurrency
+ * token for the next save.
+ */
 export async function upsertAutosave(
   db: Db,
   input: UpsertAutosaveInput,
@@ -294,7 +300,7 @@ export async function deleteAutosave(
 
 interface ListActiveAutosavesInput {
   readonly entryId: number;
-  // A parameter so tests can pin it to a fixture time.
+  /** A parameter so tests can pin it to a fixture time. */
   readonly notOlderThan: Date;
   // Exclude the calling user — every viewer should see their
   // co-authors, not themselves.
@@ -308,8 +314,10 @@ function entryAutosavePrefix(entryId: number): string {
   return `autosave:${String(entryId)}:%`;
 }
 
-// Raw rows, so the RPC layer's user-join policy can change without touching
-// the repository.
+/**
+ * Raw rows, so the RPC layer's user-join policy can change without touching
+ * the repository.
+ */
 export async function listActiveAutosaves(
   db: Db,
   input: ListActiveAutosavesInput,
@@ -385,8 +393,10 @@ export async function pruneOldRevisions(
   return excess.length;
 }
 
-// History links to its entry only through the encoded slug, not an FK, so
-// deleting entries leaves it behind unless this runs first.
+/**
+ * History links to its entry only through the encoded slug, not an FK, so
+ * deleting entries leaves it behind unless this runs first.
+ */
 export async function deleteEntriesHistory(
   db: Db,
   entryIds: readonly number[],

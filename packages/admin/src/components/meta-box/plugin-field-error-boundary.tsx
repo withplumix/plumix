@@ -8,7 +8,7 @@ interface Props {
   readonly fieldKey: string;
   readonly inputType: string;
   readonly testId: string;
-  // A change clears the error and re-attempts the render.
+  /** A change clears the error and re-attempts the render. */
   readonly resetKey: string;
   readonly children: ReactNode;
 }

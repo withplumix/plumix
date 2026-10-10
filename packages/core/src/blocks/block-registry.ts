@@ -84,17 +84,25 @@ export interface BlockVariation {
   readonly description?: Label;
   readonly keywords?: readonly Label[];
   readonly attrs?: JsonObject;
-  // Validated against the block registry at commit time, so bad names or
-  // attrs fail at boot.
+  /**
+   * Validated against the block registry at commit time, so bad names or
+   * attrs fail at boot.
+   */
   readonly innerBlocks?: readonly BlockNode[];
-  // An empty array hides the variation everywhere, keeping it only as a
-  // readback identity for `isActive`.
+  /**
+   * An empty array hides the variation everywhere, keeping it only as a
+   * readback identity for `isActive`.
+   */
   readonly scope?: readonly BlockVariationScope[];
-  // Preview surfaces render this instead of the runtime values, e.g. when the
-  // runtime body relies on an async loader.
+  /**
+   * Preview surfaces render this instead of the runtime values, e.g. when the
+   * runtime body relies on an async loader.
+   */
   readonly example?: BlockVariationExample;
-  // `string[]` matchers: longest list wins among ties, then registration
-  // order. Function matchers: first true wins.
+  /**
+   * `string[]` matchers: longest list wins among ties, then registration
+   * order. Function matchers: first true wins.
+   */
   readonly isActive?: BlockVariationIsActive;
 }
 
@@ -149,13 +157,17 @@ export interface BlockSpec<
     readonly error: unknown;
   }) => ReactNode;
   readonly inline?: boolean;
-  // For elements a div can't wrap (`<td>`, `<tr>`) and to beat the theme's
-  // element styles. Must spread `blockProps` onto a single host element; a
-  // Fragment or string drops the seam.
+  /**
+   * For elements a div can't wrap (`<td>`, `<tr>`) and to beat the theme's
+   * element styles. Must spread `blockProps` onto a single host element; a
+   * Fragment or string drops the seam.
+   */
   readonly selfSeam?: boolean;
-  // `NoInfer` keeps `defaults` from narrowing `Attrs` inference. `JsonObject`
-  // because defaults are merged into a new node's stored attrs, which the
-  // materialized `Attrs` need not be.
+  /**
+   * `NoInfer` keeps `defaults` from narrowing `Attrs` inference. `JsonObject`
+   * because defaults are merged into a new node's stored attrs, which the
+   * materialized `Attrs` need not be.
+   */
   readonly defaults?: Readonly<Partial<NoInfer<Attrs>>> & JsonObject;
   /**
    * Seeded into a new block's `style` slot so they show as editable values,
@@ -209,9 +221,11 @@ export function createBlockRegistry(
   });
 }
 
-// Returns plain `BlockSpec` because the registry stores homogenized rows and
-// `BlockSpec` is invariant in both generics. `Attrs` defaults wide so
-// `defaults` doesn't narrow it.
+/**
+ * Returns plain `BlockSpec` because the registry stores homogenized rows and
+ * `BlockSpec` is invariant in both generics. `Attrs` defaults wide so
+ * `defaults` doesn't narrow it.
+ */
 export function defineBlock<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type

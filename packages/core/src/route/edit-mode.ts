@@ -8,8 +8,10 @@ export interface EditModeDecision {
   readonly mode: EditRenderMode;
   /** Ship + boot the editor runtime into the SSR output. */
   readonly injectRuntime: boolean;
-  // Never edge-cache. The cache layer already excludes these requests via
-  // session cookie or `?preview`; this states the gate's intent.
+  /**
+   * Never edge-cache. The cache layer already excludes these requests via
+   * session cookie or `?preview`; this states the gate's intent.
+   */
   readonly bypassCache: boolean;
 }
 

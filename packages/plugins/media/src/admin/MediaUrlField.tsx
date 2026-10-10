@@ -16,8 +16,10 @@ import { M, MediaPickerModal, readAccept } from "./MediaPickerField.js";
 // stored value turns out to be other than a string reads as unset.
 const storedUrlSchema = v.fallback(v.string(), "");
 
-// Stores a bare url string, not the `media` field's `{ id, url, ... }`
-// composite: the Styles tab's background control persists a CSS `url("…")`.
+/**
+ * Stores a bare url string, not the `media` field's `{ id, url, ... }`
+ * composite: the Styles tab's background control persists a CSS `url("…")`.
+ */
 export function MediaUrlField({
   field,
   rhf,

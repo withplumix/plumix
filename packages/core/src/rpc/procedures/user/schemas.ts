@@ -38,8 +38,10 @@ export const userInviteInputSchema = v.object({
   name: v.optional(v.nullable(nameField)),
 });
 
-// No `email`: changes go through `user.requestEmailChange` so an admin or
-// hijacked session can't redirect a user's recovery email without consent.
+/**
+ * No `email`: changes go through `user.requestEmailChange` so an admin or
+ * hijacked session can't redirect a user's recovery email without consent.
+ */
 export const userUpdateInputSchema = v.object({
   id: idParam,
   name: v.optional(v.nullable(nameField)),

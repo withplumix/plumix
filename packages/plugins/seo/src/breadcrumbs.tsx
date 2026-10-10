@@ -113,6 +113,19 @@ export function breadcrumbTrail(
 /**
  * Renders nothing on a page with no trail. Style it through the
  * `data-plumix-breadcrumbs` attribute; there is no class-name API.
+ *
+ * ```tsx
+ * import { Breadcrumbs } from "@plumix/plugin-seo";
+ *
+ * export default function Post({ data }: { data: EntryData }) {
+ *   return (
+ *     <article>
+ *       <Breadcrumbs data={data} />
+ *       <h1>{data.entry.title}</h1>
+ *     </article>
+ *   );
+ * }
+ * ```
  */
 export function Breadcrumbs({
   data,

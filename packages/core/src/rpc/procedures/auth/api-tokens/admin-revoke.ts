@@ -7,8 +7,10 @@ import { apiTokensAdminRevokeInputSchema } from "./schemas.js";
 
 const ADMIN_CAPABILITY = "user:manage_tokens";
 
-// Separate from self-scope `revoke` so audit can tell an admin revoke from
-// an owner's. Soft-deletes; an already-revoked row surfaces as NOT_FOUND.
+/**
+ * Separate from self-scope `revoke` so audit can tell an admin revoke from
+ * an owner's. Soft-deletes; an already-revoked row surfaces as NOT_FOUND.
+ */
 export const adminRevoke = base
   .use(authenticated)
   .use(requireCapability(ADMIN_CAPABILITY))

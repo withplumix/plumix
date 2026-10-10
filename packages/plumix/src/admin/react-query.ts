@@ -35,7 +35,10 @@ export const matchMutation = ns.matchMutation;
 export const replaceEqualDeep = ns.replaceEqualDeep;
 export const hashKey = ns.hashKey;
 export const keepPreviousData = ns.keepPreviousData;
-// Deprecated upstream; dropping a binding from this shim would break the published surface.
+/**
+ * Deprecated upstream; dropping a binding from this shim would break the
+ * published surface.
+ */
 // eslint-disable-next-line @typescript-eslint/no-deprecated
 export const isCancelledError = ns.isCancelledError;
 export const skipToken = ns.skipToken;

@@ -575,8 +575,10 @@ interface ReferenceGroup {
 interface ReferenceContribution {
   readonly errorKey: string;
   readonly ids: readonly string[];
-  // Diagnostic only: the wire error keys on the top-level field, but server
-  // logs name the offending cell.
+  /**
+   * Diagnostic only: the wire error keys on the top-level field, but server
+   * logs name the offending cell.
+   */
   readonly diagnostic?: {
     readonly path: string;
   };
@@ -586,8 +588,10 @@ interface ReferenceContribution {
 // reached when many fields share `(kind, scope)`.
 const MAX_REFERENCE_GROUP_BATCH = 1000;
 
-// `::` can't collide: lookup kinds are constrained to `[a-z][a-z0-9_-]{0,63}`.
-// A scope with unstable key order only costs an extra query.
+/**
+ * `::` can't collide: lookup kinds are constrained to `[a-z][a-z0-9_-]{0,63}`.
+ * A scope with unstable key order only costs an extra query.
+ */
 export function referenceGroupKey(target: ReferenceTarget): string {
   try {
     return `${target.kind}::${JSON.stringify(target.scope ?? null)}`;
@@ -695,8 +699,10 @@ export async function validateMetaReferencesForRpc(
 type PathSegment = string | number;
 
 interface ReferenceOccurrence {
-  // `[key, rowIdx, subKey, …]` for nested references; the last segment is
-  // always the leaf object key.
+  /**
+   * `[key, rowIdx, subKey, …]` for nested references; the last segment is
+   * always the leaf object key.
+   */
   readonly path: readonly PathSegment[];
   readonly target: ReferenceTarget;
   readonly value: unknown;

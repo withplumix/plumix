@@ -1,5 +1,7 @@
-// Shared by the editor and the sanitiser allowlist so the editor can never
-// produce a heading the renderer would strip.
+/**
+ * Shared by the editor and the sanitiser allowlist so the editor can never
+ * produce a heading the renderer would strip.
+ */
 export const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
 
 export type HeadingLevel = (typeof HEADING_LEVELS)[number];

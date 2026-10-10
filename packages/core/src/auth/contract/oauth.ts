@@ -53,6 +53,8 @@ export type OAuthProviderFactory = (
   client: OAuthClientInput,
 ) => OAuthProviderClient;
 
-// Provider keys become a URL path segment and the `oauth_accounts.provider`
-// column, so they must be path-safe.
+/**
+ * Provider keys become a URL path segment and the `oauth_accounts.provider`
+ * column, so they must be path-safe.
+ */
 export const OAUTH_PROVIDER_KEY_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;

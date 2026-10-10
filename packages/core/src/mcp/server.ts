@@ -15,8 +15,10 @@ import { toToolInputJsonSchema } from "./schema-projection.js";
 
 const SERVER_INFO = { name: "plumix", version: "0.1.0" } as const;
 
-// `Server` is deprecated but exempt for advanced use: tools come from a
-// runtime registry and every call is wrapped in a telemetry span.
+/**
+ * `Server` is deprecated but exempt for advanced use: tools come from a
+ * runtime registry and every call is wrapped in a telemetry span.
+ */
 export function buildMcpServer(
   ctx: AppContext,
   tools: ReadonlyMap<string, McpTool>,

@@ -1,9 +1,9 @@
 import { sha256Hex } from "./hash.js";
 
 interface GravatarOptions {
-  // Defaults to 80.
+  /** Defaults to 80. */
   readonly size?: number;
-  // Defaults to `"mp"`, matching WordPress.
+  /** Defaults to `"mp"`, matching WordPress. */
   readonly default?: string;
 }
 

@@ -119,8 +119,10 @@ interface PasskeyWire {
 }
 
 interface PasskeysCardProps {
-  // The server enforces `authed.email === input.email` for the add-device
-  // challenge.
+  /**
+   * The server enforces `authed.email === input.email` for the add-device
+   * challenge.
+   */
   readonly userEmail: string;
 }
 

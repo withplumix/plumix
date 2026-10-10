@@ -14,8 +14,10 @@ export const sessionQueryOptions = () =>
 
 export const SESSION_QUERY_KEY = orpc.auth.session.queryKey({ input: {} });
 
-// `static` makes a page load fetch the session once, however many guards read
-// it.
+/**
+ * `static` makes a page load fetch the session once, however many guards read
+ * it.
+ */
 export function loadSession(queryClient: QueryClient) {
   return queryClient.query({ ...sessionQueryOptions(), staleTime: "static" });
 }

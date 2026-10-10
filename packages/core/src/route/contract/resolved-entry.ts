@@ -20,8 +20,10 @@ export interface ResolvedAuthor {
   readonly images: RoleImages;
 }
 
-// `url` is null for a private taxonomy or a nested term needing an ancestor
-// walk; `<Link term>` then degrades to its children.
+/**
+ * `url` is null for a private taxonomy or a nested term needing an ancestor
+ * walk; `<Link term>` then degrades to its children.
+ */
 export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
   /** The meta JSON column, as {@link ResolvedEntry.storedMeta}. */
@@ -30,9 +32,11 @@ export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly images: RoleImages;
 }
 
-// `content` stays loose for non-blocks serializers; `contentBlocks` is null
-// when the stored JSON fails the shape check. `url` is null where an
-// ancestor-chain walk is needed.
+/**
+ * `content` stays loose for non-blocks serializers; `contentBlocks` is null
+ * when the stored JSON fails the shape check. `url` is null where an
+ * ancestor-chain walk is needed.
+ */
 export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   /**
    * The meta column as stored. Rule predicates compare against this: a date
@@ -51,8 +55,10 @@ export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   readonly url: string | null;
 }
 
-// Generic so a theme can narrow `data.entry` to plugin-populated types, e.g.
-// `defineTemplate<EntryData<BlogPost>>`.
+/**
+ * Generic so a theme can narrow `data.entry` to plugin-populated types, e.g.
+ * `defineTemplate<EntryData<BlogPost>>`.
+ */
 export interface EntryData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly kind: "entry";
   readonly entry: TEntry;

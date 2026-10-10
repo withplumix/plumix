@@ -6,9 +6,9 @@ interface Field {
   readonly name: string;
   readonly min: number;
   readonly max: number;
-  // Lowest value first.
+  /** Lowest value first. */
   readonly names?: readonly string[];
-  // A bare number means different days on different runtimes.
+  /** A bare number means different days on different runtimes. */
   readonly numbersAreAmbiguous?: boolean;
 }
 

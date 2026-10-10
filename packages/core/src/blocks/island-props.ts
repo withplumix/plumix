@@ -15,6 +15,11 @@ export type PlumixPrefetch = "load" | "idle" | "visible";
  * Function props are dropped because they don't survive serialization to the
  * client. `client` and `prefetch` are reserved: the server strips them to pick
  * the strategies.
+ *
+ * ```ts
+ * "use client";
+ * function MyWidget(props: IslandProps<{ label: string; size?: number }>) { ... }
+ * ```
  */
 export type IslandProps<T> = OmitFunctions<Omit<T, "client" | "prefetch">> & {
   readonly client?: PlumixStrategy;
